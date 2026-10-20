@@ -47,11 +47,12 @@ type transcriptProposeFixture []string
 
 // transcriptProposeExpectation identifies the cited line and verified promiser.
 type transcriptProposeExpectation struct {
-	Meaning  *commitmentMeaning `json:"meaning,omitempty"`
-	Optional bool               `json:"optional,omitempty"`
-	Promiser string             `json:"promiser,omitempty"`
-	Line     int                `json:"line"`
-	DueDate  string             `json:"due_date"`
+	Recipients []string           `json:"recipients,omitempty"`
+	Meaning    *commitmentMeaning `json:"meaning,omitempty"`
+	Optional   bool               `json:"optional,omitempty"`
+	Promiser   string             `json:"promiser,omitempty"`
+	Line       int                `json:"line"`
+	DueDate    string             `json:"due_date"`
 }
 
 // transcriptProposeCases serves the one site that reads next steps out of a
@@ -105,6 +106,9 @@ func (transcriptProposeCases) Prepare(fixture, expected json.RawMessage) (aitask
 	}
 	for i := range want {
 		if err := validateExpectedMeaning(want[i].Optional, want[i].Meaning, want[i].DueDate, lines[want[i].Line-1]); err != nil {
+			return nil, err
+		}
+		if err := validateExpectedRecipients(want[i].Recipients, references); err != nil {
 			return nil, err
 		}
 		if want[i].Promiser == "" {
@@ -258,6 +262,9 @@ func (c *transcriptProposeCase) disagreements(payload transcriptPayload) []strin
 	var out []string
 	for _, step := range payload.proposals() {
 		for _, expected := range c.expected {
+			if slices.Contains(step.SourceLines, expected.Line) && c.promiserKeys[step.PromiserRef] == expected.Promiser && !expectedRecipientsMatch(expected.Recipients, step.RecipientRefs, c.promiserKeys) {
+				out = append(out, "the recipients do not match the quoted promise")
+			}
 			if expected.Meaning != nil && slices.Contains(step.SourceLines, expected.Line) &&
 				!expectedMeaningMatches(expected.Meaning, step.Meaning) {
 				out = append(out, "the commitment meaning does not match the source")

@@ -240,6 +240,17 @@ export function DecisionsSection({
   // the control stays pressable. `commit.isError` covers a request that never
   // returned; `failure` covers one that returned for an earlier item and then
   // refused a later one.
+  const recipientReviewMembers = new Set(
+    items.flatMap((item) => {
+      const members = item.kind === "single" ? [item.approval] : item.members;
+      return members.some(
+        (member) =>
+          typeof member.proposed_change?.existing_task_id === "string",
+      )
+        ? members.map((member) => member.id)
+        : [];
+    }),
+  );
   const commitState = commit.isPending
     ? "sending"
     : commit.isError || failure !== null
@@ -327,6 +338,7 @@ export function DecisionsSection({
             t("brief.approval.approve"),
             locale,
             shared.memberCount,
+            recipientReviewMembers.has(approval.id),
           ),
           meta: (
             <>

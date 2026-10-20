@@ -28,12 +28,16 @@ const worklistAgeOutDays = 30
 func worklistAgeOutClause(asOf time.Time, pinner string, arg func(any) int) string {
 	floor := arg(asOf.AddDate(0, 0, -worklistAgeOutDays))
 	return sprintf(`(a.kind <> 'task' OR a.due_at IS NULL OR a.due_at >= $%d
-		OR EXISTS (SELECT 1 FROM audit_log adoption WHERE adoption.entity_type = 'activity'
-            AND adoption.entity_id = a.id AND adoption.actor_type = 'human'
-            AND adoption.before->>'is_done' = 'true' AND adoption.after->>'is_done' = 'false'
- AND `+storekit.AuditNotFromAnImport("adoption")+`)
+		OR `+humanReopenedTaskSQL("a")+`
 		OR (%s, a.id::text) IN (SELECT reader_id, row_id FROM %s wp WHERE wp.source = $%d))`,
 		floor, pinner, effectivePinsSQL(arg), arg(string(crmcontracts.WorklistItemSourceTask)))
+}
+
+func humanReopenedTaskSQL(alias string) string {
+	return `EXISTS (SELECT 1 FROM audit_log adoption WHERE adoption.entity_type = 'activity'
+ AND adoption.entity_id = ` + alias + `.id AND adoption.actor_type = 'human'
+ AND adoption.before->>'is_done' = 'true' AND adoption.after->>'is_done' = 'false'
+ AND ` + storekit.AuditNotFromAnImport("adoption") + `)`
 }
 
 // worklistClauses are the narrowings that make a read the Worklist's.

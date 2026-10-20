@@ -344,7 +344,7 @@ func (s *Store) UnreadFor(ctx context.Context, limit int) ([]Notice, error) {
 		recipient, page := arg(seat), arg(limit)
 		lane := inTheReadersLane(arg(muted))
 		rows, txErr := tx.Query(ctx, fmt.Sprintf(`
-			SELECT id, kind, subject, body, target_type, target_id, created_at, origin
+			SELECT id, kind, subject, body, target_type, target_id, created_at, origin, coalesce(dedupe_key, '')
 			  FROM notice
 			 WHERE recipient_user_id = $%d AND read_at IS NULL
 			   AND %s
@@ -357,16 +357,21 @@ func (s *Store) UnreadFor(ctx context.Context, limit int) ([]Notice, error) {
 		unread = []Notice{}
 		for rows.Next() {
 			var n Notice
+			var noticeKey string
 			// Both halves are nullable and the table pairs them, so either
 			// arriving alone is a row the constraint should have refused.
 			var targetType *string
 			var targetID *ids.UUID
 			if scanErr := rows.Scan(&n.ID, &n.Kind, &n.Subject, &n.Body,
-				&targetType, &targetID, &n.CreatedAt, &n.Origin); scanErr != nil {
+				&targetType, &targetID, &n.CreatedAt, &n.Origin, &noticeKey); scanErr != nil {
 				return scanErr
 			}
 			if targetType != nil && targetID != nil {
 				n.Target = Target{Type: *targetType, ID: *targetID}
+			}
+			if approval, ok := approvalOfNoticeKey(n.Kind, noticeKey); ok {
+				typed := ids.From[ids.ApprovalKind](approval)
+				n.ApprovalID = &typed
 			}
 			unread = append(unread, n)
 		}

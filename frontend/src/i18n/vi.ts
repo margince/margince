@@ -25,6 +25,9 @@ export const vi = {
   "approval.preview.effects": "Thay đổi kèm theo",
   "approval.preview.correspondence":
     "Phân loại thư từ liên quan là hồ sơ kinh doanh.",
+  "approval.preview.attachRecipients":
+    "Liên kết các liên hệ nhận với công việc hiện có.",
+  "approval.preview.existingTask": "Công việc hiện có",
   "approval.preview.delivery":
     "Bắt đầu triển khai các dự án liên quan đủ điều kiện.",
   "approval.preview.minorUnits":
@@ -2552,7 +2555,7 @@ export const vi = {
   "approval.field.from_stage": "Từ",
   "approval.field.to_stage": "Đến",
   "approval.kind.transcript_proposal": "Thêm bước tiếp theo từ bản chép lời",
-  "approval.kind.commitment_task": "Thêm việc cần làm cho cam kết",
+  "approval.kind.commitment_task": "Cam kết công việc",
   "approval.kind.fx_rate_proposal": "Cập nhật tỷ giá",
   "approval.kind.disqualify_lead": "Loại lead",
   "approval.kind.demote_lead": "Hủy xác nhận lead đủ điều kiện",
@@ -14065,6 +14068,10 @@ export const vi = {
   "worklist.untitled.dedupe_candidate": "Hồ sơ có thể trùng",
   "worklist.untitled.task": "Việc cần làm chưa có tiêu đề",
   "worklist.untitled.brief_item": "Deal cần xem lại",
+  "worklist.recipients.label": "Liên hệ nhận",
+  "worklist.recipients.open": "Đang chờ",
+  "worklist.recipients.done": "Đã hoàn tất",
+  "worklist.recipients.dismissed": "Đã loại bỏ",
   "worklist.untitled.conversation_claim": "Cam kết của bạn",
   "worklist.untitled.customer_waiting": "Khách hàng chờ trả lời",
   "worklist.untitled.lead_response": "Lead chưa có tên",

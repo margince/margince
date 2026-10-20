@@ -159,12 +159,12 @@ func TestSettlingACommitmentLeavesATaskTheSettlerMayNotChange(t *testing.T) {
 	k.WsExec(t, `DELETE FROM role_assignment WHERE user_id = $1`, k.Rep3)
 	key := "claims-only-" + k.Rep3.String()
 	k.WsExec(t, `INSERT INTO role (key, name, permissions) VALUES ($1, 'Claims only', $2::jsonb)`,
-		key, `{"objects":{"contact":{"read":true,"update":true}},"row_scope":"all"}`)
+		key, `{"objects":{"contact":{"read":true,"update":true},"activity":{"read":true}},"row_scope":"all"}`)
 	k.WsExec(t, `INSERT INTO role_assignment (role_id, user_id) SELECT r.id, $1 FROM role r WHERE r.key = $2`,
 		k.Rep3, key)
 	settler := k.As(k.Rep3, []ids.UUID{k.Team2}, principal.Permissions{
 		RoleKeys: []string{key}, RowScope: principal.RowScopeAll,
-		Objects: map[string]principal.ObjectGrant{"contact": {Read: true, Update: true}},
+		Objects: map[string]principal.ObjectGrant{"contact": {Read: true, Update: true}, "activity": {Read: true}},
 	})
 	if err := k.Contacts.SettleConversationClaim(settler, k.claim, claimStatusDone); err != nil {
 		t.Fatalf("settling the commitment: %v", err)
@@ -323,18 +323,18 @@ func TestTheClaimTaskReadsNeedContactRead(t *testing.T) {
 	if _, err := k.Contacts.OpenClaimsOnTask(blind, k.task); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("listing a task's claims without contact read answered %v, want permission denied", err)
 	}
-	if _, _, _, err := k.Contacts.ClaimTask(blind, k.claim, ids.NewV7()); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := k.Contacts.ReadClaimSettlement(blind, k.claim, ids.NewV7()); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("reading a claim's task without contact read answered %v, want permission denied", err)
 	}
 	if err := k.Contacts.SettleConversationClaim(k.Admin(), k.claim, claimStatusDone); err != nil {
 		t.Fatalf("settling the commitment: %v", err)
 	}
 	settled := k.newest(t, eventClaimChanged, `envelope->'payload'->>'claim_id' = $2`, k.claim.String())
-	if task, _, _, err := k.Contacts.ClaimTask(k.Admin(), k.claim, ids.NewV7()); err != nil || task != nil {
+	if task, err := k.Contacts.ReadClaimSettlement(k.Admin(), k.claim, ids.NewV7()); err != nil || task != nil {
 		t.Errorf("a settlement that is no audit row answered task %v, %v; want none", task, err)
 	}
 	k.WsExec(t, `UPDATE conversation_claim SET archived_at = now() WHERE id = $1`, k.claim)
-	if task, _, _, err := k.Contacts.ClaimTask(k.Admin(), k.claim, settled.Trace.AuditLogID); err != nil || task != nil {
+	if task, err := k.Contacts.ReadClaimSettlement(k.Admin(), k.claim, settled.Trace.AuditLogID); err != nil || task != nil {
 		t.Errorf("an archived claim answered task %v, %v; want none", task, err)
 	}
 }

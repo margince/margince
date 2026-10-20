@@ -55096,7 +55096,7 @@ components:
           description: Additional business effects released by this approval. Other proposals remain separate decisions.
           items:
             type: string
-            x-extensible-enum: [classify_correspondence, start_project_delivery]
+            x-extensible-enum: [classify_correspondence, start_project_delivery, attach_task_recipients]
         evidence:
           type: array
           description: Current evidence resolved with the reader's source permissions. An empty array replaces historical evidence.
@@ -59880,6 +59880,13 @@ components:
             Withheld — named in `lanes_omitted` — for a caller with no human
             behind it. Absent — not empty — on an installation whose feed does
             not read notices.
+        notices_more_available:
+          type: boolean
+          description: |
+            The unread notice scan reached its limit before equivalent decision
+            announcements were folded. When true, an empty notices array does
+            not prove that no other notices remain. Absent when notices could
+            not be read. Counts describe the returned items, not the unread total.
         introductions:
           type: array
           items: { $ref: '#/components/schemas/AttentionItem' }
@@ -60074,6 +60081,16 @@ components:
         on_behalf_of: { type: string, format: uuid }
         on_behalf_of_name: { type: string }
         occurred_at: { type: string, format: date-time }
+    WorklistPromiseRecipient:
+      type: object
+      description: A visible recipient's own claim on a shared deliverable. Other recipients may be outside the reader's scope.
+      required: [claim_id, contact_id, display_name, status]
+      properties:
+        claim_id: { type: string, format: uuid }
+        contact_id: { type: string, format: uuid }
+        display_name: { type: string }
+        status: { type: string, enum: [open, done, dismissed] }
+
     AttentionItem:
       type: object
       description: |
@@ -60083,6 +60100,10 @@ components:
         adds none.
       required: [id, source, actions]
       properties:
+        promise_recipients:
+          type: array
+          description: Visible recipient claims represented by this task; each keeps its own settlement state. Absent when unavailable.
+          items: { $ref: '#/components/schemas/WorklistPromiseRecipient' }
         source_record:
           allOf: [{ $ref: '#/components/schemas/AttentionSubject' }]
           description: The evidence record behind this work, distinct from its account or counterparty. Its label is resolved under current read permissions; the reference grants no access.
@@ -61630,6 +61651,10 @@ components:
         browser does not.
       required: [id, source, category, level, actions, because, consequence]
       properties:
+        promise_recipients:
+          type: array
+          description: Visible recipient claims represented by this task; each keeps its own settlement state. Absent when unavailable.
+          items: { $ref: '#/components/schemas/WorklistPromiseRecipient' }
         source_record:
           allOf: [{ $ref: '#/components/schemas/AttentionSubject' }]
           description: The evidence record behind this work, distinct from its account or counterparty. Its label is resolved under current read permissions; the reference grants no access.

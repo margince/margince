@@ -44767,6 +44767,13 @@ export interface components {
              */
             notices?: components["schemas"]["AttentionItem"][];
             /**
+             * @description The unread notice scan reached its limit before equivalent decision
+             *     announcements were folded. When true, an empty notices array does
+             *     not prove that no other notices remain. Absent when notices could
+             *     not be read. Counts describe the returned items, not the unread total.
+             */
+            notices_more_available?: boolean;
+            /**
              * @description Introductions a colleague has asked THIS reader to make, oldest first —
              *     the ask waiting on them, which nothing else on this page shows. Until
              *     this lane existed a colleague only learned they had been asked by
@@ -44873,6 +44880,16 @@ export interface components {
             /** Format: date-time */
             occurred_at: string;
         };
+        /** @description A visible recipient's own claim on a shared deliverable. Other recipients may be outside the reader's scope. */
+        WorklistPromiseRecipient: {
+            /** Format: uuid */
+            claim_id: string;
+            /** Format: uuid */
+            contact_id: string;
+            display_name: string;
+            /** @enum {string} */
+            status: "open" | "done" | "dismissed";
+        };
         /**
          * @description One thing waiting, in the words a reader recognises, with a typed reference back to
          *     the record that owns it. The client routes a verb to that owner's endpoint — this
@@ -44880,6 +44897,8 @@ export interface components {
          *     adds none.
          */
         AttentionItem: {
+            /** @description Visible recipient claims represented by this task; each keeps its own settlement state. Absent when unavailable. */
+            promise_recipients?: components["schemas"]["WorklistPromiseRecipient"][];
             /** @description The evidence record behind this work, distinct from its account or counterparty. Its label is resolved under current read permissions; the reference grants no access. */
             source_record?: components["schemas"]["AttentionSubject"];
             /**
@@ -46358,6 +46377,8 @@ export interface components {
          *     browser does not.
          */
         WorklistItem: {
+            /** @description Visible recipient claims represented by this task; each keeps its own settlement state. Absent when unavailable. */
+            promise_recipients?: components["schemas"]["WorklistPromiseRecipient"][];
             /** @description The evidence record behind this work, distinct from its account or counterparty. Its label is resolved under current read permissions; the reference grants no access. */
             source_record?: components["schemas"]["AttentionSubject"];
             notice_origin?: components["schemas"]["NoticeOrigin"];

@@ -148,8 +148,8 @@ func (d *CommitmentDispatcher) renewTask(ctx context.Context, tx pgx.Tx, c Commi
 	if err != nil || !changed {
 		return CommitmentRemembered, ids.UUID{}, err
 	}
-	if c.PromisedTo != nil {
-		if _, _, err := d.fileClaim(extractorContext(ctx, c.Extractor), tx, c, *c.PromisedTo, claimKindOurs, reason); err != nil {
+	for _, recipient := range commitmentRecipients(c) {
+		if _, _, err := d.fileClaim(extractorContext(ctx, c.Extractor), tx, c, recipient, claimKindOurs, reason); err != nil {
 			return CommitmentRemembered, ids.UUID{}, err
 		}
 	}

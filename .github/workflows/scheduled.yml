@@ -56,6 +56,10 @@ name: scheduled
 #                        judge only added lines, and this is what shows whether
 #                        the rest of the tree gets better.
 #
+# The three weekly measurements also RECORD what they measured. records-pr
+# proposes those records as one pull request and never writes to main: a
+# record is published when a human reviews and merges it.
+#
 # One more job earns its place here for the same reason rather than the same
 # question. reap-caches is maintenance, not a verdict on main — but the state it
 # maintains only ever drifts BETWEEN merges, and its failure mode is silence:
@@ -79,11 +83,11 @@ on:
   workflow_dispatch:
     inputs:
       perf:
-        description: "Also run the PERF-3/PERF-7 budgets (SMB tier; mid-market is by hand, `make bench-perf`)"
+        description: "Also run and record the PERF budgets (SMB tier and mobile; mid-market is by hand, `make bench-perf`)"
         type: boolean
         default: false
       llm:
-        description: "Also run the six use cases against a real model (COSTS TOKENS; needs CLAUDE_CODE_OAUTH_TOKEN)"
+        description: "Also run and record the use cases against a real model (COSTS TOKENS; needs CLAUDE_CODE_OAUTH_TOKEN)"
         type: boolean
         default: false
       trend:
@@ -351,10 +355,10 @@ jobs:
   # re-checking govulncheck by hand does not also seed a quarter of a million
   # contacts twice.
   #
-  # It records NOTHING. MARGINCE_BENCH_RECORD stays unset, so the suite gates and
-  # prints; `make bench-perf` is the only thing that writes into
-  # docs/reference/perfbench/, and it is run by a contact. A machine writing its
-  # own numbers into the tree is the failure that switch exists to prevent.
+  # It records through `make bench-perf`, the target run by hand, so the
+  # weekly number and a by-hand one are one measurement. The record is written
+  # before the gate, so a breach is proposed too; records-pr carries it to a
+  # pull request, never to main.
   perf-budgets:
     name: perf budgets (PERF-3/PERF-7, SMB tier)
     outputs:
@@ -411,7 +415,7 @@ jobs:
         working-directory: .
         run: |
           set -o pipefail
-          if make bench-perf-check 2>&1 | tee bench.log; then
+          if make bench-perf BENCH_PERF_TIER=smb BENCH_PERF_TIMEOUT=20m BENCH_RENDER= 2>&1 | tee bench.log; then
             echo "outcome=ok" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -421,6 +425,16 @@ jobs:
             echo "outcome=lane-failed" >> "$GITHUB_OUTPUT"
           fi
           exit 1
+      # The committed file goes up whether or not this run rewrote it; records
+      # keeps it only when it differs from the tree.
+      - name: Keep the record
+        if: always()
+        uses: ./.github/actions/upload-artifact-retried
+        with:
+          name: bench-perf-record
+          path: docs/reference/perfbench/bench-perf.json
+          retention-days: 30
+          if-no-files-found: ignore
 
   # The six deck use cases, driven by a REAL assistant.
   #
@@ -564,11 +578,8 @@ jobs:
           E2E_LLM_CANDIDATE: claude
           E2E_LLM_VIA: cli
           # No embedding key reaches this runner, so search_context ranks by
-          # word overlap; the verdicts it would write say `search: lexical`.
+          # word overlap; the verdicts it writes say `search: lexical`.
           E2E_LLM_ALLOW_LEXICAL: "1"
-          # Verdicts go to a directory this run alone writes, so the upload
-          # below can never carry the committed ones in its place.
-          E2E_LLM_VERDICTS: ${{ runner.temp }}/e2e-llm-verdicts
         run: |
           set -o pipefail
           if make e2e-llm 2>&1 | tee llm.log; then
@@ -598,14 +609,15 @@ jobs:
           # nothing — a green step on top of a job that had already failed 30
           # seconds in. The absence of transcripts is itself the finding.
           if-no-files-found: error
-      # The verdicts each say how they were measured (route, search mode), which
-      # the transcripts do not; a lane that stopped first leaves none, so warn.
+      # The verdicts land in the committed records tree, in the folder the route
+      # names, and each says how it was measured (route, search mode). The whole
+      # tree goes up; records keeps only the verdicts this run rewrote.
       - name: Keep the run verdicts
         if: always() && steps.funded.outputs.configured == 'yes'
         uses: ./.github/actions/upload-artifact-retried
         with:
           name: e2e-llm-verdicts
-          path: ${{ runner.temp }}/e2e-llm-verdicts/
+          path: backend/internal/compose/aicert/records/mcp_e2e/
           retention-days: 30
           if-no-files-found: warn
 
@@ -619,11 +631,8 @@ jobs:
   # seeds a quarter of a million contacts, and a failure in either would report
   # as the other.
   #
-  # It records NOTHING, for the reason bench-perf-check states above: a record
-  # is a human's to publish, and a scheduled job is the machine that rule is
-  # about. `make bench-mobile-check` CLEARS MARGINCE_BENCH_RECORD rather than
-  # leaving it unset, so writing nothing is a property of the target rather than
-  # of this runner's environment.
+  # It records through `make bench-mobile`, the target run by hand, and
+  # records-pr proposes the record as a pull request, as for perf-budgets.
   #
   # Why this budget is schedulable when the acceptance lane's unthrottled
   # assertion was not: the Fast-3G profile's per-request latency dominates
@@ -664,7 +673,7 @@ jobs:
           node-version: 24
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
-      # The browser only. `make bench-mobile-check` runs the install and the
+      # The browser only. `make bench-mobile` runs the install and the
       # build itself, so doing them here as well would install twice and leave
       # two spellings of the lane's setup to drift apart.
       # Retried and split in the action, because `--with-deps` shells out to
@@ -686,7 +695,7 @@ jobs:
         working-directory: .
         run: |
           set -o pipefail
-          if make bench-mobile-check 2>&1 | tee bench-mobile.log; then
+          if make bench-mobile BENCH_RENDER= 2>&1 | tee bench-mobile.log; then
             echo "outcome=ok" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -696,6 +705,14 @@ jobs:
             echo "outcome=lane-failed" >> "$GITHUB_OUTPUT"
           fi
           exit 1
+      - name: Keep the record
+        if: always()
+        uses: ./.github/actions/upload-artifact-retried
+        with:
+          name: bench-mobile-record
+          path: docs/reference/perfbench/bench-mobile.json
+          retention-days: 30
+          if-no-files-found: ignore
 
   # The suite's verdict must not depend on the calendar.
   #
@@ -969,12 +986,206 @@ jobs:
           esac
           exit "$status"
 
+  # Lays what the three weekly measurements recorded over the run's own tree
+  # and renders the pages those records feed. It runs the tree's generators, so
+  # it holds no write token; records-pr pushes the patch it hands over.
+  records:
+    name: render the weekly records
+    needs: [perf-budgets, perf-mobile, llm-use-cases]
+    # !cancelled(), because a measurement that failed may still have recorded:
+    # a breach is recorded before its gate fails.
+    if: >-
+      !cancelled()
+      && (needs.perf-budgets.result != 'skipped'
+        || needs['perf-mobile'].result != 'skipped'
+        || needs['llm-use-cases'].result != 'skipped')
+    outputs:
+      parts: ${{ steps.render.outputs.parts }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: Restore the Go build cache
+        uses: ./.github/actions/go-build-cache
+        with:
+          flavor: plain
+      # By pattern, not by name: a job that never uploaded is a part that did
+      # not record, and a download by name would fail the parts that did.
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: bench-*-record
+          path: docs/reference/perfbench
+          merge-multiple: true
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: e2e-llm-verdicts
+          path: backend/internal/compose/aicert/records/mcp_e2e
+          merge-multiple: true
+      # A part counts as recorded only when its file differs from the tree, so
+      # the committed file uploaded by a run that measured nothing adds nothing.
+      - name: Render the pages the records feed
+        id: render
+        env:
+          PATCH: ${{ runner.temp }}/records.patch
+        run: |
+          set -euo pipefail
+          perfbench=docs/reference/perfbench
+          verdicts=backend/internal/compose/aicert/records/mcp_e2e
+          parts=""
+          for part in "perf:$perfbench/bench-perf.json" "mobile:$perfbench/bench-mobile.json" "llm:$verdicts"; do
+            if [ -n "$(git status --porcelain -- "${part#*:}")" ]; then
+              parts="$parts ${part%%:*}"
+            fi
+          done
+          parts="${parts# }"
+          echo "recorded: ${parts:-nothing}"
+          if [ -z "$parts" ]; then
+            exit 0
+          fi
+          case " $parts " in *" perf "* | *" mobile "*) make perfdoc ;; esac
+          case " $parts " in
+          *" llm "*)
+            (cd backend && go test ./internal/compose/ -run TestTheMCPToolCoverageIsPublished \
+              -update-mcp-tool-coverage -count=1)
+            ;;
+          esac
+          git add -A -- docs/reference "$verdicts" e2e/llm
+          git diff --cached --binary >"$PATCH"
+          git diff --cached --stat
+          echo "parts=$parts" >> "$GITHUB_OUTPUT"
+      - name: Keep the patch
+        if: steps.render.outputs.parts != ''
+        uses: ./.github/actions/upload-artifact-retried
+        with:
+          name: scheduled-records
+          path: ${{ runner.temp }}/records.patch
+          retention-days: 30
+
+  # Opens the pull request that publishes the records. It never pushes to main:
+  # a human publishes a record by reviewing and merging this pull request.
+  #
+  # The default token, because the repository holds no bot token for pull
+  # requests. A pull request that token opens starts no workflow, so the body
+  # tells the reviewer how to start CI. Only from main: a dispatch on another
+  # branch measures and renders, and proposes nothing.
+  records-pr:
+    name: propose the weekly records
+    needs: [records, perf-budgets, perf-mobile, llm-use-cases]
+    if: >-
+      !cancelled()
+      && needs.records.outputs.parts != ''
+      && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      # The credential persists here and nowhere else in this file: the push
+      # below is the one write this workflow makes to the repository.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: scheduled-records
+          path: ${{ runner.temp }}/records
+      - name: Commit the records and open the pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PATCH: ${{ runner.temp }}/records/records.patch
+          BODY: ${{ runner.temp }}/records-body.md
+          PARTS: ${{ needs.records.outputs.parts }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RUN_ID: ${{ github.run_id }}
+          BASE: ${{ github.event.repository.default_branch }}
+          PERF_RESULT: ${{ needs.perf-budgets.result }}
+          PERF_OUTCOME: ${{ needs.perf-budgets.outputs.outcome }}
+          MOBILE_RESULT: ${{ needs['perf-mobile'].result }}
+          MOBILE_OUTCOME: ${{ needs['perf-mobile'].outputs.outcome }}
+          LLM_RESULT: ${{ needs['llm-use-cases'].result }}
+          LLM_OUTCOME: ${{ needs['llm-use-cases'].outputs.outcome }}
+        run: |
+          set -euo pipefail
+          day="$(date -u +%F)"
+          branch="bench/scheduled-$day-$RUN_ID"
+          verdicts=backend/internal/compose/aicert/records/mcp_e2e
+          git apply --index "$PATCH"
+
+          # part <label> <key> <result> <outcome> <how it was measured>
+          part() {
+            if [[ " $PARTS " == *" $2 "* ]]; then
+              printf -- "- **%s**: recorded. %s Job result \`%s\`, outcome \`%s\`.\n" "$1" "$5" "$3" "${4:-none}"
+            else
+              printf -- "- **%s**: NOT recorded. Job result \`%s\`, outcome \`%s\`; the run log says why.\n" "$1" "$3" "${4:-none}"
+            fi
+          }
+          # Read from the verdicts themselves, so the body cannot claim a route
+          # or a search mode the records do not carry.
+          routes="$(git diff --cached --name-only -- "$verdicts" | cut -d/ -f7 | sort -u | paste -sd, -)"
+          search="$(git diff --cached --name-only --diff-filter=AM -- "$verdicts" |
+            xargs -r jq -r '.search // "unknown"' | sort -u | paste -sd, -)"
+          {
+            echo "## What"
+            echo
+            echo "What the weekly scheduled run measured on \`$GITHUB_SHA\`, with the pages the"
+            echo "records feed rendered again by their own generators. Run: $RUN_URL"
+            echo
+            part "PERF-3/PERF-7" perf "$PERF_RESULT" "$PERF_OUTCOME" \
+              "\`make bench-perf BENCH_PERF_TIER=smb\`, the SMB tier; a PERF-7 row measured below mid-market renders \`inconclusive\`."
+            part "MOBILE-AC-2" mobile "$MOBILE_RESULT" "$MOBILE_OUTCOME" \
+              "\`make bench-mobile\`, Playwright Chromium on a throttled Fast-3G profile at 390px."
+            part "Use cases driven by a model" llm "$LLM_RESULT" "$LLM_OUTCOME" \
+              "\`make e2e-llm\` over \`${routes:-none}\`, search \`${search:-none}\`."
+            echo
+            echo "Runner: GitHub-hosted \`${ImageOS:-unknown}\`, image \`${ImageVersion:-unknown}\`,"
+            echo "\`$RUNNER_ARCH\`. Each record names the machine it was measured on."
+            echo
+            echo "## Why"
+            echo
+            echo "A record reaches \`main\` only when a maintainer merges it. Compare the numbers with the"
+            echo "record they replace, and close this pull request to keep the old ones."
+            echo
+            echo "## How verified"
+            echo
+            echo "The default workflow token opened this pull request, so no workflow ran on it."
+            echo "Close and reopen it to start CI before you merge."
+            echo
+            echo "Closes: none"
+          } >"$BODY"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git commit -q -m "chore(records): weekly measurements of $day"
+          # --force, because a re-run of this job replaces the branch it pushed.
+          git push --force origin "$branch"
+          existing="$(gh pr list --head "$branch" --state open --json number --jq '.[0].number // empty')"
+          if [ -n "$existing" ]; then
+            gh pr edit "$existing" --body-file "$BODY"
+          else
+            gh pr create --base "$BASE" --head "$branch" \
+              --title "chore(records): weekly measurements of $day" --body-file "$BODY"
+          fi
+
   # The one job holding `issues: write`, and it runs no build code — the same
   # permission isolation sbom.yml's signing job uses. It must RUN when an upstream
   # fails, so it is guarded on !cancelled() rather than needs alone.
   report:
     name: report
-    needs: [vuln, quality-gate, renovate-liveness, backend-lane, backend-clock-drift, fe-clock-drift, fe-all-stories, perf-budgets, perf-mobile, llm-use-cases, reap-caches, slop-trend, vendor-live]
+    needs: [vuln, quality-gate, renovate-liveness, backend-lane, backend-clock-drift, fe-clock-drift, fe-all-stories, perf-budgets, perf-mobile, llm-use-cases, records, records-pr, reap-caches, slop-trend, vendor-live]
     # Every result, not only the failures — see the same condition in
     # main-health.yml for why. In short: the reporter now retracts a finding
     # whose check came back green, and a job gated on a failure is never reached
@@ -1026,6 +1237,8 @@ jobs:
           MOBILE_OUTCOME: ${{ needs['perf-mobile'].outputs.outcome }}
           LLM_RESULT: ${{ needs['llm-use-cases'].result }}
           LLM_OUTCOME: ${{ needs['llm-use-cases'].outputs.outcome }}
+          RECORDS_RESULT: ${{ needs.records.result }}
+          RECORDS_PR_RESULT: ${{ needs['records-pr'].result }}
           CACHE_RESULT: ${{ needs.reap-caches.result }}
           TREND_RESULT: ${{ needs['slop-trend'].result }}
           VENDOR_LIVE_RESULT: ${{ needs['vendor-live'].result }}

@@ -61,6 +61,8 @@ export function editableStrings(
   kind: string,
   change: Record<string, unknown>,
 ): EditableField[] {
+  if (kind === "commitment_task" && typeof change.existing_task_id === "string")
+    return [];
   // Own-property only: `kind` is a wire string, and a value named `constructor`
   // would otherwise find a function on Object's prototype, pass the truthy
   // check, and crash the queue on .filter instead of falling back to the
