@@ -312,7 +312,7 @@ function AddQuestion({
         )}
       </Field>
       <ErrorLine error={read.error} />
-      {filtered && <p role="alert">{t("reporting.questionFiltered")}</p>}
+      <ErrorLine error={filtered && t("reporting.questionFiltered")} />
       <div>
         <Button
           disabled={!runId}

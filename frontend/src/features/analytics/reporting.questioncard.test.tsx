@@ -138,7 +138,7 @@ it("refuses a saved question with filters, whose values every reader would get",
     runId,
   );
   await user.click(screen.getByRole("button", { name: "Add question" }));
-  expect(await screen.findByRole("alert")).toHaveTextContent(/has filters/);
+  expect(await screen.findByText(/has filters/)).toBeInTheDocument();
   expect(screen.queryByText(/^Question:/)).not.toBeInTheDocument();
 });
 
