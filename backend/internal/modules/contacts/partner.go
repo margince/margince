@@ -232,39 +232,27 @@ func (s *Store) UpsertPartner(ctx context.Context, in UpsertPartnerInput) (crmco
 		if err != nil {
 			return err
 		}
-		row, err := upsertPartnerRow(ctx, tx, in, fit, capturedBy)
+		written, err := writePartner(ctx, tx, in, fit, capturedBy, before)
 		if err != nil {
 			return err
 		}
-		// Promotion is a company fact, and it is the invariant's other half: a company
-		// IS a partner iff it has this row AND a live 'partner' relationship
-		// type (ADR-0079 amending ADR-0032 §Decision 2). Both are written in
-		// this one transaction, so the two can never disagree — the
-		// classification flip this replaces did the same job for the same
-		// reason, against a column that could hold only one answer.
-		if err := ensureCompanyRelationshipType(ctx, tx, in.CompanyID,
-			relationshipTypePartner, "system", capturedBy); err != nil {
-			return err
-		}
-		// The row as it now stands, not the request: an absent field coalesced
-		// onto its current value did not change, and an image built from the
-		// request would claim ownership of every field the caller left out.
-		// Narrowing to what moved is the same rule from the other side — it is
-		// what keeps a lifecycle edit from claiming the fit fields.
-		before, after := storekit.ChangedColumns(before, partnerAuditImage(row))
-		auditID, err := storekit.Audit(ctx, tx, "update", "company", in.CompanyID.UUID, before, after)
-		if err != nil {
-			return err
-		}
-		if err := storekit.EmitEvent(ctx, tx, auditID, in.CompanyID.UUID, crmcontracts.PublicEventCompanyUpdated{
-			ChangedFields: map[string]any{
-				eventKeyDelta: map[string]any{"partner": map[string]any{"role": in.PartnerRole, "cert_status": row.CertStatus}},
-			},
-		}); err != nil {
-			return err
+		if written.landed {
+			auditID, err := storekit.Audit(ctx, tx, "update", "company", in.CompanyID.UUID, written.before, written.after)
+			if err != nil {
+				return err
+			}
+			if err := storekit.EmitEvent(ctx, tx, auditID, in.CompanyID.UUID, crmcontracts.PublicEventCompanyUpdated{
+				ChangedFields: map[string]any{
+					eventKeyDelta: map[string]any{"partner": map[string]any{
+						"role": in.PartnerRole, "cert_status": written.row.CertStatus,
+					}},
+				},
+			}); err != nil {
+				return err
+			}
 		}
 		// The echo is a read: the writer's own role masks it like any other.
-		out, err = wirePartnerForCaller(ctx, tx, row)
+		out, err = wirePartnerForCaller(ctx, tx, written.row)
 		return err
 	})
 	return out, err

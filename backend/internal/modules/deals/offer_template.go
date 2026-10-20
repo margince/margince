@@ -350,6 +350,13 @@ func (s *Store) UpdateOfferTemplate(ctx context.Context, id ids.OfferTemplateID,
 		p.Set("locale", current.Locale, locale)
 		p.Set(offerTemplateIsDefaultField, current.IsDefault, in.IsDefault)
 		p.Set("layout", current.Layout, layout)
+		if p.Empty() {
+			if err := storekit.EnsureIfMatch(ctx, tx, "offer_template", id.UUID, in.IfVersion); err != nil {
+				return err
+			}
+			out = current
+			return nil
+		}
 		if err := p.ApplyGuarded(ctx, tx, "offer_template", id.UUID, in.IfVersion); err != nil {
 			if conflict := offerTemplateUniqueViolation(err, locale); conflict != nil {
 				return conflict

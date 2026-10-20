@@ -3,7 +3,12 @@
 
 package storekit
 
-import "reflect"
+import (
+	"bytes"
+	"encoding/json"
+	"reflect"
+	"time"
+)
 
 // ChangedColumns narrows a before/after pair to the columns that actually moved.
 //
@@ -53,12 +58,50 @@ func union(before, after map[string]any) []string {
 // row held SQL NULL has changed nothing, and reporting that as a change puts a
 // field on the history screen that nobody edited.
 //
+// Two values are also the same when the audit image renders them alike, so a
+// stored *string and the string a request carries are one value. That is the
+// comparison the undo path makes between an image and the live row, so "moved"
+// here and "superseded" there read one field the same way.
+//
 //craft:ignore naked-any same column-value contract as ChangedColumns
 func sameColumnValue(oldValue, newValue any) bool {
 	if emptyColumnValue(oldValue) && emptyColumnValue(newValue) {
 		return true
 	}
-	return reflect.DeepEqual(oldValue, newValue)
+	if reflect.DeepEqual(oldValue, newValue) {
+		return true
+	}
+	if oldAt, newAt, bothTimes := instants(oldValue, newValue); bothTimes {
+		return oldAt.Equal(newAt)
+	}
+	oldJSON, oldErr := json.Marshal(oldValue)
+	newJSON, newErr := json.Marshal(newValue)
+	return oldErr == nil && newErr == nil && bytes.Equal(oldJSON, newJSON)
+}
+
+// instants reads two timestamps, by value or by pointer, as the moments they
+// are. One instant spelled in two zones is one value to the column, and a
+// request that carries a stored time back in another offset has changed
+// nothing.
+//
+//craft:ignore naked-any same column-value contract as ChangedColumns
+func instants(a, b any) (time.Time, time.Time, bool) {
+	first, firstOK := instantOf(a)
+	second, secondOK := instantOf(b)
+	return first, second, firstOK && secondOK
+}
+
+//craft:ignore naked-any same column-value contract as ChangedColumns
+func instantOf(v any) (time.Time, bool) {
+	switch at := v.(type) {
+	case time.Time:
+		return at, true
+	case *time.Time:
+		if at != nil {
+			return *at, true
+		}
+	}
+	return time.Time{}, false
 }
 
 // emptyColumnValue reads a column that holds nothing. A nil slice and an empty

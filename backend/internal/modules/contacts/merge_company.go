@@ -205,7 +205,7 @@ func fillCompanySurvivorship(ctx context.Context, tx pgx.Tx, src, tgt crmcontrac
 		p.Set("address_country", nil, src.Address.Country)
 	}
 	if targetIsPartner {
-		if err := ensureCompanyRelationshipType(ctx, tx, ids.CompanyID{UUID: ids.UUID(tgt.Id)},
+		if _, err := ensureCompanyRelationshipType(ctx, tx, ids.CompanyID{UUID: ids.UUID(tgt.Id)},
 			relationshipTypePartner, "system", "system:merge"); err != nil {
 			return nil, err
 		}

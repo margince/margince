@@ -302,6 +302,13 @@ func (s *Store) SetExpiry(ctx context.Context, id ids.DealRoomID, expiresAt *tim
 		}
 		p := storekit.NewPatch()
 		p.Set("expires_at", current.ExpiresAt, expiresAt)
+		if p.Empty() {
+			if err := storekit.EnsureIfMatch(ctx, tx, roomObject, id.UUID, ifVersion); err != nil {
+				return err
+			}
+			out = current
+			return nil
+		}
 		if err := p.ApplyGuarded(ctx, tx, roomObject, id.UUID, ifVersion); err != nil {
 			return fmt.Errorf("set deal room expiry: %w", err)
 		}

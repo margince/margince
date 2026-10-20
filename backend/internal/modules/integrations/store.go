@@ -194,6 +194,43 @@ type PoolBudget struct {
 	BalanceReadAt     *time.Time
 }
 
+// presentConnection adds to a stored connection row what the card shows beside
+// it, so a list and the answer to a write to one connection carry the same
+// fields.
+//
+// The card shows what the provider says is LEFT and what this installation
+// SPENT side by side, so both arrive in one read — two round trips could show a
+// balance and a history from different moments. The backlog is read inside the
+// same transaction for the same reason.
+//
+// A backlog this read cannot produce is ABSENT, not fatal. It is one line on a
+// card whose other rows — the key, the posture, the balance, the spend — are
+// what an operator came for, and a secondary count taking the whole settings
+// page down with it is the wrong trade. The contract makes it optional for
+// exactly this.
+//
+// A cancelled request is the exception and still aborts: the caller has gone,
+// so there is nobody to render a degraded card for, and swallowing it would
+// turn a disconnect into a pointless read of every remaining provider.
+func (s *Store) presentConnection(
+	ctx context.Context, tx pgx.Tx, c Connection, d provider.Descriptor,
+) (Connection, error) {
+	spend, err := s.readSpendHistory(ctx, tx, c.Provider)
+	if err != nil {
+		return Connection{}, err
+	}
+	c.Spend = spend
+	c.Catalog = catalogOf(d)
+	backlog, err := s.backlogInTx(ctx, tx, c.Provider)
+	if err != nil && ctx.Err() != nil {
+		return Connection{}, err
+	}
+	if err == nil {
+		c.Backlog = &backlog
+	}
+	return c, nil
+}
+
 // List returns every registered provider's connection state, including the
 // providers that have no row yet — a card that only appeared after connecting
 // would give the admin nowhere to connect FROM.
@@ -213,37 +250,9 @@ func (s *Store) List(ctx context.Context) ([]Connection, error) {
 				return err
 			}
 			if c, ok := rows[name]; ok {
-				// The card shows what the provider says is LEFT and what this
-				// installation SPENT side by side, so both arrive in one read
-				// — two round trips could show a balance and a history from
-				// different moments.
-				spend, err := s.readSpendHistory(ctx, tx, name)
+				c, err := s.presentConnection(ctx, tx, c, d)
 				if err != nil {
 					return err
-				}
-				c.Spend = spend
-				c.Catalog = catalogOf(d)
-				// Read inside this transaction, beside the spend, so the card
-				// shows a balance, a history and a backlog from one moment
-				// rather than three.
-				//
-				// A backlog this read cannot produce is ABSENT, not fatal. It
-				// is one line on a card whose other rows — the key, the
-				// posture, the balance, the spend — are what an operator came
-				// for, and a secondary count taking the whole settings page
-				// down with it is the wrong trade. The contract makes it
-				// optional for exactly this.
-				//
-				// A cancelled request is the exception and still aborts: the
-				// caller has gone, so there is nobody to render a degraded card
-				// for, and swallowing it would turn a disconnect into a
-				// pointless read of every remaining provider.
-				backlog, err := s.backlogInTx(ctx, tx, name)
-				if err != nil && ctx.Err() != nil {
-					return err
-				}
-				if err == nil {
-					c.Backlog = &backlog
 				}
 				out = append(out, c)
 				continue
