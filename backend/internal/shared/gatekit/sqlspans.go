@@ -128,7 +128,7 @@ func escapeStringPrefix(text string, pos int) bool {
 	escaped := pos > 0 && (text[pos-1] == 'E' || text[pos-1] == 'e')
 	if escaped && pos > 1 {
 		before := text[pos-2]
-		escaped = !(identStart(before) || before >= '0' && before <= '9' || before == '$' || before == '"' || before == '\'' || before >= 128)
+		escaped = !identStart(before) && (before < '0' || before > '9') && before != '$' && before != '"' && before != '\'' && before < 128
 	}
 	return escaped
 }

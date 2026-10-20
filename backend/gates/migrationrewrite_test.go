@@ -81,12 +81,14 @@ func rewriteTable(tokens []rewriteToken, at int) string {
 	if at >= len(tokens) || tokens[at].text == "(" {
 		return "*"
 	}
-	name := tokens[at].text
+	var name strings.Builder
+	name.WriteString(tokens[at].text)
 	for at+2 < len(tokens) && tokens[at+1].text == "." {
-		name += "." + tokens[at+2].text
+		name.WriteString(".")
+		name.WriteString(tokens[at+2].text)
 		at += 2
 	}
-	return name
+	return name.String()
 }
 
 func migrationRewrites(sql string) ([]string, error) {
