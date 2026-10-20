@@ -2229,6 +2229,7 @@ export const de = {
   "record.tabs": "Tabs des Datensatzes",
   "record.panel.showDetails": "Details einblenden",
   "record.panel.hideDetails": "Details ausblenden",
+  "record.panel.fold": "Details",
   "room.editorial":
     "Dokumente und Kommentare sind sofort für die Käuferseite sichtbar.",
   "room.readOnly": "Du kannst diesen Raum lesen, aber nicht ändern.",
@@ -12957,7 +12958,6 @@ export const de = {
   "contact.rings.promises.caption_one": "{part} von {count} Zusage gehalten",
   "contact.rings.promises.caption_other": "{part} von {count} Zusagen gehalten",
   "contact.brief.title": "Beziehungsbericht",
-  "contact.brief.sources": "Quellen",
   "contact.brief.reading": "Beziehungsbericht wird geladen…",
   "contact.brief.sourceActivity": "Aktivität",
   "contact.brief.sourceDeal": "Deal-Notizen",

@@ -2168,6 +2168,7 @@ export const vi = {
   "record.tabs": "Tab hồ sơ",
   "record.panel.showDetails": "Hiển thị chi tiết",
   "record.panel.hideDetails": "Ẩn chi tiết",
+  "record.panel.fold": "Chi tiết",
   "room.editorial": "Tài liệu và bình luận hiển thị ngay với bên mua.",
   "room.readOnly": "Bạn chỉ có quyền xem Deal Room này, không có quyền sửa.",
   "room.finished":
@@ -12622,7 +12623,6 @@ export const vi = {
   "contact.rings.promises.caption_one": "Đã giữ {part}/{count} cam kết",
   "contact.rings.promises.caption_other": "Đã giữ {part}/{count} cam kết",
   "contact.brief.title": "Tóm tắt quan hệ",
-  "contact.brief.sources": "Nguồn",
   "contact.brief.reading": "Đang tải tóm tắt quan hệ…",
   "contact.brief.sourceActivity": "Hoạt động",
   "contact.brief.sourceDeal": "Ghi chú deal",

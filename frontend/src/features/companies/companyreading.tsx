@@ -108,8 +108,11 @@ export function CompanyReading({
         <StateStrip companyId={company.id} view={view} onOpenTab={onOpenTab} />
       )}
       {/* An account with nothing on file asks whether to research it, so the
-          offer leads; once there is anything to read, the call below leads. */}
+          offer leads; once there is anything to read, the next move and the call do. */}
       {offerResearch && <DeepReadPanel companyId={company.id} />}
+      {/* The record's next move leads, over the reading it comes from: it is
+          what a reader opened the record to do. */}
+      <NeedsList reading={reading} onOpenTasks={onOpenTasks} />
       <Company360Call
         reading={reading}
         name={company.display_name}
@@ -138,9 +141,6 @@ export function CompanyReading({
           onOpenEmail={onOpenEmail}
         />
       </Company360Call>
-      {/* Full width at every measure: cards of unequal height never share a
-          row, or the shorter one's row is left half empty. */}
-      <NeedsList reading={reading} onOpenTasks={onOpenTasks} />
     </>
   );
 }

@@ -46,10 +46,16 @@ export function ContactOverview({
     setParams(next);
   };
   const commitments = hasOpenCommitments(view);
-  // The 360 leads, then what needs a contact today, then what was promised:
-  // the record's standing is what every row under it is read against.
+  // The next move leads, then the 360 it is read from, then what was promised.
   return (
     <div className="record-stack record-sections">
+      <ContactToday
+        moment={view.moment}
+        view={view}
+        onAction={onAction}
+        onOpenEmail={onOpenEmail}
+        onOpenTasks={openQueue}
+      />
       <div id={BRIEF_ANCHOR} className="pe-brief-anchor">
         <ContactBriefCard
           brief={brief}
@@ -60,13 +66,6 @@ export function ContactOverview({
           onOpenEmail={onOpenEmail}
         />
       </div>
-      <ContactToday
-        moment={view.moment}
-        view={view}
-        onAction={onAction}
-        onOpenEmail={onOpenEmail}
-        onOpenTasks={openQueue}
-      />
       {commitments && (
         <ContactCommitmentsCard
           view={view}

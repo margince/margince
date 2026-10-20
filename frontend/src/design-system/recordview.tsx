@@ -192,6 +192,7 @@ export function RecordView({
   railLabel,
   aside,
   asideOpen,
+  asideToggle,
   asideLabel,
   timeline,
   timelineGroups,
@@ -272,6 +273,9 @@ export function RecordView({
   // Whether the details pane STANDS OPEN: `PageZones`'s own prop, handed
   // through, so a pane a toggle shut folds its column instead of vanishing.
   asideOpen?: boolean;
+  // The pane's own switch: in its head while open, and the strip that
+  // brings it back while folded.
+  asideToggle?: ReactNode;
   asideLabel?: string;
   // The entries, or undefined when this view has NO timeline at all. The
   // distinction is the same one every card on a record page keeps: absent is
@@ -402,6 +406,9 @@ export function RecordView({
           aside={
             aside && (
               <>
+                {asideToggle && (
+                  <div className="record-aside-head">{asideToggle}</div>
+                )}
                 {aside}
                 {/* Empty, and then not drawn, until a refusal fills it. */}
                 <div className="record-access">
@@ -412,6 +419,7 @@ export function RecordView({
             )
           }
           asideOpen={asideOpen}
+          asideFold={asideToggle}
           asideLabel={asideLabel ?? t("record.context")}
           asideClassName="record-aside"
         />

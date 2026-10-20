@@ -205,6 +205,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
               // pane, fold and memory.
               aside={dealContext(deal)}
               asideOpen={details.open}
+              asideToggle={<PageAsideToggle pane />}
               name={deal.name}
               identity={deal.id}
               // One rung under the record scale. The name stays the largest
@@ -269,11 +270,6 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                     legal: t("legalReview.tab"),
                     history: t("tab.history"),
                   }}
-                  // The switch for the deal's details column, at the end of
-                  // the tab row. It chooses what the page shows beside the
-                  // work. So it stands with the controls for the work column,
-                  // never in the head among the deal's verbs.
-                  trailing={<PageAsideToggle />}
                 />
               }
             >

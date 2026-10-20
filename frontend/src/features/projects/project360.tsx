@@ -10,7 +10,7 @@ import {
   useObjectCustomFields,
 } from "../../components/customfields.form";
 import { EditAction } from "../../components/edit";
-import { usePageAside } from "../../components/pageaside";
+import { PageAsideToggle, usePageAside } from "../../components/pageaside";
 import { OverflowMenu } from "../../design-system/atoms";
 import { QueryGate } from "../../design-system/querystates";
 import {
@@ -188,6 +188,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
         </>
       }
       asideOpen={details.open}
+      asideToggle={<PageAsideToggle pane />}
       name={project.name}
       identity={project.id}
       scale="compact"

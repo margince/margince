@@ -209,18 +209,19 @@ export function Proof({
  * of its 360. It says who reached the call and how many readings it rests on,
  * and opens them as a list over the card. In the head rather than under the
  * verdict, so the claim and its receipts are read together before the call.
- * The verdict keeps its line to itself.
+ * The verdict keeps its line to itself. `children` is the list it opens.
  */
 export function SourcesPill({
-  items,
-}: Readonly<{ items: readonly Grounding[] }>) {
+  count,
+  children,
+}: Readonly<{ count: number; children: ReactNode }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  if (items.length === 0) {
+  if (count === 0) {
     return null;
   }
-  const sources = `${formatNumber(items.length, locale)} ${plural("record.restsOn.source", items.length)}`;
+  const sources = `${formatNumber(count, locale)} ${plural("record.restsOn.source", count)}`;
   return (
     <Popover
       variant="aiQuiet"
@@ -231,14 +232,7 @@ export function SourcesPill({
         </>
       }
     >
-      <ul className="r360-sources-list">
-        {items.map((item) => (
-          <li key={item.key}>
-            <p className="r360-rests-quote">{item.quote}</p>
-            <p className="r360-rests-from t-caption">{item.from}</p>
-          </li>
-        ))}
-      </ul>
+      <ul className="r360-sources-list">{children}</ul>
     </Popover>
   );
 }

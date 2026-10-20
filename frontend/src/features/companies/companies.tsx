@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { PageAsideToggle } from "../../components/pageaside";
 import { QueryGate } from "../../design-system/querystates";
 import { RecordTabs } from "../../design-system/recordtabs";
 import { useT } from "../../i18n";
@@ -203,19 +202,6 @@ function CompanyRecord({
           scrollPageToTop();
         }}
         counts={companyTabCounts(assembled)}
-        // The switch for the account's own details column, at the end of
-        // the tab row: it chooses what the page shows beside the work, so it
-        // stands with the controls that choose what the work column shows,
-        // and never in the head among the record's verbs.
-        trailing={
-          <PageAsideToggle
-            quiet
-            labels={{
-              show: t("record.panel.showDetails"),
-              hide: t("record.panel.hideDetails"),
-            }}
-          />
-        }
         labels={{
           // "360", not the shared "Overview": this tab is the account's
           // one assembled reading, and the card inside it is named the same

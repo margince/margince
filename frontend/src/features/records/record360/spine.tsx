@@ -88,6 +88,7 @@ export type SpineSource = {
       // carries whether the words are this reader's: a withheld message names
       // itself and opens nothing.
       email_summary?: { display_status: string } | null;
+      content_state?: string | null;
       // Capture's own conversation id. What makes a thread a thread — a note
       // or a hand-logged call carries none, and those fall back to their
       // subject.
@@ -598,7 +599,10 @@ function exchanges(view: SpineSource, ctx: Ctx): Exchange[] {
   const asOf = Date.parse(view.as_of);
   const conversations = new Map<string, Exchange>();
   for (const entry of view.activities?.data ?? []) {
-    const subject = bareSubject(entry.subject);
+    // A row whose content is withheld names nothing, whatever it still
+    // carries: the server blanks it, and this does not rely on that.
+    const subject =
+      entry.content_state === "withheld" ? "" : bareSubject(entry.subject);
     // `isExchange` again only to narrow the kind; `isContactBy` is the rule.
     if (!isExchange(entry.kind) || !isContactBy(entry, asOf) || !subject) {
       continue;

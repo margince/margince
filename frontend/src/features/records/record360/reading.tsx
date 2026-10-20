@@ -104,7 +104,16 @@ export function CallCard({
       titleAction={
         <>
           {title ? titleAction : undefined}
-          {standing && restsOn ? <SourcesPill items={restsOn} /> : null}
+          {standing && restsOn ? (
+            <SourcesPill count={restsOn.length}>
+              {restsOn.map((item) => (
+                <li key={item.key}>
+                  <p className="r360-rests-quote">{item.quote}</p>
+                  <p className="r360-rests-from t-caption">{item.from}</p>
+                </li>
+              ))}
+            </SourcesPill>
+          ) : null}
         </>
       }
       footer={footer}

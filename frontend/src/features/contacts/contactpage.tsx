@@ -227,6 +227,7 @@ export function ContactPageV2({
           // phone width the same cards open as the drawer below instead.
           aside={narrow ? undefined : contactDetails}
           asideOpen={details.open}
+          asideToggle={<PageAsideToggle pane labels={paneWords} />}
           name={contact.full_name}
           identity={contact.id}
           // One rung under the record scale. The name is still the largest
@@ -271,23 +272,20 @@ export function ContactPageV2({
                 navigateKeepingReturn(contactTabRoute(id, next));
                 scrollPageToTop();
               }}
-              // The switch for the details pane, at the end of the tab row. It
-              // chooses what the page shows beside the work, so it stands with
-              // the controls that choose what the work column shows.
+              // On a phone the details open as a drawer, and this is its
+              // switch; beside the work the pane carries its own.
               trailing={
-                <PageAsideToggle
-                  quiet
-                  labels={paneWords}
-                  controlled={
-                    narrow
-                      ? {
-                          open: mobileDetails,
-                          labels: paneWords,
-                          onToggle: () => setMobileDetails((open) => !open),
-                        }
-                      : undefined
-                  }
-                />
+                narrow ? (
+                  <PageAsideToggle
+                    quiet
+                    labels={paneWords}
+                    controlled={{
+                      open: mobileDetails,
+                      labels: paneWords,
+                      onToggle: () => setMobileDetails((open) => !open),
+                    }}
+                  />
+                ) : undefined
               }
               labels={{
                 overview: t(TAB_LABEL_KEYS.overview),

@@ -17,7 +17,14 @@ import {
   interactionIcon,
   useInteractionLabel,
 } from "../records/interactionchrome";
-import { SentenceList, WrittenBy } from "../records/record360";
+import {
+  RecordSpine,
+  SentenceList,
+  SourcesPill,
+  type SpineSource,
+  spineTask,
+  WrittenBy,
+} from "../records/record360";
 import {
   colleagueWords,
   directionSentence,
@@ -65,6 +72,18 @@ export function ContactBriefCard({
     (view.activities?.data ?? []).map((row) => [row.id, row]),
   );
   const written = brief && brief.sentences.length > 0;
+  // One source per distinct record, not per citation: several sentences
+  // routinely cite the same thread.
+  const sources = [
+    ...new Map(
+      (brief?.sentences ?? []).flatMap((sentence) =>
+        sentence.evidence.map(
+          (cited) =>
+            [`${cited.entity_type}-${cited.entity_id}`, cited] as const,
+        ),
+      ),
+    ).entries(),
+  ];
   if (!loading && !written && !failed) {
     return (
       <Panel title={t("contact.overview.about")}>
@@ -102,7 +121,26 @@ export function ContactBriefCard({
             })
           : t("contact.brief.title")
       }
-      titleAction={written ? <WrittenBy by={brief.generated_by} /> : undefined}
+      titleAction={
+        written ? (
+          <>
+            <WrittenBy by={brief.generated_by} />
+            {/* The messages the reading rests on, behind one pill: a busy
+                contact cites dozens, and a list of them buried the call. */}
+            <SourcesPill count={sources.length}>
+              {sources.map(([key, cited]) => (
+                <li key={key}>
+                  <SourceChip
+                    cited={cited}
+                    activity={citedActivities.get(cited.entity_id)}
+                    onOpenEmail={onOpenEmail}
+                  />
+                </li>
+              ))}
+            </SourcesPill>
+          </>
+        ) : undefined
+      }
     >
       <PanelBody>
         {loading && (
@@ -119,11 +157,7 @@ export function ContactBriefCard({
         {written && (
           <>
             {/* The call first, then the judgement under it, and beside both
-                the shares the relationship is read from. The sources are
-                drawn below BY TRANSPORT rather than as citation chips,
-                because a chip cannot know whether a cited conversation was
-                mail or a chat message, and this card's reader has been told
-                wrong before. */}
+                the shares the relationship is read from. */}
             <div className="pe-brief-lead">
               <div className="pe-brief-call">
                 <BriefReadings
@@ -153,37 +187,27 @@ export function ContactBriefCard({
               onOpenEmail={onOpenEmail}
               part="readings"
             />
-            <div className="pe-chiprow">
-              <span className="t-caption">{t("contact.brief.sources")}</span>
-              {/* One source per distinct record, not per citation: several
-                  sentences routinely cite the same thread, and naming it once
-                  per mention would repeat it and collide on its key. */}
-              {[
-                ...new Map(
-                  brief.sentences.flatMap((sentence) =>
-                    sentence.evidence.map(
-                      (cited) =>
-                        [
-                          `${cited.entity_type}-${cited.entity_id}`,
-                          cited,
-                        ] as const,
-                    ),
-                  ),
-                ).entries(),
-              ].map(([key, cited]) => (
-                <SourceChip
-                  key={key}
-                  cited={cited}
-                  activity={citedActivities.get(cited.entity_id)}
-                  onOpenEmail={onOpenEmail}
-                />
-              ))}
-            </div>
           </>
         )}
       </PanelBody>
+      {/* The thread the reading was made from: the last word, the silence
+          since, and what is dated ahead, as on the company's 360. */}
+      {written && (
+        <RecordSpine source={spineSource(view)} onOpenEmail={onOpenEmail} />
+      )}
     </Panel>
   );
+}
+
+// The contact's read as the spine takes it: its open tasks are activity rows.
+function spineSource(view: Contact360): SpineSource {
+  const asOf = Date.parse(view.as_of);
+  return {
+    ...view,
+    next_steps: {
+      data: (view.next_steps?.data ?? []).map((task) => spineTask(task, asOf)),
+    },
+  };
 }
 
 // The message the "last reply" reading was read from: the newest inbound

@@ -158,6 +158,7 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
         />
       }
       asideOpen={details.open}
+      asideToggle={<PageAsideToggle pane />}
       name={leadIdentityName(lead) || t("lead.unnamed")}
       identity={lead.id}
       // The role and the company, on the name's own line: the contact
@@ -237,20 +238,6 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
             deals: t("tab.dealsProjects"),
             history: t("tab.history"),
           }}
-          // The switch for the details pane, at the end of the tab row. It
-          // chooses what the page shows beside the work, so it stands with
-          // the controls that choose what the work column shows. Drawn as a
-          // link in the row rather than a boxed control, the same quiet
-          // reading the contact page's tab strip gives it.
-          trailing={
-            <PageAsideToggle
-              quiet
-              labels={{
-                show: t("record.panel.showDetails"),
-                hide: t("record.panel.hideDetails"),
-              }}
-            />
-          }
         />
       }
     >

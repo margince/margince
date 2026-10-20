@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useId, useState } from "react";
-import { usePageAside } from "../../components/pageaside";
+import { PageAsideToggle, usePageAside } from "../../components/pageaside";
 import { Modal } from "../../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { Heading } from "../../design-system/heading";
@@ -238,6 +238,7 @@ export function CompanyPage({
       // stays put when a tab changes.
       aside={rail}
       asideOpen={details.open}
+      asideToggle={<PageAsideToggle pane />}
       // The bar that chooses which part of the account to read, across the
       // page above the columns. The details pane opens under it, from the
       // control at its end.

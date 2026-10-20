@@ -686,15 +686,54 @@
   border-radius: var(--r-lg);
   padding: var(--space-6) var(--sheetInset) var(--space-8);
 }
-/* The sheet and the fields column stand a wide gutter apart: the column is
-   unboxed, so the air between them is the only edge it has. Its track is
-   the measure of a label and a short value, not of a card. */
+/* The fields column is a card of its own beside the sheet, on the same white
+   ground, wide enough for a label and a value that does not break. */
 .page-zones.record-zones {
-  --asideOpenW: 280px;
-  column-gap: var(--space-12);
+  --asideOpenW: 340px;
+  --asideFoldW: var(--space-12);
+  column-gap: var(--space-6);
 }
-.page-zones.record-zones[data-aside="closed"] > .page-zones-main {
-  margin-inline-end: calc(-1 * var(--space-12));
+.page-zones.record-zones[data-aside="closed"]:not(
+    :has(> .page-zones-aside-fold)
+  )
+  > .page-zones-main {
+  margin-inline-end: calc(-1 * var(--space-6));
+}
+.record-zones > .record-aside,
+.record-zones > .page-zones-aside-fold {
+  background: var(--bgElevated);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-lg);
+}
+.record-zones > .record-aside {
+  padding-block-end: var(--space-3);
+}
+/* The pane's own switch heads it, at the end of its first line. */
+.record-aside-head {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-3) var(--padPanel) 0;
+}
+/* Folded, the pane is a strip the height of the sheet: its name set on its
+   side, and the arrow that brings it back. */
+.record-zones > .page-zones-aside-fold {
+  align-self: stretch;
+  display: flex;
+}
+.record-details-fold.btn {
+  flex: 1;
+  min-inline-size: 0;
+  padding-inline: 0;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: var(--space-2);
+  height: auto;
+  padding-block: var(--space-4);
+  border: 0;
+  border-radius: var(--r-lg);
+}
+.record-details-fold-label {
+  writing-mode: vertical-rl;
 }
 
 /* The strip stays in reach as the record scrolls: stuck to the top of the
@@ -1868,5 +1907,16 @@
   }
   .meta-row:not(:has(> .avatar)) > .meta-row-action {
     grid-column: 1;
+  }
+}
+
+/* Once the pane sits under the work, its folded strip is a row, read flat. */
+@media (max-width: 1200px) {
+  .record-details-fold.btn {
+    flex-direction: row;
+    justify-content: center;
+  }
+  .record-details-fold-label {
+    writing-mode: horizontal-tb;
   }
 }

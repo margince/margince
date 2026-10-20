@@ -2254,6 +2254,7 @@ export const en = {
   "record.tabs": "Record tabs",
   "record.panel.showDetails": "Show details",
   "record.panel.hideDetails": "Hide details",
+  "record.panel.fold": "Details",
   // The Deal Room aside on a deal. `room.` rather than `dealroom.` for the
   // reason the other abbreviated namespaces give: the surface is named once at
   // the top of the panel and every key under it is read in that context.
@@ -12940,7 +12941,6 @@ export const en = {
   "contact.rings.promises.caption_one": "{part} of {count} commitment kept",
   "contact.rings.promises.caption_other": "{part} of {count} commitments kept",
   "contact.brief.title": "Relationship brief",
-  "contact.brief.sources": "Sources",
   "contact.brief.reading": "Loading relationship brief…",
   "contact.brief.sourceActivity": "Activity",
   "contact.brief.sourceDeal": "Deal notes",

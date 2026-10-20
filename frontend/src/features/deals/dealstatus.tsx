@@ -166,6 +166,16 @@ export function DealStatusCardPanel({
   // reading carries still names what is being read.
   return (
     <>
+      {/* The day's work keeps its place over the call in every state of the
+          read: the page has one shape, and a panel that comes and goes with a
+          request reads as a record that has and then has not any work. What
+          it says follows the read — pending, failed — rather than claiming a
+          quiet day it has not established. */}
+      <TodayPanel
+        state={status.isPending ? "loading" : "failed"}
+        onOpenTasks={() => navigate({ screen: "worklist" })}
+        tasksLabel={t("today.workQueue")}
+      />
       <CallCard name={dealName}>
         {path ? <PanelBody>{path}</PanelBody> : null}
         <QueryStates
@@ -184,16 +194,6 @@ export function DealStatusCardPanel({
           ) : null}
         </QueryStates>
       </CallCard>
-      {/* The day's work keeps its place under the call in every state of the
-          read: the page has one shape, and a panel that comes and goes with a
-          request reads as a record that has and then has not any work. What
-          it says follows the read — pending, failed — rather than claiming a
-          quiet day it has not established. */}
-      <TodayPanel
-        state={status.isPending ? "loading" : "failed"}
-        onOpenTasks={() => navigate({ screen: "worklist" })}
-        tasksLabel={t("today.workQueue")}
-      />
     </>
   );
 }
@@ -236,6 +236,25 @@ function Briefing({
           needs was the last thing they reached. The lead sentence keeps its
           RECEIPTS: it is the sentence a reader is most likely to challenge, on
           a card whose whole premise is that they can. */}
+      {/* Drawn only where there is a move. A deal whose reading found nothing
+          owed today is a deal with one fewer card to read, not a card whose
+          body says it found nothing: the reading below already reports what
+          the day holds, and a panel repeating that in a sentence spends a
+          card on an absence. The pending and failed states keep their panel,
+          because a read still running has not established a quiet day. */}
+      {card.next ? (
+        <TodayPanel
+          onOpenTasks={() => navigate({ screen: "worklist" })}
+          tasksLabel={t("today.workQueue")}
+        >
+          <Move
+            key="next"
+            dealId={dealId}
+            move={card.next}
+            onOpenEmail={onOpenEmail}
+          />
+        </TodayPanel>
+      ) : null}
       <CallCard
         name={dealName}
         // A date that cannot be read keeps the kit's own head; Intl throws on it.
@@ -273,25 +292,6 @@ function Briefing({
         <SignalStrip signals={coverage.signals} />
         {spine}
       </CallCard>
-      {/* Drawn only where there IS a move. A deal whose reading found nothing
-          owed today is a deal with one fewer card to read, not a card whose
-          body says it found nothing: the reading above already reports what
-          the day holds, and a panel repeating that in a sentence spends a
-          card on an absence. The pending and failed states keep their panel,
-          because a read still running has not established a quiet day. */}
-      {card.next ? (
-        <TodayPanel
-          onOpenTasks={() => navigate({ screen: "worklist" })}
-          tasksLabel={t("today.workQueue")}
-        >
-          <Move
-            key="next"
-            dealId={dealId}
-            move={card.next}
-            onOpenEmail={onOpenEmail}
-          />
-        </TodayPanel>
-      ) : null}
       {/* The reading, under the call and the work: what has happened and
           where that leaves things, in prose with its sources. What is holding
           the deal up, what the buyer wants and the rest of the reasoning sit
