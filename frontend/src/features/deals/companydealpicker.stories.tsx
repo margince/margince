@@ -4,7 +4,7 @@ import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
-} from "../testing/story-utils";
+} from "../../testing/story-utils";
 import { CompanyDealPicker } from "./companydealpicker";
 
 const meta = {

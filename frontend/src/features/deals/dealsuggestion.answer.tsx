@@ -1,5 +1,4 @@
 import { useId, useState } from "react";
-import { CompanyDealPicker } from "../../components/companydealpicker";
 import { Button, Field, Modal } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
@@ -7,6 +6,7 @@ import { Select } from "../../design-system/select";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { problemCodeOf } from "../../lib/problem";
+import { CompanyDealPicker } from "./companydealpicker";
 import {
   type DealSuggestion,
   type DismissDealSuggestionBody,
