@@ -13,7 +13,6 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -51,10 +50,7 @@ func Revalidate(ctx context.Context, tx pgx.Tx, company ids.CompanyID, signalID 
 	if shown == nil || current.SourceID.IsZero() {
 		return apperrors.ErrVersionSkew
 	}
-	if _, err := contacts.LockCompanyTx(ctx, tx, company); err != nil {
-		return err
-	}
-	current, err = reconcile(ctx, tx, company, now, true)
+	current, err = ReconcileForDecision(ctx, tx, company, now)
 	if err != nil {
 		return err
 	}

@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/projects"
@@ -18,6 +19,13 @@ import (
 
 func Reconcile(ctx context.Context, tx pgx.Tx, company ids.CompanyID, now time.Time) (Finding, error) {
 	return reconcile(ctx, tx, company, now, false)
+}
+
+func ReconcileForDecision(ctx context.Context, tx pgx.Tx, company ids.CompanyID, now time.Time) (Finding, error) {
+	if _, err := contacts.LockCompanyTx(ctx, tx, company); err != nil {
+		return Finding{}, err
+	}
+	return reconcile(ctx, tx, company, now, true)
 }
 
 func reconcile(ctx context.Context, tx pgx.Tx, company ids.CompanyID, now time.Time, lock bool) (Finding, error) {

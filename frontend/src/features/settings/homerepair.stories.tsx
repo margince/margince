@@ -59,7 +59,7 @@ export const Review: Story = {
       await canvas.findByText("Keep for human review"),
     ).toBeInTheDocument();
     await expect(
-      canvas.getByRole("button", { name: "Apply 1 reviewed changes" }),
+      canvas.getByRole("button", { name: "Apply 1 reviewed change" }),
     ).toBeInTheDocument();
   },
 };
@@ -74,7 +74,7 @@ export const ReadOnly: Story = {
       await canvas.findByText("Keep for human review"),
     ).toBeInTheDocument();
     await expect(
-      canvas.queryByRole("button", { name: "Apply 1 reviewed changes" }),
+      canvas.queryByRole("button", { name: "Apply 1 reviewed change" }),
     ).not.toBeInTheDocument();
   },
 };
@@ -87,7 +87,7 @@ export const ChangedSinceReview: Story = {
     );
     await userEvent.click(
       await canvas.findByRole("button", {
-        name: "Apply 1 reviewed changes",
+        name: "Apply 1 reviewed change",
       }),
     );
     await expect(await canvas.findByRole("alert")).toBeInTheDocument();

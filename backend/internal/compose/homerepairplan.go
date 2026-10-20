@@ -55,7 +55,7 @@ func previewHomeRepairSourceTx(ctx context.Context, tx pgx.Tx, source string, af
 			return datatask.ReviewRequest{}, err
 		}
 		for _, proposal := range proposals {
-			item, err := homeRepairProposalDecisionTx(ctx, tx, proposal, asOf)
+			item, err := homeRepairProposalDecisionTx(ctx, tx, proposal, asOf, false)
 			if err != nil {
 				return datatask.ReviewRequest{}, err
 			}
@@ -117,7 +117,7 @@ func validateHomeRepairTx(ctx context.Context, tx pgx.Tx, review datatask.Review
 		}
 		seen[expected.ID] = true
 		if expected.Source == "approval" {
-			if err := validateHomeRepairProposalTx(ctx, tx, expected, review.AsOf); err != nil {
+			if err := validateHomeRepairProposalTx(ctx, tx, expected, review.AsOf, false); err != nil {
 				return "", err
 			}
 			continue

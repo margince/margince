@@ -18,17 +18,37 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func homeRepairProposalDecisionTx(ctx context.Context, tx pgx.Tx, proposal approvals.RepairProposal, asOf time.Time) (homeRepairTaskRef, error) {
+func homeRepairProposalDecisionTx(ctx context.Context, tx pgx.Tx, proposal approvals.RepairProposal, asOf time.Time, forDecision bool) (homeRepairTaskRef, error) {
 	item := homeRepairTaskRef{ID: proposal.ID.UUID, Source: "approval", Snapshot: proposal.Snapshot, Action: repairHumanReview, Reason: "source_rule_not_verified"}
 	if !proposal.Pristine {
 		item.Reason = "human_adoption_not_excluded"
 		return item, nil
 	}
-	if proposal.Kind != CommitmentTaskKind {
+	var err error
+	switch proposal.Kind {
+	case CommitmentTaskKind:
+		item, err = homeRepairCommitmentProposalTx(ctx, tx, proposal, item, asOf)
+	case lifecycleProposalKind:
+		item, err = homeRepairLifecycleProposalTx(ctx, tx, proposal, item, asOf, forDecision)
+	default:
 		return item, nil
 	}
+	if err != nil || item.Action != repairLeaveCurrent {
+		return item, err
+	}
+	duplicate, err := approvals.DuplicateRepairProposalTx(ctx, tx, proposal.ID, asOf)
+	if err != nil {
+		return item, err
+	}
+	if duplicate {
+		item.Action, item.Reason = repairWithdrawProposal, "duplicate_pending_proposal"
+	}
+	return item, nil
+}
+
+func homeRepairCommitmentProposalTx(ctx context.Context, tx pgx.Tx, proposal approvals.RepairProposal, item homeRepairTaskRef, asOf time.Time) (homeRepairTaskRef, error) {
 	var staged CommitmentTaskProposal
-	if err := json.Unmarshal(proposal.Change, &staged); err != nil || staged.SourceActivityID.IsZero() {
+	if err := json.Unmarshal(proposal.Change, &staged); err != nil || staged.SourceActivityID.IsZero() || proposal.TargetID == nil || staged.SourceActivityID != *proposal.TargetID {
 		return item, nil
 	}
 	var due *time.Time
@@ -44,25 +64,15 @@ func homeRepairProposalDecisionTx(ctx context.Context, tx pgx.Tx, proposal appro
 		return item, err
 	}
 	item.Action, item.Reason = action, reason
-	if action != repairLeaveCurrent {
-		return item, nil
-	}
-	duplicate, err := approvals.DuplicateRepairProposalTx(ctx, tx, proposal.ID, asOf)
-	if err != nil {
-		return item, err
-	}
-	if duplicate {
-		item.Action, item.Reason = repairWithdrawProposal, "duplicate_pending_proposal"
-	}
 	return item, nil
 }
 
-func validateHomeRepairProposalTx(ctx context.Context, tx pgx.Tx, expected homeRepairTaskRef, asOf time.Time) error {
+func validateHomeRepairProposalTx(ctx context.Context, tx pgx.Tx, expected homeRepairTaskRef, asOf time.Time, forDecision bool) error {
 	proposal, err := approvals.RepairProposalTx(ctx, tx, ids.From[ids.ApprovalKind](expected.ID), asOf, false)
 	if err != nil {
 		return err
 	}
-	actual, err := homeRepairProposalDecisionTx(ctx, tx, proposal, asOf)
+	actual, err := homeRepairProposalDecisionTx(ctx, tx, proposal, asOf, forDecision)
 	if err != nil {
 		return err
 	}
@@ -73,7 +83,7 @@ func validateHomeRepairProposalTx(ctx context.Context, tx pgx.Tx, expected homeR
 }
 
 func applyHomeRepairProposal(ctx context.Context, tx pgx.Tx, expected homeRepairTaskRef, activation datatask.Activation, runID ids.UUID) (bool, error) {
-	if err := validateHomeRepairProposalTx(ctx, tx, expected, activation.AsOf); err != nil {
+	if err := validateHomeRepairProposalTx(ctx, tx, expected, activation.AsOf, true); err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrConflict) {
 			return false, recordHomeRepairSkip(ctx, tx, expected, "changed_since_review", activation.RuleVersion, runID)
 		}

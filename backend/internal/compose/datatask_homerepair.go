@@ -23,11 +23,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-const homeRepairTaskID = "core/1792486503_home_attention_repair"
+const homeRepairTaskID = "core/1792501453_home_attention_repair"
 
 func homeRepairDataTask(pool *pgxpool.Pool, now func() time.Time) datatask.Task {
 	return datatask.Task{ID: homeRepairTaskID, Version: 1, Title: "Review automatic Home work", Manual: true, ReviewVersion: homeRepairVersion,
-		Requires: []string{"core/1792486503"}, Review: validateHomeRepairTx,
+		Requires: []string{"core/1792501453"}, Review: validateHomeRepairTx,
 		Steps: []datatask.Step{{Name: "reviewed_tasks", Limit: 50, MinLimit: 1, Audit: datatask.AuditPolicy{PerRecord: true},
 			Estimate: func(context.Context, datatask.Querier, int64) (int64, bool, error) { return 0, false, nil },
 			Batch: func(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {

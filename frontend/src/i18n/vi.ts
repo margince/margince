@@ -14,6 +14,12 @@ import type { MessageKey } from "./en";
 //     "pháp nhân" (onboarding's legal-block copy). The two senses share no
 //     string in this catalog and must stay that way.
 export const vi = {
+  "homeRepair.reason.engagement":
+    "Hợp đồng hoặc công việc đang thực hiện không phù hợp với việc kết thúc toàn bộ quan hệ khách hàng.",
+  "homeRepair.reason.workstream":
+    "Bằng chứng chỉ kết thúc một công việc, không phải toàn bộ quan hệ khách hàng.",
+  "homeRepair.reason.evidenceChanged":
+    "Bằng chứng mới hơn đã xác minh thay thế ngữ cảnh của đề xuất này.",
   "homeRepair.withdraw": "Rút đề xuất tự động",
   "homeRepair.reason.duplicate": "Một đề xuất đang chờ giống hệt vẫn còn.",
   "homeRepair.tasks": "Công việc",
@@ -48,8 +54,9 @@ export const vi = {
   "homeRepair.preview": "Xem trước các mục",
   "homeRepair.next": "Xem trang tiếp theo",
   "homeRepair.summary":
-    "Lưu trữ {archive} lời nhắc; rút {withdraw} đề xuất. Giữ {review} mục để xem xét và {keep} mục công việc hiện tại.",
-  "homeRepair.apply": "Áp dụng {count} thay đổi đã xem xét",
+    "Lời nhắc cần lưu trữ: {archive}. Đề xuất cần rút: {withdraw}. Giữ để xem xét: {review}; giữ làm công việc hiện tại: {keep}.",
+  "homeRepair.apply_one": "Áp dụng {count} thay đổi đã xem xét",
+  "homeRepair.apply_other": "Áp dụng {count} thay đổi đã xem xét",
   "homeRepair.started":
     "Lượt xử lý đã xem xét đang chờ chạy. Tiến độ hiển thị ở trên.",
 

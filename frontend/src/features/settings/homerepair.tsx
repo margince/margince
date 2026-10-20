@@ -12,7 +12,7 @@ import { FilterPills } from "../../design-system/filterpills";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { formatNumber } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
-import { useLocale, useT } from "../../i18n";
+import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useActivity } from "../../lib/activityread";
 import { unwrap } from "../../lib/problem";
@@ -35,6 +35,9 @@ const reasonLabels: Record<string, MessageKey> = {
   before_mailbox_history_baseline: "homeRepair.reason.baseline",
   meeting_cancelled: "homeRepair.reason.cancelled",
   request_past_waiting_horizon: "homeRepair.reason.requestAge",
+  continuing_engagement: "homeRepair.reason.engagement",
+  ending_is_not_account_wide: "homeRepair.reason.workstream",
+  lifecycle_evidence_changed: "homeRepair.reason.evidenceChanged",
   duplicate_pending_proposal: "homeRepair.reason.duplicate",
   current_work: "homeRepair.reason.current",
 };
@@ -125,6 +128,7 @@ export function HomeRepairControls({
   const t = useT();
   const { locale } = useLocale();
   const client = useQueryClient();
+  const plural = usePlural();
   const [source, setSource] = useState<"task" | "approval">("task");
   const preview = useMutation({
     mutationFn: async ({
@@ -225,7 +229,7 @@ export function HomeRepairControls({
                 disabled={preview.isPending || version < 1}
                 onClick={() => activate.mutate(review)}
               >
-                {t("homeRepair.apply", {
+                {plural("homeRepair.apply", changeCount, {
                   count: formatNumber(changeCount, locale),
                 })}
               </Button>

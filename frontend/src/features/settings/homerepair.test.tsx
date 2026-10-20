@@ -52,7 +52,7 @@ it("requires a separate explicit action after showing named tasks and their disp
   expect(screen.queryByRole("button", { name: /Apply 1 reviewed/ })).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Preview items" }));
   const apply = await screen.findByRole("button", {
-    name: "Apply 1 reviewed changes",
+    name: "Apply 1 reviewed change",
   });
   await waitFor(() =>
     expect(screen.getAllByText("Prepare account review")).toHaveLength(2),
@@ -79,7 +79,7 @@ it("keeps a refused review visible and never reports it queued", async () => {
   render(<HomeRepairControls version={7} canActivate />);
   fireEvent.click(screen.getByRole("button", { name: "Preview items" }));
   fireEvent.click(
-    await screen.findByRole("button", { name: "Apply 1 reviewed changes" }),
+    await screen.findByRole("button", { name: "Apply 1 reviewed change" }),
   );
   await waitFor(() => expect(screen.getByRole("alert")).toBeInTheDocument());
   expect(screen.getByText("Keep for human review")).toBeInTheDocument();
@@ -97,7 +97,7 @@ it("reviews proposals separately and activates only their displayed snapshot", a
   fireEvent.click(screen.getByRole("button", { name: "Proposals" }));
   fireEvent.click(screen.getByRole("button", { name: "Preview items" }));
   const apply = await screen.findByRole("button", {
-    name: "Apply 1 reviewed changes",
+    name: "Apply 1 reviewed change",
   });
   expect(previews).toEqual([{ limit: 25, source: "approval" }]);
   expect(screen.getByText("Withdraw automatic proposal")).toBeInTheDocument();
@@ -106,7 +106,7 @@ it("reviews proposals separately and activates only their displayed snapshot", a
   ).toBeInTheDocument();
   expect(
     screen.getByText(
-      "Archive 0 reminders; withdraw 1 proposals. Keep 0 for review and 0 as current work.",
+      "Reminders to archive: 0. Proposals to withdraw: 1. Keep for review: 0; keep as current work: 0.",
     ),
   ).toBeInTheDocument();
   expect(writes).toEqual([]);

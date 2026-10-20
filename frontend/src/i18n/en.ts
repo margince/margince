@@ -3,6 +3,12 @@
 // use {name} and are filled by t(key, params).
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
+  "homeRepair.reason.engagement":
+    "An active contract or delivery contradicts ending the whole account.",
+  "homeRepair.reason.workstream":
+    "The evidence ends one engagement, not the whole account.",
+  "homeRepair.reason.evidenceChanged":
+    "Newer verified evidence replaces the context of this proposal.",
   "homeRepair.withdraw": "Withdraw automatic proposal",
   "homeRepair.reason.duplicate":
     "An identical pending proposal remains available.",
@@ -29,7 +35,7 @@ export const en = {
     "Historical source without a current deadline.",
   "homeRepair.reason.baseline":
     "The source predates the mailbox history baseline.",
-  "homeRepair.reason.cancelled": "The source meeting was cancelled.",
+  "homeRepair.reason.cancelled": "The source meeting was canceled.",
   "homeRepair.reason.requestAge":
     "The original request is past the waiting horizon; archiving does not mark it answered.",
   "homeRepair.reason.current":
@@ -40,8 +46,9 @@ export const en = {
   "homeRepair.preview": "Preview items",
   "homeRepair.next": "Review next page",
   "homeRepair.summary":
-    "Archive {archive} reminders; withdraw {withdraw} proposals. Keep {review} for review and {keep} as current work.",
-  "homeRepair.apply": "Apply {count} reviewed changes",
+    "Reminders to archive: {archive}. Proposals to withdraw: {withdraw}. Keep for review: {review}; keep as current work: {keep}.",
+  "homeRepair.apply_one": "Apply {count} reviewed change",
+  "homeRepair.apply_other": "Apply {count} reviewed changes",
   "homeRepair.started":
     "The reviewed run is queued. Its progress appears above.",
 

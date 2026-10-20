@@ -5,6 +5,12 @@ import type { MessageKey } from "./en";
 // build without typechecking still fails loudly. Every value is translated from
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de = {
+  "homeRepair.reason.engagement":
+    "Ein aktiver Vertrag oder eine laufende Leistung spricht gegen das Ende der gesamten Kundenbeziehung.",
+  "homeRepair.reason.workstream":
+    "Die Belege betreffen das Ende eines einzelnen Auftrags, nicht der gesamten Kundenbeziehung.",
+  "homeRepair.reason.evidenceChanged":
+    "Neuere geprüfte Belege ersetzen den Kontext dieses Vorschlags.",
   "homeRepair.withdraw": "Automatischen Vorschlag zurückziehen",
   "homeRepair.reason.duplicate":
     "Ein identischer offener Vorschlag bleibt verfügbar.",
@@ -41,8 +47,9 @@ export const de = {
   "homeRepair.preview": "Einträge prüfen",
   "homeRepair.next": "Nächste Seite prüfen",
   "homeRepair.summary":
-    "{archive} Erinnerungen archivieren; {withdraw} Vorschläge zurückziehen. {review} zur Prüfung und {keep} als aktuelle Arbeit behalten.",
-  "homeRepair.apply": "{count} geprüfte Änderungen anwenden",
+    "Erinnerungen zum Archivieren: {archive}. Zurückzuziehende Vorschläge: {withdraw}. Zur Prüfung behalten: {review}; als aktuelle Arbeit behalten: {keep}.",
+  "homeRepair.apply_one": "{count} geprüfte Änderung anwenden",
+  "homeRepair.apply_other": "{count} geprüfte Änderungen anwenden",
   "homeRepair.started":
     "Der geprüfte Lauf ist vorgemerkt. Der Fortschritt erscheint oben.",
 

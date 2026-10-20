@@ -20,11 +20,13 @@ import (
 
 // RepairProposal keeps the reviewed snapshot separate from its authorized payload.
 type RepairProposal struct {
-	ID       ids.ApprovalID
-	Kind     string
-	Change   json.RawMessage
-	Snapshot string
-	Pristine bool
+	ID         ids.ApprovalID
+	Kind       string
+	TargetType *string
+	TargetID   *ids.UUID
+	Change     json.RawMessage
+	Snapshot   string
+	Pristine   bool
 }
 
 // RepairPageTx uses the inbox's decision authority before returning any payload.
@@ -93,7 +95,7 @@ func repairProposal(ctx context.Context, tx pgx.Tx, candidate row) (RepairPropos
 		return RepairProposal{}, err
 	}
 	sum := sha256.Sum256(encoded)
-	item := RepairProposal{ID: candidate.ID, Kind: candidate.Kind, Change: candidate.ProposedChange, Snapshot: hex.EncodeToString(sum[:])}
+	item := RepairProposal{ID: candidate.ID, Kind: candidate.Kind, TargetType: candidate.TargetType, TargetID: candidate.TargetID, Change: candidate.ProposedChange, Snapshot: hex.EncodeToString(sum[:])}
 	err = tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM audit_log WHERE entity_type='approval' AND entity_id=@id AND action='create' AND actor_type IN ('system','agent'))
  AND NOT EXISTS (SELECT 1 FROM audit_log WHERE entity_type='approval' AND entity_id=@id AND actor_type='human')`, pgx.NamedArgs{"id": candidate.ID}).Scan(&item.Pristine)
 	return item, err
