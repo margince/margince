@@ -55,11 +55,12 @@ The images start through an entrypoint that runs migrations first, so call the a
 directly:
 
 ```bash
-docker run --rm --entrypoint margince-api -e MARGINCE_DSN -v "$PWD/config:/app/config" \
+docker run --rm --entrypoint margince-api -e MARGINCE_DSN=postgres://localhost/check \
+  -v "$PWD/config:/app/config" \
   margince-api:local --config config/margince.yaml --check-config
 ```
 
-It exits 1 and lists every setting that is not valid. Read
+It exits 0 when every setting is valid. It exits 1 and lists every setting that is not valid. Read
 [check mode](../reference/configuration.md#where-a-value-comes-from) for what it prints.
 
 ## See what Margince read
