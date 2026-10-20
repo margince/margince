@@ -48,13 +48,8 @@ export function BriefScreen() {
   const [params, setParams] = useUrlParams();
   const address = addressFrom(params);
   const day = briefDay(query.data?.pages);
-  // THE QUEUE THE BUTTON OPENS, which is not always the reader's own. The
-  // drawer keeps its scope and its named owner in the address and both survive
-  // it closing, so a reader who switched it to the team and shut it had a
-  // button counting their own day over a list of somebody else's. The same
-  // query key the drawer itself uses, so the two share one read and cannot
-  // report two totals — and on the ordinary day, where neither is set, it IS
-  // `own` and costs nothing.
+  // The queue the button opens, which keeps the drawer's scope and owner from
+  // the address. It shares the drawer's query key, so the two report one total.
   const owner = params.get("owner") ?? "";
   const queued = useWorklist(
     drawerScope(params),
@@ -200,11 +195,8 @@ function PersonalMorning({
     : query.isError && !day
       ? "failed"
       : "ready";
-  // A task and a meeting are both ACTIVITIES, and the door on either row
-  // opens the activity's own read: for a meeting, its subject and the
-  // calendar's excerpt of who was there and what it was about. The pane
-  // beside the queue draws only a contact, so a meeting sent there opened a
-  // frame with nothing in it.
+  // A task or a meeting opens the activity's own read. The pane beside the
+  // queue draws only a contact, so a meeting there would show nothing.
   const opensActivity =
     context?.source === "task" || context?.source === "meeting_outcome";
   return (
