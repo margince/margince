@@ -3,6 +3,10 @@ import { type ComponentProps, useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { EntityRef } from "../../components/entityref";
+import {
+  type ReviewActions,
+  useReviewActions,
+} from "../../components/reviewactions";
 import { Button, Modal } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import { QueryGate } from "../../design-system/querystates";
@@ -15,11 +19,6 @@ import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
-import { NewDealAction } from "../companies/companyactions";
-import { CompanyDealPicker } from "../deals/companydealpicker";
-import { DealSuggestionCard } from "../deals/dealsuggestion";
-import { useDealSuggestions } from "../deals/dealsuggestions.queries";
-import { OpenActivityDrawer } from "../voice-knowledge/activitydrawer";
 
 type InputCheck = components["schemas"]["InputCheck"];
 type Props = Omit<ComponentProps<typeof ResolveSheet>, "onSubmit"> & {
@@ -27,12 +26,30 @@ type Props = Omit<ComponentProps<typeof ResolveSheet>, "onSubmit"> & {
   onSubmit: (answer: ResolveAnswer, dealId?: string) => void;
 };
 
-export function InputCheckAnswerSheet({
+export function InputCheckAnswerSheet(props: Readonly<Props>) {
+  const actions = useReviewActions();
+  if (props.check?.type !== "unlinked_signal") {
+    return <ResolveSheet {...props} />;
+  }
+  if (!actions) {
+    throw new Error("The app shell must supply review actions");
+  }
+  return <SignalCheckAnswerSheet {...props} actions={actions} />;
+}
+
+function SignalCheckAnswerSheet({
+  actions,
   check,
   onSubmit,
   labels,
   ...props
-}: Readonly<Props>) {
+}: Readonly<Props & { actions: ReviewActions }>) {
+  const {
+    NewDealAction,
+    CompanyDealPicker,
+    CoveredDealSuggestion,
+    OpenActivityDrawer,
+  } = actions;
   const t = useT();
   const queryClient = useQueryClient();
   const headingId = useId();
@@ -46,12 +63,6 @@ export function InputCheckAnswerSheet({
   const isSignal = check?.type === "unlinked_signal";
   const companyId = check?.claim?.company_id;
   const suggestionId = check?.observed?.suggestion_id;
-  const suggestions = useDealSuggestions(
-    { company_id: typeof companyId === "string" ? companyId : undefined },
-    props.open &&
-      typeof suggestionId === "string" &&
-      typeof companyId === "string",
-  );
   const occurredAt = check?.observed?.occurred_at;
   const signalId = isSignal ? check?.subject_id : undefined;
   const signal = useQuery({
@@ -93,16 +104,11 @@ export function InputCheckAnswerSheet({
         <Heading id={headingId} size="large" className="modal-title">
           {labels.title}
         </Heading>
-        <QueryGate query={suggestions} pendingLabel={t("stat.evidence")}>
-          {(found) => {
-            const suggestion = found.find((item) => item.id === suggestionId);
-            return suggestion ? (
-              <DealSuggestionCard suggestion={suggestion} />
-            ) : (
-              <p>{t("dealSuggestion.changed")}</p>
-            );
-          }}
-        </QueryGate>
+        <CoveredDealSuggestion
+          companyId={typeof companyId === "string" ? companyId : undefined}
+          suggestionId={suggestionId}
+          open={props.open}
+        />
         <div className="actions">
           <Button onClick={props.onClose}>{labels.cancel}</Button>
         </div>

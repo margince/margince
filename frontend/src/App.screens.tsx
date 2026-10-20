@@ -200,7 +200,7 @@ export const ConfirmDetailsScreen = lazy(
 
 export const AnalyticsScreen = lazy(
   routed(() =>
-    import("./features/analytics/analytics").then((m) => ({
+    import("./app/analytics").then((m) => ({
       default: m.AnalyticsScreen,
     })),
   ),
