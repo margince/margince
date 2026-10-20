@@ -151,7 +151,7 @@ starts the shipped binaries as child processes and imports none of them. It is
 a Go module that imports nothing outside Go itself, kept outside `go.work`. So
 it neither sees nor changes the dependencies of the backend.
 
-1. Reads `margince.env`; writes `margince.yaml` on first run.
+1. Reads `margince.env` for its own port; writes `margince.yaml` on first run.
 2. Sets up `data/pg` if it is missing, then starts Postgres.
    On macOS it uses a unix socket inside `data/sockets` with
    `listen_addresses=''`, so there is no TCP port open at all.
@@ -276,14 +276,14 @@ writes it with every supported setting explained and commented out. So it also
 serves as the reference for what can be turned on. The full field list is in
 [reference/configuration.md](../reference/configuration.md).
 
-Its content becomes the environment of `api` and `worker`. That is the same
-settings surface a server sets through its environment. Here a file supplies
-it, because a desktop installation has no hosting system to set it. These rules
-hold:
+The launcher passes it to `api` and `worker` as `--env-file`, and they read it
+themselves, below the environment in their order. So a setting in it shows
+`margince.env` as its source, and the app locks its control. The launcher reads
+the file too, for its own port and to set no default over a value the file
+holds. These rules hold:
 
-- `MARGINCE_ENV` is `dev` by default, and `margince.env` may change it. This is
-  the one place the desktop shape and the server shape disagree, and the reason
-  is the license. A serving role boots on a license or it does not boot, and
+- `MARGINCE_ENV` is `dev` by default. This is the one place the desktop shape
+  and the server shape disagree, and the reason is the license. A serving role boots on a license or it does not boot, and
   `MARGINCE_ENV` fails closed. So an installation that names nothing is
   production, and it must hold a license nobody gave it. Pinned to production,
   the bundle could not start at all.
@@ -296,10 +296,11 @@ hold:
   test authority. This installation has neither.
 
   It is a default, not a decision. An operator who has a license puts
-  `MARGINCE_LICENSE` and `MARGINCE_ENV=production` in `margince.env`, and the
-  installation must then meet both. The database connection strings, on the
-  other hand, are still added after the settings of the user, and nothing can
-  take their place.
+  `MARGINCE_LICENSE` in `margince.env` and starts the launcher with
+  `MARGINCE_ENV=production` in its environment. The roles take the posture only
+  from the environment, so `MARGINCE_ENV` in `margince.env` stops their start.
+  The database connection strings are in the environment the launcher gives
+  each role, so nothing in `margince.env` can take their place.
 - A wrong line refuses the start, and names the file and the line. If a setting
   with a typing error were skipped silently, a user would think a feature does
   not work.

@@ -2,29 +2,40 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Button } from "../../design-system/atoms";
+import { useT } from "../../i18n";
 
-/**
- * The row's name at both densities. A link where its subject has a page, a
- * press that opens the subject in place where it has none, else plain text.
- */
 export function RowName({
   title,
   href,
   open,
-}: Readonly<{ title: string; href?: string; open?: () => void }>) {
-  if (href) {
-    return (
-      <a className="entity-link" href={href}>
-        {title}
-      </a>
-    );
-  }
-  if (open) {
-    return (
-      <Button variant="link" aria-haspopup="dialog" onClick={open}>
-        {title}
-      </Button>
-    );
-  }
-  return <>{title}</>;
+  unavailable,
+}: Readonly<{
+  title: string;
+  href?: string;
+  open?: () => void;
+  unavailable?: boolean;
+}>) {
+  const t = useT();
+  const name = open ? (
+    <Button variant="link" aria-haspopup="dialog" onClick={open}>
+      {title}
+    </Button>
+  ) : href ? (
+    <a className="entity-link" href={href}>
+      {title}
+    </a>
+  ) : (
+    <span>{title}</span>
+  );
+  return (
+    <>
+      {name}
+      {unavailable && (
+        <>
+          {" "}
+          · <span className="t-caption">{t("worklist.sourceUnavailable")}</span>
+        </>
+      )}
+    </>
+  );
 }

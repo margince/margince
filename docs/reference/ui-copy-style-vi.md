@@ -231,7 +231,7 @@ the reviewer in the sense its row gives.
 | Snooze | tạm hoãn (Not now / set aside = gác lại, Để sau) | |
 | A classifier's result | kết quả, lần kiểm tra | `phán quyết`, `verdict` |
 | Capture intake step | kiểm tra đầu vào | `admission check` |
-| Ownership of a deal | phụ trách (label Phụ trách; the human người phụ trách; Assign owner = Giao người phụ trách) | người sở hữu for ownership |
+| The owner of a record; a responsibility role on it | chịu trách nhiệm for the owner (label Người chịu trách nhiệm; Assign owner = Giao người chịu trách nhiệm); phụ trách for a role | người sở hữu, chủ sở hữu for ownership; phụ trách for the owner |
 | Tabs of a record | the tab labels themselves | `phần của bản ghi` |
 | A pointer to a Settings page | Cài đặt, mục followed by the tab or group label as the screen shows it | an arrow between Cài đặt and the label; lowercase cài đặt before the label |
 | The running Margince system | bản cài đặt | |

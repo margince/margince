@@ -380,6 +380,8 @@ func (r *advanceDealResolver) Subject(ctx context.Context, cmd AdvanceDealComman
 		TargetType:    string(datasource.EntityDeal),
 		TargetID:      cmd.DealID,
 		TargetVersion: &rec.Version,
+		CoTargetType:  "stage",
+		CoTargetID:    cmd.ToStageID,
 		Summary:       dealMoveSummary(ctx, summaryIn(ctx, r.language), r.stages, rec, semantic),
 	}, nil
 }

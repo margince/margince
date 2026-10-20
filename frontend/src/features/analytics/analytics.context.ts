@@ -86,6 +86,16 @@ export function scopeQuery(scope: AnalyticsScope): {
   return { scope_kind: scope.kind, scope_id: scope.id };
 }
 
+/** The same scope as a prebuilt report's body names it. */
+export function reportScope(
+  scope: AnalyticsScope,
+): components["schemas"]["ReportScope"] | undefined {
+  const query = scopeQuery(scope);
+  return query.scope_kind
+    ? { kind: query.scope_kind, id: query.scope_id }
+    : undefined;
+}
+
 /**
  * The scope a WRITE names, or null when the selection cannot be written to.
  *

@@ -15,18 +15,19 @@ import (
 // What the timeline may be narrowed by on the record seam: the contract's
 // listActivities parameters, bound to the fields the HTTP door fills.
 const (
-	filterKind            = "kind"
-	filterChannelProvider = "channel_provider"
-	filterEntityType      = "entity_type"
-	filterEntityID        = "entity_id"
-	filterAssigneeID      = "assignee_id"
-	filterProjectID       = "project_id"
-	filterThreadKey       = "thread_key"
-	filterOccurredAfter   = "occurred_after"
-	filterOccurredBefore  = "occurred_before"
-	filterWaitingReply    = "waiting_reply"
-	filterIncludeArchived = "include_archived"
-	filterSort            = "sort"
+	filterKind             = "kind"
+	filterChannelProvider  = "channel_provider"
+	filterEntityType       = "entity_type"
+	filterEntityID         = "entity_id"
+	filterAssigneeID       = "assignee_id"
+	filterProjectID        = "project_id"
+	filterThreadKey        = "thread_key"
+	filterSourceActivityID = "source_activity_id"
+	filterOccurredAfter    = "occurred_after"
+	filterOccurredBefore   = "occurred_before"
+	filterWaitingReply     = "waiting_reply"
+	filterIncludeArchived  = "include_archived"
+	filterSort             = "sort"
 )
 
 var activityListFilters = storekit.FilterSet[ListActivitiesInput]{
@@ -43,14 +44,15 @@ var activityListFilters = storekit.FilterSet[ListActivitiesInput]{
 		in.EntityID = &id
 		return nil
 	},
-	filterAssigneeID:      storekit.FilterID(func(in *ListActivitiesInput, id *ids.UserID) { in.AssigneeID = id }),
-	filterProjectID:       storekit.FilterID(func(in *ListActivitiesInput, id *ids.ProjectID) { in.WithinProjectID = id }),
-	filterThreadKey:       storekit.FilterWord(func(in *ListActivitiesInput, v *string) { in.ThreadKey = v }),
-	filterOccurredAfter:   instantFilter(func(in *ListActivitiesInput, at *time.Time) { in.OccurredAfter = at }),
-	filterOccurredBefore:  instantFilter(func(in *ListActivitiesInput, at *time.Time) { in.OccurredBefore = at }),
-	filterWaitingReply:    storekit.FilterFlag(func(in *ListActivitiesInput, v *bool) { in.WaitingReply = *v }),
-	filterIncludeArchived: storekit.FilterFlag(func(in *ListActivitiesInput, v *bool) { in.IncludeArchived = *v }),
-	filterSort:            storekit.FilterWord(func(in *ListActivitiesInput, v *string) { in.Sort = v }),
+	filterAssigneeID:       storekit.FilterID(func(in *ListActivitiesInput, id *ids.UserID) { in.AssigneeID = id }),
+	filterProjectID:        storekit.FilterID(func(in *ListActivitiesInput, id *ids.ProjectID) { in.WithinProjectID = id }),
+	filterSourceActivityID: storekit.FilterID(func(in *ListActivitiesInput, id *ids.ActivityID) { in.SourceActivityID = id }),
+	filterThreadKey:        storekit.FilterWord(func(in *ListActivitiesInput, v *string) { in.ThreadKey = v }),
+	filterOccurredAfter:    instantFilter(func(in *ListActivitiesInput, at *time.Time) { in.OccurredAfter = at }),
+	filterOccurredBefore:   instantFilter(func(in *ListActivitiesInput, at *time.Time) { in.OccurredBefore = at }),
+	filterWaitingReply:     storekit.FilterFlag(func(in *ListActivitiesInput, v *bool) { in.WaitingReply = *v }),
+	filterIncludeArchived:  storekit.FilterFlag(func(in *ListActivitiesInput, v *bool) { in.IncludeArchived = *v }),
+	filterSort:             storekit.FilterWord(func(in *ListActivitiesInput, v *string) { in.Sort = v }),
 }
 
 // instantFilter binds an RFC 3339 instant, the form the contract's date-time

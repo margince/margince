@@ -67,6 +67,7 @@ export function LandingCard({
         value={money(landing.amount_minor)}
         detail={detail}
       />
+
       {/* Its OWN heading, not the card's: the caveat sat under a repeat of
           `forecast.landing` and read as a second copy of the figure's label
           rather than as a remark about it. */}
@@ -80,6 +81,31 @@ export function LandingCard({
         </Callout>
       )}
     </>
+  );
+}
+
+// Beside a manager's call, what the deal records alone project. The call
+// replaced it, so the two stand apart and are never added. Its own slot of the
+// strip, because the strip lays out one column per child.
+export function RecordsLandingCard({
+  systemMinor,
+  currency,
+  locale,
+}: Readonly<{ systemMinor: number; currency: string; locale: Locale }>) {
+  const t = useT();
+  return (
+    <StatCard
+      narrow="row"
+      label={t("forecast.landingRecords")}
+      value={formatMoneyOrWord(
+        systemMinor,
+        currency,
+        locale,
+        t("format.notForecast"),
+        formatMoneyCompact,
+      )}
+      detail={t("forecast.landingRecordsDetail")}
+    />
   );
 }
 

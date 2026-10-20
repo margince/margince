@@ -201,11 +201,10 @@ describe("the day's call, and which record it is read from", () => {
     consent: {},
   };
 
-  // What is owed lives in the panel's FOOTER now (nextCommitmentLine,
-  // company360.tsx), not as a context tile — the count and the subject stay
-  // out of it for the same reason the retired tile did: the next-steps card
-  // renders the subject with a due-date edit and a complete button, and a
-  // second flat copy here would be the weaker of the two.
+  // What is owed lives in the panel's footer (nextCommitmentLine, in
+  // company360.suggestions.tsx), not in a context tile. The subject stays out
+  // of it. The next-steps card renders the subject with a due-date edit and a
+  // complete button. A flat copy here would be the weaker of the two.
   it("says how many are overdue in the footer, never the subject", () => {
     show({
       ...BASE,
@@ -240,9 +239,9 @@ describe("the day's call, and which record it is read from", () => {
 
   // The route rule: strongest CONTACT, then that contact's strongest ROUTE.
 
-  // The largest-open-deal reading moved to the Commercial panel
-  // (companies.tsx) alongside the full open-deals list, so this file no
-  // longer picks or ranks a deal of its own.
+  // The largest-open-deal reading belongs to the Commercial panel
+  // (companies.tabs.tsx), beside the full open-deals list, so this file picks
+  // and ranks no deal of its own.
 
   // Whose move it is used to be the strip's own tile ("Whose move"); it moved
   // here because it is a DATED reading, and the strip now carries only the

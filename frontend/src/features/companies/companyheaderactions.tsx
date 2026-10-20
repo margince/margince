@@ -4,6 +4,7 @@
 import { CalendarPlus, CheckSquare, FileText } from "lucide-react";
 import { useId, useRef } from "react";
 import type { components } from "../../api/schema";
+import { ExtensionEntries } from "../../components/extensionentries";
 import { Button } from "../../design-system/atoms";
 import { ListPopover } from "../../design-system/listpopover";
 import { RecordRefusal } from "../../design-system/recordview";
@@ -11,10 +12,10 @@ import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
-import { LogActivityAction } from "../../screens/logactivity";
-import { searchCompanyContacts } from "../../screens/meetingattendees";
-import { EmailVerb } from "../../screens/recordemail";
 import { ComposeModal } from "../mail/compose";
+import { LogActivityAction } from "../records/logactivity";
+import { searchCompanyContacts } from "../records/meetingattendees";
+import { EmailVerb } from "../records/recordemail";
 
 // The account header's verbs, in the shape every record page draws them:
 // writing first, then a hairline, then the pair that record what already
@@ -122,6 +123,10 @@ export function CompanyHeaderActions({
           {t("scheduling.bookRefused")}
         </RecordRefusal>
       )}
+      <ExtensionEntries
+        slot="record_header.company"
+        record={{ type: "company", id: company.id }}
+      />
       {drawer && (
         <LogActivityAction
           entityType="company"

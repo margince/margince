@@ -201,6 +201,7 @@ func activityUpdateInput(req crmcontracts.UpdateActivityRequest, ifVersion *int6
 		// mismatch with the same MeetingStatusKindError create raises.
 		MeetingStatus: meetingStatusArg(req.MeetingStatus),
 		IfVersion:     ifVersion,
+		CustomFields:  req.AdditionalProperties,
 	}
 }
 
@@ -348,6 +349,10 @@ func logActivityInput(req crmcontracts.CreateActivityRequest, adm provenanceAdmi
 	if err := importedProvenanceFrom(req, &in); err != nil {
 		return LogActivityInput{}, err
 	}
+	if err := refuseNonCustomKeys(req.AdditionalProperties); err != nil {
+		return LogActivityInput{}, err
+	}
+	in.CustomFields = req.AdditionalProperties
 	// The task create's own rule, held on this door too: a task is its subject.
 	// Last, so a refusal of a field the caller sent wins over a missing subject.
 	if in.Kind == string(crmcontracts.CreateActivityRequestKindCreateActivityRequestKindTask) {
@@ -373,6 +378,9 @@ func logActivityInput(req crmcontracts.CreateActivityRequest, adm provenanceAdmi
 // duration rules are the pieces of CheckKindFields, asked where they were.
 // Every branch here means "the caller said nothing, so leave it alone".
 func optionalFieldsFrom(req crmcontracts.CreateActivityRequest, in *LogActivityInput) error {
+	if err := followUpFieldsFrom(req, in); err != nil {
+		return err
+	}
 	if req.RequestActivityId != nil {
 		if string(req.Kind) != string(crmcontracts.ActivityKindTask) {
 			return &RequestAcceptanceFieldError{Field: "request_activity_id", Message: "Only a task can accept a request."}

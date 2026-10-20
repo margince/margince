@@ -50,7 +50,10 @@ const LISTED = {
   ],
 };
 
-function backendFor(allow: GrantSpec, listed: typeof LISTED = LISTED) {
+function backendFor(
+  allow: GrantSpec,
+  listed: typeof LISTED & { locks?: unknown } = LISTED,
+) {
   const puts: Array<{ url: string; body: unknown }> = [];
   const deletes: string[] = [];
   const fetchMock = vi.fn(
@@ -448,6 +451,46 @@ describe("AiProviderKeysCard", () => {
       within(absent).getByRole("button", { name: /^add$/i }),
     ).toBeDisabled();
     expect(within(absent).getByText(/^not set$/i)).toBeTruthy();
+  });
+
+  it("refuses every write to a key the environment sets, and shows no value", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(KEY_EDITOR, {
+        ...LISTED,
+        locks: [
+          {
+            key: "ai.provider_keys_gemini",
+            origin: { source: "env", name: "GEMINI_API_KEY" },
+          },
+        ],
+      }).fetchMock,
+    );
+    render(<AiProviderKeysCard />);
+
+    const user = userEvent.setup();
+    const held = await openSheet(user, "gemini");
+    expect(
+      within(held).getByRole("button", { name: /^replace$/i }),
+    ).toBeDisabled();
+    expect(
+      within(held).getByText(
+        "Set by GEMINI_API_KEY (environment). Change it there.",
+      ),
+    ).toBeTruthy();
+    // No paste field, no Save, no Remove: a boot secret refuses even its own
+    // value, and nothing on screen holds or hints at it.
+    expect(held.querySelector("input, textarea")).toBeNull();
+    expect(within(held).queryByRole("button", { name: /^save$/i })).toBeNull();
+    expect(within(held).queryByRole("button", { name: /remove/i })).toBeNull();
+    expect(held.textContent).not.toMatch(/\*{3,}|•{3,}/);
+    await user.keyboard("{Escape}");
+
+    // The other vendor's key stays the administrator's to add.
+    const absent = await openSheet(user, "openai");
+    expect(
+      within(absent).getByRole("button", { name: /^add$/i }),
+    ).toBeEnabled();
   });
 
   // A credential must not survive the fold. Closing the editor DROPS what was

@@ -22,6 +22,7 @@ import type { WorklistReason } from "./worklist.queries";
 export const KNOWN_REASONS = {
   pinned: true,
   buyer_wrote_last: true,
+  non_buyer_request: true,
   waiting_days: true,
   overdue: true,
   due_today: true,

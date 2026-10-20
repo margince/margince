@@ -16,11 +16,11 @@ import { forReader } from "../../format/collate";
 import { formatNumber } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { incompleteGraph } from "../../screens/record360";
 import {
   type StrengthBucket,
   useCompanyGraph,
 } from "../companies/companygraph";
+import { incompleteGraph } from "../records/record360";
 
 // Comparing a chosen few colleagues against the account's contacts.
 //

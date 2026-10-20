@@ -78,6 +78,7 @@ func groundedReply(t *testing.T, line int, confidence float64) string {
 	raw, err := json.Marshal(map[string]any{"proposals": []map[string]any{{
 		"summary": "Send the revised pricing", "owner": "Priya",
 		"source_lines": []int{line}, "confidence": confidence,
+		"commitment": &commitmentMeaning{State: "open", DeadlinePrecision: "none"},
 	}}})
 	if err != nil {
 		t.Fatalf("building the model reply: %v", err)
@@ -97,7 +98,7 @@ func setupTranscript(t *testing.T) *transcriptEnv {
 	t.Helper()
 	e := &transcriptEnv{Env: integration.Setup(t), owner: integration.OwnerConn(t)}
 	e.ctx = e.As(e.Rep1, []ids.UUID{e.Team1}, transcriptPerms)
-	e.svc = newApprovalsService(e.DB())
+	e.svc = NewApprovalsService(e.DB())
 	e.svc.WithEffect(CommitmentTaskKind, commitmentTaskEffect(e.svc, e.Activities, e.Contacts))
 	e.svc.WithPrecheck(CommitmentTaskKind, commitmentTaskPrecheck(e.Activities))
 
@@ -119,12 +120,17 @@ func setupTranscript(t *testing.T) *transcriptEnv {
 // read drives one whole reading the way the worker does.
 func (e *transcriptEnv) read(t *testing.T, brain completer) activities.TranscriptRead {
 	t.Helper()
+	return e.readAt(t, brain, time.Now)
+}
+
+func (e *transcriptEnv) readAt(t *testing.T, brain completer, now func() time.Time) activities.TranscriptRead {
+	t.Helper()
 	started, _, err := e.Activities.StartTranscriptReadQueued(e.ctx, e.activity, "human:"+e.Rep1.String(), nil)
 	if err != nil {
 		t.Fatalf("starting the reading: %v", err)
 	}
 	quiet := slog.New(slog.NewTextHandler(os.Stderr, nil))
-	proposer := NewTranscriptProposer(e.Pool, brain, e.svc, time.Now, quiet)
+	proposer := NewTranscriptProposer(e.Pool, brain, e.svc, now, quiet)
 	// The worker's own principal, as production binds it: the reader acting
 	// for the rep who asked. A test reading as the rep would pass gates the
 	// worker never faces and fail ones it always passes.
@@ -312,6 +318,7 @@ func TestAReadingThatCitesLinesAcrossAGapStillStagesItsProposal(t *testing.T) {
 	raw, err := json.Marshal(map[string]any{"proposals": []map[string]any{{
 		"summary": "Send the revised pricing", "owner": "Priya",
 		"source_lines": []int{3, 4, 1}, "confidence": 0.9,
+		"commitment": openCommitmentMeaning("", ""),
 	}}})
 	if err != nil {
 		t.Fatalf("building the model reply: %v", err)
@@ -590,9 +597,14 @@ func TestARepWhoMayNotAddToTheTimelineCannotStartAReading(t *testing.T) {
 // datedReply is groundedReply with the deadline the transcript stated.
 func datedReply(t *testing.T, line int, due string) string {
 	t.Helper()
+	meaning := &commitmentMeaning{State: "open", DeadlinePrecision: "none"}
+	if due != "" {
+		meaning.DeadlinePrecision, meaning.DeadlineQuote = "day", "Friday"
+	}
 	raw, err := json.Marshal(map[string]any{"proposals": []map[string]any{{
 		"summary": "Send the revised pricing", "owner": "Priya",
 		"due_date": due, "source_lines": []int{line}, "confidence": 0.9,
+		"commitment": meaning,
 	}}})
 	if err != nil {
 		t.Fatalf("building the model reply: %v", err)
@@ -819,6 +831,7 @@ func attributedReply(t *testing.T, owner, promiser string, confidence float64) s
 	raw, err := json.Marshal(map[string]any{"proposals": []map[string]any{{
 		"summary": "Send the revised pricing", "owner": owner, "promiser_ref": promiser,
 		"due_date": "", "source_lines": []int{3}, "confidence": confidence,
+		"commitment": &commitmentMeaning{State: "open", DeadlinePrecision: "none"},
 	}}})
 	if err != nil {
 		t.Fatalf("building the model reply: %v", err)

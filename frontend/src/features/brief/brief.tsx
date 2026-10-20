@@ -15,9 +15,11 @@ import { useLocale, useT } from "../../i18n";
 import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import { useUrlParams } from "../../lib/urlstate";
+import { pillCount } from "../../lib/worklistcounts";
 import { LinkedApprovalDrawer } from "../automations/approvaldrawer";
 import { MagicPanel } from "../sign-in/magic";
-import { TaskDetailModal, useTaskUpdate } from "../worklist/taskactions";
+import { useTaskUpdate } from "../worklist/taskactions";
+import { TaskDetailModal } from "../worklist/taskdetailmodal";
 import type { TeamWeekReach } from "../worklist/teamweekly.queries";
 import { drawerScope } from "../worklist/worklist.address";
 import { WorklistPane } from "../worklist/worklist.pane";
@@ -129,7 +131,7 @@ export function BriefScreen() {
             prominent
             controlled={{
               open: params.get("queue") === "1",
-              count: queuedDay?.summary.total,
+              count: queuedDay ? pillCount(queuedDay, "all") : undefined,
               labels: {
                 show: t("brief.queue.show"),
                 hide: t("brief.queue.hide"),

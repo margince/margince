@@ -6,5 +6,5 @@ package briefs
 import "github.com/margince/margince/backend/internal/platform/mailcopy"
 
 func MailSubject(run BriefRun, words mailcopy.Copy) string {
-	return words.MorningSubject + run.LocalDay.Format(mailcopy.DateLayout)
+	return words.MorningSubject + words.Date(run.LocalDay)
 }

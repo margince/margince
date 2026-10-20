@@ -4,7 +4,7 @@ import { IdentityLine } from "../../design-system/identityline";
 import { useTooltip } from "../../design-system/tooltip";
 import { useLocale, useT } from "../../i18n";
 import { revealOnceMounted } from "../../lib/reveal";
-import { RecordAccess } from "../../screens/recordaccess";
+import { RecordAccess } from "../records/recordaccess";
 import { navigateKeepingReturn } from "../worklist/worklist.return";
 import { BRIEF_ANCHOR } from "./contactoverview";
 import type { Contact360 } from "./contactpage";

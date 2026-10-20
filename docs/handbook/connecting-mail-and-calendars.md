@@ -181,6 +181,17 @@ To import your old emails into Margince, open **Settings → Connections** and c
 **Stop** keeps what was captured so far. The menu offers **Import old emails** only for a mailbox that can import; IMAP mailboxes cannot. The window can only be widened later.
 Also called: backfill, import past mail, sync old emails, email history.
 
+### How do I stop old mail from suggesting commitments?
+To keep old mail from turning into suggested commitments, set **Suggest commitments from** on the mailbox. It is in the mailbox's settings under **Settings → Connections**, and in **Import old emails**.
+1. Open **Settings**, then **Connections**, and open the mailbox.
+2. Pick a date in **Suggest commitments from** and press **Save date**.
+Mail sent before that day, in your own time zone, suggests no commitments for you. Mail sent on that day still does. The mail stays captured and you can still search it. A promise it holds is listed under **Commitment review** on the email.
+
+The date applies only to this mailbox and only to your own commitments. A colleague who has the same email in their mailbox still gets their suggestions. Meeting transcripts stay as they are.
+
+Changing the date or pressing **Clear date** completes and deletes nothing. Tasks you already have stay as they are.
+Also called: ignore old promises, start date for suggestions.
+
 ## Importing your mail history
 
 Importing mailbox history is a one-time look back over old mail, offered when

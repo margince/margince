@@ -5,6 +5,38 @@ import type { MessageKey } from "./en";
 // build without typechecking still fails loudly. Every value is translated from
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de = {
+  "approval.preview.nameUnavailable": "Name nicht verfügbar",
+  "approval.preview.structured": "Strukturierter Wert: {value}",
+  "approval.preview.resolveConflict":
+    "Kläre die widersprüchlichen Angaben, bevor du diese Änderung freigibst.",
+  "history.field.closed_at": "Abgeschlossen am",
+  "history.field.amount_minor_base": "Betrag in Basiswährung",
+  "approval.preview.conflict": "Widersprüchlicher Kontext",
+  "approval.preview.execution": "Wird beim Anwenden festgelegt",
+  "approval.preview.effects": "Weitere Änderungen",
+  "approval.preview.correspondence":
+    "Verknüpfte Korrespondenz als Geschäftsbriefe einordnen.",
+  "approval.preview.delivery":
+    "Bei berechtigten verknüpften Projekten die Umsetzung starten.",
+  "approval.preview.minorUnits":
+    "{amount} {currency} in kleinster Währungseinheit",
+  "approval.preview.empty": "Nicht gesetzt",
+  "approval.preview.status": "Freigabekontext",
+  "approval.preview.stale":
+    "Dieser Eintrag wurde nach dem Vorschlag geändert. Fordere vor der Freigabe einen neuen Vorschlag an.",
+  "approval.preview.incomplete":
+    "Die vollständige Änderung kann nicht angezeigt werden. Fordere vor der Freigabe einen neuen Vorschlag an.",
+  "approval.preview.unavailable":
+    "Der Freigabekontext ist nicht verfügbar. Lade die Seite neu oder fordere einen neuen Vorschlag an.",
+  "approval.preview.change": "{before} → {after}",
+  "approval.preview.authorityUnknown":
+    "Der Grund für deine Freigabeberechtigung ist nicht verfügbar.",
+  "approval.preview.reviewer": "Freigabeberechtigung",
+  "approval.preview.requested":
+    "Du wurdest gebeten, diesen Vorschlag zu prüfen.",
+  "approval.preview.onBehalf":
+    "Der Agent hat diese Änderung in deinem Namen vorgeschlagen.",
+  "approval.preview.authority": "Du darfst diese Änderung vornehmen.",
   "aiWait.provider":
     "Der KI-Anbieter ist nicht erreichbar. Die Arbeit wird automatisch fortgesetzt, sobald er wieder verfügbar ist.",
   "aiWait.budget":
@@ -95,6 +127,9 @@ export const de = {
     "Der Snapshot ist geplant und wird hier angezeigt, sobald er fertig ist.",
   "reporting.createReport": "Aus Performance erstellen",
   "reporting.newCustomReport": "Neuer eigener Bericht",
+  "reporting.stageAmountDeals_one": "{amount} · {count} bepreister Deal",
+  "reporting.stageAmountDeals_other": "{amount} · {count} bepreiste Deals",
+  "reporting.stageDeals": "Bepreiste Deals",
   "reporting.observations_one": "Beobachtung: {count}",
   "reporting.observations_other": "Beobachtungen: {count}",
   "reporting.observationsUnavailable": "Stichprobengröße nicht verfügbar",
@@ -106,6 +141,7 @@ export const de = {
   "reporting.back": "Vorherige Seite",
   "reporting.status.insufficient_sample": "Zu wenige Beobachtungen",
   "reporting.status.unavailable": "Nicht verfügbar",
+  "reporting.status.failed": "Konnte nicht berechnet werden",
   "reporting.status.unsupported": "Nicht unterstützt",
   "reporting.status.not_configured": "Einrichtung erforderlich",
   "reporting.status.no_data": "Keine passenden Datensätze",
@@ -127,6 +163,29 @@ export const de = {
   "brief.weekly.numericPartial":
     "Einige Nachweise sind nicht verfügbar. Die Werte enthalten nur lesbare Datensätze mit bekanntem Wert.",
   "reporting.edit": "Bericht bearbeiten",
+  "reporting.saveDraft": "Als Entwurf speichern",
+  "reporting.draftKeepsName":
+    "Ein Entwurf behält Namen und Sichtbarkeit des Berichts. Um sie zu ändern, den Bericht direkt speichern.",
+  "reporting.draftEditNote":
+    "Gespeichert werden die Diagramme als Entwurf. Um Namen oder Sichtbarkeit zu ändern, zuerst den Entwurf veröffentlichen oder verwerfen.",
+  "reporting.draftOpen": "Entwurf {revision} ist noch nicht veröffentlicht",
+  "reporting.draftHidden":
+    "Wer den Bericht liest, sieht weiter die veröffentlichte Fassung. Den Entwurf vor dem Veröffentlichen ansehen.",
+  "reporting.draftPreviewing":
+    "Hier steht der Entwurf. Wer den Bericht liest, sieht weiter die veröffentlichte Fassung.",
+  "reporting.previewDraft": "Entwurf ansehen",
+  "reporting.showPublished": "Veröffentlichte Fassung zeigen",
+  "reporting.publishDraft": "Entwurf veröffentlichen",
+  "reporting.discardDraft": "Entwurf verwerfen",
+  "reporting.versions": "Versionen",
+  "reporting.versionN": "Version {revision}",
+  "reporting.savedBy": "Gespeichert von",
+  "reporting.revisionState.draft": "Entwurf",
+  "reporting.revisionState.published": "veröffentlicht",
+  "reporting.revisionState.earlier": "früher",
+  "reporting.restoreRevision": "Version {revision} wiederherstellen",
+  "reporting.restoreBlocked":
+    "Vor dem Wiederherstellen einer früheren Version den Entwurf veröffentlichen oder verwerfen.",
   "reporting.moveUp": "Nach oben",
   "reporting.moveDown": "Nach unten",
   "reporting.exportCsv": "CSV exportieren",
@@ -185,7 +244,45 @@ export const de = {
   "reporting.pipeline": "Pipeline",
   "reporting.allPipelines": "Alle Pipelines",
   "reporting.resultsThrough": "Ergebnisse bis {at}",
+  "reporting.writtenNoneWon": "Kein Umsatz gewonnen im Zeitraum {period}.",
+  "reporting.writtenWon": "Gewonnen im Zeitraum {period}: {amount}.",
+  "reporting.writtenTarget":
+    "Ziel für {targetPeriod}: {target}, zu {percent} % erreicht mit {actual}.",
+  "reporting.writtenLanding":
+    "Prognose für das Ende des Geschäftsquartals, Stand {date}: {amount}.",
+  "reporting.writtenOpen_one": "Offen am {date}: {amount} in {count} Deal.",
+  "reporting.writtenOpen_other": "Offen am {date}: {amount} in {count} Deals.",
+  "reporting.prepared.title": "Vorbereitete Berichte",
+  "reporting.prepared.open": "Öffnen",
+  "reporting.prepared.preview": "Vorschau",
+  "reporting.prepared.saveCopy": "Kopie speichern",
+  "reporting.prepared.weeklyTitle": "Wöchentlicher Vertriebsüberblick",
+  "reporting.prepared.weeklyPurpose":
+    "Gewonnener Umsatz der letzten Woche, offene Pipeline nach Phase und das Ergebnis je Verantwortlichem.",
+  "reporting.prepared.healthTitle": "Zustand der Pipeline",
+  "reporting.prepared.healthPurpose":
+    "Offene Deals nach Phase, wie lange sie dort liegen, und was sich bewegt hat.",
+  "reporting.prepared.ownerTitle": "Ergebnisse je Verantwortlichem",
+  "reporting.prepared.ownerPurpose":
+    "Gewonnener Umsatz dieses Quartals je Verantwortlichem, mit Zielen, wo gesetzt, und der Abschlussquote des Teams.",
+  "reporting.prepared.qualificationTitle": "Qualifizierung",
+  "reporting.prepared.qualificationPurpose":
+    "Diesen Monat qualifizierte Pipeline, zugeordnet dem Verantwortlichen zum Zeitpunkt der Qualifizierung.",
+  "reporting.prepared.personalTitle": "Eigene Ergebnisse",
+  "reporting.prepared.personalPurpose":
+    "Deine offenen Deals und Termine, unter Meine Ergebnisse.",
+  "reporting.prepared.accountsTitle": "Offene Deals je Unternehmen",
+  "reporting.prepared.accountsPurpose":
+    "Offene Deals je Unternehmen und ihr Anteil an der Pipeline, unter Pipeline.",
+  "reporting.prepared.deliveryTitle": "Umsetzung",
+  "reporting.prepared.deliveryPurpose":
+    "Projektzusagen, ruhende Projekte und Phasen, unter Umsetzung.",
   "reporting.noSalesWon": "Keine gewonnenen Abschlüsse",
+  "reporting.openPipelineAsOf": "Stand {at}",
+  "reporting.openPipelineBasis_one": "Offener Deal: {count} · Stand {at}",
+  "reporting.openPipelineBasis_other": "Offene Deals: {count} · Stand {at}",
+  "reporting.forecastLandingBasis":
+    "Dieses Geschäftsquartal, berechnet aus der Deal-Prognose",
   "reporting.this_month": "Dieser Monat",
   "reporting.last_month": "Letzter Monat",
   "reporting.last_week": "Letzte abgeschlossene Woche",
@@ -215,6 +312,14 @@ export const de = {
   "reporting.targetBasis": "Zielzeitraum",
   "reporting.month": "Monat",
   "reporting.fiscal_quarter": "Geschäftsquartal",
+  "reporting.creditCapturedOwner":
+    "Zugeordnet dem Verantwortlichen des Deals zum Zeitpunkt dieser Ausgabe",
+  "reporting.creditCurrentOwner":
+    "Zugeordnet dem aktuellen Verantwortlichen des Deals",
+  "reporting.creditQualifyingOwner":
+    "Zugeordnet dem Verantwortlichen zum Zeitpunkt der Qualifizierung",
+  "reporting.targetPeriodElapsed":
+    "{percent} % des Zielzeitraums sind vergangen",
   "reporting.closeWindow": "Erwarteter Abschlusszeitraum",
   "reporting.all_open": "Alle offenen Deals",
   "reporting.median": "Median in Tagen",
@@ -644,8 +749,10 @@ export const de = {
     "Erfasste CRM-Arbeit dieser abgeschlossenen Woche. Fehlende Datensätze belegen keine Inaktivität.",
   "brief.weekly.notRecorded": "Nicht erfasst",
   "brief.weekly.recordedFrom": "Erfasst ab {date}",
-  "brief.weekly.noRecords": "Keine Datensätze aus dieser Quelle",
-  "brief.weekly.partialFrom": "Teilwoche: gezählt ab {date}",
+  "brief.weekly.noRecords":
+    "Für diesen Teil der Auswertung liegen keine Angaben vor",
+  "brief.weekly.partialFrom":
+    "Die Auswertung umfasst nur den Zeitraum ab {date}",
   "brief.weekly.partialValue": "{value} (teilweise)",
   "brief.week.beforeHistory":
     "Für diese Woche gibt es keine Zahlen, da sie vor den ersten Datensätzen liegt.",
@@ -765,6 +872,7 @@ export const de = {
   "brief.team.plan": "Aktuellen Plan prüfen",
   "brief.approval.approve": "Freigeben",
   "brief.approval.email": "E-Mail freigeben",
+  "brief.coverage.source.domain_question": "Domainprüfungen",
   "brief.coverage.source.approval": "Vorschläge",
   "brief.coverage.source.task": "Aufgaben",
   "brief.coverage.source.dsr": "Datenschutzanfragen",
@@ -872,6 +980,7 @@ export const de = {
   "systemJob.ai_price_sync": "Aktualisierung der Modellpreise",
   "systemJob.alias_discovery": "Erkennung von E-Mail-Adressen",
   "systemJob.approval_expiry": "Ablauf von Freigaben",
+  "systemJob.approval_notice_reconcile": "Bereinigung offener Freigabehinweise",
   "systemJob.approval_notice_retract": "Rücknahme von Freigabehinweisen",
   "systemJob.approval_notify": "Freigabebenachrichtigung",
   "systemJob.assign_owner_release": "Freigabe der Verantwortung",
@@ -2502,12 +2611,14 @@ export const de = {
   "co.brief.cite.activity": "Aktivität",
   "co.brief.cite.contact": "Kontakt",
   "co.brief.cite.company": "Unternehmen",
+  "co.brief.cite.lead": "Lead",
   "co.brief.cite.fact": "Fakt",
   "co.brief.cite.profile_field": "Profilfeld",
   "co.brief.cite.deal.many": "{count} Deals",
   "co.brief.cite.activity.many": "{count} Aktivitäten",
   "co.brief.cite.contact.many": "{count} Kontakte",
   "co.brief.cite.company.many": "{count} Unternehmen",
+  "co.brief.cite.lead.many": "{count} Leads",
   "co.brief.cite.fact.many": "{count} Fakten",
   "co.brief.cite.profile_field.many": "{count} Profilfelder",
   "approval.kind.advance_deal": "Deal voranbringen",
@@ -2838,10 +2949,14 @@ export const de = {
   "email.detail.when": "Gesendet",
   "commitment.review.count_one": "Zusage zur Prüfung: {count}",
   "commitment.review.count_other": "Zusagen zur Prüfung: {count}",
+  "commitment.review.conditionWords": "Bedingung: {words}",
+  "commitment.review.deadlineWords": "Genannte Frist: {words}",
   "commitment.review.title": "Zusagen prüfen",
   "commitment.review.detail":
     "Aus diesen Auswertungen wurden keine Aufgaben erstellt. Prüfe die Quelle und spätere Antworten, bevor du im verknüpften Datensatz eine Folgeaufgabe anlegst.",
   "commitment.review.historical": "Ältere Zusage ohne aktuelle Frist.",
+  "commitment.review.beforeBaseline":
+    "Vor dem Datum gesendet, ab dem dieses Postfach Zusagen vorschlägt.",
   "commitment.review.incomplete":
     "Spätere Nachrichten wurden nicht vollständig gelesen. Die Zusage könnte bereits erfüllt sein.",
   "commitment.review.unknownDate":
@@ -2851,11 +2966,25 @@ export const de = {
   "commitment.review.canceledMeeting": "Der Termin wurde abgesagt.",
   "commitment.review.pendingMeeting":
     "Der Termin hat noch nicht stattgefunden.",
+  "commitment.review.completed":
+    "Die Quelle beschreibt bereits erledigte Arbeit. Es wurde keine neue Aufgabe erstellt.",
+  "commitment.review.conditional":
+    "Die Zusage hängt von einer noch nicht erfüllten Bedingung ab.",
+  "commitment.review.optional": "Das ist ein Angebot, keine feste Zusage.",
+  "commitment.review.request":
+    "Die Arbeit wurde angefragt, aber noch nicht zugesagt.",
+  "commitment.review.unclear":
+    "Aus der Quelle geht keine offene Zusage hervor.",
   "commitment.review.unavailable":
     "Prüfe die Quelle, bevor du eine Aufgabe erstellst.",
   "commitment.review.evaluated": "Geprüft {when}",
   "activity.detail.loading": "Aktivität wird geladen…",
   "activity.detail.none": "Diese Aktivität",
+  "activity.followUps": "Folgeaufgaben",
+  "activity.noFollowUps": "Keine Folgeaufgaben",
+  "activity.files.empty": "Noch keine Dateien an dieser Aktivität.",
+  "activity.files.title": "Dateien zu {subject}",
+  "activity.followUpOpen": "Offen",
   "activity.detail.withheldReason": "Inhalt der Aktivität ist zurückgehalten",
   "activity.detail.when": "Wann",
   "activity.detail.attendees": "Teilnehmende",
@@ -4363,9 +4492,9 @@ export const de = {
     "Noch kein Wochenrückblick. Der erste wird am Montag nach deiner ersten vollen Woche erstellt.",
   "brief.weekly.tasksDelivered": "Fällige Aufgaben erledigt",
   "brief.weekly.ofDue": "{done} von {due}",
-  "brief.weekly.dealsWon": "Gewonnen",
-  "brief.weekly.dealsLost": "Verloren",
-  "brief.weekly.dealsMoved": "Bewegt",
+  "brief.weekly.dealsWon": "Gewonnene Deals",
+  "brief.weekly.dealsLost": "Verlorene Deals",
+  "brief.weekly.dealsMoved": "Deals mit Phasenwechsel",
   "brief.weekly.decided": "Entschiedene Vorschläge",
   "brief.weekly.acceptedRejected":
     "{accepted} angenommen · {rejected} abgelehnt",
@@ -4378,8 +4507,8 @@ export const de = {
   "brief.weekly.planCommitmentsKept": "Eingehaltene Zusagen",
   "brief.weekly.meetingsHeld": "Termine mit Follow-up",
   "brief.weekly.ofMeetings": "{withStep} von {held}",
-  "brief.weekly.carriedOver": "Übertragen",
-  "brief.weekly.outcome.moved": "bewegt",
+  "brief.weekly.carriedOver": "Zum Wochenende offen",
+  "brief.weekly.outcome.moved": "Verkaufsphase geändert",
   "brief.weekly.outcome.won": "gewonnen",
   "brief.weekly.outcome.lost": "verloren",
   "brief.act": "Erledigt",
@@ -4852,6 +4981,8 @@ export const de = {
   "docs.state.final": "Final",
   "docs.state.superseded": "Ersetzt",
   "log.title": "Aktivität erfassen",
+  "log.addFollowUp": "Folgeaufgabe hinzufügen",
+  "log.followUpSubject": "Nächster Schritt",
   "log.addTask": "Aufgabe hinzufügen",
   "log.kind": "Typ",
   "log.kindNote": "Notiz",
@@ -4866,6 +4997,12 @@ export const de = {
   "log.transcriptUploadRejected": "Nur eine .txt-Datei ist zulässig.",
   "log.transcriptUploadFailed":
     "Die Datei konnte nicht gelesen werden. Füge stattdessen den Text ein.",
+  "log.files": "Dateien anhängen",
+  "log.filesEmpty": "Dateien hier ablegen oder zum Auswählen klicken",
+  "log.fileUnattached":
+    "Die Aktivität ist erfasst, aber {filename} wurde nicht angehängt. {reason}",
+  "log.fileUncertain":
+    "Die Aktivität ist erfasst, aber der Upload von {filename} wurde nicht abgeschlossen. Prüfe die Dateien der Aktivität, bevor du die Datei erneut hinzufügst.",
   "log.attendee": "Teilnehmende",
   "log.otherAttendees": "Weitere Teilnehmende",
   "log.removeAttendee": "{name} entfernen",
@@ -5258,7 +5395,6 @@ export const de = {
   "tasks.snooze": "1 Tag zurückstellen",
   "tasks.moveTo": "Verschieben auf",
   "tasks.detail": "Aufgabe",
-  "tasks.source": "Ursprungstermin",
   "tasks.sourceEmail": "Ursprungs-E-Mail",
   "tasks.openSource": "Original öffnen",
   "tasks.detailLoading": "Aufgabe wird geladen…",
@@ -5289,7 +5425,14 @@ export const de = {
   "analytics.sectionReports": "Berichte",
   "analytics.setup": "Einrichtung",
   "analytics.filters": "Filter",
+  "analytics.firstRunTitle": "Noch keine Deals für die Auswertung",
+  "analytics.firstRunBody":
+    "Die Auswertungen füllen sich, sobald Deals erfasst werden, die du sehen kannst. Öffne Deals, um einen anzulegen oder deine Daten zu importieren.",
+  "analytics.firstRunAction": "Deals öffnen",
   "analytics.attention": "Braucht deine Aufmerksamkeit",
+  "analytics.attentionNoOwner": "Kein Verantwortlicher",
+  "analytics.attentionAtStake": "{amount} betroffen",
+  "analytics.attentionReview": "Prüfen",
   "analytics.attentionChecks_one": "1 Prüfung zur Einschätzung offen",
   "analytics.attentionChecks_other": "{count} Prüfungen zur Einschätzung offen",
   "analytics.attentionChecksDetail":
@@ -5307,7 +5450,7 @@ export const de = {
   "analytics.attentionCoverageAction": "Datenabdeckung ansehen",
   "analytics.reportDealsByStage": "Alle Deals nach Phase",
   "analytics.reportLeadsByStatus": "Leads nach Status",
-  "analytics.reportActivitiesByKind": "Aktivitäten nach Typ",
+  "analytics.reportActivitiesByKind": "Termine und Aufgaben",
   "analytics.reportMeetingConversion": "Konversion aus Terminen",
   "analytics.field.amount_base_minor": "Umgerechneter Betrag",
   "analytics.field.amount_minor": "Betrag",
@@ -5326,6 +5469,7 @@ export const de = {
   "analytics.field.open_commitments": "Offene Zusagen",
   "analytics.field.open_deal_value_minor": "Offener Deal-Wert",
   "analytics.field.overdue_commitments": "Überfällige Zusagen",
+  "analytics.field.close_month": "Abschlussmonat",
   "analytics.field.owner_id": "Verantwortlich",
   "analytics.field.partner_company_id": "Partnerunternehmen",
   "analytics.field.partner_sourced": "Von Partnern vermittelt",
@@ -5642,6 +5786,10 @@ export const de = {
   "forecast.confirmed": "Abschlussdatum bestätigt",
   "forecast.fxMissing": "Wechselkurs fehlt",
   "analytics.reportForecast": "Prognosekategorien",
+  "analytics.shareOfOpenPipeline": "Anteil an offener Pipeline",
+  "analytics.reportPipelineByCloseMonth": "Offene Pipeline nach Abschlussmonat",
+  "analytics.closeMonth": "Abschlussmonat",
+  "analytics.noCloseDate": "Kein Abschlussdatum",
   "analytics.reportOpenByCompany": "Offene Deals pro Unternehmen",
   "analytics.retiredPipeline": "{name} (stillgelegt)",
   "analytics.forecastBanner":
@@ -5668,6 +5816,18 @@ export const de = {
   "settings.removedItem": "„{name}“ entfernt",
   "settings.removed": "Entfernt",
   "settings.saved": "Gespeichert",
+  "settings.lockedBy.flag":
+    "Festgelegt durch {name} (Befehlszeile). Ändere den Wert dort.",
+  "settings.lockedBy.env":
+    "Festgelegt durch {name} (Umgebung). Ändere den Wert dort.",
+  "settings.lockedBy.env_file":
+    "Festgelegt durch {name} in {file}. Ändere den Wert dort.",
+  "settings.lockedBy.config_file":
+    "Festgelegt durch {name} in {file}. Ändere den Wert dort.",
+  "settings.lockedBy.env_file_unnamed":
+    "Festgelegt durch {name} (.env-Datei). Ändere den Wert dort.",
+  "settings.lockedBy.config_file_unnamed":
+    "Festgelegt durch {name} (Konfigurationsdatei). Ändere den Wert dort.",
   "settings.signatureFromTemplate": "Unternehmensvorlage",
   "settings.signatureTemplateHint":
     "Deine E-Mails enden mit der Signaturvorlage deines Unternehmens. Die Vorlage füllt deinen Namen, deinen Jobtitel und deine Telefonnummer ein.",
@@ -7985,6 +8145,13 @@ export const de = {
     "Folgt der Unternehmenseinstellung. Eine Änderung hier gibt diesem Postfach eine eigene Einstellung.",
   "connectors.signatureEnrich.ownAnswer":
     "Eigene Einstellung dieses Postfachs, unabhängig von der Unternehmenseinstellung.",
+  "connectors.historyBaseline.label": "Zusagen vorschlagen ab",
+  "connectors.historyBaseline.help":
+    "Aus E-Mails vor diesem Datum werden dir keine Zusagen automatisch vorgeschlagen. Die E-Mails bleiben erfasst und durchsuchbar. Ein geändertes oder entferntes Datum erledigt oder löscht nichts.",
+  "connectors.historyBaseline.current":
+    "Für dieses Postfach auf {date} ({zone}) gesetzt.",
+  "connectors.historyBaseline.save": "Datum speichern",
+  "connectors.historyBaseline.clear": "Datum entfernen",
   "hold.sectionTitle": "Private Korrespondenz",
   "hold.notHeld":
     "E-Mails mit diesem Kontakt folgen der Einstellung deines Postfachs.",
@@ -9173,6 +9340,8 @@ export const de = {
   "confirm.field.phone": "Telefon",
   "confirm.field.company": "Unternehmen",
   "confirm.field.none": "Nicht erfasst",
+  "confirm.marketing.optional":
+    "Die Auswahl ist freiwillig. Sie können Ihre Kontaktdaten korrigieren, ohne Neuigkeiten zu abonnieren.",
   "confirm.marketing.title": "Gelegentlich Neuigkeiten erhalten?",
   "confirm.marketing.ask":
     "Sie erhalten von Zeit zu Zeit Neuigkeiten, etwa einmal im Monat. Ihre Entscheidung wird respektiert.",
@@ -9382,6 +9551,7 @@ export const de = {
   "cf.obj.lead": "Lead",
   "cf.obj.project": "Projekt",
   "cf.obj.contract": "Vertrag",
+  "cf.obj.activity": "Aktivität",
   "cf.listLabel": "Felder für {object}",
   "cf.col.field": "Feld",
   "cf.col.type": "Typ",
@@ -9399,6 +9569,8 @@ export const de = {
     "Noch keine eigenen Felder für Projekte. Füge eines hinzu, um Daten zur Umsetzung zu erfassen, die die Kernfelder nicht abdecken.",
   "cf.empty.contract":
     "Noch keine eigenen Felder für Verträge. Füge eines für eine Einordnung hinzu, die die Standardkonditionen nicht abdecken.",
+  "cf.empty.activity":
+    "Noch keine eigenen Felder für Aktivitäten. Ein hier hinzugefügtes Feld steht bei jedem Anruf, Termin, jeder Notiz und Aufgabe zur Wahl, die du erfasst.",
   "cf.emptyReadOnly": "Noch keine eigenen Felder für {object}.",
   "cf.type.text": "Text",
   "cf.type.number": "Zahl",
@@ -9452,6 +9624,11 @@ export const de = {
   "cf.shownInCreate": "„{label}“ beim Anlegen eingeblendet",
   "cf.hiddenFromCreate":
     "„{label}“ beim Anlegen ausgeblendet, weiter auf der Datensatzseite",
+  "cf.col.inReports": "In Berichten",
+  "cf.reportableFor": "„{label}“ in Berichten nutzen",
+  "cf.addedToReports":
+    "„{label}“ in Berichten nutzbar. Wer Berichte liest, sieht seine Bezeichnung und Auswahlwerte.",
+  "cf.removedFromReports": "„{label}“ aus Berichten entfernt",
   "cf.audit.title": "Letzte Feldänderungen",
   "audit.kind.customField": "Eigenes Feld",
   "cf.audit.empty": "Noch keine Änderungen an eigenen Feldern.",
@@ -9593,6 +9770,36 @@ export const de = {
   "settings.tab.model-calls": "KI-Aufrufprotokoll",
   "settings.tab.audit": "Audit-Log",
   "settings.tab.system-health": "Systemzustand",
+  "settings.page.configuration.sub":
+    "Jede Einstellung und woher ihr Wert stammt.",
+  "settings.tab.configuration": "Konfiguration",
+  "configuration.title": "Konfiguration",
+  "configuration.sub":
+    "Jede Einstellung, die diese Installation liest, mit ihrem Wert und ihrer Herkunft. Diese Seite zeigt sie nur an. Eine gesperrte Einstellung änderst du dort, wo ihre Quelle es sagt.",
+  "configuration.search": "Nach Schlüssel oder Umgebungsvariable filtern",
+  "configuration.noMatch": "Keine Einstellung entspricht diesem Filter.",
+  "configuration.col.key": "Schlüssel",
+  "configuration.col.value": "Wert",
+  "configuration.col.source": "Quelle",
+  "configuration.col.detail": "Details",
+  "configuration.secret": "Geheim",
+  "configuration.unset": "Nicht gesetzt",
+  "configuration.emptyValue": "Leer",
+  "configuration.source.database": "In der App gespeichert",
+  "configuration.source.default": "Standardwert",
+  "configuration.source.unset": "Hier nicht gesetzt",
+  "configuration.source.flag": "Kommandozeile",
+  "configuration.source.env": "Umgebung",
+  "configuration.source.env_file": ".env-Datei",
+  "configuration.source.config_file": "Konfigurationsdatei",
+  "configuration.noValue": "Kein Wert",
+  "configuration.toggle": "Details zu {key} anzeigen",
+  "configuration.detail.value": "Vollständiger Wert",
+  "configuration.detail.default": "Standard: {value}",
+  "configuration.detail.none": "keiner",
+  "configuration.detail.type": "Typ: {type}",
+  "configuration.detail.flag": "Option: {flag}",
+  "configuration.detail.readBy": "Gelesen von: {programs}",
   "settings.tab.reset": "Daten zurücksetzen",
   "settings.group.me": "Du",
   "settings.group.company": "Unternehmen",
@@ -10949,6 +11156,9 @@ export const de = {
   "forecast.landingFrom":
     "Hochgerechnet · {won} gewonnen + {remaining} erwartet",
   "forecast.landingFromCall": "Aus der Einschätzung · bisher {won} gewonnen",
+  "forecast.landingRecords": "Aus den Deal-Daten",
+  "forecast.landingRecordsDetail":
+    "Gewonnen plus Commit-Deals mit bestätigtem Abschlussdatum, ohne die Einschätzung",
   "forecast.landingCaveat": "Das erwartete Ergebnis hat einen Vorbehalt",
   "forecast.landing.caveat.call_absent":
     "Angezeigt werden die Commit-Belege, da für diesen Zeitraum keine Einschätzung erfasst ist.",
@@ -11061,8 +11271,6 @@ export const de = {
   "oauthApp.microsoft.removeConfirmBody":
     "Der Clientschlüssel lässt sich nicht wieder auslesen. Um die App wiederherzustellen, müssen Client-ID und Clientschlüssel erneut aus dem Entra-Portal eingetragen werden. Outlook-E-Mail- und -Kalender-Verbindungen nutzen diese App. Google- und IMAP-Postfächer sind nicht betroffen. Die Ersteinrichtung fragt erneut nach einer App.",
   "oauthApp.configured": "In Verwendung: {clientId}",
-  "oauthApp.fromEnvironment":
-    "Aus der Konfiguration dieser Installation in Verwendung: {clientId}. Eine hier gespeicherte App hat Vorrang, bis sie entfernt wird.",
   "oauthApp.pinnedToDirectory": "An das Verzeichnis {tenant} gebunden.",
   "oauthApp.replaceHint":
     "Ein neues Paar ersetzt das gespeicherte. Bestehende Verbindungen funktionieren weiter, bis sie neu verbunden werden.",
@@ -13112,10 +13320,9 @@ export const de = {
   "filters.start.buildBody":
     "Wähle ein Feld, wie es verglichen wird, und einen Wert. Füge nach und nach weitere Bedingungen hinzu.",
   "filters.describeChanges": "Änderungen in eigenen Worten beschreiben",
-  "filters.connector.matchAll":
-    "{word}: Alle davon müssen zutreffen. Drücke, damit eine reicht.",
-  "filters.connector.matchAny":
-    "{word}: Eine davon muss zutreffen. Drücke, damit alle zutreffen müssen.",
+  "filters.connector.and":
+    "{word}: Die Bedingungen auf beiden Seiten müssen zutreffen. Drücke für „{other}“.",
+  "filters.connector.or": "{word}: Eine Seite reicht. Drücke für „{other}“.",
   "filters.group.all": "Alle davon",
   "filters.group.any": "Mindestens eine davon",
   "filters.addGroupToGroup": "Untergruppe hinzufügen",
@@ -13304,9 +13511,9 @@ export const de = {
     "Wer eine Liste sieht, sieht dadurch keinen Datensatz, den er nicht schon sehen durfte.",
   "lists.teamLabel": "Welches Team",
   "lists.team.allMine": "Alle meine Teams",
-  "lists.team.allOwners": "Alle Teams der zust\u00e4ndigen Person",
+  "lists.team.allOwners": "Alle Teams der verantwortlichen Person",
   "lists.audience.yourTeams": "Deine Teams",
-  "lists.audience.ownerTeams": "Die Teams der zust\u00e4ndigen Person",
+  "lists.audience.ownerTeams": "Die Teams der verantwortlichen Person",
   "lists.audience.unknownTeam": "Ein Team, das du nicht sehen kannst",
   "lists.health.ownerless": "Niemand verantwortlich",
   "lists.health.invalid": "Filter funktioniert nicht mehr",
@@ -13778,7 +13985,7 @@ export const de = {
   "project.advance.reasonRequired":
     "Ein abgeschlossenes Projekt braucht eine Begründung.",
   "deal.project": "Projekt",
-  "deal.newProjectOwner": "Zuständig für das Projekt",
+  "deal.newProjectOwner": "Verantwortlich für das Projekt",
   "deal.projectNew": "Neues Projekt…",
   "deal.projectWithheld": "Projekt ausgeblendet",
   "deal.projectNeedsCompany":
@@ -13808,14 +14015,34 @@ export const de = {
     "{urgent} dringend · {due} fällig · {lower} Routine · {total} gesamt",
   "worklist.summary.wholeDay": "Ganzer Tag: {sentence}",
   "worklist.summary.split": "{today} heute · {review} zu prüfen",
-  "worklist.completeness": "{shown} von {considered} angezeigt",
+  "worklist.completeness": "{shown} von {considered} Einträgen angezeigt",
+  "worklist.completeness.floor_one": "{shown} Eintrag angezeigt",
+  "worklist.completeness.floor_other": "{shown} Einträge angezeigt",
+  "worklist.completeness.cards_one": "{cards} Karte sichtbar",
+  "worklist.completeness.cards_other": "{cards} Karten sichtbar",
+  "worklist.completeness.bounded":
+    "Lesegrenze erreicht bei {kinds}. Sieh dir die Quellengrenzen an.",
+  "worklist.completeness.unread_one": "{count} Quelle nicht geladen",
+  "worklist.completeness.unread_other": "{count} Quellen nicht geladen",
   "worklist.review.partial":
     "{loaded} von {total} angezeigt. Lade unten mehr, um den Rest zu sehen.",
+  "worklist.limits.title": "Lesegrenzen der Quellen",
+  "worklist.limits.source": "{source}: Lesegrenze erreicht · {scope}",
+  "worklist.emptyPage":
+    "Keine Einträge auf dieser Seite. Lade mehr, um fortzufahren.",
+  "worklist.review.more":
+    "Weitere Seiten können Einträge zur Prüfung enthalten. Lade unten mehr, um fortzufahren.",
+  "worklist.limits.boundary":
+    "Mehr laden setzt diesen Stand fort. Die Lesegrenzen der Quellen bleiben bestehen.",
+  "worklist.limits.personal": "deine persönliche Quelle",
+  "worklist.limits.selected": "der gewählte Datensatzbereich",
+  "worklist.limits.remedy":
+    "Prüfe die verfügbaren Einträge und aktualisiere dann die Ansicht. Fehlt weiterhin benötigte Arbeit, wende dich an einen Admin, um die Lesegrenze der Quelle zu prüfen.",
+  "worklist.review.snapshotChanged":
+    "{loaded} von {total} Einträgen des gespeicherten Stands angezeigt. Der Tag hat sich geändert. Aktualisiere die Ansicht, um die Zahlen neu zu laden.",
   "worklist.review.partialDone": "{loaded} von {total} angezeigt.",
-  "worklist.completeness.bounded_one":
-    "{shown} angezeigt · {sources} Quelle hat mehr",
-  "worklist.completeness.bounded_other":
-    "{shown} angezeigt · {sources} Quellen haben mehr",
+  "worklist.review.floor":
+    "{loaded}+ angezeigt. Eine Quelle hat ihre Lesegrenze erreicht. Sieh dir die Quellengrenzen an.",
   "worklist.clear": "Nichts wartet auf dich.",
   "worklist.clearFor": "Nichts wartet auf {name}.",
   "worklist.clearOfTasksToday":
@@ -13891,6 +14118,8 @@ export const de = {
     "Der Eintrag konnte nicht entfernt werden. Bitte versuche es erneut.",
   "worklist.scope.label": "Wessen Arbeit",
   "worklist.scope.mine": "Meine",
+  "worklist.sourceUnavailable":
+    "Quelle nicht verfügbar oder nicht für dich freigegeben",
   "worklist.scope.unassigned": "Nicht zugewiesen",
   "worklist.scope.team": "Team",
   "worklist.scope.all": "Alle",
@@ -14073,6 +14302,7 @@ export const de = {
   "worklist.category.decisions": "Freigabe",
   "worklist.category.system": "System",
   "worklist.because.pinned": "von dir angeheftet",
+  "worklist.because.non_buyer_request": "nicht als Kundenanliegen bestätigt",
   "worklist.because.buyer_wrote_last":
     "die Käuferseite hat zuletzt geschrieben",
   "worklist.because.waiting_days": "wartet",

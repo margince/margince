@@ -97,9 +97,9 @@ func TestReportEvidenceRouteAnswersAsTheTool(t *testing.T) {
 			body = "The buyer pushed back on pricing again"
 		}
 		if status := d.e.Call(t, "POST", "/v1/activities", AnyMap{
-			"kind": "call", "source": "manual", "direction": "outbound", "subject": "Weekly check-in", "body": body,
+			"kind": "meeting", "source": "manual", "subject": "Weekly check-in", "body": body,
 		}, nil, nil); status != http.StatusCreated {
-			t.Fatalf("logging call %d → %d", i, status)
+			t.Fatalf("logging meeting %d → %d", i, status)
 		}
 	}
 	var run struct {
@@ -128,7 +128,7 @@ func TestReportEvidenceRouteAnswersAsTheTool(t *testing.T) {
 		t.Fatal(err)
 	}
 	if tally.Tally.Matched+tally.Tally.Unmatched == 0 {
-		t.Errorf("the search judged none of the run's six calls: %s", evidence)
+		t.Errorf("the search judged none of the run's six meetings: %s", evidence)
 	}
 }
 

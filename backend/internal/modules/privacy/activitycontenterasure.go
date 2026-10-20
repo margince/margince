@@ -119,7 +119,7 @@ func (e *Eraser) purgeContentDerivedFrom(ctx context.Context, tx pgx.Tx, id ids.
 	if err := purgeTranscriptReadings(ctx, tx, []ids.UUID{id}); err != nil {
 		return err
 	}
-	if err := redactApprovalsCitingActivities(ctx, tx, []ids.UUID{id}, act.approvalWithdrawal); err != nil {
+	if err := redactApprovalsCitingActivities(ctx, tx, []ids.UUID{id}, act.approvalWithdrawal, act.cause); err != nil {
 		return err
 	}
 	if err := redactEvidenceQuoting(ctx, tx, []ids.UUID{id}, act.collateralReason, act.cause); err != nil {

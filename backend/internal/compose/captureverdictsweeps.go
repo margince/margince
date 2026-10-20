@@ -21,6 +21,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -243,6 +244,12 @@ func (e *CounterpartyVerdictEngine) RedactNoiseWorkspace(ctx context.Context, wi
 		if err != nil {
 			return err
 		}
+		// Read once per pass and above every message's transaction: the catalog
+		// opens a connection of its own.
+		erasable, err := e.activities.ErasableActivityColumns(wsCtx)
+		if err != nil {
+			return err
+		}
 		redacted, failed := 0, 0
 		var after *capture.NoiseMessage
 		// Pages walk past a message that keeps failing. A pass that only ever
@@ -255,7 +262,7 @@ func (e *CounterpartyVerdictEngine) RedactNoiseWorkspace(ctx context.Context, wi
 				return err
 			}
 			for _, message := range page {
-				done, err := e.redactOneNoiseMessage(wsCtx, message.ID, window)
+				done, err := e.redactOneNoiseMessage(wsCtx, message.ID, window, erasable)
 				switch {
 				case err != nil:
 					failed++
@@ -285,7 +292,9 @@ func (e *CounterpartyVerdictEngine) RedactNoiseWorkspace(ctx context.Context, wi
 // It reports false when the message no longer qualifies once locked. A human
 // may have un-archived it. A hold, a request or a colleague's import may have
 // arrived after the backlog was read.
-func (e *CounterpartyVerdictEngine) redactOneNoiseMessage(ctx context.Context, id ids.UUID, window time.Duration) (bool, error) {
+func (e *CounterpartyVerdictEngine) redactOneNoiseMessage(
+	ctx context.Context, id ids.UUID, window time.Duration, erasable activities.ErasableColumns,
+) (bool, error) {
 	destroyed := false
 	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
 		// The floor in force now, not the one the page was selected under: a
@@ -298,7 +307,7 @@ func (e *CounterpartyVerdictEngine) redactOneNoiseMessage(ctx context.Context, i
 		if err != nil || !claimed {
 			return err
 		}
-		done, err := e.activities.RedactCapturedNoiseTx(ctx, tx, []ids.UUID{id})
+		done, err := e.activities.RedactCapturedNoiseTx(ctx, tx, erasable, []ids.UUID{id})
 		if err != nil {
 			return err
 		}

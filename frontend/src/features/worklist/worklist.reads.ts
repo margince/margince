@@ -1,6 +1,7 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import { unwrap } from "../../lib/problem";
+import { represented } from "../../lib/worklistunits";
 import type {
   HandledForYou,
   TeamBoard,
@@ -44,11 +45,8 @@ export function useWorklist(
         }),
       );
     },
-    // The server hands back no cursor on the final page, which is how a walk
-    // ends. Returning undefined for an empty page too, so a day that empties
-    // between reads stops rather than asking again for nothing.
-    getNextPageParam: (last) =>
-      last.queue.length > 0 ? (last.next_cursor ?? undefined) : undefined,
+    // A page can empty as rows leave the snapshot; only its cursor ends the walk.
+    getNextPageParam: (last) => last.next_cursor ?? undefined,
   });
 }
 
@@ -138,4 +136,47 @@ export function useTeamBoard(enabled: boolean, team?: string) {
       );
     },
   });
+}
+
+/** Preserve the server's order across the pages the reader has requested. */
+export function accumulatedDay(
+  pages: readonly Worklist[] | undefined,
+): Worklist | undefined {
+  const first = pages?.[0];
+  if (!first || !pages) return undefined;
+  const queue = loadedQueue(pages);
+  const counts = first.counts.map((entry) => ({
+    ...entry,
+    more_available: pages.some((page) =>
+      page.counts.some(
+        (count) => count.category === entry.category && count.more_available,
+      ),
+    ),
+    shown: represented(queue.filter((item) => item.category === entry.category))
+      .items,
+  }));
+  const unavailable = new Map(
+    pages
+      .flatMap((page) => page.sources_unavailable)
+      .map((entry) => [entry.source, entry]),
+  );
+  return {
+    ...first,
+    queue,
+    counts,
+    reach: first.reach?.map((entry) => ({
+      ...entry,
+      more_available: pages.some((page) =>
+        page.reach?.some(
+          (source) => source.source === entry.source && source.more_available,
+        ),
+      ),
+    })),
+    sources_unavailable: [...unavailable.values()],
+    readings: {
+      ...first.readings,
+      more_available: pages.some((page) => page.readings.more_available),
+    },
+    next_cursor: pages.at(-1)?.next_cursor,
+  };
 }

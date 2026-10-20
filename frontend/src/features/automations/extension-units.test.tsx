@@ -38,6 +38,7 @@ const DISPACT: ExtensionDescriptor = {
   title: "extDispactConnector.title",
   secretScope: "user",
   verbs: [],
+  entries: [],
 };
 
 function renderCard(scope: "user" | "workspace") {
@@ -66,7 +67,13 @@ describe("the units offered on a settings page", () => {
 
   it("reads a unit with no title by its key, as the extensions page does", () => {
     unitsForSecretScope.mockReturnValue([
-      { name: "open_notes", title: "", secretScope: "user", verbs: [] },
+      {
+        name: "open_notes",
+        title: "",
+        secretScope: "user",
+        verbs: [],
+        entries: [],
+      },
     ]);
     renderCard("user");
     const link = screen.getByRole("link", { name: "Settings for Open notes" });
@@ -91,7 +98,7 @@ describe("the units offered on a settings page", () => {
   it("gives every offered unit its own row", () => {
     unitsForSecretScope.mockReturnValue([
       DISPACT,
-      { name: "notes", title: "", secretScope: "user", verbs: [] },
+      { name: "notes", title: "", secretScope: "user", verbs: [], entries: [] },
     ]);
     renderCard("user");
     expect(screen.getAllByRole("link")).toHaveLength(2);

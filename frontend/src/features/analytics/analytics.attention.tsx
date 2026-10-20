@@ -1,16 +1,22 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { components } from "../../api/schema";
+import { EntityRef } from "../../components/entityref";
 import { Button } from "../../design-system/atoms";
 import { Panel, PanelRow } from "../../design-system/panel";
-import { formatNumber } from "../../format/format";
+import { formatMoneyOrAbsent, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
+import { isEntityKind } from "../../lib/entity";
+import { useMemberNames } from "../../lib/membernames";
 import { openAnalyticsSection, type Section } from "./analytics.address";
 import type { AnalyticsScope } from "./analytics.context";
 import { useDataCoverage } from "./analytics.coverage";
-import { useInputChecks } from "./analytics.forecast.review";
+import { checkLabel, useInputChecks } from "./analytics.forecast.review";
 import { useForecastReadings } from "./forecast.queries";
+
+type InputCheck = components["schemas"]["InputCheck"];
 
 export type AttentionItem = Readonly<{
   key: string;
@@ -18,11 +24,15 @@ export type AttentionItem = Readonly<{
   detail: string;
   action: string;
   section: Section;
+  // The record a finding is about, when the line names one.
+  subject?: InputCheck["subject"];
 }>;
 
-// What stands between this reader and numbers they can trust, each with the
-// door to where it is fixed. The panel is absent when nothing does, because an
-// empty "nothing needs you" panel is one more thing to read past every day.
+// How many findings the panel names one by one, in the server's order (most
+// severe, then most money at stake). The rest stay one line that opens the
+// full review, so the panel stays short enough to read every day.
+const NAMED_FINDINGS = 5;
+
 export function AnalyticsAttention({
   scope,
 }: Readonly<{ scope: AnalyticsScope }>) {
@@ -43,6 +53,13 @@ export function AttentionPanel({
         <PanelRow key={item.key} className="analytics-attention-row">
           <div className="analytics-attention-text">
             <p className="analytics-attention-title">{item.title}</p>
+            {item.subject && isEntityKind(item.subject.type) && (
+              <EntityRef
+                kind={item.subject.type}
+                id={item.subject.id}
+                name={item.subject.label}
+              />
+            )}
             <p className="t-caption">{item.detail}</p>
           </div>
           <Button onClick={() => openAnalyticsSection(item.section)}>
@@ -63,7 +80,7 @@ function useAttentionItems(scope: AnalyticsScope): AttentionItem[] {
   const plural = usePlural();
   const { locale } = useLocale();
   const canReadForecast = useCan("forecast", "read");
-  const checks = useInputChecks(canReadForecast);
+  const checks = useInputChecks(canReadForecast, scope);
   // An undefined scope holds the read, which is what a reader without the
   // forecast grant needs: no request, rather than a refused one.
   const readings = useForecastReadings(
@@ -77,7 +94,34 @@ function useAttentionItems(scope: AnalyticsScope): AttentionItem[] {
   // mid-session is checked here as well as at the request.
   const items: AttentionItem[] = [];
   const findings = (canReadForecast && checks.data) || [];
-  if (findings.length > 0) {
+  const owners = useMemberNames(
+    findings.flatMap((check) => check.owner_id ?? []),
+  );
+  for (const check of findings.slice(0, NAMED_FINDINGS)) {
+    // An owner whose name has not arrived is left out, never called absent.
+    const owner = check.owner_id
+      ? owners.get(check.owner_id)
+      : t("analytics.attentionNoOwner");
+    const amount =
+      check.affected_minor == null
+        ? undefined
+        : t("analytics.attentionAtStake", {
+            amount: formatMoneyOrAbsent(
+              check.affected_minor,
+              check.currency,
+              locale,
+            ),
+          });
+    items.push({
+      key: `check:${check.id}`,
+      title: t(checkLabel(check.type)),
+      subject: check.subject,
+      detail: [owner, amount].filter(Boolean).join(" · "),
+      action: t("analytics.attentionReview"),
+      section: "forecast",
+    });
+  }
+  if (findings.length > NAMED_FINDINGS) {
     items.push({
       key: "checks",
       title: plural("analytics.attentionChecks", findings.length, {

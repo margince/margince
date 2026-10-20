@@ -240,6 +240,7 @@ func (h installationSettingsHandlers) toContract(s identity.InstallationSettings
 		SignInProviders:            h.signInProviders(s.EnabledOidcProviders),
 		Operations:                 crmcontracts.OperationSettings(s.Operations),
 		AgentAllowances:            toAgentAllowances(s.AgentAllowances, h.clock()),
+		Locks:                      loadedLocks(identity.Settings()),
 	}
 	dateFormat := crmcontracts.InstallationSettingsDateFormat(s.DateFormat)
 	timeFormat := crmcontracts.InstallationSettingsTimeFormat(s.TimeFormat)

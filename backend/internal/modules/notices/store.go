@@ -43,13 +43,14 @@ func NewStore(db *database.DB) *Store {
 
 // Notice is one durable line addressed to one contact.
 type Notice struct {
-	Origin    *crmcontracts.NoticeOrigin
-	ID        ids.UUID
-	Kind      string
-	Subject   string
-	Body      string
-	Target    Target
-	CreatedAt time.Time
+	ApprovalID *ids.ApprovalID
+	Origin     *crmcontracts.NoticeOrigin
+	ID         ids.UUID
+	Kind       string
+	Subject    string
+	Body       string
+	Target     Target
+	CreatedAt  time.Time
 }
 
 // Target is the record a notice is about, when it is about one.

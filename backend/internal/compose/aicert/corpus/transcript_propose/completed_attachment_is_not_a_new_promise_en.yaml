@@ -1,0 +1,16 @@
+name: transcript_completed_attachment_is_not_a_new_promise_en
+task: transcript_propose
+site: next_steps
+source: hand_authored
+sanitized_by: hand_authored/codex
+fixture:
+  - "Mira: The signed form is attached. I sent the final copy this morning."
+  - "Alex: Received, thank you. That completes the paperwork."
+expect:
+  outcome: accepted
+  answer: [{"optional": true, "meaning": {"state": "completed", "condition": "", "deadline_precision": "none", "deadline_quote": ""}, "line": 1, "due_date": ""}]
+  judge: none
+  judge_none_reason: >
+    The sender reports an already delivered attachment and the recipient
+    confirms receipt. Neither speaker promises future work. Any proposed
+    commitment would ask someone to repeat an act that is already complete.

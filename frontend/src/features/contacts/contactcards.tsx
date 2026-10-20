@@ -15,7 +15,7 @@ import type { MessageKey } from "../../i18n/en";
 import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
-import { DismissClaimButton } from "../../screens/claimdismiss";
+import { DismissClaimButton } from "../records/claimdismiss";
 
 // The overview's four cards (concept §5.6–5.9). Each one is a read of what the
 // 360 already assembled — none of them fetches, so a card can never show a

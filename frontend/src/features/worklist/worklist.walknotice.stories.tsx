@@ -40,11 +40,7 @@ export const WorkArrived: Story = {
   ),
 };
 
-/**
- * Work LEFT — dealt with, deleted, or no longer theirs to see. No refresh is
- * offered: refreshing does not bring these back, so the verb would point at
- * the wrong remedy.
- */
+/** Refreshing replaces the original snapshot totals after work leaves. */
 export const WorkLeft: Story = {
   render: () => (
     <StoryProviders>

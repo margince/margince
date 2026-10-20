@@ -14,6 +14,7 @@ import {
 } from "../../design-system/drawerbands";
 import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
+import { lockReasonOr, useRefusalId } from "../../format/settinglocks";
 import { useT } from "../../i18n";
 import { problemMessageOf } from "../../lib/problem";
 import { isConflict, readLatest, writeSlice } from "./ai-binding-write";
@@ -126,7 +127,16 @@ export function BindingEditor({
 
   const binding = draft.binding;
   const keyMissing = binding ? missingKey(binding.provider, keys) : false;
-  const busy = !canManage || save.isPending;
+  const refusal = lockReasonOr(
+    opened.routing.locks,
+    "ai.routing",
+    t,
+    canManage ? undefined : t("aiRouting.adminOnly"),
+  );
+  const busy = refusal !== undefined || save.isPending;
+  // The refusal is drawn once, above the fields, and every refused verb
+  // points at it.
+  const reasonId = useRefusalId(refusal);
   return (
     <Modal
       open
@@ -142,6 +152,11 @@ export function BindingEditor({
         </Heading>
       </DrawerHead>
       <DrawerBody>
+        {reasonId && (
+          <p id={reasonId} className="t-caption">
+            {refusal}
+          </p>
+        )}
         {binding && (
           <div className="form-stack">
             <SliceFields
@@ -218,7 +233,8 @@ export function BindingEditor({
           <span className="actions-lead">
             <Button
               variant="link"
-              disabled={busy}
+              disabled={save.isPending}
+              reasonId={reasonId}
               onClick={() => submit({ kind: "decisions", binding: undefined })}
             >
               {t("aiRouting.decisions.remove")}
@@ -234,13 +250,12 @@ export function BindingEditor({
             pending={save.isPending}
             busyLabel={t("aiRouting.saving")}
             disabled={
-              !canManage ||
               !binding ||
               binding.model.trim() === "" ||
               keyMissing ||
               (servingBlocked(draft, opened.routing) === null && !servingValid)
             }
-            reason={canManage ? undefined : t("aiRouting.adminOnly")}
+            reasonId={reasonId}
             onClick={() => submit(draft)}
           >
             {t("aiRouting.saveBinding")}

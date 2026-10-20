@@ -130,3 +130,34 @@ func TestTheEmployerNeedsBothTheEdgeAndTheCompanyGrant(t *testing.T) {
 		}
 	}
 }
+
+// The employer wears the logo URL its company record wears. So a company is one
+// face on its own row and beside every contact who works there. A company with
+// no logo sends none, and the client draws its monogram.
+func TestTheEmployerCarriesTheCompanyRecordsLogo(t *testing.T) {
+	e := Setup(t)
+	ctx := e.Admin()
+	acme := e.SeedCompany(t, "Acme", nil)
+	plain := e.SeedCompany(t, "Plain GmbH", nil)
+	acmeID := ids.From[ids.CompanyKind](acme)
+	key := "company_logo/" + acme.String() + "/" + ids.NewV7().String()
+	if _, _, err := e.Contacts.SetCompanyLogo(ctx, acmeID, key, "https://acme.test/touch.png"); err != nil {
+		t.Fatalf("storing the logo: %v", err)
+	}
+	logged := e.SeedContact(t, "Anna Weber", nil)
+	unlogged := e.SeedContact(t, "Ben Plain", nil)
+	employContact(t, e, logged, acme, nil)
+	employContact(t, e, unlogged, plain, nil)
+
+	company, err := e.Contacts.GetCompany(ctx, acmeID, storekit.LiveOnly)
+	if err != nil {
+		t.Fatalf("reading the company: %v", err)
+	}
+	employer := listedContact(ctx, t, e, logged).Employer
+	if employer == nil || company.LogoUrl == nil || employer.LogoUrl == nil || *employer.LogoUrl != *company.LogoUrl {
+		t.Errorf("the employer's logo is %+v, want the company record's %v", employer, company.LogoUrl)
+	}
+	if got := listedContact(ctx, t, e, unlogged).Employer; got == nil || got.LogoUrl != nil {
+		t.Errorf("a company with no logo gives its employer %+v, want a logo-less employer", got)
+	}
+}

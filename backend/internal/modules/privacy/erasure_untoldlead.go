@@ -48,6 +48,9 @@ func EraseUntoldLeadTx(ctx context.Context, tx pgx.Tx, in UntoldLead) error {
 		return err
 	}
 	if !in.ApprovalID.IsZero() {
+		if err := eraseApprovalNoticesMatching(ctx, tx, untoldLeadReason, causeUntoldLead, "id = @id", pgx.StrictNamedArgs{"id": in.ApprovalID}); err != nil {
+			return err
+		}
 		if err := dropFromSiteRead(ctx, tx, in.ApprovalID); err != nil {
 			return err
 		}

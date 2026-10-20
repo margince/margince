@@ -44,6 +44,15 @@ test("AC-leaddetail-work: a note is logged against the lead itself", async ({
   // open in the middle of it was a page half filled in before anybody asked.
   await page.getByRole("button", { name: "Aktivität erfassen" }).click();
   await page.getByLabel("Betreff *").fill("Rückruf vereinbart");
+  await page.getByLabel("Dateien anhängen").setInputFiles({
+    name: "preisliste.pdf",
+    mimeType: "application/pdf",
+    buffer: Buffer.from("%PDF-1.4"),
+  });
+  const uploaded = page.waitForRequest(
+    (request) =>
+      request.url().endsWith("/v1/attachments") && request.method() === "POST",
+  );
   await page.getByRole("button", { name: "Erfassen", exact: true }).click();
   const request = await posted;
   const body = request.postDataJSON();
@@ -51,6 +60,11 @@ test("AC-leaddetail-work: a note is logged against the lead itself", async ({
   // The link is the LEAD, not a contact: this is what activity_link's lead arm
   // (migration 0038) exists for.
   expect(body.links).toEqual([{ entity_type: "lead", entity_id: "l-1" }]);
+  // The file is filed on the activity the server created, not on the lead.
+  const upload = (await uploaded).postData() ?? "";
+  expect(upload).toContain('name="entity_type"\r\n\r\nactivity\r\n');
+  expect(upload).toContain('name="entity_id"\r\n\r\nact-new\r\n');
+  expect(upload).toContain('filename="preisliste.pdf"');
 });
 
 test("AC-leaddetail-qualify: the dialog says what qualifying will do and why, then the page stays and names the contact", async ({

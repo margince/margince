@@ -25,16 +25,35 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// AnalyticsSchemaFor derives what this caller may ask about.
+// AnalyticsSchemaFor derives what this caller may ask about from the prebuilt
+// catalog alone. AnalyticsSchemaIn adds the installation's reportable custom
+// fields, and every door that runs a question uses that one.
 func AnalyticsSchemaFor(ctx context.Context) analyticsquery.Schema {
+	return analyticsSchemaFrom(ctx, prebuiltReports)
+}
+
+// AnalyticsSchemaIn derives what this caller may ask about in this
+// installation, and returns the specs it was derived from. The scope a question
+// runs under then reads the same fields the vocabulary offered.
+func AnalyticsSchemaIn(ctx context.Context, tx pgx.Tx) (analyticsquery.Schema, map[string]reportSpec, error) {
+	specs, err := analyticsCatalog(ctx, tx)
+	if err != nil {
+		return analyticsquery.Schema{}, nil, err
+	}
+	return analyticsSchemaFrom(ctx, specs), specs, nil
+}
+
+func analyticsSchemaFrom(ctx context.Context, specs map[string]reportSpec) analyticsquery.Schema {
 	entities := map[string]analyticsquery.Entity{}
-	for key, spec := range prebuiltReports {
+	for key, spec := range specs {
 		// The population's OWN read gate, applied at derivation. grantedSpec
 		// below narrows only the fields that read ANOTHER record type
 		// (spec.grants); the base entity's grant is the engine's admission
@@ -53,7 +72,7 @@ func AnalyticsSchemaFor(ctx context.Context) analyticsquery.Schema {
 			// the report engine's FROM, and the two would disagree the first
 			// time a spec grew a join.
 			From:      granted.fromClause(),
-			BaseWhere: granted.baseWhere,
+			BaseWhere: granted.populationWhere(),
 			Fields:    map[string]analyticsquery.Field{},
 		}
 		addFields(entity.Fields, withoutKeys(granted.dimensions, slices.Concat(granted.rowKeys, granted.rowMoments)), analyticsquery.KindDimension)
@@ -63,6 +82,13 @@ func AnalyticsSchemaFor(ctx context.Context) analyticsquery.Schema {
 		// would advertise a narrowing that answers 403.
 		addFields(entity.Fields, grantedFilters(ctx, spec), analyticsquery.KindFilter)
 		addFields(entity.Fields, onlyKeys(granted.dimensions, granted.rowMoments), analyticsquery.KindFilter)
+		for name, field := range entity.Fields {
+			field.Domain = filterDomain(spec, field.Expr)
+			if custom, ok := spec.customFields[field.Expr]; ok {
+				field = custom.describe(field)
+			}
+			entity.Fields[name] = field
+		}
 		// An entity with nothing left to name is not offered. A population a
 		// caller can see the existence of but ask nothing about is a name that
 		// only tells them a report exists.
@@ -151,10 +177,14 @@ func schemaVersion(entities map[string]analyticsquery.Entity) string {
 	for _, name := range slices.Sorted(maps.Keys(entities)) {
 		sum.Write([]byte(name))
 		entity := entities[name]
+		// The population is part of the meaning: a saved answer over a base
+		// predicate that has since narrowed must not look comparable to today's.
+		sum.Write([]byte(entity.BaseWhere))
 		for _, field := range slices.Sorted(maps.Keys(entity.Fields)) {
 			sum.Write([]byte(field))
 			sum.Write([]byte(entity.Fields[field].Expr))
 			sum.Write([]byte(entity.Fields[field].Kind))
+			writeCustomMeaning(sum, entity.Fields[field])
 		}
 	}
 	return hex.EncodeToString(sum.Sum(nil))[:16]
@@ -174,6 +204,7 @@ func DescribeAnalyticsSchema(schema analyticsquery.Schema) string {
 		out.WriteString("\n  measure:  ")
 		out.WriteString(strings.Join(entity.FieldNames(analyticsquery.KindMeasure), ", "))
 		out.WriteString("\n")
+		describeCustomFields(&out, entity)
 	}
 	return out.String()
 }

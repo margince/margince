@@ -184,7 +184,6 @@ export function CommitteeBoard({
   );
 }
 
-/** The map's own words, all of them the caller's to supply. */
 /**
  * mapLabels is the shared word set for the relationship map.
  *

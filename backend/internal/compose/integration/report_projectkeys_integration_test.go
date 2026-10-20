@@ -123,13 +123,14 @@ func TestActivitiesByKindFiltersAndGroupsByProject(t *testing.T) {
 	when := time.Date(2026, 8, 10, 12, 0, 0, 0, time.UTC)
 	fileActivity(admin, t, e, "meeting", when, &erp.ID)
 	fileActivity(admin, t, e, "meeting", when.Add(time.Hour), &erp.ID)
-	fileActivity(admin, t, e, "call", when, &crm.ID)
-	fileActivity(admin, t, e, "note", when, nil)
+	fileActivity(admin, t, e, "task", when, &crm.ID)
+	fileActivity(admin, t, e, "task", when, nil)
+	fileActivity(admin, t, e, "email", when, &erp.ID)
 
 	rows := runPrebuiltReport(admin, t, e, "activities-by-kind",
 		`{"filters":{"project_id":"`+erp.ID.String()+`"}}`)
 	if len(rows) != 1 || cell(rows[0], "kind") != "meeting" || cell(rows[0], "activities") != "2" {
-		t.Fatalf("filtered to ERP: rows = %v, want one meeting row counting 2 (the CRM call and the unfiled note excluded)", rows)
+		t.Fatalf("filtered to ERP: rows = %v, want one meeting row counting 2 (the CRM task, the unfiled task and the ERP email excluded)", rows)
 	}
 
 	byProject := map[string]string{}

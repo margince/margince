@@ -1,155 +1,54 @@
 # yaml-language-server: $schema=./margince.schema.json
-# config/margince.example.yaml — the dev deployment configuration (A107/ADR-0061).
+# Written by tools/gen-config from the settings registry; run `make config-gen` after a change.
 #
-# `make dev` copies this to config/margince.yaml on first run and then LEAVES it
-# — created if missing and left alone if it exists
-# — so your edits persist across `make dev-stop` / `make dev`. To reset, delete
-# config/margince.yaml and re-run `make dev`.
-#
-# The api bootstraps the demo company + admin from this file the first time
-# it boots against an empty database; an existing installation just reads it.
-#
-# This is the BASE. MARGINCE_ENV selects an overlay beside it —
-# config/margince.dev.yaml for a dev stack — and its keys win over this file's.
-# Within a key: a scalar replaces, a mapping merges, a list replaces entirely.
-# The whole file layer still sits between compiled defaults and the environment
-# (OPS-CFG-1): defaults -> this file -> the overlay -> env vars -> flags.
+# The bootstrap part first, then every setting commented out at its default. To set one, remove
+# the first "# " of its lines and of the section lines above it. A secret takes a reference and
+# never a literal: ${file:/path} or ${env:NAME}. A secret that allows it takes ${none} to declare
+# itself absent.
+
 version: 1
 
-# name, base_currency, base_language and timezone are what the installation IS,
-# and they are read ONCE — the first time this build boots against an empty
-# database. After that the settings rows are authoritative and this block is
-# never consulted again, so a real deployment replaces the demo values below
-# BEFORE first boot.
-#
-# Getting one wrong is not fatal: Settings → General edits all four afterwards.
-# But base_currency stops being changeable once anything has converted against
-# it (a closed deal, a sent offer, a mirrored invoice, a loaded rate sheet), so
-# it is the one worth checking twice.
+# What the installation is, read once: the first time the api boots against an
+# empty database. After that the settings rows are authoritative, so replace the
+# demo values before first boot. Settings -> General edits them later, except
+# base_currency once anything has converted against it.
 workspace:
   name: Demo Workspace
   base_currency: EUR
-  # The language AI writes in for the whole team — en, de or vi. Not a contact's
-  # display language, which each user picks for themselves.
+  # The language AI writes the shared record in: en, de or vi.
   base_language: en
   timezone: Europe/Berlin
-  # The jurisdiction pack this installation runs under: de, vn, or any other
-  # pack compiled into this build. It sets the retention floor, the messaging
-  # rules and the request deadlines. Leave it out to choose later in Settings →
-  # Jurisdiction; until then the strictest compiled-in floor and the GDPR
-  # one-month deadline apply. Boot refuses a code with no compiled-in pack.
+  # The jurisdiction pack this installation runs under, such as de or vn. Leave
+  # it out to choose later under Settings -> Jurisdiction. Boot refuses a code
+  # with no compiled-in pack.
   # country: de
 
+# The first administrator, created with the workspace. The password must be at
+# least 12 characters and arrives only by reference:
+#
+#   password: ${file:/run/secrets/admin-password}   a mounted secret
+#   password: ${env:MARGINCE_ADMIN_PASSWORD}        the environment
+#
+# A literal password fails the boot. `make dev` writes the file below on its
+# first run; the path is relative to the directory the api starts in.
 bootstrap_admin:
   email: admin@demo.test
   display_name: Demo Admin
-  # Read at boot (must be >=12 chars). `make dev` seeds the referenced file
-  # (config/margince-admin-password) on first run; the path is relative to the
-  # repo root the api is launched from.
-  #
-  # This is the OPERATOR's password, and the admin it creates reaches nothing
-  # but the change-password route until the colleague using the account replaces
-  # it. `make seed-dev` performs that first login and chooses the password the
-  # docs name — so the value here is spent once and never signed in with again.
-  #
-  # scripts/dev.sh writes this file; scripts/seed-dev.sh READS it, so changing
-  # the operator password means changing it in one place (or deleting the file
-  # and letting dev.sh reseed it). The password seed-dev then chooses is its own
-  # ADMIN_PASSWORD default.
-  # Either spelling works. The reference form is preferred and is the only one
-  # that can name the environment:
-  #
-  #   password: ${file:/run/secrets/admin-password}   the mounted secret store
-  #   password: ${env:MARGINCE_ADMIN_PASSWORD}        the environment
-  #
-  # A secret field REFUSES a literal — writing the password here fails the boot
-  # and names the line, because this file is the most-pasted artefact an
-  # installation has and a value that can be written here eventually is.
-  #
-  # The two are not equally compliant: ${file:} keeps the value in the secret
-  # store, while ${env:} only keeps it out of THIS file. OPS-CFG-3 names the
-  # environment alongside files, so ${env:} is a deliberate transitional form.
   password_file: config/margince-admin-password
 
-# The SMTP relay for mail the installation writes by itself (optional): the
-# privacy notice, the confirm-your-details and double opt-in links, password
-# reset, member and Deal Room invitations, and the emailed weekly review and
-# morning brief. These never go through a rep's connected Gmail or Outlook.
-# Without this block every one of them is not sent, and a privacy-notice duty
-# cannot be discharged from inside the product. Needs --public-base-url, and the
-# worker must read this file too. docs/how-to/set-up-outbound-mail.md explains.
-# email:
-#   enabled: true
-#   from_address: privacy@example.com
-#   smtp:
-#     host: smtp.example.com
-#     port: 587
-#     username: privacy@example.com
-#     password: ${env:MARGINCE_SMTP_PASSWORD}
-#
-# The first boot that reads the password seals it into the key vault, and the
-# sealed copy answers once this line is gone. To stop using it (a relay that
-# takes no credential, or a password that has leaked), write `password: ${none}`:
-# the boot deletes the sealed copy and sends without authenticating.
-
-# Retention posture at first boot (optional). Consumed ONCE, when the api
-# bootstraps the company against an empty database — it is not re-read, and
-# an admin can change the posture afterwards on the privacy settings screen.
-#
-#   standard    (or omitted) the shipped storage-limitation ladder runs: an
-#               unconverted lead is anonymized after a year, a meeting transcript
-#               and an AI payload are erased after a year, activities and lost
-#               deals are archived. Art. 5(1)(e) compliant out of the box.
-#   retain_only the SAME policy rows are planted, and nothing destructive ever
-#               fires: no anonymize, no erase, however over-age a record becomes.
-#               Archive still runs, because archiving retains. For an
-#               installation under a contractual or statutory keep-everything
-#               obligation — a seven-year engagement being the case that named it.
-#
-# Why declare it here rather than just toggling it in the UI: bootstrap plants the
-# policy rows, and the nightly pass can fire before an admin first signs in. This
-# closes that window. The rows stay visible under either posture, so an admin can
-# always see what WOULD happen if the obligation lapsed.
+# The retention posture a new installation starts in. standard (or omitted) runs
+# the shipped storage-limitation ladder; retain_only plants the same policy rows
+# and never anonymizes or erases. Read once, at bootstrap.
 # seeds:
 #   retention:
 #     default_policy: retain_only
 
-# The tier→model binding a FRESH installation is bootstrapped with (optional).
-#
-# Declared here so a deployment names its models in the file it already reviews,
-# rather than having to call an API after first boot — which is what keeps an
-# infrastructure-as-code install declarative. Consumed exactly once, like every
-# other seed: the database is authoritative afterwards, and an admin re-points a
-# lane through PUT /v1/ai/routing without a restart.
-#
-# Omitted, the installation binds nothing and its AI lanes are simply absent.
-# That is a state, not a fault — nothing guesses which vendor your text goes to.
-#
-# Held to the same bar the routing file always was, at BOOTSTRAP, which is the
-# one moment somebody is watching: an unknown tier, a cloud provider under the
-# sovereign profile, or an embeddings width outside [1,2000] fails the boot
-# rather than surfacing at the first model call.
-#
-# Credentials are NOT here and never will be. A binding names providers; each
-# one's BYOK key lives in the key vault, put there by an admin under
-# Settings -> AI -> AI models -> Providers, so this section is safe to commit.
-#
-# The conventional environment variables (GEMINI_API_KEY, ANTHROPIC_API_KEY, …)
-# are still read, but only to SEED: a boot that finds one MAY seal it into the
-# vault and record where, after which the variable can be unset. It needs a
-# key-vault root key and a stored model binding to do that — the sealing runs on
-# the path that resolves a binding — so an unbound installation keeps the
-# environment as its only copy. Unset the variable once the boot log says the key
-# was sealed, not merely because it was set.
-#
-# A key in the environment is readable by every process in the container and
-# survives in shell history and process listings; one in the vault is encrypted
-# at rest and rotatable without a restart, which is why the vault is the home.
-#
+# The tier-to-model binding a new installation starts with. Read once, at
+# bootstrap; afterwards Settings -> AI or PUT /v1/ai/routing changes it. Omitted,
+# no model is bound. A binding names providers only: each provider's key is a
+# setting of its own (ai.provider_keys_*), never part of this block.
 # seeds:
 #   ai_routing:
-#     # cloud_frontier, not eu_hosted: the Gemini Developer API states no EU
-#     # processing region, so nothing here keeps text in the EU.
 #     profile: cloud_frontier     # eu_hosted | sovereign | cloud_frontier
 #     tiers:
 #       local_small: { provider: gemini, model: gemini-3.1-flash-lite }
@@ -161,225 +60,489 @@ bootstrap_admin:
 #       model: gemini-embedding-001
 #       dimensions: 1536
 
-# Entitlement (optional). The token is verified offline against the validation
-# module bundled in the binary — no callout, so an air-gapped installation proves
-# its entitlement like any other. A file reference, never an inline value: the
-# token is a credential and this file is not.
-#
-# Omitted, a PRODUCTION installation refuses to boot: it serves on a license or
-# it does not serve, and MARGINCE_ENV is fail-closed, so an installation that
-# names no posture is production. A dev or CI process runs unlicensed by saying
-# so (MARGINCE_ENV=dev), which is what every lane in this repository does.
-# Configured and REFUSED, the api and the worker both refuse to boot in every
-# posture — a license that is present and unhonored is an operator mistake, not a
-# downgrade to choose silently. MARGINCE_LICENSE overrides the file when it holds
-# a non-empty value; exporting it empty falls through to the file rather than
-# switching the installation off.
-#
-# What the license grants is also enforced: once every licensed full seat is in
-# use, inviting a member is refused. Nobody already working loses anything.
-#
-# Sealed on the first boot that resolves it: the token goes into the key vault
-# and the installation records where. The boot log says so, and from then on
-# this whole block can be DELETED and the vault answers instead — deleting only
-# the file it points at, and leaving the block, fails the boot instead.
-# To rotate, put the new token back here — the declaration still wins, and the
-# next boot re-seals it. docs/reference/configuration.md, "the vault also holds
-# the two deployment credentials".
-# license:
-#   token: ${file:config/margince-license}
+# ---- top-level keys ----
+# # Listen address of the HTTP server.
+# # default: :8080
+# addr: :8080
+# # Drive the AI surfaces with the offline fake model when nothing else can serve (dev and test
+# # only).
+# # default: false
+# ai_fake: false
+# # Ignored; kept so existing command lines parse.
+# ai_routing:
+# # External base of the api for the OAuth redirect_uri when the api and the SPA are on different
+# # origins; defaults to --public-base-url.
+# api_base_url:
+# # Access key for the object store.
+# blobstore_access_key: ${file:/run/secrets/blobstore_access_key}
+# # Bucket attachments are written to.
+# blobstore_bucket:
+# # Endpoint of an object store such as MinIO for attachment bytes; it wins over
+# # MARGINCE_BLOBSTORE_PATH, and with both unset the attachment endpoints answer 501.
+# blobstore_endpoint:
+# # Directory attachment bytes are written to when there is no object storage service; ignored when
+# # MARGINCE_BLOBSTORE_ENDPOINT is set.
+# blobstore_path:
+# # Region the bucket lives in.
+# blobstore_region:
+# # Secret key for the object store.
+# blobstore_secret_key: ${file:/run/secrets/blobstore_secret_key}
+# # Reach the object store over TLS.
+# # default: false
+# blobstore_use_ssl: false
+# # Base URL of a certificate log, or public for a free public one; unset makes no outbound lookups
+# # of what a company runs.
+# certlog_base_url:
+# # HMAC key of at least 32 bytes signing the OAuth connect state; required for the Gmail and Graph
+# # connect flows.
+# connector_state_key: ${file:/run/secrets/connector_state_key}
+# # Postgres DSN of the runtime app role; migrate falls back to it when MARGINCE_OWNER_DSN is unset.
+# dsn: ${file:/run/secrets/dsn}
+# # Nominatim base URL, or public; set it on the api and the worker together, or a lookup is never
+# # queued.
+# geocode_base_url:
+# # Google OAuth client id of the Gmail capture connector.
+# gmail_client_id:
+# # Google OAuth client secret of the Gmail capture connector.
+# gmail_client_secret: ${file:/run/secrets/gmail_client_secret}
+# # Override of the Google OIDC JWKS URL, for test and dev.
+# gmail_jwks_url:
+# # Gmail Pub/Sub topic (projects/<p>/topics/<t>) that enables the push-watch job; unset leaves
+# # capture on the poll.
+# gmail_pubsub_topic:
+# # OIDC audience the Pub/Sub push subscription mints tokens for.
+# gmail_push_audience:
+# # Google service account email that signs the Pub/Sub push OIDC tokens.
+# gmail_push_service_account:
+# # Shared secret on the Pub/Sub push URL; unset, POST /webhooks/gmail is absent.
+# gmail_push_token: ${file:/run/secrets/gmail_push_token}
+# # Microsoft Entra app id of the Outlook and Microsoft 365 capture connector.
+# graph_client_id:
+# # Microsoft client secret of the Outlook and Microsoft 365 capture connector.
+# graph_client_secret: ${file:/run/secrets/graph_client_secret}
+# # Public URL, token included, that Microsoft posts Graph change notices to; unset leaves Outlook
+# # capture on the poll.
+# graph_notification_url: ${file:/run/secrets/graph_notification_url}
+# # Shared secret on the Graph change notice URL; unset, POST /webhooks/graph is absent.
+# graph_push_token: ${file:/run/secrets/graph_push_token}
+# # Microsoft identity tenant of the capture consent endpoint and token refresh; unset means common.
+# graph_tenant:
+# # Run the outbox relay in this process; false when cmd/worker runs it.
+# # default: true
+# inline_relay: true
+# # How long a running job gets to finish at shutdown; the grace period must cover it, five more
+# # seconds and the shutdown steps.
+# # default: 20s
+# job_drain_window: 20s
+# # Standard Base64 of the 32-byte root key that seals connector credentials; unset disables the
+# # vault.
+# keyvault_root_key: ${file:/run/secrets/keyvault_root_key}
+# # Log format.
+# # default: text
+# log_format: text
+# # Log level.
+# # default: info
+# log_level: info
+# # Origin the api reads the MCP App view documents from; defaults to --public-base-url.
+# mcp_apps_base_url:
+# # Who /metrics serves: token requires --metrics-token, open serves any client that reaches the
+# # port.
+# # default: token
+# metrics_access: token
+# # Bearer credential /metrics requires; unset, /metrics refuses every scrape unless
+# # --metrics-access=open.
+# metrics_token: ${file:/run/secrets/metrics_token}
+# # Comma-separated Entra directory ids whose members may sign in; defaults to --graph-tenant when
+# # that names a directory.
+# microsoft_signin_tenant:
+# # Address the worker serves its /healthz, /readyz and /metrics on, such as 127.0.0.1:9101; unset
+# # serves nothing.
+# observe_addr:
+# # Serve the Go profiles under /debug/pprof/ on the --observe-addr listener with no sign-in; turn
+# # it on only to find a fault.
+# # default: false
+# observe_pprof: false
+# # Postgres DSN of the owner role, which migrate applies the schema with.
+# owner_dsn: ${file:/run/secrets/owner_dsn}
+# # Enrichment provider: live, offline or off; an unknown value fails the boot.
+# # default: live
+# provider_surfe: live
+# # External scheme and host for the links a buyer sees and for the OAuth callback; required to send
+# # mail.
+# public_base_url:
+# # Redis address of the event bus.
+# # default: localhost:16379
+# redis: localhost:16379
+# # Event-bus credential, where the Redis server requires one.
+# redis_password: ${file:/run/secrets/redis_password}
+# # Postgres DSN of the owner role for custom-field schema changes; unset, those two operations
+# # answer 501.
+# schema_dsn: ${file:/run/secrets/schema_dsn}
+# # Comma-separated CIDR prefixes of the reverse proxies whose client address header the rate limits
+# # per IP trust.
+# trusted_proxies:
+# # VIES base URL, or public; set it on the api and the worker together, or a VAT check is never
+# # queued.
+# vat_check_base_url:
+# # Base64 32-byte key sealing outbound-webhook signing secrets; unset, the webhook paths that
+# # change data answer 503 and the worker sends nothing.
+# webhook_key: ${file:/run/secrets/webhook_key}
+# # Directory where the AI task probes of the worker write their files.
+# # default: .tmp/aitask
+# work_dir: .tmp/aitask
 
-# AI runtime posture (optional). Uncomment to turn on Layer-3 AI payload capture
-# (ai_call_payload) — OFF by default because it stores special-category-adjacent
-# content that then ages under the retention engine and the Art. 17 erasure
-# cascade. Honored by both the api and worker roles (both take --config).
-#
-# IF YOU TURN THIS ON, SET THE WINDOW DELIBERATELY. The `ai_call_payload` /
-# `content` retention policy is an admin-editable row, seeded at bootstrap at
-# 365 days, and it is the whole of the bound on this exposure. Three things
-# decide what the number should be:
-#
-#   WHAT IT BOUNDS. How long a captured transcript, contract or draft — the
-#   model's whole request — stays on disk after the work is done. For a reading
-#   of a meeting transcript, that request IS the transcript: the largest copy of
-#   somebody's words this product holds.
-#
-#   WHAT IT IS FOR. Debugging a call and auditing what was sent are
-#   days-to-weeks questions. A year of them is a year of somebody's words kept
-#   for a lane nobody is reading.
-#
-#   WHAT IT DOES NOT BOUND. An Art. 17 erasure reaches these payloads two ways:
-#   by the record a call cited, and by matching the subject's addresses in the
-#   text. A call that names no record and whose text spells no address is
-#   reached by neither, and for those this window is the guaranteed end — which
-#   is exactly the case a shorter one is for.
-#   docs/explanation/privacy-and-consent.md, "What an erasure reaches in the AI
-#   telemetry, and what it does not".
+# ---- activities ----
+# activities:
+#   # Days a sent message may go without a reply before its sender is asked to follow up.
+#   # default: 2
+#   follow_up_after_days: 2
+
+# ---- ai ----
 # ai:
-#   capture_payloads: true
+#   # The monthly AI token budget of the company, as tokens_per_full_user and company_monthly_tokens
+#   # (null for the total over its users).
+#   # default: {"tokens_per_full_user":12000000,"company_monthly_tokens":null}
+#   budget: {"tokens_per_full_user":12000000,"company_monthly_tokens":null}
+#   # Keep each AI call's request and answer in ai_call_payload, aged by its retention policy; set it
+#   # on the api and the worker together.
+#   # default: false
+#   capture_payloads: false
+#   # Whether the daily job syncs model prices, as {"auto_sync": true|false}. Refresh now runs either
+#   # way.
+#   # default: {"auto_sync":true}
+#   price_sync: {"auto_sync":true}
+#   # BYOK API key for the Anthropic provider; required only when a binding names it.
+#   provider_keys_anthropic: ${file:/run/secrets/ai.provider_keys_anthropic}
+#   # BYOK API key for the Gemini provider; required only when a binding names it.
+#   provider_keys_gemini: ${file:/run/secrets/ai.provider_keys_gemini}
+#   # BYOK service-account key (the JSON key file's contents) for the gemini_vertex provider; required
+#   # only when a binding names it.
+#   provider_keys_gemini_vertex: ${file:/run/secrets/ai.provider_keys_gemini_vertex}
+#   # API key for the TypeSafe decision provider; required only when the decisions lane binds it.
+#   provider_keys_jev: ${file:/run/secrets/ai.provider_keys_jev}
+#   # API key for a jev_compatible decision server; sent when set and never required.
+#   provider_keys_jev_compatible: ${file:/run/secrets/ai.provider_keys_jev_compatible}
+#   # BYOK API key for the OpenAI provider; required only when a binding names it.
+#   provider_keys_openai: ${file:/run/secrets/ai.provider_keys_openai}
+#   # BYOK API key for the openai_compatible provider; required only when a binding names it.
+#   provider_keys_openai_compatible: ${file:/run/secrets/ai.provider_keys_openai_compatible}
+#   # The tier-to-model binding, in the shape seeds.ai_routing takes (JSON in the environment). Unset
+#   # binds no models.
+#   routing:
+#   # Each task's thinking level and timeouts, as the JSON object PUT /ai/task-overrides takes. Unset
+#   # keeps the product's values.
+#   # default: {}
+#   task_overrides: {}
 
-# How large a file this installation accepts, per route (optional, OPS-CFG-12).
-#
-# DECIMAL megabytes — 25 means 25,000,000 bytes, not 26,214,400. The number you
-# write here is the number the server's refusal names and the number the upload
-# form states, and those three agreeing is the whole reason the unit is decimal.
-#
-# The ceiling bounds the WHOLE request, part framing included, not the file
-# alone. The overhead is a few hundred bytes, so it only matters within a
-# rounding error of the limit.
-#
-# Each key is separate on purpose: raising what a scanned contract may weigh is
-# not a reason to let a CSV import attempt more parsing work. An omitted key
-# takes the default below; a value outside 1–100 MB is a boot error, not a
-# silent clamp. Past 100 MB the answer is an upload straight to object storage,
-# which is a different design rather than a bigger number.
-#
-# What this section does NOT decide is which routes may carry a file at all —
-# that stays in the source, and it is what keeps a route carrying no file from
-# claiming the wider bound by sending a multipart header.
-# uploads:
-#   attachment_mb: 25        # POST /v1/attachments — the documents surface
-#   csv_import_mb: 10        # POST /v1/imports/sources
-#   linkedin_import_mb: 8    # POST /v1/me/linkedin-connections
-#   knowledge_document_mb: 5 # POST /v1/knowledge/corpora/{id}/documents — a
-#                            # document filed into an asked corpus. Low because
-#                            # the cost of a big one is passages the ask scans,
-#                            # not the bytes on disk.
+# ---- analytics ----
+# analytics:
+#   # Ignored; kept so existing files load.
+#   # default: false
+#   performance_enabled: false
 
-# Capture pipeline posture (optional).
-#
-# trace_payloads keeps each traced message's sender and a bounded subject in the
-# 24-hour Capture activity trace every member sees under Settings.
-#
-# ON unless you set it to false. Without the sender the trace is a list of
-# decisions naming nobody, which cannot answer the question the page exists for:
-# why a message did not arrive. What is kept is one address and one subject line
-# (320 and 300 characters), never a body, and a member reads only rows from
-# their own connections — no grant widens them, so this is somebody's own mail
-# shown back to them.
-#
-# It covers messages the pipeline DROPPED because every party was internal to
-# your own domains. Those are the ones the CRM otherwise stores nothing about,
-# and they are exactly what an operator is looking for when a message went
-# missing. Turn it off if your works agreement requires it; the trace then keeps
-# recording every decision and names nobody.
-#
-# The hourly sweep deletes payloads with the rows that carry them, and an
-# erasure request reaches them inside the window.
-# max_backfill_months caps how far back a mailbox import may reach, for the whole
-# installation. Absent means no cap, which is the shipped behaviour: whoever
-# connects a mailbox picks from 3 months to 10 years, and picks again next time.
-#
-# Set one when the answer should be the installation's rather than each
-# colleague's. A ten-year import is not a bigger version of a one-year import —
-# it predates every notice, policy and exclusion rule you have handed out, and it
-# is the input to the raw_capture growth your retention rule then ages back out.
-#
-# The number is matched against the offered windows (3, 6, 12, 24, 36, 60, 84,
-# 120), so the connect dialog offers only what it admits and a start above it is
-# refused at the door as well as at the preview.
-#
-# skip_reserved_domain_proposals keeps senders on RFC 2606 reserved names
-# (example.com, example.net, example.org and their subdomains, and anything
-# under .test, .example, .invalid or .localhost) out of the contact review
-# queue. Their mail is still captured and shown; only the "is this a contact
-# worth keeping?" proposal is not raised. ON unless you set it to false, which
-# you would do only for an installation that deliberately runs a test mailbox.
+# ---- auth ----
+# auth:
+#   password:
+#     # Email and password sign-in; an installation behind its own identity provider turns it off.
+#     # default: true
+#     enabled: true
+
+# ---- capture ----
 # capture:
-#   trace_payloads: false
-#   max_backfill_months: 24
-#   skip_reserved_domain_proposals: false
+#   # Read a new contact's company web page automatically.
+#   # default: true
+#   auto_enrich: true
+#   # Automatic company web-page reads the installation may start in one UTC day.
+#   # default: 500
+#   auto_enrich_daily_cap: 500
+#   # Ignored, with a warning at boot; the consumer-mail list is edited under Settings.
+#   freemail_extra:
+#   # Ignored, with a warning at boot; the consumer-mail list is edited under Settings.
+#   freemail_never:
+#   # Let every colleague who can see a contact read the email captured with them; off keeps new mail
+#   # to those on it.
+#   # default: true
+#   mail_sharing: true
+#   # Seconds a working mailbox connection waits between polls.
+#   # default: 120
+#   mail_sync_interval_seconds: 120
+#   # How far back a mailbox import may reach, for the whole installation; 0 is no cap.
+#   # default: 0
+#   max_backfill_months: 0
+#   # Allow a seat to share their mailbox with colleagues as mail lands; turn it on only where a works
+#   # agreement allows it.
+#   # default: false
+#   shared_posture_allowed: false
+#   # Read contact details from the signatures and attached cards of captured mail, for every mailbox
+#   # that has made no choice of its own.
+#   # default: true
+#   signature_enrich: true
+#   # MiB one company web-page read may hold, over all its pages.
+#   # default: 32
+#   site_read_max_mib: 32
+#   # Pages one company web-page read may fetch.
+#   # default: 60
+#   site_read_max_pages: 60
+#   # Seconds one company web-page read may run before it stops and extracts what it has.
+#   # default: 240
+#   site_read_wall_seconds: 240
+#   # Raise no contact proposal for a sender on an RFC 2606 reserved name; the mail is still captured.
+#   # default: true
+#   skip_reserved_domain_proposals: true
+#   # Keep each traced message's sender and a bounded subject in the 24-hour capture trace, dropped
+#   # messages included.
+#   # default: true
+#   trace_payloads: true
+#   # Domains of mail services added to the built-in list; their mail keeps the activity and derives
+#   # no counterparty.
+#   transactional_extra:
+#   # Domains never held back as system mail, whatever the built-in rules say.
+#   transactional_never:
 
-# Rates & costs "Refresh from sources" (worker role): an admin triggers an async
-# FX refresh that stages confirm-first proposals into the approvals inbox; a
-# human approves every change, nothing is auto-applied. Model prices are not
-# configured here: "Refresh model prices" reads the broker's own catalogue.
-# Field reference: docs/reference/configuration.md#rates.
-rates:
-  # Base-relative FX JSON API ({base,rates}); defaults to api.frankfurter.dev.
-  fx_source: https://api.frankfurter.dev/v1/latest
-  # Currencies proposed to bootstrap an empty FX sheet; defaults to USD/GBP/CHF.
-  fx_currencies: [USD, GBP, CHF]
+# ---- company_context ----
+# company_context:
+#   # Company-context stage: off, read (reads and settings), tasks (AI tasks get it) or onboarding
+#   # (the first-run flow too).
+#   # default: onboarding
+#   rollout: onboarding
 
-# Remote MCP connector (Gate 1). On means /mcp and /oauth/* are served, so any
-# human here can lend one of their passports to an outside client; it is on in
-# this file so a local stack works unedited. The code default is off — delete
-# this block and none of it exists. It needs --public-base-url (a bare origin),
-# which cmd/api refuses to boot without; that refusal only catches an unset
-# flag, and mail, reset links and the Gmail/Graph connectors need it too, so a
-# deployment that already sets it serves the surface the moment it copies this.
-mcp:
-  connector_enabled: true
+# ---- consent ----
+# consent:
+#   # How strictly the authorization engine applies its answer for each message category: observe,
+#   # warn or enforce.
+#   # default: {"account_notice":"enforce","active_deal_followup":"enforce","consent_confirmation":"enforce","contract_notice":"enforce","customer_service":"enforce","invoice_or_payment":"enforce","marketing":"enforce","optout_confirmation":"enforce","precontract_quote":"enforce","privacy_notice":"enforce","record_confirmation":"enforce","reply_to_inbound":"enforce","requested_followup":"enforce","security_notice":"enforce"}
+#   authorization_modes: {"account_notice":"enforce","active_deal_followup":"enforce","consent_confirmation":"enforce","contract_notice":"enforce","customer_service":"enforce","invoice_or_payment":"enforce","marketing":"enforce","optout_confirmation":"enforce","precontract_quote":"enforce","privacy_notice":"enforce","record_confirmation":"enforce","reply_to_inbound":"enforce","requested_followup":"enforce","security_notice":"enforce"}
+#   # Who this installation is, as every message it sends must say: legal name, address, privacy
+#   # contact, how to object, and advertiser contact.
+#   controller_particulars:
 
-# The MCP App views (the ui:// documents a host renders beside a tool's answer)
-# are static files the web tier serves, and the api reads them over HTTP:
-# GET <origin>/mcp-apps/<view>.html, once at startup and periodically after.
-# There is nothing to configure here — the origin is --mcp-apps-base-url /
-# MARGINCE_MCP_APPS_BASE_URL, which DEFAULTS to --public-base-url, and the
-# connector gate above already makes that a boot error to omit.
-#
-# Set it only when the api cannot reach the public origin: a container without
-# ingress hairpin routing, external DNS or egress. The value has to be
-# API-reachable, which is not the same as publicly reachable. A CDN origin works
-# and is recommended — it trades the dependency on the web tier for a better
-# one rather than removing it. The scheme must be https unless the host is a
-# literal loopback or private address (or localhost): a cleartext hostname like
-# http://web.internal is a boot error, not a silent one. See
-# docs/reference/configuration.md.
+# ---- contacts ----
+# contacts:
+#   # Track a first-response target on every lead.
+#   # default: false
+#   first_response_enabled: false
+#   # Minutes a lead may wait for its first real response once its clock starts.
+#   # default: 240
+#   first_response_target_minutes: 240
+#   # The email signature of the workspace, used in place of the own signature of each sender; empty
+#   # means none.
+#   signature_template:
+#   # The user id of the colleague who answers for a lead nobody owns once it misses its target; empty
+#   # means nobody, and a boot value that names no active colleague reaches nobody and logs a warning.
+#   unassigned_escalation_user_id:
 
-# Ordered company-context rollout (OPS-CFG-10). The default is onboarding;
-# moving backward disables reads/injection/surfaces but never deletes confirmed
-# company data. Stages include the prior stage: off < read < tasks < onboarding.
-company_context:
-  rollout: onboarding
+# ---- deals ----
+# deals:
+#   # Let a deal be sent to legal for review, and let a legal_reviewed criterion hold a deal at its
+#   # stage.
+#   # default: true
+#   legal_review_enabled: true
+#   # Let the nightly close-date sweep write to a deal. Off stops every automatic write the sweep
+#   # makes.
+#   # default: true
+#   maintenance_writes_enabled: true
+#   # Let a deal move to the next stage by itself where the rule of its stage allows it; off stops
+#   # every automatic move.
+#   # default: false
+#   stage_autopilot_enabled: false
 
-# Live Lists and Shortlists: named, shared sets of one record type. On by
-# default. Set enabled: false to hide them: the /lists routes answer 404, no
-# agent tool reaches them and no screen offers them. No list is deleted.
-lists:
-  enabled: true
+# ---- email ----
+# email:
+#   # Send the installation's own mail through the SMTP relay below; needs --public-base-url.
+#   # default: false
+#   enabled: false
+#   # Sender address of the installation's own mail; required when email.enabled.
+#   from_address:
+#   smtp:
+#     # SMTP relay host; required when email.enabled.
+#     host:
+#     # SMTP relay password, sealed into the key vault at boot; ${none} deletes the sealed copy and
+#     # sends without one.
+#     password: ${file:/run/secrets/email.smtp.password}
+#     # Path to a file holding the SMTP relay password; a password set by reference wins over it.
+#     password_file:
+#     # SMTP relay port, 1 to 65535 when email.enabled.
+#     # default: 0
+#     port: 0
+#     # SMTP relay user; unset sends without signing in.
+#     username:
 
-# Ops kill switches (OPS-CFG-9): capabilities this installation turns on
-# deliberately, in the file the deployment reviews. The whole section is
-# COMMENTED OUT, and that is the shipped posture — every switch is off unless an
-# operator writes it, so a deployment that mounts this file as-is arms nothing.
-#
-# A dev stack gets the Reset data button from config/margince.dev.yaml, the
-# tracked overlay MARGINCE_ENV=dev selects on top of this file — which is why a
-# dev stack has the button and this file still does not.
-#
+# ---- identity ----
+# identity:
+#   # The sign-in providers offered, as a list of provider keys; unset offers every provider the
+#   # deployment set up.
+#   enabled_oidc_providers:
+#   # The role each directory group grants at sign-in, as group:role pairs; it only grants, and never
+#   # removes a role.
+#   oidc_group_role_map:
+#   # Every member must use two-step sign-in.
+#   # default: false
+#   require_mfa: false
+#   # Members other than admins sign in only through a sign-in provider.
+#   # default: false
+#   require_sso: false
+
+# ---- installation ----
+# installation:
+#   # Calls of any kind, tool or API, one agent passport may make per window.
+#   # default: 1000
+#   agent_calls_per_window: 1000
+#   # Calls that send something out of the workspace one agent passport may make per window.
+#   # default: 20
+#   agent_egress_per_window: 20
+#   # Seconds between the passes of the agent scheduler.
+#   # default: 30
+#   agent_runner_interval_seconds: 30
+#   # Hours in the window the agent limits count over; set at boot, it also keeps a length an admin
+#   # saved for the next reset from taking over.
+#   # default: 24
+#   agent_window_hours: 24
+#   # Changing calls one agent passport may make per window.
+#   # default: 200
+#   agent_writes_per_window: 200
+#   # The language AI writes the shared record in: en, de or vi.
+#   # default: en
+#   base_language: en
+#   # Seconds between the close-date sweeps.
+#   # default: 86400
+#   close_date_sweep_interval_seconds: 86400
+#   # Where the installation is established, as a two-letter ISO 3166-1 code in small letters; empty
+#   # for none.
+#   # default: ""
+#   country: ""
+#   # How dates are written: locale, dmy, mdy or ymd.
+#   # default: locale
+#   date_format: locale
+#   # Hours the job-health banner looks back before it calls dead work a problem.
+#   # default: 24
+#   dead_work_banner_hours: 24
+#   # The month the business year begins, 1 to 12.
+#   # default: 1
+#   fiscal_year_start_month: 1
+#   # Seconds between the follow-up reconcile passes.
+#   # default: 86400
+#   follow_up_reconcile_interval_seconds: 86400
+#   # Which remaining-pipeline reading a projected landing is built from.
+#   # default: commit_evidence
+#   forecast_forward_measure: commit_evidence
+#   # Seconds between the sweeps that add missing map points, or 0 for off.
+#   # default: 3600
+#   geocode_backfill_interval_seconds: 3600
+#   # Hours before a Gmail push subscription ends that it is renewed.
+#   # default: 48
+#   gmail_watch_renew_within_hours: 48
+#   # Seconds between the scans for Gmail push subscriptions due for renewal.
+#   # default: 21600
+#   gmail_watch_scan_interval_seconds: 21600
+#   # Hours before a Microsoft Graph mail subscription ends that it is renewed.
+#   # default: 24
+#   graph_watch_renew_within_hours: 24
+#   # Seconds between the scans for Microsoft Graph mail subscriptions due for renewal.
+#   # default: 21600
+#   graph_watch_scan_interval_seconds: 21600
+#   # The company's name. Set at boot, it also refuses a different name on the company profile.
+#   name:
+#   # Minutes an access token from the OAuth handshake of a connector lives, for the first token and
+#   # every refresh.
+#   # default: 43200
+#   oauth_access_token_ttl_minutes: 43200
+#   # Seconds between the retention sweeps.
+#   # default: 86400
+#   retention_sweep_interval_seconds: 86400
+#   # Hours a delivery held back by the send rate may wait before it stops with a reason.
+#   # default: 24
+#   send_max_age_hours: 24
+#   # Messages one mailbox may send per send-rate window.
+#   # default: 30
+#   send_rate_limit: 30
+#   # Seconds in the window the send rate is counted over.
+#   # default: 60
+#   send_rate_window_seconds: 60
+#   # Seconds between the sweeps that add missing technical profiles, or 0 for off.
+#   # default: 21600
+#   technical_backfill_interval_seconds: 21600
+#   # How times of day are written: locale, 24h or 12h.
+#   # default: locale
+#   time_format: locale
+#   # Seconds between the time-scan passes.
+#   # default: 3600
+#   time_scan_interval_seconds: 3600
+#   # Seconds between the passes that retry failed webhook deliveries.
+#   # default: 30
+#   webhook_retry_interval_seconds: 30
+
+# ---- integrations ----
+# integrations:
+#   # Look each new contact up once against the connected data provider for the free details, with no
+#   # request from a user.
+#   # default: true
+#   automatic_lookup: true
+
+# ---- license ----
+# license:
+#   # Licence token; unset with no license.token_file runs with no license, which production refuses.
+#   token: ${file:/run/secrets/license.token}
+#   # Path to a file holding the licence token, read again at each licence check; license.token wins
+#   # over it.
+#   token_file:
+
+# ---- lists ----
+# lists:
+#   # Live Lists and Shortlists; false hides every list surface and deletes no list.
+#   # default: true
+#   enabled: true
+
+# ---- mcp ----
+# mcp:
+#   # Serve /mcp and the OAuth authorization server to outside agent clients; needs --public-base-url.
+#   # default: false
+#   connector_enabled: false
+
+# ---- operations ----
 # operations:
-#   # Arms POST /v1/admin/reset-data, the lanes behind it, and the "Reset data"
-#   # action /me offers. It PURGES this installation's tenant data back to its
+#   # Arm POST /v1/admin/reset-data, which purges this installation's tenant data back to its
 #   # first-boot state.
-#   #
-#   # Not derived from MARGINCE_ENV: a deployment being called dev or staging is
-#   # not consent to erase what is in it. Not a `setting` row either — an admin
-#   # must not be able to arm their own tenant's purge through the API.
-#   allow_data_reset: true
-#
-#   # Arms the test_mailbox connector: a QC-only, no-network fake mailbox that
-#   # can both capture and send synthetic mail, reachable only through
-#   # POST /connectors/test_mailbox/connect once this is set. Never true on a
-#   # real deployment — a fake send that reads as a real one to a customer is
-#   # a worse failure than the capability merely existing.
+#   # default: false
+#   allow_data_reset: false
+#   # Arm the test_mailbox connector, a no-network fake mailbox that captures and sends; never on a
+#   # real deployment.
+#   # default: false
 #   allow_test_mailbox: false
 
-# The RFC 9116 security.txt this installation publishes (optional).
-#
-# The contact belongs to whoever OPERATES this installation, the party a finder
-# should tell about a hole in it, so nothing is compiled in. With the block absent,
-# /.well-known/security.txt is a 404. With it set, the api serves the file, so
-# the ingress must route that exact path to the api ("Route one host to two
-# services" in docs/how-to/deploy-margince.md). Every contact is a mailto:,
-# https: or tel: URI; expires is required, in RFC 3339. The api warns at boot
-# when expires has passed or is more than a year out, and keeps serving the file
-# either way.
+# ---- privacy ----
+# privacy:
+#   # Keep everything: the nightly retention pass erases nothing and strips no personal data, whatever
+#   # a policy says.
+#   # default: false
+#   retain_only: false
+
+# ---- rates ----
+# rates:
+#   # ISO 4217 codes the FX refresh offers for an empty rate sheet; unset offers USD, GBP and CHF.
+#   fx_currencies:
+#   # Page the FX refresh reads rates from; unset reads a free source of ECB rates.
+#   fx_source:
+#   # Ignored, with a warning at boot; kept so existing files load.
+#   model_pricing:
+
+# ---- uploads ----
+# uploads:
+#   # Largest request POST /v1/attachments takes, in decimal MB.
+#   # default: 25
+#   attachment_mb: 25
+#   # Largest request POST /v1/imports/sources and the vCard import take, in decimal MB.
+#   # default: 10
+#   csv_import_mb: 10
+#   # Largest document POST /v1/knowledge/corpora/{id}/documents takes, in decimal MB.
+#   # default: 5
+#   knowledge_document_mb: 5
+#   # Largest request POST /v1/me/linkedin-connections takes, in decimal MB.
+#   # default: 8
+#   linkedin_import_mb: 8
+
+# ---- web ----
 # web:
-#   security_txt:
-#     contact:
-#       - mailto:security@example.org
-#       - https://example.org/report-a-vulnerability
-#     expires: "2030-01-01T00:00:00Z"
-#     policy: https://example.org/disclosure-policy   # optional, https: only
-#     preferred_languages: [en, de]                   # optional
+#   # RFC 9116 security.txt: one or more contact URIs and an RFC 3339 end time, with an optional
+#   # policy link and preferred_languages.
+#   # default: null
+#   security_txt: null

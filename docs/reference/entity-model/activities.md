@@ -55,7 +55,7 @@ The 28 tables owned by `activities`, as the migrations build them. [Back to the 
 | `retention_class` | `text` |  |  |
 | `retention_class_at` | `timestamp with time zone` |  |  |
 | `sent_by_colleague` | `uuid` |  | Points at `app_user.id`. |
-| `source_activity_id` | `uuid` |  | The activity this one was derived from: today, the meeting whose transcript proposed a task. |
+| `source_activity_id` | `uuid` |  | The conversation or note this task follows from, whether added by a human or read from a conversation. |
 | `source_author_id` | `uuid` |  | Points at `app_user.id`. |
 | `source_author_name` | `text` |  |  |
 | `source_id` | `text` |  | Provider message/event id; part of the idempotency key. |
@@ -209,7 +209,7 @@ The 28 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity_commitment_admission
 
-12 columns · primary key `(source_activity_id, locator)` · referenced by 0 foreign keys
+13 columns · primary key `(source_activity_id, locator)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -217,6 +217,7 @@ The 28 tables owned by `activities`, as the migrations build them. [Back to the 
 | `evaluated_at` | `timestamp with time zone` | yes |  |
 | `evidence_ids` | `uuid[]` | yes |  |
 | `locator` | `text` | yes |  |
+| `meaning` | `jsonb` |  |  |
 | `outcome` | `text` | yes |  |
 | `renewed_at` | `timestamp with time zone` |  |  |
 | `renewed_by` | `uuid` |  | Points at `activity.id`. |

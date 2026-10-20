@@ -21,16 +21,16 @@ import type { MessageKey } from "../../i18n/en";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
-import { ContractForm } from "../../screens/contractform";
+import { ContractForm } from "../projects/contractform";
 import {
   ContractCancelModal,
   ContractRenewModal,
   ContractStatusModal,
   isTerminalContractStatus,
-} from "../../screens/contractlifecycle";
-import { ContractPaper } from "../../screens/contractpaperchip";
-import { ContractTerm, ContractTerms } from "../../screens/contractterms";
-import { CustomFieldsPanel } from "../../screens/customfields.card";
+} from "../projects/contractlifecycle";
+import { ContractPaper } from "../projects/contractpaperchip";
+import { ContractTerm, ContractTerms } from "../projects/contractterms";
+import { CustomFieldsPanel } from "../records/customfields.card";
 // The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
 // are defined in company360.css. Imported HERE rather than left to the caller:
 // it works today only because the company record page pulls that stylesheet in

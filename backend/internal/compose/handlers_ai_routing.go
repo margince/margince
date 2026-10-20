@@ -48,6 +48,7 @@ func writeAiRouting(w http.ResponseWriter, r *http.Request, cfg ai.RoutingConfig
 		httperr.Write(w, r, err)
 		return
 	}
+	out.Locks = loadedLocks(ai.RoutingSurface())
 	w.Header().Set("ETag", `"`+cfg.Revision()+`"`)
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
@@ -75,7 +76,7 @@ func (h aiRoutingHandlers) ReplaceAiRouting(w http.ResponseWriter, r *http.Reque
 	}
 	next, err := fromContractAiRouting(req, sentRouting(r))
 	if err != nil {
-		httperr.Write(w, r, err)
+		httperr.Write(w, r, h.store.LockFirst(r.Context(), ai.RoutingKey, err))
 		return
 	}
 	cfg, err := h.store.ReplaceIfVersion(r.Context(), next, expected)

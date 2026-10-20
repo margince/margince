@@ -180,6 +180,7 @@ const ALIASES: Partial<Record<SettingsPageId, readonly string[]>> = {
   jurisdiction: ["country", "law", "legal", "pack", "deadline", "floor"],
   audit: ["trail", "log", "who", "history", "compliance"],
   "system-health": ["jobs", "queue", "reindex", "maintenance", "stuck"],
+  configuration: ["environment", "env", "flag", "yaml", "source", "locked"],
   extensions: ["units", "plugins", "modules", "extension"],
   reset: ["empty", "wipe", "delete everything", "danger"],
 };

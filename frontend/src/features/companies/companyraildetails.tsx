@@ -17,11 +17,11 @@ import { useCanWriteRecord } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { invalidateCompany } from "../../lib/recordwritekeys";
 import { useRecordZone } from "../../lib/recordzone";
-import { derivedSource } from "../../screens/evidencesource";
+import { derivedSource } from "../records/evidencesource";
 import {
   profileFieldsKey,
   useCompanyProfileFields,
-} from "../../screens/evidenceverdict";
+} from "../records/evidenceverdict";
 import { CompanyDetails } from "./companydetails";
 import { useCompanyReadOnlyReason } from "./companyheader";
 import { VatMark } from "./companyvatmark";

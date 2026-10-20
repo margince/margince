@@ -687,3 +687,108 @@ it("keeps a distinct explanation below the proposal summary", () => {
     screen.getByText("The customer requested updated terms."),
   ).toBeInTheDocument();
 });
+
+it.each(["row", "deck"] as const)(
+  "uses the authorized comparison in the %s layout",
+  (layout) => {
+    render(
+      card({
+        layout,
+        approval: approval({
+          kind: "lifecycle_change",
+          proposed_change: {
+            current_lifecycle: "raw_before",
+            proposed_lifecycle: "raw_after",
+          },
+        }),
+        display: [
+          {
+            field: "lifecycle",
+            label: "Account stage",
+            value: "Customer to Former customer",
+            comparison: { from: "Customer", to: "Former customer" },
+          },
+        ],
+      }),
+    );
+    expect(screen.getByText("Account stage")).toBeInTheDocument();
+    expect(screen.getByText("Customer")).toBeInTheDocument();
+    expect(screen.getByText("Former customer")).toBeInTheDocument();
+    expect(screen.queryByText("raw_before")).not.toBeInTheDocument();
+    expect(screen.queryByText("raw_after")).not.toBeInTheDocument();
+  },
+);
+
+it.each(["row", "deck"] as const)(
+  "does not reconstruct a refused comparison in the %s layout",
+  (layout) => {
+    const { container } = render(
+      card({
+        layout,
+        approval: approval({
+          kind: "lifecycle_change",
+          proposed_change: {
+            current_lifecycle: "raw_before",
+            proposed_lifecycle: "raw_after",
+          },
+        }),
+        display: [
+          {
+            field: "preview_status",
+            label: "Preview",
+            value: "The record changed. Review a new proposal.",
+            comparison: null,
+            lead: true,
+          },
+        ],
+      }),
+    );
+    expect(
+      screen.getByText("The record changed. Review a new proposal."),
+    ).toBeInTheDocument();
+    expect(container.querySelector(".dcard-diff")).toBeNull();
+    expect(screen.queryByText("raw_before")).not.toBeInTheDocument();
+    expect(screen.queryByText("raw_after")).not.toBeInTheDocument();
+  },
+);
+
+it("replaces historical evidence with the current authorized evidence", () => {
+  const { rerender } = render(
+    card({
+      layout: "deck",
+      approval: approval({
+        evidence: [{ evidence_snippet: "Historical private excerpt" }],
+        preview: {
+          version: 1,
+          state: "unavailable",
+          changes: [],
+          reviewer_reason: "record_authority",
+          evidence: [],
+        },
+      }),
+    }),
+  );
+  expect(
+    screen.queryByText(/Historical private excerpt/),
+  ).not.toBeInTheDocument();
+  rerender(
+    card({
+      layout: "deck",
+      approval: approval({
+        preview: {
+          version: 1,
+          state: "ready",
+          changes: [],
+          reviewer_reason: "record_authority",
+          evidence: [
+            {
+              evidence_snippet: "Current authorized excerpt",
+              source_type: "signal",
+            },
+          ],
+        },
+      }),
+    }),
+  );
+  expect(screen.getByText(/Current authorized excerpt/)).toBeInTheDocument();
+});

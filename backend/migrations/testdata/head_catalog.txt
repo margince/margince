@@ -152,6 +152,7 @@ public.activity_commitment_admission.current_work boolean NOT NULL gen=- def=-
 public.activity_commitment_admission.evaluated_at timestamp with time zone NOT NULL gen=- def=-
 public.activity_commitment_admission.evidence_ids uuid[] NOT NULL gen=- def=-
 public.activity_commitment_admission.locator text NOT NULL gen=- def=-
+public.activity_commitment_admission.meaning jsonb gen=- def=-
 public.activity_commitment_admission.outcome text NOT NULL gen=- def=-
 public.activity_commitment_admission.renewed_at timestamp with time zone gen=- def=-
 public.activity_commitment_admission.renewed_by uuid gen=- def=-
@@ -1656,6 +1657,7 @@ public.capture_connection.account_label text gen=- def=-
 public.capture_connection.archived_at timestamp with time zone gen=- def=-
 public.capture_connection.auth bytea gen=- def=-
 public.capture_connection.capture_connection_context_tag_id_fkey FOREIGN KEY (context_tag_id) REFERENCES tag(id) ON DELETE SET NULL
+public.capture_connection.capture_connection_history_baseline_check CHECK ((((history_baseline_date IS NULL) = (history_baseline_tz IS NULL)) AND ((history_baseline_date IS NULL) = (history_baseline_set_by IS NULL)) AND ((history_baseline_date IS NULL) = (history_baseline_set_at IS NULL))))
 public.capture_connection.capture_connection_mail_posture_check CHECK ((mail_posture = ANY (ARRAY['shared'::text, 'classified'::text, 'held'::text])))
 public.capture_connection.capture_connection_provider_check CHECK ((provider = ANY (ARRAY['gmail'::text, 'gcal'::text, 'imap'::text, 'graph'::text, 'graphcal'::text, 'whatsapp'::text, 'telegram'::text, 'offline_demo'::text, 'test_mailbox'::text])))
 public.capture_connection.capture_connection_status_check CHECK ((status = ANY (ARRAY['connected'::text, 'disconnected'::text, 'error'::text, 'reauth_required'::text])))
@@ -1666,6 +1668,10 @@ public.capture_connection.context_tag_id uuid gen=- def=-
 public.capture_connection.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.capture_connection.credential_ref text gen=- def=-
 public.capture_connection.generation integer NOT NULL gen=- def=0
+public.capture_connection.history_baseline_date date gen=- def=-
+public.capture_connection.history_baseline_set_at timestamp with time zone gen=- def=-
+public.capture_connection.history_baseline_set_by text gen=- def=-
+public.capture_connection.history_baseline_tz text gen=- def=-
 public.capture_connection.id uuid NOT NULL gen=- def=uuidv7()
 public.capture_connection.mail_posture text NOT NULL gen=- def='classified'::text
 public.capture_connection.provider text NOT NULL gen=- def=-
@@ -1739,6 +1745,7 @@ public.capture_import.capture_import_pkey PRIMARY KEY (id)
 public.capture_import.capture_import_posture_check CHECK (((posture_at_import IS NULL) OR (posture_at_import = ANY (ARRAY['shared'::text, 'classified'::text, 'held'::text]))))
 public.capture_import.capture_import_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE RESTRICT
 public.capture_import.capture_import_verdict_status_check CHECK (((verdict_status IS NULL) OR (verdict_status = ANY (ARRAY['pending'::text, 'cleared'::text, 'held'::text, 'unsure'::text, 'shared_by_owner'::text, 'held_by_owner'::text]))))
+public.capture_import.delivered_by text[] NOT NULL gen=- def='{}'::text[]
 public.capture_import.id uuid NOT NULL gen=- def=uuidv7()
 public.capture_import.imported_at timestamp with time zone NOT NULL gen=- def=now()
 public.capture_import.posture_at_import text gen=- def=-
@@ -3315,6 +3322,7 @@ public.custom_field.custom_field_created_by_fkey FOREIGN KEY (created_by) REFERE
 public.custom_field.custom_field_currency_check CHECK (((currency IS NULL) OR (currency ~ '^[A-Z]{3}$'::text)))
 public.custom_field.custom_field_object_check CHECK ((object = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text, 'contract'::text])))
 public.custom_field.custom_field_pkey PRIMARY KEY (id)
+public.custom_field.custom_field_reportable_type_check CHECK (((NOT reportable) OR ((object = 'deal'::text) AND (type = ANY (ARRAY['picklist'::text, 'boolean'::text])))))
 public.custom_field.custom_field_status_check CHECK ((status = ANY (ARRAY['active'::text, 'retired'::text])))
 public.custom_field.custom_field_type_check CHECK ((type = ANY (ARRAY['text'::text, 'number'::text, 'date'::text, 'currency'::text, 'picklist'::text, 'multiselect'::text, 'boolean'::text])))
 public.custom_field.custom_field_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
@@ -3322,6 +3330,7 @@ public.custom_field.id uuid NOT NULL gen=- def=uuidv7()
 public.custom_field.label text NOT NULL gen=- def=-
 public.custom_field.object text NOT NULL gen=- def=-
 public.custom_field.options jsonb gen=- def=-
+public.custom_field.reportable boolean NOT NULL gen=- def=false
 public.custom_field.show_in_create boolean NOT NULL gen=- def=true
 public.custom_field.slug text NOT NULL gen=- def=-
 public.custom_field.status text NOT NULL gen=- def='active'::text
@@ -5456,7 +5465,9 @@ public.notice.retracted_at timestamp with time zone gen=- def=-
 public.notice.subject text NOT NULL gen=- def=-
 public.notice.target_id uuid gen=- def=-
 public.notice.target_type text gen=- def=-
+public.notice_dedupe_key CREATE INDEX notice_dedupe_key ON public.notice USING btree (dedupe_key) WHERE (dedupe_key IS NOT NULL)
 public.notice_history CREATE INDEX notice_history ON public.notice USING btree (recipient_user_id, created_at DESC, id DESC)
+public.notice_outstanding_kind_id CREATE INDEX notice_outstanding_kind_id ON public.notice USING btree (kind, id) WHERE (retracted_at IS NULL)
 public.notice_pkey CREATE UNIQUE INDEX notice_pkey ON public.notice USING btree (id)
 public.notice_unread CREATE INDEX notice_unread ON public.notice USING btree (recipient_user_id, created_at DESC) WHERE (read_at IS NULL)
 public.notification_digest_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -6284,12 +6295,15 @@ public.report_definition.archived_at timestamp with time zone gen=- def=-
 public.report_definition.audience text NOT NULL gen=- def=-
 public.report_definition.audience_team_id uuid gen=- def=-
 public.report_definition.created_at timestamp with time zone NOT NULL gen=- def=-
+public.report_definition.draft_revision bigint gen=- def=-
 public.report_definition.id uuid NOT NULL gen=- def=-
 public.report_definition.name text NOT NULL gen=- def=-
 public.report_definition.owner_id uuid NOT NULL gen=- def=-
 public.report_definition.report_definition_audience_check CHECK ((audience = ANY (ARRAY['private'::text, 'team'::text, 'workspace'::text])))
 public.report_definition.report_definition_audience_team_id_fkey FOREIGN KEY (audience_team_id) REFERENCES team(id)
 public.report_definition.report_definition_check CHECK (((audience = 'team'::text) = (audience_team_id IS NOT NULL)))
+public.report_definition.report_definition_draft_after_published CHECK (((draft_revision IS NULL) OR ((draft_revision >= (revision + 1)) AND (draft_revision <= '9007199254740991'::bigint))))
+public.report_definition.report_definition_draft_revision_js_safe CHECK (((draft_revision >= '-9007199254740991'::bigint) AND (draft_revision <= '9007199254740991'::bigint)))
 public.report_definition.report_definition_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id)
 public.report_definition.report_definition_pkey PRIMARY KEY (id)
 public.report_definition.report_definition_revision_js_safe CHECK (((revision >= '-9007199254740991'::bigint) AND (revision <= '9007199254740991'::bigint)))

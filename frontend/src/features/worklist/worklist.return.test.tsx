@@ -1,5 +1,6 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { translate } from "../../i18n";
@@ -39,9 +40,15 @@ describe("a row opened from the Worklist drawer", () => {
       "GET /worklist": () => jsonResponse(readingsDay({}, [aboutWeber])),
     });
     render(<BriefQueue />);
-    await screen.findByRole("link", { name: "Call Weber" });
+    await screen.findByRole("button", { name: "Call Weber" });
+    await userEvent
+      .setup()
+      .click(
+        screen.getByRole("button", { name: "More actions for Call Weber" }),
+      );
+    await screen.findByRole("link", { name: "Open" });
 
-    const dials = linkTo("Call Weber");
+    const dials = linkTo("Open");
     expect(dials.get("from")).toBe("worklist");
     expect(dials.get("filter")).toBe("tasks");
     expect(dials.get("queue_scope")).toBe("team");
@@ -55,9 +62,15 @@ describe("a row opened from the Worklist drawer", () => {
     window.location.hash = "#/worklist?filter=tasks";
     stub(worklistDay({ queue: [aboutWeber] }));
     renderWorklist();
-    await screen.findByRole("link", { name: "Call Weber" });
+    await screen.findByRole("button", { name: "Call Weber" });
+    await userEvent
+      .setup()
+      .click(
+        screen.getByRole("button", { name: "More actions for Call Weber" }),
+      );
+    await screen.findByRole("link", { name: "Open" });
 
-    expect(linkTo("Call Weber").has("from")).toBe(false);
+    expect(linkTo("Open").has("from")).toBe(false);
   });
 
   it("leaves a link to anything but a record page untouched", () => {

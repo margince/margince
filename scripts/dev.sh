@@ -17,10 +17,9 @@
 # http — no TLS front door needed.
 #
 # BYOK: if .env.local sets a cloud key (GEMINI_API_KEY / OPENAI_API_KEY /
-# ANTHROPIC_API_KEY / OPENAI_COMPATIBLE_API_KEY), sourcing it exports the var and
-# the api/worker inherit it — SelectBrain reads the key from the environment at
-# boot (the routing file holds only providers), so the cold-start read-back runs
-# the real model; otherwise the offline fake (--ai-fake) drives it.
+# ANTHROPIC_API_KEY / OPENAI_COMPATIBLE_API_KEY), the api and the worker read it
+# through --env-file .env.local, so the cold-start read-back runs the real model;
+# otherwise the offline fake (--ai-fake) drives it.
 #
 # Credentials are NOT hardcoded: the connection URLs derive from OWNER_DSN /
 # APP_DSN, which fall back to the MARGINCE_OWNER_DSN / MARGINCE_DSN the binaries
@@ -69,28 +68,39 @@ COMPOSE_OWNER_DSN="postgres://margince_owner:dev@localhost:15432/margince"
 COMPOSE_APP_DSN="postgres://margince_app:margince_app_dev@localhost:15432/margince"
 
 # .env.local FIRST, before anything below resolves a default out of the
-# environment.
+# environment. Seeded here too, on every invocation: the seed and the read are
+# one step.
 #
-# It used to be sourced deep inside the `dev` command, beside the AI block that
-# needed the cloud keys — which is after every `${VAR:-default}` in this file
-# has already run. So the file lost every question it was asked: the DSN
-# resolution below explained in a comment that it consults MARGINCE_DSN, and did
-# so against an environment that had not yet been read. A value set in
-# .env.local looked meaningful and did nothing, which is the failure this whole
-# file has now made twice.
-#
-# Seeded here too, and on every invocation rather than only on `dev`: the seed
-# and the read are one step, and splitting them is what let the read move.
-seed_and_source_env_local() {
+# Read into this shell and NOT exported. The api and the worker read the file
+# themselves through --env-file, below the environment in their order, and say
+# so as its source; an exported copy would rank as the environment instead.
+# This script reads it only for its own decisions (the DSNs, which keys are
+# set), and the environment wins here too: a name it already holds is skipped.
+read_env_local() {
     if [[ ! -f .env.local && -f .env.example ]]; then
         cp .env.example .env.local
         echo "dev: seeded .env.local from .env.example — edit it to set keys (GEMINI_API_KEY, MARGINCE_GMAIL_*, …)"
     fi
-    if [[ -f .env.local ]]; then
+    [[ -f .env.local ]] || return 0
+    local assignments
+    # A clean shell parses the file, so a name this script uses for itself is
+    # never overwritten; only upper-case names come back.
+    assignments="$(env -i "$BASH" -c '
         set -a; . ./.env.local; set +a
-    fi
+        for name in $(compgen -e); do
+            [[ "$name" =~ ^[A-Z][A-Z0-9_]*$ && "$name" != PWD && "$name" != OLDPWD && "$name" != SHLVL ]] || continue
+            printf "[[ -n \"\${%s:-}\" ]] || %s=%q\n" "$name" "$name" "${!name}"
+        done')"
+    eval "$assignments"
 }
-seed_and_source_env_local
+read_env_local
+
+# stack_default NAME VALUE exports VALUE only when neither the environment nor
+# .env.local names NAME, so a value from the file still reaches the api through
+# --env-file and is shown with the file as its source.
+stack_default() {
+    [[ -n "${!1:-}" ]] || export "$1=$2"
+}
 
 # This stack's connection surface, resolved the way the product resolves it:
 # an explicit argument, else the environment the binaries themselves read, else
@@ -99,9 +109,8 @@ seed_and_source_env_local
 #
 # MARGINCE_OWNER_DSN / MARGINCE_DSN are consulted because they are what cmd/api,
 # cmd/worker and cmd/migrate read, and this script passes --dsn explicitly, which
-# OUTRANKS that environment. A value set in .env.local — which this script
-# sources — was therefore inert for the entire dev stack while looking like it
-# meant something. Two names for one setting, and only one of them worked.
+# OUTRANKS that environment. A value set only in .env.local would otherwise be
+# inert for the entire dev stack while looking like it meant something.
 OWNER_DSN="${OWNER_DSN:-${MARGINCE_OWNER_DSN:-$COMPOSE_OWNER_DSN}}"
 APP_DSN="${APP_DSN:-${MARGINCE_DSN:-$COMPOSE_APP_DSN}}"
 REDIS_PORT="${REDIS_PORT:-16379}"
@@ -119,23 +128,19 @@ MINIO_PORT="${MINIO_PORT:-29000}"
 #
 # Everything else it sets is a DEFAULT. The blobstore four point at the MinIO
 # the compose stack starts, and pointing them at a real object store instead is
-# a thing an engineer legitimately wants; they were passed as command-prefix
-# assignments, which outrank an exported variable, so a value set in .env.local
-# was read, exported and then discarded with nothing said.
-# Its own function so a test can call it rather than read it: the failure this
-# replaces was a resolution that looked right in the file and lost at runtime.
+# a thing an engineer legitimately wants, in the environment or in .env.local.
+# Its own function so a test can call it rather than read it.
 resolve_stack_environment() { # minio_port
-    MARGINCE_BLOBSTORE_ENDPOINT="${MARGINCE_BLOBSTORE_ENDPOINT:-localhost:${1}}"
-    MARGINCE_BLOBSTORE_ACCESS_KEY="${MARGINCE_BLOBSTORE_ACCESS_KEY:-minioadmin}"
-    MARGINCE_BLOBSTORE_SECRET_KEY="${MARGINCE_BLOBSTORE_SECRET_KEY:-minioadmin}"
-    MARGINCE_BLOBSTORE_REGION="${MARGINCE_BLOBSTORE_REGION:-us-east-1}"
-    export MARGINCE_BLOBSTORE_ENDPOINT MARGINCE_BLOBSTORE_ACCESS_KEY \
-        MARGINCE_BLOBSTORE_SECRET_KEY MARGINCE_BLOBSTORE_REGION
+    stack_default MARGINCE_BLOBSTORE_ENDPOINT "localhost:${1}"
+    stack_default MARGINCE_BLOBSTORE_ACCESS_KEY minioadmin
+    stack_default MARGINCE_BLOBSTORE_SECRET_KEY minioadmin
+    stack_default MARGINCE_BLOBSTORE_REGION us-east-1
 
     # MARGINCE_ENV is this script's, and says so rather than winning silently.
     # A `make dev` that booted a production posture would refuse an unlicensed
-    # install and hide the data reset, for a reason nobody would connect to a
-    # line in their own .env.local.
+    # install and hide the data reset. A non-empty one in .env.local fails the
+    # api's boot instead: the programs take the posture only from the
+    # environment.
     if [[ -n "${MARGINCE_ENV:-}" && "${MARGINCE_ENV}" != "dev" ]]; then
         echo "dev: MARGINCE_ENV=${MARGINCE_ENV} is set, and this stack runs as dev regardless — the dev postures are what \`make dev\` is. Run the binary yourself to serve another posture."
     fi
@@ -847,7 +852,7 @@ log_colour=0
 # effective_flag KEY — what the api will see for a boolean key, printed as
 # "true", "false", or "" when neither file names it (the compiled default).
 #
-# The overlay is consulted first because MARGINCE_ENV=dev makes it the winning
+# The dev file is consulted first because it is the --config-file, the winning
 # layer, and a key it names decides even when it names `false`. Both files are
 # grepped rather than parsed: this is a status line, and a shell YAML parser
 # would be a second implementation of the loader that could disagree with it.
@@ -1143,7 +1148,7 @@ up)
   # The model binding is a stored setting, planted at bootstrap from
   # `seeds.ai_routing`; there is no routing file to seed any more. Which file
   # declares it decides which providers this stack binds, and the layering picks
-  # the winner: the posture overlay is applied AFTER the base, so if
+  # the winner: the --config-file is read AFTER the base, so if
   # config/margince.dev.yaml declares the key it wins over the engineer's own
   # config/margince.yaml.
   #
@@ -1154,17 +1159,13 @@ up)
     routing_src="config/margince.dev.yaml"
   fi
 
-  # BYOK: the real model powers the /coldstart read-back when a cloud key is in
-  # the environment, the offline fake otherwise. Secrets ride the ENVIRONMENT —
-  # the api resolves each provider's key from its conventional env var
-  # (GEMINI_API_KEY / GEMINI_VERTEX_SA_JSON / OPENAI_API_KEY / ANTHROPIC_API_KEY /
-  # OPENAI_COMPATIBLE_API_KEY / TYPESAFE_API_KEY)
-  # at boot; the routing file names only providers, never a key. Sourcing
-  # .env.local exports those vars, and the api/worker started below inherit them —
-  # no key ever lands in a config file. Seed .env.local from the tracked template
-  # on first run so a fresh clone has a documented place for these keys.
-  # Already sourced, at the top of this file — see seed_and_source_env_local.
-  # The keys the scan below looks for are in the environment by now.
+  # BYOK: the real model powers the /coldstart read-back when a cloud key is set,
+  # the offline fake otherwise. The api resolves each provider's key from its
+  # conventional variable (GEMINI_API_KEY / GEMINI_VERTEX_SA_JSON /
+  # OPENAI_API_KEY / ANTHROPIC_API_KEY / OPENAI_COMPATIBLE_API_KEY /
+  # TYPESAFE_API_KEY), in the environment or in .env.local through --env-file;
+  # no key ever lands in a config file. read_env_local, at the top of this
+  # file, has already given this shell the keys the scan below looks for.
   ai_flag=(--ai-fake)
   # Real routing needs the key for EVERY cloud provider the routing file
   # actually binds — SelectBrain fails closed at boot on the first bound
@@ -1220,7 +1221,7 @@ up)
   # refresh tokens). Export it unconditionally so `make dev` can connect an IMAP
   # mailbox with no Google OAuth app configured — the gmail branch below adds
   # only the OAuth-specific state key and base URLs.
-  export MARGINCE_KEYVAULT_ROOT_KEY="${MARGINCE_KEYVAULT_ROOT_KEY:-bWFyZ2luY2UtZGV2LW9ubHkta2V5dmF1bHQtcm9vdGs=}"
+  stack_default MARGINCE_KEYVAULT_ROOT_KEY "bWFyZ2luY2UtZGV2LW9ubHkta2V5dmF1bHQtcm9vdGs="
 
   # The SPA's own origin (:fe_port) is where a browser lands — the same origin
   # Gmail consent redirects to and, per DESIGN §5.1, the same origin an MCP
@@ -1232,7 +1233,7 @@ up)
   # no Gmail env vars in sight.
   # A tunnelled host (cloudflared quick tunnel) needs this to be the public
   # URL, not localhost, or the advertised MCP resource mismatches and OAuth
-  # token exchange fails. Overridable from .env.local (sourced above) so every
+  # token exchange fails. Overridable from .env.local (read above) so every
   # `make dev` boots tunnel-correct; unset, dev is unchanged.
   #
   # BOTH ROLES take it. The worker refuses to boot without a usable origin once
@@ -1256,7 +1257,7 @@ up)
   # yet" to somebody who had just registered one, because the roster could not
   # tell an unregistered app from an unusable deployment. Not a secret: a fixed
   # dev constant, overridden by .env.local where one is set.
-  export MARGINCE_CONNECTOR_STATE_KEY="${MARGINCE_CONNECTOR_STATE_KEY:-margince-dev-connector-state-key-0001}"
+  stack_default MARGINCE_CONNECTOR_STATE_KEY margince-dev-connector-state-key-0001
 
   # Gmail capture connector: when .env.local supplies a Google OAuth app, pass
   # its flags to the api and run the sync worker. Absent it, `make dev` is
@@ -1266,9 +1267,9 @@ up)
   if [[ -n "${MARGINCE_GMAIL_CLIENT_ID:-}" && -n "${MARGINCE_GMAIL_CLIENT_SECRET:-}" ]]; then
     gmail_enabled=1
     # Secrets travel via the environment, NEVER CLI flags (argv is visible in
-    # the process table). The client id/secret are already exported from
-    # .env.local, and the state key above. The api/worker flags default to
-    # these env vars, so we pass only the non-secret, dev-computed URL on the
+    # the process table). The api and the worker read the client id/secret
+    # from .env.local through --env-file, and the state key above. So we pass
+    # only the non-secret, dev-computed URL on the
     # command line — api base = the api (:api_port), where the callback
     # redirect_uri resolves. public-base-url is Gmail's consent landing origin
     # too, but it rides on $public_base_url_flag above so it is passed exactly
@@ -1288,6 +1289,9 @@ up)
   # restarts (it lives in config/, not the scratch rundir dev-stop clears).
   deploy_cfg="config/margince.yaml"
   dev_cfg="config/margince.dev.yaml"
+  # The api and the worker read .env.local themselves; read_env_local seeded it.
+  env_file_flag=()
+  [[ -f .env.local ]] && env_file_flag=(--env-file .env.local)
   admin_pw_file="config/margince-admin-password"
   # The OPERATOR's password, which is deliberately not the one anybody signs in
   # with. A configured bootstrap requires the admin to replace it before the
@@ -1304,17 +1308,17 @@ up)
     echo "dev: seeded $deploy_cfg from config/margince.example.yaml — edit it to change company/admin or AI posture (e.g. ai.capture_payloads)"
   fi
   # The dev posture's own differences — the Reset data button among them — live
-  # in the TRACKED config/margince.dev.yaml, which MARGINCE_ENV=dev selects on
-  # top of the file above. They used to be appended here, which meant the most
+  # in the TRACKED config/margince.dev.yaml, which the api and the worker read
+  # as --config-file on top of the file above. They used to be appended here, which meant the most
   # destructive capability a dev stack has was armed by a heredoc no review ever
   # saw as a diff, in a file git does not track.
   # Report which deployment config the api + worker are using, and its AI
   # posture — mirrors the ai-routing line above so both configs are visible.
   #
-  # Both keys are read the way the api reads them: the dev overlay first,
-  # because it wins, and the base only for a key the overlay is silent about. A
+  # Both keys are read the way the api reads them: the dev file first,
+  # because it wins, and the base only for a key the dev file is silent about. A
   # status line that reported the base alone would contradict the running
-  # process the moment anyone used the overlay for what it is for.
+  # process the moment anyone used the dev file for what it is for.
   if [[ "$(effective_flag capture_payloads)" == "true" ]]; then
     capture_note="ai.capture_payloads ON"
   else
@@ -1366,7 +1370,8 @@ up)
   # double-ship.
   MARGINCE_SCHEMA_DSN="$dev_owner_url" \
     MARGINCE_BLOBSTORE_BUCKET="$blob_bucket" \
-    ./bin/api --addr ":${api_port}" --dsn "$dev_app_url" --config "$deploy_cfg" \
+    ./bin/api --addr ":${api_port}" --dsn "$dev_app_url" --config "$deploy_cfg" --config-file "$dev_cfg" \
+    "${env_file_flag[@]+"${env_file_flag[@]}"}" \
     --redis "${REDIS_ADDR}" \
     "${public_base_url_flag[@]}" \
     "${ai_flag[@]+"${ai_flag[@]}"}" "${gmail_api_flags[@]+"${gmail_api_flags[@]}"}" > >(log_as api) 2>&1 &
@@ -1395,15 +1400,16 @@ up)
   # automations at all, event- or clock-triggered). It gets the SAME config
   # surface as the api — the same $ai_flag (real cloud model when
   # .env.local set a BYOK key, else the offline fake, so its runner
-  # matches the api), the same blobstore endpoint, and the .env.local keys
-  # already exported into this shell (vault + Gmail secrets travel via the
-  # environment, never CLI flags). How often each pass runs and how often a
+  # matches the api), the same blobstore endpoint, and the same --env-file
+  # (vault + Gmail secrets travel via the environment or that file, never CLI
+  # flags). How often each pass runs and how often a
   # mailbox syncs are admin settings (Settings -> System health, Capture), so
   # a demo that wants a quicker mail poll sets it there.
   ( cd backend && GOWORK="$PWD/../build/composition/go.work" go build -o ../bin/worker ./cmd/worker ) > >(log_as boot) 2>&1
   MARGINCE_BLOBSTORE_BUCKET="$blob_bucket" \
     ./bin/worker --dsn "$dev_app_url" --redis "${REDIS_ADDR}" \
-    --config "$deploy_cfg" \
+    --config "$deploy_cfg" --config-file "$dev_cfg" \
+    "${env_file_flag[@]+"${env_file_flag[@]}"}" \
     "${public_base_url_flag[@]}" \
     "${ai_flag[@]+"${ai_flag[@]}"}" > >(log_as worker) 2>&1 &
   worker_pid=$!

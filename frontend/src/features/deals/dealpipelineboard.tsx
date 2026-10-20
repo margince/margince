@@ -13,7 +13,7 @@ import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { routeHash } from "../../lib/router";
 import { useWriteTo } from "../../lib/writeto";
-import { LogActivityAction } from "../../screens/logactivity";
+import { LogActivityAction } from "../records/logactivity";
 import { dealMailAside } from "./dealmailaside";
 import { DealStatusCardPanel } from "./dealstatus";
 

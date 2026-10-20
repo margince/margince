@@ -20,6 +20,8 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/config/configtest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -129,9 +131,13 @@ func TestReplayErasuresRefusesToRunWithoutTheObjectStore(t *testing.T) {
 func replayErasures(t *testing.T, e *integration.Env, flags ...string) (string, error) {
 	t.Helper()
 	vault := newTestVault(t, e)
+	settings, err := configtest.Load(t, "", config.Environ(), nil, blobstore.Settings()...)
+	if err != nil {
+		t.Fatalf("loading the blobstore settings: %v", err)
+	}
 	var out bytes.Buffer
 	handled, err := runDatabaseSubcommand(t.Context(), e.Pool,
-		func() (keyvault.Vault, error) { return vault, nil },
+		func() (keyvault.Vault, error) { return vault, nil }, settings,
 		append([]string{"replay-erasures"}, flags...), &out)
 	if !handled {
 		t.Fatal("the worker does not know the replay-erasures command")

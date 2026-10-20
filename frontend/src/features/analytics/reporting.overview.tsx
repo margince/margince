@@ -169,11 +169,10 @@ function OverviewBody({
     .filter((metric) =>
       template === "sdr"
         ? ["meetings_held", "accepted_opportunities"].includes(metric.id)
-        : ![
-            "meetings_held",
-            "accepted_opportunities",
-            "forecast_landing",
-          ].includes(metric.id),
+        : !["meetings_held", "accepted_opportunities"].includes(metric.id) &&
+          // The expected finish is always this fiscal quarter's, so it is
+          // asked only when the page reads this quarter too.
+          (metric.id !== "forecast_landing" || period === "this_quarter"),
     )
     .map((metric) => metric.id);
   const desired: ReportingSelection["blocks"] =

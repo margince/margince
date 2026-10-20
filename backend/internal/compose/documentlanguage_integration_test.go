@@ -12,9 +12,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -23,10 +21,7 @@ func TestDocumentReadingStoresItsOriginalExplanationLanguage(t *testing.T) {
 		t.Run(tc.language, func(t *testing.T) {
 			env := integration.Setup(t)
 			ctx := env.Admin()
-			settingStore := settings.New(env.Pool, settings.NewRegistry(identity.BaseLanguage))
-			if err := settings.Set(ctx, settingStore, identity.BaseLanguage, tc.language); err != nil {
-				t.Fatal(err)
-			}
+			integration.SetBaseLanguage(ctx, t, env.Pool, tc.language)
 			pipeline, stage, _ := integration.DealFixture(t, env)
 			deal := env.SeedDeal(t, "Example deal", pipeline, stage, &env.Rep1)
 			store := activities.NewStore(env.DB()).WithBlobstore(blobstore.NewMemory())
@@ -44,9 +39,7 @@ func TestDocumentReadingStoresItsOriginalExplanationLanguage(t *testing.T) {
 			if err := reader.Read(ctx, store, reading.ID, attachmentID); err != nil {
 				t.Fatal(err)
 			}
-			if err := settings.Set(ctx, settingStore, identity.BaseLanguage, "en"); err != nil {
-				t.Fatal(err)
-			}
+			integration.SetBaseLanguage(ctx, t, env.Pool, "en")
 			finished, err := store.GetExtractionRead(ctx, attachmentID, reading.ID)
 			if err != nil {
 				t.Fatal(err)

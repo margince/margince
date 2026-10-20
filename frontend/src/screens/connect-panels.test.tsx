@@ -9,13 +9,13 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { LocaleProvider } from "../i18n";
-import { en } from "../i18n/en";
-import { installFetchStub, jsonResponse } from "../testing/story-utils";
 import {
   OAuthConnectPanel,
   OAuthReturnPanel,
-} from "./onboarding-connect-panels";
+} from "../features/onboarding/onboarding-connect-panels";
+import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
+import { installFetchStub, jsonResponse } from "../testing/story-utils";
 
 // The Google panel's pre-connect state must reassure a first-time user before
 // the redirect: an unverified dev app shows Google's "unverified app" notice,

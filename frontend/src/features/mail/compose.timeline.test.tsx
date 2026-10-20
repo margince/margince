@@ -7,7 +7,7 @@ import {
   messageText,
   writeMessage,
 } from "../../design-system/richtext-testing";
-import { TimelineActions } from "../../screens/timelineactions";
+import { TimelineActions } from "../records/timelineactions";
 import { ChannelReplyAction, ComposeModal } from "./compose";
 import {
   type Activity,

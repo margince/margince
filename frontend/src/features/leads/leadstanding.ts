@@ -2,7 +2,7 @@ import type { components } from "../../api/schema";
 import { formatDateAbbrev } from "../../format/format";
 import type { Locale, Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import type { Grounding, StandingTone } from "../../screens/record360";
+import type { Grounding, StandingTone } from "../records/record360";
 
 type Lead = components["schemas"]["Lead"];
 

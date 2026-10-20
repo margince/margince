@@ -9,12 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/dealstatus"
 	"github.com/margince/margince/backend/internal/modules/dealrooms"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -24,9 +21,7 @@ func TestChangingDealCardLanguagePreservesTheReadersDismissal(t *testing.T) {
 	deal := ids.From[ids.DealKind](e.SeedDeal(t, "Original deal name", pipeline, stage, &e.Rep1))
 	now := clocktest.Now(t)
 	svc := dealstatus.NewService(e.Pool, e.Deals, e.Activities, dealrooms.NewStore(e.DB()), func() time.Time { return now })
-	if err := settings.Set(e.Admin(), compose.NewSettingsStore(e.Pool), identity.BaseLanguage, "en"); err != nil {
-		t.Fatal(err)
-	}
+	SetBaseLanguage(e.Admin(), t, e.Pool, "en")
 	before, err := svc.ReadFacts(e.Admin(), deal)
 	if err != nil {
 		t.Fatal(err)
@@ -39,9 +34,7 @@ func TestChangingDealCardLanguagePreservesTheReadersDismissal(t *testing.T) {
 		if err := svc.DismissMove(e.Admin(), deal, fingerprint); err != nil {
 			t.Fatal(err)
 		}
-		if err := settings.Set(e.Admin(), compose.NewSettingsStore(e.Pool), identity.BaseLanguage, language); err != nil {
-			t.Fatal(err)
-		}
+		SetBaseLanguage(e.Admin(), t, e.Pool, language)
 		card, err := svc.ReadFacts(e.Admin(), deal)
 		if err != nil {
 			t.Fatal(err)

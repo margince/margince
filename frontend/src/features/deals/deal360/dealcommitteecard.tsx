@@ -21,8 +21,8 @@ import { Badge } from "../../../design-system/atoms";
 import { Panel, PanelBody } from "../../../design-system/panel";
 import { useT } from "../../../i18n";
 import { useCanWrite } from "../../../lib/capability";
-import { RelationshipRows } from "../../../screens/relationshiprows";
-import { AddRelationshipAction } from "../../../screens/relationships";
+import { RelationshipRows } from "../../records/relationshiprows";
+import { AddRelationshipAction } from "../../records/relationships";
 import { CommitteeReading } from "./dealcommittee";
 
 type DealCoverage = components["schemas"]["DealCoverage"];

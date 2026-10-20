@@ -101,7 +101,7 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   stays with that surface.
 - **`src/screens/`**: one file per surface. A surface gets a *folder* only
   when it is a state machine and not a page. One has one:
-  `screens/onboarding-conversation/`. There the conversation machine, each
+  `features/onboarding/onboarding-conversation/`. There the conversation machine, each
   `*-act.tsx` and `*-scene.tsx` file, and the code that loads the conversation
   again each need their own file. Everything else, even surfaces as
   large as `companies.tsx` and `deals.tsx`, stays one file, with its
@@ -296,8 +296,8 @@ The old parts stay in two places, both by design:
 - **On the staging surfaces**, whose job is to set a proposal beside what is
   stored. The first is the approvals lane of the Worklist (`features/worklist/worklist.tsx`,
   `features/automations/approvalrow.tsx`). Then the confirm step of onboarding
-  (`screens/onboarding-conversation/confirm-card.tsx`,
-  `screens/onboarding-company-form.tsx`) and the Company-context settings
+  (`features/onboarding/onboarding-conversation/confirm-card.tsx`,
+  `features/onboarding/onboarding-company-form.tsx`) and the Company-context settings
   screen. Last are the record surfaces that show a single line about where a
   value comes from (`contacts.tsx`, `leads.tsx`, `consent.tsx`, `history.tsx`).
   `StagingCard` and `FieldDiff` are the composed forms of the same parts.

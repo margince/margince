@@ -116,7 +116,7 @@ var emailPassthroughs = gatekit.Waive(map[string]string{
 	"design-system/activitytimeline.tsx":      "maps an Activity onto a TimelineEntry, email_summary included, for timeline.tsx to draw; it builds the entry and renders nothing",
 	"design-system/timelineentry.tsx":         "declares the TimelineEntry shape, its emailSummary field included, and small row parts that read no message; timeline.tsx and timelinethread.tsx draw the message",
 	"lib/openemail.ts":                        "the drawer controller: it reads emailSummary only to decide an entry HAS a message to open, and holds no part of one",
-	"screens/recordchronology.tsx":            "wires onOpenEmail onto the entries it hands to the timeline; the rendering is timeline.tsx's",
+	"features/records/recordchronology.tsx":   "wires onOpenEmail onto the entries it hands to the timeline; the rendering is timeline.tsx's",
 	"features/worklist/worklist.row.tsx":      "same branch as the focus card, for the list row",
 	"features/contacts/contactmemory.rows.ts": "maps a memory row onto the card's row model, the email summary included, for contactmemory.tsx to draw through EmailEntry; its subject and preview fill only the filter text and the fallback row",
 	"features/brief/brief.focus.tsx":          "draws no part of the message: the moment it arrived, for the card's label row, and its audience status as one more fact about whose row it is — the same access reading emailaccesseditor.tsx takes. No subject, no body, no party, no attachment: the ranked column beside the card names its rows from the row's own `title` and `contact` (itemTitle, aboutRecord), never off the message. The message itself is handed to WorklistRow, which draws it through EmailEntry",

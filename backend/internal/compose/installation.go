@@ -35,7 +35,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/ownedfile"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -45,7 +44,7 @@ import (
 // 1 → bind; >1 → refuse with the operator-facing invariant error.
 // Restarts are idempotent — bootstrap values never reconcile into an
 // existing workspace.
-func EnsureInstallation(ctx context.Context, pool *pgxpool.Pool, log *slog.Logger, cfg deployconfig.Config) error {
+func EnsureInstallation(ctx context.Context, pool *pgxpool.Pool, log *slog.Logger, cfg deployconfig.Bootstrap) error {
 	var create func() (identity.InstallationBootstrap, error)
 	if b := cfg.BootstrapAdmin; b != nil {
 		if cfg.Workspace.Name == "" {
@@ -74,7 +73,7 @@ func EnsureInstallation(ctx context.Context, pool *pgxpool.Pool, log *slog.Logge
 		}
 	}
 
-	svc := identity.NewService(pool)
+	svc := identity.NewService(pool).WithConfig(StoredConfig(pool))
 	// Its own slice rather than identity's: createInstallation ASSIGNS the
 	// identity discards, so anything appended to that one from inside the seed
 	// callback is overwritten. Merged below.
@@ -318,10 +317,8 @@ func configuredSeed(seeds deployconfig.Seeds, dealsH dealsHandlers, discarded *[
 		if err := ai.SeedWorkspaceDefaultsTx(ctx, tx, time.Now().UTC()); err != nil {
 			return err
 		}
-		if seeds.LegalReview != nil && !*seeds.LegalReview {
-			if _, err := settings.SeedValue(ctx, tx, deals.LegalReviewEnabled, false); err != nil {
-				return err
-			}
+		if err := seedLegalReview(ctx, tx, seeds); err != nil {
+			return err
 		}
 		if seeds.StarterAutomations == nil || *seeds.StarterAutomations {
 			if err := automation.SeedStarterAutomationsTx(ctx, tx); err != nil {
@@ -333,6 +330,17 @@ func configuredSeed(seeds deployconfig.Seeds, dealsH dealsHandlers, discarded *[
 		}
 		return nil
 	}
+}
+
+// seedLegalReview turns legal review off when the deployment asked for it. A
+// value a boot source sets is not seeded, since the row would act only once
+// that source is gone.
+func seedLegalReview(ctx context.Context, tx pgx.Tx, seeds deployconfig.Seeds) error {
+	if seeds.LegalReview == nil || *seeds.LegalReview {
+		return nil
+	}
+	_, err := config.SeedTx(ctx, tx, loadedConfig(), deals.LegalReviewEnabled, false)
+	return err
 }
 
 func seedPipeline(ctx context.Context, tx pgx.Tx, p *deployconfig.PipelineSeed, dealsH dealsHandlers) error {
@@ -377,12 +385,10 @@ func seedRetentionPosture(ctx context.Context, tx pgx.Tx, seeds deployconfig.See
 	if !seeds.RetainOnly() {
 		return nil
 	}
-	// The stored answer is deliberately dropped here, and this is the one seed
-	// where that is defensible: the value is the constant true, so a discard can
-	// only have preserved a row that already says what this would have written.
-	// Nothing an operator supplied is lost, which is exactly what separates it
-	// from the identity trio.
-	_, err := settings.SeedValue(ctx, tx, privacy.RetainOnly, true)
+	// The seed writes only where no row exists, so it never replaces a saved
+	// posture. Under a boot-set posture it writes nothing: the boot value is in
+	// force, and the deployment's seed of true is dropped.
+	_, err := config.SeedTx(ctx, tx, loadedConfig(), privacy.RetainOnly, true)
 	return err
 }
 
@@ -411,19 +417,20 @@ func seedRoutingBinding(ctx context.Context, tx pgx.Tx, declared yaml.Node, disc
 	if err != nil || !declaredAny {
 		return err
 	}
-	stored, err := settings.SeedValue(ctx, tx, ai.Routing, cfg)
+	boot := loadedConfig()
+	stored, err := config.SeedTx(ctx, tx, boot, ai.Routing, cfg)
 	if err != nil {
 		return err
 	}
 	// A declaration that did not store is REPORTED, and this is the one seed
 	// where silence would be dangerous. `setting` is not workspace-scoped, so a
-	// bootstrap over a database still holding a previous installation's rows
-	// keeps the old binding — and ai.Routing is installation identity, so a
-	// data reset spares it too. The operator's file can say `sovereign`, meaning
+	// bootstrap over a previous installation's rows keeps the old binding.
+	// ai.Routing survives a data reset, so a reset keeps it too. The operator's
+	// file can say `sovereign`, meaning
 	// zero egress, while the installation serves a cloud vendor the previous
 	// one chose. That is text leaving for somewhere nobody chose, and nothing
 	// else in the boot would mention it.
-	if !stored {
+	if _, locked := boot.Locked(ai.RoutingKey); !stored && !locked {
 		*discarded = append(*discarded, ai.RoutingKey)
 	}
 	return nil

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQuery } from "@tanstack/react-query";
+import { Avatar } from "../design-system/avatar";
 import { useT } from "../i18n";
 import { ENTITY, type EntityKind } from "../lib/entity";
 import { useMemberName } from "../lib/membernames";
@@ -355,25 +356,30 @@ export function rosterOwnerNaming(
 }
 
 /**
- * The owner of a record, by name, for a list column.
+ * The owner of a record, by name, for a list column. `useMemberName` batches
+ * the ids of one tick, so a page of rows costs one request.
  *
- * Reads `useMemberName`, batching every id asked for within one tick into a
- * single request, so a list of 50 rows costs one request rather than fifty.
- * An owner the read cannot name still renders rather than going blank (a
- * blank column reads as unowned, a different fact with its own filter), but
- * as the same unnamed reference every other cross-record reference gets, not
- * a truncated id, which is a non-answer that has also lost the ability to be
- * looked up.
+ * An unnamed owner renders as an unnamed reference, never blank: a blank cell
+ * reads as unowned. `face` adds the avatar, keyed by user id.
  */
 export function OwnerName({
   ownerId,
   unowned,
-}: Readonly<{ ownerId?: string | null; unowned: string }>) {
+  face = false,
+}: Readonly<{ ownerId?: string | null; unowned: string; face?: boolean }>) {
   const query = useMemberName(ownerId);
   if (!ownerId) {
     return <span>{unowned}</span>;
   }
   const resolved = usableName(query.data);
+  if (resolved != null && face) {
+    return (
+      <span className="avatar-row">
+        <Avatar identity={ownerId} name={resolved} />
+        <span>{resolved}</span>
+      </span>
+    );
+  }
   if (resolved != null) {
     return <span>{resolved}</span>;
   }

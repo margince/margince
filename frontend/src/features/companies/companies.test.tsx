@@ -16,10 +16,8 @@ import { render } from "./companies.testkit";
 import { company, emptyPage, jsonResponse } from "./company.fixtures";
 import { stubFetch } from "./company.testkit";
 
-// The same P-14/15/16/1 shared-block wiring as contacts
-// (contacts.test.tsx) — search/sort/pagination, the rich create modal
-// (display_name/legal_name/industry/size_band/domains), the company-360
-// If-Match edit, and the duplicate_domain dedupe link.
+// The companies list, wired as the contacts list is (contacts.test.tsx):
+// search, sort and pagination, the rich create modal, and the dedupe link.
 
 afterEach(() => {
   cleanup();

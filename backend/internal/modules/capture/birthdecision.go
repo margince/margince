@@ -23,8 +23,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -159,7 +159,7 @@ func decideBirthTx(
 		return birthDecision{}, nil
 	}
 
-	sharing, err := settings.ApplyTx(ctx, tx, MailSharing)
+	sharing, err := config.StoredApplyTx(ctx, tx, config.Bound(), MailSharing)
 	if err != nil {
 		return birthDecision{}, fmt.Errorf("capture: reading the mail-sharing posture: %w", err)
 	}

@@ -14,12 +14,8 @@
 
 import type { components } from "../api/schema";
 import type { MessageKey } from "../i18n/en";
-// `accessgrants`, not `capability`: the latter's other exports are hooks that
-// reach `useMe` and through it the design system's stylesheets, so importing it
-// pulls the component graph into anything that only wants to read this table.
-// `e2e/ac.spec.ts` derives its sweep from SETTINGS_PAGES, and that chain took
-// Playwright's transform into a CSS file — the whole suite failed to boot
-// before a single test ran.
+// `accessgrants`, not `capability`: the latter's hooks pull the component graph
+// and its CSS into `e2e/ac.spec.ts`, whose Playwright transform cannot load it.
 import {
   type AccessSnapshot,
   grants,
@@ -738,6 +734,14 @@ export const SETTINGS_PAGES = [
       acts(writes("installation_settings", ["update"])),
       reads("job_health"),
     ),
+  },
+  {
+    id: "configuration",
+    group: "governance",
+    scope: "installation",
+    // The update, as on Company: the endpoint answers only that grant.
+    requires: writes("installation_settings", ["update"]),
+    changes: acts(writes("installation_settings", ["update"])),
   },
   {
     id: "extensions",

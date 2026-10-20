@@ -67,7 +67,7 @@ func (h captureSettingsHandlers) UpdateCaptureSettings(w http.ResponseWriter, r 
 	httperr.WriteJSON(w, http.StatusOK, toContractCaptureSettings(settings))
 }
 
-// toContractCaptureSettings maps the stored posture onto the wire shape.
+// toContractCaptureSettings maps the posture in force onto the wire shape.
 func toContractCaptureSettings(s capture.Settings) crmcontracts.CaptureSettings {
 	return crmcontracts.CaptureSettings{
 		AutoEnrich:           s.AutoEnrich,
@@ -81,5 +81,6 @@ func toContractCaptureSettings(s capture.Settings) crmcontracts.CaptureSettings 
 			WallSeconds: s.SiteRead.WallSeconds,
 		},
 		MailSyncIntervalSeconds: s.MailSyncIntervalSeconds,
+		Locks:                   loadedLocks(capture.ConfigSettings()),
 	}
 }

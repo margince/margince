@@ -53,7 +53,7 @@ when it runs. So a stale or foreign domain cannot ride in the args.
 ### `MARGINCE_CERTLOG_BASE_URL`: required, or the whole lane is off
 
 The **worker** reads it when it starts; the API does not, because `cmd/worker/jobrunner.go` builds the
-enricher. In development, put it in `.env.local`, which `scripts/dev.sh` reads and exports.
+enricher. In development, put it in `.env.local`, which `scripts/dev.sh` passes to the worker as `--env-file`.
 
 ```sh
 MARGINCE_CERTLOG_BASE_URL=public

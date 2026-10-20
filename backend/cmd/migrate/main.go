@@ -30,6 +30,7 @@ import (
 	"golang.org/x/term"
 
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/dbmigrate"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -57,11 +58,10 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	// The usage text goes where the caller says, so a test can assert what it
 	// contains. flag writes to os.Stderr otherwise, out of reach of any assertion.
 	fs.SetOutput(stderr)
-	// Registered with an EMPTY default and resolved after parsing. flag echoes a
-	// non-empty default in its usage output — `(default "postgres://…")` — and this
-	// value carries a password, so any default read from the environment here
-	// reaches stderr on a mistyped flag. On CI that stderr is a public build log.
-	dsn := fs.String("dsn", "", "Postgres DSN (owner role); default MARGINCE_OWNER_DSN, else MARGINCE_DSN")
+	dsn, err := addDSNFlags(fs)
+	if err != nil {
+		return err
+	}
 	steps := fs.Int("steps", 1, "migrations to revert (down only)")
 	email := fs.String("email", "", "user email (reset-password only)")
 	name := fs.String("name", "", "database name (recreate-db, drop-db, db-exists only)")
@@ -98,7 +98,7 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	if err := fs.Parse(args[1:]); err != nil {
 		return err
 	}
-	resolved, err := resolveDSN(fs, *dsn)
+	resolved, err := dsn.resolve(config.Environ())
 	if err != nil {
 		return err
 	}

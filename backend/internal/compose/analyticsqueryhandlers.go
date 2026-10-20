@@ -48,14 +48,24 @@ func newAnalyticsQueryHandlers(
 
 // GetAnalyticsSchema implements GET /analytics/schema.
 func (h analyticsQueryHandlers) GetAnalyticsSchema(w http.ResponseWriter, r *http.Request) {
-	schema := AnalyticsSchemaFor(r.Context())
+	ctx := r.Context()
+	var schema analyticsquery.Schema
+	if err := h.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		schema, _, err = AnalyticsSchemaIn(ctx, tx)
+		return err
+	}); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	out := crmcontracts.AnalyticsSchema{Version: schema.Version}
 	for _, name := range schema.EntityNames() {
 		entity := schema.Entities[name]
 		out.Entities = append(out.Entities, crmcontracts.AnalyticsEntity{
-			Name:     name,
-			GroupBy:  entity.FieldNames(analyticsquery.KindDimension),
-			Measures: entity.FieldNames(analyticsquery.KindMeasure),
+			Name:         name,
+			GroupBy:      entity.FieldNames(analyticsquery.KindDimension),
+			Measures:     entity.FieldNames(analyticsquery.KindMeasure),
+			CustomFields: analyticsCustomFieldsOf(entity),
 		})
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)

@@ -116,6 +116,11 @@ func frontendGen(manifests []derivedManifest, verbs []declaredVerb, merged map[s
 			}
 			writeVerbDescriptor(&b, d.verb)
 		}
+		b.WriteString("    ],\n    entries: [\n")
+		for _, e := range m.Manifest.Entries {
+			fmt.Fprintf(&b, "      {\n        slot: %s,\n        label: %s,\n        icon: %s,\n        target: %s,\n        object: %s,\n      },\n",
+				tsString(e.Slot), tsString(e.Label), tsString(e.Icon), tsString(e.Target), tsString(e.Object))
+		}
 		b.WriteString("    ],\n  },\n")
 	}
 	b.WriteString("];\n")

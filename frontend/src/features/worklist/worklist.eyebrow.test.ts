@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { translate } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { itemTitle } from "./worklist.copy";
 import { conditionOf, eyebrowKeyFor } from "./worklist.eyebrow";
 import type { WorklistItem } from "./worklist.queries";
 
@@ -121,4 +122,15 @@ describe("the word above a queue row", () => {
       ),
     ).toBeNull();
   });
+});
+
+it("does not call a non-buyer request customer work", () => {
+  const request = row({
+    source: "customer_waiting",
+    category: "customer_waiting",
+    title: "",
+    because: [{ kind: "non_buyer_request" }],
+  });
+  expect(eyebrowKeyFor(request)).toBe("worklist.source.awaiting_reply");
+  expect(itemTitle(request, t, "en")).toBe(t("worklist.source.awaiting_reply"));
 });

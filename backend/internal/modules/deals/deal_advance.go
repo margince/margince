@@ -335,18 +335,19 @@ func announceStageAdvance(
 func (s *Store) onDealWon(
 	ctx context.Context, tx pgx.Tx, id ids.DealID, status, by string, p *storekit.Patch,
 ) error {
-	if DealStatus(status) != DealWon {
-		return nil
+	for _, effect := range wonEffects(status, p) {
+		switch effect {
+		case effectClassifyCorrespondence:
+			if err := s.stampCorrespondence(ctx, tx, id, BasisDealWon); err != nil {
+				return fmt.Errorf("stamp won deal's correspondence: %w", err)
+			}
+		case effectStartDelivery:
+			if err := s.startDeliveryForWonDeal(ctx, tx, id, by); err != nil {
+				return fmt.Errorf("start delivery on the won deal's project: %w", err)
+			}
+		}
 	}
-	if err := s.stampCorrespondence(ctx, tx, id, BasisDealWon); err != nil {
-		return fmt.Errorf("stamp won deal's correspondence: %w", err)
-	}
-	if _, becameWon := p.After()["status"]; !becameWon {
-		return nil
-	}
-	if err := s.startDeliveryForWonDeal(ctx, tx, id, by); err != nil {
-		return fmt.Errorf("start delivery on the won deal's project: %w", err)
-	}
+
 	return nil
 }
 
@@ -375,12 +376,11 @@ func frozenFxFromPatch(p *storekit.Patch, current crmcontracts.Deal) *string {
 func (s *Store) stageTransitionPatch(ctx context.Context, tx pgx.Tx,
 	current crmcontracts.Deal, in AdvanceDealInput, semantic string,
 ) (*storekit.Patch, string, error) {
-	status := string(DealOpen)
+	status := string(StageSemantic(semantic).Status())
 	var closedAt *time.Time
 	var lostReason string
 	switch semantic {
 	case "won", "lost":
-		status = semantic
 		now := s.clock().UTC()
 		if in.closedAt != nil {
 			now = in.closedAt.UTC()
@@ -431,9 +431,8 @@ func (s *Store) stageTransitionPatch(ctx context.Context, tx pgx.Tx,
 	// close it is supposed to price, and the roll-up would then reconcile
 	// against a rate the deal never closed at.
 	if DealStatus(status) != DealOpen && current.AmountMinor != nil && current.Currency != nil {
-		rateBefore, rateDateBefore := frozenBefore(current)
 		if err := s.freezeBaseRate(ctx, tx, p, current.Id, string(*current.Currency),
-			*current.AmountMinor, *closedAt, rateBefore, rateDateBefore); err != nil {
+			*current.AmountMinor, *closedAt); err != nil {
 			return nil, "", fmt.Errorf("freeze fx at close: %w", err)
 		}
 	}
@@ -444,17 +443,7 @@ func (s *Store) stageTransitionPatch(ctx context.Context, tx pgx.Tx,
 	// which covers the reopen too.
 	if DealStatus(status) == DealOpen && DealStatus(current.Status) != DealOpen {
 		p.Set("closed_at", current.ClosedAt, nil)
-		// The pre-images are what the row HELD, not nil. A closed deal carrying an
-		// amount carries a rate — deal_closed_fx requires it — and the reopen's
-		// audit row is precisely what a reversal reads to put the old rate back.
-		rateBefore, rateDateBefore := frozenBefore(current)
-		p.Set(fxRateColumn, rateBefore, nil)
-		p.SetDate(fxRateDateColumn, rateDateBefore, nil)
-		// The converted amount goes with the rate it was converted at, so the
-		// reopen clears both. clearFrozenConversion owns that, beside the writer
-		// that sets it: two places deciding what a frozen conversion consists of
-		// is how one of them comes to leave half of it behind.
-		if err := clearFrozenConversion(ctx, tx, p, current); err != nil {
+		if err := clearFrozenConversion(ctx, tx, p, current.Id); err != nil {
 			return nil, "", err
 		}
 	}

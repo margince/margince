@@ -19,8 +19,8 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/platform/config/configtest"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -159,7 +159,7 @@ func TestSwitchingLegalReviewOffAndOnAgain(t *testing.T) {
 // deals wait for legal is an admin's call.
 func TestOnlyAnAdminSwitchesLegalReview(t *testing.T) {
 	e := setupReviewEnv(t)
-	store := settings.New(e.pool, settings.NewRegistry(Definitions()...))
+	store := configtest.StoredOver(t, e.pool, ConfigSettings())
 	ops := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.ws), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.admin.String(), UserID: e.admin,
 		Permissions: principal.Permissions{

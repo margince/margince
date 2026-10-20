@@ -98,6 +98,8 @@ var scrubbedEntityTypes = map[string]bool{
 	// The weekly review rebuilds a DEAL from its own audit images, never an
 	// evidence row. The evidence create images never carried the quotation.
 	"deal_stage_evidence": true,
+	// Notice history reads stored text directly; no restore surface may replay its erased images.
+	"notice": true,
 }
 
 func TestEveryScrubbedRecordTypeIsOneAReaderOfTheBoundaryExpects(t *testing.T) {

@@ -12,12 +12,6 @@ import { ENGAGEMENT_LABELS } from "./contacts";
 import "./companycontacts.css";
 
 import { CommitteeBoard } from "./summary.board";
-// What the account looks like before the reader picks anybody.
-//
-// The list below answers "who, in what order". This band answers the three
-// questions a rep opens the tab with and would otherwise work out by reading
-// the list themselves: is anybody here talking to us, who is the way in, and
-// which buying role nobody holds.
 import { ROLE_LABELS } from "./summary.roles";
 
 export { mapLabels } from "./summary.board";
@@ -42,6 +36,11 @@ export function useCompanyCoverage(companyId: string) {
   });
 }
 
+// What the account looks like before the reader picks anybody.
+//
+// The list below answers "who, in what order". This band answers the three
+// questions a rep opens the tab with. Is anybody here talking to us? Who is
+// the way in? Which buying role does nobody hold?
 export function CoverageBand({
   companyId,
   accountName,

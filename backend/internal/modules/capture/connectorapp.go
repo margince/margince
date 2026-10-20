@@ -18,12 +18,12 @@ package capture
 // redirect a browser makes, so treating it as a secret would be a fiction that
 // costs an operator the ability to see which app their installation is using.
 //
-// The environment still WORKS: an installation exporting a pair keeps running
-// with no action, because the connect transport prefers the stored app and falls
-// back to what the deployment composed. It is not migrated, though — nothing
-// seals the environment's pair into the vault the way compose.SealProviderKeys
-// does for a BYOK key, so those variables stay the live source until somebody
-// stores an app.
+// The environment wins. A pair the deployment exports is the app every connect
+// uses, and a write of the stored app is refused while it is set. It is never
+// copied into the vault. The pair is several boot settings, such as
+// MARGINCE_GMAIL_CLIENT_ID and MARGINCE_GMAIL_CLIENT_SECRET. One stored value
+// cannot carry those, so this row stays a settings entry and compose holds the
+// lock.
 //
 // Two providers, ONE set of mechanics. What differs between them is declared in
 // appKinds below — the storage key, the vendor's name, the shape of a client id,
@@ -211,6 +211,16 @@ func AppProviders() []AppProvider {
 	// two boots of one binary must not disagree about the order.
 	slices.Sort(out)
 	return out
+}
+
+// AppSettingKeys are the settings keys the apps are stored under, each a row
+// whose client_secret_ref names a sealed secret.
+func AppSettingKeys() []string {
+	keys := make([]string, 0, len(appKinds))
+	for _, p := range AppProviders() {
+		keys = append(keys, appKinds[p].entry.Key())
+	}
+	return keys
 }
 
 // ParseAppProvider reads a provider name off the wire, or refuses it.

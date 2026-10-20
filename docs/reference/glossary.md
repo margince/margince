@@ -25,8 +25,10 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | CRA | The EU Cyber Resilience Act, which sets duties for software makers. |
 | CRM | Customer relationship management: software for contacts, companies and deals. |
 | CSV | Comma-separated values, a plain text format for tables. |
+| de | The language code for German, as a setting value. |
 | dev | The development mode of a local install, set by `MARGINCE_ENV`. |
 | Diátaxis | A way to sort docs into tutorials, how-to guides, reference and explanation. |
+| dmy | The date order day, month, year, as a setting value. |
 | Docker | The container tool used to run the local stack and the images. |
 | English | The language the docs and the source catalog are written in. |
 | EU | The European Union, whose laws several pages refer to. |
@@ -47,9 +49,11 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | Langdock | A service that serves OpenAI, Gemini and Claude models on one key. |
 | LICENSE | The file at the repository root that holds the license text. |
 | LinkedIn | The professional network whose contact export Margince can import. |
+| locale | The date or time format of the reader's language, as a setting value. |
 | macOS | Apple's desktop operating system. |
 | Margince | The CRM this repository builds. |
 | MCP | Model Context Protocol: how an AI agent connects to Margince's tools. |
+| mdy | The date order month, day, year, as a setting value. |
 | Microsoft | The company behind Microsoft 365 mail and calendars. |
 | Node | Node.js, the JavaScript runtime the web app's tools run on. |
 | Ollama | A tool that runs language models on your own machine. |
@@ -69,12 +73,14 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | Telegram | A chat app Margince can send messages through. |
 | UTF | The Unicode text encoding family, as in UTF-8. |
 | VAT | Value added tax, and the tax number a company is registered under. |
+| vi | The language code for Vietnamese, as a setting value. |
 | Vite | The build and dev server tool for the web app. |
 | vLLM | A server that runs language models on your own machines. |
 | webhook | A message Margince sends to another tool's address when a chosen event happens. |
 | Windows | Microsoft's desktop operating system. |
 | Worklist | The app's list of tasks and items that need a user's action. |
 | worktree | A second git checkout of the repository with its own branch. |
+| ymd | The date order year, month, day, as a setting value. |
 | Zapier | An automation tool that can start a task when a webhook arrives. |
 | ZIP | A file format that packs many files into one. |
 

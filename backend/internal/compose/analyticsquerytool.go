@@ -132,7 +132,7 @@ const AnalyticsSchemaURI = "margince://schema/analytics"
 const mimeTextPlain = "text/plain"
 
 // analyticsSchemaResource publishes that document.
-type analyticsSchemaResource struct{}
+type analyticsSchemaResource struct{ db *database.DB }
 
 // Resources advertises the one document this provider publishes.
 func (analyticsSchemaResource) Resources(context.Context) []mcp.Resource {
@@ -150,33 +150,46 @@ func (analyticsSchemaResource) Resources(context.Context) []mcp.Resource {
 
 // ReadResource composes the document under the caller's own derivation, so a
 // masked field never appears in it.
-func (analyticsSchemaResource) ReadResource(ctx context.Context, uri string) (mcp.ResourceContents, error) {
+func (a analyticsSchemaResource) ReadResource(ctx context.Context, uri string) (mcp.ResourceContents, error) {
 	if uri != AnalyticsSchemaURI {
 		return mcp.ResourceContents{}, fmt.Errorf("compose: resource %q: %w", uri, apperrors.ErrNotFound)
 	}
-	return mcp.ResourceContents{URI: uri, MIMEType: mimeTextPlain, Text: analyticsVocabularyText(ctx)}, nil
+	text, err := analyticsVocabularyText(ctx, a.db)
+	if err != nil {
+		return mcp.ResourceContents{}, err
+	}
+	return mcp.ResourceContents{URI: uri, MIMEType: mimeTextPlain, Text: text}, nil
 }
 
 // analyticsVocabularyText is the vocabulary document, composed for this
-// caller. ONE writer: the resource above and the vocabulary tool's reader
-// below both serve it, so the two doors cannot drift.
+// caller. The resource above and the tool's reader below both serve it; held by
+// TestTheAnalyticsResourceAndTheToolReaderServeOneDocument.
 //
-// Held by: TestTheAnalyticsResourceAndTheToolReaderServeOneDocument
-// (internal/compose/analyticsqueryseam_test.go)
-func analyticsVocabularyText(ctx context.Context) string {
+// With no installation database, as when the published MCP page is built, the
+// document is the prebuilt catalog's: no installation means no custom fields.
+func analyticsVocabularyText(ctx context.Context, db *database.DB) (string, error) {
 	schema := AnalyticsSchemaFor(ctx)
+	if db != nil {
+		if err := db.Tx(ctx, func(tx pgx.Tx) error {
+			var err error
+			schema, _, err = AnalyticsSchemaIn(ctx, tx)
+			return err
+		}); err != nil {
+			return "", err
+		}
+	}
 	var out strings.Builder
 	out.WriteString("schema version " + schema.Version + "\n")
 	out.WriteString("aggregates: " + strings.Join(analyticsquery.AggregateNames(), ", ") + "\n")
 	out.WriteString("filter ops: " + strings.Join(analyticsquery.FilterOpNames(), ", ") + "\n\n")
 	out.WriteString(DescribeAnalyticsSchema(schema))
-	return out.String()
+	return out.String(), nil
 }
 
 // analyticsVocabularyReader satisfies the agents port with the resource's own
 // composition, which is what keeps the tool and the resource one document.
-type analyticsVocabularyReader struct{}
+type analyticsVocabularyReader struct{ db *database.DB }
 
-func (analyticsVocabularyReader) AnalyticsVocabularyDocument(ctx context.Context) (string, error) {
-	return analyticsVocabularyText(ctx), nil
+func (a analyticsVocabularyReader) AnalyticsVocabularyDocument(ctx context.Context) (string, error) {
+	return analyticsVocabularyText(ctx, a.db)
 }

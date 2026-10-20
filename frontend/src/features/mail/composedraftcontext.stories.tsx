@@ -4,12 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import type { components } from "../../api/schema";
-import { openCitation } from "../../screens/record360";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
+import { openCitation } from "../records/record360";
 import {
   AccountDraftContext,
   DraftOffer,

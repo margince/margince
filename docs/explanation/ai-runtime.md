@@ -315,7 +315,7 @@ They also show up as `/metrics` counters per task.
 
 The whole lane sits behind the `company_context.rollout` switch in `margince.yaml`, which can turn it
 off. Its steps are ordered `off < read < tasks < onboarding` (default `onboarding` = all the way on;
-`platform/deployconfig`).
+`compose/companycontextrollout.go`).
 
 The form with no database, `ai.NewLocalRouter`, serves the same seam for each offline `fixture` and the
 certification lane. `--ai-fake` binds the offline fake *through the Router*. So dev and test run the
@@ -450,7 +450,7 @@ The full steps: [how-to/certify-an-ai-model.md](../how-to/certify-an-ai-model.md
 | Task contract (tasks, tiers, ladders, budget rule, status, sites, context, cost unit) | `backend/api/ai-tasks.yaml` → `tasks_gen.go` (through `tools/gen-aitasks`, `make gen`) |
 | Site census (which sites this build ships, and the case that certifies each) | `internal/compose/aitaskregistry.go` (`NewTaskCensus`) · `internal/compose/aitasks` |
 | The runtime binding (tier → provider and model, profile) | the `ai.routing` setting, seeded from `seeds.ai_routing`, changed under Settings → AI. Shape declared under `$defs.aiRouting` in `config/margince.schema.json` |
-| BYOK keys | the key vault, set under Settings → AI → AI models → Providers. The usual environment values (`GEMINI_API_KEY`, `GEMINI_VERTEX_SA_JSON`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENAI_COMPATIBLE_API_KEY`, `TYPESAFE_API_KEY`, `JEV_COMPATIBLE_API_KEY`) are read once, to store a key in the vault on first boot |
+| BYOK keys | one stored secret setting per provider (`ai.provider_keys_<provider>`), sealed in the key vault and set under Settings → AI → AI models → Providers. The usual environment values (`GEMINI_API_KEY`, `GEMINI_VERTEX_SA_JSON`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENAI_COMPATIBLE_API_KEY`, `TYPESAFE_API_KEY`, `JEV_COMPATIBLE_API_KEY`) win over the vault and lock the key; they are never sealed |
 | The gate | `internal/modules/ai`: `ai.Router` / `ai.NewLocalRouter`; `--ai-fake` flag |
 | Decision lane | `decisions:` in the routing setting · `Router.Decide` (`decideroute.go`) · certified rows in `decisioncert_gen.go` |
 | Providers | `anthropic`, `openai`, `gemini`, `gemini_vertex` (built in; `gemini_vertex` is the `gemini` wire on Vertex AI, bound by `location`) · `ollama`, `vllm`, `openai_compatible` · `fake` · decision lane only: `jev`, `jev_compatible` (`providerregistry.go`) |
@@ -461,7 +461,7 @@ The full steps: [how-to/certify-an-ai-model.md](../how-to/certify-an-ai-model.md
 | Monthly budget setting | `ai.budget`: `BudgetConfig` (`internal/modules/ai/budgetsettings.go`); RBAC object `ai_budget` |
 | Budget deferral | `BudgetDeferralError` / `ErrBudgetDeferred` (`internal/modules/ai/budget.go`) |
 | Deferred carriers & resume | `site_read` / `company_scan` / `voice_build`, each with a `BudgetDeferred*` predicate; resumed by the fleet job `ai_budget_resume` (`internal/compose/jobs_aibudget.go`) through `ResumeScheduledTx` (`internal/platform/jobs/resume.go`) |
-| Company context | `companycontextprompt.go` (compose) · switch `company_context.rollout` (`margince.yaml`, `platform/deployconfig`, migration `0105`) |
+| Company context | `companycontextprompt.go` (compose) · switch `company_context.rollout` (`margince.yaml`, `compose/companycontextrollout.go`, migration `0105`) |
 | Boot and `ops` surface | `/readyz` AI state; a boot warning per task for a ladder with no bound tier |
 | The certification lane | `internal/compose/aicert`: `make e2e-ai`, `make e2e-ai-report` |
 

@@ -6,12 +6,17 @@ package compose
 import (
 	"slices"
 	"strings"
+	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/emailview"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 )
 
-func mailWorkItem(item crmcontracts.WorklistItem, words mailcopy.Copy) string {
+func mailWorkItem(item crmcontracts.WorklistItem, words mailcopy.Copy, zone *time.Location) string {
+	if item.Source == crmcontracts.WorklistItemSourceApproval && !slices.Contains(item.Actions, crmcontracts.WorklistItemActions("decide")) {
+		return ""
+	}
 	label := ""
 	if item.Subject != nil && item.Subject.Label != nil {
 		label = *item.Subject.Label
@@ -33,42 +38,34 @@ func mailWorkItem(item crmcontracts.WorklistItem, words mailcopy.Copy) string {
 		lines = append(lines, words.MailOwner+": "+mailcopy.OneLine(*item.Owner.Label))
 	}
 	if item.DueAt != nil {
-		lines = append(lines, words.MailDue+": "+item.DueAt.Format(mailcopy.DateLayout))
+		at := *item.DueAt
+		if zone != nil {
+			at = at.In(zone)
+		}
+		due := words.Instant(at)
+		if item.Source == crmcontracts.WorklistItemSourceWeeklyCommitment {
+			due = words.Date(*item.DueAt)
+		}
+		lines = append(lines, words.MailDue+": "+due)
 	}
 	lines = append(lines, mailWorkAction(item, words))
 	return strings.Join(lines, "\n")
 }
 
-func mailPreferences(body *strings.Builder, base string, words mailcopy.Copy) {
-	body.WriteString("\n" + words.MailWhy + "\n")
-	mailcopy.Link(body, base, mailcopy.PreferencesFragment, words.ManagePreferencesLabel)
+func routineFooterContent(base string, words mailcopy.Copy) emailview.Content {
+	var content emailview.Content
+	content.Paragraph(words.MailWhy)
+	content.Action(words.ManagePreferencesLabel, mailcopy.Destination(base, mailcopy.PreferencesFragment))
+	return content
 }
 
-func routineFooter(base string, words mailcopy.Copy) string {
-	var body strings.Builder
-	mailPreferences(&body, base, words)
-	return body.String()
-}
-
-func writeMailItemLink(body *strings.Builder, item crmcontracts.WorklistItem, base string, words mailcopy.Copy) {
+func writeMailItemLink(body *emailview.Content, item crmcontracts.WorklistItem, base string, words mailcopy.Copy) {
 	if item.Subject == nil {
 		return
 	}
-	fragment := ""
-	switch item.Subject.Type {
-	case crmcontracts.AttentionSubjectTypeDeal:
-		fragment = mailcopy.DealRecordFragment
-	case crmcontracts.AttentionSubjectTypeContact:
-		fragment = mailcopy.ContactRecordFragment
-	case crmcontracts.AttentionSubjectTypeCompany:
-		fragment = mailcopy.CompanyRecordFragment
-	case crmcontracts.AttentionSubjectTypeLead:
-		fragment = mailcopy.LeadRecordFragment
-	case crmcontracts.AttentionSubjectTypeProject:
-		fragment = mailcopy.ProjectRecordFragment
-	}
+	fragment := mailcopy.RecordFragment(string(item.Subject.Type), item.Subject.Id.String())
 	if fragment != "" {
-		mailcopy.Link(body, base, fragment+item.Subject.Id.String(), words.MailReview)
+		body.Action(words.MailReview, mailcopy.Destination(base, fragment))
 	}
 }
 

@@ -15,6 +15,7 @@ expect:
   answer:
     - line: 2
       due_date: "2026-03-06"
+      meaning: {state: open, condition: "", deadline_precision: day, deadline_quote: "Friday"}
   rubric: >
     One speaker states one plain promise: "I will send the integration spec by
     Friday" — a specific thing, by a named day, owed by Lars. Cite it on line 2

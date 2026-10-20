@@ -9,9 +9,15 @@ import {
   RangeChart,
 } from "../../design-system/report-charts";
 import { Waterfall } from "../../design-system/waterfall";
-import { formatDateTime, formatMoneyCompact } from "../../format/format";
-import { type Translator, useLocale, useT } from "../../i18n";
+import {
+  formatDateTime,
+  formatMoneyCompact,
+  formatNumber,
+  MONEY_ABSENT,
+} from "../../format/format";
+import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import { ChartContext } from "./reporting.chartcontext";
+import { withDealCount } from "./reporting.dealcount";
 import { MetricsTable } from "./reporting.metricstable";
 import {
   blockLabel,
@@ -26,6 +32,7 @@ import {
 import { movementLabel } from "./reporting.movement";
 import { SdrOutcomes } from "./reporting.sdroutcomes";
 import { ResultsSummary, TargetProgress } from "./reporting.summary";
+import { WrittenSummary } from "./reporting.written";
 import "./reporting.css";
 
 type EvidenceAction = (reference: ReportingEvidenceRef) => void;
@@ -52,15 +59,20 @@ export function ReportingCharts({
       !(
         chart.kind === "sdr_outcomes" &&
         chart.metric === "accepted_opportunities" &&
+        // The meetings chart draws both series, unless its own reading
+        // failed; then the acceptance series keeps its own card.
         evaluation.charts.some(
           (other) =>
-            other.kind === "sdr_outcomes" && other.metric === "meetings_held",
+            other.kind === "sdr_outcomes" &&
+            other.metric === "meetings_held" &&
+            other.coverage.status !== "failed",
         )
       ),
   );
   const wide = wideCharts(charts);
   return (
     <div className="reporting-results">
+      <WrittenSummary evaluation={evaluation} />
       <ResultsSummary evaluation={evaluation} onEvidence={onEvidence} />
       {afterSummary}
       <div className="reporting-grid">
@@ -155,6 +167,7 @@ function ChartBody({
   onEvidence: EvidenceAction;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const format = (value: number | null | undefined) =>
     reportingAmount(value, chart.unit, evaluation.context.currency, locale);
@@ -273,16 +286,21 @@ function ChartBody({
                       key: point.key,
                       label: point.label,
                       value: point.value,
-                      amount: reportingMoneyUnit(
-                        chart.unit,
-                        evaluation.context.currency,
-                      )
-                        ? formatMoneyCompact(
-                            point.value,
-                            evaluation.context.currency,
-                            locale,
-                          )
-                        : point.amount,
+                      amount: withDealCount(
+                        reportingMoneyUnit(
+                          chart.unit,
+                          evaluation.context.currency,
+                        )
+                          ? formatMoneyCompact(
+                              point.value,
+                              evaluation.context.currency,
+                              locale,
+                            )
+                          : point.amount,
+                        point.observations,
+                        plural,
+                        locale,
+                      ),
                     },
                   ],
             )}
@@ -310,6 +328,14 @@ function ChartBody({
                   key: "value",
                   header: t("reporting.actual"),
                   render: (point) => format(point.value),
+                },
+                {
+                  key: "deals",
+                  header: t("reporting.stageDeals"),
+                  render: (point) =>
+                    point.observations == null
+                      ? MONEY_ABSENT
+                      : formatNumber(point.observations, locale),
                 },
               ]}
             />

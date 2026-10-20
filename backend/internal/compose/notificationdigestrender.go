@@ -6,12 +6,14 @@ package compose
 import (
 	"context"
 	"fmt"
-	"strings"
+	"sort"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/emailview"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -26,8 +28,14 @@ const digestQuoteCap = 5
 
 // Digest totals include only the notices whose content remains visible.
 type digestLines struct {
-	quotable []string
+	quotable []digestItem
 	total    int
+}
+
+type digestItem struct {
+	text     string
+	target   notices.Target
+	decision bool
 }
 
 // readDigestLines reads this colleague's batched notices and decides which of
@@ -54,18 +62,36 @@ func (w *notificationDigestWorker) readDigestLines(
 	}); err != nil {
 		return digestLines{}, err
 	}
+	sort.SliceStable(held, func(i, j int) bool {
+		return held[i].Kind == notices.KindApprovalPending && held[j].Kind != notices.KindApprovalPending
+	})
 	lines := digestLines{}
 	for _, notice := range held {
 		if notice.Target.Named() && !nameable[notice.Target] {
 			continue
 		}
+
+		if notice.Kind == notices.KindApprovalPending {
+			if notice.ApprovalID == nil {
+				continue
+			}
+			attempt, current, err := refreshApprovalNotice(seatCtx, w.pool, notices.EmailAttempt{Notice: notice, ApprovalID: notice.ApprovalID, Recipient: seat}, mailNow(w.now))
+			if err != nil {
+				return digestLines{}, err
+			}
+			if !current {
+				continue
+			}
+			notice = attempt.Notice
+			notice.Target = notices.Target{Type: notices.TargetApproval, ID: attempt.ApprovalID.UUID}
+		}
 		lines.total++
 		if len(lines.quotable) < digestQuoteCap {
 			line := mailcopy.OneLine(notice.Subject)
 			if notice.Body != "" {
-				line += " — " + mailcopy.OneLine(notice.Body)
+				line += " — " + mailcopy.Snippet(notice.Body, 280)
 			}
-			lines.quotable = append(lines.quotable, line)
+			lines.quotable = append(lines.quotable, digestItem{text: line, target: notice.Target, decision: notice.Kind == notices.KindApprovalPending})
 		}
 	}
 	return lines, nil
@@ -108,21 +134,39 @@ func digestSubject(lines digestLines, words mailcopy.Copy) string {
 	return fmt.Sprintf("%s (%d)", words.DigestSubject, lines.total)
 }
 
-// digestMessage renders the body: why it arrived, what is in it, and the way in.
+// digestContent renders the body: why it arrived, what is in it, and the way in.
 //
 // EVERY interpolated value goes through OneLine. mailer.Send refuses line breaks
 // in the recipient and the subject, which are the header fields; the body is the
 // sender's to keep honest, and a notice's subject is written by producers that
 // bound its length and not its structure.
-func digestMessage(lines digestLines, base string, words mailcopy.Copy) string {
-	var b strings.Builder
-	b.WriteString(words.DigestIntro + "\n\n")
+func digestContent(lines digestLines, base string, words mailcopy.Copy) emailview.Content {
+	var body emailview.Content
+	body.Paragraph(words.DigestIntro)
+	group := ""
 	for _, line := range lines.quotable {
-		b.WriteString("  · " + line + "\n")
+		heading := words.MailUpdates
+		if line.decision {
+			heading = words.MailDecisions
+		}
+		if heading != group {
+			body.Heading(heading)
+			group = heading
+		}
+		body.Paragraph(line.text)
+		if fragment := mailcopy.RecordFragment(line.target.Type, line.target.ID.String()); fragment != "" {
+			body.Action(words.MailReview, mailcopy.Destination(base, fragment))
+		}
 	}
 	if rest := lines.total - len(lines.quotable); rest > 0 {
-		fmt.Fprintf(&b, "  "+words.DigestAndMore+"\n", rest)
+		body.Paragraph(fmt.Sprintf(words.DigestAndMore, rest))
 	}
-	mailcopy.Link(&b, base, mailcopy.WorklistFragment, words.DigestOpen)
-	return b.String()
+	body.Action(words.DigestOpen, mailcopy.Destination(base, mailcopy.WorklistFragment))
+	return body
+}
+
+func digestMail(lines digestLines, base string, words mailcopy.Copy) emailview.Message {
+	body := digestContent(lines, base, words)
+	body.Append(routineFooterContent(base, words))
+	return body.Message(digestSubject(lines, words), string(words.Language), words.DigestPreview)
 }

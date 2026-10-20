@@ -30,6 +30,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -39,7 +40,23 @@ import (
 // full list in Go means the rows crossed a boundary they should not have, and
 // the count of what was dropped is itself a statement about how much there is.
 func AssuranceExceptions(ctx context.Context, tx pgx.Tx) ([]assurance.Exception, error) {
-	return assuranceExceptionsOwnedBy(ctx, tx, nil, 0)
+	return assuranceExceptionsOwnedBy(ctx, tx, nil, nil, 0)
+}
+
+// AssuranceExceptionsIn reads them for one population, narrowed by the same
+// rule the forecast and the reports measure that population by. A population
+// the caller may not measure is refused there.
+func AssuranceExceptionsIn(
+	ctx context.Context, tx pgx.Tx, population assurance.Population,
+) ([]assurance.Exception, error) {
+	if population.Kind == "" {
+		if population.ID != nil {
+			return nil, fmt.Errorf("scope_id names a team or owner and needs scope_kind: %w", apperrors.ErrInvalidArgument)
+		}
+		return AssuranceExceptions(ctx, tx)
+	}
+	requested := RequestedScope{Kind: population.Kind, ID: population.ID}
+	return assuranceExceptionsOwnedBy(ctx, tx, nil, &requested, 0)
 }
 
 // TeamAssuranceExceptions reads the open findings on deals the members own
@@ -51,13 +68,13 @@ func TeamAssuranceExceptions(
 	if len(members) == 0 {
 		return nil, nil
 	}
-	return assuranceExceptionsOwnedBy(ctx, tx, members, limit)
+	return assuranceExceptionsOwnedBy(ctx, tx, members, nil, limit)
 }
 
 // assuranceExceptionsOwnedBy is both readers' body. Nil owners reads every
 // finding the caller may see; a zero limit reads them all.
 func assuranceExceptionsOwnedBy(
-	ctx context.Context, tx pgx.Tx, owners []ids.UUID, limit int,
+	ctx context.Context, tx pgx.Tx, owners []ids.UUID, requested *RequestedScope, limit int,
 ) ([]assurance.Exception, error) {
 	// Both halves, and the object half first. Every finding here is ABOUT a
 	// deal and carries its name, so the row scope below answers which deals
@@ -84,6 +101,15 @@ func assuranceExceptionsOwnedBy(
 	}
 	if owners != nil {
 		scopeClause = fmt.Sprintf("(%s) AND d.owner_id = ANY($%d)", scopeClause, arg(owners))
+	}
+	if requested != nil {
+		_, population, err := AnalyticsPopulationClause(ctx, tx, *requested, "d", arg, unownedIsPartOfDefault)
+		if err != nil {
+			return nil, err
+		}
+		if population != "" {
+			scopeClause = "(" + scopeClause + ") AND " + population
+		}
 	}
 	bound := ""
 	if limit > 0 {

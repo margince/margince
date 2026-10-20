@@ -251,8 +251,9 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 	).WithWaiting(attentionWaiting{
 		store: activities.NewStore(db).WithOwnDomains(
 			ownDomainReader{store: capture.NewOwnDomainStore(db)}),
-		deals: deals.NewStore(db, DealsInstallation()),
-		now:   now,
+		deals:    deals.NewStore(db, DealsInstallation()),
+		contacts: contacts.NewStore(db),
+		now:      now,
 	}).
 		// The mirror: the reader's own sends nobody has answered, once the
 		// workspace's follow-up window has passed.

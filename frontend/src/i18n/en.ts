@@ -3,6 +3,34 @@
 // use {name} and are filled by t(key, params).
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
+  "approval.preview.nameUnavailable": "Name unavailable",
+  "approval.preview.structured": "Structured value: {value}",
+  "approval.preview.resolveConflict":
+    "Resolve the conflicting context before approving this change.",
+  "history.field.closed_at": "Closed on",
+  "history.field.amount_minor_base": "Amount in base currency",
+  "approval.preview.conflict": "Conflicting context",
+  "approval.preview.execution": "Set when applied",
+  "approval.preview.effects": "Also changes",
+  "approval.preview.correspondence":
+    "Classify linked correspondence as business records.",
+  "approval.preview.delivery": "Start delivery on eligible linked projects.",
+  "approval.preview.minorUnits": "{amount} {currency} minor units",
+  "approval.preview.empty": "Not set",
+  "approval.preview.status": "Approval context",
+  "approval.preview.stale":
+    "This record changed after the proposal. Request a new proposal before approving.",
+  "approval.preview.incomplete":
+    "The full change cannot be shown. Request a new proposal before approving.",
+  "approval.preview.unavailable":
+    "Approval context is unavailable. Reload or request a new proposal.",
+  "approval.preview.change": "{before} → {after}",
+  "approval.preview.authorityUnknown":
+    "The reason you can review this change is unavailable.",
+  "approval.preview.reviewer": "Review authority",
+  "approval.preview.requested": "You were asked to review this proposal.",
+  "approval.preview.onBehalf": "The agent proposed this change on your behalf.",
+  "approval.preview.authority": "You have permission to make this change.",
   "aiWait.provider":
     "The AI provider is unavailable. This work resumes automatically when it recovers.",
   "aiWait.budget":
@@ -93,6 +121,9 @@ export const en = {
     "Snapshot queued. It will appear here when ready.",
   "reporting.createReport": "Create from Performance",
   "reporting.newCustomReport": "New custom report",
+  "reporting.stageAmountDeals_one": "{amount} · {count} priced deal",
+  "reporting.stageAmountDeals_other": "{amount} · {count} priced deals",
+  "reporting.stageDeals": "Priced deals",
   "reporting.observations_one": "Observation: {count}",
   "reporting.observations_other": "Observations: {count}",
   "reporting.observationsUnavailable": "Sample size unavailable",
@@ -104,6 +135,7 @@ export const en = {
   "reporting.back": "Previous page",
   "reporting.status.insufficient_sample": "Too few observations",
   "reporting.status.unavailable": "Unavailable",
+  "reporting.status.failed": "Could not be calculated",
   "reporting.status.unsupported": "Not supported",
   "reporting.status.not_configured": "Setup needed",
   "reporting.status.no_data": "No matching records",
@@ -125,6 +157,29 @@ export const en = {
   "brief.weekly.numericPartial":
     "Some source evidence is unavailable. Figures include only readable, priced records.",
   "reporting.edit": "Edit report",
+  "reporting.saveDraft": "Save as draft",
+  "reporting.draftKeepsName":
+    "A draft keeps the report’s name and who sees it. To change those, save the report directly.",
+  "reporting.draftEditNote":
+    "This saves the charts as a draft. To change the name or who sees the report, publish or discard the draft first.",
+  "reporting.draftOpen": "Draft {revision} is not published yet",
+  "reporting.draftHidden":
+    "Readers still see the published report. Preview the draft before you publish it.",
+  "reporting.draftPreviewing":
+    "You are looking at the draft. Readers still see the published report.",
+  "reporting.previewDraft": "Preview draft",
+  "reporting.showPublished": "Show published report",
+  "reporting.publishDraft": "Publish draft",
+  "reporting.discardDraft": "Discard draft",
+  "reporting.versions": "Versions",
+  "reporting.versionN": "Version {revision}",
+  "reporting.savedBy": "Saved by",
+  "reporting.revisionState.draft": "draft",
+  "reporting.revisionState.published": "published",
+  "reporting.revisionState.earlier": "earlier",
+  "reporting.restoreRevision": "Restore version {revision}",
+  "reporting.restoreBlocked":
+    "Publish or discard the draft before you restore an earlier version.",
   "reporting.moveUp": "Move up",
   "reporting.moveDown": "Move down",
   "reporting.exportCsv": "Export CSV",
@@ -183,7 +238,45 @@ export const en = {
   "reporting.pipeline": "Pipeline",
   "reporting.allPipelines": "All pipelines",
   "reporting.resultsThrough": "Results through {at}",
+  "reporting.writtenNoneWon": "No sales won in {period}.",
+  "reporting.writtenWon": "Won in {period}: {amount}.",
+  "reporting.writtenTarget":
+    "Target for {targetPeriod}: {target}, {percent}% reached with {actual}.",
+  "reporting.writtenLanding":
+    "Forecast for the end of the fiscal quarter, as of {date}: {amount}.",
+  "reporting.writtenOpen_one": "Open on {date}: {amount} in {count} deal.",
+  "reporting.writtenOpen_other": "Open on {date}: {amount} in {count} deals.",
+  "reporting.prepared.title": "Prepared reports",
+  "reporting.prepared.open": "Open",
+  "reporting.prepared.preview": "Preview",
+  "reporting.prepared.saveCopy": "Save a copy",
+  "reporting.prepared.weeklyTitle": "Weekly sales review",
+  "reporting.prepared.weeklyPurpose":
+    "Last week’s sales won, the open pipeline by stage and each salesperson’s result.",
+  "reporting.prepared.healthTitle": "Pipeline health",
+  "reporting.prepared.healthPurpose":
+    "Open deals by stage, how long they have sat there, and what moved.",
+  "reporting.prepared.ownerTitle": "Sales results by owner",
+  "reporting.prepared.ownerPurpose":
+    "This quarter’s sales won per salesperson against targets where set, with the team’s win rate.",
+  "reporting.prepared.qualificationTitle": "Qualification review",
+  "reporting.prepared.qualificationPurpose":
+    "Pipeline qualified this month, credited to the owner when each deal qualified.",
+  "reporting.prepared.personalTitle": "Personal outcomes",
+  "reporting.prepared.personalPurpose":
+    "Your own open deals and meetings, in My outcomes.",
+  "reporting.prepared.accountsTitle": "Open deals by company",
+  "reporting.prepared.accountsPurpose":
+    "Open deals per company and each one’s share of the pipeline, in Pipeline.",
+  "reporting.prepared.deliveryTitle": "Delivery review",
+  "reporting.prepared.deliveryPurpose":
+    "Project commitments, quiet projects and phases, in Delivery.",
   "reporting.noSalesWon": "No sales won",
+  "reporting.openPipelineAsOf": "As of {at}",
+  "reporting.openPipelineBasis_one": "Open deal: {count} · as of {at}",
+  "reporting.openPipelineBasis_other": "Open deals: {count} · as of {at}",
+  "reporting.forecastLandingBasis":
+    "This fiscal quarter, from the deal forecast",
   "reporting.this_month": "This month",
   "reporting.last_month": "Last month",
   "reporting.last_week": "Last completed week",
@@ -213,6 +306,12 @@ export const en = {
   "reporting.targetBasis": "Target period",
   "reporting.month": "Month",
   "reporting.fiscal_quarter": "Fiscal quarter",
+  "reporting.creditCapturedOwner":
+    "Credited to each deal’s owner when this edition was captured",
+  "reporting.creditCurrentOwner": "Credited to each deal’s current owner",
+  "reporting.creditQualifyingOwner":
+    "Credited to the owner when the deal qualified",
+  "reporting.targetPeriodElapsed": "{percent}% of the target period has passed",
   "reporting.closeWindow": "Expected close window",
   "reporting.all_open": "All open deals",
   "reporting.median": "Median days",
@@ -624,8 +723,9 @@ export const en = {
     "Recorded CRM work for this closed week. Missing records do not establish inactivity.",
   "brief.weekly.notRecorded": "Not recorded",
   "brief.weekly.recordedFrom": "Recorded from {date}",
-  "brief.weekly.noRecords": "No records from this source",
-  "brief.weekly.partialFrom": "Partial week: counted from {date}",
+  "brief.weekly.noRecords":
+    "No information recorded for this part of the report",
+  "brief.weekly.partialFrom": "Figures cover the period from {date} only",
   "brief.weekly.partialValue": "{value} (partial)",
   "brief.week.beforeHistory":
     "This week falls before the first records, so it has no figures to report.",
@@ -741,6 +841,7 @@ export const en = {
   "brief.team.plan": "Review current plan",
   "brief.approval.approve": "Approve",
   "brief.approval.email": "Approve email",
+  "brief.coverage.source.domain_question": "Domain reviews",
   "brief.coverage.source.approval": "Proposals",
   "brief.coverage.source.task": "Tasks",
   "brief.coverage.source.dsr": "Privacy requests",
@@ -852,6 +953,7 @@ export const en = {
   "systemJob.ai_price_sync": "Model price update",
   "systemJob.alias_discovery": "Mail address discovery",
   "systemJob.approval_expiry": "Approval expiry",
+  "systemJob.approval_notice_reconcile": "Pending approval notice cleanup",
   "systemJob.approval_notice_retract": "Approval notice withdrawal",
   "systemJob.approval_notify": "Approval notification",
   "systemJob.assign_owner_release": "Assignee release",
@@ -2539,6 +2641,7 @@ export const en = {
   "co.brief.cite.activity": "activity",
   "co.brief.cite.contact": "contact",
   "co.brief.cite.company": "company",
+  "co.brief.cite.lead": "lead",
   "co.brief.cite.fact": "fact",
   "co.brief.cite.profile_field": "profile field",
   // Several sources of one kind that have no screen to open collapse into one
@@ -2547,6 +2650,7 @@ export const en = {
   "co.brief.cite.activity.many": "{count} activities",
   "co.brief.cite.contact.many": "{count} contacts",
   "co.brief.cite.company.many": "{count} companies",
+  "co.brief.cite.lead.many": "{count} leads",
   "co.brief.cite.fact.many": "{count} facts",
   "co.brief.cite.profile_field.many": "{count} profile fields",
   "approval.kind.advance_deal": "Advance deal",
@@ -2880,11 +2984,15 @@ export const en = {
   "email.detail.when": "Sent",
   "commitment.review.count_one": "Commitment to review: {count}",
   "commitment.review.count_other": "Commitments to review: {count}",
+  "commitment.review.conditionWords": "Condition: {words}",
+  "commitment.review.deadlineWords": "Stated deadline: {words}",
   "commitment.review.title": "Commitment review",
   "commitment.review.detail":
     "No task was created from these readings. Review the source and later replies before adding a follow-up from a linked record.",
   "commitment.review.historical":
     "Historical commitment without a current deadline.",
+  "commitment.review.beforeBaseline":
+    "Sent before the date this mailbox suggests commitments from.",
   "commitment.review.incomplete":
     "Later messages were not fully read. The commitment may already be fulfilled.",
   "commitment.review.unknownDate": "The source date could not be verified.",
@@ -2892,11 +3000,25 @@ export const en = {
     "The message date and mailbox arrival disagree. Review the original dates.",
   "commitment.review.canceledMeeting": "The meeting was canceled.",
   "commitment.review.pendingMeeting": "The meeting has not taken place yet.",
+  "commitment.review.completed":
+    "The source describes work already done. No new task was created.",
+  "commitment.review.conditional":
+    "The commitment depends on a condition that has not been met.",
+  "commitment.review.optional": "This is an offer, not an agreed commitment.",
+  "commitment.review.request":
+    "This asks for work that nobody has agreed to do.",
+  "commitment.review.unclear":
+    "The source does not establish an open commitment.",
   "commitment.review.unavailable":
     "The source needs review before creating work.",
   "commitment.review.evaluated": "Reviewed {when}",
   "activity.detail.loading": "Loading activity…",
   "activity.detail.none": "This activity",
+  "activity.followUps": "Follow-up tasks",
+  "activity.noFollowUps": "No follow-up tasks",
+  "activity.files.empty": "No files on this activity yet.",
+  "activity.files.title": "Files on {subject}",
+  "activity.followUpOpen": "Open",
   "activity.detail.withheldReason": "Activity content is withheld",
   "activity.detail.when": "When",
   "activity.detail.attendees": "Attendees",
@@ -4406,9 +4528,9 @@ export const en = {
     "No weekly review yet. The first one is created on the Monday after your first full week.",
   "brief.weekly.tasksDelivered": "Due tasks completed",
   "brief.weekly.ofDue": "{done} of {due}",
-  "brief.weekly.dealsWon": "Won",
-  "brief.weekly.dealsLost": "Lost",
-  "brief.weekly.dealsMoved": "Moved",
+  "brief.weekly.dealsWon": "Deals won",
+  "brief.weekly.dealsLost": "Deals lost",
+  "brief.weekly.dealsMoved": "Deals with stage changes",
   "brief.weekly.decided": "Proposals decided",
   "brief.weekly.acceptedRejected": "{accepted} accepted · {rejected} rejected",
   "brief.weekly.queueWorked": "Morning brief items",
@@ -4420,8 +4542,8 @@ export const en = {
   "brief.weekly.planCommitmentsKept": "Commitments kept",
   "brief.weekly.meetingsHeld": "Meetings with follow-up",
   "brief.weekly.ofMeetings": "{withStep} of {held}",
-  "brief.weekly.carriedOver": "Carried over",
-  "brief.weekly.outcome.moved": "moved",
+  "brief.weekly.carriedOver": "Open at week’s end",
+  "brief.weekly.outcome.moved": "stage changed",
   "brief.weekly.outcome.won": "won",
   "brief.weekly.outcome.lost": "lost",
   "brief.act": "Done",
@@ -4925,6 +5047,8 @@ export const en = {
   "docs.state.final": "Final",
   "docs.state.superseded": "Superseded",
   "log.title": "Log activity",
+  "log.addFollowUp": "Add a follow-up task",
+  "log.followUpSubject": "Next step",
   "log.addTask": "Add task",
   "log.kind": "Type",
   "log.kindNote": "Note",
@@ -4946,6 +5070,12 @@ export const en = {
   "log.transcriptUploadRejected": "Only a .txt file is accepted.",
   "log.transcriptUploadFailed":
     "File could not be read. Paste the text instead.",
+  "log.files": "Attach files",
+  "log.filesEmpty": "Drop files here, or click to choose them",
+  "log.fileUnattached":
+    "The activity is logged, but {filename} was not attached. {reason}",
+  "log.fileUncertain":
+    "The activity is logged, but the upload of {filename} did not finish. Check the activity’s files before you add it again.",
   "log.dueAt": "Due date",
   "log.date": "Date",
   "log.dateHint": "The day it happened; for a later day, add a task.",
@@ -5324,7 +5454,6 @@ export const en = {
   "tasks.snooze": "Snooze 1 day",
   "tasks.moveTo": "Move to",
   "tasks.detail": "Task",
-  "tasks.source": "Source meeting",
   "tasks.sourceEmail": "Source email",
   "tasks.openSource": "Open original",
   "tasks.detailLoading": "Loading task…",
@@ -5355,7 +5484,14 @@ export const en = {
   "analytics.sectionReports": "Reports",
   "analytics.setup": "Setup",
   "analytics.filters": "Filters",
+  "analytics.firstRunTitle": "No deals to report on yet",
+  "analytics.firstRunBody":
+    "Analytics fills in as the deals you can see are recorded. Open Deals to create one or import your records.",
+  "analytics.firstRunAction": "Open Deals",
   "analytics.attention": "Needs your attention",
+  "analytics.attentionNoOwner": "No owner",
+  "analytics.attentionAtStake": "{amount} at stake",
+  "analytics.attentionReview": "Review",
   "analytics.attentionChecks_one": "1 forecast check to answer",
   "analytics.attentionChecks_other": "{count} forecast checks to answer",
   "analytics.attentionChecksDetail":
@@ -5371,7 +5507,7 @@ export const en = {
   "analytics.attentionCoverageAction": "View data coverage",
   "analytics.reportDealsByStage": "All deals by stage",
   "analytics.reportLeadsByStatus": "Leads by status",
-  "analytics.reportActivitiesByKind": "Activities by type",
+  "analytics.reportActivitiesByKind": "Meetings and tasks",
   "analytics.reportMeetingConversion": "Meeting conversion",
   "analytics.field.amount_base_minor": "Converted amount",
   "analytics.field.amount_minor": "Amount",
@@ -5390,6 +5526,7 @@ export const en = {
   "analytics.field.open_commitments": "Open commitments",
   "analytics.field.open_deal_value_minor": "Open deal value",
   "analytics.field.overdue_commitments": "Overdue commitments",
+  "analytics.field.close_month": "Close month",
   "analytics.field.owner_id": "Owner",
   "analytics.field.partner_company_id": "Partner company",
   "analytics.field.partner_sourced": "Partner-sourced",
@@ -5701,6 +5838,10 @@ export const en = {
   "forecast.confirmed": "Close date confirmed",
   "forecast.fxMissing": "Exchange rate missing",
   "analytics.reportForecast": "Forecast categories",
+  "analytics.shareOfOpenPipeline": "Share of open pipeline",
+  "analytics.reportPipelineByCloseMonth": "Open pipeline by close month",
+  "analytics.closeMonth": "Close month",
+  "analytics.noCloseDate": "No close date",
   "analytics.reportOpenByCompany": "Open deals per company",
   "analytics.retiredPipeline": "{name} (retired)",
   "analytics.forecastBanner":
@@ -5727,6 +5868,14 @@ export const en = {
   "settings.removedItem": "“{name}” removed",
   "settings.removed": "Removed",
   "settings.saved": "Saved",
+  "settings.lockedBy.flag": "Set by {name} (command line). Change it there.",
+  "settings.lockedBy.env": "Set by {name} (environment). Change it there.",
+  "settings.lockedBy.env_file": "Set by {name} in {file}. Change it there.",
+  "settings.lockedBy.config_file": "Set by {name} in {file}. Change it there.",
+  "settings.lockedBy.env_file_unnamed":
+    "Set by {name} (.env file). Change it there.",
+  "settings.lockedBy.config_file_unnamed":
+    "Set by {name} (configuration file). Change it there.",
   "settings.signatureFromTemplate": "Company template",
   "settings.signatureTemplateHint":
     "Your company’s signature template signs your mail. It fills in your name, title and phone.",
@@ -8060,6 +8209,13 @@ export const en = {
     "Follows the company setting. Changing it here gives this mailbox its own setting.",
   "connectors.signatureEnrich.ownAnswer":
     "This mailbox’s own setting, independent of the company setting.",
+  "connectors.historyBaseline.label": "Suggest commitments from",
+  "connectors.historyBaseline.help":
+    "Mail sent before this date suggests no automatic commitments for you. The mail stays captured and searchable. Changing or clearing the date completes or deletes nothing.",
+  "connectors.historyBaseline.current":
+    "Set to {date} ({zone}) for this mailbox only.",
+  "connectors.historyBaseline.save": "Save date",
+  "connectors.historyBaseline.clear": "Clear date",
   "hold.sectionTitle": "Private correspondence",
   "hold.notHeld": "Mail with this contact follows your mailbox setting.",
   "hold.heldByAddress":
@@ -9277,6 +9433,8 @@ export const en = {
   "confirm.field.phone": "Phone",
   "confirm.field.company": "Company",
   "confirm.field.none": "Not recorded",
+  "confirm.marketing.optional":
+    "This choice is optional. You can correct your details without subscribing.",
   "confirm.marketing.title": "Receive occasional news?",
   "confirm.marketing.ask":
     "News from time to time, roughly once a month. Your choice is respected.",
@@ -9477,6 +9635,7 @@ export const en = {
   "cf.obj.lead": "Lead",
   "cf.obj.project": "Project",
   "cf.obj.contract": "Contract",
+  "cf.obj.activity": "Activity",
   "cf.listLabel": "Fields on {object}",
   "cf.col.field": "Field",
   "cf.col.type": "Type",
@@ -9494,6 +9653,8 @@ export const en = {
     "No custom fields on Project yet. Add one to track delivery data the core fields do not cover.",
   "cf.empty.contract":
     "No custom fields on Contract yet. Add one for a classification the standard terms do not cover.",
+  "cf.empty.activity":
+    "No custom fields on Activity yet. A field added here is offered on every call, meeting, note and task you log.",
   "cf.emptyReadOnly": "No custom fields on {object} yet.",
   "cf.type.text": "Text",
   "cf.type.number": "Number",
@@ -9546,6 +9707,11 @@ export const en = {
   "cf.shownInCreate": "“{label}” shown in create forms",
   "cf.hiddenFromCreate":
     "“{label}” hidden from create forms, still on the record page",
+  "cf.col.inReports": "In reports",
+  "cf.reportableFor": "Use “{label}” in reports",
+  "cf.addedToReports":
+    "“{label}” added to reports. Everyone who reads reports sees its label and choices.",
+  "cf.removedFromReports": "“{label}” removed from reports",
   "cf.audit.title": "Recent field changes",
   "audit.kind.customField": "Custom field",
   "cf.audit.empty": "No custom field changes yet.",
@@ -9686,6 +9852,36 @@ export const en = {
   "settings.tab.model-calls": "AI call log",
   "settings.tab.audit": "Audit log",
   "settings.tab.system-health": "System health",
+  "settings.page.configuration.sub":
+    "Every setting and where its value comes from.",
+  "settings.tab.configuration": "Configuration",
+  "configuration.title": "Configuration",
+  "configuration.sub":
+    "Every setting this installation reads, its value and where it comes from. This page only shows them. Change a locked setting where its source says.",
+  "configuration.search": "Filter by key or environment variable",
+  "configuration.noMatch": "No setting matches this filter.",
+  "configuration.col.key": "Key",
+  "configuration.col.value": "Value",
+  "configuration.col.source": "Source",
+  "configuration.col.detail": "Details",
+  "configuration.secret": "Secret",
+  "configuration.unset": "Not set",
+  "configuration.emptyValue": "Empty",
+  "configuration.source.database": "Saved in the app",
+  "configuration.source.default": "Default value",
+  "configuration.source.unset": "Not set here",
+  "configuration.source.flag": "Command line",
+  "configuration.source.env": "Environment",
+  "configuration.source.env_file": ".env file",
+  "configuration.source.config_file": "Configuration file",
+  "configuration.noValue": "No value",
+  "configuration.toggle": "Show details for {key}",
+  "configuration.detail.value": "Full value",
+  "configuration.detail.default": "Default: {value}",
+  "configuration.detail.none": "none",
+  "configuration.detail.type": "Type: {type}",
+  "configuration.detail.flag": "Flag: {flag}",
+  "configuration.detail.readBy": "Read by: {programs}",
   "settings.tab.reset": "Reset data",
   "settings.group.me": "You",
   "settings.group.company": "Company",
@@ -10997,6 +11193,9 @@ export const en = {
   "forecast.landing": "Landing",
   "forecast.landingFrom": "Projected · {won} won + {remaining} to come",
   "forecast.landingFromCall": "From the call · {won} won so far",
+  "forecast.landingRecords": "From the deal records",
+  "forecast.landingRecordsDetail":
+    "Won plus Commit deals with confirmed close dates, without the manager’s call",
   "forecast.landingCaveat": "Landing has a caveat",
   "forecast.landing.caveat.call_absent":
     "No call recorded for this period, so this shows commit evidence.",
@@ -11108,8 +11307,6 @@ export const en = {
   "oauthApp.microsoft.removeConfirmBody":
     "The client secret cannot be read back, so restoring the app requires re-entering the client ID and secret from the Entra portal. Outlook mail and calendar connections use this app; Google and IMAP mailboxes are unaffected. First-run setup asks for an app again.",
   "oauthApp.configured": "In use: {clientId}",
-  "oauthApp.fromEnvironment":
-    "In use from this installation’s configuration: {clientId}. An app stored here overrides it until removed.",
   "oauthApp.pinnedToDirectory": "Pinned to directory {tenant}.",
   "oauthApp.replaceHint":
     "A new pair replaces the stored one. Existing connections keep working until reconnected.",
@@ -13116,11 +13313,11 @@ export const en = {
     "Pick a field, how to compare it, and a value. Add more conditions as you go.",
   "filters.describeChanges": "Describe changes in plain words",
   // Named by the word the button shows, then what pressing it does (WCAG
-  // 2.5.3): {word} is filters.join.and or filters.join.or.
-  "filters.connector.matchAll":
-    "{word}: match all of these. Press to match any.",
-  "filters.connector.matchAny":
-    "{word}: match any of these. Press to match all.",
+  // 2.5.3). {word} is that word, and {other} is the word a press puts there.
+  "filters.connector.and":
+    "{word}: the conditions on both sides must match. Press for {other}.",
+  "filters.connector.or":
+    "{word}: a match on either side is enough. Press for {other}.",
   "filters.group.all": "All of these",
   "filters.group.any": "Any of these",
   "filters.addGroupToGroup": "Add nested group",
@@ -13816,14 +14013,33 @@ export const en = {
     "{urgent} urgent · {due} due · {lower} routine · {total} total",
   "worklist.summary.wholeDay": "Whole day: {sentence}",
   "worklist.summary.split": "{today} today · {review} to review",
-  "worklist.completeness": "{shown} of {considered} shown",
+  "worklist.completeness": "{shown} of {considered} items shown",
+  "worklist.completeness.floor_one": "{shown} item shown",
+  "worklist.completeness.floor_other": "{shown} items shown",
+  "worklist.completeness.cards_one": "{cards} card on screen",
+  "worklist.completeness.cards_other": "{cards} cards on screen",
+  "worklist.completeness.bounded":
+    "Read limit reached for {kinds}. See the source limits.",
+  "worklist.completeness.unread_one": "{count} source did not load",
+  "worklist.completeness.unread_other": "{count} sources did not load",
   "worklist.review.partial":
     "{loaded} of {total} shown. Load more below to see the rest.",
+  "worklist.limits.title": "Source read limits",
+  "worklist.limits.source": "{source}: read limit reached · {scope}",
+  "worklist.emptyPage": "Nothing on this page. Load more to continue.",
+  "worklist.review.more":
+    "More pages may contain review items. Load more below to continue.",
+  "worklist.limits.boundary":
+    "Load more continues this snapshot. It cannot read beyond the source limits.",
+  "worklist.limits.personal": "your personal source",
+  "worklist.limits.selected": "the selected record scope",
+  "worklist.limits.remedy":
+    "Review the available items, then refresh. If needed work is still missing, ask an admin to investigate the source read limit.",
+  "worklist.review.snapshotChanged":
+    "{loaded} of {total} snapshot items shown. The day has changed; refresh to update the totals.",
   "worklist.review.partialDone": "{loaded} of {total} shown.",
-  "worklist.completeness.bounded_one":
-    "{shown} shown · {sources} source has more",
-  "worklist.completeness.bounded_other":
-    "{shown} shown · {sources} sources have more",
+  "worklist.review.floor":
+    "{loaded}+ shown. A source read limit was reached; see the source limits.",
   "worklist.clear": "Nothing is waiting on you.",
   "worklist.clearFor": "Nothing is waiting on {name}.",
   "worklist.clearOfTasksToday":
@@ -13898,6 +14114,7 @@ export const en = {
   "worklist.disposition.failed": "Item was not removed. Retry.",
   "worklist.scope.label": "Whose work",
   "worklist.scope.mine": "Mine",
+  "worklist.sourceUnavailable": "Source unavailable or not shared with you",
   "worklist.scope.unassigned": "Unassigned",
   "worklist.scope.team": "Team",
   "worklist.scope.all": "All",
@@ -14078,6 +14295,7 @@ export const en = {
   "worklist.category.decisions": "Approval",
   "worklist.category.system": "System",
   "worklist.because.pinned": "pinned by you",
+  "worklist.because.non_buyer_request": "not established as customer work",
   "worklist.because.buyer_wrote_last": "buyer wrote last",
   "worklist.because.waiting_days": "waiting",
   "worklist.because.more_one": "+{count} more",

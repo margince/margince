@@ -65,7 +65,9 @@ func TestCommitmentAdmissionUsesCurrentEvidenceBeforeWriting(t *testing.T) {
 				}
 			}
 			sourceID := ids.UUID(source.Id)
-			c := Commitment{AsOf: asOf, ReadMessages: []ids.UUID{sourceID}, Extractor: signalScanActor, SourceActivityID: sourceID, Summary: "Send the pricing", Quote: body, Seat: &e.Rep1, DueDate: test.due, Confidence: 0.95, Locator: commitmentLocator(sourceID, claimKindOurs, e.Rep1.String(), body), Body: body}
+			c := Commitment{
+				Meaning: openCommitmentMeaning(test.due, body), AsOf: asOf, ReadMessages: []ids.UUID{sourceID}, Extractor: signalScanActor, SourceActivityID: sourceID, Summary: "Send the pricing", Quote: body, Seat: &e.Rep1, DueDate: test.due, Confidence: 0.95, Locator: commitmentLocator(sourceID, claimKindOurs, e.Rep1.String(), body), Body: body,
+			}
 			ctx := withTranscriptReader(principal.WithWorkspaceID(context.Background(), e.WS), "human:"+e.Rep1.String(), ids.NewV7())
 			dispatcher := NewCommitmentDispatcher(e.Pool, approvals.NewService(e.DB()))
 			var taskID ids.UUID
@@ -146,7 +148,9 @@ func TestCapturedMailWithoutASentDateDoesNotCreateFreshWork(t *testing.T) {
 		if err := tx.QueryRow(ctx, `SELECT activity_id FROM activity_identity WHERE identity_kind = 'mail' AND identity_key = $1`, "undated@counterparty.test").Scan(&source); err != nil {
 			return err
 		}
-		c := Commitment{AsOf: time.Date(2027, 1, 1, 0, 0, 0, 0, time.UTC), SourceActivityID: source, ReadMessages: []ids.UUID{source}, Extractor: signalScanActor, Locator: commitmentLocator(source, claimKindOurs, e.Rep1.String(), "Send pricing"), Seat: &e.Rep1, Summary: "Send pricing", Confidence: 0.95}
+		c := Commitment{
+			Meaning: openCommitmentMeaning("", ""), AsOf: time.Date(2027, 1, 1, 0, 0, 0, 0, time.UTC), SourceActivityID: source, ReadMessages: []ids.UUID{source}, Extractor: signalScanActor, Locator: commitmentLocator(source, claimKindOurs, e.Rep1.String(), "Send pricing"), Seat: &e.Rep1, Summary: "Send pricing", Confidence: 0.95,
+		}
 		outcome, _, err := dispatcher.DispatchTx(ctx, tx, c, ids.NewV7())
 		if err == nil && outcome != CommitmentOutcome(activities.CommitmentSourceUnknown) {
 			t.Errorf("outcome = %q, want unknown source date", outcome)
@@ -174,7 +178,9 @@ func TestHistoricalPromiseRemainsSearchableWithoutBecomingCurrentWork(t *testing
 	}
 	sourceID := ids.UUID(source.Id)
 	contactID := ids.From[ids.ContactKind](ids.UUID(contact.Id))
-	c := Commitment{AsOf: at.AddDate(2, 0, 0), Extractor: signalScanActor, SourceActivityID: sourceID, Summary: "Send pricing", Quote: quote, PromisedTo: &contactID, Seat: &e.Rep1, DueDate: "2024-10-20", Confidence: 0.95, Locator: commitmentLocator(sourceID, claimKindOurs, e.Rep1.String(), quote)}
+	c := Commitment{
+		Meaning: openCommitmentMeaning("2024-10-20", quote), AsOf: at.AddDate(2, 0, 0), Extractor: signalScanActor, SourceActivityID: sourceID, Summary: "Send pricing", Quote: quote, PromisedTo: &contactID, Seat: &e.Rep1, DueDate: "2024-10-20", Confidence: 0.95, Locator: commitmentLocator(sourceID, claimKindOurs, e.Rep1.String(), quote),
+	}
 	dispatcher := NewCommitmentDispatcher(e.Pool, approvals.NewService(e.DB()))
 	ctx := withTranscriptReader(principal.WithWorkspaceID(context.Background(), e.WS), "human:"+e.Rep1.String(), ids.NewV7())
 	for range 2 {
@@ -227,7 +233,8 @@ func TestProviderArrivalContradictionRemainsReviewable(t *testing.T) {
 	ctx := withTranscriptReader(principal.WithWorkspaceID(context.Background(), e.WS), "human:"+e.Rep1.String(), ids.NewV7())
 	dispatcher := NewCommitmentDispatcher(e.Pool, approvals.NewService(e.DB()))
 	c := Commitment{
-		AsOf: asOf, SourceActivityID: source.ID, ReadMessages: []ids.UUID{source.ID}, Extractor: signalScanActor,
+		Meaning: openCommitmentMeaning("", ""),
+		AsOf:    asOf, SourceActivityID: source.ID, ReadMessages: []ids.UUID{source.ID}, Extractor: signalScanActor,
 		Locator: commitmentLocator(source.ID, claimKindOurs, e.Rep1.String(), "Send pricing"), Seat: &e.Rep1, Summary: "Send pricing", Confidence: 0.95,
 	}
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
@@ -275,7 +282,8 @@ func TestAdmissionDoesNotDemoteWatchedOrProposedCommitments(t *testing.T) {
 			}
 			sourceID := ids.UUID(source.Id)
 			c := Commitment{
-				AsOf: at.Add(time.Hour), Extractor: transcriptProposalActor, SourceActivityID: sourceID,
+				Meaning: openCommitmentMeaning("", quote),
+				AsOf:    at.Add(time.Hour), Extractor: transcriptProposalActor, SourceActivityID: sourceID,
 				Summary: "Send pricing", Quote: quote, Confidence: 0.7, Evidence: approvals.Evidence{Snippet: quote, SourceType: "activity", SourceID: sourceID}, Locator: commitmentLocator(sourceID, claimKindOurs, "Pat", quote),
 			}
 			want := CommitmentProposed
@@ -351,7 +359,9 @@ func TestCapturedSourceDateSurvivesOriginalRetention(t *testing.T) {
 				if err := capture.NewPendingStore(e.DB()).PurgeRawCaptureTx(ctx, tx, []ids.UUID{source}); err != nil {
 					return err
 				}
-				c := Commitment{AsOf: time.Date(2026, 10, 20, 0, 0, 0, 0, time.UTC), SourceActivityID: source, ReadMessages: []ids.UUID{source}, Extractor: signalScanActor, Locator: commitmentLocator(source, claimKindOurs, e.Rep1.String(), "Send pricing"), Seat: &e.Rep1, Summary: "Send pricing", Confidence: 0.95}
+				c := Commitment{
+					Meaning: openCommitmentMeaning("", ""), AsOf: time.Date(2026, 10, 20, 0, 0, 0, 0, time.UTC), SourceActivityID: source, ReadMessages: []ids.UUID{source}, Extractor: signalScanActor, Locator: commitmentLocator(source, claimKindOurs, e.Rep1.String(), "Send pricing"), Seat: &e.Rep1, Summary: "Send pricing", Confidence: 0.95,
+				}
 				outcome, _, err := dispatcher.DispatchTx(ctx, tx, c, ids.NewV7())
 				want := CommitmentOutcome(activities.CommitmentSourceUnknown)
 				if dated {

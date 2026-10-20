@@ -9,12 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -43,9 +40,7 @@ func TestAccountClaimTranslatesExplanationAndPreservesQuotedEvidence(t *testing.
 	for _, tc := range []struct{ lang, why string }{
 		{"de", "Seit einem Tag fällig und noch offen."}, {"vi", "Quá hạn một ngày và vẫn đang mở."},
 	} {
-		if err := settings.Set(ctx, compose.NewSettingsStore(e.Pool), identity.BaseLanguage, tc.lang); err != nil {
-			t.Fatal(err)
-		}
+		integration.SetBaseLanguage(ctx, t, e.Pool, tc.lang)
 		page, err := svc.Assemble(ctx, ids.From[ids.CompanyKind](company))
 		if err != nil {
 			t.Fatal(err)

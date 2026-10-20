@@ -11,7 +11,7 @@ import { ErrorLine } from "../../design-system/errorline";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
-import { useArchiveRecord } from "../../screens/archive";
+import { useArchiveRecord } from "../records/archive";
 import "../../design-system/querystates.css";
 
 type Company = components["schemas"]["Company"];

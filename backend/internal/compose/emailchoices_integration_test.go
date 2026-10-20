@@ -14,6 +14,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -158,7 +159,7 @@ func TestLostTeamChoiceStillDeliversPersonalFacts(t *testing.T) {
 	if e.relay.count() != 1 {
 		t.Fatal("lost team access suppressed the personal edition")
 	}
-	if !strings.Contains(e.relay.bodies[0], "2026-06-29") {
+	if !strings.Contains(e.relay.bodies[0], mailcopy.For("en").Date(time.Date(2026, 6, 29, 0, 0, 0, 0, time.UTC))) {
 		t.Fatal("personal reporting period disappeared")
 	}
 	personal := identity.RoutinePersonal

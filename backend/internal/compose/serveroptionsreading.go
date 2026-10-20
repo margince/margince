@@ -24,7 +24,7 @@ func WithColdStart(fetch PageFetcher, brain completer) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		s.coldstartHandlers = coldstartHandlers{engine: &coldStartEngine{
 			extract:   evidenceExtractor{fetch: fetch, brain: brain},
-			approvals: newApprovalsService(InstallationDB(pool)),
+			approvals: NewApprovalsService(InstallationDB(pool)),
 			pool:      pool,
 		}}
 	}
@@ -39,7 +39,7 @@ func WithScrape(fetch PageFetcher, brain completer) Option {
 		s.scrapeHandlers = scrapeHandlers{engine: &scrapeEngine{
 			extract:   evidenceExtractor{fetch: fetch, brain: brain},
 			contacts:  contacts.NewStore(InstallationDB(pool)),
-			approvals: newApprovalsService(InstallationDB(pool)),
+			approvals: NewApprovalsService(InstallationDB(pool)),
 			pool:      pool,
 		}}
 	}

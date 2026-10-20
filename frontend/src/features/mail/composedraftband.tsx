@@ -10,7 +10,7 @@ import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useOpenEmail } from "../../lib/openemail";
 import { useRecordZone } from "../../lib/recordzone";
-import { openCitation } from "../../screens/record360";
+import { openCitation } from "../records/record360";
 import { VoiceDegradedNotice } from "./compose.notices";
 import { DraftReasons } from "./composedraftcontext";
 import { OpenEmailDrawer } from "./openemaildrawer";

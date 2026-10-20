@@ -46,8 +46,8 @@ import { useT } from "../../i18n";
 import { useActivity } from "../../lib/activityread";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
-import { outgoingBody } from "../../screens/activitybody";
-import { ActivityBodyField } from "../../screens/activitybodyfield";
+import { outgoingBody } from "../records/activitybody";
+import { ActivityBodyField } from "../records/activitybodyfield";
 import { useMeetingOutcome } from "./taskactions";
 import { worklistKey } from "./worklist.queries";
 

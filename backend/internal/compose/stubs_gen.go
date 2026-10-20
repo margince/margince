@@ -419,6 +419,18 @@ func (stubs) UpdateReportingReport(w nethttp.ResponseWriter, r *nethttp.Request,
 	httperr.NotImplemented(w, r, "UpdateReportingReport")
 }
 
+func (stubs) DiscardReportingReportDraft(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.DiscardReportingReportDraftParams) {
+	httperr.NotImplemented(w, r, "DiscardReportingReportDraft")
+}
+
+func (stubs) SaveReportingReportDraft(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.SaveReportingReportDraftParams) {
+	httperr.NotImplemented(w, r, "SaveReportingReportDraft")
+}
+
+func (stubs) PublishReportingReportDraft(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.PublishReportingReportDraftParams) {
+	httperr.NotImplemented(w, r, "PublishReportingReportDraft")
+}
+
 func (stubs) ListReportingEditions(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ListReportingEditionsParams) {
 	httperr.NotImplemented(w, r, "ListReportingEditions")
 }
@@ -433,6 +445,14 @@ func (stubs) EvaluateReportingReport(w nethttp.ResponseWriter, r *nethttp.Reques
 
 func (stubs) ListReportingExecutions(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ListReportingExecutionsParams) {
 	httperr.NotImplemented(w, r, "ListReportingExecutions")
+}
+
+func (stubs) ListReportingReportRevisions(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ListReportingReportRevisions")
+}
+
+func (stubs) RestoreReportingReportRevision(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, revision int64, params crmcontracts.RestoreReportingReportRevisionParams) {
+	httperr.NotImplemented(w, r, "RestoreReportingReportRevision")
 }
 
 func (stubs) ListReportingSchedules(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
@@ -1235,6 +1255,10 @@ func (stubs) DisconnectConnector(w nethttp.ResponseWriter, r *nethttp.Request, p
 	httperr.NotImplemented(w, r, "DisconnectConnector")
 }
 
+func (stubs) SetConnectorHistoryBaseline(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.CaptureProvider) {
+	httperr.NotImplemented(w, r, "SetConnectorHistoryBaseline")
+}
+
 func (stubs) SetConnectorMailPosture(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.CaptureProvider) {
 	httperr.NotImplemented(w, r, "SetConnectorMailPosture")
 }
@@ -1851,7 +1875,7 @@ func (stubs) GetForecastAssurance(w nethttp.ResponseWriter, r *nethttp.Request) 
 	httperr.NotImplemented(w, r, "GetForecastAssurance")
 }
 
-func (stubs) ListInputChecks(w nethttp.ResponseWriter, r *nethttp.Request) {
+func (stubs) ListInputChecks(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListInputChecksParams) {
 	httperr.NotImplemented(w, r, "ListInputChecks")
 }
 
@@ -1965,6 +1989,10 @@ func (stubs) ValidateImportRun(w nethttp.ResponseWriter, r *nethttp.Request, id 
 
 func (stubs) GetAuthenticationPolicy(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetAuthenticationPolicy")
+}
+
+func (stubs) GetInstallationConfiguration(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetInstallationConfiguration")
 }
 
 func (stubs) GetInstallationJurisdiction(w nethttp.ResponseWriter, r *nethttp.Request) {

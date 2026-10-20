@@ -227,10 +227,10 @@ func redactCommitmentDecision(ctx context.Context, tx pgx.Tx, item commitmentEra
  (source_activity_id, locator, summary, source_quote, outcome, current_work, rule_version, evidence_ids, evaluated_at, captured_by)
  VALUES (@evidence_source, @locator, '', '', CASE WHEN @unavailable THEN @reason ELSE 'retained' END,
  NOT @unavailable, 'erasure', '{}', now(), @by)
- ON CONFLICT (source_activity_id, locator) DO UPDATE SET summary = '', source_quote = '',
+ ON CONFLICT (source_activity_id, locator) DO UPDATE SET summary = '', source_quote = '', meaning = NULL,
  outcome = CASE WHEN @unavailable THEN @reason ELSE prior.outcome END,
  current_work = prior.current_work AND NOT @unavailable
- WHERE prior.summary <> '' OR prior.source_quote <> ''
+ WHERE prior.summary <> '' OR prior.source_quote <> '' OR prior.meaning IS NOT NULL
  OR (@unavailable AND (prior.outcome <> @reason OR prior.current_work))`, pgx.StrictNamedArgs{
 		"unavailable": unavailable, evidenceKeyReason: auth.CommitmentEvidenceUnavailable, "evidence_source": item.source, "locator": item.locator, "by": by,
 	})

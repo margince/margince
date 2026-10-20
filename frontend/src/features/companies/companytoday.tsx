@@ -9,7 +9,7 @@ import { PanelBody } from "../../design-system/panel";
 import { Popover } from "../../design-system/popover";
 import { RingDot, Rings } from "../../design-system/rings";
 import { useT } from "../../i18n";
-import { CallCard, TodayPanel } from "../../screens/record360";
+import { CallCard, TodayPanel } from "../records/record360";
 import "./company360.css";
 import { HEALTH_RANK } from "./companylookups";
 import {

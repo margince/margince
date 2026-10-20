@@ -14,9 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -30,10 +28,7 @@ func TestScanFailuresKeepTheirWrittenLanguage(t *testing.T) {
 			e := integration.Setup(t)
 			at := clocktest.Now(t)
 			now := func() time.Time { return at }
-			store := settings.New(e.Pool, settings.NewRegistry(identity.BaseLanguage))
-			if err := settings.Set(e.Admin(), store, identity.BaseLanguage, tc.language); err != nil {
-				t.Fatal(err)
-			}
+			integration.SetBaseLanguage(e.Admin(), t, e.Pool, tc.language)
 			company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Original account", &e.Rep1))
 			view := company360Service(e)
 			noWorker := companyscan.NewService(e.Pool, view, view, nil, nil, nil, now, nil)
@@ -63,9 +58,7 @@ func TestScanFailuresKeepTheirWrittenLanguage(t *testing.T) {
 			if tc.language == "en" {
 				nextLanguage = "de"
 			}
-			if err := settings.Set(e.Admin(), store, identity.BaseLanguage, nextLanguage); err != nil {
-				t.Fatal(err)
-			}
+			integration.SetBaseLanguage(e.Admin(), t, e.Pool, nextLanguage)
 			replay, err := svc.Get(rep, company)
 			if err != nil {
 				t.Fatal(err)

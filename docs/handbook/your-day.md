@@ -210,7 +210,10 @@ by who made it.
 - A task you archived, a proposal you refused and a customer promise you dismissed do not come back
   when Margince reads the conversation again.
 
-When Margince reads old mail, it checks newer messages before it creates work.
+When Margince reads old mail, it checks newer messages before it creates work. Work already done and offers to help create no new task. Neither does work that depends on something which has not happened yet.
+A request alone does not mean someone agreed to do it. **Commitment review** on the source shows why no task was made.
+Words such as "next week" stay in the source without setting a due day.
+
 An old promise without a current deadline stays in the source, rather than becoming a new overdue task.
 A future deadline can keep an old promise current. If later context has not been read, Margince does not create the task.
 
@@ -328,19 +331,19 @@ The Worklist holds still while you work through it. Something may come in, or so
 something while you work. Then a notice headed **List changed** says which: "{arrived} new since you
 opened the list. Refresh to add them."
 
-The page is still right, only not complete. The Refresh button appears only when something came in.
+Refresh updates the totals when work arrives or leaves the list.
 
 ### How complete is this?
-The Worklist footer says how complete the list is, in one of two ways:
+The Worklist footer and **To review** panel count items, not cards: 8 possible duplicates are one card.
 
-- **"{shown} of {considered} shown"**: a plain share.
-- **"{shown} shown · {sources} sources have more"**: a source stopped at its reading limit.
+- **"{shown} of {considered} items shown"**: a share, plus "{cards} cards on screen" for a group.
+- **"Read limit reached for {kinds}"**, such as "Approvals (200+)": no share, because nobody knows
+  the total. **Load more** cannot read past a source limit. **Source read limits** names each
+  source and its scope. Review available work, then refresh. Ask an admin to check the source
+  limit if needed work is still missing.
+- **"{count} sources did not load"**: the list may not be complete, even after the last page.
 
-The second shows no share, because nobody knows the total.
-
-If Margince could not read a source at all, a box headed
-**Worklist incomplete** names it above the list. The empty list then reads
-**"No items in the sources that loaded."** instead of "Nothing is waiting on you."
+**Worklist incomplete** names sources that did not load; an empty list says **"No items in the sources that loaded."**
 
 ### Handled for you
 
@@ -355,23 +358,20 @@ leaving the list, so you can see that it was.
 
 ## For a team lead
 
-A team lead in Margince, or anyone who can see records past their own, sees more on Home and in the
-Worklist.
-
 On **Home → Team** you get the team board and the coaching suggestions. The rest lives in the
 Worklist panel, which has its own **Whose work** switch (**Mine**,
-**Unassigned**, **Team**, **All**). **Hidden from the Worklist** appears only at
-**All**.
+**Unassigned**, **Team**, **All**). **Hidden from the Worklist** appears only at **All**, with no teammate selected.
 
-**Team exceptions** is team work that has gone past a line. A first reply is late, money is at risk,
-nobody has taken it, or the same thing keeps failing. Each row names **what it was judged against**,
+**Team exceptions** shows money at risk, work nobody has taken, or the same thing failing again. Each row names **what it was judged against**,
 so you can see the bar instead of guessing it. You can take a row on from here.
+
+Your brief and digest stay personal. **Team**, **All**, and teammate views show shared work you may read,
+not a colleague's private messages or personal notices. A teammate's decision keeps its owner; it is not yours.
 
 **Team work needing attention** has a row per teammate: waiting on a reply, deals at risk, past due,
 promises due. Unassigned work gets its own row.
 
-**Coaching suggestions** has at most one suggestion per teammate: the most urgent kind, not the one
-with the most work.
+**Coaching suggestions** has at most one suggestion per teammate: the most urgent kind, not the one with the most work.
 
 **Hidden from the Worklist** lists the reasons work is held back, each with what it costs you:
 - **Too old for the Worklist**: no one decided this; the sender wrote months back and nobody answered
@@ -382,8 +382,7 @@ with the most work.
 
 When nothing is held back, it says: "Nothing is hidden. Every waiting customer reaches a Worklist."
 
-You can also add a note to a teammate's Worklist with **Add note** ("A short note that appears in
-their Worklist.").
+You can also add a note to a teammate's Worklist with **Add note** ("A short note that appears in their Worklist.").
 
 ### What is in the morning email?
 

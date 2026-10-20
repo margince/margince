@@ -33,6 +33,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -385,7 +386,7 @@ func unreadInWindow(ctx context.Context, tx pgx.Tx, user ids.UserID, w Window) (
 	window := digestWindowSQL(arg(w.from()), arg(w.Morning))
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT notice.id, notice.kind, notice.subject, notice.body,
-		       notice.target_type, notice.target_id, notice.created_at, notice.origin
+		       notice.target_type, notice.target_id, notice.created_at, notice.origin, coalesce(notice.dedupe_key,'')
 		  FROM notice
 		 WHERE notice.recipient_user_id = $%d
 		   AND %s
@@ -397,16 +398,21 @@ func unreadInWindow(ctx context.Context, tx pgx.Tx, user ids.UserID, w Window) (
 	var held []Notice
 	for rows.Next() {
 		var n Notice
+		var noticeKey string
 		// Both halves are nullable and the table pairs them, so either arriving
 		// alone is a row the constraint should have refused.
 		var targetType *string
 		var targetID *ids.UUID
 		if scanErr := rows.Scan(&n.ID, &n.Kind, &n.Subject, &n.Body,
-			&targetType, &targetID, &n.CreatedAt, &n.Origin); scanErr != nil {
+			&targetType, &targetID, &n.CreatedAt, &n.Origin, &noticeKey); scanErr != nil {
 			return nil, scanErr
 		}
 		if targetType != nil && targetID != nil {
 			n.Target = Target{Type: *targetType, ID: *targetID}
+		}
+		if approval, ok := approvalOfNoticeKey(n.Kind, noticeKey); ok {
+			typed := ids.From[ids.ApprovalKind](approval)
+			n.ApprovalID = &typed
 		}
 		held = append(held, n)
 	}

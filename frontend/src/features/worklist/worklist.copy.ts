@@ -17,12 +17,8 @@ import {
 } from "../contacts/contactpage.address";
 import { caseHref } from "../privacy/privacy.caselink";
 import { connectionName, connectionTitleKey } from "./worklist.connection";
-import { countsUnder } from "./worklist.narrowing";
-import type {
-  Worklist,
-  WorklistFilter,
-  WorklistItem,
-} from "./worklist.queries";
+import { nonBuyerRequest } from "./worklist.eyebrow";
+import type { Worklist, WorklistItem } from "./worklist.queries";
 
 export {
   comparisonText,
@@ -59,6 +55,7 @@ export function subjectHref(
 // Sources without record pages link to their existing work surface.
 const SOURCE_QUEUE: Partial<Record<WorklistItem["source"], string>> = {
   dsr: routeHash(settingsHref("privacy")),
+  capture_health: routeHash(settingsHref("connections")),
   // A rule that failed, and the page that lists the rules.
   //
   // The row named a broken automation and offered no address at all — not the
@@ -338,7 +335,10 @@ export function itemTitle(item: WorklistItem, t: T, locale: Locale): string {
     return t("worklist.untitled.generic");
   }
   const title = t(
-    connectionTitleKey(item) ?? (`worklist.untitled.${item.source}` as const),
+    nonBuyerRequest(item)
+      ? "worklist.source.awaiting_reply"
+      : (connectionTitleKey(item) ??
+          (`worklist.untitled.${item.source}` as const)),
   );
   return item.subject?.label ? `${title} · ${item.subject.label}` : title;
 }
@@ -410,84 +410,4 @@ function knownSource(
   source: WorklistItem["source"],
 ): source is keyof typeof KNOWN_SOURCES {
   return source in KNOWN_SOURCES;
-}
-
-// How much of one kind of work the page is carrying, for the pill that narrows
-// to it.
-//
-// A count is drawn only when it is EXACT. `FilterPills` treats an absent count
-// as "no number" rather than as a zero, and that is the honest answer for a
-// category read to its bound: the server knows a floor, not a total, and a
-// floor printed as a count is a wrong number rather than a missing one.
-//
-// The `all` pill counts every category, because "all" is not a category and has
-// no row of its own.
-export function pillCount(
-  day: Worklist,
-  filter: WorklistFilter,
-): number | undefined {
-  if (filter === "all") {
-    return day.counts.some((count) => count.more_available)
-      ? undefined
-      : day.counts.reduce((total, count) => total + count.considered, 0);
-  }
-  const found = day.counts.find((count) => count.category === filter);
-  if (!found || found.more_available) {
-    return undefined;
-  }
-  return found.considered;
-}
-
-// What the page is NOT showing, in one line.
-//
-// The queue is a cut, and before this the reader had no way to tell a finished
-// day from a truncated one — a full first page read as an empty backlog. The
-// line is drawn only when there IS a difference to report: on a day the page
-// carries whole, saying "12 of 12" is noise.
-//
-// It reads only the cut the reader is LOOKING at. `considered` is snapshotted
-// before the category narrowing, so on a filtered page the other categories keep
-// their full figures and contribute nothing shown — summing them all would
-// answer "5 of 35" on a page that is showing every one of the five things the
-// reader asked for, and conflate "you filtered this out" with "this did not
-// fit".
-//
-// Where a source was read to its bound the total is a floor, and the sentence
-// says a source has more rather than printing a number it cannot stand behind.
-export function completenessText(
-  day: Worklist,
-  filter: WorklistFilter,
-  t: T,
-  locale: Locale,
-  // How many rows are on screen NOW. `counts[].shown` describes one response
-  // page, and the reader can have walked past several — reading it after a
-  // "show more" would report the first page's rows over the whole day's
-  // candidates and call a growing list incomplete for ever.
-  loaded?: number,
-): string | null {
-  // Null is a narrowing these figures cannot describe. See countsUnder.
-  const counted = countsUnder(day, filter);
-  if (counted === null) return null;
-  const shown =
-    loaded ?? counted.reduce((total, count) => total + count.shown, 0);
-  const considered = counted.reduce(
-    (total, count) => total + count.considered,
-    0,
-  );
-  const bounded = counted.filter((count) => count.more_available).length;
-  if (shown >= considered && bounded === 0) {
-    return null;
-  }
-  if (bounded > 0) {
-    // No fraction: its denominator would be a floor, and "200 of 200 shown · 1
-    // source has more" contradicts itself. Pluralised on the reader's own rule.
-    return translatePlural(locale, "worklist.completeness.bounded", bounded, {
-      shown: formatNumber(shown, locale),
-      sources: formatNumber(bounded, locale),
-    });
-  }
-  return t("worklist.completeness", {
-    shown: formatNumber(shown, locale),
-    considered: formatNumber(considered, locale),
-  });
 }

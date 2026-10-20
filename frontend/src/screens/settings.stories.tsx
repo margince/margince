@@ -652,6 +652,7 @@ export const PrivacyPage: Story = catalogPage("privacy");
 export const JurisdictionPage: Story = catalogPage("jurisdiction");
 export const AuditPage: Story = catalogPage("audit");
 export const SystemHealthPage: Story = catalogPage("system-health");
+export const ConfigurationPage: Story = catalogPage("configuration");
 export const ExtensionsPage: Story = catalogPage("extensions");
 export const ResetPage: Story = catalogPage("reset");
 

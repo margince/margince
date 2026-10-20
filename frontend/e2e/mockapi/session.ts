@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { components } from "../../src/api/schema";
 import { defaultAgentAllowances } from "../../src/features/automations/agentallowances.fixtures";
 import { defaultOperations } from "../../src/screens/operationsettings.fixtures";
 import { meFixture } from "../../src/testing/mefixture";
@@ -107,6 +108,62 @@ export const installationSettings = {
     { key: "microsoft", label: "Microsoft", enabled: false },
   ],
 };
+
+// The configuration list: a value from each kind of source, a secret, and a
+// struct value long enough to need wrapping at 390px.
+export const installationConfiguration: components["schemas"]["ConfigurationEntry"][] =
+  [
+    {
+      key: "http.addr",
+      env: "MARGINCE_ADDR",
+      flag: "addr",
+      type: "string",
+      doc: "The address the api listens on.",
+      roles: ["api"],
+      secret: false,
+      stored: false,
+      value: ":8080",
+      default: ":8080",
+      origin: { source: "flag", name: "--addr" },
+    },
+    {
+      key: "database.dsn",
+      env: "MARGINCE_DSN",
+      type: "string",
+      doc: "The connection string of the database.",
+      roles: ["api", "worker"],
+      secret: true,
+      stored: false,
+      value: null,
+      default: null,
+      origin: { source: "env", name: "MARGINCE_DSN" },
+    },
+    {
+      key: "ai.budget",
+      env: "MARGINCE_AI_BUDGET",
+      type: "struct",
+      doc: "The AI token allowance per seat and per company.",
+      roles: ["api", "worker"],
+      secret: false,
+      stored: true,
+      value:
+        '{"tokens_per_full_user":12000000,"company_monthly_tokens":null,"tokens_per_light_user":3000000}',
+      default: null,
+      origin: { source: "database", name: "" },
+    },
+    {
+      key: "installation.follow_up_reconcile_interval_seconds",
+      env: "MARGINCE_INSTALLATION_FOLLOW_UP_RECONCILE_INTERVAL_SECONDS",
+      type: "int",
+      doc: "How often the follow-up reconcile pass runs.",
+      roles: ["worker"],
+      secret: false,
+      stored: true,
+      value: "900",
+      default: "900",
+      origin: { source: "default", name: "" },
+    },
+  ];
 
 // The banner keys on the two identities differing and on nothing else. It
 // does not read `reindex_needed`, which a drift-cancelled rebuild leaves set.

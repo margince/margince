@@ -51,19 +51,25 @@ describe("what has moved since the reader started", () => {
     expect(refreshed).toHaveBeenCalledTimes(1);
   });
 
-  it("explains a count that fell without offering a refresh", () => {
+  it("offers to refresh the snapshot totals after work leaves", async () => {
+    const refreshed = vi.fn();
+    const user = userEvent.setup();
     render(
-      notice({
-        as_of: "2026-09-05T09:00:00Z",
-        // Dealt with since the walk started. Refreshing does not bring these
-        // back, so offering it here would point at the wrong remedy.
-        changed_since_snapshot: 2,
-        new_available: 0,
-      }),
+      notice(
+        {
+          as_of: "2026-09-05T09:00:00Z",
+          changed_since_snapshot: 2,
+          new_available: 0,
+        },
+        refreshed,
+      ),
     );
 
-    expect(screen.queryByRole("button")).toBeNull();
     expect(screen.getByText(/2/)).toBeTruthy();
+    await user.click(
+      screen.getByRole("button", { name: en["worklist.walk.refresh"] }),
+    );
+    expect(refreshed).toHaveBeenCalledTimes(1);
   });
 
   it("reports arrivals and departures separately", () => {

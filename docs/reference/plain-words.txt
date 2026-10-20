@@ -274,7 +274,6 @@ comfort
 comma
 command
 comment
-commission
 commit
 common
 company
@@ -302,7 +301,6 @@ connect
 connection
 connector
 consent
-console
 consolidation
 constant
 constellation
@@ -627,7 +625,6 @@ general
 generate
 generation
 generator
-geocoding
 get
 gif
 git
@@ -656,10 +653,8 @@ guard
 guess
 guide
 guidelines
-guids
 h
 had
-hairpin
 half
 halves
 hand
@@ -727,7 +722,6 @@ ignore
 image
 immutable
 import
-imprint
 in
 inbound
 inbox
@@ -875,7 +869,6 @@ mail
 mailbox
 main
 maintain
-maintenance
 make
 manager
 manifest
@@ -984,6 +977,7 @@ nowhere
 number
 object
 obligation
+observe
 occasional
 of
 off
@@ -1004,7 +998,6 @@ one
 only
 onto
 open
-openstreetmap
 operation
 operational
 operator
@@ -1034,7 +1027,6 @@ outrank
 outside
 over
 overlap
-overlay
 overridable
 overridden
 override
@@ -1319,7 +1311,6 @@ rollback
 rollout
 room
 root
-rotation
 rough
 round
 route
@@ -1372,7 +1363,6 @@ see
 seeded
 seeds
 segment
-sek
 selects
 self
 send
@@ -1476,7 +1466,6 @@ static
 status
 statute
 stay
-std
 stdio
 step
 still
@@ -1584,7 +1573,6 @@ tiers
 time
 timeline
 timeout
-timer
 timezone
 title
 to
@@ -1654,7 +1642,6 @@ unrelated
 unresolved
 unset
 unsigned
-unsubscribe
 untagged
 untested
 until
@@ -1669,6 +1656,7 @@ upstream
 uptime
 urls
 us
+usd
 use
 user
 user's

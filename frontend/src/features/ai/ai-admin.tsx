@@ -20,6 +20,7 @@ import { QueryStates } from "../../design-system/querystates";
 import { Meter } from "../../design-system/readings";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { formatDateTime, formatNumber } from "../../format/format";
+import { lockFor } from "../../format/settinglocks";
 import { formatTokens } from "../../format/tokens";
 import { useLocale, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
@@ -68,6 +69,8 @@ export function AiBudgetCard() {
   });
   if (!canSee) return null;
   const budget = query.data;
+  // The allowance is one setting: a boot source that sets it refuses the editor.
+  const lock = lockFor(budget?.locks, "ai.budget", t);
   return (
     <Panel
       title={t("aiAdmin.allowance")}
@@ -80,6 +83,7 @@ export function AiBudgetCard() {
                 node.focus();
               }
             }}
+            reason={lock.disabled ? lock.reason : undefined}
             onClick={() => {
               setSaved(false);
               setEditing(true);

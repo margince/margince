@@ -25,7 +25,7 @@ import { WaitingEmailLine } from "./worklist.emailtitle";
 import { conditionOf, eyebrowKeyFor, kindClass } from "./worklist.eyebrow";
 import { leadFactsText } from "./worklist.leadfacts";
 import { hostText } from "./worklist.meetingparties";
-import { useNoticeSource } from "./worklist.noticesource";
+import { useRowSource } from "./worklist.noticesource";
 import { lastTouch } from "./worklist.pane";
 import type { WorklistItem } from "./worklist.queries";
 import { noticeDetail, readerTask } from "./worklist.reader";
@@ -136,9 +136,8 @@ export function WorklistRow({
   const drawer = useDrawerDials();
   const target = rowHref(item);
   const href = target && withWorklistReturn(target, drawer);
-  // A notice about a mail or meeting has no address to link, so its name opens
-  // the activity in a drawer instead.
-  const source = useNoticeSource(item);
+  // Open the activity itself without leaving the queue for its linked record.
+  const source = useRowSource(item);
   const viewer = useMe(false).data?.user;
   const title = itemTitle(readerTask(item, viewer, t), t, locale);
   const facts =
@@ -201,6 +200,7 @@ export function WorklistRow({
     title,
     href,
     open: source.open,
+    sourceUnavailable: source.unavailable,
     when,
     facts,
     said,
@@ -300,14 +300,13 @@ export function WorklistRow({
           item={item}
           title={title}
           href={href}
-          density={density}
           owner={owner}
           primary={answer.primary}
           equals={answer.equals}
           onReview={onReview}
           context={context}
           framed={framed}
-          titled={titleLinks(emailOpener, href)}
+          titled={titleLinks(emailOpener, href, source.open)}
         />
         {/* An answer that is not a VERB: a duplicate pair, whose two buttons
             each name the record they keep and cannot leave the list that names

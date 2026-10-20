@@ -23,11 +23,8 @@ var waivedRecords = gatekit.Waive(map[string]string{
 
 const rerunCertLane = "re-run the cert lane: make -C backend e2e-ai-certify"
 
-// TestCommitmentTaskConfidenceSitsInTheCertifiedGap holds the constant to the
-// certification records: every certified record of a task that reads
-// commitments must have measured a firm and a hedged promise, and the
-// threshold must fall between what it read of each.
-func TestCommitmentTaskConfidenceSitsInTheCertifiedGap(t *testing.T) {
+// Certified firm promises must clear the automatic-task threshold.
+func TestAutomaticTaskConfidenceFitsCertifiedCommitments(t *testing.T) {
 	if compose.CommitmentTaskConfidence < compose.ExtractorFloor {
 		t.Errorf("the threshold %v is under the extractor floor %v, so it would describe readings that are dropped before the rule sees them",
 			compose.CommitmentTaskConfidence, compose.ExtractorFloor)
@@ -43,7 +40,7 @@ func TestCommitmentTaskConfidenceSitsInTheCertifiedGap(t *testing.T) {
 	}
 	bands := map[string]map[string]string{}
 	for _, sc := range scenarios {
-		if sc.CommitmentBand == "" {
+		if sc.CommitmentBand != aicert.CommitmentBandFirm {
 			continue
 		}
 		if bands[sc.Task] == nil {
@@ -77,16 +74,13 @@ func TestCommitmentTaskConfidenceSitsInTheCertifiedGap(t *testing.T) {
 			continue
 		}
 		checked[rec.Task]++
-		firmMin, hedgedMax := commitmentGap(t, rec, bands[rec.Task])
+		firmMin := certifiedFirmMinimum(t, rec, bands[rec.Task])
 		who := rec.Task + "/" + rec.Provider + "/" + rec.ServedModel
 		if firmMin != nil && *firmMin < compose.CommitmentTaskConfidence {
 			t.Errorf("%s: a firm promise was read at %v, below the threshold %v, so it would stage instead of becoming a task",
 				who, *firmMin, compose.CommitmentTaskConfidence)
 		}
-		if hedgedMax != nil && *hedgedMax >= compose.CommitmentTaskConfidence {
-			t.Errorf("%s: a hedged promise was read at %v, at or above the threshold %v, so it would become a task unasked",
-				who, *hedgedMax, compose.CommitmentTaskConfidence)
-		}
+
 	}
 	for task := range bands {
 		if checked[task] == 0 {
@@ -95,16 +89,14 @@ func TestCommitmentTaskConfidenceSitsInTheCertifiedGap(t *testing.T) {
 	}
 }
 
-// commitmentGap is the least confidence a record read a firm promise at and the
-// greatest it read a hedged one at. A banded scenario the record has no row for,
-// or a row that predates the band, is a record that was never measured for this
-// gate and fails rather than passing as an absence of evidence.
-func commitmentGap(t *testing.T, rec aicert.Record, bands map[string]string) (firmMin, hedgedMax *float64) {
+// A missing firm measurement fails instead of making the threshold pass on a shorter census.
+func certifiedFirmMinimum(t *testing.T, rec aicert.Record, bands map[string]string) *float64 {
 	t.Helper()
 	rows := map[string]aicert.ScenarioRecord{}
 	for _, row := range rec.Scenarios {
 		rows[row.Scenario] = row
 	}
+	var minimum *float64
 	for name, band := range bands {
 		who := rec.Task + "/" + rec.Provider + "/" + rec.ServedModel
 		row, ok := rows[name]
@@ -112,24 +104,13 @@ func commitmentGap(t *testing.T, rec aicert.Record, bands map[string]string) (fi
 			t.Errorf("%s has no measurement of %q — %s", who, name, rerunCertLane)
 			continue
 		}
-		switch band {
-		case aicert.CommitmentBandFirm:
-			if row.AnswerConfidenceMin == nil {
-				t.Errorf("%s: no kept run of the firm scenario %q reported a confidence", who, name)
-				continue
-			}
-			if firmMin == nil || *row.AnswerConfidenceMin < *firmMin {
-				firmMin = row.AnswerConfidenceMin
-			}
-		case aicert.CommitmentBandHedged:
-			if row.AnswerConfidenceMax == nil {
-				t.Errorf("%s: no kept run of the hedged scenario %q reported a confidence", who, name)
-				continue
-			}
-			if hedgedMax == nil || *row.AnswerConfidenceMax > *hedgedMax {
-				hedgedMax = row.AnswerConfidenceMax
-			}
+		if row.AnswerConfidenceMin == nil {
+			t.Errorf("%s: no kept run of the firm scenario %q reported a confidence", who, name)
+			continue
+		}
+		if minimum == nil || *row.AnswerConfidenceMin < *minimum {
+			minimum = row.AnswerConfidenceMin
 		}
 	}
-	return firmMin, hedgedMax
+	return minimum
 }

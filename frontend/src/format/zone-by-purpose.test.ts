@@ -142,6 +142,18 @@ function code(path: string, source: string): string {
 // output moved with the machine it ran on would assert nothing.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "features/capture/connectors.historybaseline.stories.tsx",
+    why: "A mailbox history baseline stores the zone its owner picked the date in; the fixture carries that stored zone.",
+  },
+  {
+    file: "features/capture/connectors.historybaseline.test.tsx",
+    why: "A mailbox history baseline stores the zone its owner picked the date in; the fixture carries that stored zone.",
+  },
+  {
+    file: "features/automations/approvalpreview.test.ts",
+    why: "The preview must use the card's supplied date formatter and zone in every locale, independent of the test machine's zone.",
+  },
+  {
     file: "features/analytics/reporting.fixtures.ts",
     why: "The report API fixture carries the installation timezone so schedule and frozen-period rendering remain independent of the browser zone.",
   },
@@ -206,7 +218,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Proves a date-only provisional close keeps its day east and west of UTC.",
   },
   {
-    file: "screens/projectheaderfacts.test.tsx",
+    file: "features/projects/projectheaderfacts.test.tsx",
     why: "The head's target-end cell prints a date and the count of mornings to it, and the case is that the two name the SAME day — which needs a record zone far enough east of UTC that they would not. It is supplied through RecordZoneProvider, the seam the product itself reads; the other cases pass UTC so the count in the assertion is the one a reader on that day sees.",
   },
   {
@@ -258,7 +270,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Same: the stubbed report result carries the installation zone the server sends, and the caption assertion is about that zone reaching the screen unchanged. Reading the runner's zone would make the assertion about the machine.",
   },
   {
-    file: "screens/recordconversations.test.tsx",
+    file: "features/records/recordconversations.test.tsx",
     why: "The component takes the zone as a required prop and these cases assert which GROUPS render and which badges they carry — no date rendering is asserted. The zone is the shape being satisfied, not a rendering under test.",
   },
   {
@@ -266,7 +278,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The gutter case asserts that a row's time is drawn in the RECORD's zone rather than the instant's — '14:22' for a 12:22Z instant — which needs a zone whose offset is not zero, and the component takes it as a required prop. The other cases pass UTC as the shape being satisfied and assert who wrote what, not a rendering of the clock.",
   },
   {
-    file: "screens/historyreversalrow.stories.tsx",
+    file: "features/records/historyreversalrow.stories.tsx",
     why: "The story hand-renders a member row and passes the formatter's required zone directly — a story has no installation read to take it from, and a zone read off the runner would draw a different date column on every machine the catalog builds on.",
   },
   {
@@ -274,23 +286,23 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The story hand-renders a RecordView around the details pane and passes the view's required zone; nothing in it renders a date, so the zone is the shape being satisfied, not a rendering under review.",
   },
   {
-    file: "screens/recordconversations.stories.tsx",
+    file: "features/records/recordconversations.stories.tsx",
     why: "The story passes the component's required zone prop directly — a story has no installation read to take it from, and a zone read off the runner would draw a different date column on every machine the catalog builds on.",
   },
   {
-    file: "screens/historyfielddiff.test.tsx",
+    file: "features/records/historyfielddiff.test.tsx",
     why: "The component under test takes a reading context whose zone is required, and these cases assert the CURRENCY scaling — no value here renders a date. The zone is the shape being satisfied, not a rendering being asserted.",
   },
   {
-    file: "screens/history.timeline.test.tsx",
+    file: "features/records/history.timeline.test.tsx",
     why: "The adapter under test takes a reading context whose zone is required, and none of these rows carries a timestamp for it to render — the zone is the SHAPE being satisfied, not a rendering being asserted, so it is pinned rather than read from a provider these unit calls do not have.",
   },
   {
-    file: "screens/recordchronology.test.tsx",
+    file: "features/records/recordchronology.test.tsx",
     why: "Same shape, one level up: the hook takes the reading context whole, and these cases assert which ROWS survive a narrowed read rather than how any date renders. A zone read off the runner would make the fixture differ by machine while proving nothing about the zone.",
   },
   {
-    file: "screens/historyvalues.test.ts",
+    file: "features/records/historyvalues.test.ts",
     why: "The zone IS the input under test: a stored timestamp is asserted to render at the RECORD's zone rather than at UTC, which needs a zone east of UTC to stand in. Read off the runner's own zone the suite would assert a different rendering on every machine.",
   },
   {
@@ -310,7 +322,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The timeline's from/to filter cuts a picked day at the INSTALLATION's boundaries; asserting that against the fallback would agree with itself whichever zone the code read, so the suite names a zone that is not the fallback.",
   },
   {
-    file: "screens/recordlist.test.tsx",
+    file: "features/records/recordlist.test.tsx",
     why: "createdColumn now takes the zone it renders dates in; this suite asserts what the column SORTS on, so it hands over a named zone to satisfy the signature and the zone itself carries none of the claim.",
   },
   {
@@ -386,7 +398,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Pins viewerZone()'s answer and its UTC fallback by pretending to be in a named zone.",
   },
   {
-    file: "screens/adddocument.test.tsx",
+    file: "features/voice-knowledge/adddocument.test.tsx",
     why: "Installation-settings fixture: the company timezone the document form reads back.",
   },
   {
@@ -406,11 +418,11 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Proves the record/viewer split on one row, which only works by naming both zones and a boundary-straddling instant.",
   },
   {
-    file: "screens/contractform.currency.test.tsx",
+    file: "features/projects/contractform.currency.test.tsx",
     why: "Installation-settings fixture: the company timezone the contract form reads back.",
   },
   {
-    file: "screens/contractform.customseed.test.tsx",
+    file: "features/projects/contractform.customseed.test.tsx",
     why: "The same installation-settings fixture, behind the contract form's custom-field seeding cases.",
   },
   {
@@ -438,11 +450,11 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Asserts that same card shows the configured zone verbatim — the one screen where the zone name is the content.",
   },
   {
-    file: "screens/onboarding-conversation/basis-act.stories.tsx",
+    file: "features/onboarding/onboarding-conversation/basis-act.stories.tsx",
     why: "The basis act prefills the installation's reporting zone from the same settings record; the story needs a configured value.",
   },
   {
-    file: "screens/onboarding-conversation/basis-act.test.tsx",
+    file: "features/onboarding/onboarding-conversation/basis-act.test.tsx",
     why: "Asserts the reporting zone is prefilled verbatim and left out of the patch when unchanged — the zone name is the content.",
   },
   {
@@ -454,7 +466,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Installation-settings fixture backing the leads screen's settings read.",
   },
   {
-    file: "screens/logactivity.test.tsx",
+    file: "features/records/logactivity.test.tsx",
     why: "Reads back the calendar day an entry files under — backdated or logged at the moment — which needs both a named zone to pretend to be in and a named zone to compare the filing against.",
   },
   {

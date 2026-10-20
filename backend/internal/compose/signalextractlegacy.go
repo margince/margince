@@ -108,11 +108,13 @@ func (x *SignalExtractor) convertLegacyCommitment(ctx context.Context, legacy le
 		readCtx, cancelRead := readDeadline(ctx)
 		events, err = x.ask(readCtx, thread)
 		cancelRead()
-		// A refused reading settles the signal like an empty one: the old card
-		// held nothing a reader could act on, and asking again every hour for a
-		// message the model will not read would cost more than it could find.
-		if err != nil && !errors.Is(err, errRefusedReading) {
+		if err != nil {
 			return err
+		}
+	}
+	for _, event := range events {
+		if msg := validateEventEvidence(event, thread); msg != "" {
+			return fmt.Errorf("%w: %s", errRefusedReading, msg)
 		}
 	}
 	return database.WithWorkspaceTx(ctx, x.pool, func(tx pgx.Tx) error {

@@ -52,6 +52,9 @@ export MARGINCE_PUBLIC_BASE_URL="http://localhost:8080"         # post-consent l
 # export MARGINCE_GMAIL_PUSH_TOKEN="$(openssl rand -hex 16)"    # api: enables POST /webhooks/gmail
 ```
 
+A client ID and secret set here win over a Google app saved under Settings. That app is then locked: to save or delete
+it gets a `409`.
+
 Without the client ID and secret, the state key and the public base URL, `/connectors/gmail/*` stays at the `501` it
 declares. The screen then says `Gmail is not configured on this installation.` and sends no one on. The full table is
 in the Capture connector OAuth section of [reference/configuration.md](../reference/configuration.md).
@@ -73,12 +76,13 @@ Register a Microsoft Entra app with these delegated permissions: `offline_access
 Give it the redirect URI `<api-base>/v1/connectors/graph/callback`. `Mail.Send` shares the one consent, for the same
 reason as the Gmail send scope.
 
-Then give the app to the installation. A stored app wins, and works from the next consent with no restart. The
+Then give the app to the installation. A stored app works from the next consent with no restart. The
 **Microsoft app** form under Settings → General takes the `Application (client) ID` and secret, and a
 `Directory (tenant) ID` if you want to pin it to one directory. It lists the redirect URIs to register, and they must
 match byte for byte.
 
-Or use the environment: `MARGINCE_GRAPH_CLIENT_ID`, `MARGINCE_GRAPH_CLIENT_SECRET`, and if you want it,
+Or use the environment, which wins over a stored app and locks it: `MARGINCE_GRAPH_CLIENT_ID`,
+`MARGINCE_GRAPH_CLIENT_SECRET`, and if you want it,
 `MARGINCE_GRAPH_TENANT`. Leave that one empty, or set `common`, for any company; set a directory ID to pin it. Add
 the state key, vault key and public base URL from the Gmail section.
 

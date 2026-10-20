@@ -1,0 +1,30 @@
+name: partial_delivery_keeps_the_remaining_invoice_de
+task: request_settlement
+site: request_settle
+source: hand_authored
+sanitized_by: hand_authored/codex
+fixture:
+- messages:
+  - direction: inbound
+    subject: Documents
+    body: Bitte schick das überarbeitete Angebot und die Rechnung.
+  - direction: outbound
+    subject: Documents
+    body: Das überarbeitete Angebot ist angehängt. Die Rechnung schicke ich später.
+- messages:
+  - direction: inbound
+    subject: Documents
+    body: Bitte schick das überarbeitete Angebot und die Rechnung.
+  - direction: outbound
+    subject: Documents
+    body: Das überarbeitete Angebot und die Rechnung sind angehängt.
+expect:
+  outcome: accepted
+  answer:
+  - verdict: still_owed
+    remaining_names: invoice
+  - verdict: settled
+  judge: none
+  judge_none_reason: The first answer supplies only the quote and explicitly defers the invoice. The
+    remaining work must name the invoice in the configured English record language. The second supplies
+    both requested documents.

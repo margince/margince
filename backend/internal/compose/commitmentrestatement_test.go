@@ -19,7 +19,7 @@ func TestRestatementMustBeLaterQuotedEvidenceFromTheSameConversationSide(t *test
 		{ID: original, Direction: "outbound", At: at, Body: "I will send pricing."},
 		{ID: later, Direction: "outbound", At: at.Add(time.Hour), Body: "I will send pricing by Friday."},
 	}}
-	valid := extractedEvent{Kind: extractKindCommitment, MessageID: original.String(), Quote: "I will send pricing.", RestatedMessageID: later.String(), RestatedQuote: "I will send pricing by Friday."}
+	valid := extractedEvent{Meaning: &commitmentMeaning{State: "open", DeadlinePrecision: "none"}, Kind: extractKindCommitment, MessageID: original.String(), Quote: "I will send pricing.", RestatedMessageID: later.String(), RestatedQuote: "I will send pricing by Friday."}
 	if reason := validateEventEvidence(valid, thread); reason != "" {
 		t.Fatal(reason)
 	}
@@ -52,16 +52,18 @@ func TestRenewalCertificationRejectsMissingEvidenceAndTheOldDeadline(t *testing.
 			{ID: original, Direction: "outbound", At: at, Body: "I will send pricing."},
 			{ID: renewed, Direction: "outbound", At: at.Add(48 * time.Hour), Body: "I will send pricing by Friday."},
 		}},
-		expected: []signalExtractExpectation{{Kind: extractKindCommitment, Message: 1, RestatedMessage: 2, DueDate: "2026-09-11"}},
+		expected: []signalExtractExpectation{{Kind: extractKindCommitment, Message: 1, RestatedMessage: 2, DueDate: new("2026-09-11")}},
 	}
 	for _, name := range []string{"valid", "missing renewal", "old deadline"} {
 		t.Run(name, func(t *testing.T) {
 			event := extractedEvent{
-				Kind: extractKindCommitment, MessageID: original.String(), Quote: "I will send pricing.",
+				Meaning: &commitmentMeaning{State: "open", DeadlinePrecision: "day", DeadlineQuote: "Friday"},
+				Kind:    extractKindCommitment, MessageID: original.String(), Quote: "I will send pricing.",
 				RestatedMessageID: renewed.String(), RestatedQuote: "I will send pricing by Friday.", DueDate: "2026-09-11", Summary: "Send pricing", Confidence: 0.95,
 			}
 			if name == "missing renewal" {
-				event.RestatedMessageID, event.RestatedQuote = "", ""
+				event.RestatedMessageID, event.RestatedQuote, event.DueDate = "", "", ""
+				event.Meaning = &commitmentMeaning{State: "open", DeadlinePrecision: "none"}
 			}
 			if name == "old deadline" {
 				event.DueDate = "2026-05-01"

@@ -18,8 +18,8 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -168,12 +168,14 @@ func (h Handlers) GetControllerParticulars(w http.ResponseWriter, r *http.Reques
 	// entry's own read verb. The ungated read exists for the send path
 	// composing a message; a screen asks the object, so somebody with no
 	// settings grant at all is refused the form.
-	current, err := settings.Get(r.Context(), h.settings, ControllerIdentity)
+	current, err := config.StoredVal(r.Context(), h.settings, ControllerIdentity)
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, wireParticulars(current))
+	out := wireParticulars(current)
+	out.Locks = h.settingLocks(ControllerIdentity)
+	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
 // SetControllerParticulars records who this installation is.
@@ -198,25 +200,27 @@ func (h Handlers) SetControllerParticulars(w http.ResponseWriter, r *http.Reques
 	// without read would otherwise change what every outgoing message says
 	// about this company and then receive a 403 for the same request, with the
 	// mutation already committed and nothing telling them so.
-	if _, err := settings.Get(r.Context(), h.settings, ControllerIdentity); err != nil {
+	if _, err := config.StoredVal(r.Context(), h.settings, ControllerIdentity); err != nil {
 		writeConsentErr(w, r, err)
 		return
 	}
 	// The settings store owns the table and applies the entry's own validator,
 	// so the bounds live with the definition rather than being re-checked here.
-	if err := settings.Set(r.Context(), h.settings, ControllerIdentity, in); err != nil {
+	if err := config.Save(r.Context(), h.settings, ControllerIdentity, in); err != nil {
 		writeConsentErr(w, r, err)
 		return
 	}
 	// Answering the STORED value rather than the submitted one: a form that
 	// posts and then shows its own input would hide any normalisation, and a
 	// reader would believe something is saved that is not.
-	saved, err := settings.Get(r.Context(), h.settings, ControllerIdentity)
+	saved, err := config.StoredVal(r.Context(), h.settings, ControllerIdentity)
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, wireParticulars(saved))
+	out := wireParticulars(saved)
+	out.Locks = h.settingLocks(ControllerIdentity)
+	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
 // valueOr reads an optional wire string. An ABSENT field and an empty one are
@@ -244,4 +248,18 @@ func wireParticulars(p ControllerParticulars) crmcontracts.ControllerParticulars
 		ObjectionRoute:    &p.ObjectionRoute,
 		AdvertiserContact: &p.AdvertiserContact,
 	}
+}
+
+// WithLocks binds what reports the settings a boot source sets.
+func (h Handlers) WithLocks(locks func(surface []config.Any) *[]crmcontracts.SettingLock) Handlers {
+	h.locks = locks
+	return h
+}
+
+// settingLocks are the locks among surface, the settings one response carries.
+func (h Handlers) settingLocks(surface ...config.Any) *[]crmcontracts.SettingLock {
+	if h.locks == nil {
+		return nil
+	}
+	return h.locks(surface)
 }

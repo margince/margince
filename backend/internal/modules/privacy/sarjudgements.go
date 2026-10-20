@@ -138,6 +138,9 @@ func sarJudgementSections(pkg *SARPackage, authored []ids.UUID) []sarSection {
           CASE WHEN ` + sarContentDisclosed + ` AND (d.renewed_by IS NULL OR EXISTS (
             SELECT 1 FROM activity a WHERE a.id = d.renewed_by AND ` + sarContentDisclosed + `
           )) THEN d.summary END AS summary,
+          CASE WHEN ` + sarContentDisclosed + ` AND (d.renewed_by IS NULL OR EXISTS (
+            SELECT 1 FROM activity a WHERE a.id = d.renewed_by AND ` + sarContentDisclosed + `
+          )) THEN d.meaning END AS meaning,
           CASE WHEN ` + sarContentDisclosed + ` THEN d.source_quote END AS source_quote
           FROM activity_commitment_admission d JOIN activity a ON a.id = d.source_activity_id
           WHERE d.source_activity_id = ANY($1) OR d.renewed_by = ANY($1)`, messages},

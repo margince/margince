@@ -9,7 +9,9 @@ import { StoryProviders } from "../../testing/story-utils";
 import { defaultAgentAllowances } from "../automations/agentallowances.fixtures";
 import { RegionalSettingsFields } from "./installation-settings.regional";
 
-function RegionalFields() {
+function RegionalFields({
+  locks,
+}: Readonly<{ locks?: components["schemas"]["SettingLocks"] }>) {
   const [draft, setDraft] = useState<
     components["schemas"]["InstallationSettings"]
   >({
@@ -33,6 +35,7 @@ function RegionalFields() {
     <StoryProviders>
       <div className="form-stack">
         <RegionalSettingsFields
+          locks={locks}
           draft={draft}
           canManage
           refused={new Map()}
@@ -51,3 +54,21 @@ export default meta;
 type Story = StoryObj<typeof RegionalSettingsFields>;
 export const Editable: Story = {};
 export const Dark: Story = { globals: { theme: "dark" } };
+// The date format set in the configuration file: the field is refused and
+// names the file and key to change.
+export const LockedByConfigFile: Story = {
+  render: () => (
+    <RegionalFields
+      locks={[
+        {
+          key: "installation.date_format",
+          origin: {
+            source: "config_file",
+            name: "installation.date_format",
+            file: "/etc/margince/margince.yaml",
+          },
+        },
+      ]}
+    />
+  ),
+};

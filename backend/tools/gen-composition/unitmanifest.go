@@ -97,6 +97,9 @@ type unitManifest struct {
 	// route" and "how much can one stranger make this installation read" are the
 	// same question. omitempty for the reason the fields above have it.
 	Inbound []inboundEndpoint `json:"inbound,omitempty"`
+
+	// Entries are the places on core screens that offer a way into the unit.
+	Entries []declaredEntry `json:"entries,omitempty"`
 }
 
 // inboundEndpoint is one declared anonymous edge (see

@@ -128,7 +128,7 @@ func (h Handlers) ApproveApproval(w http.ResponseWriter, r *http.Request, id crm
 		}
 	}
 	approvalID := pathID[ids.ApprovalKind](id)
-	var a row
+	var a crmcontracts.Approval
 	var err error
 	if req.EditedPayload != nil {
 		edited, marshalErr := json.Marshal(*req.EditedPayload)
@@ -136,15 +136,15 @@ func (h Handlers) ApproveApproval(w http.ResponseWriter, r *http.Request, id crm
 			httperr.Write(w, r, httperr.Validation("edited_payload", "malformed_json", marshalErr.Error()))
 			return
 		}
-		a, err = h.svc.DecideEditedFor(r.Context(), approvalID, edited, req.Reason)
+		a, err = h.svc.DecideEditedWire(r.Context(), approvalID, edited, req.Reason)
 	} else {
-		a, err = h.svc.Decide(r.Context(), approvalID, true, req.Reason)
+		a, err = h.svc.DecideWire(r.Context(), approvalID, true, req.Reason)
 	}
 	if err != nil {
 		writeErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, h.wire(a))
+	httperr.WriteJSON(w, http.StatusOK, a)
 }
 
 func (h Handlers) RejectApproval(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
@@ -156,12 +156,12 @@ func (h Handlers) RejectApproval(w http.ResponseWriter, r *http.Request, id crmc
 			return
 		}
 	}
-	a, err := h.svc.Decide(r.Context(), pathID[ids.ApprovalKind](id), false, req.Reason)
+	a, err := h.svc.DecideWire(r.Context(), pathID[ids.ApprovalKind](id), false, req.Reason)
 	if err != nil {
 		writeErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, h.wire(a))
+	httperr.WriteJSON(w, http.StatusOK, a)
 }
 
 // ApproveApprovalBundle decides every still-pending member of one bundle at
@@ -229,8 +229,6 @@ func writeErr(w http.ResponseWriter, r *http.Request, err error) {
 	httperr.Write(w, r, err)
 }
 
-func (h Handlers) wire(a row) crmcontracts.Approval { return wire(a, h.svc.now()) }
-
 // wire maps the store row onto the contract shape; effectiveStatus folds
 // lazy expiry in so a stale pending row never reads as approvable.
 func wire(a row, now time.Time) crmcontracts.Approval {
@@ -264,6 +262,9 @@ func wire(a row, now time.Time) crmcontracts.Approval {
 		out.TargetEntityType = a.TargetType
 	}
 	out.TargetLabel = a.TargetLabel
+	if a.TargetVersion != nil {
+		out.TargetVersion = new(int(*a.TargetVersion))
+	}
 	if a.TargetID != nil {
 		v := openapi_types.UUID(*a.TargetID)
 		out.TargetEntityId = &v

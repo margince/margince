@@ -11,19 +11,19 @@ import { TimelineFilterBar } from "../../design-system/timelinefilterbar";
 import { groupChronology } from "../../design-system/timelinegroups";
 import { useLocale, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
-import { RecordHistoryTab } from "../../screens/history";
+import { RecordHistoryTab } from "../records/history";
 import {
   CHRONOLOGY_EMPTY_KEYS,
   ChronologyFilter,
   ChronologyFooter,
   hasChronologyFooter,
   useRecordChronology,
-} from "../../screens/recordchronology";
+} from "../records/recordchronology";
 import {
   ConversationList,
   useChronologyCut,
-} from "../../screens/recordconversations";
-import { TimelineActions } from "../../screens/timelineactions";
+} from "../records/recordconversations";
+import { TimelineActions } from "../records/timelineactions";
 import { MeetingBriefAction } from "./contactmeetings";
 import { timelineState } from "./contacttimelinestate";
 import "./contact360.css";

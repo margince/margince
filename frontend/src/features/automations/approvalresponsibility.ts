@@ -59,7 +59,22 @@ export function commitmentResponsibility(
 }
 
 export function approvalAcceptable(
-  approval: Readonly<{ assignee_inactive?: boolean }>,
+  approval: Readonly<{
+    assignee_inactive?: boolean;
+    preview?: {
+      version: number;
+      state: string;
+      conflicts?: readonly { blocks_approval: boolean }[];
+    };
+  }>,
 ): boolean {
-  return approval.assignee_inactive !== true;
+  return (
+    approval.assignee_inactive !== true &&
+    (!approval.preview ||
+      (approval.preview.version === 1 &&
+        approval.preview.state === "ready" &&
+        !approval.preview.conflicts?.some(
+          (conflict) => conflict.blocks_approval,
+        )))
+  );
 }

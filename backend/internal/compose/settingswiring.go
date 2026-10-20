@@ -12,29 +12,25 @@ import (
 	"encoding/json"
 	"maps"
 	"reflect"
+	"slices"
 	"strings"
 	"sync"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/installseam"
-	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/consent"
-	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/integrations"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
-// settingsDefinitions is the whole catalog, in one list. A module that owns no
-// setting contributes nothing — there is no interface every module must
-// satisfy, because most of them have no settings and never will.
+// settingsDefinitions is the whole catalog, in one list: the configuration
+// registry's stored settings, then the settings.Define exceptions.
 //
 // This function is also the fitness gate's input: settingscatalog_test.go
 // asserts uniqueness and module-prefix ownership over exactly this list, so a
@@ -50,18 +46,15 @@ var settingsDefinitions = sync.OnceValue(func() []settings.Definition {
 	// setting stays changeable) rather than loudly.
 	identity.LockBaseCurrencyWith(deals.BaseCurrencyLock(identity.BaseCurrency.Key()))
 
-	var defs []settings.Definition
-	defs = append(defs, activities.Definitions()...)
-	defs = append(defs, ai.Definitions()...)
-	defs = append(defs, capture.Definitions()...)
-	defs = append(defs, consent.Definitions()...)
-	defs = append(defs, deals.Definitions()...)
-	defs = append(defs, identity.Definitions()...)
-	defs = append(defs, integrations.Definitions()...)
-	defs = append(defs, contacts.Definitions()...)
-	defs = append(defs, privacy.Definitions()...)
-	return defs
+	return slices.Concat(storedDefinitions(), defineExceptions())
 })
+
+// defineExceptions are the settings.Define entries that stay out of the
+// configuration registry. The census gate names each with its reason
+// (gates/settingsdefineexceptions_test.go).
+func defineExceptions() []settings.Definition {
+	return slices.Concat(ai.Definitions(), capture.Definitions(), identity.Definitions(), privacy.Definitions())
+}
 
 // NewSettingsStore builds a store over the pool and the assembled catalog.
 // Exported because it is genuinely part of the composition surface: the
@@ -112,12 +105,18 @@ func SettingsCatalogForTest() []SettingSpec {
 	return out
 }
 
-// DeploymentConfigKeysForTest returns every dotted yaml path in the
-// deployment-config schema, so the surface-disjointness gate compares against
-// the STRUCT rather than the illustrative example file — which omits whole
-// sections and would let the check pass vacuously.
+// DeploymentConfigKeysForTest returns every dotted yaml path margince.yaml
+// takes: the bootstrap struct's, and every boot setting's key. Derived rather
+// than read off the example file, which omits whole sections and would let the
+// surface-disjointness gate pass vacuously.
 func DeploymentConfigKeysForTest() map[string]bool {
-	return yamlPaths(reflect.TypeFor[deployconfig.Config](), "")
+	keys := yamlPaths(reflect.TypeFor[deployconfig.Bootstrap](), "")
+	for _, s := range allSettings() {
+		if !s.Stored() {
+			keys[s.Key()] = true
+		}
+	}
+	return keys
 }
 
 // yamlPaths walks a config struct and returns every dotted yaml path in it,

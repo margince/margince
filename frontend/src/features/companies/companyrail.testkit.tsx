@@ -45,8 +45,8 @@ export const company = {
 
 export const emptyPage = { has_more: false, next_cursor: null };
 
-// No rail test asserts where a header link sends the reader. That claim is
-// companies.test.tsx's, since the callback only makes sense on the real tab strip.
+// A no-op by default. A case that checks where a header link sends the reader
+// passes its own spy.
 export const onTab = () => {};
 
 // The 360 this suite reads: every section present and empty, so a case names

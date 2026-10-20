@@ -290,8 +290,8 @@ describe("focus", () => {
       // One marks a refused field on the sign-in surface, which is a
       // different fact from where the keyboard is.
       "src/design-system/composed.css: outline: 2px dashed var(--accent)",
+      "src/features/onboarding/onboarding-conversation/conversation.css: outline: 2px dashed var(--aiMed)",
       "src/features/sign-in/auth.css: outline: 2px solid var(--danger)",
-      "src/screens/onboarding-conversation/conversation.css: outline: 2px dashed var(--aiMed)",
     ]);
   });
 
@@ -388,7 +388,7 @@ describe("unsaved edits", () => {
 
 describe("the transient confirmation", () => {
   // The defect this is derived from was real, and nothing caught it.
-  // `screens/commissiondecide.tsx` called `useToast` and rendered no region.
+  // `features/projects/commissiondecide.tsx` called `useToast` and rendered no region.
   // So every approve/pay/void confirmation it showed went into a `useState`
   // nobody read. Nothing failed: the suite only rendered the toast's own
   // harness. A confirmation shown to nobody looks the same as one nobody

@@ -17,7 +17,7 @@ import { Badge, Disclosure } from "../../../design-system/atoms";
 import { Panel, PanelBody } from "../../../design-system/panel";
 import { SurfaceState } from "../../../design-system/surfacestate";
 import { useT } from "../../../i18n";
-import { SentenceList } from "../../../screens/record360";
+import { SentenceList } from "../../records/record360";
 
 type MeetingBrief = components["schemas"]["MeetingBrief"];
 type BriefSection = components["schemas"]["MeetingBriefSection"];

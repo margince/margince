@@ -21,8 +21,8 @@ import { navigate, routeHash } from "../../lib/router";
 import {
   type ProjectOwnerPicker,
   projectOwnerField,
-} from "../../screens/projectownerfield";
-import type { Project } from "../../screens/projects.form";
+} from "../projects/projectownerfield";
+import type { Project } from "../projects/projects.form";
 
 // Where a deal meets its project: the picker on the deal form (with the
 // inline "new project" it can grow), the chip on the deal page, and the one

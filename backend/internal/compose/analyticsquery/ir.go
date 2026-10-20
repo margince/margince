@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // Query is one question.
@@ -333,6 +334,11 @@ func validateFilters(entity Entity, filters []Filter) error {
 				Suggest: valueAdvice(field.Shape),
 			}
 		}
+		if !valuelessOps[f.Op] {
+			if err := field.Domain.Admits(f.Field, f.Value); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
@@ -356,6 +362,9 @@ func valueShape(op FilterOp) string {
 // a caller looking for a narrowing the entity does offer, under a name the
 // list did not carry.
 func unknownFilterField(entity Entity, name string) error {
+	if strings.HasPrefix(name, datasource.CustomFieldPrefix) {
+		return customFieldNotInReports(entity, name)
+	}
 	return &RefusalError{
 		Kind:    RefusalUnsupported,
 		Message: fmt.Sprintf("no field named %s on %s", httperr.QuoteCaller(name), entity.Name),
@@ -364,10 +373,26 @@ func unknownFilterField(entity Entity, name string) error {
 }
 
 func unknownField(entity Entity, name string, kind FieldKind) error {
+	if strings.HasPrefix(name, datasource.CustomFieldPrefix) {
+		return customFieldNotInReports(entity, name)
+	}
 	return &RefusalError{
 		Kind:    RefusalUnsupported,
 		Message: fmt.Sprintf("no field named %s on %s", httperr.QuoteCaller(name), entity.Name),
 		Suggest: fmt.Sprintf("available: %s", strings.Join(entity.FieldNames(kind), ", ")),
+	}
+}
+
+// customFieldNotInReports refuses a custom field the vocabulary does not
+// carry: a misspelled name, or one an admin took out of reports or retired.
+// The refusal names both repairs. Every cf_ name gets it, so it
+// confirms no field exists.
+func customFieldNotInReports(entity Entity, name string) error {
+	return &RefusalError{
+		Kind:    RefusalUnsupported,
+		Message: fmt.Sprintf("the custom field %s is not in reports on %s", httperr.QuoteCaller(name), entity.Name),
+		Suggest: "check the field's name. If it is right, an admin may have turned the field off " +
+			"under Settings, Fields, In reports, or retired it. Ask without it, or ask an admin to turn it on again",
 	}
 }
 

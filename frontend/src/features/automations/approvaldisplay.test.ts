@@ -353,3 +353,43 @@ it.each(LOCALES)(
     );
   },
 );
+
+it("keeps the business reason beside a typed lifecycle preview", () => {
+  const fields = resolveDisplay(
+    "lifecycle_change",
+    {
+      because: "The buyer confirmed the agreement ended.",
+      current_lifecycle: "raw-old",
+      proposed_lifecycle: "raw-new",
+    },
+    t,
+    (value) => value,
+    new Map(),
+    undefined,
+    false,
+    {
+      version: 1,
+      state: "ready",
+      reviewer_reason: "record_authority",
+      changes: [
+        {
+          field: "lifecycle",
+          before: { kind: "lifecycle", text: "customer" },
+          after: { kind: "lifecycle", text: "former_customer" },
+        },
+      ],
+    },
+  );
+  expect(fields[0]).toMatchObject({
+    field: "because",
+    value: "The buyer confirmed the agreement ended.",
+    lead: true,
+  });
+  expect(
+    fields.some(
+      (field) => field.comparison !== undefined && field.comparison !== null,
+    ),
+  ).toBe(true);
+  expect(JSON.stringify(fields)).not.toContain("raw-old");
+  expect(JSON.stringify(fields)).not.toContain("raw-new");
+});

@@ -33,7 +33,7 @@ import (
 // subcommands run without one, as they always have.
 func runReplayErasures(
 	ctx context.Context, pool *pgxpool.Pool, resolveVault func() (keyvault.Vault, error),
-	env config.Lookup, args []string, stdout io.Writer,
+	settings *config.Config, args []string, stdout io.Writer,
 ) error {
 	fs := flag.NewFlagSet("replay-erasures", flag.ContinueOnError)
 	fs.SetOutput(stdout)
@@ -45,7 +45,7 @@ func runReplayErasures(
 	if fs.NArg() > 0 {
 		return fmt.Errorf("replay-erasures: unexpected argument %q; usage: worker replay-erasures [--empty-journal-ok]", fs.Arg(0))
 	}
-	blob, _, err := blobstore.FromEnv(ctx, env)
+	blob, _, err := blobstore.FromConfig(ctx, settings)
 	if err != nil {
 		return fmt.Errorf("replay-erasures: blobstore: %w", err)
 	}

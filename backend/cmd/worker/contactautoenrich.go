@@ -23,7 +23,6 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/margince/margince/backend/internal/compose"
-	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 )
 
@@ -37,7 +36,7 @@ func startContactAutoEnrich(
 	logger *slog.Logger,
 	stdout io.Writer,
 ) {
-	enricher := compose.NewContactAutoEnrich(pool, contacts.NewStore(compose.InstallationDB(pool)), approvals.NewService(compose.InstallationDB(pool)), logger)
+	enricher := compose.NewContactAutoEnrich(pool, contacts.NewStore(compose.InstallationDB(pool)), compose.NewApprovalsService(compose.InstallationDB(pool)), logger)
 	_, _ = fmt.Fprintln(stdout, "worker filling contacts from their employer's published pages")
 	background.Go(func() { runSubscriber(ctx, rdb, "cg:contact-auto-enrich", enricher.HandleEvent, logger, 0) })
 }

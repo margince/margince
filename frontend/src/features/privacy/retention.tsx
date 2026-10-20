@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useId, useState } from "react";
 import { api } from "../../api/client";
 import {
@@ -18,7 +18,6 @@ import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate, QueryStates } from "../../design-system/querystates";
 import { RowOpen } from "../../design-system/rowopen";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
-import { Switch } from "../../design-system/switch";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
@@ -37,6 +36,7 @@ import {
   type RetentionPolicy,
   scopeLabelKey,
 } from "./retention.logic";
+import { PostureToggle } from "./retention.posture";
 import { RetentionPolicyForm } from "./retentionpolicyform";
 import "./retention.css";
 
@@ -47,47 +47,6 @@ import {
   type EditorState,
   PolicyEditor,
 } from "./retentionpolicyeditor";
-
-// Refused, never hidden, without the update grant: every reader needs to know
-// which posture is in force, and `reason` says why they cannot change it.
-function PostureToggle({
-  retainOnly,
-  canManage,
-}: Readonly<{ retainOnly: boolean; canManage: boolean }>) {
-  const t = useT();
-  const queryClient = useQueryClient();
-
-  const update = useMutation({
-    mutationFn: async (next: boolean) => {
-      return unwrap(
-        await api.PATCH("/retention/settings", {
-          body: { retain_only: next },
-        }),
-      );
-    },
-    onSuccess: (data) => {
-      queryClient.setQueryData(RETENTION_SETTINGS_KEY, data);
-      // Every row's `suppressed_by_posture` derives from the posture just written.
-      queryClient.invalidateQueries({ queryKey: RETENTION_POLICIES_KEY });
-    },
-  });
-
-  return (
-    <div className="retention-posture">
-      {/* The row draws the naming, so the switch carries the same words hidden. */}
-      <Switch
-        label={t("retention.retainOnly")}
-        labelHidden
-        reason={canManage ? undefined : t("retention.adminOnly")}
-        checked={retainOnly}
-        disabled={!canManage}
-        pending={update.isPending}
-        onChange={(next) => update.mutate(next)}
-      />
-      <ErrorLine error={update.error} />
-    </div>
-  );
-}
 
 export function RetentionCard() {
   const t = useT();
@@ -165,6 +124,7 @@ export function RetentionCard() {
               ) : (
                 <PostureToggle
                   retainOnly={settings.data.retain_only}
+                  locks={settings.data.locks}
                   canManage={canManage}
                 />
               )

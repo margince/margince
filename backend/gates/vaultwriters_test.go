@@ -54,11 +54,9 @@ var vaultWriters = map[string]string{
 	"internal/modules/integrations/connect.go":   "audit_log, under the integration connect verbs",
 
 	// Sealed alongside a SETTINGS write, which is what carries the audit row
-	// (settings.SetTx -> storekit.Audit, under the setting's own verb). The two
-	// boot seals each stamp their own actor so they stay distinguishable there.
-	"internal/compose/deploymentsecretseal.go":      "audit_log via the settings write, actor deployment-secret-seal",
-	"internal/compose/providerkeyseal.go":           "audit_log via the settings write, actor routing-seed",
-	"internal/modules/ai/providerkeystore.go":       "audit_log via the settings write, under the ProviderKeys verb",
+	// (settings.SetTx -> storekit.Audit, under the setting's own verb). The
+	// sealer config.Save calls for a secret setting, such as a provider key.
+	"internal/compose/storedconfig.go":              "audit_log via the settings write config.Save makes, under the sealed setting's own verb",
 	"internal/modules/capture/connectorappstore.go": "audit_log via the settings write, under capture settings' update verb",
 
 	// Sealed inside the transaction that mints the confirm link, so the token

@@ -278,6 +278,8 @@ func TestTheCensusDescribesEverySourceTheQueueClassifies(t *testing.T) {
 // so every stub carries a row.
 func aDayWithEveryLaneCarryingARow(t *testing.T) crmcontracts.Attention {
 	t.Helper()
+	commitment := promise("a promise", readInstant)
+	commitment.ActivityID = ids.NewV7()
 	svc := NewService(
 		// The four lanes the sibling check leaves empty, filled here on purpose:
 		// a lane the fixture does not feed is a lane this census silently does
@@ -294,10 +296,10 @@ func aDayWithEveryLaneCarryingARow(t *testing.T) crmcontracts.Attention {
 		}}},
 		stubReceipts{},
 		stubBriefing{rows: []BriefEntry{{ID: ids.NewV7(), DealID: ids.NewV7(), Rank: 1}}},
-		&stubCommitments{rows: []Commitment{promise("a promise", readInstant)}},
-		stubAtRisk{rows: []RiskyDeal{{Name: "a deal", QuietDays: 20}}},
-		&stubDecay{rows: []QuietRelationship{{Name: "a contact", QuietDays: 63, LastAt: readInstant}}},
-		&stubMeetings{rows: []Meeting{{Subject: "a meeting", StartsAt: readInstant}}},
+		&stubCommitments{rows: []Commitment{commitment}},
+		stubAtRisk{rows: []RiskyDeal{{DealID: ids.NewV7(), Name: "a deal", QuietDays: 20}}},
+		&stubDecay{rows: []QuietRelationship{{ContactID: ids.NewV7(), Name: "a contact", QuietDays: 63, LastAt: readInstant}}},
+		&stubMeetings{rows: []Meeting{{ID: ids.NewV7(), Subject: "a meeting", StartsAt: readInstant}}},
 		&stubFailedEffects{rows: []FailedEffect{{
 			ID: ids.NewV7(), Kind: "send_email",
 			Sentence: "this was approved, but the work it released did not run",
@@ -323,7 +325,7 @@ func aDayWithEveryLaneCarryingARow(t *testing.T) crmcontracts.Attention {
 		// The other clock the law started, an Option for the same reason and so
 		// just as easy to leave out of a fixture.
 		WithNoticeCases(&stubNoticeCases{rows: []NoticeCase{{
-			ID: ids.NewV7(), Rule: "art14", DueAt: readInstant,
+			ID: ids.NewV7(), ContactID: ids.NewV7(), Rule: "art14", DueAt: readInstant,
 		}}})).
 		WithUndelivered(&stubUndelivered{rows: []ParkedSend{{
 			ID: ids.NewV7(), Subject: "a send that never left",

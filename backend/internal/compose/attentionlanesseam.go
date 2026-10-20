@@ -69,6 +69,7 @@ func (c attentionCommitments) DueBy(ctx context.Context, by time.Time, limit int
 	for _, row := range due {
 		promises = append(promises, attention.Commitment{
 			ID:          row.ID,
+			ActivityID:  row.ActivityID,
 			ContactID:   row.ContactID.UUID,
 			Body:        row.Body,
 			Quote:       row.SourceQuote,

@@ -222,16 +222,14 @@ describe("a notice about an activity", () => {
     expect(readsOf(fetchMock, `/activities/${MEETING_ID}`)).toBe(1);
   });
 
-  // The server leaves the label off an activity this reader may not read, mail
-  // outside their audience included.
-  it("offers nothing to open when the reader may not read the activity", () => {
+  it("opens an unnamed source through its current authorized read", async () => {
     const fetchMock = stubServer();
     renderUpdates([notice({ subject: { type: "activity", id: MAIL_ID } })]);
 
-    expect(screen.getByText("Summary updated")).toBeVisible();
-    expect(
-      screen.queryByRole("button", { name: "Summary updated" }),
-    ).toBeNull();
-    expect(readsOf(fetchMock, `/activities/${MAIL_ID}`)).toBe(0);
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Summary updated" }));
+    await screen.findByText("Here is the price list.");
+    expect(readsOf(fetchMock, `/activities/${MAIL_ID}`)).toBe(1);
   });
 });

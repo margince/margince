@@ -31,7 +31,7 @@ import (
 func TestAllowanceOverflowLockoutRecoversThroughReplaceBudget(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
-	store := ai.NewAdminStore(e.DB(), NewSettingsStore(e.Pool), budgetFullUsers, aiDeferredWork(e.Pool))
+	store := ai.NewAdminStore(e.DB(), NewSettingsStore(e.Pool), StoredConfig(e.Pool), budgetFullUsers, aiDeferredWork(e.Pool))
 	service := identity.NewService(e.Pool)
 	actor := recoveryAdminIdentity(e)
 	rep3 := ids.From[ids.UserKind](e.Rep3)
@@ -142,7 +142,7 @@ func TestAllowanceReadFailsClosedWhenFullUserCountingErrors(t *testing.T) {
 	e := integration.Setup(t)
 	errCounting := errors.New("full-user count unavailable")
 	failingUsers := func(context.Context, pgx.Tx) (int64, error) { return 0, errCounting }
-	store := ai.NewAdminStore(e.DB(), NewSettingsStore(e.Pool), failingUsers, aiDeferredWork(e.Pool))
+	store := ai.NewAdminStore(e.DB(), NewSettingsStore(e.Pool), StoredConfig(e.Pool), failingUsers, aiDeferredWork(e.Pool))
 	if _, err := store.ReadBudget(e.Admin()); !errors.Is(err, errCounting) {
 		t.Fatalf("ReadBudget must surface the counting failure, got %v", err)
 	}

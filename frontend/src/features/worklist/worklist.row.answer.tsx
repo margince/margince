@@ -5,8 +5,8 @@ import { type ReactNode, useRef, useState } from "react";
 import { Button } from "../../design-system/atoms";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
-import { hasMoveControl, MoveButton } from "../../screens/movebutton";
 import { ApprovalDecisionDrawer } from "../automations/approvaldrawer";
+import { hasMoveControl, MoveButton } from "../records/movebutton";
 import {
   useAutomationRetry,
   useClaimSettle,

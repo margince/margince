@@ -28,6 +28,7 @@ import {
   type AnalyticsQuery,
   type AnswerRow,
   analyticsFieldLabel,
+  type CustomLabels,
   columnLabel,
   explainGroup,
   isWithheldRow,
@@ -40,6 +41,8 @@ import {
 } from "./analytics.questions.vocab";
 
 type Translate = ReturnType<typeof useT>;
+
+const NO_LABELS: CustomLabels = new Map();
 
 /** Where a row's records are read from: the question itself, or a saved run. */
 export type ExplainSource =
@@ -102,6 +105,7 @@ type CellFrame = Readonly<{
   source: ExplainSource;
   baseCurrency: string | null;
   withheldGroups: number;
+  fieldLabels: CustomLabels;
 }>;
 
 // One cell. The row's first cell also carries the way into its records; the
@@ -152,11 +156,14 @@ export function AnswerTable({
   answer,
   baseCurrency,
   source,
+  fieldLabels = NO_LABELS,
 }: Readonly<{
   query: AnalyticsQuery;
   answer: AnalyticsAnswer;
   baseCurrency: string | null;
   source: ExplainSource;
+  /** The administrator's names for the installation's own fields. */
+  fieldLabels?: CustomLabels;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -176,6 +183,7 @@ export function AnswerTable({
     source,
     baseCurrency,
     withheldGroups,
+    fieldLabels,
   };
   const position = new Map(rows.map((row, index) => [row, index]));
   const limit = query.limit ?? QUESTION_LIMIT;
@@ -213,7 +221,7 @@ export function AnswerTable({
           label={t("analytics.q.answerTitle")}
           columns={answer.columns.map((column, index) => ({
             key: column,
-            header: columnLabel(t, query, column),
+            header: columnLabel(t, query, column, fieldLabels),
             render: (row: AnswerRow) => (
               <AnswerCell
                 frame={frame}
@@ -257,7 +265,7 @@ function RowExplain({
   children,
 }: Readonly<{ frame: CellFrame; row: AnswerRow; children: ReactNode }>) {
   const t = useT();
-  const { query, namer, source, baseCurrency } = frame;
+  const { query, namer, source, baseCurrency, fieldLabels } = frame;
   const group = explainGroup(query, row);
   return (
     <ExplainDrawer
@@ -269,6 +277,7 @@ function RowExplain({
           query={query}
           group={group}
           baseCurrency={baseCurrency}
+          fieldLabels={fieldLabels}
         />
       )}
     >
@@ -306,11 +315,13 @@ function ExplainRecords({
   query,
   group,
   baseCurrency,
+  fieldLabels,
 }: Readonly<{
   source: ExplainSource;
   query: AnalyticsQuery;
   group: unknown[] | undefined;
   baseCurrency: string | null;
+  fieldLabels: CustomLabels;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -352,7 +363,7 @@ function ExplainRecords({
             // its id goes once every row has a name.
             columns={derivationColumns(data).map((column) => ({
               key: column,
-              header: recordHeader(t, column),
+              header: recordHeader(t, column, fieldLabels),
               render: (row: AnswerRow) =>
                 recordCell(column, row, {
                   query,
@@ -378,10 +389,14 @@ function explanationState(
   return data.rows.length === 0 ? "empty" : "ready";
 }
 
-function recordHeader(t: Translate, column: string): string {
+function recordHeader(
+  t: Translate,
+  column: string,
+  fieldLabels: CustomLabels,
+): string {
   if (column === "label") return t("analytics.q.record");
   if (column === "id") return t("analytics.q.recordId");
-  return analyticsFieldLabel(t, column);
+  return analyticsFieldLabel(t, column, fieldLabels);
 }
 
 // A record is named by the server, under the reader's grants, so the drawer

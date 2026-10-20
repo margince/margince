@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { standardViews } from "../../screens/recordlist";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
+import { standardViews } from "../records/recordlist";
 import { LeadBoard, StatusBadge } from "./leadpresentation";
 import { LeadScreen } from "./leads";
 import { LeadsScreen } from "./leads.list";

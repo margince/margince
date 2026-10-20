@@ -10,14 +10,12 @@ import (
 	"strings"
 )
 
-// loadEnvFile reads margince.env into a KEY=VALUE slice for the child
-// processes.
+// loadEnvFile reads margince.env into a KEY=VALUE slice for the launcher's own
+// decisions: its web port, and which defaults the user has already set.
 //
-// The server roles take their secrets from the environment (12-factor), which
-// on a server is set by the deployment. A desktop installation has no
-// deployment, so this file is that layer: it is the ONE place a user turns
-// features on, and it is why "full features" does not require a terminal
-// incantation.
+// A desktop installation has no deployment, so this file is where a user turns
+// features on. The api and the worker read it themselves through --env-file.
+// A setting in it shows the file as its source and locks its control.
 //
 // Values here are secrets. The file is created 0600 and never logged.
 // The returns are NAMED so the deferred close can reach them: with unnamed
@@ -150,11 +148,12 @@ const envTemplate = `# Margince settings.
 # their own copy, and it does NOT arm the destructive admin endpoints — those
 # need allow_data_reset in margince.yaml, which is absent.
 #
-# If you have been issued a licence for this installation, name it here and
-# switch the posture to production; a serving role then holds itself to it.
+# If you have been issued a licence for this installation, name it here. To be
+# held to it, start Margince with MARGINCE_ENV=production in its environment:
+# the posture is never read from this file, and a MARGINCE_ENV value here stops
+# the start.
 # ---------------------------------------------------------------------------
 # MARGINCE_LICENSE=
-# MARGINCE_ENV=production
 
 # ---------------------------------------------------------------------------
 # Where Margince listens. Keep this stable so your browser bookmark keeps
@@ -175,11 +174,10 @@ const envTemplate = `# Margince settings.
 # Both take effect without a restart, within the routing refresh interval rather
 # than the instant you save, and neither needs a file in this folder.
 #
-# A key set below only does the SECOND half: the next start seals it into the
-# app's key vault and records where, after which the line here can go. It saves
-# pasting a long key into a browser and nothing else — the tiers still have to be
-# bound in the app, and Settings -> AI is the only path that can rotate a key
-# later.
+# A key set below does only the SECOND half, and it wins over a key saved in the
+# app: Settings -> AI shows that provider's key as set by this file and does not
+# change it. To rotate it, edit the line and restart. Remove the line to manage
+# the key in the app again; a key saved there before is used again.
 # ---------------------------------------------------------------------------
 # ANTHROPIC_API_KEY=
 # OPENAI_API_KEY=

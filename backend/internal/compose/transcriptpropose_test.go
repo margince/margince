@@ -38,7 +38,7 @@ func TestAReadingIsRefusedWhenItCitesALineTheTranscriptDoesNotHave(t *testing.T)
 			Summary: "Send the revised pricing", Owner: "Priya",
 			SourceLines: []int{cited}, Confidence: 0.9,
 		})
-		msg := validateTranscriptPayload(payload, len(lines), nil)
+		msg := validateTranscriptPayload(payload, lines, nil)
 		if msg == "" {
 			t.Fatalf("citing line %d of a %d-line transcript must be refused; an uncheckable citation reads as corroboration",
 				cited, len(lines))
@@ -87,7 +87,7 @@ func TestAReadingIsRefusedWhenItProposesSomethingItCannotPointAt(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			msg := validateTranscriptPayload(payloadOf(t, tc.step), len(meetingLines()), nil)
+			msg := validateTranscriptPayload(payloadOf(t, tc.step), meetingLines(), nil)
 			if msg == "" {
 				t.Fatal("want a refusal")
 			}
@@ -100,10 +100,10 @@ func TestAReadingIsRefusedWhenItProposesSomethingItCannotPointAt(t *testing.T) {
 
 func TestATranscriptThatStatesNothingIsAnAnswerAndAMissingKeyIsNot(t *testing.T) {
 	empty := payloadOf(t)
-	if msg := validateTranscriptPayload(empty, 4, nil); msg != "" {
+	if msg := validateTranscriptPayload(empty, make([]string, 4), nil); msg != "" {
 		t.Errorf("an empty list is the CORRECT answer for a transcript with no commitments, got refusal %q", msg)
 	}
-	if msg := validateTranscriptPayload(transcriptPayload{}, 4, nil); msg == "" {
+	if msg := validateTranscriptPayload(transcriptPayload{}, make([]string, 4), nil); msg == "" {
 		t.Error("a reply with no proposals key did not answer the question and must be refused, not read as empty")
 	}
 }
@@ -115,19 +115,19 @@ func TestAReadingIsRefusedWhenItProposesMoreThanAMeetingCanHold(t *testing.T) {
 			Summary: "Send pricing", Owner: "Priya", SourceLines: []int{3}, Confidence: 0.9,
 		})
 	}
-	msg := validateTranscriptPayload(payloadOf(t, steps...), len(meetingLines()), nil)
+	msg := validateTranscriptPayload(payloadOf(t, steps...), meetingLines(), nil)
 	if !strings.Contains(msg, "at most") {
 		t.Errorf("over the cap must be refused with the cap named, got %q", msg)
 	}
 }
 
 func TestTheConfidenceFloorDropsAnUnsureReadingRatherThanRefusingIt(t *testing.T) {
-	sure := proposedStep{Summary: "Send pricing", Owner: "Priya", SourceLines: []int{3}, Confidence: transcriptConfidenceFloor}
-	unsure := proposedStep{Summary: "Maybe review", Owner: "Dana", SourceLines: []int{4}, Confidence: transcriptConfidenceFloor - 0.01}
+	sure := proposedStep{Meaning: &commitmentMeaning{State: "open", DeadlinePrecision: "none"}, Summary: "Send pricing", Owner: "Priya", SourceLines: []int{3}, Confidence: transcriptConfidenceFloor}
+	unsure := proposedStep{Meaning: &commitmentMeaning{State: "open", DeadlinePrecision: "none"}, Summary: "Maybe review", Owner: "Dana", SourceLines: []int{4}, Confidence: transcriptConfidenceFloor - 0.01}
 
 	// Both are VALID: the floor is a question about whether a well-formed
 	// reading earns a human's attention, not about whether it may be read.
-	if msg := validateTranscriptPayload(payloadOf(t, sure, unsure), len(meetingLines()), nil); msg != "" {
+	if msg := validateTranscriptPayload(payloadOf(t, sure, unsure), meetingLines(), nil); msg != "" {
 		t.Fatalf("an unsure but well-formed reading is valid, got refusal %q", msg)
 	}
 	kept := aboveFloor([]proposedStep{sure, unsure})
@@ -188,12 +188,13 @@ func TestTheRequestNumbersEveryLineAndFencesTheTranscript(t *testing.T) {
 }
 
 func TestTheValidatorRefusesOutputThatIsNotTheRequiredShape(t *testing.T) {
-	validate := transcriptShapeValid(len(meetingLines()), nil)
+	validate := transcriptShapeValid(meetingLines(), nil)
 	if err := validate("not json at all"); err == nil {
 		t.Error("unparseable output must be refused")
 	}
 	good, err := json.Marshal(map[string]any{"proposals": []map[string]any{{
 		"summary": "Send the revised pricing", "owner": "Priya",
+		"commitment":   &commitmentMeaning{State: "open", DeadlinePrecision: "none"},
 		"source_lines": []int{3}, "confidence": 0.9,
 	}}})
 	if err != nil {

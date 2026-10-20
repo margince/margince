@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/config/configtest"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -81,20 +82,18 @@ func TestSealedSecretsWithNoRootKeyRefuseTheBoot(t *testing.T) {
 // a pool — the local provider refuses to build without one.
 func TestForRoleHandsBackNilForExactlyAnUnconfiguredVault(t *testing.T) {
 	pool := singleConnPool(t)
-	configured := config.Static(map[string]string{
-		keyvault.EnvRootKey: base64.StdEncoding.EncodeToString(rootKey(t)),
-	})
+	configured := map[string]string{keyvault.EnvRootKey: base64.StdEncoding.EncodeToString(rootKey(t))}
 
 	for _, tc := range []struct {
 		name       string
-		env        config.Lookup
+		env        map[string]string
 		wantAVault bool
 	}{
-		{"no root key", config.Static(nil), false},
+		{"no root key", nil, false},
 		{"a root key", configured, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			vault, flag, err := keyvault.FromEnv(t.Context(), pool, tc.env)
+			vault, flag, err := keyvault.FromEnv(t.Context(), pool, config.Static(tc.env))
 			if err != nil {
 				t.Fatalf("FromEnv: %v", err)
 			}
@@ -102,7 +101,15 @@ func TestForRoleHandsBackNilForExactlyAnUnconfiguredVault(t *testing.T) {
 				t.Fatalf("FromEnv reported configured=%v vault!=nil=%v, want both %v",
 					flag, vault != nil, tc.wantAVault)
 			}
-			forRole, err := keyvault.ForRole(t.Context(), "role", pool, tc.env)
+			var environ []string
+			for name, value := range tc.env {
+				environ = append(environ, name+"="+value)
+			}
+			settings, err := configtest.Load(t, "", environ, nil, keyvault.Settings()...)
+			if err != nil {
+				t.Fatalf("loading the root key: %v", err)
+			}
+			forRole, err := keyvault.ForRole(t.Context(), "role", pool, settings)
 			if err != nil {
 				t.Fatalf("ForRole: %v", err)
 			}

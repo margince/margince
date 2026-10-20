@@ -27,7 +27,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/jobtest"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
-	"github.com/margince/margince/backend/internal/platform/deployconfig"
 )
 
 // importCall posts an approve or an undo of a run, then works every job it
@@ -265,7 +264,7 @@ func TestAShutdownFlushesAndSnoozesWithoutFailing(t *testing.T) {
 	run := testedLeadRun(t, e, leadFile(rows))
 
 	runner, _, _ := jobtest.StartTestJobRunner(t, e.Pool, compose.JobRunnerConfig{
-		Blobstore: store, ImportUploadCap: deployconfig.Config{}.EffectiveUploads().CSVImport,
+		Blobstore: store, ImportUploadCap: compose.DefaultUploadLimits().CSVImport,
 	})
 	approveQueued(t, e, run.ID)
 	landed := awaitCheckpoint(t, e, run.ID)

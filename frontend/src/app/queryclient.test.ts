@@ -110,9 +110,9 @@ describe("the query client defaults", () => {
   // kinds of key, because what a change could get wrong is one kind while the
   // other stays right.
   //
-  // The predicates, not the defaults they are installed as: what they are
-  // wired to is proved end to end in screens/liverecord.test.tsx, by driving
-  // each record page's own read through this client.
+  // The predicates, not the defaults they are installed as. What they are
+  // wired to is proved end to end in features/records/liverecord.test.tsx,
+  // which drives each record page's own read through this client.
   it("repeats a record read, and nothing else", () => {
     expect(liveInterval({ queryKey: ["contact360", "p-1"] })).toBe(60_000);
     expect(liveInterval({ queryKey: ["contact", "p-1"] })).toBe(60_000);

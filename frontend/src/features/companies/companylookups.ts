@@ -3,8 +3,8 @@ import { formatDateAbbrev, formatNumber } from "../../format/format";
 import { type PluralBase, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useRecordZone } from "../../lib/recordzone";
-import { useFinanceSummary } from "../../screens/financesummary";
-import type { Grounding } from "../../screens/record360";
+import { useFinanceSummary } from "../projects/financesummary";
+import type { Grounding } from "../records/record360";
 
 // A leaf for the small lookup tables the company page and its rail both need
 // to draw the same enums the same way. Neither company360.tsx nor
@@ -129,8 +129,8 @@ export const SIZE_BAND_OPTIONS = [
   "5000+",
 ] as const;
 
-// Exported so worstOf (company360.tsx) reads the same three ranks and the
-// same order rather than keeping its own copy of the scale it ranks against.
+// The rating vocabulary, worst first. The order is the worst-of rule: a
+// verdict is the lowest-ranked rating among the dimensions that have one.
 export const HEALTH_RANK = ["at_risk", "good", "strong"] as const;
 export type HealthRating = (typeof HEALTH_RANK)[number];
 

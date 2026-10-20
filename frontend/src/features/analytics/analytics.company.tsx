@@ -5,6 +5,7 @@ import { DataTable } from "../../design-system/datatable";
 import {
   formatMoneyOrAbsent,
   formatNumber,
+  formatPercent,
   MONEY_ABSENT,
 } from "../../format/format";
 import { type Locale, useT } from "../../i18n";
@@ -52,16 +53,45 @@ function currencyScales(
   return scales;
 }
 
+// Each currency's open total, the whole a company's share is taken of. The
+// sums are native, so a share is only ever of the pipeline in its own currency.
+function currencyTotals(
+  rows: readonly ReportRow[],
+): ReadonlyMap<string, number> {
+  const totals = new Map<string, number>();
+  for (const row of rows) {
+    const currency = rowCurrency(row);
+    const rawMinor = rowMoney(row, "raw_minor");
+    if (currency && rawMinor != null) {
+      totals.set(currency, (totals.get(currency) ?? 0) + rawMinor);
+    }
+  }
+  return totals;
+}
+
 export function CompanyTable({
   rows,
   complete,
   locale,
-}: Readonly<{ rows: ReportRow[]; complete: boolean; locale: Locale }>) {
+  withheld = 0,
+}: Readonly<{
+  rows: ReportRow[];
+  complete: boolean;
+  locale: Locale;
+  // Deals the reader may not see, left out of every row. Their value is part
+  // of the whole too, so a share stated without them would overstate.
+  withheld?: number;
+}>) {
   const t = useT();
   const single = singleCurrencyKeys(rows.map(companyKey));
   // One scale per currency: the sums are native, and a euro bar against a
   // dong one compares numbers with no common unit.
   const scaleOf = currencyScales(rows);
+  // A capped or withheld answer is missing value, so its sum is not the whole.
+  const totalOf =
+    complete && withheld === 0
+      ? currencyTotals(rows)
+      : new Map<string, number>();
   return (
     <DataTable
       label={t("analytics.reportOpenByCompany")}
@@ -125,6 +155,19 @@ export function CompanyTable({
                 {formatMoneyOrAbsent(rawMinor, currency, locale)}
               </BarFigure>
             );
+          },
+        },
+        {
+          key: "share",
+          header: t("analytics.shareOfOpenPipeline"),
+          align: "end",
+          render: (row: ReportRow) => {
+            const currency = rowCurrency(row);
+            const rawMinor = rowMoney(row, "raw_minor");
+            const total = currency ? totalOf.get(currency) : undefined;
+            return rawMinor != null && total
+              ? formatPercent(rawMinor / total, locale)
+              : MONEY_ABSENT;
           },
         },
       ]}

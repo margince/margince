@@ -47,7 +47,8 @@ func TestHiddenReassignedTaskIsNotRecreatedWhenAttributionIsLost(t *testing.T) {
 			quote := strings.Split(transcriptBody, "\n")[2]
 			span := "3:" + quote
 			c := Commitment{
-				AsOf: source.OccurredAt, SourceActivityID: e.activity.UUID, Extractor: transcriptProposalActor,
+				Meaning: openCommitmentMeaning("", quote),
+				AsOf:    source.OccurredAt, SourceActivityID: e.activity.UUID, Extractor: transcriptProposalActor,
 				Summary: "Send revised pricing", Quote: quote, Span: span, Confidence: 0.95,
 				Locator:  commitmentLocator(e.activity.UUID, claimKindOurs, unnamedPromiserKey(""), span),
 				Evidence: approvals.Evidence{SourceType: "activity", SourceID: e.activity.UUID, Snippet: quote},

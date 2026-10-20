@@ -11,12 +11,12 @@ import { memoryStorage, teardownApp, wizardRow } from "./testing/appharness";
 import { type GrantSpec, meFixture } from "./testing/mefixture";
 
 // Two places decide, on their own, where a session belongs when the
-// installation has not described itself, and each rewrites the hash to say so:
+// installation has not described itself, and each rewrites the hash to say so.
 // AuthedApp's onboarding gate sends every route back to onboarding while
-// GET /company answers 404, and the conversational shell's restore
-// (screens/onboarding-conversation/restore.ts) decides whether the journey is
-// finished and leaves. Those are the only two automatic navigators in the app;
-// every other navigate() answers a click.
+// GET /company answers 404. The conversational shell's restore
+// (features/onboarding/onboarding-conversation/restore.ts) decides whether the
+// journey is finished and leaves. Those are the only two automatic navigators
+// in the app; every other navigate() answers a click.
 //
 // When they disagree they rewrite the hash AT each other, and that is not a
 // cosmetic redirect flicker. `useRoute` is a useSyncExternalStore over

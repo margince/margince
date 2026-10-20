@@ -24,10 +24,9 @@
 }
 
 /* The smallest rung, and the default: every list row, every name a chip sits
-   beside, the account block in the rail. A dense list table draws its chips
-   smaller still, and does it from its own sheet — see `.lt-table.dense .avatar`
-   in listtable.css — because density is the table's decision and not a rung of
-   this scale. */
+   beside, the account block in the rail. A list table draws some chips smaller
+   still, and does it from its own sheet — see the 20px rule in listtable.css —
+   because row height is the table's decision and not a rung of this scale. */
 .avatar-sm {
   width: 28px;
   height: 28px;

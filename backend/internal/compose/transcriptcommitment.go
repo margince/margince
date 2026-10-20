@@ -34,6 +34,7 @@ func (p *TranscriptProposer) commitmentFrom(
 	cited := quotedFromTranscript(step, reading.Lines)
 	owner := strings.TrimSpace(step.Owner)
 	c := Commitment{
+		Meaning:          step.Meaning,
 		AsOf:             asOf,
 		Extractor:        transcriptProposalActor,
 		SourceActivityID: activityID.UUID,
@@ -120,6 +121,18 @@ func (said transcriptCopy) transcriptReadDetail(found int, staged transcriptStag
 }
 
 func (said transcriptCopy) transcriptWithheldReason(outcome CommitmentOutcome) string {
+	switch outcome {
+	case "semantic_completed":
+		return said.Say(transcriptWords.Completed)
+	case "semantic_conditional":
+		return said.Say(transcriptWords.Conditional)
+	case "semantic_optional":
+		return said.Say(transcriptWords.Optional)
+	case "semantic_request":
+		return said.Say(transcriptWords.Request)
+	case "semantic_unclear", "semantic_unassessed":
+		return said.Say(transcriptWords.Unclear)
+	}
 	switch activities.CommitmentAdmissionReason(outcome) {
 	case activities.CommitmentHistorical:
 		return said.Say(transcriptWords.History)

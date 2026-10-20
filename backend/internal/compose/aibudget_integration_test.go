@@ -22,7 +22,7 @@ import (
 func TestAllowanceWriteIsLiveAuditedAndRevisionGuarded(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
-	store := ai.NewAdminStore(e.DB(), NewSettingsStore(e.Pool), budgetFullUsers, aiDeferredWork(e.Pool))
+	store := ai.NewAdminStore(e.DB(), NewSettingsStore(e.Pool), StoredConfig(e.Pool), budgetFullUsers, aiDeferredWork(e.Pool))
 	before, err := store.ReadBudget(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -70,7 +70,7 @@ func TestAllowanceWriteIsLiveAuditedAndRevisionGuarded(t *testing.T) {
 
 func TestConcurrentAllowanceEditsHaveOneWinner(t *testing.T) {
 	e := integration.Setup(t)
-	store := ai.NewAdminStore(e.DB(), NewSettingsStore(e.Pool), budgetFullUsers, aiDeferredWork(e.Pool))
+	store := ai.NewAdminStore(e.DB(), NewSettingsStore(e.Pool), StoredConfig(e.Pool), budgetFullUsers, aiDeferredWork(e.Pool))
 	before, err := store.ReadBudget(e.Admin())
 	if err != nil {
 		t.Fatal(err)
@@ -104,7 +104,7 @@ func TestConcurrentAllowanceEditsHaveOneWinner(t *testing.T) {
 func TestAllowanceAndAuditRollBackWhenItsEventCannotCommit(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
-	store := ai.NewAdminStore(e.DB(), NewSettingsStore(e.Pool), budgetFullUsers, aiDeferredWork(e.Pool))
+	store := ai.NewAdminStore(e.DB(), NewSettingsStore(e.Pool), StoredConfig(e.Pool), budgetFullUsers, aiDeferredWork(e.Pool))
 	before, err := store.ReadBudget(ctx)
 	if err != nil {
 		t.Fatal(err)

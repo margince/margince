@@ -1,9 +1,16 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type ReactNode, useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
-import { formatMoney, formatNumber, ordinalNumber } from "../format/format";
+import {
+  formatDateAbbrev,
+  formatMoney,
+  formatNumber,
+  ordinalNumber,
+} from "../format/format";
+import { viewerZone } from "../format/timezone";
 import { useLocale } from "../i18n";
 import { Badge, Button, OverflowMenu } from "./atoms";
+import { Avatar } from "./avatar";
 import type { ListChip } from "./listsurface";
 import { CellStrip, type ListColumn, ListTable } from "./listtable";
 import { SelectionBar } from "./selectionbar";
@@ -31,6 +38,7 @@ type Company = {
   owner: string;
   region: string;
   valueMinor: number;
+  createdAt: string;
 };
 
 const INDUSTRIES = ["Manufacturing", "Logistics", "Healthcare", "SaaS"];
@@ -45,6 +53,7 @@ function companies(count: number): Company[] {
     owner: index % 2 === 0 ? "Lars" : "Mia",
     region: REGIONS[index % REGIONS.length] ?? "DACH",
     valueMinor: (index + 1) * 12_500,
+    createdAt: new Date(Date.UTC(2026, 0, 1 + index * 9)).toISOString(),
   }));
 }
 
@@ -60,7 +69,19 @@ const columns = [
   },
   { key: "industry", header: "Industry", cell: (row: Company) => row.industry },
   { key: "size", header: "Size", cell: (row: Company) => row.size },
-  { key: "owner", header: "Owner", cell: (row: Company) => row.owner },
+  {
+    key: "owner",
+    header: "Owner",
+    // A colleague's face before their name, and a colleague column's width: no
+    // wider than a name needs, however wide the page.
+    holds: "colleague" as const,
+    cell: (row: Company) => (
+      <span className="avatar-row">
+        <Avatar identity={row.owner} name={row.owner} />
+        <span>{row.owner}</span>
+      </span>
+    ),
+  },
   { key: "region", header: "Region", cell: (row: Company) => row.region },
   {
     key: "value",
@@ -71,6 +92,12 @@ const columns = [
     // reference copy of the surface, so a hand-rolled currency string here is
     // the version somebody else copies.
     cell: (row: Company) => formatMoney(row.valueMinor, "EUR", "en"),
+  },
+  {
+    key: "created",
+    header: "Created",
+    holds: "date" as const,
+    cell: (row: Company) => formatDateAbbrev(row.createdAt, "en", viewerZone()),
   },
 ];
 
@@ -107,7 +134,7 @@ function Surface({
   rows: Company[];
   /** The page's own name, for the story where the surface IS the page. */
   title?: string;
-  /** Defaults to the six this file reads as the reference set. */
+  /** Defaults to the seven this file reads as the reference set. */
   columns?: ListColumn<Company>[];
   pending?: boolean;
   problem?: ReactNode;

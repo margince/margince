@@ -11,9 +11,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
-// validateExtractPayload names the first fidelity violation, or "" when the
-// payload is one this site may act on.
-func validateExtractPayload(payload extractPayload, thread settledThread) string {
+// Envelope validation binds each event to the supplied conversation.
+// Evidence is checked per event before writing, so one refusal cannot hide a valid risk notice.
+func validateExtractEnvelope(payload extractPayload, thread settledThread) string {
 	if payload.Events == nil {
 		return "the reply carries no events key, so it did not answer the question"
 	}
@@ -41,6 +41,15 @@ func validateExtractPayload(payload extractPayload, thread settledThread) string
 		if event.Confidence < 0 || event.Confidence > 1 {
 			return fmt.Sprintf("confidence %v is outside [0,1]", event.Confidence)
 		}
+	}
+	return ""
+}
+
+func validateExtractPayload(payload extractPayload, thread settledThread) string {
+	if msg := validateExtractEnvelope(payload, thread); msg != "" {
+		return msg
+	}
+	for _, event := range payload.events() {
 		if msg := validateEventEvidence(event, thread); msg != "" {
 			return msg
 		}
@@ -54,6 +63,7 @@ func extractSchema() json.RawMessage {
 		map[string]schema.Node{
 			"events": schema.Array(schema.Object(
 				map[string]schema.Node{
+					commitmentMeaningField:  commitmentMeaningSchema(),
 					paramKind:               schema.Enum("contract_ended", "new_opportunity", "commitment_made"),
 					"message_id":            schema.String(),
 					"summary":               schema.String(),

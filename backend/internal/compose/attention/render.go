@@ -11,6 +11,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -256,6 +257,9 @@ func approvalItem(approval crmcontracts.Approval, machine MachineSender) crmcont
 		Title:   approval.Summary,
 		Actions: []crmcontracts.AttentionItemActions{"decide"},
 	}
+	if approvals.PreviewRefusal(approval.Preview) != nil {
+		item.Actions = []crmcontracts.AttentionItemActions{}
+	}
 	item.RequestedDeciderId = approval.RequestedDeciderId
 	if approval.ExpiresAt != nil {
 		item.DueAt = approval.ExpiresAt
@@ -427,6 +431,9 @@ func commitmentItem(promise Commitment, asOf time.Time) crmcontracts.AttentionIt
 			crmcontracts.AttentionItemActionsComplete,
 			actionOpen,
 		},
+	}
+	if !promise.ActivityID.IsZero() {
+		item.SourceRecord = subjectOf("activity", promise.ActivityID)
 	}
 	if promise.ReadOnly {
 		item.Actions = []crmcontracts.AttentionItemActions{actionOpen}

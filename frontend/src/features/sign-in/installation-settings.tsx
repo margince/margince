@@ -9,6 +9,7 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { useToast } from "../../design-system/toast";
+import { lockFor } from "../../format/settinglocks";
 import { LOCALES, localeNameKey, useLocale, useT } from "../../i18n";
 import { LANGUAGE_DEPENDENT_QUERY_PREFIXES } from "../../lib/aicaches";
 import { useCanWrite } from "../../lib/capability";
@@ -235,18 +236,22 @@ function InstallationSettingsForm({
     update.mutate(patch);
   };
 
-  const editVerb = (fact: EditedFact, field: string) => (
-    <Button
-      variant="ghost"
-      // Named by the fact it changes, not "Edit": three rows offering three
-      // identically-named buttons make a screen reader's user count them.
-      aria-label={t("installationSettings.editField", { field })}
-      reasonId={canManage ? undefined : denialId}
-      onClick={() => setEditing(fact)}
-    >
-      {t("installationSettings.edit")}
-    </Button>
-  );
+  const editVerb = (fact: EditedFact, field: string) => {
+    const lock = lockFor(settings.locks, `installation.${fact}`, t);
+    return (
+      <Button
+        variant="ghost"
+        // Named by the fact it changes, not "Edit": three rows offering three
+        // identically-named buttons make a screen reader's user count them.
+        aria-label={t("installationSettings.editField", { field })}
+        reason={lock.disabled ? lock.reason : undefined}
+        reasonId={canManage || lock.disabled ? undefined : denialId}
+        onClick={() => setEditing(fact)}
+      >
+        {t("installationSettings.edit")}
+      </Button>
+    );
+  };
 
   return (
     <Panel title={t("installationSettings.companyTitle")}>

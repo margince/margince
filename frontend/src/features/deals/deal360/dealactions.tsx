@@ -18,6 +18,7 @@ import { useId, useState } from "react";
 import { api } from "../../../api/client";
 import type { components } from "../../../api/schema";
 import { ifMatch, requireVersion } from "../../../api/version";
+import { ExtensionEntries } from "../../../components/extensionentries";
 import { Button, OverflowMenu } from "../../../design-system/atoms";
 import { ConfirmModal } from "../../../design-system/confirmmodal";
 import { ErrorLine } from "../../../design-system/errorline";
@@ -27,10 +28,10 @@ import { useCanWrite } from "../../../lib/capability";
 import { unwrap } from "../../../lib/problem";
 import { navigate } from "../../../lib/router";
 import { useMe } from "../../../lib/session";
-import { ArchiveAction } from "../../../screens/archive";
-import { LogActivityAction } from "../../../screens/logactivity";
-import { RecordEmailVerb } from "../../../screens/recordemail";
-import { ShareAction } from "../../../screens/share";
+import { ArchiveAction } from "../../records/archive";
+import { LogActivityAction } from "../../records/logactivity";
+import { RecordEmailVerb } from "../../records/recordemail";
+import { ShareAction } from "../../records/share";
 import { useDealCoverage } from "./usedealcoverage";
 import { useDealRecipientAddress } from "./usedealrecipient";
 import "./deal360.css";
@@ -221,6 +222,10 @@ export function DealActions({
       >
         <CheckSquare aria-hidden="true" /> {t("log.addTask")}
       </Button>
+      <ExtensionEntries
+        slot="record_header.deal"
+        record={{ type: "deal", id: deal.id }}
+      />
       {drawer && (
         <LogActivityAction
           entityType="deal"

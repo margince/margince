@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { DecisionDiff } from "../../design-system/decisioncard.payload";
 import type { MessageKey } from "../../i18n/en";
 
 // The shapes of a kind's display declaration and of what resolving it yields.
@@ -36,5 +37,6 @@ export type ResolvedDisplayField = Readonly<{
   field: string;
   label: string;
   value: string | null;
+  comparison?: Pick<DecisionDiff, "from" | "to"> | null;
   lead?: true;
 }>;

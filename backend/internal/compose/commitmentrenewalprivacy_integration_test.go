@@ -59,6 +59,7 @@ func TestErasingEitherCitationWithdrawsTheRenewedProposal(t *testing.T) {
 
 func TestErasingRenewalRemovesTheWorkDerivedFromItsWords(t *testing.T) {
 	f := setupRenewalPrivacy(t, 0.95)
+	assertNonActionRereadPreservesAdmission(t, f)
 	subject := f.e.SeedContact(t, "Renewal subject", &f.e.Rep1)
 	integration.LinkActivity(t, integration.OwnerConn(t), f.messages[1], "contact", subject)
 	if err := privacy.NewEraser(f.e.DB()).WithRawCapturePurger(RawCapturePurgerFor(f.e.DB())).EraseContact(f.e.Admin(), subject, "Subject requested erasure"); err != nil {
@@ -95,7 +96,8 @@ func setupRenewalPrivacy(t *testing.T, confidence float64) renewalPrivacyFixture
 		messages = append(messages, ids.UUID(row.Id))
 	}
 	c := Commitment{
-		AsOf: now, ReadMessages: messages, Extractor: signalScanActor, SourceActivityID: messages[0],
+		Meaning: &commitmentMeaning{State: "open", DeadlinePrecision: "day", DeadlineQuote: "tomorrow"},
+		AsOf:    now, ReadMessages: messages, Extractor: signalScanActor, SourceActivityID: messages[0],
 		AdmissionSourceID: &messages[1], RenewedAt: new(now.Add(-24 * time.Hour)),
 		Summary: "Send confidential enterprise pricing", Quote: "I will send pricing.", Seat: &e.Rep1, PromisedTo: &contact,
 		Confidence: confidence, Locator: "private-renewal", Body: "A promise from the pricing conversation.", DueDate: "2026-10-19",
@@ -217,7 +219,7 @@ func TestHeldDerivedWorkSurvivesErasureWithoutReleasingItsContent(t *testing.T) 
 	if err != nil || task.Subject != nil {
 		t.Fatalf("erased source released held task content: %v", err)
 	}
-	if got := f.e.WsCount(t, `SELECT count(*) FROM activity_commitment_admission WHERE renewed_by=$1 AND summary='' AND source_quote='' AND NOT current_work`, f.messages[1]); got != 1 {
+	if got := f.e.WsCount(t, `SELECT count(*) FROM activity_commitment_admission WHERE renewed_by=$1 AND summary='' AND source_quote='' AND meaning IS NULL AND NOT current_work`, f.messages[1]); got != 1 {
 		t.Fatal("held work lost its redacted access boundary")
 	}
 	if got := f.e.WsCount(t, `SELECT count(*) FROM embedding WHERE entity_type='activity' AND entity_id=$1`, f.work); got != 0 {
@@ -278,10 +280,10 @@ func TestSubjectExportIncludesRenewalProvenanceWithoutPrivateWords(t *testing.T)
 		if admission["renewed_by"] != f.messages[1].String() || admission["renewed_at"] == nil {
 			t.Fatalf("export lost renewal provenance: %#v", admission)
 		}
-		if private && admission["summary"] != nil {
+		if private && (admission["summary"] != nil || admission["meaning"] != nil) {
 			t.Fatal("export disclosed private renewal words")
 		}
-		if !private && admission["summary"] != "Send confidential enterprise pricing" {
+		if !private && (admission["summary"] != "Send confidential enterprise pricing" || admission["meaning"] == nil) {
 			t.Fatal("export lost the subject's held conclusion")
 		}
 	}
@@ -320,7 +322,8 @@ func TestRefusedRenewalPreservesTheClaimAndItsEvidence(t *testing.T) {
 			}
 			renewal := ids.UUID(later.Id)
 			c := Commitment{
-				AsOf: now.Add(time.Hour), ReadMessages: append(f.messages, renewal), Extractor: signalScanActor,
+				Meaning: openCommitmentMeaning("2026-10-23", "I will send pricing."),
+				AsOf:    now.Add(time.Hour), ReadMessages: append(f.messages, renewal), Extractor: signalScanActor,
 				SourceActivityID: f.messages[0], AdmissionSourceID: &renewal, RenewedAt: &now,
 				Summary: "Send pricing next Friday", Quote: "I will send pricing.", Seat: &f.e.Rep1, PromisedTo: &f.contact,
 				Confidence: 0.75, Locator: "private-renewal", DueDate: "2026-10-23",
@@ -413,7 +416,7 @@ func TestAnonymizingAContactPreservesDerivedWorkAndItsPrivateBoundary(t *testing
 			if err != nil || task.Subject != nil {
 				t.Fatalf("anonymization widened the private source boundary: %v", err)
 			}
-			if got := f.e.WsCount(t, `SELECT count(*) FROM activity_commitment_admission WHERE renewed_by=$1 AND summary='' AND source_quote=''`, f.messages[1]); got != 1 {
+			if got := f.e.WsCount(t, `SELECT count(*) FROM activity_commitment_admission WHERE renewed_by=$1 AND summary='' AND source_quote='' AND meaning IS NULL`, f.messages[1]); got != 1 {
 				t.Fatal("the decision retained personal prose or lost provenance")
 			}
 		})

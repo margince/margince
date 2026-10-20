@@ -40,7 +40,8 @@ func TestLaterPassCannotReplaceANewerRenewalWithOlderEvidence(t *testing.T) {
 		messages = append(messages, ids.UUID(message.Id))
 	}
 	c := Commitment{
-		AsOf: now, ReadMessages: messages, Extractor: signalScanActor, SourceActivityID: messages[0],
+		Meaning: openCommitmentMeaning("", "I will send pricing."),
+		AsOf:    now, ReadMessages: messages, Extractor: signalScanActor, SourceActivityID: messages[0],
 		Summary: "Send pricing", Quote: "I will send pricing.", Seat: &e.Rep1, Confidence: 0.95, Locator: "pricing-renewal", Body: "I will send pricing.",
 	}
 	ctx := withTranscriptReader(principal.WithWorkspaceID(context.Background(), e.WS), "human:"+e.Rep1.String(), ids.NewV7())
@@ -105,7 +106,8 @@ func TestConcurrentOlderRenewalCannotOverwriteCommittedNewerWork(t *testing.T) {
 	}
 	latestID := ids.UUID(latest.Id)
 	newer := Commitment{
-		AsOf: now.Add(time.Hour), ReadMessages: append(f.messages, latestID), Extractor: signalScanActor,
+		Meaning: openCommitmentMeaning("2026-10-23", "I will send pricing."),
+		AsOf:    now.Add(time.Hour), ReadMessages: append(f.messages, latestID), Extractor: signalScanActor,
 		SourceActivityID: f.messages[0], AdmissionSourceID: &latestID, RenewedAt: &now,
 		Summary: "Send pricing next week", Quote: "I will send pricing.", Seat: &f.e.Rep1, PromisedTo: &f.contact,
 		Confidence: 0.95, Locator: "private-renewal", Body: "Pricing promise", DueDate: "2026-10-23",
@@ -198,7 +200,8 @@ func TestErasingOldRenewalWaitsForTheTaskAndRechecksItsEvidence(t *testing.T) {
 	}
 	renewed := ids.UUID(later.Id)
 	c := Commitment{
-		AsOf: now.Add(time.Hour), ReadMessages: append(f.messages, renewed), Extractor: signalScanActor,
+		Meaning: openCommitmentMeaning("2026-10-23", "I will send pricing."),
+		AsOf:    now.Add(time.Hour), ReadMessages: append(f.messages, renewed), Extractor: signalScanActor,
 		SourceActivityID: f.messages[0], AdmissionSourceID: &renewed, RenewedAt: &now,
 		Summary: "Send new pricing", Quote: "I will send pricing.", Seat: &f.e.Rep1, PromisedTo: &f.contact,
 		Confidence: 0.95, Locator: "private-renewal", DueDate: "2026-10-23",

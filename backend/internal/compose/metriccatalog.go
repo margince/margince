@@ -71,11 +71,7 @@ func (e metricEvaluator) Evaluate(ctx context.Context, tx pgx.Tx, selection crmc
 		if err := auth.Require(ctx, spec.object, principal.ActionRead); err != nil {
 			return out, err
 		}
-		facts, coverage, err := spec.read(ctx, tx, frame, framework, e)
-		if err != nil {
-			return out, err
-		}
-		coverage, err = reportingHistoryCoverage(ctx, tx, frame, spec.definition.Id, coverage)
+		facts, coverage, err := e.readIsolated(ctx, tx, spec, frame, framework)
 		if err != nil {
 			return out, err
 		}
@@ -86,12 +82,24 @@ func (e metricEvaluator) Evaluate(ctx context.Context, tx pgx.Tx, selection crmc
 		return out, err
 	}
 	for index, chart := range out.Result.Charts {
-		if chart.Kind != reportingPipelineMovement {
+		if chart.Kind != reportingPipelineMovement || chart.Coverage.Status == reportingFailed {
 			continue
 		}
-		projected, facts, err := e.movementChart(ctx, tx, frame, chart)
+		var projected crmcontracts.ReportingChart
+		var facts []reporting.Fact
+		failed, err := underSavepoint(ctx, tx, string(chart.Kind), func(savepoint pgx.Tx) error {
+			var err error
+			projected, facts, err = e.movementChart(ctx, savepoint, frame, chart)
+			return err
+		})
 		if err != nil {
 			return out, err
+		}
+		if failed {
+			chart.Coverage = calculationFailed(frame)
+			chart.Points = []crmcontracts.ReportingPoint{}
+			out.Result.Charts[index] = chart
+			continue
 		}
 		out.Result.Charts[index] = projected
 		out.Facts = append(out.Facts, facts...)

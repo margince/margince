@@ -32,6 +32,14 @@ const (
 	SemanticLost StageSemantic = "lost"
 )
 
+// Status is the deal outcome established by entering this stage.
+func (s StageSemantic) Status() DealStatus {
+	if s.Terminal() {
+		return DealStatus(s)
+	}
+	return DealOpen
+}
+
 // Terminal reports whether a stage closes the deal.
 func (s StageSemantic) Terminal() bool { return s == SemanticWon || s == SemanticLost }
 

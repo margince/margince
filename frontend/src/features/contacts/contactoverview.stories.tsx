@@ -1,12 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
-import { MoveButton } from "../../screens/movebutton";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
+import { MoveButton } from "../records/movebutton";
 import { ConsentAndChannels } from "./contactconsentpanel";
 import { ContactOverview } from "./contactoverview";
 import { ContactPageV2 } from "./contactpage";

@@ -4,6 +4,7 @@
 import { CalendarDays, CheckSquare, FileText, Phone } from "lucide-react";
 import type { ReactNode } from "react";
 import { useId } from "react";
+import { ExtensionEntries } from "../../components/extensionentries";
 import { Button, OverflowMenu } from "../../design-system/atoms";
 import { IconAction } from "../../design-system/iconaction";
 import { RecordRefusal } from "../../design-system/recordview";
@@ -11,9 +12,9 @@ import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
-import { EmailVerb } from "../../screens/recordemail";
-import { ShareAction } from "../../screens/share";
 import { AddToShortlistAction } from "../lists/addtoshortlist";
+import { EmailVerb } from "../records/recordemail";
+import { ShareAction } from "../records/share";
 import { openContactTab } from "../worklist/worklist.return";
 import { ImportActivitiesAction } from "./contactimportaction";
 import { WorkAsLeadAction } from "./contactleadaction";
@@ -159,6 +160,10 @@ export function ContactActions({
       <Button disabled={logPending} reasonId={logRefused} onClick={onAddTask}>
         <CheckSquare aria-hidden="true" /> {t("contact.action.addTask")}
       </Button>
+      <ExtensionEntries
+        slot="record_header.contact"
+        record={{ type: "contact", id: contactId }}
+      />
       {/* Every secondary verb, behind one control. A header that put edit,
           merge and archive beside the daily verbs made the destructive one as
           easy to reach as the routine one, and read as a toolbar rather than

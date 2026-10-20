@@ -45,6 +45,7 @@ import { CUSTOM_SCREEN } from "./app/custom";
 import { opensReservedPage } from "./app/nav";
 import { UnsavedGuard } from "./components/unsaved";
 import { isContactTab } from "./features/contacts/contacttab";
+import { OnboardingScreen } from "./features/onboarding/onboarding";
 import { RESET_ROUTE } from "./features/sign-in/auth";
 import { EXTENSION_SCREEN } from "./lib/extensions";
 import {
@@ -54,7 +55,6 @@ import {
   routeIdentity,
   type Screen,
 } from "./lib/router";
-import { OnboardingScreen } from "./screens/onboarding";
 
 // The path segments below the screen. Only two of the four are dispatched on.
 // id3 belongs to the screens that read it themselves (the consent return's

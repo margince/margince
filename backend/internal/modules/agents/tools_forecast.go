@@ -12,6 +12,7 @@ package agents
 // never the SQL.
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 
@@ -267,8 +268,15 @@ type ForecastAssuranceSourceResult struct {
 	CheckedThrough string `json:"checked_through,omitempty"`
 }
 
-// InputChecksReader answers the open findings this caller may see.
-type InputChecksReader func(ctx context.Context) (json.RawMessage, error)
+// InputChecksReader answers the open findings this caller may see, for one
+// population when the arguments name one.
+type InputChecksReader func(ctx context.Context, args InputChecksArgs) (json.RawMessage, error)
+
+// InputChecksArgs narrows list_input_checks the way its route's query does.
+type InputChecksArgs struct {
+	ScopeKind string `json:"scope_kind,omitempty"`
+	ScopeID   string `json:"scope_id,omitempty"`
+}
 
 // RegisterInputChecksTool joins list_input_checks to the surface.
 func RegisterInputChecksTool(r *Registry, read InputChecksReader) {
@@ -286,18 +294,24 @@ func (t listInputChecks) Spec() mcp.ToolSpec {
 		Description:   listInputChecksCopy.render(),
 		Instead:       listInputChecksCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
-		OpenAPIOp:    "listInputChecks",
-		InputSchema:  schema(`{"type":"object","properties":{},"additionalProperties":false}`),
+		OpenAPIOp: "listInputChecks",
+		InputSchema: schema(`{"type":"object","properties":{
+			"scope_kind":{"type":"string","enum":["workspace","team","owner"],"description":"Only the findings on the deals of this population. Omit for every finding you can see."},
+			"scope_id":{"type":"string","format":"uuid","description":"The team or owner, for a team or owner scope_kind"}},
+			"additionalProperties":false}`),
 		OutputSchema: schemaFor[InputChecksResult](),
 	}
 }
 
 func (t listInputChecks) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
-	if err := decodeNoArguments(in); err != nil {
-		return nil, err
+	var args InputChecksArgs
+	if len(bytes.TrimSpace(in)) > 0 {
+		if err := decodeArgs(in, &args); err != nil {
+			return nil, err
+		}
 	}
 	noteDerivedContent(ctx)
-	return t.read(ctx)
+	return t.read(ctx, args)
 }
 
 // InputChecksResult is what list_input_checks answers with.

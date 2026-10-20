@@ -14,7 +14,6 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -55,7 +54,7 @@ func (w *aiPriceSyncSweepWorker) syncWorkspace(ctx context.Context, workspace id
 
 // addAIPriceSyncJobs registers the sweep and hands back its schedule.
 func addAIPriceSyncJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger) []*river.PeriodicJob {
-	sync := newAIPriceSync(pool, cfg.AIKeyVault, config.FromOS, log, newAIPriceCatalogues())
+	sync := newAIPriceSync(pool, cfg.AIKeyVault, log, newAIPriceCatalogues())
 	addDeclaredWorker[AIPriceSyncSweepArgs](reg, &aiPriceSyncSweepWorker{pool: pool, sync: sync, log: log})
 	return periodicFor(cfg, AIPriceSyncSweepArgs{})
 }

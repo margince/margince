@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -120,6 +121,7 @@ func mailedCommitmentReply(t *testing.T, message, promiser ids.UUID, confidence 
 		"kind": "commitment_made", "message_id": message.String(),
 		"summary": "Send the revised pricing", "quote": seatStatusPromise,
 		"due_date": "", "confidence": confidence, "promiser_ref": "seat:" + promiser.String(),
+		"commitment": openCommitmentMeaning("", ""),
 	}}})
 	if err != nil {
 		t.Fatalf("building the model reply: %v", err)
@@ -149,8 +151,31 @@ func TestTheLegacyConversionSettlesEverySignalItIsOwed(t *testing.T) {
 	older := seedOwedCommitmentSignal(t, e, "thread-older", -72*time.Hour)
 	newer := seedOwedCommitmentSignal(t, e, "thread-newer", -71*time.Hour)
 
-	if err := runSignalPass(t, e, reply); err != nil {
+	replies := map[string]string{}
+	read := map[string]bool{}
+	for thread, signal := range map[string]ids.UUID{"thread-older": older, "thread-newer": newer} {
+		message := ids.MustParse(e.WsScalar(t, `SELECT evidence->0->>'source_id' FROM signal WHERE id=$1`, signal))
+		replies[thread] = mailedCommitmentReply(t, message, e.Rep1, taskWorthyConfidence)
+	}
+	brain := offerDraftCompleterStub{reply: func(req model.Request) string {
+		for _, message := range req.Messages {
+			for thread, answer := range replies {
+				if strings.Contains(message.Content, thread) {
+					read[thread] = true
+					return answer
+				}
+			}
+		}
+		return reply
+	}}
+	pass := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), signalScanActor)
+	if _, err := NewSignalExtractor(e.Pool, brain, func() time.Time { return clocktest.Now(t) }, slog.Default()).RunWorkspace(pass, ids.From[ids.WorkspaceKind](e.WS)); err != nil {
 		t.Fatalf("the pass failed: %v", err)
+	}
+	for thread := range replies {
+		if !read[thread] {
+			t.Fatalf("the conversion never read %s", thread)
+		}
 	}
 
 	for _, c := range []struct {

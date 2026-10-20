@@ -28,12 +28,12 @@ import { useMe } from "../../lib/session";
 import { readStored, STORAGE_KEYS, writeStored } from "../../lib/storage";
 import { listQueryParams } from "../../lib/tagfilter";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
+import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
 import {
   mineEmptyNote,
   standardViews,
   useOwnerTagChips,
-} from "../../screens/recordlist";
-import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
+} from "../records/recordlist";
 import { LeadBulkBar } from "./leadbulk";
 import { LEAD_STATUS_FILTER_OPTIONS, LeadBoard } from "./leadpresentation";
 import { leadColumns } from "./leads.columns";

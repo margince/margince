@@ -1,7 +1,8 @@
 import { StatCard } from "../../design-system/atoms";
 import { StatStrip } from "../../design-system/statstrip";
-import { formatNumber } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { formatDateAbbrev, formatNumber } from "../../format/format";
+import { useLocale, usePlural, useT, type Words } from "../../i18n";
+import { openAnalyticsSection } from "./analytics.address";
 import {
   metricLabel,
   type ReportingEvaluation,
@@ -33,6 +34,16 @@ export function TargetProgress({
   );
 }
 
+// Results over the period first, then where this quarter is heading, then
+// what is open now.
+const HEADLINE_METRICS = [
+  "bookings_won",
+  "forecast_landing",
+  "open_pipeline",
+  "meetings_held",
+  "accepted_opportunities",
+] as const;
+
 export function ResultsSummary({
   evaluation,
   onEvidence,
@@ -42,10 +53,8 @@ export function ResultsSummary({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const metrics = evaluation.metrics.filter((metric) =>
-    ["bookings_won", "meetings_held", "accepted_opportunities"].includes(
-      metric.id,
-    ),
+  const metrics = HEADLINE_METRICS.flatMap(
+    (id) => evaluation.metrics.find((metric) => metric.id === id) ?? [],
   );
   if (!metrics.length) return null;
   return (
@@ -119,11 +128,7 @@ export function ResultsSummary({
                 </p>
               </>
             }
-            onOpen={
-              metric.coverage.status === "no_data"
-                ? undefined
-                : () => onEvidence(metric.evidence)
-            }
+            onOpen={headlineOpen(metric, onEvidence)}
             meter={comparable ? { filled: actual, total: target } : undefined}
           />
         );
@@ -140,6 +145,7 @@ function OutcomePeriod({
   metric: ReportingEvaluation["metrics"][number];
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   return (
     <>
@@ -147,11 +153,7 @@ function OutcomePeriod({
         {metric.id === "bookings_won" && metric.coverage.status === "no_data"
           ? `${t("reporting.noSalesWon")} · `
           : ""}
-        {reportingPeriodLabel(
-          evaluation.context.interval,
-          evaluation.context.timezone,
-          locale,
-        )}
+        {headlineBasis(evaluation, metric, { t, plural, locale })}
       </span>
       {metric.coverage.status !== "ok" &&
         !(
@@ -159,4 +161,46 @@ function OutcomePeriod({
         ) && <span>{t(`reporting.status.${metric.coverage.status}`)}</span>}
     </>
   );
+}
+
+// What a headline figure is about. Sales won covers the chosen period. Open
+// pipeline is the state now, so it names a moment and a count. The forecast
+// landing is always this fiscal quarter's.
+function headlineBasis(
+  evaluation: ReportingEvaluation,
+  metric: ReportingEvaluation["metrics"][number],
+  words: Words,
+): string {
+  const { t, plural, locale } = words;
+  const { context } = evaluation;
+  if (metric.id === "open_pipeline") {
+    const at = formatDateAbbrev(context.state_at, locale, context.timezone);
+    const count = metric.coverage.eligible_count;
+    // A withheld count stays unknown rather than reading as zero deals.
+    return count == null
+      ? t("reporting.openPipelineAsOf", { at })
+      : plural("reporting.openPipelineBasis", count, {
+          count: formatNumber(count, locale),
+          at,
+        });
+  }
+  if (metric.id === "forecast_landing") {
+    return t("reporting.forecastLandingBasis");
+  }
+  return reportingPeriodLabel(context.interval, context.timezone, locale);
+}
+
+// The forecast landing is a projection, not a sum of records. Its evidence is
+// the Forecast section, where each part opens its own deals.
+function headlineOpen(
+  metric: ReportingEvaluation["metrics"][number],
+  onEvidence: (reference: ReportingEvidenceRef) => void,
+): (() => void) | undefined {
+  if (metric.coverage.status === "no_data") {
+    return undefined;
+  }
+  if (metric.id === "forecast_landing") {
+    return () => openAnalyticsSection("forecast");
+  }
+  return () => onEvidence(metric.evidence);
 }

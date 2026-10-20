@@ -9,7 +9,7 @@
 // box and Deal360 agree about whether an answer is owed. Deal360 says WHY
 // writing is the move; this box is where the writing happens.
 
-import { RecordEmailAside } from "../../screens/recordemail";
+import { RecordEmailAside } from "../records/recordemail";
 import { useDealStatusCard } from "./dealstatus";
 
 export function DealEmailAside({ dealId }: Readonly<{ dealId: string }>) {

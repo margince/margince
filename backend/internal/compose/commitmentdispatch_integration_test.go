@@ -164,6 +164,7 @@ func TestOurPromiseIsFiledOnTheCustomerItWasMadeTo(t *testing.T) {
 	raw, err := json.Marshal(map[string]any{"proposals": []map[string]any{{
 		"summary": "Send the revised pricing", "owner": "Priya Raman", "promiser_ref": "seat:" + e.Rep2.String(),
 		"due_date": "2026-09-08", "source_lines": []int{3}, "confidence": 0.9,
+		"commitment": openCommitmentMeaning("2026-09-08", "Friday"),
 	}}})
 	if err != nil {
 		t.Fatalf("building the model reply: %v", err)

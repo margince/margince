@@ -102,10 +102,11 @@ func TestContactWritesLeaveTheSameOnEitherDoor(t *testing.T) {
 }
 
 type sharedActivity struct {
-	Kind    string  `json:"kind"`
-	Subject *string `json:"subject"`
-	Body    *string `json:"body"`
-	DueAt   *string `json:"due_at"`
+	SourceActivityID *string `json:"source_activity_id"`
+	Kind             string  `json:"kind"`
+	Subject          *string `json:"subject"`
+	Body             *string `json:"body"`
+	DueAt            *string `json:"due_at"`
 }
 
 // A note logged and a task filed over either door are the same records. They
@@ -134,14 +135,17 @@ func TestLogActivityAndCreateTaskLeaveTheSameOnEitherDoor(t *testing.T) {
 	d.sameEffect(t, "note", noteREST, noteTool)
 
 	restTask := d.restStatus(t, "POST", "/v1/tasks", AnyMap{
-		"subject": "Send the quote", "due_at": "2036-04-01T09:00:00Z", "source": "manual", "links": link,
+		"subject": "Send the quote", "source_activity_id": noteREST, "due_at": "2036-04-01T09:00:00Z", "source": "manual", "links": link,
 	}, http.StatusCreated)
 	toolTask := d.tool(t, "create_task", map[string]any{
-		"subject": "Send the quote", "due_at": "2036-04-01T09:00:00Z", "links": link,
+		"subject": "Send the quote", "source_activity_id": noteREST, "due_at": "2036-04-01T09:00:00Z", "links": link,
 	})
 	taskREST, taskTool := anIDIn(t, restTask), anIDIn(t, toolTask)
 	sameStored(t, "task", stored(taskREST), stored(taskTool), taskREST, taskTool)
 	filed := sameRecords[sharedActivity](t, "task", stored(taskREST), stored(taskTool))
+	if filed.SourceActivityID == nil || *filed.SourceActivityID != noteREST {
+		t.Fatal("task lost its source relation")
+	}
 	if filed.Kind != "task" {
 		t.Errorf("the filed task is a %q, want a task", filed.Kind)
 	}

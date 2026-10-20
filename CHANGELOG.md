@@ -12,6 +12,14 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
 
 ### Added
 
+- A mailbox can set a date its automatic commitment suggestions start from.
+  Mail that mailbox delivered on an earlier local day suggests no automatic
+  commitments for its owner; the mail stays captured and searchable, and the
+  promise is listed for review. The setting is on the mailbox's settings and in
+  **Import old emails**, through `PUT /connectors/{provider}/history-baseline`,
+  and `CaptureConnection.history_baseline` shows it. Changing or clearing the
+  date completes and deletes nothing.
+
 - A custom field can stay out of create forms. Each custom field has a
   **In create forms** setting, on by default, so every existing field
   keeps showing. Turned off, the field leaves the dialogs that create a record
@@ -19,6 +27,12 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
   **Fields** shows and changes it, and the custom-field API takes
   `show_in_create` on create and update, so an import can create a field that
   only keeps a value from a previous system.
+
+- Recipient email summaries name results and unfinished work, use the member's
+  saved language and suppress empty weeks. Team priorities follow the worklist's
+  ranking across members. Product mail shares explicit sections and actions;
+  buyer and privacy messages use formal German and state precise link expiry.
+  Contacts can correct details without selecting optional marketing consent.
 
 - **MCP tools match the API.** An MCP tool takes every
   filter, sort and option its REST route takes. `read_view` reads a route's

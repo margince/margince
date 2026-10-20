@@ -2,12 +2,9 @@ import { Card, EmptyState, Skeleton } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { sectionState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
-import type { OpenReceipt } from "../../screens/record360";
-import {
-  TaskDetailModal,
-  TaskQuickActions,
-  type useTaskUpdate,
-} from "../worklist/taskactions";
+import type { OpenReceipt } from "../records/record360";
+import { TaskQuickActions, type useTaskUpdate } from "../worklist/taskactions";
+import { TaskDetailModal } from "../worklist/taskdetailmodal";
 import type { Company, Company360View } from "./companies";
 import { DealsCard, NextSteps, ProposedNextSteps } from "./company360";
 import { NewDealAction } from "./companyactions";

@@ -5,7 +5,7 @@ import { formatMoneyCompact } from "../../format/format";
 import type { Locale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { problemCodeOf } from "../../lib/problem";
-import { useFinanceSummary } from "../../screens/financesummary";
+import { useFinanceSummary } from "../projects/financesummary";
 import type { Company360 } from "./company360";
 import { WITHHELD_READING } from "./company360health";
 import {

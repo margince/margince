@@ -3,7 +3,6 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { type LibraryItem, libraryItems } from "../../screens/library";
 import {
   listsMe,
   liveList,
@@ -17,6 +16,7 @@ import {
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
+import { type LibraryItem, libraryItems } from "../voice-knowledge/library";
 import { LibraryTable, NewShortlistAction } from "./listlibrary";
 import { DEFAULT_AUDIENCE } from "./listsharing";
 import type { SavedView } from "./savedviews.queries";

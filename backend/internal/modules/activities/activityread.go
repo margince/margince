@@ -39,7 +39,10 @@ func (s *Store) GetActivity(ctx context.Context, id ids.ActivityID, archived sto
 		out, err = readActivity(ctx, tx, id, archived)
 		return err
 	})
-	return out, err
+	if err != nil {
+		return out, err
+	}
+	return out, s.attachCustomValues(ctx, &out)
 }
 
 // activitySortFields is what a caller may order the timeline by: the four
@@ -138,7 +141,11 @@ var errRequestReviewWithCursor = errors.New("activities: a recency cursor cannot
 func (s *Store) ListActivities(ctx context.Context, in ListActivitiesInput) ([]crmcontracts.Activity, storekit.Page, error) {
 	var activities []crmcontracts.Activity
 	var page storekit.Page
-	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
+	var err error
+	if in.Columns, err = s.ActiveActivityColumns(ctx); err != nil {
+		return nil, storekit.Page{}, err
+	}
+	err = s.tx(ctx, func(tx pgx.Tx) (err error) {
 		// The colleague-domain snapshot for THIS read, taken beside the rows it
 		// judges. ListActivitiesTx cannot take it itself: it is a free function
 		// for a caller that already holds a transaction, so it has no seam to
@@ -186,6 +193,11 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 	}
 	if in.WithinProjectID != nil {
 		if err := RequireProjectScope(ctx, tx, *in.WithinProjectID); err != nil {
+			return nil, storekit.Page{}, err
+		}
+	}
+	if in.SourceActivityID != nil {
+		if _, err := readActivityContent(ctx, tx, *in.SourceActivityID, storekit.IncludeArchived); err != nil {
 			return nil, storekit.Page{}, err
 		}
 	}
@@ -249,6 +261,9 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 		return nil, storekit.Page{}, err
 	}
 	if err := WithCommitmentAdmissions(ctx, tx, activities); err != nil {
+		return nil, storekit.Page{}, err
+	}
+	if err := withCustomValues(ctx, tx, in.Columns.cols, pageOf(activities)); err != nil {
 		return nil, storekit.Page{}, err
 	}
 	if activities == nil {
@@ -436,7 +451,13 @@ func scanActivity(row pgx.Row) (crmcontracts.Activity, error) {
 // contact the reader may not see would disclose that contact.
 func (s *Store) CountActivities(ctx context.Context, in ListActivitiesInput) (int, error) {
 	var total int
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	var err error
+	if len(in.CustomFilters) > 0 {
+		if in.Columns, err = s.ActiveActivityColumns(ctx); err != nil {
+			return 0, err
+		}
+	}
+	err = s.tx(ctx, func(tx pgx.Tx) error {
 		if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 			return err
 		}

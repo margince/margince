@@ -9,40 +9,60 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { viewerZone } from "../../format/timezone";
+import { TASK_QUEUE_KEY } from "../../lib/activitykeys";
 import { useActivity } from "../../lib/activityread";
-import { OpenActivityDrawer } from "../../screens/activitydrawer";
+import { useCanWrite } from "../../lib/capability";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
+import { OpenActivityDrawer } from "../voice-knowledge/activitydrawer";
+import { useTaskUpdate } from "./taskactions";
+import { TaskDetailModal } from "./taskdetailmodal";
+import { rowHref } from "./worklist.copy";
 import { type WorklistItem, worklistKey } from "./worklist.queries";
 
-/**
- * The activity a notice row may open, or undefined.
- *
- * Only a NAMED subject. The server fills `label` under the reader's grants and
- * the mail audience, and leaves it off where the reader may not read the
- * activity. So the row never offers a way into mail it would then refuse.
- */
-export function noticeSourceId(item: WorklistItem): string | undefined {
-  const subject = item.subject;
-  if (item.source !== "notice" || subject?.type !== "activity") {
+// Task and meeting row ids are activity ids; other lanes must name their activity explicitly.
+export function rowActivityId(item: WorklistItem): string | undefined {
+  if (
+    item.source === "task" ||
+    item.source === "meeting" ||
+    item.source === "meeting_outcome"
+  )
+    return item.id;
+  const subject = item.source_record ?? item.subject;
+  if (subject?.type !== "activity") {
     return undefined;
   }
-  return subject.label ? subject.id : undefined;
+  return subject.id;
 }
 
-/** What a row needs to open its notice's source: the press, and its drawer. */
-export function useNoticeSource(item: WorklistItem): Readonly<{
+export function rowSourceUnavailable(item: WorklistItem): boolean {
+  const source = rowActivityId(item);
+  return (
+    ((item.source_record ?? item.subject)?.type === "activity" &&
+      source === undefined) ||
+    (source === undefined &&
+      rowHref(item) === undefined &&
+      item.actions.includes("open"))
+  );
+}
+
+/** Open the current activity read beside the queue, keeping its filters and scroll position. */
+export function useRowSource(item: WorklistItem): Readonly<{
   open?: () => void;
+  unavailable: boolean;
   drawer: ReactNode;
 }> {
   const [opened, setOpened] = useState<string | null>(null);
   const client = useQueryClient();
-  const source = noticeSourceId(item);
+  const source = rowActivityId(item);
   return {
     open: source === undefined ? undefined : () => setOpened(source),
+    unavailable: rowSourceUnavailable(item),
     // Mounted only while open, so a closed drawer keeps no read that refetches
     // on every window focus, once for each row a reader ever opened.
     drawer:
-      opened === null ? null : (
+      opened === null ? null : item.source === "task" ? (
+        <OpenTaskSource activityId={opened} onClose={() => setOpened(null)} />
+      ) : (
         <SourceDrawer
           activityId={opened}
           onClose={() => setOpened(null)}
@@ -52,6 +72,22 @@ export function useNoticeSource(item: WorklistItem): Readonly<{
         />
       ),
   };
+}
+
+function OpenTaskSource({
+  activityId,
+  onClose,
+}: Readonly<{ activityId: string; onClose: () => void }>) {
+  const canUpdate = useCanWrite("activity", "update");
+  const update = useTaskUpdate([worklistKey, TASK_QUEUE_KEY, ["activities"]]);
+  return (
+    <TaskDetailModal
+      activityId={activityId}
+      readOnly={!canUpdate}
+      update={update}
+      onClose={onClose}
+    />
+  );
 }
 
 /**

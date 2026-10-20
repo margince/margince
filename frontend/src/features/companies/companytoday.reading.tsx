@@ -4,6 +4,7 @@ import { AiPending } from "../../design-system/aipending";
 import { PanelRow } from "../../design-system/panel";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
+import { type AccountScan, scanIsLive } from "../capture/accountscan";
 import {
   FoundMove,
   type Grounding,
@@ -12,8 +13,7 @@ import {
   type OpenReceipt,
   type StandingTone,
   WithheldNotice,
-} from "../../screens/record360";
-import { type AccountScan, scanIsLive } from "../capture/accountscan";
+} from "../records/record360";
 import {
   nextCommitmentLine,
   type SuggestionAction,
@@ -43,6 +43,7 @@ import {
   momentFallbackVerb,
   momentVerb,
 } from "./companytodayverbs";
+import "./company360.css";
 
 type HealthRating = components["schemas"]["HealthDimension"]["rating"];
 

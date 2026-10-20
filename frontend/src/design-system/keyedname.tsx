@@ -17,7 +17,9 @@ export function KeyedName({
   if (name === code) return <BareKey code={code} />;
   return (
     <CellStack>
-      <span>{name}</span>
+      <span>
+        <KeyText code={name} />
+      </span>
       <code className="keyed-name-key">
         <KeyText code={code} />
       </code>
@@ -49,13 +51,14 @@ function BareKey({ code }: Readonly<{ code: string }>) {
   );
 }
 
-// A break opportunity after each underscore lets a long key wrap between its
-// words; `<wbr>` adds no character, so a copied key still greps.
+// A break opportunity after each `_`, `.` or `,` lets a long key, a dotted
+// setting name or a JSON value wrap between its words. `<wbr>` adds no
+// character, so a copied key still greps.
 function KeyText({ code }: Readonly<{ code: string }>) {
-  return [...code.matchAll(/(?:[^_]*_)|(?:[^_]+$)/g)].map((part) => (
+  return [...code.matchAll(/(?:[^_.,]*[_.,])|(?:[^_.,]+$)/g)].map((part) => (
     <Fragment key={part.index}>
       {part[0]}
-      {part[0].endsWith("_") && <wbr />}
+      {/[_.,]$/.test(part[0]) && <wbr />}
     </Fragment>
   ));
 }

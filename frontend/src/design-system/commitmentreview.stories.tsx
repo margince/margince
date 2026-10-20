@@ -70,3 +70,77 @@ export const NeedsEvidenceDark: Story = {
   ...NeedsEvidence,
   globals: { theme: "dark" },
 };
+
+export const ConditionalOffer: Story = {
+  args: {
+    zone: viewerZone(),
+    decisions: [
+      {
+        ...historical,
+        outcome: "semantic_conditional",
+        source_quote: "If the buyer agrees, I could send a draft next week.",
+        summary: "Send a draft",
+        meaning: {
+          state: "conditional",
+          condition: "If the buyer agrees",
+          deadline_precision: "range",
+          deadline_quote: "next week",
+        },
+      },
+    ],
+  },
+};
+export const CompletedWork: Story = {
+  args: {
+    zone: viewerZone(),
+    decisions: [
+      {
+        ...historical,
+        outcome: "semantic_completed",
+        source_quote: "The signed form is attached.",
+        summary: "Send the signed form",
+      },
+    ],
+  },
+};
+
+export const ConditionalOfferDark: Story = {
+  ...ConditionalOffer,
+  globals: { theme: "dark" },
+};
+export const CompletedWorkDark: Story = {
+  ...CompletedWork,
+  globals: { theme: "dark" },
+};
+export const OtherNonActions: Story = {
+  args: {
+    zone: viewerZone(),
+    decisions: [
+      {
+        ...historical,
+        locator: "optional",
+        outcome: "semantic_optional",
+        source_quote: "I could send a draft.",
+        summary: "Optional draft",
+      },
+      {
+        ...historical,
+        locator: "request",
+        outcome: "semantic_request",
+        source_quote: "Please send a draft.",
+        summary: "Unaccepted request",
+      },
+      {
+        ...historical,
+        locator: "unclear",
+        outcome: "semantic_unclear",
+        source_quote: "We should discuss a draft.",
+        summary: "Unclear next step",
+      },
+    ],
+  },
+};
+export const OtherNonActionsDark: Story = {
+  ...OtherNonActions,
+  globals: { theme: "dark" },
+};

@@ -362,6 +362,8 @@ export function DecisionsSection({
             approvalNames,
             approval.requested_decider_id,
             approval.assignee_inactive,
+            approval.preview,
+            locale,
           ),
         })}
       />

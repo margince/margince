@@ -20,6 +20,7 @@ const (
 	reportingState                    = "state"
 	reportingTarget                   = "target"
 	reportingUnavailable              = "unavailable"
+	reportingFailed                   = "failed"
 	reportingInsufficientSample       = "insufficient_sample"
 	reportingInterval                 = "interval"
 	reportingMonthContext             = "month"

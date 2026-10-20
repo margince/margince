@@ -22,6 +22,8 @@ import { type Locale, LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { WorklistScreen } from "./worklist";
 
+export { row } from "./worklist.fixtures";
+
 export type Worklist = components["schemas"]["Worklist"];
 export type WorklistItem = components["schemas"]["WorklistItem"];
 
@@ -212,24 +214,6 @@ export function day(over: Partial<Worklist> = {}): Worklist {
       review: 0,
       more_available: false,
     },
-    ...over,
-  };
-}
-
-export function row(over: Partial<WorklistItem> = {}): WorklistItem {
-  return {
-    id: "row-1",
-    source: "task",
-    category: "tasks",
-    level: 4,
-    consequence: "task_slips",
-    because: [],
-    actions: [],
-    // The version the row's own verbs write with. Present on every fixture row
-    // because the server sends it for every row whose verbs write: a fixture
-    // without one describes a payload the read cannot produce, and the write
-    // under test would refuse rather than run.
-    version: 3,
     ...over,
   };
 }

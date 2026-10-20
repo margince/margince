@@ -27,6 +27,7 @@ import {
   QueryStates,
 } from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
+import { ArchiveAction } from "../features/records/archive";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Translator, useLocale, usePlural, useT } from "../i18n";
@@ -38,7 +39,6 @@ import {
   unwrap,
 } from "../lib/problem";
 import { useMe } from "../lib/session";
-import { ArchiveAction } from "./archive";
 import { WebhookSubscriptionDrawer } from "./webhookdrawer";
 import "./webhooks.css";
 

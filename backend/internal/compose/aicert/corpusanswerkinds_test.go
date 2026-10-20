@@ -77,7 +77,7 @@ import (
 // The blind spot, stated: two DISTINCT vocabularies owned by the same set of
 // sites are indistinguishable here, because a row is the owner string. One site
 // sending two closed answer enums would need this list to carry that owner
-// twice. No site does today.
+// twice. Meaning and deadline precision are distinct vocabularies at the same sites.
 //
 // Update deliberately when a task's vocabulary genuinely arrives or leaves;
 // never edit it to make a run green.
@@ -103,6 +103,8 @@ var recognisedOwners = []string{
 	// the floor exists to produce.
 	"request_settlement/request_settle",
 	"signal_extract/thread_events",
+	"signal_extract/thread_events, transcript_propose/next_steps",
+	"signal_extract/thread_events, transcript_propose/next_steps",
 	"site_triage/triage",
 }
 

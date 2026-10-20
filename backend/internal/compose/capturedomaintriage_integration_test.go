@@ -125,7 +125,7 @@ func TestTriageOnCaptureLeavesTheCompanyToTheSweepAtTheDailyCap(t *testing.T) {
 	// the number under test is "the cap", not its value. Set through the admin's
 	// own write.
 	testCap := 3
-	if _, err := capture.NewSettings(NewSettingsStore(e.Pool)).Update(e.Admin(),
+	if _, err := capture.NewSettings(NewSettingsStore(e.Pool), StoredConfig(e.Pool)).Update(e.Admin(),
 		capture.SettingsPatch{AutoEnrichDailyCap: &testCap}); err != nil {
 		t.Fatal(err)
 	}

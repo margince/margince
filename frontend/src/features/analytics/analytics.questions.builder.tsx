@@ -25,6 +25,8 @@ import {
 import {
   type AnalyticsEntity,
   analyticsFieldLabel,
+  customFieldOf,
+  customLabels,
   entityLabel,
   fieldReference,
   fieldsForFn,
@@ -61,10 +63,15 @@ function startingValue(entity: AnalyticsEntity, field: string) {
   return valueShape(entity, field) === "boolean" ? true : "";
 }
 
-function fieldOptions(t: Translate, fields: readonly string[]) {
+function fieldOptions(
+  t: Translate,
+  fields: readonly string[],
+  entity: AnalyticsEntity | undefined,
+) {
+  const custom = customLabels(entity ? [entity] : []);
   return fields.map((field) => ({
     value: field,
-    label: analyticsFieldLabel(t, field),
+    label: analyticsFieldLabel(t, field, custom),
   }));
 }
 
@@ -129,7 +136,7 @@ export function QuestionBuilder({
             {(control) => (
               <MultiSelect
                 {...control}
-                options={fieldOptions(t, entity?.group_by ?? [])}
+                options={fieldOptions(t, entity?.group_by ?? [], entity)}
                 values={draft.groupBy}
                 placeholder={t("analytics.q.noGrouping")}
                 disabled={!entity}
@@ -252,7 +259,11 @@ function MeasureRows({
                   aria-label={t("analytics.q.measureFieldN", {
                     n: ordinalNumber(index + 1),
                   })}
-                  options={fieldOptions(t, fieldsForFn(entity, measure.fn))}
+                  options={fieldOptions(
+                    t,
+                    fieldsForFn(entity, measure.fn),
+                    entity,
+                  )}
                   value={measure.field}
                   placeholder={t("analytics.q.chooseField")}
                   onChange={(field) =>
@@ -380,7 +391,7 @@ function FilterRow({
   const t = useT();
   const controlOp = valueControlOp(filter.op);
   const fieldName = filter.field
-    ? analyticsFieldLabel(t, filter.field)
+    ? analyticsFieldLabel(t, filter.field, customLabels([entity]))
     : t("analytics.q.filterN", { n: ordinalNumber(position) });
   return (
     <li
@@ -392,7 +403,7 @@ function FilterRow({
         aria-label={t("analytics.q.filterFieldN", {
           n: ordinalNumber(position),
         })}
-        options={fieldOptions(t, fields)}
+        options={fieldOptions(t, fields, entity)}
         value={filter.field}
         placeholder={t("analytics.q.chooseField")}
         onChange={(field) =>
@@ -421,7 +432,7 @@ function FilterRow({
           <ValueControl
             type={controlType(entity, filter.field)}
             references={fieldReference(filter.field)}
-            options={undefined}
+            options={customFieldOf(entity, filter.field)?.options}
             op={controlOp}
             value={filter.value}
             onChange={(value) => onChange({ ...filter, value })}

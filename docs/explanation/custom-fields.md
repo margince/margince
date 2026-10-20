@@ -220,7 +220,7 @@ the cost visible, but it is new surface to govern. The choice is an open product
 | The record store code | `internal/platform/database/storekit/customcolumns.go` |
 | The sort and filter words that `cf_*` columns are part of | `internal/platform/database/storekit/listquery.go` |
 | The catalog table + its RBAC grants | `backend/migrations/core/` (the `custom_field` table is in the `0001` migration) |
-| The admin UI | `frontend/src/screens/customfields.tsx` |
+| The admin UI | `frontend/src/features/records/customfields.tsx` |
 
 The owner pool flag and its `/readyz` check: [reference/configuration.md](../reference/configuration.md).
 The write shape these changes still go through: [write-backbone.md](write-backbone.md). The role table

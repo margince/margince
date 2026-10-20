@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/finance"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -112,8 +113,12 @@ func TestConnectingAnAccountingSourceAsksItFirstAndAdmitsOne(t *testing.T) {
 	}
 
 	store := financeStoreFor(e, testBooksSource{})
-	if _, err := store.Connect(admin, "not_installed"); !errors.Is(err, apperrors.ErrInvalidArgument) {
-		t.Errorf("connect to an uninstalled source = %v, want ErrInvalidArgument", err)
+	// A source this build does not compose is a fault of the provider field.
+	_, err := store.Connect(admin, "not_installed")
+	var refused *httperr.DetailedError
+	if !errors.As(err, &refused) || refused.Code != "validation_error" ||
+		len(refused.Fields) != 1 || refused.Fields[0].Field != "provider" {
+		t.Errorf("connect to an uninstalled source = %v, want a validation error on provider", err)
 	}
 	first, err := store.Connect(admin, testBooks)
 	if err != nil {

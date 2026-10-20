@@ -9,6 +9,7 @@ import {
   MONEY_ABSENT,
 } from "../../format/format";
 import { AnalyticsScreen, buildStageAggregates } from "./analytics";
+import { SECTION_REPORTS } from "./analytics.reports";
 import {
   openPipeline,
   render,
@@ -23,7 +24,7 @@ afterEach(() => {
 
 type Stage = components["schemas"]["Stage"];
 
-const SECTION_REPORT_COUNT_PIPELINE = 3;
+const SECTION_REPORT_COUNT_PIPELINE = SECTION_REPORTS.pipeline.length;
 
 // Money never sums across currencies (AC-DS-FX1). Every plan this screen runs
 // groups by currency, so a stage or a category holding two currencies has two

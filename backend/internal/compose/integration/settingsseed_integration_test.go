@@ -18,8 +18,8 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
 // The SECOND attempt is the defect. The first insert proves nothing — it stores,
@@ -42,10 +42,10 @@ func TestASecondSeedKeepsTheStoredValueAndSaysItDiscardedTheNewOne(t *testing.T)
 			return err
 		}
 		var err error
-		if storedFirst, err = settings.SeedValue(context.Background(), tx, identity.Name, first); err != nil {
+		if storedFirst, err = config.SeedTx(context.Background(), tx, nil, identity.Name, first); err != nil {
 			return err
 		}
-		storedSecond, err = settings.SeedValue(context.Background(), tx, identity.Name, second)
+		storedSecond, err = config.SeedTx(context.Background(), tx, nil, identity.Name, second)
 		return err
 	}); err != nil {
 		t.Fatal(err)

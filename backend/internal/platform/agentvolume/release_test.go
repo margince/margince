@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -143,7 +142,7 @@ func releaseIn(t *testing.T, m *Meter, ws, passport ids.UUID, c Counter, bucket 
 // ahead, which the length in force would refuse as a window not yet started.
 // Only the length check answers "nothing" here.
 func TestAReleaseStagedUnderAnotherLengthAppliesToNothing(t *testing.T) {
-	meter := NewWithClock(nil, Limits{}, DefaultWindow, func() time.Time { return clocktest.Now(t) })
+	meter := NewWithClock(nil, Limits{}, DefaultWindow, func() time.Time { return time.Date(2026, 3, 4, 12, 0, 0, 0, time.UTC) })
 	ws, subject := ids.New[ids.WorkspaceKind]().UUID, SubjectOf(ids.New[ids.PassportKind]().UUID, ids.UUID{})
 
 	applied, err := meter.Release(t.Context(), ws, subject, Writes, meter.Bucket(t.Context())+1, 12*time.Hour)

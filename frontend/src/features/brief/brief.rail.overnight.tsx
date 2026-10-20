@@ -11,8 +11,8 @@ import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { navigate } from "../../lib/router";
-import { isProjectPhase, PHASE_LABEL } from "../../screens/projects.form";
 import { errorClassKey, isUnhealthy } from "../capture/connector-status";
+import { isProjectPhase, PHASE_LABEL } from "../projects/projects.form";
 import { type MorningDigest, useMorningDigest } from "./brief.queries";
 
 // What the night shift did, as the last group of Home's receipt: counts with

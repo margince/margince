@@ -277,6 +277,8 @@ const SEEDED_OPS_PAGES = pagesNamed(
   // The installation_settings update ops holds, which also opens Company.
   "jurisdiction",
   "system-health",
+  // The same installation_settings update, which lists where each setting comes from.
+  "configuration",
 );
 
 describe("SettingsScreen page visibility", () => {

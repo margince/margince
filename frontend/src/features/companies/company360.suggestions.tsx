@@ -17,7 +17,7 @@ import {
   FoundMove,
   fromCitations,
   type OpenReceipt,
-} from "../../screens/record360";
+} from "../records/record360";
 import type { Company360 } from "./company360";
 import {
   type DeferOf,
@@ -118,7 +118,7 @@ function performable(
 // nextCommitmentLine is the daily brief's own footer reading: what is owed
 // and how soon. It is not a suggestion: nobody proposed it, the open tasks
 // section has one. So it sits in the footer rather than as a row. Exported so
-// the brief (companytoday.tsx) reads the same truncation rule, not a copy.
+// the brief (companytoday.reading.tsx) reads the same truncation rule, not a copy.
 export function nextCommitmentLine(
   view: Company360 | undefined,
   locale: Locale,
@@ -149,7 +149,7 @@ export function nextCommitmentLine(
 }
 
 // useSuggestionsBody is the advice section's data and rows: the dismiss
-// mutation and the "move" rows, which companytoday.tsx composes into the brief.
+// mutation and the "move" rows, which companytoday.reading.tsx composes into the brief.
 // Each row leads with the reason the rule fired, so a rep can disagree with it.
 // A dismissal is keyed on the evidence: the advice stays gone while that holds.
 export function useSuggestionsBody({

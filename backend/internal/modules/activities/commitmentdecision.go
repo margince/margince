@@ -33,7 +33,8 @@ func RecordCommitmentAdmissionTx(ctx context.Context, tx pgx.Tx, source ids.Acti
 	var before json.RawMessage
 	if err := tx.QueryRow(ctx, `SELECT jsonb_build_object('commitment_admission',
   (SELECT jsonb_build_object('locator', d.locator, 'outcome', d.outcome, 'current_work', d.current_work,
- 'rule_version', d.rule_version, 'evidence_ids', d.evidence_ids, 'evaluated_at', d.evaluated_at, 'renewed_by', d.renewed_by, 'renewed_at', d.renewed_at)
+ 'rule_version', d.rule_version, 'evidence_ids', d.evidence_ids, 'evaluated_at', d.evaluated_at, 'renewed_by', d.renewed_by, 'renewed_at', d.renewed_at,
+ 'meaning_state', d.meaning->'state', 'deadline_precision', d.meaning->'deadline_precision')
  FROM activity_commitment_admission d WHERE d.source_activity_id = a.id AND d.locator = $2))
   FROM activity a WHERE a.id = $1 FOR UPDATE OF a`, source, decision.Locator).Scan(&before); err != nil {
 		return fmt.Errorf("activities: locking prior commitment admission: %w", err)
@@ -41,19 +42,19 @@ func RecordCommitmentAdmissionTx(ctx context.Context, tx pgx.Tx, source ids.Acti
 	var args []any
 	arg := func(value any) int { args = append(args, value); return len(args) }
 	query := fmt.Sprintf(`INSERT INTO activity_commitment_admission AS prior
- (source_activity_id, locator, summary, source_quote, outcome, current_work, rule_version, evidence_ids, evaluated_at, captured_by, renewed_by, renewed_at)
- VALUES ($%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d)
+ (source_activity_id, locator, summary, source_quote, outcome, current_work, rule_version, evidence_ids, evaluated_at, captured_by, renewed_by, renewed_at, meaning)
+ VALUES ($%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d)
  ON CONFLICT (source_activity_id, locator) DO UPDATE SET
  summary = EXCLUDED.summary, source_quote = EXCLUDED.source_quote, outcome = EXCLUDED.outcome, current_work = EXCLUDED.current_work,
  rule_version = EXCLUDED.rule_version, evidence_ids = EXCLUDED.evidence_ids,
  evaluated_at = EXCLUDED.evaluated_at, captured_by = EXCLUDED.captured_by,
- renewed_by = EXCLUDED.renewed_by, renewed_at = EXCLUDED.renewed_at
+ renewed_by = EXCLUDED.renewed_by, renewed_at = EXCLUDED.renewed_at, meaning = EXCLUDED.meaning
  WHERE prior.outcome <> $%d AND prior.evaluated_at <= EXCLUDED.evaluated_at AND
- (prior.summary, prior.source_quote, prior.outcome, prior.current_work, prior.rule_version, prior.evidence_ids, prior.evaluated_at, prior.renewed_by, prior.renewed_at)
+ (prior.summary, prior.source_quote, prior.outcome, prior.current_work, prior.rule_version, prior.evidence_ids, prior.evaluated_at, prior.renewed_by, prior.renewed_at, prior.meaning)
  IS DISTINCT FROM
- (EXCLUDED.summary, EXCLUDED.source_quote, EXCLUDED.outcome, EXCLUDED.current_work, EXCLUDED.rule_version, EXCLUDED.evidence_ids, EXCLUDED.evaluated_at, EXCLUDED.renewed_by, EXCLUDED.renewed_at)`,
+ (EXCLUDED.summary, EXCLUDED.source_quote, EXCLUDED.outcome, EXCLUDED.current_work, EXCLUDED.rule_version, EXCLUDED.evidence_ids, EXCLUDED.evaluated_at, EXCLUDED.renewed_by, EXCLUDED.renewed_at, EXCLUDED.meaning)`,
 		arg(source), arg(decision.Locator), arg(decision.Summary), arg(decision.SourceQuote), arg(decision.Outcome), arg(decision.CurrentWork),
-		arg(decision.RuleVersion), arg(decision.EvidenceIds), arg(decision.EvaluatedAt), arg(by), arg(decision.RenewedBy), arg(decision.RenewedAt), arg(CommitmentSourceUnavailable))
+		arg(decision.RuleVersion), arg(decision.EvidenceIds), arg(decision.EvaluatedAt), arg(by), arg(decision.RenewedBy), arg(decision.RenewedAt), arg(decision.Meaning), arg(CommitmentSourceUnavailable))
 	tag, err := tx.Exec(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("activities: recording commitment admission: %w", err)
@@ -61,8 +62,14 @@ func RecordCommitmentAdmissionTx(ctx context.Context, tx pgx.Tx, source ids.Acti
 	if tag.RowsAffected() == 0 {
 		return nil
 	}
+	// Source words stay in the erasable decision; audits retain only its classifications.
+	var meaningState, deadlinePrecision *string
+	if decision.Meaning != nil {
+		meaningState, deadlinePrecision = &decision.Meaning.State, &decision.Meaning.DeadlinePrecision
+	}
 	auditID, err := storekit.Audit(ctx, tx, "update", "activity", source.UUID, before, map[string]any{"commitment_admission": map[string]any{
 		"locator": decision.Locator, "outcome": decision.Outcome, "current_work": decision.CurrentWork,
+		"meaning_state": meaningState, "deadline_precision": deadlinePrecision,
 		"rule_version": decision.RuleVersion, "evidence_ids": decision.EvidenceIds, "evaluated_at": decision.EvaluatedAt, "renewed_by": decision.RenewedBy, "renewed_at": decision.RenewedAt,
 	}})
 	if err != nil {
@@ -100,7 +107,7 @@ func WithCommitmentAdmissions(ctx context.Context, tx pgx.Tx, list []crmcontract
 	if err != nil {
 		return err
 	}
-	query := fmt.Sprintf(`SELECT d.source_activity_id, d.locator, d.summary, d.source_quote, d.outcome, d.current_work, d.rule_version, d.evidence_ids, d.evaluated_at, d.renewed_by, d.renewed_at
+	query := fmt.Sprintf(`SELECT d.source_activity_id, d.locator, d.summary, d.source_quote, d.outcome, d.current_work, d.rule_version, d.evidence_ids, d.evaluated_at, d.renewed_by, d.renewed_at, d.meaning
  FROM activity_commitment_admission d JOIN activity a ON a.id = d.source_activity_id
  WHERE a.id = ANY($%d::uuid[]) AND (d.summary <> '' OR d.source_quote <> '') AND `+content+` AND `+renewal+` ORDER BY d.source_activity_id, d.locator`, arg(sources))
 	rows, err := tx.Query(ctx, query, args...)
@@ -111,7 +118,7 @@ func WithCommitmentAdmissions(ctx context.Context, tx pgx.Tx, list []crmcontract
 	for rows.Next() {
 		var source ids.UUID
 		var decision crmcontracts.CommitmentAdmission
-		if err := rows.Scan(&source, &decision.Locator, &decision.Summary, &decision.SourceQuote, &decision.Outcome, &decision.CurrentWork, &decision.RuleVersion, &decision.EvidenceIds, &decision.EvaluatedAt, &decision.RenewedBy, &decision.RenewedAt); err != nil {
+		if err := rows.Scan(&source, &decision.Locator, &decision.Summary, &decision.SourceQuote, &decision.Outcome, &decision.CurrentWork, &decision.RuleVersion, &decision.EvidenceIds, &decision.EvaluatedAt, &decision.RenewedBy, &decision.RenewedAt, &decision.Meaning); err != nil {
 			return fmt.Errorf("activities: reading commitment admission: %w", err)
 		}
 		i, ok := positions[source]

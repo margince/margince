@@ -24,6 +24,9 @@ func TestAFollowUpRowSaysWhoWroteLastAndHowLongAgo(t *testing.T) {
 		ContactID: ids.NewV7(), EmailSummary: &crmcontracts.EmailSummary{},
 	}, at).item
 
+	if row.SourceRecord == nil || row.SourceRecord.Type != "activity" || ids.UUID(row.SourceRecord.Id) != sent {
+		t.Fatalf("message source = %+v", row.SourceRecord)
+	}
 	if row.Source != sourceAwaitingReply || row.Category != "tasks" {
 		t.Fatalf("row filed as %s/%s, want %s/tasks", row.Source, row.Category, sourceAwaitingReply)
 	}
@@ -123,12 +126,15 @@ func TestAFailedMeetingReadKeepsTheReplies(t *testing.T) {
 func TestAMeetingFollowUpOffersAMessageToEveryoneItWasWith(t *testing.T) {
 	t.Parallel()
 	at := time.Date(2026, 9, 6, 9, 0, 0, 0, time.UTC)
-	first, second := ids.NewV7(), ids.NewV7()
+	first, second, meeting := ids.NewV7(), ids.NewV7(), ids.NewV7()
 	ranked, actionable := classifyMeetingFollowUp(AwaitedReply{
-		ActivityID: ids.NewV7(), Subject: "Discovery workshop", SentAt: at.Add(-3 * 24 * time.Hour),
+		ActivityID: meeting, Subject: "Discovery workshop", SentAt: at.Add(-3 * 24 * time.Hour),
 		ContactID: first, DealID: ids.NewV7(), Recipients: []ids.UUID{first, second},
 	}, at)
 	row := ranked.item
+	if row.SourceRecord == nil || row.SourceRecord.Type != "activity" || ids.UUID(row.SourceRecord.Id) != meeting {
+		t.Fatalf("meeting source = %+v", row.SourceRecord)
+	}
 	if !actionable || row.Source != sourceMeetingFollowUp || row.Category != crmcontracts.WorklistItemCategoryMeetings {
 		t.Fatalf("row filed as %s/%s (produced: %v)", row.Source, row.Category, actionable)
 	}

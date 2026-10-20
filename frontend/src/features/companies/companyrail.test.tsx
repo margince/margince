@@ -37,10 +37,10 @@ describe("CompanyRail", () => {
     });
   });
 
-  // sectionState (company360.tsx) reads an undefined `view` as "loading" only
-  // when told the composite read is still running — otherwise it reads the
-  // exact same undefined `view` as "unavailable", the words a real outage
-  // shows. Before `loading` was threaded through, every ordinary page open
+  // sectionState (design-system/surfacestate.tsx) reads an undefined `view`
+  // as "loading" only when told the composite read is still running.
+  // Otherwise it reads the same undefined `view` as "unavailable", the words a
+  // real outage shows. Before `loading` was threaded through, every ordinary page open
   // flashed "could not be loaded" on Health/Contacts/Tags for as long as the
   // read was in flight. Pinned here as two DIFFERENT renders rather than one
   // happy-path check, because a fix that only makes the loading case not

@@ -16,7 +16,10 @@ import {
   isISODate,
 } from "../../design-system/dateinput";
 import { DecisionEvidence } from "../../design-system/decisioncard.content";
-import { withoutRepeatedLead } from "../../design-system/decisioncard.payload";
+import {
+  decisionEvidence,
+  withoutRepeatedLead,
+} from "../../design-system/decisioncard.payload";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
@@ -167,6 +170,8 @@ function ApprovalDetailBody({
     approvalNames,
     approval.requested_decider_id,
     approval.assignee_inactive,
+    approval.preview,
+    locale,
   );
   const named = withoutRepeatedLead(display, approval.summary).filter(
     (entry) => entry.value !== null,
@@ -191,7 +196,10 @@ function ApprovalDetailBody({
       {askedOn(approval, locale, zone, t).map(([label, value]) => (
         <FieldLine key={label} name={label} value={value} />
       ))}
-      <DecisionEvidence evidence={approval.evidence} collapsed={false} />
+      <DecisionEvidence
+        evidence={decisionEvidence(approval)}
+        collapsed={false}
+      />
       {named.length > 0 && (
         <Disclosure summary={t("decision.detailTechnical")}>
           <div className="form-stack">{rawPayload}</div>

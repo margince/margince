@@ -9,6 +9,7 @@ import { PanelNotices } from "../../design-system/panelnotices";
 import { QueryGate } from "../../design-system/querystates";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { Switch } from "../../design-system/switch";
+import { lockReasonOr } from "../../format/settinglocks";
 import { useT } from "../../i18n";
 import { useLeadSettings, useUpdateLeadSettings } from "./leadsources";
 import { useVocabGrants } from "./leadvocab.rows";
@@ -47,6 +48,7 @@ export function LeadHandlingCard() {
     update.isError && update.variables?.[setting] !== undefined
       ? refusalId
       : undefined;
+  const readOnly = refusal || undefined;
   return (
     <Panel title={t("leadHandling.title")}>
       <QueryGate query={query} pendingLabel={t("leadHandling.title")}>
@@ -70,7 +72,12 @@ export function LeadHandlingCard() {
                   checked={settings.first_response_enabled}
                   pending={update.isPending}
                   disabled={!canEdit}
-                  reason={refusal}
+                  reason={lockReasonOr(
+                    settings.locks,
+                    "contacts.first_response_enabled",
+                    t,
+                    readOnly,
+                  )}
                   testId="lead-first-response-switch"
                   onChange={(next) =>
                     update.mutate({ first_response_enabled: next })
@@ -88,7 +95,12 @@ export function LeadHandlingCard() {
               disabled={
                 !canEdit || !settings.first_response_enabled || update.isPending
               }
-              reason={refusal}
+              reason={lockReasonOr(
+                settings.locks,
+                "contacts.first_response_target_minutes",
+                t,
+                readOnly,
+              )}
               describedBy={refusedFor("first_response_target_minutes")}
               onCommit={(minutes) =>
                 update.mutate({ first_response_target_minutes: minutes })

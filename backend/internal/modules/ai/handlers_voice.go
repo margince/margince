@@ -18,6 +18,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -28,6 +29,9 @@ import (
 // transport). The BudgetPolicy is compose-injected — the seat-derived
 // pool joins identity's tables, which this module never reaches.
 type Handlers struct {
+	// locks reports the settings a boot source sets on each settings response;
+	// nil leaves the field out.
+	locks  func(surface []config.Any) *[]crmcontracts.SettingLock
 	voice  *VoiceStore
 	meter  *Meter
 	budget BudgetPolicy

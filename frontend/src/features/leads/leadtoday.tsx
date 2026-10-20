@@ -9,7 +9,7 @@ import type { components } from "../../api/schema";
 import { formatDateAbbrev } from "../../format/format";
 import { daysPast } from "../../format/lateness";
 import type { Locale, Translator } from "../../i18n";
-import { TodoRow } from "../../screens/record360";
+import { TodoRow } from "../records/record360";
 
 type Lead = components["schemas"]["Lead"];
 

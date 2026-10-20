@@ -416,6 +416,9 @@ func resolveValuePredicate(spec reportSpec, name, value string) (boundExpr, erro
 			Allowed: allowedPredicateNames(spec),
 		}
 	}
+	if err := filterDomain(spec, expr).Admits(name, value); err != nil {
+		return boundExpr{}, err
+	}
 	return boundExpr{field: name, expr: expr, value: value}, nil
 }
 

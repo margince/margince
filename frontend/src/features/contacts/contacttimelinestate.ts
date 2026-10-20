@@ -12,7 +12,7 @@ import {
   type SectionState,
   sectionState,
 } from "../../design-system/surfacestate";
-import type { RecordChronology } from "../../screens/recordchronology";
+import type { RecordChronology } from "../records/recordchronology";
 
 type Contact360 = components["schemas"]["Contact360"];
 

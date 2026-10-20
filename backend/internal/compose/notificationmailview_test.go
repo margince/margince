@@ -15,7 +15,7 @@ func TestNoticeWordsCannotForgeMailStructure(t *testing.T) {
 	notice := notices.Notice{Subject: "Quota reached\nFrom: finance@example.test", Body: "First line\nSubject: another message"}
 	words := mailcopy.For("en")
 	subject := notificationMailSubject(notice, words)
-	body := notificationMailBody(notice, "https://example.test", words)
+	body := notificationMessage(notice, "https://example.test", words).Text
 	if strings.ContainsAny(subject, "\r\n") {
 		t.Fatal("subject contains an injected header")
 	}

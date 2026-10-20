@@ -48,6 +48,7 @@ func prepareRoutineDigest(ctx context.Context, pool *pgxpool.Pool, user ids.UUID
 		return part, err
 	}
 	worker := newNotificationDigestWorker(pool, NotificationMailConfig{}, nil)
+	worker.now = func() time.Time { return now }
 	part.lines, err = worker.readDigestLines(ctx, ids.From[ids.UserKind](user), part.window)
 	return part, err
 }

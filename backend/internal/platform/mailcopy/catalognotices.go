@@ -19,24 +19,18 @@ func noticeLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.NoticeSLABody },
 		"A lead's first response is overdue; its escalation task is on your list.",
 		"Die erste Antwort auf einen Lead ist überfällig; die Eskalationsaufgabe steht auf deiner Liste.",
-		"Phản hồi đầu tiên cho một khách hàng tiềm năng đã quá hạn; công việc leo thang nằm trong danh sách của bạn.")
+		"Phản hồi đầu tiên cho một lead đã quá hạn; công việc leo thang nằm trong danh sách của bạn.")
 	line(func(c *Copy) *string { return &c.NoticeBacklogSubject },
-		"Your captured mail is waiting on the classifier",
-		"Deine erfasste Mail wartet auf die Klassifizierung",
-		"Thư đã thu của bạn đang chờ bộ phân loại")
+		"Some captured emails are not yet available to your team",
+		"Einige erfasste E-Mails sind für dein Team noch nicht verfügbar",
+		"Một số email đã nhận chưa được hiển thị cho nhóm")
 	// The count leads as a label rather than a quantity in a sentence.
 	//
 	// One waiting decision is reachable, because the seats query counts and
 	// groups with no lower bound. A sentence would read "1 sender decisions".
 	// Vietnamese does not inflect for number and reads naturally either way.
 	line(func(c *Copy) *string { return &c.NoticeBacklogBody },
-		"Sender decisions waiting without an answer: %d. Mail stays withheld from "+
-			"your colleagues while this lasts — nothing is lost, and it clears on its own "+
-			"once the classifier answers again.",
-		"Entscheidungen zu Absendeadressen ohne Antwort: %d. E-Mails bleiben den anderen "+
-			"Teammitgliedern vorenthalten, solange das anhält. Es geht nichts verloren, und es löst "+
-			"sich von selbst, sobald die Klassifizierung wieder antwortet.",
-		"%d quyết định về người gửi đang chờ mà chưa có câu trả lời. Thư vẫn được giữ lại, "+
-			"không cho đồng nghiệp của bạn thấy, trong thời gian này — không có gì bị mất, "+
-			"và tình trạng này tự hết khi bộ phân loại trả lời lại.")
+		"Senders awaiting review: %d. Your team cannot see these messages yet. The checks determine which messages can be shared with your team.",
+		"Absender mit ausstehender Prüfung: %d. Dein Team kann diese Nachrichten noch nicht sehen. Nach der Prüfung zeigt Margince die Nachrichten an, die für dein Team freigegeben sind.",
+		"Người gửi đang chờ kiểm tra: %d. Nhóm chưa thể xem các thư này. Việc kiểm tra xác định thư nào có thể được chia sẻ với nhóm.")
 }

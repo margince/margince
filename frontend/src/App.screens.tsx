@@ -14,7 +14,7 @@ import { composedScreens, findExtension, unitTitle } from "./lib/extensions";
 import { navigate } from "./lib/router";
 
 // Static imports are what a first paint needs: the shell, the auth surfaces and
-// the router. screens/onboarding is static too, since the shell calls its
+// the router. features/onboarding/onboarding is static too, since the shell calls its
 // company probe. A module imported statically anywhere lands in the entry chunk
 // whatever a dynamic import says, so splitting it costs a round-trip for nothing.
 // Every route chunk, registered as it is declared. A screen is split so the
@@ -100,7 +100,7 @@ export const LeadsScreen = lazy(
 
 export const ProjectScreen = lazy(
   routed(() =>
-    import("./screens/project360").then((m) => ({
+    import("./features/projects/project360").then((m) => ({
       default: m.ProjectScreen,
     })),
   ),
@@ -108,7 +108,7 @@ export const ProjectScreen = lazy(
 
 export const ProjectsScreen = lazy(
   routed(() =>
-    import("./screens/projects").then((m) => ({
+    import("./features/projects/projects").then((m) => ({
       default: m.ProjectsScreen,
     })),
   ),
@@ -146,7 +146,9 @@ export const CompanyScreen = lazy(
 
 export const PartnersScreen = lazy(
   routed(() =>
-    import("./screens/partners").then((m) => ({ default: m.PartnersScreen })),
+    import("./features/projects/partners").then((m) => ({
+      default: m.PartnersScreen,
+    })),
   ),
 );
 
@@ -228,7 +230,9 @@ export const TagResultScreen = lazy(() =>
 
 export const SearchRoute = lazy(
   routed(() =>
-    import("./screens/search").then((m) => ({ default: m.SearchRoute })),
+    import("./features/voice-knowledge/search").then((m) => ({
+      default: m.SearchRoute,
+    })),
   ),
 );
 
@@ -240,7 +244,9 @@ export const SettingsScreen = lazy(
 
 const ShareScreen = lazy(
   routed(() =>
-    import("./screens/share").then((m) => ({ default: m.ShareScreen })),
+    import("./features/records/share").then((m) => ({
+      default: m.ShareScreen,
+    })),
   ),
 );
 

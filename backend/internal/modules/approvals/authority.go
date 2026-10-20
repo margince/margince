@@ -406,29 +406,31 @@ func decidable(ctx context.Context, tx pgx.Tx, p principal.Principal, a row) (bo
 // absent with invisible, and a predicate that raised for the one and answered
 // for the other would leak which it was.
 func (s *Service) PendingDecidableBy(ctx context.Context, id ids.ApprovalID) (bool, error) {
+	var could bool
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		could, err = s.pendingDecidable(ctx, tx, id)
+		return err
+	})
+	return could, err
+}
+
+func (s *Service) pendingDecidable(ctx context.Context, tx pgx.Tx, id ids.ApprovalID) (bool, error) {
 	if err := actingForAHuman(ctx); err != nil {
 		return false, err
 	}
 	p, _ := principal.Actor(ctx)
-	var could bool
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		a, err := get(ctx, tx, id)
-		if errors.Is(err, apperrors.ErrNotFound) {
-			return nil
-		}
-		if err != nil {
-			return err
-		}
-		if a.effectiveStatus(s.now()) != statusPending {
-			return nil
-		}
-		could, err = decidable(ctx, tx, p, a)
-		return err
-	})
+	a, err := get(ctx, tx, id)
+	if errors.Is(err, apperrors.ErrNotFound) {
+		return false, nil
+	}
 	if err != nil {
 		return false, err
 	}
-	return could, nil
+	if !a.PendingAt(s.now()) {
+		return false, nil
+	}
+	return decidable(ctx, tx, p, a)
 }
 
 func requireDecisionGrants(p principal.Principal, a row) error {

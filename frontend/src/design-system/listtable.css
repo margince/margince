@@ -834,17 +834,28 @@
   background: var(--bgHover);
 }
 
-/* Compact tightens the row, so the chips in it come down to match: a 28px mark
- * against a 20px row is what makes one row taller than its neighbours.
+/* A chip comes down to 20px wherever a 28px mark would make its row taller
+ * than its neighbours: every cell of a compact table, and a chip beside a value
+ * (an owner, an employer) after the identity cell at either density.
  *
- * This is the ONE avatar size a prop cannot carry — density is the table's
- * decision and the chip arrives already built from a caller's cell renderer,
- * which knows nothing about it. It is also the only place a chip is drawn below
- * `Avatar`'s smallest rung: the scale starts at `sm`, so this 20 belongs to the
- * dense table and to nothing else. */
-.lt-table.dense .avatar {
+ * This is the ONE avatar size a prop cannot carry — the row height is the
+ * table's decision and the chip arrives already built from a caller's cell
+ * renderer, which knows nothing about it. It is also the only place a chip is
+ * drawn below `Avatar`'s smallest rung: the scale starts at `sm`, so this 20
+ * belongs to the table and to nothing else. */
+.lt-table.dense .avatar,
+.lt-table td:not(.lt-identity) .avatar {
   width: 20px;
   height: 20px;
+}
+
+/* The value beside such a chip ends in an ellipsis, as a bare value does: the
+ * cell's own `text-overflow` never reaches the text of a flex item. */
+.lt-table td:not(.lt-identity) .avatar-row > :not(.avatar) {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Compact: the rows tighten, the type does not. Shrinking the text too would

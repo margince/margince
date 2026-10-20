@@ -6,7 +6,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { viewerZone } from "../format/timezone";
-import { LocaleProvider } from "../i18n";
+import { type Locale, LocaleProvider } from "../i18n";
 
 afterEach(cleanup);
 
@@ -53,4 +53,99 @@ describe("commitment review", () => {
     );
     expect(container.textContent).toBe("");
   });
+});
+
+it.each([
+  {
+    locale: "en",
+    outcome: "semantic_completed",
+    text: "The source describes work already done. No new task was created.",
+  },
+  {
+    locale: "de",
+    outcome: "semantic_completed",
+    text: "Die Quelle beschreibt bereits erledigte Arbeit. Es wurde keine neue Aufgabe erstellt.",
+  },
+  {
+    locale: "vi",
+    outcome: "semantic_completed",
+    text: "Nguồn mô tả công việc đã làm xong. Không tạo việc mới.",
+  },
+  {
+    locale: "en",
+    outcome: "semantic_conditional",
+    text: "The commitment depends on a condition that has not been met.",
+  },
+  {
+    locale: "de",
+    outcome: "semantic_conditional",
+    text: "Die Zusage hängt von einer noch nicht erfüllten Bedingung ab.",
+  },
+  {
+    locale: "vi",
+    outcome: "semantic_conditional",
+    text: "Cam kết phụ thuộc vào một điều kiện chưa được đáp ứng.",
+  },
+  {
+    locale: "en",
+    outcome: "semantic_optional",
+    text: "This is an offer, not an agreed commitment.",
+  },
+  {
+    locale: "en",
+    outcome: "semantic_request",
+    text: "This asks for work that nobody has agreed to do.",
+  },
+  {
+    locale: "en",
+    outcome: "semantic_unclear",
+    text: "The source does not establish an open commitment.",
+  },
+] satisfies { locale: Locale; outcome: string; text: string }[])(
+  "explains $outcome in $locale",
+  async ({ locale, outcome, text }) => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <LocaleProvider initial={locale}>
+        <CommitmentReview
+          zone={viewerZone()}
+          decisions={[{ ...decision, outcome }]}
+        />
+      </LocaleProvider>,
+    );
+    const summary = container.querySelector("summary");
+    if (!summary) throw new Error("Review disclosure is missing");
+    await user.click(summary);
+    expect(screen.getByText(text)).not.toBeNull();
+    expect(screen.getByText(decision.source_quote)).not.toBeNull();
+    expect(screen.queryByRole("button", { name: /create task/i })).toBeNull();
+  },
+);
+
+it("keeps the condition and deadline words visible without inventing a date", async () => {
+  const user = userEvent.setup();
+  const { container } = render(
+    <LocaleProvider initial="en">
+      <CommitmentReview
+        zone={viewerZone()}
+        decisions={[
+          {
+            ...decision,
+            outcome: "semantic_conditional",
+            meaning: {
+              state: "conditional",
+              condition: "if the buyer agrees",
+              deadline_precision: "range",
+              deadline_quote: "next week",
+            },
+          },
+        ]}
+      />
+    </LocaleProvider>,
+  );
+  const summary = container.querySelector("summary");
+  if (!summary) throw new Error("Review disclosure is missing");
+  await user.click(summary);
+  expect(screen.getByText("Condition: if the buyer agrees")).not.toBeNull();
+  expect(screen.getByText("Stated deadline: next week")).not.toBeNull();
 });

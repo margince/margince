@@ -13,9 +13,9 @@ import { ifMatch, requireVersion } from "../api/version";
 import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { useToast } from "../design-system/toast";
+import { ArchiveAction } from "../features/records/archive";
 import { useT } from "../i18n";
 import { unwrap } from "../lib/problem";
-import { ArchiveAction } from "./archive";
 
 type Pipeline = components["schemas"]["Pipeline"];
 

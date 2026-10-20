@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/reporting"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -26,10 +26,7 @@ func TestReportingFailureKeepsItsWrittenLanguageAndRetryIntent(t *testing.T) {
 	} {
 		t.Run(tc.language, func(t *testing.T) {
 			f := reportingBusiness(t)
-			config := settings.New(f.env.Pool, settings.NewRegistry(identity.BaseLanguage))
-			if err := settings.Set(f.human, config, identity.BaseLanguage, tc.language); err != nil {
-				t.Fatal(err)
-			}
+			integration.SetBaseLanguage(f.human, t, f.env.Pool, tc.language)
 			catalog, err := f.service.Catalog(f.human)
 			if err != nil {
 				t.Fatal(err)
@@ -51,9 +48,7 @@ func TestReportingFailureKeepsItsWrittenLanguageAndRetryIntent(t *testing.T) {
 			if err := failed.Sweep(principal.SystemActing(f.human, "system:language-proof")); err != nil {
 				t.Fatal(err)
 			}
-			if err := settings.Set(f.human, config, identity.BaseLanguage, "en"); err != nil {
-				t.Fatal(err)
-			}
+			integration.SetBaseLanguage(f.human, t, f.env.Pool, "en")
 			current, err := f.service.GetExecution(f.human, ids.UUID(run.Id))
 			if err != nil {
 				t.Fatal(err)
@@ -72,10 +67,7 @@ func TestUnconfiguredReportingFrameworkUsesRecordLanguage(t *testing.T) {
 		t.Run(tc.language, func(t *testing.T) {
 			env := setupForecast(t)
 			ctx := reportingActor(env)
-			config := settings.New(env.Pool, settings.NewRegistry(identity.BaseLanguage))
-			if err := settings.Set(ctx, config, identity.BaseLanguage, tc.language); err != nil {
-				t.Fatal(err)
-			}
+			integration.SetBaseLanguage(ctx, t, env.Pool, tc.language)
 			service := newReportingService(env.Pool, func() time.Time { return time.Date(2026, 8, 1, 12, 0, 0, 0, time.UTC) })
 			framework, err := service.GetFramework(ctx)
 			if err != nil {
@@ -94,10 +86,7 @@ func TestReportingCatchUpKeepsItsWrittenLanguage(t *testing.T) {
 	} {
 		t.Run(tc.language, func(t *testing.T) {
 			f := reportingBusiness(t)
-			config := settings.New(f.env.Pool, settings.NewRegistry(identity.BaseLanguage))
-			if err := settings.Set(f.human, config, identity.BaseLanguage, tc.language); err != nil {
-				t.Fatal(err)
-			}
+			integration.SetBaseLanguage(f.human, t, f.env.Pool, tc.language)
 			if _, err := f.env.owner.Exec(t.Context(), `INSERT INTO retention_policy(object_type,retain_days,action,enabled) VALUES('report_edition',730,'erase',true)`); err != nil {
 				t.Fatal(err)
 			}
@@ -113,9 +102,7 @@ func TestReportingCatchUpKeepsItsWrittenLanguage(t *testing.T) {
 			if err := f.service.Sweep(f.writer); err != nil {
 				t.Fatal(err)
 			}
-			if err := settings.Set(f.human, config, identity.BaseLanguage, "en"); err != nil {
-				t.Fatal(err)
-			}
+			integration.SetBaseLanguage(f.human, t, f.env.Pool, "en")
 			runs, err := f.service.ListExecutions(f.human, ids.UUID(report.Id), nil, 30)
 			if err != nil {
 				t.Fatal(err)

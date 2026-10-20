@@ -1,0 +1,996 @@
+/** @vitest-environment happy-dom */
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  cleanup,
+  render as rtlRender,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
+import { useReducer } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  ASYNC_UTIL_TIMEOUT_MS,
+  SLOWEST_MEASURED_TEST_MS,
+} from "../../../../vitest.budget";
+import type { components } from "../../../api/schema";
+import { LocaleProvider } from "../../../i18n";
+import { en } from "../../../i18n/en";
+import type { ConversationState } from "./conversation-machine";
+import {
+  conversationReducer,
+  initialConversationState,
+} from "./conversation-machine";
+import { run } from "./test-fixtures";
+import { VoiceAct } from "./voice-act";
+
+type CorpusPreview = components["schemas"]["VoiceCorpusPreviewResult"];
+type CorpusSummary = components["schemas"]["VoiceCorpusSummary"];
+type IngestStats = components["schemas"]["VoiceIngestStats"];
+
+// The two build cases below narrate a poll, so each raises two of its waiters
+// to 4000ms to outlast it. A test may spend the SUM of its waiters' budgets
+// without any one of them failing, and the heavier of the two spends 12000ms —
+// past the suite's own ceiling, which is derived for tests that wait at the
+// default. So they state their own, the way read-conclusion.test.tsx and
+// onboarding-restore.test.tsx already do: the raised waiters, the defaults
+// beside them, and the SAME measured allowance for the work between them that
+// the suite ceiling uses, so the two rest on one measurement rather than on a
+// round number picked here. Without it the test fails while every waiter in it
+// is still inside its budget, and the failure names the test rather than the
+// poll that was slow (issue 1144).
+const POLL_WAITER_MS = 4000;
+// The count a dropped file produces is rendered at the END of a chain — read
+// the file, parse it, POST /sources, take the summary back, re-render — and
+// the default async-util timeout covers a render, not a round trip. Under the
+// sharded suite that chain outran 1000ms and the failure read as "Unable to
+// find an element with the text: 900 words", which is the count being late
+// rather than wrong: the panel is mounted in the dump, the number is simply
+// not there yet. Given the poll's allowance for the same reason the polls have
+// it — the assertion is about the VALUE, and what it waits on is somebody
+// else's latency.
+const INGEST_WAITER_MS = POLL_WAITER_MS;
+const BUILD_TEST_MS =
+  POLL_WAITER_MS * 2 + ASYNC_UTIL_TIMEOUT_MS * 4 + SLOWEST_MEASURED_TEST_MS;
+
+const PROFILE_ID = "018f3a1b-0000-7000-8000-0000000000d1";
+const BUILD_IDS = [
+  "018f3a1b-0000-7000-8000-0000000000e1",
+  "018f3a1b-0000-7000-8000-0000000000e2",
+];
+
+function summaryOf(totalWords: number): CorpusSummary {
+  return {
+    total_words: totalWords,
+    target_words: 30000,
+    maturity: "collecting",
+    quality_band: totalWords >= 800 ? "good" : "thin",
+    source_count: 1,
+    register_words: { spoken: totalWords },
+  };
+}
+
+const conversationalPreview: CorpusPreview = {
+  detected_format: "vtt",
+  total_words: 5400,
+  speakers: [
+    { label: "Speaker 1", turns: 12, words: 1240 },
+    { label: "Speaker 2", turns: 14, words: 4160 },
+  ],
+  unattributed_words: 0,
+  ingestible_as_transcript: true,
+};
+
+const unattributedPreview: CorpusPreview = {
+  detected_format: "vtt",
+  total_words: 5400,
+  speakers: [],
+  unattributed_words: 5400,
+  ingestible_as_transcript: false,
+};
+
+const documentPreview: CorpusPreview = {
+  detected_format: "txt",
+  total_words: 900,
+  speakers: [],
+  unattributed_words: 900,
+  ingestible_as_transcript: false,
+};
+
+const transcriptStats: IngestStats = {
+  input_words: 5400,
+  kept_words: 1240,
+  kept_turns: 12,
+  discarded_turns: 14,
+  speakers_seen: ["Speaker 1", "Speaker 2"],
+};
+
+const documentStats: IngestStats = {
+  input_words: 900,
+  kept_words: 900,
+  kept_turns: 1,
+  discarded_turns: 0,
+  speakers_seen: [],
+};
+
+// Build poll rows: only the fields the hook reads; the stub serves them as
+// plain JSON exactly like the server would.
+// What the server sends when an installation has no AI provider bound: the
+// one sentence that separates "open a setting" from "try again", and the
+// reason a reader retried a build that could never succeed.
+const UNCONFIGURED_DETAIL =
+  "Voice building is unavailable until an AI provider is configured: the offline stand-in model answered instead. Open Settings → AI, bind each tier to a vendor and add that vendor's key under AI models → Providers, then build again.";
+
+type BuildRow = {
+  id: string;
+  status: string;
+  stage: string | null;
+  /** The server's own words about a terminal outcome. Optional here exactly
+   * as it is on the wire — absent is what a build with nothing to add sends,
+   * and the screen must read correctly either way. */
+  status_detail?: string;
+};
+
+const candidateVersion = {
+  profile_version: 3,
+  status: "candidate",
+  model_name: "test-model",
+  profile_json: {
+    inference: { identity_summary: "Direct, concrete, writes as I." },
+  },
+  stats_json: { word_count: 1240 },
+};
+
+// A version carrying every optional field parseVoiceInsights reads — the
+// result scene's own structure (the sample card, the measured dimensions,
+// the reading) is pinned against this, independent of the parser's own
+// tests.
+const richVersion = {
+  profile_version: 5,
+  status: "active",
+  model_name: "test-model",
+  profile_json: {
+    inference: {
+      identity_summary: "Direct and warm.",
+      thinking_pattern: "Leads with the ask, then the context.",
+      signature_moves: [
+        { move: "Opens with 'Hey'", quote: "Hey Jordan," },
+        { move: "Closes with Cheers", quote: "Cheers, Alex" },
+      ],
+      avoid: ["Corporate jargon", "Em dashes"],
+    },
+    sample_drafts: [
+      {
+        subject: "Following up on Tuesday",
+        body: "Hey Jordan, just circling back on this.",
+        voice_score: 0.9,
+      },
+      {
+        subject: "Quick nudge",
+        body: "Hey Jordan, any update on your end?",
+        voice_score: 0.8,
+      },
+    ],
+    guidance: { next_best: "Add two more sent emails." },
+  },
+  stats_json: { word_count: 4200, mean_sentence_words: 9.5, sample_count: 4 },
+};
+
+type IngestFixture = {
+  stats: IngestStats;
+  summary: CorpusSummary;
+  /** Response latency, to force out-of-order settlement in tests. */
+  delayMs?: number;
+};
+
+type StubOptions = {
+  preview?: CorpusPreview;
+  /** Ingest responses in order: each carries its stats + resulting summary. */
+  ingests?: readonly IngestFixture[];
+  /** Ingest responses keyed by source_label; wins over the ordered list. */
+  ingestsBySource?: Readonly<Record<string, IngestFixture>>;
+  /** Poll snapshots per build id, consumed one per GET (last one repeats). */
+  builds?: Readonly<Record<string, BuildRow[]>>;
+  /** Error status for the build poll GET (resilience tests). */
+  buildPollStatus?: number;
+  /** RFC 7807 body + status the build POST is refused with, for the cases
+   * about what a refused start is allowed to say on the collect scene. */
+  buildStartRefusal?: Readonly<{ body: unknown; status: number }>;
+  /** The built version the versions GET returns; defaults to the thin
+   * candidateVersion fixture most tests never look past. */
+  version?: unknown;
+};
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    globalThis.setTimeout(resolve, ms);
+  });
+}
+
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+function stubApi(options: StubOptions = {}) {
+  const calls: Request[] = [];
+  let ingestIndex = 0;
+  let buildIndex = 0;
+  const buildPolls = new Map<string, BuildRow[]>(
+    Object.entries(options.builds ?? {}),
+  );
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (request: Request) => {
+      calls.push(request);
+      const path = new URL(request.url).pathname;
+      if (path.endsWith("/ai/profile")) {
+        return jsonResponse({
+          name: "Margince",
+          kind: "ai",
+          state: "configured",
+          inference_mode: "cloud",
+          providers: ["gemini"],
+          configured_models: [
+            {
+              tier: "cheap_cloud",
+              provider: "gemini",
+              model: "gemini-3.5-flash",
+            },
+          ],
+        });
+      }
+      if (path.endsWith("/voice-profiles") && request.method === "GET") {
+        return jsonResponse({
+          data: [{ id: PROFILE_ID }],
+          page: { next_cursor: null },
+        });
+      }
+      if (path.endsWith("/sources/preview")) {
+        return jsonResponse(options.preview ?? documentPreview);
+      }
+      if (path.endsWith("/sources") && request.method === "POST") {
+        const body = (await request.clone().json()) as Record<string, unknown>;
+        const label =
+          typeof body.source_label === "string" ? body.source_label : "";
+        const bySource = options.ingestsBySource?.[label];
+        const ingest = bySource ?? (options.ingests ?? [])[ingestIndex];
+        if (!ingest) {
+          throw new Error("unexpected ingest: no fixture left");
+        }
+        ingestIndex += 1;
+        if (ingest.delayMs !== undefined) {
+          await delay(ingest.delayMs);
+        }
+        return jsonResponse(
+          {
+            source: { id: `source-${ingestIndex}` },
+            summary: ingest.summary,
+            ingest_stats: ingest.stats,
+          },
+          201,
+        );
+      }
+      if (path.endsWith("/builds") && request.method === "POST") {
+        const refusal = options.buildStartRefusal;
+        if (refusal !== undefined) {
+          return jsonResponse(refusal.body, refusal.status);
+        }
+        const id = BUILD_IDS[buildIndex];
+        buildIndex += 1;
+        return jsonResponse({ id, status: "queued", stage: null }, 202);
+      }
+      if (path.includes("/builds/") && request.method === "GET") {
+        if (options.buildPollStatus !== undefined) {
+          return jsonResponse(
+            { detail: "build fetch failed" },
+            options.buildPollStatus,
+          );
+        }
+        const buildId = path.slice(path.lastIndexOf("/") + 1);
+        const polls = buildPolls.get(buildId) ?? [];
+        const row = polls.length > 1 ? polls.shift() : polls[0];
+        if (!row) {
+          throw new Error(`unstubbed build poll: ${buildId}`);
+        }
+        return jsonResponse(row);
+      }
+      if (path.endsWith("/versions") && request.method === "GET") {
+        return jsonResponse({
+          data: [options.version ?? candidateVersion],
+          page: { next_cursor: null },
+        });
+      }
+      throw new Error(`unstubbed request: ${request.method} ${request.url}`);
+    }),
+  );
+  return calls;
+}
+
+function collectingState(): ConversationState {
+  return { ...initialConversationState, act: "voice", phase: "vo.collecting" };
+}
+
+function VoiceHarness({ initial }: Readonly<{ initial: ConversationState }>) {
+  const [state, dispatch] = useReducer(conversationReducer, initial);
+  return <VoiceAct state={state} dispatch={dispatch} />;
+}
+
+function render(ui: ReactNode) {
+  return rtlRender(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <LocaleProvider initial="en">{ui}</LocaleProvider>
+    </QueryClientProvider>,
+  );
+}
+
+async function uploadFile(name: string, content: string) {
+  const input = document.querySelector<HTMLInputElement>('input[type="file"]');
+  expect(input).not.toBeNull();
+  if (input) {
+    await userEvent.upload(
+      input,
+      new File([content], name, { type: "text/plain" }),
+    );
+  }
+}
+
+const testdata = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "..",
+  "..",
+  "screens",
+  "testdata",
+);
+
+// A drop on the window itself, where the hint promises one lands anywhere.
+function dropOnWindow(files: File[]) {
+  const drop = new Event("drop", { bubbles: true, cancelable: true });
+  Object.defineProperty(drop, "dataTransfer", {
+    value: { types: ["Files"], files },
+  });
+  window.dispatchEvent(drop);
+}
+
+// Path-suffix matching so "/sources" never also counts "/sources/preview".
+function requestsTo(calls: Request[], path: string, method: string) {
+  return calls.filter(
+    (request) =>
+      new URL(request.url).pathname.endsWith(path) && request.method === method,
+  );
+}
+
+beforeEach(() => {
+  vi.stubGlobal("scrollTo", vi.fn());
+});
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
+
+describe("the conversational voice act", () => {
+  it("asks the speaker question for a conversational file and ingests with the chosen speaker_label", async () => {
+    const calls = stubApi({
+      preview: conversationalPreview,
+      ingests: [{ stats: transcriptStats, summary: summaryOf(1240) }],
+    });
+    render(<VoiceHarness initial={collectingState()} />);
+
+    await uploadFile("call.vtt", "WEBVTT transcript content");
+
+    // The decision is the whole work surface, not a rail card: the question
+    // and its server-derived speaker options render there.
+    expect(
+      await screen.findByText(/Which one is you\? Only your own words count/),
+    ).toBeTruthy();
+    expect(screen.getByText("words: 1,240 · turns: 12")).toBeTruthy();
+    expect(screen.getByText("words: 4,160 · turns: 14")).toBeTruthy();
+
+    await userEvent.click(screen.getByRole("radio", { name: /Speaker 1/ }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Use this speaker" }),
+    );
+
+    await waitFor(() => {
+      expect(requestsTo(calls, "/sources", "POST").length).toBe(1);
+    });
+    const body = (await requestsTo(calls, "/sources", "POST")[0]
+      .clone()
+      .json()) as Record<string, unknown>;
+    expect(body.format).toBe("transcript");
+    expect(body.speaker_label).toBe("Speaker 1");
+    expect(body.register).toBe("spoken");
+
+    // The server's kept-of-total stats land on the collect scene's own
+    // sources list, once — never a second copy of the same fact in the rail.
+    // Both figures are word COUNTS, so they carry the reader's own grouping
+    // (en-GB here) rather than a bare digit run.
+    expect(await screen.findByText(/Kept 1,240 of 5,400 words/)).toBeTruthy();
+  });
+
+  it("ingests a document directly and reacts with the server word count", async () => {
+    const calls = stubApi({
+      preview: documentPreview,
+      ingests: [{ stats: documentStats, summary: summaryOf(900) }],
+    });
+    render(<VoiceHarness initial={collectingState()} />);
+
+    await uploadFile("notes.md", "Plain prose I wrote myself.");
+
+    // The server's word count lands on the collect scene's own sources
+    // list, not as a second bubble in the rail.
+    expect(
+      await screen.findByText("900 words", {}, { timeout: INGEST_WAITER_MS }),
+    ).toBeTruthy();
+    const body = (await requestsTo(calls, "/sources", "POST")[0]
+      .clone()
+      .json()) as Record<string, unknown>;
+    expect(body.format).toBe("text");
+    expect(body.speaker_label).toBeNull();
+    // No speaker question was ever asked for single-author prose.
+    expect(screen.queryByText(/Which one is you/)).toBeNull();
+  });
+
+  it("accepts a drop anywhere in the window — composer, artifact, gaps included — and neutralizes the browser default", async () => {
+    const calls = stubApi({
+      preview: documentPreview,
+      ingests: [{ stats: documentStats, summary: summaryOf(900) }],
+    });
+    render(<VoiceHarness initial={collectingState()} />);
+
+    // The drop lands on window, NOT on the thread div: the hint promises
+    // "anywhere in this conversation", and an unhandled drop would navigate
+    // the browser to the file, destroying the onboarding session.
+    const drop = new Event("drop", { bubbles: true, cancelable: true });
+    Object.defineProperty(drop, "dataTransfer", {
+      value: {
+        types: ["Files"],
+        files: [
+          new File(["Plain prose I wrote myself."], "notes.md", {
+            type: "text/plain",
+          }),
+        ],
+      },
+    });
+    window.dispatchEvent(drop);
+
+    expect(drop.defaultPrevented).toBe(true);
+    expect(
+      await screen.findByText("900 words", {}, { timeout: INGEST_WAITER_MS }),
+    ).toBeTruthy();
+    expect(requestsTo(calls, "/sources", "POST").length).toBe(1);
+
+    // A text-selection drag is NOT claimed: the composer's native
+    // drag-to-insert must keep working.
+    const textDrag = new Event("drop", { bubbles: true, cancelable: true });
+    Object.defineProperty(textDrag, "dataTransfer", {
+      value: { types: ["text/plain"], files: [] },
+    });
+    window.dispatchEvent(textDrag);
+    expect(textDrag.defaultPrevented).toBe(false);
+  });
+
+  it("neutralizes a stray drop outside the collecting phases without ingesting", () => {
+    const calls = stubApi({});
+    render(
+      <VoiceHarness
+        initial={{
+          ...initialConversationState,
+          act: "voice",
+          phase: "vo.skipped",
+        }}
+      />,
+    );
+
+    const drop = new Event("drop", { bubbles: true, cancelable: true });
+    Object.defineProperty(drop, "dataTransfer", {
+      value: { types: ["Files"], files: [new File(["text"], "stray.txt")] },
+    });
+    window.dispatchEvent(drop);
+
+    expect(drop.defaultPrevented).toBe(true);
+    expect(requestsTo(calls, "/sources", "POST").length).toBe(0);
+  });
+
+  // The board is the only surface left: with no rail thread, a drop that went
+  // nowhere has to be answered where the reader is looking, and the answer
+  // has to say which formats WOULD have worked.
+  it("names a dropped file it cannot read on the board, with the formats it takes, and ingests nothing", async () => {
+    const calls = stubApi({});
+    render(<VoiceHarness initial={collectingState()} />);
+
+    dropOnWindow([new File(["binary"], "photo.png", { type: "image/png" })]);
+
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toBe(
+      "I cannot read photo.png. Supported formats: .txt, .md, .pdf, .docx, .vtt, .srt, .json.",
+    );
+    expect(requestsTo(calls, "/sources/preview", "POST").length).toBe(0);
+    expect(requestsTo(calls, "/sources", "POST").length).toBe(0);
+  });
+
+  it("takes a dropped PDF in as its text, on the same wire a text file uses", async () => {
+    const calls = stubApi({
+      preview: documentPreview,
+      ingests: [{ stats: documentStats, summary: summaryOf(900) }],
+    });
+    render(<VoiceHarness initial={collectingState()} />);
+
+    dropOnWindow([
+      new File([readFileSync(join(testdata, "proposal.pdf"))], "proposal.pdf", {
+        type: "application/pdf",
+      }),
+    ]);
+
+    expect(
+      await screen.findByText("900 words", {}, { timeout: INGEST_WAITER_MS }),
+    ).toBeTruthy();
+    const ingest = requestsTo(calls, "/sources", "POST");
+    expect(ingest.length).toBe(1);
+    const body = (await ingest[0].clone().json()) as Record<string, unknown>;
+    expect(body.format).toBe("text");
+    expect(body.source_label).toBe("proposal.pdf");
+    expect(body.content).toContain("Here is the proposal we discussed.");
+  });
+
+  it("refuses an unattributed transcript honestly and counts nothing", async () => {
+    const calls = stubApi({ preview: unattributedPreview });
+    render(<VoiceHarness initial={collectingState()} />);
+
+    await uploadFile("raw.vtt", "unlabelled transcript text");
+
+    expect(
+      await screen.findByText(
+        /I cannot tell which words are yours, so none were counted/,
+      ),
+    ).toBeTruthy();
+    expect(requestsTo(calls, "/sources", "POST").length).toBe(0);
+    expect(screen.queryByText(/words kept/)).toBeNull();
+  });
+
+  // The scene shows the build action from the start and states its
+  // precondition beside it: an affordance that appears out of nowhere at 800
+  // words is one nobody could plan for. Enabled is what the floor gates.
+  it("enables the build only at the server floor of 800 words", async () => {
+    stubApi({
+      preview: documentPreview,
+      ingests: [
+        { stats: documentStats, summary: summaryOf(500) },
+        { stats: documentStats, summary: summaryOf(820) },
+      ],
+    });
+    render(<VoiceHarness initial={collectingState()} />);
+
+    await uploadFile("one.md", "First document.");
+    expect(
+      await screen.findByText(
+        "500 of 800 words",
+        {},
+        { timeout: INGEST_WAITER_MS },
+      ),
+    ).toBeTruthy();
+    // Below the floor the button still presses: the press names the floor
+    // on the rail and starts nothing.
+    await userEvent.click(
+      screen.getByRole("button", { name: /Build my voice profile/ }),
+    );
+    expect((await screen.findByRole("alert")).textContent).toContain("800");
+
+    await uploadFile("two.md", "Second document.");
+    // At the floor the reason is gone with the block it named.
+    await waitFor(() => {
+      expect(screen.queryByRole("alert")).toBeNull();
+    });
+    expect(screen.queryByText("500 of 800 words")).toBeNull();
+  });
+
+  it(
+    "narrates build stages and lands the succeeded result card with the candidate note",
+    async () => {
+      stubApi({
+        preview: documentPreview,
+        ingests: [{ stats: documentStats, summary: summaryOf(820) }],
+        builds: {
+          [BUILD_IDS[0]]: [
+            { id: BUILD_IDS[0], status: "running", stage: "extract" },
+            { id: BUILD_IDS[0], status: "succeeded", stage: null },
+          ],
+        },
+      });
+      render(<VoiceHarness initial={collectingState()} />);
+
+      await uploadFile("one.md", "Enough material.");
+      await userEvent.click(
+        await screen.findByRole("button", { name: /Build my voice profile/ }),
+      );
+
+      expect(
+        await screen.findByText(/Extracting your writing patterns/, undefined, {
+          timeout: 4000,
+        }),
+      ).toBeTruthy();
+      expect(
+        await screen.findByText(/This is your voice profile\./, undefined, {
+          timeout: 4000,
+        }),
+      ).toBeTruthy();
+      expect(
+        await screen.findByText(/needs your review before it goes live/),
+      ).toBeTruthy();
+      expect(await screen.findByText(/Direct, concrete/)).toBeTruthy();
+    },
+    BUILD_TEST_MS,
+  );
+
+  it(
+    "offers a retry after a failed build and a second build proceeds",
+    async () => {
+      const calls = stubApi({
+        preview: documentPreview,
+        ingests: [{ stats: documentStats, summary: summaryOf(820) }],
+        builds: {
+          [BUILD_IDS[0]]: [
+            {
+              id: BUILD_IDS[0],
+              status: "failed",
+              stage: null,
+              status_detail: UNCONFIGURED_DETAIL,
+            },
+          ],
+          [BUILD_IDS[1]]: [
+            { id: BUILD_IDS[1], status: "succeeded", stage: null },
+          ],
+        },
+      });
+      render(<VoiceHarness initial={collectingState()} />);
+
+      await uploadFile("one.md", "Enough material.");
+      await userEvent.click(
+        await screen.findByRole("button", { name: /Build my voice profile/ }),
+      );
+
+      expect(
+        await screen.findByText(
+          en["ob.conv.voice.continueFailedStatus"],
+          undefined,
+          {
+            timeout: 4000,
+          },
+        ),
+      ).toBeTruthy();
+      // The headline is the same for every broken build, so what the reader
+      // acts on is the server's sentence under it. Without this the screen
+      // says only "the build did not finish" and the one actionable fact —
+      // that no provider is configured — never reaches them.
+      expect(await screen.findByText(UNCONFIGURED_DETAIL)).toBeTruthy();
+
+      await userEvent.click(
+        screen.getByRole("button", { name: /Retry build/ }),
+      );
+
+      expect(
+        await screen.findByText(/This is your voice profile\./, undefined, {
+          timeout: 4000,
+        }),
+      ).toBeTruthy();
+      expect(requestsTo(calls, "/builds", "POST").length).toBe(2);
+    },
+    BUILD_TEST_MS,
+  );
+
+  it("keeps the newest-by-request-order summary when ingest responses settle out of order", async () => {
+    stubApi({
+      preview: documentPreview,
+      // The first upload's response is held back past the second's: the
+      // stale 500-word summary settles last and must not roll the meter
+      // (or the build gate) back below the floor.
+      ingestsBySource: {
+        "one.md": {
+          stats: documentStats,
+          summary: summaryOf(500),
+          delayMs: 150,
+        },
+        "two.md": { stats: documentStats, summary: summaryOf(820) },
+      },
+    });
+    render(<VoiceHarness initial={collectingState()} />);
+
+    await uploadFile("one.md", "First document.");
+    await uploadFile("two.md", "Second document.");
+
+    // Both sources land in the scene's own list regardless of settlement
+    // order — the rail carries neither reaction.
+    await waitFor(() => {
+      expect(screen.getAllByText("900 words").length).toBe(2);
+    });
+    // The one-time floor-reached announcement echoes this same sentence into
+    // a second, visually-hidden node, so the visible line is queried by its
+    // own class rather than by text (which would now match both).
+    await waitFor(() => {
+      expect(document.querySelector(".ob-voice-meter-line")?.textContent).toBe(
+        "820 words: enough to build. More words improve it.",
+      );
+    });
+    expect(
+      await screen.findByRole("button", { name: /Build my voice profile/ }),
+    ).toBeTruthy();
+    expect(screen.queryByText(/I need at least 800/)).toBeNull();
+    expect(screen.queryByText("500 of 800 words")).toBeNull();
+  });
+
+  it("concludes as failed with the retry chip when the build poll keeps erroring", async () => {
+    stubApi({
+      preview: documentPreview,
+      ingests: [{ stats: documentStats, summary: summaryOf(820) }],
+      buildPollStatus: 500,
+    });
+    render(<VoiceHarness initial={collectingState()} />);
+
+    await uploadFile("one.md", "Enough material.");
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Build my voice profile/ }),
+    );
+
+    // The act never sits silent in vo.building: a poll that keeps erroring
+    // still lands on the one failed outcome the surface knows how to show,
+    // with the retry chip back on offer.
+    expect(
+      await screen.findByText(en["ob.conv.voice.continueFailedStatus"]),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Retry build/ })).toBeTruthy();
+  });
+
+  // What a refused build start may say on the collect scene. The two halves
+  // of the same rule: the server's own sentence is the best thing a reader
+  // can be given, and a failure the server put no words to is answered in
+  // the reader's language rather than in whatever the exception happened to
+  // carry.
+  it("shows the server's own refusal on the collect scene when the build cannot start", async () => {
+    stubApi({
+      preview: documentPreview,
+      ingests: [{ stats: documentStats, summary: summaryOf(820) }],
+      buildStartRefusal: {
+        status: 422,
+        body: {
+          code: "validation_error",
+          detail: "at least 800 eligible own-authored words are required",
+          details: {
+            errors: [
+              {
+                field: "corpus",
+                code: "invalid",
+                message:
+                  "at least 800 eligible own-authored words are required",
+              },
+            ],
+          },
+        },
+      },
+    });
+    render(<VoiceHarness initial={collectingState()} />);
+
+    await uploadFile("one.md", "Enough material.");
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Build my voice profile/ }),
+    );
+
+    expect(
+      await screen.findByText(
+        "at least 800 eligible own-authored words are required",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("answers a refusal carrying no words for a reader with the shared line", async () => {
+    stubApi({
+      preview: documentPreview,
+      ingests: [{ stats: documentStats, summary: summaryOf(820) }],
+      buildStartRefusal: { status: 502, body: { status: 502 } },
+    });
+    render(<VoiceHarness initial={collectingState()} />);
+
+    await uploadFile("one.md", "Enough material.");
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Build my voice profile/ }),
+    );
+
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toBe("The request failed. No cause reported.");
+  });
+
+  it("keeps late events from a superseded build inert after the retry", () => {
+    // Machine-level correlation, reusing the shared fold helper: once build
+    // two is the active run, build one's late terminal changes nothing.
+    const retried = run(
+      [
+        { type: "BUILD_STARTED", buildId: BUILD_IDS[0] },
+        {
+          type: "BUILD_TERMINAL",
+          buildId: BUILD_IDS[0],
+          status: "failed",
+          detail: null,
+        },
+        { type: "BUILD_STARTED", buildId: BUILD_IDS[1] },
+      ],
+      collectingState(),
+    );
+    expect(retried.phase).toBe("vo.building");
+
+    const afterStale = conversationReducer(retried, {
+      type: "BUILD_TERMINAL",
+      buildId: BUILD_IDS[0],
+      status: "succeeded",
+      detail: null,
+    });
+    expect(afterStale).toBe(retried);
+  });
+});
+
+// The rule this act follows: the work happens on the surface, the rail only
+// narrates. These pin the three places that rule used to break.
+describe("the voice act's surface/rail split", () => {
+  // There is no rail to keep these off any more — OnboardingStage is one
+  // room, not a board beside a conversation thread — so what these cases
+  // pin now is only the positive half: the decision, and every action that
+  // used to have a rail copy to disagree with, lives on the one surface.
+  it("keeps the speaker decision on the board, radio options and all", async () => {
+    stubApi({
+      preview: conversationalPreview,
+      ingests: [{ stats: transcriptStats, summary: summaryOf(1240) }],
+    });
+    render(<VoiceHarness initial={collectingState()} />);
+
+    await uploadFile("call.vtt", "WEBVTT transcript content");
+    await screen.findByText(/Which one is you\? Only your own words count/);
+
+    expect(screen.getAllByRole("radio").length).toBeGreaterThan(0);
+  });
+
+  it("renders a skipped voice act's Continue action on the surface's own pinned bar", () => {
+    stubApi({});
+    render(
+      <VoiceHarness
+        initial={{
+          ...initialConversationState,
+          act: "voice",
+          phase: "vo.skipped",
+        }}
+      />,
+    );
+
+    const bar = document.querySelector(".ob-stage-acts");
+    expect(bar).not.toBeNull();
+    expect(
+      within(bar as HTMLElement).getByRole("button", { name: "Continue" }),
+    ).toBeTruthy();
+  });
+
+  it("renders the succeeded result as structured sections, each from the same parsed data", async () => {
+    stubApi({
+      preview: documentPreview,
+      ingests: [{ stats: documentStats, summary: summaryOf(820) }],
+      builds: {
+        [BUILD_IDS[0]]: [
+          { id: BUILD_IDS[0], status: "succeeded", stage: null },
+        ],
+      },
+    });
+    render(<VoiceHarness initial={collectingState()} />);
+
+    await uploadFile("one.md", "Enough material.");
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Build my voice profile/ }),
+    );
+
+    // Every section is its own bordered card, and the confirm action sits
+    // on the stage's own rail beside them.
+    const identity = await screen.findByText(/Direct, concrete/);
+    expect(identity.closest(".ob-voice-result-card")).not.toBeNull();
+    const bar = document.querySelector(".ob-stage-acts");
+    expect(bar).not.toBeNull();
+    expect(
+      within(bar as HTMLElement).getByRole("button", {
+        name: "That is me",
+      }),
+    ).toBeTruthy();
+  });
+
+  it("shows the sample as a real draft and cycles to another one already in hand", async () => {
+    stubApi({
+      preview: documentPreview,
+      ingests: [{ stats: documentStats, summary: summaryOf(820) }],
+      builds: {
+        [BUILD_IDS[0]]: [
+          { id: BUILD_IDS[0], status: "succeeded", stage: null },
+        ],
+      },
+      version: richVersion,
+    });
+    render(<VoiceHarness initial={collectingState()} />);
+
+    await uploadFile("one.md", "Enough material.");
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Build my voice profile/ }),
+    );
+
+    expect(await screen.findByText("Following up on Tuesday")).toBeTruthy();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Another scenario" }),
+    );
+    expect(screen.getByText("Quick nudge")).toBeTruthy();
+    expect(screen.queryByText("Following up on Tuesday")).toBeNull();
+  });
+
+  it("measures only the dimension it actually scored, as a readout rather than a control", async () => {
+    stubApi({
+      preview: documentPreview,
+      ingests: [{ stats: documentStats, summary: summaryOf(820) }],
+      builds: {
+        [BUILD_IDS[0]]: [
+          { id: BUILD_IDS[0], status: "succeeded", stage: null },
+        ],
+      },
+      version: richVersion,
+    });
+    render(<VoiceHarness initial={collectingState()} />);
+
+    await uploadFile("one.md", "Enough material.");
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Build my voice profile/ }),
+    );
+
+    expect(await screen.findByText("Sentence length")).toBeTruthy();
+    expect(screen.getByText("Measured: 1")).toBeTruthy();
+    expect(screen.getByText("9.5 words per sentence on average.")).toBeTruthy();
+    // A readout, not a control: nothing here is focusable or draggable.
+    expect(document.querySelector(".ob-voice-dim-track input")).toBeNull();
+    expect(document.querySelector('[role="slider"]')).toBeNull();
+    // The reference's other four axes (formality, warmth, directness,
+    // vocabulary) have no server-measured equivalent, so none render.
+    expect(screen.queryByText("Formality")).toBeNull();
+  });
+
+  it("keeps the how-you-think, moves, avoid, and improvement sections beside the sample", async () => {
+    stubApi({
+      preview: documentPreview,
+      ingests: [{ stats: documentStats, summary: summaryOf(820) }],
+      builds: {
+        [BUILD_IDS[0]]: [
+          { id: BUILD_IDS[0], status: "succeeded", stage: null },
+        ],
+      },
+      version: richVersion,
+    });
+    render(<VoiceHarness initial={collectingState()} />);
+
+    await uploadFile("one.md", "Enough material.");
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Build my voice profile/ }),
+    );
+
+    expect(
+      await screen.findByText("Leads with the ask, then the context."),
+    ).toBeTruthy();
+    expect(screen.getByText("Hey Jordan,")).toBeTruthy();
+    expect(screen.getByText("Corporate jargon")).toBeTruthy();
+    expect(screen.getByText(/Add two more sent emails\./)).toBeTruthy();
+    // The sample card's own "why" line draws on the same move names, at a
+    // glance rather than in full.
+    expect(
+      screen.getByText(/Opens with 'Hey', Closes with Cheers/),
+    ).toBeTruthy();
+  });
+});

@@ -13,7 +13,7 @@ import (
 	"context"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/platform/config"
 )
 
 // StageAutopilotEnabled is the installation-wide answer to whether a stage
@@ -30,13 +30,16 @@ import (
 // the pipeline's rule and the rates, so flipping it off stops the next apply
 // rather than the one after. Read at staging instead, it would authorize a
 // move hours before that move happened.
-var StageAutopilotEnabled = settings.Define[bool](
-	"deals.stage_autopilot_enabled",
-	stageAutomationObject,
-	"update",
-	false,
-	nil, // a bool has two values and both mean something; nothing to validate
-).MachineryApplied() // the apply path reads it; no request carries it
+var StageAutopilotEnabled = config.DefineStored(config.Spec[bool]{
+	Key:     "deals.stage_autopilot_enabled",
+	Env:     "MARGINCE_DEALS_STAGE_AUTOPILOT_ENABLED",
+	Type:    config.Bool,
+	Default: config.Some(false),
+	Doc:     "Let a deal move to the next stage by itself where the rule of its stage allows it; off stops every automatic move.",
+}, config.Store{
+	RBACObject: stageAutomationObject, AuditVerb: settingsAuditVerb,
+	MachineryApplied: true, // the apply path reads it; no request carries it
+})
 
 // stageAutomationObject is the RBAC object gating stage automation's
 // governance. `pipeline`, because that is what a rule is about — the same
@@ -66,13 +69,16 @@ const stageAutomationObject = "pipeline"
 // Assessment, the receipt and Undo stay outside its reach on purpose. Switching
 // maintenance off stops NEW changes; it does not hide the changes already made
 // or take away a reader's ability to reverse one.
-var MaintenanceWritesEnabled = settings.Define[bool](
-	"deals.maintenance_writes_enabled",
-	maintenanceObject,
-	"update",
-	true,
-	nil, // a bool has two values and both mean something; nothing to validate
-).MachineryApplied() // the sweep reads it; no request carries it
+var MaintenanceWritesEnabled = config.DefineStored(config.Spec[bool]{
+	Key:     "deals.maintenance_writes_enabled",
+	Env:     "MARGINCE_DEALS_MAINTENANCE_WRITES_ENABLED",
+	Type:    config.Bool,
+	Default: config.Some(true),
+	Doc:     "Let the nightly close-date sweep write to a deal. Off stops every automatic write the sweep makes.",
+}, config.Store{
+	RBACObject: maintenanceObject, AuditVerb: settingsAuditVerb,
+	MachineryApplied: true, // the sweep reads it; no request carries it
+})
 
 // maintenanceObject is the RBAC object gating maintenance governance. `deal`,
 // because a deal is what the sweep writes — the grant that lets somebody update
@@ -87,25 +93,31 @@ const maintenanceObject = "deal"
 // the request, the queue and the criterion kind, and keeps every review
 // already recorded. It is read inside the advance transaction, so switching it
 // off releases a gated stage on the next move.
-var LegalReviewEnabled = settings.Define[bool](
-	"deals.legal_review_enabled",
-	"installation_settings",
-	"update",
-	true,
-	nil, // a bool has two values and both mean something; nothing to validate
-).MachineryApplied() // the advance gate reads it for whoever moves the deal
+var LegalReviewEnabled = config.DefineStored(config.Spec[bool]{
+	Key:     "deals.legal_review_enabled",
+	Env:     "MARGINCE_DEALS_LEGAL_REVIEW_ENABLED",
+	Type:    config.Bool,
+	Default: config.Some(true),
+	Doc:     "Let a deal be sent to legal for review, and let a legal_reviewed criterion hold a deal at its stage.",
+}, config.Store{
+	RBACObject: "installation_settings", AuditVerb: settingsAuditVerb,
+	MachineryApplied: true, // the advance gate reads it for whoever moves the deal
+})
+
+// settingsAuditVerb is the audit action every deals settings change records.
+const settingsAuditVerb = "update"
 
 // SetLegalReviewEnabled switches legal review for the installation. An admin's
 // act alone: ops holds installation_settings.update for the wiring it runs,
 // and whether deals wait for legal is not wiring.
-func SetLegalReviewEnabled(ctx context.Context, store *settings.Store, on bool) error {
+func SetLegalReviewEnabled(ctx context.Context, cfg *config.Config, on bool) error {
 	if err := auth.RequireAdmin(ctx); err != nil {
 		return err
 	}
-	return settings.Set(ctx, store, LegalReviewEnabled, on)
+	return config.Save(ctx, cfg, LegalReviewEnabled, on)
 }
 
-// Definitions is the deals module's contribution to the settings catalog.
-func Definitions() []settings.Definition {
-	return []settings.Definition{StageAutopilotEnabled, MaintenanceWritesEnabled, LegalReviewEnabled}
+// ConfigSettings are this module's settings in the configuration registry.
+func ConfigSettings() []config.Any {
+	return []config.Any{StageAutopilotEnabled, MaintenanceWritesEnabled, LegalReviewEnabled}
 }

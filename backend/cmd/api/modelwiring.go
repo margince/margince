@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose"
+	ps "github.com/margince/margince/backend/internal/compose/programsettings"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/config"
@@ -57,17 +58,20 @@ type modelPathSpec struct {
 	// make it. The node travels as a value through this field instead.
 	seeds           deployconfig.Seeds
 	capturePayloads bool
+	// keys resolve the binding's credentials; compose.RoutingKeys builds them.
+	keys config.Lookup
 }
 
 // modelPathSpecFrom gathers the model-path knobs from where each is declared:
 // the routing choice from the process flags, the capture posture from the
 // deployment config.
-func modelPathSpecFrom(cfg apiConfig, deployCfg deployconfig.Config) modelPathSpec {
+func modelPathSpecFrom(cfg apiConfig, bootstrap deployconfig.Bootstrap) modelPathSpec {
 	return modelPathSpec{
 		routingPath:     cfg.routingPath,
 		fakeBrain:       cfg.fakeBrain,
-		seeds:           deployCfg.Seeds,
-		capturePayloads: deployCfg.AI.CapturePayloads,
+		seeds:           bootstrap.Seeds,
+		capturePayloads: config.Val(cfg.settings, ps.CapturePayloads),
+		keys:            compose.RoutingKeys(cfg.settings),
 	}
 }
 
@@ -84,7 +88,7 @@ func resolveModelPath(ctx context.Context, spec modelPathSpec, pool *pgxpool.Poo
 	if err := compose.SeedRoutingIfUnset(ctx, pool, spec.seeds.AIRouting, log); err != nil {
 		return nil, "", ai.PublicProfile{}, "", err
 	}
-	cfg, err := compose.ResolveRouting(ctx, pool, spec.routingPath, config.FromOS, log)
+	cfg, err := compose.ResolveRouting(ctx, pool, spec.routingPath, spec.keys, log)
 	if err != nil {
 		return nil, "", ai.PublicProfile{}, "", err
 	}

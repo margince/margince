@@ -13,7 +13,6 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/platform/mailer"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -377,15 +376,9 @@ func (h Handlers) sendInvite(r *http.Request, email, rawToken string, inviter Id
 		return
 	}
 	link := passwordLink(h.passwordLinkBaseURL, rawToken)
-	words := h.mailCopy(r.Context())
-	intro := words.InviteIntro
-	if inviter.DisplayName != "" && inviter.WorkspaceName != "" {
-		intro = fmt.Sprintf(words.InviteBy, mailcopy.OneLine(inviter.DisplayName), mailcopy.OneLine(inviter.WorkspaceName))
-	}
-	body := intro + "\n\n" +
-		words.InviteAction + "\n\n  " + link + "\n\n" +
-		words.InviteIgnore
-	if err := mailer.SendLocalized(r.Context(), h.resetMailer, email, words.InviteSubject, body, string(words.Language)); err != nil {
+	words := h.mailCopy(r.Context(), email)
+	body := words.AccountMessage(true, inviter.DisplayName, inviter.WorkspaceName, link)
+	if err := mailer.SendProduct(r.Context(), h.resetMailer, email, words.InviteSubject, body); err != nil {
 		slog.Error("invite email failed", "err", err)
 	}
 }

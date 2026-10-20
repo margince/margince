@@ -1,0 +1,25 @@
+name: range_commitment_preserves_its_meaning_de
+task: signal_extract
+site: thread_events
+source: hand_authored
+sanitized_by: hand_authored/codex
+fixture:
+  - direction: outbound
+    subject: "Scope review"
+    sent: "2026-09-07"
+    body: "Mira: Ich schicke den überarbeiteten Leistungsumfang nächste Woche."
+expect:
+  outcome: accepted
+  answer:
+    - kind: commitment_made
+      message: 1
+      due_date: ""
+      meaning:
+        state: open
+        condition: ""
+        deadline_precision: range
+        deadline_quote: "nächste Woche"
+  judge: none
+  judge_none_reason: >
+    The definite promise remains actionable, but a range is not an exact due day.
+    The deterministic checks require the stated action set and exact deadline behavior.

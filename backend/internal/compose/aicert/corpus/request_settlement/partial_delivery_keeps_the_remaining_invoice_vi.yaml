@@ -1,0 +1,30 @@
+name: partial_delivery_keeps_the_remaining_invoice_vi
+task: request_settlement
+site: request_settle
+source: hand_authored
+sanitized_by: hand_authored/codex
+fixture:
+- messages:
+  - direction: inbound
+    subject: Documents
+    body: Vui lòng gửi báo giá đã sửa và hóa đơn.
+  - direction: outbound
+    subject: Documents
+    body: Báo giá đã sửa được đính kèm. Tôi sẽ gửi hóa đơn sau.
+- messages:
+  - direction: inbound
+    subject: Documents
+    body: Vui lòng gửi báo giá đã sửa và hóa đơn.
+  - direction: outbound
+    subject: Documents
+    body: Báo giá đã sửa và hóa đơn được đính kèm.
+expect:
+  outcome: accepted
+  answer:
+  - verdict: still_owed
+    remaining_names: invoice
+  - verdict: settled
+  judge: none
+  judge_none_reason: The first answer supplies only the quote and explicitly defers the invoice. The
+    remaining work must name the invoice in the configured English record language. The second supplies
+    both requested documents.

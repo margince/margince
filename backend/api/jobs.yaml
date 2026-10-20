@@ -999,6 +999,21 @@ kinds:
       loosening the cadence without amending the migration makes it a lie.
 
 
+  approval_notice_reconcile:
+    role: worker
+    go_type: ApprovalNoticeReconcileArgs
+    queue: default
+    timeout: 2m
+    max_attempts: 3
+    opts_owner: args
+    cadence: 5m
+    reason: >-
+      Clear pending-decision notices whose approval was withdrawn, replaced or
+      erased without a decision event. Each attempt reads at most 200 notices
+      and keeps its cursor in the job metadata before yielding. Pending rows
+      do not hide later notices. At the end of the scan the job completes, so
+      the next periodic pass starts from the beginning.
+
   # One job, not a dispatcher and a child (ADR-0103 §1): one indexed scan over
   # an installation-wide table, so there is nothing to fan out over.
   approval_expiry:
@@ -1024,8 +1039,6 @@ kinds:
       every row this pass did not reach is still due then. A backing-off row
       would only suppress that tick.
 
-  # One job, not a dispatcher and a child (ADR-0103 §1): one indexed scan over
-  # an installation-wide table, so there is nothing to fan out over.
   intro_expiry:
     role: worker
     go_type: IntroExpiryArgs

@@ -6,6 +6,7 @@ package reporting
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -59,6 +60,9 @@ func (s *Service) executeClaim(ctx context.Context, claim executionClaim) error 
 		}
 		evaluation, err := s.evaluateSelection(human, tx, selection, framework)
 		if err != nil {
+			return err
+		}
+		if err := requireEveryMetricCalculated(evaluation.Result); err != nil {
 			return err
 		}
 		if !evaluation.Result.Context.Interval.StartAt.Equal(run.Interval.StartAt) || !evaluation.Result.Context.Interval.EndAt.Equal(run.Interval.EndAt) {
@@ -198,4 +202,16 @@ func (s *Service) failClaim(ctx context.Context, claim executionClaim, cause err
 		}
 		return s.recordScheduleResult(ctx, tx, claim, status, reason)
 	})
+}
+
+// requireEveryMetricCalculated refuses to publish an edition with a metric the
+// database failed to calculate. The run retries instead: an edition is kept,
+// and a passing failure captured in it would outlast the failure.
+func requireEveryMetricCalculated(evaluation crmcontracts.ReportingEvaluation) error {
+	for _, metric := range evaluation.Metrics {
+		if metric.Coverage.Status == crmcontracts.ReportingStatusFailed {
+			return fmt.Errorf("reporting: metric %s could not be calculated, so no edition is published", metric.Id)
+		}
+	}
+	return nil
 }

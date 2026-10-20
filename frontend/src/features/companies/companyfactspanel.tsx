@@ -21,7 +21,7 @@ import {
   factCategoryLabelKey,
   factFieldLabelKey,
   listFacts,
-} from "../../screens/factview";
+} from "../records/factview";
 import { FactRow } from "./companyfactrow";
 import { isTechnicalFact } from "./companytechnical";
 import "./company360.css";

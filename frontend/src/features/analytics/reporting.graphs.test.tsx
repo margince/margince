@@ -416,3 +416,176 @@ it("keeps the movement label readable in its evidence drawer", async () => {
   expect(await screen.findByText(/Reopened or archived/)).toBeInTheDocument();
   expect(screen.queryByText(/reopened_or_archived/)).not.toBeInTheDocument();
 });
+
+it("marks one failed chart and keeps drawing the others", () => {
+  installFetchStub(reportingStoryRoutes());
+  const baseline = render(
+    <StoryProviders>
+      <ReportingCharts
+        evaluation={reportingStoryEvaluation}
+        onEvidence={() => {}}
+      />
+    </StoryProviders>,
+  );
+  const figuresBefore = screen.getAllByRole("figure").length;
+  baseline.unmount();
+
+  const [first, ...others] = reportingStoryEvaluation.charts;
+  const evaluation = {
+    ...reportingStoryEvaluation,
+    charts: [
+      {
+        ...first,
+        points: [],
+        coverage: {
+          status: "failed",
+          withheld: false,
+          reason: "This figure could not be calculated just now.",
+        },
+      },
+      ...others,
+    ],
+  } satisfies typeof reportingStoryEvaluation;
+  render(
+    <StoryProviders>
+      <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
+    </StoryProviders>,
+  );
+  expect(screen.getAllByText("Could not be calculated")).toHaveLength(1);
+  expect(
+    screen.getByText("This figure could not be calculated just now."),
+  ).toBeInTheDocument();
+  expect(screen.getAllByRole("figure").length).toBeGreaterThanOrEqual(
+    figuresBefore - 1,
+  );
+});
+
+it("keeps the accepted-opportunities series when only the meetings reading failed", () => {
+  installFetchStub(reportingStoryRoutes(sdrEvaluation));
+  const evaluation = {
+    ...sdrEvaluation,
+    charts: sdrEvaluation.charts.map((chart) =>
+      chart.kind === "sdr_outcomes" && chart.metric === "meetings_held"
+        ? {
+            ...chart,
+            points: [],
+            coverage: { status: "failed", withheld: false },
+          }
+        : chart,
+    ),
+  } satisfies typeof sdrEvaluation;
+  render(
+    <StoryProviders>
+      <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
+    </StoryProviders>,
+  );
+  expect(screen.getAllByText("Could not be calculated").length).toBeGreaterThan(
+    0,
+  );
+  expect(screen.getAllByText(/Week 1/).length).toBeGreaterThan(0);
+});
+
+it("shows how many priced deals make each stage's value", () => {
+  installFetchStub(reportingStoryRoutes());
+  const evaluation = {
+    ...reportingStoryEvaluation,
+    charts: reportingStoryEvaluation.charts
+      .filter((chart) => chart.kind === "stage_distribution")
+      .map((chart) => ({
+        ...chart,
+        points: chart.points.map((point, index) => ({
+          ...point,
+          observations: index === 0 ? 1 : 7,
+        })),
+      })),
+  } satisfies typeof reportingStoryEvaluation;
+  render(
+    <StoryProviders>
+      <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
+    </StoryProviders>,
+  );
+  expect(
+    screen.getByRole("button", { name: /Discovery: .+ · 1 priced deal$/ }),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: /Proposal: .+ · 7 priced deals$/ }),
+  ).toBeInTheDocument();
+});
+
+function ownerChartEvaluation(withTargets: boolean) {
+  return {
+    ...reportingStoryEvaluation,
+    context: {
+      ...reportingStoryEvaluation.context,
+      evaluated_at: "2026-10-16T00:00:00Z",
+      target_interval: {
+        start_at: "2026-10-01T00:00:00Z",
+        end_at: "2026-10-31T00:00:00Z",
+      },
+    },
+    charts: reportingStoryEvaluation.charts
+      .filter(
+        (chart) =>
+          chart.kind === "owner_attainment" && chart.metric === "bookings_won",
+      )
+      .map((chart) => ({
+        ...chart,
+        points: chart.points.map((point) => ({
+          ...point,
+          target: withTargets ? 100_000 : undefined,
+        })),
+      })),
+  } satisfies typeof reportingStoryEvaluation;
+}
+
+it("says whom an owner chart credits and how much of the target period has passed", () => {
+  installFetchStub(reportingStoryRoutes());
+  render(
+    <StoryProviders>
+      <ReportingCharts
+        evaluation={ownerChartEvaluation(true)}
+        onEvidence={() => {}}
+      />
+    </StoryProviders>,
+  );
+  expect(
+    screen.getByText("Credited to each deal’s current owner"),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByText("50% of the target period has passed"),
+  ).toBeInTheDocument();
+});
+
+it("says nothing about the target period where no target applies to the chart", () => {
+  installFetchStub(reportingStoryRoutes());
+  render(
+    <StoryProviders>
+      <ReportingCharts
+        evaluation={ownerChartEvaluation(false)}
+        onEvidence={() => {}}
+      />
+    </StoryProviders>,
+  );
+  expect(screen.queryByText(/of the target period has passed/)).toBeNull();
+});
+
+it("credits a saved edition's sales to the owner it captured", () => {
+  installFetchStub(reportingStoryRoutes());
+  render(
+    <StoryProviders>
+      <ReportingCharts
+        evaluation={ownerChartEvaluation(true)}
+        editionId="e-1"
+        onEvidence={() => {}}
+      />
+    </StoryProviders>,
+  );
+  expect(
+    screen.getByText(
+      "Credited to each deal’s owner when this edition was captured",
+    ),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByText("Credited to each deal’s current owner"),
+  ).toBeNull();
+});

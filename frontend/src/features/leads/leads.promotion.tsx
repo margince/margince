@@ -11,7 +11,7 @@ import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { leadWriteKeys } from "../../lib/leadkeys";
 import { problemMessageOf, unwrap } from "../../lib/problem";
-import { useRecordHistory } from "../../screens/history";
+import { useRecordHistory } from "../records/history";
 import type { Lead } from "./leads";
 
 // The recorded trigger, as the outcome card names it. The wire token never

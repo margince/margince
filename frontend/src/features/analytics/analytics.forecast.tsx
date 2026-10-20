@@ -28,7 +28,11 @@ import { type Locale, useLocale, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { type AnalyticsSelection, writableScope } from "./analytics.context";
-import { LandingCard, SufficiencyCard } from "./analytics.forecast.landing";
+import {
+  LandingCard,
+  RecordsLandingCard,
+  SufficiencyCard,
+} from "./analytics.forecast.landing";
 import { ForecastReview } from "./analytics.forecast.review";
 import {
   FORECAST_PERIODS,
@@ -312,6 +316,13 @@ function ForecastAnswer({
           {readings.landing && (
             <LandingCard
               landing={readings.landing}
+              currency={currency}
+              locale={locale}
+            />
+          )}
+          {readings.landing?.system_minor != null && (
+            <RecordsLandingCard
+              systemMinor={readings.landing.system_minor}
               currency={currency}
               locale={locale}
             />

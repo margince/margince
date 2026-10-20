@@ -10,6 +10,9 @@ import (
 	"time"
 
 	"github.com/riverqueue/river"
+
+	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/config"
 )
 
 // periodicLog records what a schedule change asked of the runner, in order,
@@ -126,5 +129,18 @@ func TestApplyRetriesARefusedScheduleEvenOnceTheValueIsBack(t *testing.T) {
 	}
 	if len(runner.calls) != 0 {
 		t.Errorf("a schedule already back on the runner was moved again: %v", runner.calls)
+	}
+}
+
+// A worker falls back to this book when its first read fails. It still runs a
+// schedule a boot source sets, and the default for the others.
+func TestTheScheduleFallbackKeepsABootValue(t *testing.T) {
+	t.Parallel()
+	book := schedulesWithoutDatabase(bootConfigForTest(t, config.RoleWorker, "MARGINCE_INSTALLATION_TIME_SCAN_INTERVAL_SECONDS=120"))
+	if got := book.intervals[identity.TimeScanIntervalSeconds.Key()].get(); got != 2*time.Minute {
+		t.Errorf("the boot-set time scan runs every %s, want 2m0s", got)
+	}
+	if got := book.intervals[identity.CloseDateSweepIntervalSeconds.Key()].get(); got != 24*time.Hour {
+		t.Errorf("the close-date sweep, which no boot source sets, runs every %s, want its 24h default", got)
 	}
 }

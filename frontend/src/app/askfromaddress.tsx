@@ -21,7 +21,9 @@ import {
 // Lazy, because the dialog brings the markdown renderer with it and most
 // sessions never open one.
 const AskMarginceModal = lazy(() =>
-  import("../screens/corpusask").then((m) => ({ default: m.AskMarginceModal })),
+  import("../features/voice-knowledge/corpusask").then((m) => ({
+    default: m.AskMarginceModal,
+  })),
 );
 
 export function AskFromAddress() {

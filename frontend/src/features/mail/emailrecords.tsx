@@ -8,7 +8,7 @@
 // with, and not which account, deal or project it belongs to.
 
 import type { components } from "../../api/schema";
-import { RecordLinks } from "../../screens/recordlinks";
+import { RecordLinks } from "../records/recordlinks";
 
 type EmailPresentation = components["schemas"]["EmailPresentation"];
 

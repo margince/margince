@@ -1,3 +1,4 @@
+import type { components } from "../../api/schema";
 import { formatDate } from "../../format/format";
 import type { Locale, Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -6,6 +7,7 @@ import type {
   ResolvedDisplayField,
 } from "./approvaldisplay.types";
 import { humanizeKind } from "./approvalkind";
+import { commercialPreviewDisplay } from "./approvalpreview";
 import { commitmentResponsibility } from "./approvalresponsibility";
 
 // What a reader SEES of a staged proposal, per kind.
@@ -382,6 +384,8 @@ export function resolveDisplay(
   names: ReadonlyMap<string, string> = new Map(),
   requestedDecider?: string | null,
   assigneeInactive = false,
+  preview?: components["schemas"]["ApprovalPreview"],
+  locale: Locale = "en",
 ): readonly ResolvedDisplayField[] {
   const resolved = displayFields(kind).map((entry) => ({
     field: entry.field,
@@ -394,6 +398,13 @@ export function resolveDisplay(
     ),
     lead: entry.lead,
   }));
+  if (preview)
+    return [
+      ...resolved.filter(
+        (entry) => preview.state === "ready" && entry.lead && entry.value,
+      ),
+      ...commercialPreviewDisplay(preview, t, locale, formatDay),
+    ];
   if (kind === "commitment_task") {
     const due = resolved.find((entry) => entry.field === "due_date");
     if (due && due.value === null)

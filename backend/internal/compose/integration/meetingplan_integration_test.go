@@ -15,8 +15,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -165,10 +163,7 @@ func TestTheArcNamesNoConversationTheCallerMayNotRead(t *testing.T) {
 	for _, tc := range []struct{ language, prefix string }{{"en", "1 conversation"}, {"de", "Du darfst ein Gespräch"}, {"vi", "Bạn không có quyền đọc một cuộc trao đổi"}} {
 		t.Run(tc.language, func(t *testing.T) {
 			e := Setup(t)
-			store := settings.New(e.Pool, settings.NewRegistry(identity.BaseLanguage))
-			if err := settings.Set(e.Admin(), store, identity.BaseLanguage, tc.language); err != nil {
-				t.Fatal(err)
-			}
+			SetBaseLanguage(e.Admin(), t, e.Pool, tc.language)
 			owner := OwnerConn(t)
 			attendee := e.SeedContact(t, "Ana Roth", &e.Rep1)
 

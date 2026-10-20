@@ -17,7 +17,7 @@ const certReportedParticipants = `[
  {"key":"ines","kind":"contact","role":"to","name":"Ines"}]`
 
 func TestMailCertificationRejectsAValidButWrongPromiser(t *testing.T) {
-	fixture := json.RawMessage(`[{"direction":"outbound","body":"You agreed to pay by Friday.","participants":` + certReportedParticipants + `}]`)
+	fixture := json.RawMessage(`[{"direction":"outbound","body":"You agreed to pay.","participants":` + certReportedParticipants + `}]`)
 	prepared, err := (signalExtractCases{}).Prepare(fixture, json.RawMessage(`[{"kind":"commitment_made","message":1,"promiser":"ines"}]`))
 	if err != nil {
 		t.Fatal(err)
@@ -28,7 +28,7 @@ func TestMailCertificationRejectsAValidButWrongPromiser(t *testing.T) {
 	}
 	message := c.thread.Messages[0]
 	for _, party := range message.Parties {
-		reply := fmt.Sprintf(`{"events":[{"kind":"commitment_made","message_id":%q,"summary":"Pay","quote":"You agreed to pay by Friday.","due_date":"","promiser_ref":%q,"confidence":0.95}]}`, message.ID.String(), party.Ref)
+		reply := fmt.Sprintf(`{"events":[{"kind":"commitment_made","message_id":%q,"summary":"Pay","quote":"You agreed to pay.","due_date":"","promiser_ref":%q,"confidence":0.95,"commitment":{"state":"open","condition":"","deadline_precision":"none","deadline_quote":""}}]}`, message.ID.String(), party.Ref)
 		trace, err := prepared.Run(t.Context(), fixedCompleter{reply: reply})
 		if err != nil {
 			t.Fatal(err)
@@ -48,7 +48,7 @@ func TestMailCertificationRejectsAValidButWrongPromiser(t *testing.T) {
 }
 
 func TestTranscriptCertificationRejectsAValidButWrongPromiser(t *testing.T) {
-	fixture := json.RawMessage(`{"lines":["Mira: Ines agreed to pay by Friday."],"participants":` + certReportedParticipants + `}`)
+	fixture := json.RawMessage(`{"lines":["Mira: Ines agreed to pay."],"participants":` + certReportedParticipants + `}`)
 	prepared, err := (transcriptProposeCases{}).Prepare(fixture, json.RawMessage(`[{"line":1,"promiser":"ines"}]`))
 	if err != nil {
 		t.Fatal(err)
@@ -58,7 +58,7 @@ func TestTranscriptCertificationRejectsAValidButWrongPromiser(t *testing.T) {
 		t.Fatal("unexpected transcript certification case")
 	}
 	for _, party := range c.parties {
-		reply := fmt.Sprintf(`{"proposals":[{"summary":"Pay","owner":"Ines","promiser_ref":%q,"due_date":"","source_lines":[1],"confidence":0.95}]}`, party.Ref)
+		reply := fmt.Sprintf(`{"proposals":[{"summary":"Pay","owner":"Ines","promiser_ref":%q,"due_date":"","source_lines":[1],"confidence":0.95,"commitment":{"state":"open","condition":"","deadline_precision":"none","deadline_quote":""}}]}`, party.Ref)
 		trace, err := prepared.Run(t.Context(), fixedCompleter{reply: reply})
 		if err != nil {
 			t.Fatal(err)
@@ -80,8 +80,12 @@ func TestTranscriptCertificationRejectsAValidButWrongPromiser(t *testing.T) {
 func TestTranscriptCertificationGradesDatesExactly(t *testing.T) {
 	for _, wanted := range []string{"", "2026-03-06", "2026-03-11"} {
 		for _, answer := range []string{"", "2026-03-06", "2026-03-11"} {
-			c := transcriptProposeCase{lines: []string{"Mira: I will send pricing."}, expected: []transcriptProposeExpectation{{Line: 1, DueDate: wanted}}}
-			trace := aitasks.Trace{Output: fmt.Sprintf(`{"proposals":[{"summary":"Send pricing","owner":"Mira","promiser_ref":"","due_date":%q,"source_lines":[1],"confidence":0.95}]}`, answer)}
+			source, precision, quote := "Mira: I will send pricing.", "none", ""
+			if answer != "" {
+				source, precision, quote = "Mira: I will send pricing on "+answer+".", "day", answer
+			}
+			c := transcriptProposeCase{lines: []string{source}, expected: []transcriptProposeExpectation{{Line: 1, DueDate: wanted}}}
+			trace := aitasks.Trace{Output: fmt.Sprintf(`{"proposals":[{"summary":"Send pricing","owner":"Mira","promiser_ref":"","due_date":%q,"source_lines":[1],"confidence":0.95,"commitment":{"state":"open","condition":"","deadline_precision":%q,"deadline_quote":%q}}]}`, answer, precision, quote)}
 			got := c.Evaluate(trace)
 			if (got.Result == aitasks.OutcomeAccepted) != (answer == wanted) {
 				t.Fatalf("wanted date %q, answer %q: %+v", wanted, answer, got)

@@ -393,10 +393,9 @@ func assertListFiltering(t *testing.T, e *apptest.AppEnv) {
 		t.Fatalf("status=retired must include only the retired field: %+v", retiredOnly.Data)
 	}
 
-	// A DIFFERENT valid target object, not just any string: the object parameter
-	// is membership-checked against the modules/customfields FieldObjects list, so a non-target
-	// (`activity`, `relationship`) answers 422 and would prove nothing about
-	// filtering.
+	// A different valid target object, not just any string. The object parameter
+	// is checked against customfields.FieldObjects, so a non-target such as
+	// `relationship` answers 422 and would prove nothing about filtering.
 	var otherObject customFieldListWire
 	if s := e.Call(t, "GET", "/v1/custom-fields?object=company", nil, nil, &otherObject); s != http.StatusOK {
 		t.Fatalf("list other-object status = %d, want 200: %+v", s, otherObject)

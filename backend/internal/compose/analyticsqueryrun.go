@@ -53,8 +53,11 @@ type AnalyticsAnswer struct {
 func RunAnalyticsQuery(
 	ctx context.Context, tx pgx.Tx, q analyticsquery.Query, floor analyticsquery.Floor,
 ) (AnalyticsAnswer, error) {
-	schema := AnalyticsSchemaFor(ctx)
-	spec, ok := prebuiltReports[q.Entity]
+	schema, specs, err := AnalyticsSchemaIn(ctx, tx)
+	if err != nil {
+		return AnalyticsAnswer{}, err
+	}
+	spec, ok := specs[q.Entity]
 	if !ok {
 		// A name no catalog entry carries is judged by the caller's own
 		// derived vocabulary, so the refusal is Validate's — the one writer

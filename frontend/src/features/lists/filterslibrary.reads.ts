@@ -21,7 +21,7 @@ import {
   sortForReader,
   treeOf,
   withFound,
-} from "../../screens/library";
+} from "../voice-knowledge/library";
 import { LIBRARY_TYPES } from "./filtersaddress";
 import { filterSentence, useSentenceWords } from "./filtersentence";
 import { useAllSavedViews } from "./savedviews.queries";

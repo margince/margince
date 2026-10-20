@@ -19,7 +19,7 @@ Margince Settings puts its pages in these groups:
 - **Sales**: Pipelines, Stage automation, Lead handling, Acquisition sources, Outcome reviews, Responsibility roles, Fields, Tags, Products and offers.
 - **Data**: Capture rules, Integrations, Knowledge, Data import.
 - **AI**: AI usage, AI models, AI call log, Automations.
-- **Governance**: Privacy and retention, Audit log, System health, Extensions, Reset data.
+- **Governance**: Privacy and retention, Audit log, System health, [Configuration](configuration.md), Extensions, Reset data.
 
 You see only the pages your permissions open. The Reset data page appears only where the installation turns it on.
 
@@ -77,6 +77,15 @@ Only an administrator can change your role or permissions, in **Members**.
 Also called: settings missing, no access to settings, greyed out.
 
 The settings list down the side shows what you can change. A page where every control is closed to you is not in it, but you can still open it. Overview lists everything you can open, in the same groups as the side list, with **You** first. A page you can read and not change has a lock there, which says **Read-only** when you point at it. The page says so once at its top: "Your role cannot change these settings."
+
+### Why can't I change a setting?
+A setting is locked when whoever runs the installation set it outside the app. The control is turned off, and a line under it says where the value comes from. For the daily limit on **Capture rules**, it can read:
+- "Set by MARGINCE_CAPTURE_AUTO_ENRICH_DAILY_CAP (environment). Change it there."
+- "Set by MARGINCE_CAPTURE_AUTO_ENRICH_DAILY_CAP in .env.local. Change it there."
+- "Set by capture.auto_enrich_daily_cap in margince.yaml. Change it there."
+
+Ask whoever runs the installation to change it there, or to remove it so the app can change it again. The [Configuration](configuration.md) page lists every setting and where its value comes from.
+Also called: locked setting, greyed out setting, read-only field.
 
 ## Whose settings are you changing?
 

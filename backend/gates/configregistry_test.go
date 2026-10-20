@@ -1,0 +1,295 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+//gate:kind census H3
+
+package gates
+
+// Every setting declared in the tree is one some program loads. A setting no
+// registry holds is read by nothing: an operator sets it, and it does nothing.
+// The census parses the source rather than asking the registries, because a
+// declaration the registries miss is what it exists to find.
+
+import (
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"maps"
+	"slices"
+	"strconv"
+	"strings"
+	"testing"
+
+	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
+)
+
+const (
+	configImport   = "github.com/margince/margince/backend/internal/platform/config"
+	settingsImport = "github.com/margince/margince/backend/internal/platform/settings"
+	cliflagsImport = "github.com/margince/margince/backend/internal/platform/cliflags"
+)
+
+// declaredSetting is one package-level var a config.Define or DefineStored
+// call initialises.
+type declaredSetting struct{ pos, callPos, name, key string }
+
+type configCensus struct {
+	settings []declaredSetting
+	// strayCalls are Define or DefineStored calls that initialise no
+	// package-level var: a loop or a function, whose keys a census cannot read.
+	strayCalls    []string
+	defineCalls   []declaredSetting
+	cliflagsUsers []string
+	files         int
+}
+
+func TestEverySettingIsInSomeProgram(t *testing.T) {
+	t.Parallel()
+	census := takeConfigCensus(t)
+	if census.files == 0 || len(census.settings) == 0 {
+		t.Fatalf("read %d files and found %d settings — a census that finds nothing passes like a clean tree", census.files, len(census.settings))
+	}
+	registered := map[string]bool{}
+	for _, reg := range compose.ProgramRegistries() {
+		for _, s := range reg.All() {
+			registered[s.Key()] = true
+		}
+	}
+	declared := map[string]bool{}
+	for _, s := range census.settings {
+		switch {
+		case s.key == "":
+			t.Errorf("%s: %s declares its Key with an expression; write it as a string literal so this census can read it", s.pos, s.name)
+		case declared[s.key]:
+			t.Errorf("%s: %s declares key %s a second time", s.pos, s.name, s.key)
+		case !registered[s.key]:
+			t.Errorf("%s: %s (%s) is declared but no program registers it", s.pos, s.name, s.key)
+		}
+		declared[s.key] = true
+	}
+	for _, pos := range census.strayCalls {
+		t.Errorf("%s: config.Define or DefineStored outside a package-level var; declare each setting as one, with a literal Key, so this census can count it", pos)
+	}
+	// Both ways: a registered key no census declaration names came from a
+	// declaration this census cannot see.
+	for key := range registered {
+		if !declared[key] {
+			t.Errorf("%s is registered but declared where this census cannot read it", key)
+		}
+	}
+	for _, pos := range census.cliflagsUsers {
+		t.Errorf("%s: imports platform/cliflags, which is retired: declare a platform/config setting instead", pos)
+	}
+}
+
+// settings.Define is internal to platform/config; a module declares a stored
+// setting with config.DefineStored. A key still declared through settings.Define
+// is an exception this list names, with its reason. A listed key that is gone
+// fails too, so the list never outlives what it excuses.
+func TestEverySettingsDefineKeyIsANamedException(t *testing.T) {
+	t.Parallel()
+	declared := legacySettingKeys(t)
+	if len(declared) == 0 && len(settingsDefineExceptions) > 0 {
+		t.Fatal("found no settings.Define key while the exception list names some; the census stopped reading the tree")
+	}
+	for _, key := range slices.Sorted(maps.Keys(declared)) {
+		if _, listed := settingsDefineExceptions[key]; !listed {
+			t.Errorf("%s: %s is declared with settings.Define; declare it with config.DefineStored, "+
+				"or name it in settingsDefineExceptions with the reason it cannot be", declared[key], key)
+		}
+	}
+	for _, key := range slices.Sorted(maps.Keys(settingsDefineExceptions)) {
+		if _, still := declared[key]; !still {
+			t.Errorf("%s is listed in settingsDefineExceptions but nothing declares it with settings.Define any more; remove the line", key)
+		}
+	}
+}
+
+// legacySettingKeys are the keys declared through settings.Define, with where.
+// A source walk reads the literal keys. The settings catalog adds every key no
+// configuration registry declares, which catches a key spelled as a constant.
+func legacySettingKeys(t *testing.T) map[string]string {
+	t.Helper()
+	out := map[string]string{}
+	for _, call := range takeConfigCensus(t).defineCalls {
+		if call.key != "" {
+			out[call.key] = call.pos
+		}
+	}
+	stored := map[string]bool{}
+	for _, reg := range compose.ProgramRegistries() {
+		for _, s := range reg.All() {
+			stored[s.Key()] = s.Stored()
+		}
+	}
+	for _, s := range compose.SettingsCatalogForTest() {
+		if _, seen := out[s.Key]; !seen && !stored[s.Key] {
+			out[s.Key] = "the settings catalog"
+		}
+	}
+	return out
+}
+
+func takeConfigCensus(t *testing.T) configCensus {
+	t.Helper()
+	var census configCensus
+	fset := gatekit.SourceFileSet()
+	walkHandWrittenGoFiles(t, ".", func(path, text string) {
+		if strings.HasSuffix(path, "_test.go") || strings.HasPrefix(path, "internal/contracts/") {
+			return
+		}
+		file, err := parser.ParseFile(fset, path, text, parser.SkipObjectResolution)
+		if err != nil {
+			t.Fatalf("parsing %s: %v", path, err)
+		}
+		census.files++
+		names := importNames(t, file)
+		if _, ok := names[cliflagsImport]; ok {
+			census.cliflagsUsers = append(census.cliflagsUsers, path)
+		}
+		settings, stray := configDeclarations(file, names[configImport], fset.Position)
+		census.settings = append(census.settings, settings...)
+		census.strayCalls = append(census.strayCalls, stray...)
+		if settingsName, ok := names[settingsImport]; ok && !strings.HasPrefix(path, "internal/platform/config/") {
+			census.defineCalls = append(census.defineCalls, defineCalls(file, settingsName, fset.Position)...)
+		}
+	})
+	return census
+}
+
+// importNames maps each import path to the name the file uses for it.
+func importNames(t *testing.T, file *ast.File) map[string]string {
+	t.Helper()
+	out := map[string]string{}
+	for _, spec := range file.Imports {
+		path, err := strconv.Unquote(spec.Path.Value)
+		if err != nil {
+			t.Fatalf("an import path the parser accepted does not unquote: %v", err)
+		}
+		name := path[strings.LastIndex(path, "/")+1:]
+		if spec.Name != nil {
+			name = spec.Name.Name
+		}
+		out[path] = name
+	}
+	return out
+}
+
+// configDeclarations returns the file's package-level settings and the
+// position of every other Define or DefineStored call.
+func configDeclarations(file *ast.File, pkg string, position func(p token.Pos) token.Position) ([]declaredSetting, []string) {
+	settings := packageSettings(file, pkg, position)
+	if pkg == "" {
+		return settings, nil
+	}
+	initialisers := map[string]bool{}
+	for _, s := range settings {
+		initialisers[s.callPos] = true
+	}
+	var stray []string
+	ast.Inspect(file, func(n ast.Node) bool {
+		call, ok := n.(*ast.CallExpr)
+		if ok && callsFunc(call.Fun, pkg, "Define", "DefineStored") {
+			if pos := position(call.Pos()).String(); !initialisers[pos] {
+				stray = append(stray, pos)
+			}
+		}
+		return true
+	})
+	return settings, stray
+}
+
+// packageSettings are the file's package-level vars whose value is a call to
+// pkg.Define or pkg.DefineStored, with the Key their Spec literal spells.
+func packageSettings(file *ast.File, pkg string, position func(p token.Pos) token.Position) []declaredSetting {
+	if pkg == "" {
+		return nil
+	}
+	var out []declaredSetting
+	for _, decl := range file.Decls {
+		gen, ok := decl.(*ast.GenDecl)
+		if !ok || gen.Tok != token.VAR {
+			continue
+		}
+		for _, spec := range gen.Specs {
+			value, ok := spec.(*ast.ValueSpec)
+			if !ok {
+				continue
+			}
+			for i, expr := range value.Values {
+				call, ok := expr.(*ast.CallExpr)
+				if !ok || !callsFunc(call.Fun, pkg, "Define", "DefineStored") || len(call.Args) == 0 || i >= len(value.Names) {
+					continue
+				}
+				out = append(out, declaredSetting{
+					pos: position(value.Names[i].Pos()).String(), callPos: position(call.Pos()).String(),
+					name: value.Names[i].Name, key: specKey(call.Args[0]),
+				})
+			}
+		}
+	}
+	return out
+}
+
+// callsFunc matches pkg.Name and the instantiated pkg.Name[T].
+func callsFunc(fun ast.Expr, pkg string, names ...string) bool {
+	switch typed := fun.(type) {
+	case *ast.IndexExpr:
+		fun = typed.X
+	case *ast.IndexListExpr:
+		fun = typed.X
+	}
+	sel, ok := fun.(*ast.SelectorExpr)
+	if !ok {
+		return false
+	}
+	x, ok := sel.X.(*ast.Ident)
+	return ok && x.Name == pkg && slices.Contains(names, sel.Sel.Name)
+}
+
+// specKey is the Key a Spec composite literal spells, or "" when it is not a
+// string literal.
+func specKey(arg ast.Expr) string {
+	lit, ok := arg.(*ast.CompositeLit)
+	if !ok {
+		return ""
+	}
+	for _, element := range lit.Elts {
+		field, ok := element.(*ast.KeyValueExpr)
+		if !ok {
+			continue
+		}
+		if key, ok := field.Key.(*ast.Ident); !ok || key.Name != "Key" {
+			continue
+		}
+		if basic, ok := field.Value.(*ast.BasicLit); ok && basic.Kind == token.STRING {
+			value, err := strconv.Unquote(basic.Value)
+			if err == nil {
+				return value
+			}
+		}
+	}
+	return ""
+}
+
+// defineCalls are the file's settings.Define calls, each with its key when
+// the first argument is a string literal.
+func defineCalls(file *ast.File, settingsName string, position func(p token.Pos) token.Position) []declaredSetting {
+	var out []declaredSetting
+	ast.Inspect(file, func(n ast.Node) bool {
+		call, ok := n.(*ast.CallExpr)
+		if !ok || !callsFunc(call.Fun, settingsName, "Define") || len(call.Args) == 0 {
+			return true
+		}
+		found := declaredSetting{pos: position(call.Pos()).String()}
+		if lit, ok := call.Args[0].(*ast.BasicLit); ok && lit.Kind == token.STRING {
+			if key, err := strconv.Unquote(lit.Value); err == nil {
+				found.key = key
+			}
+		}
+		out = append(out, found)
+		return true
+	})
+	return out
+}

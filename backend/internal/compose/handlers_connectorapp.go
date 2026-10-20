@@ -15,9 +15,11 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/margince/margince/backend/internal/compose/programsettings"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -28,18 +30,15 @@ import (
 // this is the configuration that makes that possible.
 const connectorAppReadActor = "connector-app-read"
 
-// connectorAppComposition is what THIS process composed for one vendor, which is
-// half of what a read reports: the stored app wins and the environment is the
-// fallback, so a read that could see only the database reported "no app stored"
-// — and told the operator mail could not be connected — on installations where
-// it demonstrably could.
+// connectorAppComposition is what this process composed for one vendor, half
+// of what a read reports. The environment's app wins and locks the stored one.
+// A read of the database alone would describe an app no connect uses.
 type connectorAppComposition struct {
 	// envClientID is the app the DEPLOYMENT composed, empty when it composed
 	// none.
 	//
-	// The same reading GET /installation/setup already takes. The two are not
-	// two sources of truth for STORAGE: a write still lands in exactly one
-	// place, and this is one honest reading of a two-source resolution.
+	// The same reading GET /installation/setup already takes. A write lands in
+	// one place, and is refused while this is set.
 	envClientID string
 	// redirectURIs are the callback URLs an operator must register on the
 	// vendor's OAuth client, derived from the functions that BUILD them rather
@@ -108,7 +107,14 @@ func (h connectorAppHandlers) GetOauthApp(w http.ResponseWriter, r *http.Request
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, connectorAppView(p, status, h.composed[p]))
+	view := connectorAppView(p, status, h.composed[p])
+	locks := []crmcontracts.SettingLock{}
+	// Built here, not by Locks: a connector app is no registered setting.
+	if lock, ok := h.envLock(p); ok {
+		locks = append(locks, crmcontracts.SettingLock{Key: lock.Key, Origin: settingOrigin(lock.Origin)})
+	}
+	view.Locks = &locks
+	httperr.WriteJSON(w, http.StatusOK, view)
 }
 
 // SetOauthApp implements (PUT /installation/oauth-apps/{provider}).
@@ -123,6 +129,10 @@ func (h connectorAppHandlers) SetOauthApp(w http.ResponseWriter, r *http.Request
 	}
 	var body crmcontracts.ConnectorAppInput
 	if !httperr.Decode(w, r, &body) {
+		return
+	}
+	if err := h.locked(p); err != nil {
+		httperr.Write(w, r, err)
 		return
 	}
 	err := h.store.Set(r.Context(), p, body.ClientId, sent(body.ClientSecret), sent(body.Tenant))
@@ -140,6 +150,10 @@ func (h connectorAppHandlers) SetOauthApp(w http.ResponseWriter, r *http.Request
 func (h connectorAppHandlers) DeleteOauthApp(w http.ResponseWriter, r *http.Request, provider string) {
 	p, ok := h.ready(w, r, provider, principal.ActionUpdate)
 	if !ok {
+		return
+	}
+	if err := h.locked(p); err != nil {
+		httperr.Write(w, r, err)
 		return
 	}
 	if err := h.store.Remove(r.Context(), p); err != nil {
@@ -192,6 +206,40 @@ func (h connectorAppHandlers) ready(
 	return p, true
 }
 
+// envAppSettings are the boot settings each vendor's environment app is read
+// from, by the client id that names it.
+var envAppSettings = map[capture.AppProvider]struct {
+	key      string
+	clientID *config.Setting[string]
+}{
+	capture.AppProviderGoogle:    {key: capture.GoogleAppKey, clientID: programsettings.GmailClientID},
+	capture.AppProviderMicrosoft: {key: capture.MicrosoftAppKey, clientID: programsettings.GraphClientID},
+}
+
+// locked refuses a change to an app the deployment composed. That app is the
+// one every connect uses, so a stored one would be saved and never read. The
+// lock comes after the grant and the body, and before the value is judged.
+func (h connectorAppHandlers) locked(p capture.AppProvider) error {
+	if lock, ok := h.envLock(p); ok {
+		return lock
+	}
+	return nil
+}
+
+// envLock is the lock the deployment's app puts on the stored one, named by
+// the client id's source. A read reports it and a write is refused with it.
+func (h connectorAppHandlers) envLock(p capture.AppProvider) (config.LockedError, bool) {
+	if h.composed[p].envClientID == "" {
+		return config.LockedError{}, false
+	}
+	app := envAppSettings[p]
+	origin, set := loadedConfig().Locked(app.clientID.Key())
+	if !set {
+		origin = config.Origin{Source: config.SourceEnv, Name: app.clientID.Env()}
+	}
+	return config.LockedError{Key: app.key, Origin: origin}, true
+}
+
 // sent reads an omitted string field as empty.
 //
 // The write-only fields arrive as pointers because the schema marks
@@ -209,14 +257,13 @@ func sent(v *string) string {
 // connectorAppView answers WHICH app this installation will actually use, split
 // from the transport so the rule can be read and tested on its own.
 //
-// The stored app wins, exactly as it does at the moment of a connect, and the
-// environment is the fallback rather than an alternative — reporting anything
-// else would describe a resolution the connector does not perform.
+// The environment's app wins, as it does at the moment of a connect. The
+// stored app answers only where the environment composed none.
 //
 // `configured` answers "can this vendor be connected at all", which is a
-// different question from where the app came from: it is true for both sources,
-// and the surface used to conflate them and tell an operator that mail could not
-// be connected on an installation where it could.
+// different question from where the app came from: it is true for both
+// sources. `source` names the one in use, so the environment reads as the lock
+// on the stored app.
 func connectorAppView(
 	p capture.AppProvider, stored capture.ConnectorAppStatus, composed connectorAppComposition,
 ) crmcontracts.ConnectorApp {
@@ -229,8 +276,6 @@ func connectorAppView(
 		RedirectUris: composed.redirectURIs,
 	}
 	switch {
-	case stored.Configured:
-		app.Source = crmcontracts.ConnectorAppSourceStored
 	case composed.envClientID != "":
 		app.Source = crmcontracts.ConnectorAppSourceEnvironment
 		app.Configured = true
@@ -239,6 +284,8 @@ func connectorAppView(
 		// app's id with another's directory would send an operator to check a
 		// registration that is not the one in use.
 		app.Tenant = optionalString(composed.envTenant)
+	case stored.Configured:
+		app.Source = crmcontracts.ConnectorAppSourceStored
 	}
 	// An empty LIST and not null: the field is contract-required, and a client
 	// that has to test for null before iterating is one the contract lied to.

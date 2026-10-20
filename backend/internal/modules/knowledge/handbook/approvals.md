@@ -6,6 +6,17 @@ make on its own. The agent does not do it. It writes down what it means to do
 and puts it before a human, who accepts, edits or rejects it. The product
 calls the waiting items **Approvals**.
 
+## Reading a commercial change
+
+A deal-stage, owner or company-lifecycle proposal shows the record and the values before and after
+the change. Owners and stages have names. **Review authority** explains why you can answer it.
+A deal win also names its effects on linked correspondence and eligible delivery projects.
+**Set when applied** means Margince records that value when the change takes effect.
+
+Open the source evidence before answering a lifecycle proposal. A linked proposal remains a
+separate decision. If the record changed or the full change cannot be shown, you cannot approve it.
+Request a new proposal with current context, or reject the old one.
+
 ## Answering approvals
 
 ### How do I approve an action in Margince?
@@ -187,10 +198,9 @@ confirmation.
 
 ## When something changed first
 
-The record may change while an approval waits. Then the app says
-"This record changed after it was staged. Stage it again before deciding." and
-offers **Reload**. So you never approve a proposal based on an older version of
-the record.
+The record may change while an approval waits. Ask for a current proposal before
+approving it so the decision uses the current record. You can still reject the
+old proposal.
 
 If someone else answered first, you see "Already decided. Nothing left to do."
 Nobody can decide it a second time; that try is refused.

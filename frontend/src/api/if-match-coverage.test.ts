@@ -41,10 +41,10 @@ const UNPINNED_WRITES: readonly string[] = [
   "features/contacts/contactmeetings.waiting.tsx DELETE /activities/{id}",
   // Relationship archives still need their record version threaded through.
   "features/contacts/contactemployers.tsx DELETE /relationships/{id}",
-  "screens/relationshiprows.tsx DELETE /relationships/{id}",
-  "screens/contractwrites.ts PATCH /contracts/{id}",
-  "screens/customfields.tsx PATCH /custom-fields/{id}",
-  "screens/voice-dna.tsx PATCH /voice-profiles/{id}",
+  "features/records/relationshiprows.tsx DELETE /relationships/{id}",
+  "features/projects/contractwrites.ts PATCH /contracts/{id}",
+  "features/records/customfields.tsx PATCH /custom-fields/{id}",
+  "features/voice-knowledge/voice-dna.tsx PATCH /voice-profiles/{id}",
 ];
 
 const HTTP_METHODS: readonly string[] = [

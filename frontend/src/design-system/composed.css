@@ -280,6 +280,9 @@
      it the deal anchor would spread to the nearest positioned ancestor — the
      column, or the board — and swallow every card beside it. */
   position: relative;
+  /* Keeps the layers raised over that link inside the card; loose, they tie
+     the stuck column head's z-index and paint over it by coming later. */
+  isolation: isolate;
   /* The pane over the column's ground, not the elevated surface: a card lifts
      off the stage it sits in by being translucent white over it, which is the
      same separation every other pane in the product is drawn with.
@@ -1672,7 +1675,7 @@
   outline-offset: -2px;
 }
 
-/* One responsibility row in the Responsible panel (screens/recordteam.tsx).
+/* One responsibility row in the Responsible panel (features/records/recordteam.tsx).
  *
  * The row is the reader's unit: a role label over the colleague or team that
  * holds it, with the verbs for that one responsibility stacked under the
@@ -1711,7 +1714,7 @@
   margin-inline-start: auto;
 }
 
-/* The Delivery health panel (screens/projecthealth.tsx).
+/* The Delivery health panel (features/projects/projecthealth.tsx).
  *
  * Its rows are labelled pairs like .firmo's, but the panel had no sheet of its
  * own, so the state badge, the date and the note ran together into one string:

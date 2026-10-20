@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // lockedField is the FOR UPDATE snapshot that Update, Retire and SetOptions
@@ -36,6 +37,7 @@ type lockedField struct {
 	Label        string
 	OptionsRaw   []byte
 	ShowInCreate bool
+	Reportable   bool
 	Version      int64
 }
 
@@ -58,9 +60,9 @@ func (f lockedField) mutable() error {
 func lockField(ctx context.Context, tx pgx.Tx, id ids.UUID) (lockedField, error) {
 	var f lockedField
 	err := tx.QueryRow(ctx,
-		`SELECT object, column_name, type, status, label, options, show_in_create, version
+		`SELECT object, column_name, type, status, label, options, show_in_create, reportable, version
 		   FROM custom_field WHERE id = $1 FOR UPDATE`,
-		id).Scan(&f.Object, &f.ColumnName, &f.Type, &f.Status, &f.Label, &f.OptionsRaw, &f.ShowInCreate, &f.Version)
+		id).Scan(&f.Object, &f.ColumnName, &f.Type, &f.Status, &f.Label, &f.OptionsRaw, &f.ShowInCreate, &f.Reportable, &f.Version)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return lockedField{}, apperrors.ErrNotFound
 	}
@@ -86,13 +88,14 @@ func readField(ctx context.Context, tx pgx.Tx, id ids.UUID) (crmcontracts.Custom
 type FieldPatch struct {
 	Label        *string
 	ShowInCreate *bool
+	Reportable   *bool
 }
 
 // validate refuses a patch that changes nothing or blanks the label. An empty
 // patch answers the same label-required refusal a rename always gave, so a
 // client that only ever renames sees no new error.
 func (p FieldPatch) validate() error {
-	if p.ShowInCreate == nil && p.Label == nil {
+	if p.ShowInCreate == nil && p.Label == nil && p.Reportable == nil {
 		return &ValidationError{Errors: []FieldError{{Field: fieldLabel, Code: codeRequired}}}
 	}
 	if p.Label != nil && strings.TrimSpace(*p.Label) == "" {
@@ -127,27 +130,34 @@ func (s *Service) Update(ctx context.Context, id ids.UUID, patch FieldPatch, ifV
 		if ifVersion != nil && *ifVersion != f.Version {
 			return apperrors.ErrVersionSkew
 		}
-		label, show := f.Label, f.ShowInCreate
+		next := f
 		if patch.Label != nil {
-			label = *patch.Label
+			next.Label = *patch.Label
 			if err := serializeSchemaChange(ctx, tx, f.Object); err != nil {
 				return err
 			}
-			if err := refuseTakenLabel(ctx, tx, f.Object, id, label); err != nil {
+			if err := refuseTakenLabel(ctx, tx, f.Object, id, next.Label); err != nil {
 				return err
 			}
 		}
 		if patch.ShowInCreate != nil {
-			show = *patch.ShowInCreate
+			next.ShowInCreate = *patch.ShowInCreate
+		}
+		if patch.Reportable != nil {
+			if *patch.Reportable && !reportable(f) {
+				return &ValidationError{Errors: []FieldError{{Field: fieldReport, Code: codeUnsupportedType}}}
+			}
+			next.Reportable = *patch.Reportable
 		}
 		if _, err := tx.Exec(ctx,
-			`UPDATE custom_field SET label = $1, show_in_create = $2 WHERE id = $3`, label, show, id); err != nil {
+			`UPDATE custom_field SET label = $1, show_in_create = $2, reportable = $3 WHERE id = $4`,
+			next.Label, next.ShowInCreate, next.Reportable, id); err != nil {
 			return fmt.Errorf("customfields: updating settings: %w", err)
 		}
 		if out, err = readField(ctx, tx, id); err != nil {
 			return err
 		}
-		before, after := patch.auditDiff(f, label, show)
+		before, after := patch.auditDiff(f, next)
 		if _, err := storekit.Audit(ctx, tx, "update", rbacObject, id, before, after); err != nil {
 			return fmt.Errorf("customfields: audit write: %w", err)
 		}
@@ -161,15 +171,25 @@ func (s *Service) Update(ctx context.Context, id ids.UUID, patch FieldPatch, ifV
 
 // auditDiff names only the settings the patch carried, so the trail of a
 // rename does not claim the create-dialog setting moved, and the other way.
-func (p FieldPatch) auditDiff(f lockedField, label string, show bool) (before, after map[string]any) {
+func (p FieldPatch) auditDiff(was, now lockedField) (before, after map[string]any) {
 	before, after = map[string]any{}, map[string]any{}
 	if p.Label != nil {
-		before[fieldLabel], after[fieldLabel] = f.Label, label
+		before[fieldLabel], after[fieldLabel] = was.Label, now.Label
 	}
 	if p.ShowInCreate != nil {
-		before[fieldShow], after[fieldShow] = f.ShowInCreate, show
+		before[fieldShow], after[fieldShow] = was.ShowInCreate, now.ShowInCreate
+	}
+	if p.Reportable != nil {
+		before[fieldReport], after[fieldReport] = was.Reportable, now.Reportable
 	}
 	return before, after
+}
+
+// reportable is the fields a report can group by: a deal's, since reports
+// group deals alone by custom fields. One value per record keeps a total from
+// counting a record twice, which rules out a multiselect.
+func reportable(f lockedField) bool {
+	return f.Object == string(datasource.EntityDeal) && (f.Type == TypePicklist || f.Type == TypeBoolean)
 }
 
 // Retire flips status to retired (CUSTOM-FIELDS-WIRE-4/AC-13): the field
@@ -194,15 +214,19 @@ func (s *Service) Retire(ctx context.Context, id ids.UUID) (crmcontracts.CustomF
 			out, err = readField(ctx, tx, id)
 			return err
 		}
+		// A retired field leaves reports, so it stops claiming to be in them.
 		if _, err := tx.Exec(ctx,
-			`UPDATE custom_field SET status = $1 WHERE id = $2`, statusRetired, id); err != nil {
+			`UPDATE custom_field SET status = $1, reportable = false WHERE id = $2`, statusRetired, id); err != nil {
 			return fmt.Errorf("customfields: updating status: %w", err)
 		}
 		if out, err = readField(ctx, tx, id); err != nil {
 			return err
 		}
-		if _, err := storekit.Audit(ctx, tx, "update", rbacObject, id,
-			map[string]any{fieldStatus: f.Status}, map[string]any{fieldStatus: statusRetired}); err != nil {
+		before, after := map[string]any{fieldStatus: f.Status}, map[string]any{fieldStatus: statusRetired}
+		if f.Reportable {
+			before[fieldReport], after[fieldReport] = true, false
+		}
+		if _, err := storekit.Audit(ctx, tx, "update", rbacObject, id, before, after); err != nil {
 			return fmt.Errorf("customfields: audit write: %w", err)
 		}
 		return nil

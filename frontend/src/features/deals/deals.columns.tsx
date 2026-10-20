@@ -6,7 +6,7 @@ import { FieldGuard } from "../../design-system/rbac";
 import { middayInstant } from "../../format/calendarday";
 import { formatDate, formatDuration, formatMoney } from "../../format/format";
 import type { Locale, useT } from "../../i18n";
-import { ownerColumn, tagsColumn } from "../../screens/recordlist";
+import { ownerColumn, tagsColumn } from "../records/recordlist";
 import { toBoardDeal } from "./boarddeal";
 import type { CompanyNaming } from "./dealcompanymarks";
 import { lastMailColumn } from "./dealmailaside";
@@ -165,6 +165,7 @@ export function dealColumns(
     {
       key: "close",
       header: t("deals.close"),
+      holds: "date",
       sort: "expected_close_date",
       cell: (deal) =>
         deal.expected_close_date

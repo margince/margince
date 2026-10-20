@@ -17,9 +17,9 @@ import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
-import { derivedSource } from "../../screens/evidencesource";
-import { EvidenceVerdict, factClaim } from "../../screens/evidenceverdict";
-import { factFieldLabelKey } from "../../screens/factview";
+import { derivedSource } from "../records/evidencesource";
+import { EvidenceVerdict, factClaim } from "../records/evidenceverdict";
+import { factFieldLabelKey } from "../records/factview";
 import { settleFacts } from "./companyfactspanel";
 import "./company360.css";
 

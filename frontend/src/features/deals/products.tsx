@@ -23,8 +23,8 @@ import type { MessageKey } from "../../i18n/en";
 import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
-import { ArchiveAction } from "../../screens/archive";
-import { billingOf, billingPatchOf } from "../../screens/billingclassification";
+import { billingOf, billingPatchOf } from "../projects/billingclassification";
+import { ArchiveAction } from "../records/archive";
 import "../lists/listsection.css";
 import { currencyOptions } from "../../format/currencychoices";
 import {

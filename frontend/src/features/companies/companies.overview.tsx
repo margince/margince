@@ -1,6 +1,6 @@
 import { Panel } from "../../design-system/panel";
-import { AssistantPanel } from "../../screens/assistant";
 import { CompanySuggestions } from "../deals/dealsuggestion";
+import { AssistantPanel } from "../voice-knowledge/assistant";
 import type { Company360View } from "./companies";
 import { LatestSection } from "./company/glance";
 import { GrowthFitPanel } from "./companygrowthfit";
@@ -8,6 +8,7 @@ import { PeopleSection, SignalsSection } from "./companyrail";
 import { DealsSection } from "./companyraildeals";
 import { type CompanyOverviewProps, CompanyReading } from "./companyreading";
 import { hasWorkInFlight } from "./companywork";
+import "./company360.css";
 
 // Whether this account has anything captured against it at all.
 //

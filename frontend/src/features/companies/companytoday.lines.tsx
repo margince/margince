@@ -4,12 +4,12 @@ import { Badge } from "../../design-system/atoms";
 import { formatDateTime, formatNumber } from "../../format/format";
 import type { Locale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { TodoRow, WrittenBy } from "../../screens/record360";
 import {
   type AccountScan,
   scanHasSettled,
   scanIsLive,
 } from "../capture/accountscan";
+import { TodoRow, WrittenBy } from "../records/record360";
 import {
   ENGAGEMENT_LABELS,
   ENGAGEMENT_TONE,

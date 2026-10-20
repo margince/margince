@@ -24,9 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -203,10 +201,7 @@ func TestUndoingAMachinePromotionDemotesTheLead(t *testing.T) {
 	} {
 		t.Run(tc.language, func(t *testing.T) {
 			e := integration.Setup(t)
-			config := settings.New(e.Pool, settings.NewRegistry(identity.BaseLanguage))
-			if err := settings.Set(e.Admin(), config, identity.BaseLanguage, tc.language); err != nil {
-				t.Fatal(err)
-			}
+			integration.SetBaseLanguage(e.Admin(), t, e.Pool, tc.language)
 			name, email := "Lena Lead", "lena@prospect.test"
 			lead, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{Source: "import", FullName: &name, Email: &email})
 			if err != nil {
@@ -234,9 +229,7 @@ func TestUndoingAMachinePromotionDemotesTheLead(t *testing.T) {
 			if answer := advisoryAnswer(e.Admin(), t, e, entityTypeLead, leadID, promoteID); answer.Reason != string(ReasonAlreadyUndone) {
 				t.Errorf("the undone promotion reads %+v, want %q", answer, ReasonAlreadyUndone)
 			}
-			if err := settings.Set(e.Admin(), config, identity.BaseLanguage, "en"); err != nil {
-				t.Fatal(err)
-			}
+			integration.SetBaseLanguage(e.Admin(), t, e.Pool, "en")
 			row := auditRowOf(t, e, latestAuditRowID(t, e, entityTypeLead, leadID, "demote"))
 			var after struct {
 				Reason string `json:"reason"`

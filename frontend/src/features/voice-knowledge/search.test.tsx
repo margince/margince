@@ -1,0 +1,917 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+/** @vitest-environment happy-dom */
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  cleanup,
+  render as rtlRender,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "../../i18n";
+import { SearchScreen } from "./search";
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
+
+function jsonResponse(body: unknown) {
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+const render = (ui: ReactNode) => {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return rtlRender(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">{ui}</LocaleProvider>
+    </QueryClientProvider>,
+  );
+};
+
+// One result row, so a claim about what a hit does NOT print is made against
+// the row rather than against the whole page — the group card and the search
+// field are not places a badge or a figure would have appeared.
+function hitRow(container: HTMLElement): HTMLElement {
+  const row = container.querySelector<HTMLElement>(".search-hit");
+  if (!row) {
+    throw new Error("the results rendered no hit row at all");
+  }
+  return row;
+}
+
+// One email hit, as the server sends it: the canonical row rides the hit and
+// the raw `snippet` is what the row REPLACES.
+const emailHit = {
+  type: "activity",
+  id: "a1",
+  title: "Rennsteig renewal terms",
+  snippet: "…a raw body slice the canonical row replaces…",
+  score: 0.88,
+  trust_tier: "authoritative",
+  email_summary: {
+    activity_id: "a1",
+    occurred_at: "2026-09-01T09:15:00Z",
+    version: 3,
+    subject: "Rennsteig renewal terms",
+    preview: "The quote holds until Friday.",
+    counterparty: "Dana Buyer",
+    direction: "inbound",
+    display_status: "team",
+    move: "needs_reply",
+    attachment_count: 1,
+  },
+};
+
+// The detail read, as the contract shapes it: the parties are flat on the
+// presentation and the access block is required. A fixture that omitted them
+// would model a response the server cannot send, and the drawer would throw on
+// a shape no user will ever meet.
+const emailPresentation = {
+  id: "a1",
+  lifecycle: "delivered",
+  occurred_at: "2026-09-01T09:15:00Z",
+  summary: emailHit.email_summary,
+  body: "The quote holds until Friday.",
+  thread_key: "t1",
+  from: [{ address: "dana@acme.test", display_name: "Dana Buyer" }],
+  to: [{ address: "rep@demo.test", display_name: "Lena Fischer" }],
+  cc: [],
+  bcc: [],
+  bcc_withheld: false,
+  attachments: [],
+  links: [],
+  thread: { members: [], next_cursor: null },
+  access: {
+    content_state: "available",
+    audience: "workspace",
+    selected_members: [],
+    display_status: "team",
+    can_change: false,
+    change_mode: "message",
+    held_by_others: false,
+  },
+  can_reply: true,
+  can_relink: false,
+  version: 3,
+};
+
+describe("SearchScreen", () => {
+  // An email hit is the canonical row, not a title and a raw body slice. The
+  // subject, the preview the server composed and the access badge all come
+  // from `email_summary`, and the row opens the same drawer every timeline
+  // opens.
+  it("renders an email hit as the canonical row and opens the drawer", async () => {
+    // The URL off the Request, not String(input): openapi-fetch hands fetch a
+    // Request object, whose String() is "[object Request]" and matches nothing.
+    const urlOf = (input: RequestInfo | URL) =>
+      input instanceof Request ? input.url : String(input);
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      if (urlOf(input).includes("email-presentation")) {
+        return jsonResponse(emailPresentation);
+      }
+      return jsonResponse({
+        data: [emailHit],
+        page: { next_cursor: null, has_more: false },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<SearchScreen q="renewal" />);
+
+    await waitFor(() =>
+      expect(screen.getByText("Rennsteig renewal terms")).toBeTruthy(),
+    );
+    // The server's preview, not the raw `snippet`: the snippet is a
+    // 200-character slice of the body and drawing both would put two readings
+    // of one message on one line.
+    expect(screen.getByText("The quote holds until Friday.")).toBeTruthy();
+    expect(screen.queryByText(/raw body slice/)).toBeNull();
+    // The access badge rides the row, which is how a reader tells a limited
+    // conversation from an open one without opening it.
+    expect(screen.getByText("Team")).toBeTruthy();
+
+    // Clicking the row opens the drawer over the results — which is search's
+    // half of this. That it asks for THIS message's presentation is the claim;
+    // what the drawer then draws is emaildetail's own contract.
+    const row = screen.getByRole("button", { name: /Rennsteig renewal terms/ });
+    expect(row.getAttribute("aria-haspopup")).toBe("dialog");
+    await userEvent.click(row);
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some((call) =>
+          urlOf(call[0]).includes("/activities/a1/email-presentation"),
+        ),
+      ).toBe(true),
+    );
+  });
+
+  // The palette's half of #3850: it owns no page, so it sends the reader here
+  // with the message named in the address, and the screen opens the drawer it
+  // already owns. Without this the palette could find an email and had nowhere
+  // to put the reader.
+  it("opens the message the address names, on arrival", async () => {
+    const urlOf = (input: RequestInfo | URL) =>
+      input instanceof Request ? input.url : String(input);
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      if (urlOf(input).includes("email-presentation")) {
+        return jsonResponse(emailPresentation);
+      }
+      return jsonResponse({
+        data: [emailHit],
+        page: { next_cursor: null, has_more: false },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<SearchScreen q="renewal" openActivityId="a1" />);
+
+    // Asked for WITHOUT a click. The drawer's own contract is emaildetail's;
+    // what this holds is that the address reached it.
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some((call) =>
+          urlOf(call[0]).includes("/activities/a1/email-presentation"),
+        ),
+      ).toBe(true),
+    );
+  });
+
+  // Closing it has to STAY closed. The address still names the message, so a
+  // drawer driven by the prop on every render would reopen under the reader.
+  it("stays closed once the reader closes it", async () => {
+    const urlOf = (input: RequestInfo | URL) =>
+      input instanceof Request ? input.url : String(input);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) =>
+        urlOf(input).includes("email-presentation")
+          ? jsonResponse(emailPresentation)
+          : jsonResponse({
+              data: [emailHit],
+              page: { next_cursor: null, has_more: false },
+            }),
+      ),
+    );
+    render(<SearchScreen q="renewal" openActivityId="a1" />);
+
+    const close = await screen.findByRole("button", { name: /close/i });
+    await userEvent.click(close);
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("groups hits by type and shows the snippet", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [
+            {
+              type: "contact",
+              id: "p1",
+              title: "Dana Buyer",
+              snippet: "…Dana at Acme…",
+              score: 0.91,
+              trust_tier: "authoritative",
+            },
+            {
+              type: "deal",
+              id: "d1",
+              title: "Acme expansion",
+              snippet: "…platform…",
+              score: 0.74,
+              trust_tier: "authoritative",
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    render(<SearchScreen q="acme" />);
+    // By ROLE, not by text: the type filter above the results names the same
+    // groups the headings do, so a bare getByText("Contacts") matches the pill —
+    // which renders before the read settles, and would wait out nothing.
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: "Contacts" })).toBeTruthy(),
+    );
+    expect(screen.getByRole("heading", { name: "Deals" })).toBeTruthy();
+    expect(screen.getByText(/Dana at Acme/)).toBeTruthy();
+    // A contact is a record card, named straight from the search result (no
+    // per-hit record fetch), whose name links to the record's 360.
+    const hitLink = screen.getByRole("link", { name: "Dana Buyer" });
+    expect(hitLink.getAttribute("href")).toBe("#/contacts/p1");
+    expect(hitLink.className).toContain("record-card-open");
+  });
+
+  // A stored record is `authoritative` in native mode — every one of them — so
+  // a badge for that tier put the same pill on every row on the page and told a
+  // reader nothing they did not already assume. The score is not drawn either:
+  // the contract bounds it to nothing, so the retriever's raw figure reached the
+  // page as a percentage over 100 that a reader can neither act on nor doubt.
+  it("prints neither a tier badge nor a relevance figure for a stored record", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [
+            {
+              type: "contact",
+              id: "p1",
+              title: "Dana Buyer",
+              snippet: "…Dana at Acme…",
+              // Past 1, the way the seeded retriever actually scores: a hit that
+              // renders its score as a percentage reads "relevance 280%" here.
+              score: 2.8,
+              trust_tier: "authoritative",
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    const { container } = render(<SearchScreen q="acme" />);
+    await waitFor(() => expect(screen.getByText("Dana Buyer")).toBeTruthy());
+    const row = hitRow(container);
+    // What the row still carries: the name and the matched text.
+    expect(row.textContent).toContain("Dana at Acme");
+    expect(row.querySelectorAll(".badge")).toHaveLength(0);
+    expect(screen.queryByText("verified")).toBeNull();
+    expect(row.textContent).not.toContain("%");
+    expect(row.textContent).not.toMatch(/relevance/i);
+  });
+
+  it("badges an external-tier hit as mirrored", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [
+            {
+              type: "contact",
+              id: "p1",
+              title: "Dana Buyer",
+              trust_tier: "external",
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    const { container } = render(<SearchScreen q="acme" />);
+    await waitFor(() => expect(screen.getByText("Dana Buyer")).toBeTruthy());
+    // The tier covers every connector source, so the badge names none of
+    // them: a hit carries no provider field, and a vendor name here would be
+    // stamped on rows mirrored from a different system.
+    expect(screen.getByText("From a connected system")).toBeTruthy();
+    expect(screen.queryByText(/HubSpot/)).toBeNull();
+    // authoritative's badge never renders alongside a mirrored hit.
+    expect(screen.queryByText("verified")).toBeNull();
+    // And it is the ONLY badge on the row: the mirrored mark is the one that
+    // varies between hits, so a second pill beside it is what buried it.
+    expect(hitRow(container).querySelectorAll(".badge")).toHaveLength(1);
+  });
+
+  // A tier the record CARRIES and the page does not draw reads as a record with
+  // nothing to declare, which is the opposite of what unverified means.
+  it("badges an unverified hit rather than leaving it unmarked", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [
+            {
+              type: "contact",
+              id: "p2",
+              title: "Sam Unknown",
+              trust_tier: "unverified",
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    render(<SearchScreen q="acme" />);
+    await waitFor(() => expect(screen.getByText("Sam Unknown")).toBeTruthy());
+    expect(screen.getByText("Unverified")).toBeTruthy();
+    expect(screen.queryByText("verified")).toBeNull();
+  });
+
+  it("shows an honest empty state", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    render(<SearchScreen q="zzz" />);
+    await waitFor(() => expect(screen.getByText(/No matches/)).toBeTruthy());
+  });
+  // Finding the WORD is the step before finding the records carrying it, so a
+  // tag hit has to be openable. It shipped as plain text — the group rendered,
+  // and the result was a dead end.
+  it("opens the tag page from a tag hit, and says what the word is on", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [
+            {
+              type: "tag",
+              id: "01a05ebd-b03d-7183-b2fb-c00bcb58b419",
+              title: "Key Account",
+              snippet: null,
+              score: 2,
+              carried_by: 7,
+              trust_tier: "authoritative",
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    render(<SearchScreen q="key" />);
+
+    const hit = await screen.findByText("Key Account");
+    expect(hit.tagName).toBe("BUTTON");
+    expect(screen.getByText("7 tagged records")).toBeTruthy();
+
+    await userEvent.setup().click(hit);
+    expect(window.location.hash).toBe(
+      "#/tags/01a05ebd-b03d-7183-b2fb-c00bcb58b419",
+    );
+  });
+
+  it("counts a tag on one record in the singular", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [
+            {
+              type: "tag",
+              id: "01a05ebd-b03d-7183-b2fb-c00bcb58b419",
+              title: "Key Account",
+              snippet: null,
+              score: 2,
+              carried_by: 1,
+              trust_tier: "authoritative",
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    render(<SearchScreen q="key" />);
+    expect(await screen.findByText("1 tagged record")).toBeTruthy();
+  });
+
+  // Absent is not zero. A server that sent no number has not said the word is
+  // unused, and printing "Records: 0" would be a claim nobody made.
+  it("prints no count when the answer carried none", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [
+            {
+              type: "tag",
+              id: "01a05ebd-b03d-7183-b2fb-c00bcb58b419",
+              title: "Key Account",
+              snippet: null,
+              score: 2,
+              trust_tier: "authoritative",
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    render(<SearchScreen q="key" />);
+
+    expect(await screen.findByText("Key Account")).toBeTruthy();
+    expect(screen.queryByText(/Records: \d+/)).toBeNull();
+  });
+
+  // A partner is a property of a company and not a thing the search finds, so
+  // the company hit carries the fact and the route: the account is a partner,
+  // and its partner record is one press away rather than reachable only by
+  // knowing the Partners screen exists.
+  it("marks a partner company and routes to its partner record", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [
+            {
+              type: "company",
+              id: "01a05ebd-b03d-7183-b2fb-c00bcb58b419",
+              title: "Brandt GmbH",
+              trust_tier: "authoritative",
+              is_partner: true,
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    const { container } = render(<SearchScreen q="brandt" />);
+    await waitFor(() => expect(screen.getByText("Brandt GmbH")).toBeTruthy());
+    expect(screen.getByText("Partner")).toBeTruthy();
+    // The one badge on the row is the fact; the route beside it is a link,
+    // because a badge is never pressed.
+    expect(hitRow(container).querySelectorAll(".badge")).toHaveLength(1);
+    // Named for the account, so a page of partner rows does not announce the
+    // same "Open partner record" on every one of them.
+    const open = screen.getByRole("link", {
+      name: "Open partner record for Brandt GmbH",
+    });
+    expect(open.getAttribute("href")).toBe(
+      "#/companies/01a05ebd-b03d-7183-b2fb-c00bcb58b419/partner",
+    );
+  });
+
+  // `false` is a company checked and found plain; an absent field is a marker
+  // nobody took, which the server sends when the reader may not read partner
+  // programmes. Neither is a partner, so neither draws the mark or the route.
+  it.each([{ is_partner: false }, { is_partner: null }, {}])(
+    "draws no partner mark for a company hit carrying %o",
+    async (marker) => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () =>
+          jsonResponse({
+            data: [
+              {
+                type: "company",
+                id: "o1",
+                title: "Brandt GmbH",
+                trust_tier: "authoritative",
+                ...marker,
+              },
+            ],
+            page: { next_cursor: null, has_more: false },
+          }),
+        ),
+      );
+      const { container } = render(<SearchScreen q="brandt" />);
+      await waitFor(() => expect(screen.getByText("Brandt GmbH")).toBeTruthy());
+      expect(hitRow(container).querySelectorAll(".badge")).toHaveLength(0);
+      expect(screen.queryByText("Open partner record")).toBeNull();
+    },
+  );
+
+  // The marker means nothing off a company, and the screen holds that itself
+  // rather than trusting the server to send it on company hits alone.
+  it("draws no partner mark on a hit that is not a company", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [
+            {
+              type: "contact",
+              id: "p1",
+              title: "Dana Buyer",
+              trust_tier: "authoritative",
+              is_partner: true,
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    const { container } = render(<SearchScreen q="dana" />);
+    await waitFor(() => expect(screen.getByText("Dana Buyer")).toBeTruthy());
+    expect(hitRow(container).querySelectorAll(".badge")).toHaveLength(0);
+    expect(screen.queryByText("Open partner record")).toBeNull();
+  });
+});
+
+// The results screen dropped `project` hits for months: the server ranked and
+// returned them, and the group list here — a hand-kept literal — never named
+// the type, so they were filtered out on the way to the screen. Both new
+// catalog types would have landed the same way. The list is derived now, and
+// this is the assertion that says so for every member of it.
+describe("SearchScreen — every hit type the contract can return", () => {
+  const KINDS = [
+    { type: "contact", heading: "Contacts" },
+    { type: "company", heading: "Companies" },
+    { type: "deal", heading: "Deals" },
+    { type: "project", heading: "Projects" },
+    { type: "product", heading: "Products" },
+    { type: "offer_template", heading: "Offer templates" },
+    { type: "lead", heading: "Leads" },
+    { type: "tag", heading: "Tags" },
+  ] as const;
+
+  it.each(KINDS)(
+    "groups a $type hit under $heading",
+    async ({ type, heading }) => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () =>
+          jsonResponse({
+            data: [
+              {
+                type,
+                id: "01a05ebd-b03d-7183-b2fb-c00bcb58b419",
+                title: "Findable thing",
+                score: 0.5,
+                trust_tier: "authoritative",
+              },
+            ],
+            page: { next_cursor: null, has_more: false },
+          }),
+        ),
+      );
+      render(<SearchScreen q="findable" />);
+      expect(
+        await screen.findByRole("heading", { name: heading }),
+      ).toBeTruthy();
+      expect(screen.getByText("Findable thing")).toBeTruthy();
+    },
+  );
+});
+
+describe("SearchScreen — narrowing by type", () => {
+  // The pills are a SERVER dial: they put `types` on the wire rather than
+  // hiding rows already drawn, so a narrowed search is a different answer and
+  // not a smaller view of the same one.
+  it("sends the narrowed type to the server and puts it in the address", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL) =>
+      jsonResponse({
+        data: [],
+        page: { next_cursor: null, has_more: false },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    render(<SearchScreen q="acme" />);
+
+    await user.click(screen.getByRole("button", { name: "Products" }));
+
+    await waitFor(() => {
+      // openapi-fetch hands fetch a Request, so the URL is on the object rather
+      // than being the first argument.
+      const asked = fetchMock.mock.calls.map(([input]) =>
+        input instanceof Request ? input.url : String(input),
+      );
+      expect(
+        asked.some(
+          (url) =>
+            url.includes("types=product") &&
+            url.includes("with_employees=true"),
+        ),
+      ).toBe(true);
+    });
+    expect(globalThis.location.hash).toContain("type=product");
+  });
+
+  // The default is spelled by ABSENCE, so one view has exactly one address and
+  // "everything" cannot be reached by two different links.
+  it("clears the parameter rather than naming the default", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    render(<SearchScreen q="acme" />);
+
+    await user.click(screen.getByRole("button", { name: "Products" }));
+    await waitFor(() =>
+      expect(globalThis.location.hash).toContain("type=product"),
+    );
+    await user.click(screen.getByRole("button", { name: "All" }));
+    await waitFor(() =>
+      expect(globalThis.location.hash).not.toContain("type="),
+    );
+  });
+
+  // A narrowing that found nothing keeps the control that got the reader there.
+  // Losing it would leave them on an empty page with no way back but the
+  // address bar.
+  it("keeps the pills when the narrowed search finds nothing", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    render(<SearchScreen q="zzz" />);
+    expect(await screen.findByText(/No matches/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "All" })).toBeTruthy();
+  });
+});
+
+describe("SearchScreen — grouped by what each hit is", () => {
+  // Unnarrowed: a test above leaves a `type` dial in the address.
+  beforeEach(() => {
+    globalThis.location.hash = "#/search/rennsteig";
+  });
+  const urlOf = (input: RequestInfo | URL) =>
+    input instanceof Request ? input.url : String(input);
+
+  // Fifty hits ranked across types were fifty emails for a word that also named
+  // the company: relevance does not compare across kinds. Unnarrowed, the page
+  // asks for a few of each kind instead, and the company is on it.
+  it("asks for a few of each kind and draws the mail apart from the records", async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL) =>
+      jsonResponse({
+        data: [
+          emailHit,
+          {
+            type: "company",
+            id: "o1",
+            title: "Rennsteig GmbH",
+            score: 0.2,
+            trust_tier: "authoritative",
+          },
+        ],
+        page: { next_cursor: null, has_more: false },
+        types_with_more: [],
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    render(<SearchScreen q="rennsteig" />);
+
+    expect(
+      await screen.findByRole("heading", { name: "Companies" }),
+    ).toBeTruthy();
+    const headings = screen
+      .getAllByRole("heading")
+      .map((heading) => heading.textContent);
+    expect(headings).toEqual(["Companies", "Emails"]);
+    const asked = fetchMock.mock.calls.map(([input]) => urlOf(input));
+    expect(asked.some((url) => url.includes("per_type=5"))).toBe(true);
+    expect(asked.some((url) => url.includes("limit="))).toBe(false);
+    expect(asked.some((url) => url.includes("with_employees=true"))).toBe(true);
+    // Nothing was cut, so nothing offers the rest.
+    expect(screen.queryByRole("button", { name: /^Show all/ })).toBeNull();
+  });
+
+  // Only a kind the server says holds more offers the rest, and the rest is
+  // that kind's own ranked list: the same narrowing the pills make.
+  it("offers the rest of a kind the server cut, as that kind's own list", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL) =>
+      jsonResponse({
+        data: [
+          emailHit,
+          { type: "company", id: "o1", title: "Rennsteig GmbH", score: 0.2 },
+        ],
+        page: { next_cursor: null, has_more: false },
+        types_with_more: ["company"],
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    render(<SearchScreen q="rennsteig" />);
+
+    const showAll = await screen.findByRole("button", {
+      name: "Show all Companies",
+    });
+    expect(
+      screen.queryByRole("button", { name: "Show all Emails" }),
+    ).toBeNull();
+    await user.click(showAll);
+
+    await waitFor(() =>
+      expect(globalThis.location.hash).toContain("type=company"),
+    );
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(([input]) =>
+          urlOf(input).includes("types=company"),
+        ),
+      ).toBe(true),
+    );
+  });
+
+  // Emails and calls are one type to the server, so a cut among either is one
+  // list to open: one button, named for that list, not one per heading.
+  it("offers the rest of emails and activities once, for both", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [
+            emailHit,
+            { type: "activity", id: "a2", title: "Rennsteig kickoff call" },
+          ],
+          page: { next_cursor: null, has_more: false },
+          types_with_more: ["activity"],
+        }),
+      ),
+    );
+    render(<SearchScreen q="rennsteig" />);
+
+    expect(
+      await screen.findByRole("heading", { name: "Activities" }),
+    ).toBeTruthy();
+    const offers = screen.getAllByRole("button", { name: /^Show all/ });
+    expect(offers.map((button) => button.getAttribute("aria-label"))).toEqual([
+      "Show all Emails and activities",
+    ]);
+  });
+
+  // The activity pill narrows to the emails AND the calls and notes beside
+  // them, so it says both rather than reading as the Activities heading.
+  it("names the activity pill for everything it narrows to", () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    render(<SearchScreen q="acme" />);
+    expect(
+      screen.getByRole("button", { name: "Emails and activities" }),
+    ).toBeTruthy();
+  });
+});
+
+describe("SearchScreen — one kind, paged", () => {
+  // A narrowed search is that kind's whole ranked list, and fifty is a page of
+  // it rather than the end of it.
+  it("loads the next page of a narrowed search from the cursor", async () => {
+    const user = userEvent.setup();
+    globalThis.location.hash = "#/search/acme?type=deal";
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = input instanceof Request ? input.url : String(input);
+      return url.includes("cursor=next-1")
+        ? jsonResponse({
+            data: [{ type: "deal", id: "d2", title: "Acme renewal" }],
+            page: { next_cursor: null, has_more: false },
+          })
+        : jsonResponse({
+            data: [{ type: "deal", id: "d1", title: "Acme expansion" }],
+            page: { next_cursor: "next-1", has_more: true },
+          });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<SearchScreen q="acme" />);
+
+    await user.click(await screen.findByRole("button", { name: "Load more" }));
+
+    expect(await screen.findByText("Acme renewal")).toBeTruthy();
+    expect(screen.getByText("Acme expansion")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
+  });
+});
+
+// A word that names a company also finds the contacts who work there, and each
+// says why it is listed. Both kinds are drawn as the card the record rails use.
+describe("SearchScreen — a company and the contacts who work there", () => {
+  beforeEach(() => {
+    globalThis.location.hash = "#/search/acme";
+  });
+  const LOGO =
+    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E";
+  const answer = (data: unknown[]) =>
+    vi.fn(async () =>
+      jsonResponse({
+        data,
+        page: { next_cursor: null, has_more: false },
+        types_with_more: [],
+      }),
+    );
+
+  it("draws a company as a record card with its logo, linked to its page", async () => {
+    vi.stubGlobal(
+      "fetch",
+      answer([
+        { type: "company", id: "o1", title: "Acme GmbH", logo_url: LOGO },
+      ]),
+    );
+    const { container } = render(<SearchScreen q="acme" />);
+
+    const open = await screen.findByRole("link", { name: "Acme GmbH" });
+    expect(open.getAttribute("href")).toBe("#/companies/o1");
+    expect(open.closest(".record-card")).toBeTruthy();
+    expect(
+      hitRow(container).querySelector(".avatar-img")?.getAttribute("src"),
+    ).toBe(LOGO);
+  });
+
+  it("draws the monogram for a company without a logo", async () => {
+    vi.stubGlobal(
+      "fetch",
+      answer([
+        { type: "company", id: "o1", title: "Acme GmbH", logo_url: null },
+      ]),
+    );
+    const { container } = render(<SearchScreen q="acme" />);
+    await screen.findByRole("link", { name: "Acme GmbH" });
+    expect(hitRow(container).querySelector(".avatar-img")).toBeNull();
+    expect(hitRow(container).querySelector(".avatar")?.textContent).toBe("AG");
+  });
+
+  it("says which matched company a contact works at", async () => {
+    vi.stubGlobal(
+      "fetch",
+      answer([
+        { type: "company", id: "o1", title: "Acme GmbH" },
+        {
+          type: "contact",
+          id: "p1",
+          title: "Jonas Weiß",
+          works_at: { company_id: "o1", company_name: "Acme GmbH" },
+        },
+        { type: "contact", id: "p2", title: "Acme Mustermann" },
+      ]),
+    );
+    render(<SearchScreen q="acme" />);
+
+    const jonas = await screen.findByRole("link", { name: "Jonas Weiß" });
+    expect(jonas.getAttribute("href")).toBe("#/contacts/p1");
+    const card = jonas.closest(".record-card");
+    expect(card?.querySelector(".record-card-position")?.textContent).toBe(
+      "Works at Acme GmbH",
+    );
+    // A contact the word matched by its own name needs no reason given.
+    const own = screen.getByRole("link", { name: "Acme Mustermann" });
+    expect(own.closest(".record-card")?.textContent).not.toContain("Works at");
+    expect(screen.getAllByText(/^Works at/)).toHaveLength(1);
+  });
+
+  // In the facts row, which spans the card and wraps: in the aside's narrow
+  // track the marks squeezed a partner's name to a letter on a phone.
+  it("keeps a partner company's mark and route in its card's facts row", async () => {
+    vi.stubGlobal(
+      "fetch",
+      answer([
+        { type: "company", id: "o2", title: "Brandt GmbH", is_partner: true },
+      ]),
+    );
+    render(<SearchScreen q="brandt" />);
+
+    const open = await screen.findByRole("link", {
+      name: "Open partner record for Brandt GmbH",
+    });
+    const facts = open.closest(".record-card-position");
+    expect(facts?.querySelectorAll(".badge")).toHaveLength(1);
+    expect(facts?.textContent).toContain("Partner");
+    expect(
+      open.closest(".record-card")?.querySelector(".record-card-aside"),
+    ).toBeNull();
+  });
+});

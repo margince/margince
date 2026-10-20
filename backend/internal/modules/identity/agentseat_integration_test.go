@@ -58,7 +58,7 @@ func bootstrapForAgentSeat(t *testing.T, pool *pgxpool.Pool) (ids.WorkspaceID, s
 	var wsID ids.WorkspaceID
 	err := database.WithInfraTx(ctx, pool, func(tx pgx.Tx) error {
 		var err error
-		wsID, err = createInstallation(ctx, tx, InstallationBootstrap{
+		wsID, err = createInstallation(ctx, tx, nil, InstallationBootstrap{
 			CompanyName:   slug,
 			AdminEmail:    "admin@" + slug + ".test",
 			AdminName:     "Admin",

@@ -56,6 +56,11 @@ type Landing struct {
 	// so RemainingMinor is zero there and the line says the call instead.
 	WonMinor       int64
 	RemainingMinor int64
+	// SystemMinor is what the deal records alone project, by the commit
+	// measure, beside a manager's call. A call replaces that figure, and a
+	// reader comparing the two needs both. Nil for every other measure, whose
+	// amount already is the system's.
+	SystemMinor *int64
 	// Caveat names why this answer is not the plain one, empty when it is.
 	Caveat LandingCaveat
 }
@@ -100,9 +105,13 @@ func ProjectLanding(readings Readings, measure ForwardMeasure, call *int64) (Lan
 			out.Caveat = CaveatCallAbsent
 			return out, nil
 		}
+		system, err := remainingLanding(readings, MeasureCommitEvidence, readings.EvidenceMinor)
+		if err != nil {
+			return Landing{}, err
+		}
 		out := Landing{
 			AmountMinor: *call, Measure: MeasureManagerCall,
-			WonMinor: readings.WonMinor,
+			WonMinor: readings.WonMinor, SystemMinor: &system.AmountMinor,
 		}
 		if *call < readings.WonMinor {
 			out.Caveat = CaveatCallBelowActual

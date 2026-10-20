@@ -56,18 +56,18 @@ var FieldTypes = []string{TypeText, TypeNumber, TypeDate, TypeCurrency, TypePick
 //     cf_* value travels in
 //
 // Fail either and the field is creatable and never served: the ALTER runs, the
-// column exists, and every read drops the value. The two exclusions are named
+// column exists, and every read drops the value. The one exclusion is named
 // rather than left to be inferred from an absence:
 //
-//   - activity — no store wiring, no wire carriage, so a custom field on an
-//     activity can be created and never read back. That has been true since it
-//     shipped, hidden only by the SPA's picker; naming it here is what closes it.
-//   - relationship — same two gaps. Custom fields on edges is deliberately its
-//     own future change, because it opens a question no gate here can answer: a
-//     `relationship` row is EXCLUDED from piiTables today, judged against a
+//   - relationship — no store wiring, no wire carriage. Custom fields on edges is
+//     its own future change, because it opens a question no gate here can answer:
+//     a `relationship` row is EXCLUDED from piiTables today, judged against a
 //     closed set of business facts, and an open-ended cf_* column on a contact's
 //     employment edge would change that premise while Art. 17 erasure and
 //     Art. 15 SAR both stay blind to it.
+//
+// An activity field applies to every kind. The catalog has no per-kind
+// narrowing, so a field meant for meetings is offered on a logged call too.
 //
 // The catalog CHECK stays WIDER than this list (migrations/core/0171), which is
 // safe because this engine is the only writer of that table, and is the same
@@ -83,6 +83,7 @@ var FieldObjects = []string{
 	string(datasource.EntityDeal),
 	string(datasource.EntityLead),
 	string(datasource.EntityProject),
+	string(datasource.EntityActivity),
 	// Contract comes from the field-catalog TARGET vocabulary rather than from
 	// datasource.EntityType, and the difference is the whole reason that
 	// vocabulary exists. EntityType is what a record PROVIDER can be asked
@@ -144,6 +145,7 @@ const (
 	fieldSource   = "source"
 	fieldStatus   = "status"
 	fieldShow     = "show_in_create"
+	fieldReport   = "reportable"
 	fieldSlug     = "slug"
 	fieldColumn   = "column_name"
 	codeRequired  = "required"

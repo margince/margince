@@ -168,6 +168,8 @@ type WaitingCustomer struct {
 	// thread. It is what keeps a long wait in execution instead of sending it
 	// to review.
 	HasOpenDeal bool
+	// NonBuyer keeps commercial direction separate from whether a reply is owed.
+	NonBuyer bool
 	// Engaged says the workspace wrote on this thread before the message
 	// arrived. False means unproven, not absent: a client that strips reply
 	// headers gives each message its own thread, so this demotes rather than

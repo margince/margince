@@ -206,6 +206,10 @@ type reportSpec struct {
 	// silently included those deals under a null key would still disclose that
 	// somebody's partner brought them.
 	referenceScopes map[string]string
+	// customFields are the reportable custom fields this spec was extended
+	// with in one installation, keyed by their SQL expression. Empty on every
+	// prebuilt entry; analyticsCatalog fills it per request.
+	customFields map[string]customDimension
 	// thresholds are the filters that compare the row against a NUMBER the
 	// caller sends rather than a column it must equal (reportthreshold.go).
 	// Each has a default, so the report answers with no plan at all, and the

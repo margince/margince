@@ -9,7 +9,7 @@ var reportingLabelWords = struct{ OwnerMissing, Unassigned, ForecastContribution
 	PipelineContribution: langcopy.Phrase{En: "Captured pipeline contribution", De: "Erfasster Pipelinebeitrag", Vi: "Khoản đóng góp vào pipeline đã ghi nhận"},
 	Unmapped:             langcopy.Phrase{En: "Unmapped", De: "Nicht zugeordnet", Vi: "Chưa ánh xạ"},
 	Meeting:              langcopy.Phrase{En: "Meeting", De: "Besprechung", Vi: "Cuộc họp"},
-	OwnerMissing:         langcopy.Phrase{En: "Owner not recorded", De: "Verantwortliche Person nicht erfasst", Vi: "Chưa ghi nhận người phụ trách"},
+	OwnerMissing:         langcopy.Phrase{En: "Owner not recorded", De: "Verantwortliche Person nicht erfasst", Vi: "Chưa ghi nhận người chịu trách nhiệm"},
 	Unassigned:           langcopy.Phrase{En: "Unassigned", De: "Nicht zugewiesen", Vi: "Chưa phân công"},
 	ForecastContribution: langcopy.Phrase{En: "Forecast contribution", De: "Prognosebeitrag", Vi: "Khoản đóng góp vào dự báo"},
 }

@@ -18,7 +18,7 @@ import type { MessageKey } from "../../i18n/en";
 import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
-import { ArchiveAction } from "../../screens/archive";
+import { ArchiveAction } from "../records/archive";
 import "../lists/listsection.css";
 
 type OfferTemplate = components["schemas"]["OfferTemplate"];

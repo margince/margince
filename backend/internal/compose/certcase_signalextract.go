@@ -61,11 +61,13 @@ const certSentDefault = "2026-09-07"
 
 // signalExtractExpectation identifies an event, its cited message and verified promiser.
 type signalExtractExpectation struct {
-	Kind            string `json:"kind"`
-	Message         int    `json:"message"`
-	RestatedMessage int    `json:"restated_message,omitempty"`
-	DueDate         string `json:"due_date,omitempty"`
-	Promiser        string `json:"promiser,omitempty"`
+	Meaning         *commitmentMeaning `json:"meaning,omitempty"`
+	Optional        bool               `json:"optional,omitempty"`
+	Kind            string             `json:"kind"`
+	Message         int                `json:"message"`
+	RestatedMessage int                `json:"restated_message,omitempty"`
+	DueDate         *string            `json:"due_date,omitempty"`
+	Promiser        string             `json:"promiser,omitempty"`
 }
 
 // signalExtractCases serves the one site that reads material events out of a
@@ -134,6 +136,13 @@ func (signalExtractCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pr
 		})
 	}
 	for i := range want {
+		due := ""
+		if want[i].DueDate != nil {
+			due = *want[i].DueDate
+		}
+		if err := validateExpectedMeaning(want[i].Optional, want[i].Meaning, due, thread.Messages[want[i].Message-1].Body); err != nil {
+			return nil, err
+		}
 		if want[i].Promiser == "" {
 			continue
 		}
@@ -263,7 +272,7 @@ func (c *signalExtractCase) AnswerConfidence(trace aitasks.Trace) (low, high flo
 	}
 	var confidences []float64
 	for _, event := range payload.events() {
-		if event.Kind == extractKindCommitment {
+		if event.Kind == extractKindCommitment && event.Meaning.withheldOutcome() == "" {
 			confidences = append(confidences, float64(event.Confidence))
 		}
 	}
@@ -294,10 +303,16 @@ func (c *signalExtractCase) disagreements(payload extractPayload) []string {
 	}
 	reported := map[string]bool{}
 	for _, event := range payload.events() {
+		if event.Kind == extractKindCommitment && event.Meaning.withheldOutcome() != "" {
+			continue
+		}
 		reported[fmt.Sprintf("%s@%d:%s", event.Kind, position[event.MessageID], c.promiserKeys[event.PromiserRef])] = true
 	}
 	wanted := map[string]bool{}
 	for _, event := range c.expected {
+		if event.Optional {
+			continue
+		}
 		wanted[fmt.Sprintf("%s@%d:%s", event.Kind, event.Message, event.Promiser)] = true
 	}
 	var out []string
@@ -306,11 +321,14 @@ func (c *signalExtractCase) disagreements(payload extractPayload) []string {
 			if event.Kind != expected.Kind || position[event.MessageID] != expected.Message {
 				continue
 			}
+			if !expectedMeaningMatches(expected.Meaning, event.Meaning) {
+				out = append(out, "the commitment meaning does not match the source")
+			}
 			if expected.RestatedMessage != 0 && position[event.RestatedMessageID] != expected.RestatedMessage {
 				out = append(out, "the renewed promise does not cite its restatement")
 			}
-			if expected.DueDate != "" && event.DueDate != expected.DueDate {
-				out = append(out, "the renewed deadline does not match its source date")
+			if expected.DueDate != nil && event.DueDate != *expected.DueDate {
+				out = append(out, "the deadline does not match its source date")
 			}
 		}
 	}

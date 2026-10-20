@@ -80,7 +80,7 @@ openapi: 3.1.0
 info:
   title: Margince API
   version: 1.0.0-draft
-  summary: AI-native, open-source CRM core — contacts, companies, deals, pipelines, activities, leads, plus the agent/AI surface.
+  summary: AI-native, source-available CRM core — contacts, companies, deals, pipelines, activities, leads, plus the agent/AI surface.
   description: |
     The V1 core CRM contract. Derived from `spec/data-model.md` (the canonical
     Postgres schema), `spec/features/01-core-objects.md` (endpoint acceptance
@@ -2573,6 +2573,7 @@ paths:
               schema: { $ref: '#/components/schemas/IntegrationsSettings' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/SettingLocked' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   # ------------------------ /provider-connections --------------------------
@@ -2946,7 +2947,11 @@ paths:
               schema: { $ref: '#/components/schemas/Company' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '409':
+          description: 'A state conflict (a concurrent edit or a duplicate). Or the company is the installations anchor, its name changes, and a boot source sets `installation.name` (`code: setting_locked_by_boot_source`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
     delete:
       tags: [Companies]
@@ -5066,6 +5071,7 @@ paths:
               schema: { $ref: '#/components/schemas/LegalReviewSettings' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/SettingLocked' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /legal-reviews/{id}:
@@ -7236,6 +7242,10 @@ paths:
       tags: [Activities]
       operationId: listActivities
       summary: List activities (the timeline; cursor-paginated, filterable by type/entity).
+      description: >-
+        A `cf_<slug>=<value>` query parameter narrows the list to activities whose custom field
+        holds that value. It names an active activity custom field, and it reads content, so a
+        row whose content the caller may not read is left out rather than listed withheld.
       x-mcp-tool: { verb: list_records, record_type: activity, tier: auto_execute, scope: read }
       parameters:
         - $ref: '#/components/parameters/Cursor'
@@ -7272,6 +7282,10 @@ paths:
           description: >-
             Narrow the timeline sections to one body of work: what is filed under this project
             or under no project; correspondence filed under another project is left out.
+        - name: source_activity_id
+          in: query
+          schema: { type: string, format: uuid }
+          description: Tasks derived from this readable source activity, under current task visibility.
         - name: thread_key
           in: query
           schema: { type: string }
@@ -10235,6 +10249,7 @@ paths:
               schema: { $ref: '#/components/schemas/FollowUpSettings' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/SettingLocked' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /email-signature-template:
@@ -10274,6 +10289,7 @@ paths:
               schema: { $ref: '#/components/schemas/EmailSignatureTemplate' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/SettingLocked' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /leads/settings:
@@ -10313,6 +10329,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/LeadSettings' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/SettingLocked' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /leads/{id}:
@@ -12377,6 +12394,175 @@ paths:
           $ref: '#/components/responses/NotFound'
         '422':
           $ref: '#/components/responses/ValidationError'
+      x-agent-access: human-only
+      security:
+      - cookieAuth: []
+  /analytics/reports/{id}/draft:
+    parameters: *id016
+    put:
+      tags:
+      - Reports
+      operationId: saveReportingReportDraft
+      summary: Save a reporting report draft
+      description: Saves the next revision as a draft that only the report's editors see. Readers keep the published revision. A second save replaces the draft.
+      responses:
+        '200':
+          description: Reporting result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportingReport'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - name: If-Match
+        in: header
+        required: true
+        schema: { type: string }
+      x-agent-access: human-only
+      security:
+      - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportingReportDraftInput'
+    delete:
+      tags:
+      - Reports
+      operationId: discardReportingReportDraft
+      summary: Discard a reporting report draft
+      description: Removes the draft. The published revision is unchanged.
+      responses:
+        '200':
+          description: Reporting result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportingReport'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - name: If-Match
+        in: header
+        required: true
+        schema: { type: string }
+      x-agent-access: human-only
+      security:
+      - cookieAuth: []
+  /analytics/reports/{id}/draft/publish:
+    parameters: *id016
+    post:
+      tags:
+      - Reports
+      operationId: publishReportingReportDraft
+      summary: Publish a reporting report draft
+      description: Makes the draft the revision every reader sees. Editions and schedules keep the revision they were made from.
+      responses:
+        '200':
+          description: Reporting result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportingReport'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - name: If-Match
+        in: header
+        required: true
+        schema: { type: string }
+      x-agent-access: human-only
+      security:
+      - cookieAuth: []
+  /analytics/reports/{id}/revisions:
+    parameters: *id016
+    get:
+      tags:
+      - Reports
+      operationId: listReportingReportRevisions
+      summary: List reporting report revisions
+      description: Every revision of the report, newest first, with who saved it and when. Only an editor of the report may list them.
+      responses:
+        '200':
+          description: Reporting result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportingReportRevisionList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      x-agent-access: human-only
+      security:
+      - cookieAuth: []
+  /analytics/reports/{id}/revisions/{revision}/restore:
+    parameters:
+    - $ref: '#/components/parameters/Id'
+    - name: revision
+      in: path
+      required: true
+      schema: { type: integer, format: int64, minimum: 1 }
+    post:
+      tags:
+      - Reports
+      operationId: restoreReportingReportRevision
+      summary: Restore a reporting report revision
+      description: Publishes a copy of an earlier revision as the newest one. Earlier revisions, editions and schedules are not rewritten. Refused while a draft is open.
+      responses:
+        '200':
+          description: Reporting result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportingReport'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - name: If-Match
+        in: header
+        required: true
+        schema: { type: string }
       x-agent-access: human-only
       security:
       - cookieAuth: []
@@ -14708,6 +14894,7 @@ paths:
               schema: { $ref: '#/components/schemas/CompanyProfile' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/SettingLocked' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /company/logo:
@@ -15098,7 +15285,9 @@ paths:
             The draft cannot be confirmed as submitted, and `code` says which of the three it is:
             `already_confirmed` (this dossier was confirmed already — reload the company),
             `not_confirmable` (the read has produced no draft yet — wait for it or start a new one),
-            or `version_skew` (the draft moved since it was reviewed — inspect it again).
+            or `version_skew` (the draft moved since it was reviewed — inspect it again). It is also
+            `setting_locked_by_boot_source` when the draft renames the company and a boot source
+            sets `installation.name`.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -15954,6 +16143,48 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /connectors/{provider}/history-baseline:
+    parameters:
+      - $ref: '#/components/parameters/CaptureProvider'
+    put:
+      tags: [Connectors]
+      operationId: setConnectorHistoryBaseline
+      summary: Set the date this mailbox's automatic commitment suggestions start from.
+      description: |
+        The mailbox owner's own answer, and only for their own mailbox: the write matches on the
+        authenticated user, so there is no id that reaches a colleague's connection.
+
+        Mail this mailbox delivered on a local day strictly before `date`, in `timezone`, suggests
+        no automatic commitments for this seat. Mail on the date itself is not excluded. The mail
+        stays captured and searchable, and a withheld promise is listed for review with the
+        reason `before_mailbox_history_baseline`.
+
+        It applies only to mail this mailbox is proven to have delivered, and only to work that
+        would go to this seat. A message another mailbox also delivered follows that mailbox's own
+        answer, and a colleague's commitments are never withheld by it. Meeting transcripts are
+        not mail and are never affected.
+
+        A null `date` clears it. Setting, moving or clearing the date completes, archives and
+        deletes nothing: it changes which new automatic suggestions are admitted. Audited like
+        every other change to a connection. Human-only, like every per-mailbox setting.
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SetMailHistoryBaselineRequest' }
+      responses:
+        '200':
+          description: The connection, with its baseline as it now stands.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CaptureConnection' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /connectors/{provider}/context-tag:
     parameters:
       - $ref: '#/components/parameters/CaptureProvider'
@@ -16675,17 +16906,9 @@ paths:
       security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: What is going wrong on this lead's team, and what it was judged against.
       description: |
-        The lead's own page. `/worklist/team` answers "who is carrying what" and routes to
-        a contact; this answers "what is going wrong", which is the question a lead opens
-        the page for and which counts structurally cannot answer — a board of three
-        numbers per teammate cannot say that one customer has waited past the target while
-        another rep's queue is merely long.
-
-        EVERY ROW NAMES ITS BASIS. `threshold` carries the policy state that decided the
-        row rather than a number invented for this reading, so a lead disputing it can see
-        the rule. The response-breach rows read the SAME lead-response policy the rep's own
-        queue reads, which is what stops the manager and the rep holding two rules that
-        agree today and drift tomorrow.
+        Team exceptions identify material revenue risk, unassigned work and repeated
+        failures. Each row names the basis used by the shared Worklist classification.
+        Waiting-message age alone does not establish a breached response deadline.
 
         Gated to the lead tier and read under the caller's visibility, like every figure on
         this surface. A rep gets 403 rather than an empty list: a refusal that answered
@@ -16986,7 +17209,35 @@ paths:
               schema: { $ref: '#/components/schemas/InstallationSettings' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/SettingLocked' }
         '422': { $ref: '#/components/responses/ValidationError' }
+
+  /installation/configuration:
+    get:
+      tags: [Identity]
+      operationId: getInstallationConfiguration
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      summary: Every setting the programs read, with its value and source (admin/ops).
+      description: |
+        Lists every registered setting of the api, worker and migrate programs, sorted by key:
+        its environment variable and flag, its type, the programs that read it, the value in
+        force and where that value came from. A secret answers `secret: true` and a null value
+        and default; no response carries a secret. Settings the product writes itself are not
+        configuration and are not listed.
+
+        Admin/ops only: governed by the `installation_settings` RBAC object's update grant, the
+        grant of those who change the installation.
+      responses:
+        '200':
+          description: The configuration overview.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ConfigurationEntry' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
 
   /installation/setup:
     get:
@@ -17122,6 +17373,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '409': { $ref: '#/components/responses/SettingLocked' }
         '422': { $ref: '#/components/responses/ValidationError' }
         '503':
           description: >-
@@ -17160,6 +17412,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '409': { $ref: '#/components/responses/SettingLocked' }
         '503':
           description: >-
             This installation has no key vault, so there is no sealed secret to remove. The
@@ -17413,6 +17666,7 @@ paths:
               schema: { $ref: '#/components/schemas/CaptureSettings' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/SettingLocked' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   # ------------- /capture/consumer-mail-domains (CAP-PARAM-5) ---------------
@@ -17921,7 +18175,10 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '409':
-          description: The configuration changed; reload before saving.
+          description: 'The configuration changed; reload before saving. Or a boot source sets the allowance (`code: setting_locked_by_boot_source`): change it there.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /ai/budget/preview:
@@ -18018,7 +18275,10 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '409':
-          description: Someone saved the overrides since they were read; reload before saving.
+          description: 'Someone saved the overrides since they were read; reload before saving. Or a boot source sets the overrides (`code: setting_locked_by_boot_source`): change it there.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /ai/task-overrides/preview:
@@ -18229,7 +18489,11 @@ paths:
               schema: { $ref: '#/components/schemas/AiRouting' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
-        '409': { description: 'The supplied configuration revision is stale, or, with no revision supplied, the document kept changing while its Vertex AI bindings were being checked. Read it again and retry.' }
+        '409':
+          description: 'The supplied configuration revision is stale, or, with no revision supplied, the document kept changing while its Vertex AI bindings were being checked (`code: version_skew` or `conflict`): read it again and retry. Or a boot source sets the binding (`code: setting_locked_by_boot_source`): change it there.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /ai/provider-keys:
@@ -18473,6 +18737,7 @@ paths:
         '204': { description: 'Sealed. The key is not echoed.' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
+        '409': { $ref: '#/components/responses/SettingLocked' }
         '422': { $ref: '#/components/responses/ValidationError' }
         '503':
           description: >-
@@ -18507,6 +18772,7 @@ paths:
         '204': { description: 'Removed, or there was nothing to remove.' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
+        '409': { $ref: '#/components/responses/SettingLocked' }
         '503':
           description: >-
             This installation has no key vault, so there is no sealed credential to remove. The
@@ -18560,7 +18826,11 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '409': { description: 'The routing document kept changing while its Vertex AI bindings were being checked against the new location. Read it again and retry.' }
+        '409':
+          description: 'The routing document kept changing while its Vertex AI bindings were being checked: read it again and retry. Or a boot source sets the binding (`code: setting_locked_by_boot_source`): change it there.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
   /ai/provider-keys/{provider}/test:
     parameters:
@@ -19290,6 +19560,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ControllerParticulars' }
+        '409': { $ref: '#/components/responses/SettingLocked' }
   /privacy/notice-cases:
     get:
       tags: [Compliance]
@@ -20144,7 +20415,7 @@ paths:
         - name: object
           in: query
           required: true
-          schema: { type: string, enum: [contact, company, deal, lead, project, contract] }
+          schema: { type: string, enum: [contact, company, deal, lead, project, contract, activity] }
           description: Target core object (CUSTOM-FIELDS-PARAM-2).
         - name: status
           in: query
@@ -20621,6 +20892,7 @@ paths:
               schema: { $ref: '#/components/schemas/RetentionSettings' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/SettingLocked' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /retention/restrictions:
@@ -21788,8 +22060,6 @@ paths:
         - name: team_ids
           in: query
           required: false
-          explode: false
-          style: form
           schema:
             type: array
             maxItems: 20
@@ -25267,6 +25537,20 @@ paths:
         `claim` and `observed` hold structured values whose keys depend on the exception
         type — a date, a minor-unit amount, an id. Never a snippet lifted from an activity
         body: a frozen copy of a protected sentence outlives the protection on its source.
+      parameters:
+        - name: scope_kind
+          in: query
+          schema: { type: string, enum: [workspace, team, owner] }
+          description: >-
+            Narrows the findings to the deals of one population, as the forecast and the
+            reports measure it. Omitted means every finding the caller can see. A scope the
+            caller may not measure is refused.
+        - name: scope_id
+          in: query
+          schema: { type: string, format: uuid }
+          description: >-
+            The team or owner, for a team or owner scope. Refused with the workspace scope,
+            which names no subject.
       x-mcp-tool: { verb: list_input_checks, tier: auto_execute, scope: read }
       responses:
         '200':
@@ -25281,8 +25565,14 @@ paths:
                     type: array
                     items: { $ref: '#/components/schemas/InputCheck' }
                 additionalProperties: false
+        '400':
+          description: A scope the request cannot mean, such as an id without a kind or a workspace scope with an id.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /forecast/assurance/exceptions/{id}/resolve:
     post:
       tags: [Reports]
@@ -29104,6 +29394,7 @@ paths:
               schema: { $ref: '#/components/schemas/AiPriceSync' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
+        '409': { $ref: '#/components/responses/SettingLocked' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /ai-model-rates/propose-refresh:
@@ -29180,7 +29471,11 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/VersionConflict' }
+        '409':
+          description: 'The company changed since the version in If-Match (`code: version_skew`). Or the company is the installations anchor, its name changes, and a boot source sets `installation.name` (`code: setting_locked_by_boot_source`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /companies/{id}/profile-fields/{field}/confirm:
@@ -29210,7 +29505,11 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/VersionConflict' }
+        '409':
+          description: 'The company changed since the version in If-Match (`code: version_skew`). Or the company is the installations anchor, its name changes, and a boot source sets `installation.name` (`code: setting_locked_by_boot_source`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /companies/{id}/facts/{factKey}:
@@ -30009,6 +30308,14 @@ components:
           examples:
             skew:
               value: { type: 'https://errors.gradion.com/version_skew', title: Version conflict, status: 409, code: version_skew, detail: The resource changed since your last read; re-read and retry. }
+    SettingLocked:
+      description: 'A boot source (a flag, the environment, a .env file or a YAML file) sets a setting this write would change (`code: setting_locked_by_boot_source`). The detail names the setting and its source; change it there. Sending the value in force is accepted, except for a secret, which refuses every value.'
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          examples:
+            locked:
+              value: { type: 'https://errors.gradion.com/setting_locked_by_boot_source', title: Conflict, status: 409, code: setting_locked_by_boot_source, detail: 'capture.auto_enrich_daily_cap is set by env MARGINCE_CAPTURE_AUTO_ENRICH_DAILY_CAP; change it there' }
     ValidationError:
       description: Request failed validation (RFC 7807 with field-level `details.errors`).
       content:
@@ -30180,6 +30487,7 @@ components:
       additionalProperties: false
       required: [auto_sync]
       properties:
+        locks: { $ref: '#/components/schemas/SettingLocks' }
         auto_sync: { type: boolean, description: Whether the daily job syncs model prices. }
         last_run: { $ref: '#/components/schemas/AiPriceSyncRun' }
     AiPriceSyncRun:
@@ -30408,6 +30716,63 @@ components:
         page: { $ref: '#/components/schemas/PageInfo' }
 
     # ---- capture settings (workspace-shared posture; CAP-PARAM-7, ADR-0072) ----
+    SettingOrigin:
+      type: object
+      additionalProperties: false
+      description: Where the value in force came from.
+      required: [source, name]
+      properties:
+        source:
+          type: string
+          enum: [flag, env, env_file, config_file, database, default, unset]
+          description: |
+            `flag`, `env`, `env_file` and `config_file` are boot sources, and a setting one of them
+            sets is locked. `config_file` covers both the base file and the `--config-file` file;
+            `file` says which. `database` is a value an administrator saved, `default` the
+            declared default, and `unset` no value at all.
+        name: { type: string, description: 'The flag, environment variable or YAML key that set the value. Empty for `database`, `default` and `unset`.' }
+        file: { type: string, description: 'The file that held the value, for a .env or YAML source or a secret file.' }
+    SettingLock:
+      type: object
+      additionalProperties: false
+      description: A setting a boot source sets. A write that changes it is refused with 409 `setting_locked_by_boot_source`.
+      required: [key, origin]
+      properties:
+        key: { type: string, description: 'The setting''s key, such as `capture.auto_enrich_daily_cap`.' }
+        origin: { $ref: '#/components/schemas/SettingOrigin' }
+    SettingLocks:
+      type: array
+      description: |
+        The settings in this response that a boot source sets, each with its source. A client
+        shows each as read-only. Empty when nothing is locked. A write ignores it.
+      items: { $ref: '#/components/schemas/SettingLock' }
+    ConfigurationEntry:
+      type: object
+      additionalProperties: false
+      description: One registered setting, as the api program loaded it.
+      required: [key, env, type, doc, roles, secret, stored, value, default, origin]
+      properties:
+        key: { type: string }
+        env: { type: string, description: The environment variable that sets it. }
+        flag: { type: string, description: 'The command-line flag that sets it, without dashes. Absent when none does.' }
+        type: { type: string, description: 'The value''s type, as the reference documentation names it.' }
+        doc: { type: string }
+        roles:
+          type: array
+          description: The programs that read the setting.
+          items: { type: string, enum: [api, worker, migrate] }
+        secret: { type: boolean, description: 'True for a secret, whose value and default this answer never carries.' }
+        stored: { type: boolean, description: True when an administrator may also save it in the product. }
+        value:
+          type: [string, 'null']
+          description: |
+            The value in force, written as an operator writes it. Null for a secret, for a setting
+            with no value, and for a setting the api does not read: another program's sources are
+            not visible to the api.
+        default:
+          type: [string, 'null']
+          description: The declared default, written as an operator writes it. Null for a secret and when none is declared.
+        origin: { $ref: '#/components/schemas/SettingOrigin' }
     InstallationSettings:
       type: object
       description: |
@@ -30415,6 +30780,7 @@ components:
         changed only by admin/ops.
       required: [name, timezone, base_currency, base_language, fiscal_year_start_month, dead_work_banner_hours, oauth_access_token_ttl_minutes, forecast_forward_measure, base_currency_locked, max_upload_bytes, sign_in_providers, operations, agent_allowances]
       properties:
+        locks: { $ref: '#/components/schemas/SettingLocks' }
         name:
           type: string
           description: |
@@ -31093,6 +31459,7 @@ components:
         changed only by admin/ops.
       required: [auto_enrich, mail_sharing, shared_posture_allowed, signature_enrich, auto_enrich_daily_cap, site_read, mail_sync_interval_seconds]
       properties:
+        locks: { $ref: '#/components/schemas/SettingLocks' }
         auto_enrich_daily_cap:
           type: integer
           minimum: 1
@@ -31203,6 +31570,7 @@ components:
       additionalProperties: false
       required: [provider, configured, client_id, source, redirect_uris]
       properties:
+        locks: { $ref: '#/components/schemas/SettingLocks' }
         provider:
           type: string
           enum: [google, microsoft]
@@ -31210,9 +31578,10 @@ components:
         configured:
           type: boolean
           description: >-
-            Whether this vendor's app is available to this installation from any source — true when
-            `source` is `stored` or `environment`. It answers "can this vendor's mail and calendar
-            be connected", which is a different question from where the app came from.
+            Whether this vendor's app is available to this installation from any source — one
+            stored through this surface, or the deployment's own. It answers "can this vendor's mail
+            and calendar be connected", which is a different question from where the app came
+            from: an entry in `locks` says the deployment set it.
         client_id:
           type: string
           description: >-
@@ -31229,11 +31598,11 @@ components:
         source:
           type: string
           enum: [stored, environment, none]
+          deprecated: true
           description: >-
-            Where the app in use comes from. `stored` is one saved through this surface, which wins
-            over the deployment's. `environment` is the pair the deployment composed, used whenever
-            nothing is stored — so removing a stored app reverts to it rather than leaving the
-            installation with none. `none` means neither source can supply one.
+            Deprecated: read `locks` instead, which names the flag, variable or file that sets the
+            deployment's app. `environment` is that app, which wins and locks the stored one;
+            `stored` is one saved through this surface; `none` means neither can supply one.
         redirect_uris:
           type: array
           description: >-
@@ -31556,6 +31925,7 @@ components:
       additionalProperties: false
       required: [providers]
       properties:
+        locks: { $ref: '#/components/schemas/SettingLocks' }
         providers:
           type: array
           items: { $ref: '#/components/schemas/AiProviderKeyStatus' }
@@ -31823,6 +32193,10 @@ components:
         copy free to drift from the generated one.
       required: [profile, tiers, embeddings]
       properties:
+        locks:
+          $ref: '#/components/schemas/SettingLocks'
+          readOnly: true
+          description: 'The settings a boot source sets among the binding and the task overrides; `/ai/task-overrides` is a map of tasks, so its lock is reported here.'
         profile:
           type: string
           enum: [eu_hosted, sovereign, cloud_frontier]
@@ -32081,6 +32455,7 @@ components:
         admin/ops.
       required: [automatic_lookup]
       properties:
+        locks: { $ref: '#/components/schemas/SettingLocks' }
         automatic_lookup:
           type: boolean
           description: |
@@ -32433,6 +32808,7 @@ components:
             AFTERWARDS; already-captured mail keeps the audience it has unless the same call asks
             for `apply_to_history`.
         context_tag: { $ref: '#/components/schemas/ConnectorContextTag' }
+        history_baseline: { $ref: '#/components/schemas/MailHistoryBaseline' }
         created_at: { type: string, format: date-time, readOnly: true }
         updated_at: { type: string, format: date-time, readOnly: true }
     ConnectorContextTag:
@@ -32480,6 +32856,37 @@ components:
 
             Validated here, at the moment it is set, rather than when a record lands: a
             capture must never fail over a word somebody archived afterwards.
+    MailHistoryBaseline:
+      type: object
+      additionalProperties: false
+      readOnly: true
+      required: [date, timezone, set_at]
+      description: |
+        The local date this mailbox's automatic commitment suggestions start from. Absent when the
+        owner chose none, which keeps the normal policy. Set and cleared through
+        PUT /connectors/{provider}/history-baseline.
+      properties:
+        date:
+          type: string
+          format: date
+          description: Mail from a local day strictly before this date suggests no automatic commitments.
+        timezone:
+          type: string
+          description: The IANA zone the date is read in, such as Europe/Berlin.
+        set_at: { type: string, format: date-time }
+    SetMailHistoryBaselineRequest:
+      type: object
+      additionalProperties: false
+      required: [date]
+      description: The date one mailbox's automatic commitment suggestions start from.
+      properties:
+        date:
+          type: [string, 'null']
+          format: date
+          description: The first local day that suggests automatic commitments. Null clears the baseline.
+        timezone:
+          type: string
+          description: 'The IANA zone `date` is read in. Required with a date; ignored when clearing.'
     SetSignatureEnrichmentRequest:
       type: object
       additionalProperties: false
@@ -33880,6 +34287,7 @@ components:
       type: object
       required: [enabled]
       properties:
+        locks: { $ref: '#/components/schemas/SettingLocks', readOnly: true }
         enabled: { type: boolean }
 
     DealSuggestion:
@@ -34112,6 +34520,7 @@ components:
       type: object
       required: [config, revision, eligible_full_users, budgeted_full_users, source, monthly_tokens, spent_tokens, remaining_tokens, band, month_start_at, resets_at, observed_at]
       properties:
+        locks: { $ref: '#/components/schemas/SettingLocks' }
         config: { $ref: '#/components/schemas/AiBudgetConfig' }
         revision: { type: string }
         eligible_full_users: { type: integer, format: int64 }
@@ -36396,6 +36805,12 @@ components:
       properties:
         company_id: { type: string, format: uuid }
         company_name: { type: string }
+        logo_url:
+          type: string
+          description: >-
+            The same `getCompanyLogo` path `Company.logo_url` carries for this account. The key
+            is ABSENT when the company wears no logo; a client draws the company's monogram
+            then.
 
     CreateContactRequest:
       type: object
@@ -37465,7 +37880,7 @@ components:
       description: One record a brief sentence was written from.
       required: [entity_type, entity_id]
       properties:
-        entity_type: { type: string, enum: [deal, activity, contact, company, fact, profile_field] }
+        entity_type: { type: string, enum: [deal, activity, contact, company, lead, fact, profile_field] }
         entity_id: { type: string, format: uuid }
         name:
           type: string
@@ -41661,6 +42076,7 @@ components:
       type: object
       required: [template]
       properties:
+        locks: { $ref: '#/components/schemas/SettingLocks', readOnly: true }
         template:
           type: string
           maxLength: 4000
@@ -44727,6 +45143,16 @@ components:
         start: { type: string, format: date-time }
         end: { type: string, format: date-time }
 
+    CommitmentMeaning:
+      type: object
+      description: The source-supported state and deadline precision of a possible promise.
+      required: [state, condition, deadline_precision, deadline_quote]
+      properties:
+        state: { type: string, description: "Whether the promise is open, completed, conditional, optional, a request, or unclear." }
+        condition: { type: string, description: "The unmet condition in the source's own words, otherwise empty." }
+        deadline_precision: { type: string, description: "Day, range, or none. A range does not name a due date." }
+        deadline_quote: { type: string, description: "The source's deadline words, empty when no deadline was stated." }
+
     CommitmentAdmission:
       type: object
       description: A recorded decision about whether a promise creates current work. Re-reading replaces this decision without changing human-owned work.
@@ -44737,6 +45163,7 @@ components:
         source_quote: { type: string }
         outcome: { type: string }
         current_work: { type: boolean }
+        meaning: { $ref: "#/components/schemas/CommitmentMeaning" }
         rule_version: { type: string }
         evidence_ids: { type: array, items: { type: string, format: uuid } }
         evaluated_at: { type: string, format: date-time }
@@ -44761,6 +45188,9 @@ components:
         what the DB CHECK would reject, rather than 500-ing at write time).
         `channel_provider` is the same kind of constraint in both directions: non-null exactly
         when `kind=message` (ADR-0107).
+        **Custom fields**: the values of the workspace's activity custom fields arrive as extra
+        top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
+        `withheld`.
       required: [id, kind, occurred_at, source, captured_by, created_at, updated_at]
       properties:
         commitment_admissions:
@@ -44898,10 +45328,9 @@ components:
           format: uuid
           readOnly: true
           description: >-
-            The activity this one was derived from: today, the meeting whose transcript proposed a task. Null on almost every row: a task somebody typed came from
-            nowhere but them. It is a reference, not a grant: opening it goes through the
-            activity read path under the caller's own scope, so a reader who may not see
-            the meeting gets the same answer they would get by asking for it directly.
+            The conversation or note this task follows from, whether added by a human or
+            read from a conversation. Opening the source requires current source access.
+            A task cannot grant access to its source or disclose content from a withheld source.
         links:
           type: array
           description: One activity may link to >1 entity (contact + deal).
@@ -44945,6 +45374,7 @@ components:
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         archived_at: { type: [string, 'null'], format: date-time }
+      additionalProperties: true
 
     ProviderRef:
       type: string
@@ -45082,11 +45512,29 @@ components:
                 a transport that sends text-with-files as a caption bounds it far below a
                 text-only message. Zero means no extra bound.
 
+    ActivityFollowUpTask:
+      type: object
+      additionalProperties: false
+      required: [subject]
+      properties:
+        subject: { type: string, minLength: 1 }
+        body: { type: [string, 'null'] }
+        due_at: { type: [string, 'null'], format: date-time }
+        assignee_id: { type: [string, 'null'], format: uuid }
+
     CreateTaskRequest:
       type: object
       description: What a task needs. Stored as an activity of kind `task`.
       required: [subject, source]
       properties:
+        source_activity_id:
+          type: string
+          format: uuid
+          description: >-
+            The non-task activity this task follows from, including email and messages.
+            The caller and assignee need access to the source content. The task preserves
+            its audience and inherits its visible links when no links are supplied.
+            This reference does not accept or settle a request.
         request_activity_id:
           type: string
           format: uuid
@@ -45104,7 +45552,7 @@ components:
         assignee_id: { type: [string, 'null'], format: uuid, description: 'Who owes it. Defaults to the caller.' }
         links:
           type: array
-          description: The records the task is about. Omit it and the task appears on no timeline.
+          description: The records the task is about. With a source activity, omitted or empty links inherit its visible links. Otherwise the task appears on no timeline.
           items:
             type: object
             required: [entity_type, entity_id]
@@ -45117,6 +45565,20 @@ components:
       type: object
       required: [kind, source]
       properties:
+        source_activity_id:
+          type: string
+          format: uuid
+          description: >-
+            The non-task activity this task follows from, including email and messages.
+            The caller and assignee need access to the source content. The task preserves
+            its audience and inherits its visible links when no links are supplied.
+            This reference does not accept or settle a request.
+        follow_up_task:
+          $ref: '#/components/schemas/ActivityFollowUpTask'
+          description: >-
+            Meeting, call or note only. Create this task and its source activity in one
+            transaction. The task inherits the source links and audience. Replaying a source
+            identity returns the original activity without adding another task.
         request_activity_id:
           type: string
           format: uuid
@@ -45242,6 +45704,11 @@ components:
             start, as the calendar states it. Meeting only. Required whenever
             `ical_uid` is given, because a series without an occurrence names every
             meeting in it at once.
+      additionalProperties: true
+      description: >-
+        The workspace's active activity custom fields travel as extra top-level `cf_` keys.
+        A key that is not `cf_`-prefixed, names no active activity field, or carries a value
+        of the wrong shape for its field returns `422`.
 
     ActivityAudience:
       type: string
@@ -45379,6 +45846,12 @@ components:
             an explicit `null` is also unchanged rather than a clear, unlike `due_at`,
             `remind_at` and `assignee_id`, where `null` removes the value. Recording the
             wrong outcome is fixed by sending the right one.
+      additionalProperties: true
+      description: >-
+        A sparse patch. The workspace's active activity custom fields travel as extra
+        top-level `cf_` keys, and an explicit `null` clears one. A key that is not
+        `cf_`-prefixed, names no active activity field, or carries a value of the wrong
+        shape for its field returns `422`.
 
     ActivityListResponse:
       type: object
@@ -47351,6 +47824,7 @@ components:
       type: object
       required: [follow_up_after_days]
       properties:
+        locks: { $ref: '#/components/schemas/SettingLocks', readOnly: true }
         follow_up_after_days:
           type: integer
           minimum: 1
@@ -47361,6 +47835,7 @@ components:
       type: object
       required: [first_response_enabled, first_response_target_minutes]
       properties:
+        locks: { $ref: '#/components/schemas/SettingLocks' }
         first_response_enabled: { type: boolean, description: 'Whether the first-response target is tracked at all. Off by default.' }
         first_response_target_minutes: { type: integer, description: 'How long a lead may wait for its first genuine response once the clock starts (routing, else creation). 15..10080.' }
         unassigned_escalation_user_id:
@@ -48617,6 +49092,10 @@ components:
       - metric_reading
     ReportingStatus:
       type: string
+      description: |
+        `failed` means the database could not calculate this figure on this
+        read. The other figures in the same evaluation are unaffected, and a
+        later read may succeed.
       enum:
       - ok
       - no_data
@@ -48625,6 +49104,7 @@ components:
       - partial
       - unsupported
       - unavailable
+      - failed
     ReportingScope:
       type: object
       additionalProperties: false
@@ -49037,6 +49517,41 @@ components:
           format: int64
         created_at: *id001
         archived_at: *id001
+        draft_revision:
+          type: integer
+          format: int64
+          description: |
+            The unpublished draft revision, shown only to an editor of the report. Absent when there
+            is no draft. Evaluate it with `revision` to preview it.
+    ReportingReportDraftInput:
+      type: object
+      additionalProperties: false
+      required: [selection]
+      properties:
+        selection:
+          $ref: '#/components/schemas/ReportingSelection'
+    ReportingReportRevision:
+      type: object
+      additionalProperties: false
+      required: [revision, state, created_at, created_by, selection]
+      properties:
+        revision: { type: integer, format: int64 }
+        selection:
+          $ref: '#/components/schemas/ReportingSelection'
+        state:
+          type: string
+          enum: [draft, published, earlier]
+          description: The draft, the revision readers see, or one published before it.
+        created_at: *id001
+        created_by: *id002
+    ReportingReportRevisionList:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/ReportingReportRevision' }
     ReportingTargetInput:
       type: object
       additionalProperties: false
@@ -50162,6 +50677,14 @@ components:
             The forward half. Zero for a manager call, which is a single authored TOTAL
             rather than a remainder — a call is not added to won_minor, and a
             reconciliation line drawing this must say the call instead of a split.
+        system_minor:
+          type: integer
+          format: int64
+          description: >-
+            Beside a manager call only: what the deal records alone project, won plus
+            commit evidence. The call replaces this figure, so a reader comparing the
+            call with the records needs both. Absent for every other measure, whose
+            amount_minor already is the records' projection.
         caveat:
           type: string
           enum: [call_absent, call_below_actual]
@@ -50740,6 +51263,30 @@ components:
           type: array
           items: { type: string }
           description: The fields this population can be aggregated over.
+        custom_fields:
+          type: array
+          items: { $ref: '#/components/schemas/AnalyticsCustomField' }
+          description: |
+            The installation's own fields among `group_by`, with the label and choices an
+            administrator gave them. A field an administrator opted into reporting shows here, and
+            only such a field: its label and choices are published to every reader of the population.
+      additionalProperties: false
+    AnalyticsCustomField:
+      type: object
+      required: [name, label, type, options]
+      properties:
+        name: { type: string, description: "The field as `group_by` and a filter name it." }
+        label: { type: string, description: "The name an administrator gave the field." }
+        type:
+          type: string
+          enum: [picklist, boolean]
+          description: The value shape. A picklist holds one of `options`; a boolean holds yes or no.
+        options:
+          type: array
+          items: { type: string }
+          description: |
+            The choices a picklist offers today, empty for a boolean. A record may still hold a
+            choice an administrator has since removed.
       additionalProperties: false
     AnalyticsQuery:
       type: object
@@ -52239,12 +52786,12 @@ components:
         a column drop — CUSTOM-FIELDS-AC-13). Deliberately carries no
         `source`/`captured_by` — the catalog row itself has no such columns; provenance
         on create lives in the audit row.
-      required: [id, object, label, slug, type, status, column_name, show_in_create, created_by, created_at, updated_at]
+      required: [id, object, label, slug, type, status, column_name, show_in_create, reportable, created_by, created_at, updated_at]
       properties:
         id: { type: string, format: uuid }
         object:
           type: string
-          enum: [contact, company, deal, lead, project, contract]
+          enum: [contact, company, deal, lead, project, contract, activity]
           description: The existing core object this field is added to.
         label: { type: string, description: 'Display label; a rename changes it, and never the slug or column_name.' }
         slug: { type: string, description: Admin-facing key the column_name derives from. }
@@ -52274,6 +52821,13 @@ components:
           description: >-
             Whether the field is offered in the create dialog of its object. Off keeps it out of
             create dialogs only: the record page still shows the field and edits its value.
+        reportable:
+          type: boolean
+          description: >-
+            Whether reports may group and filter by this field. Off by default, and only a
+            picklist or boolean field can be on: one value per record keeps a grouped total
+            from counting a record twice. On publishes the field's label and choices to every
+            reader of the reports over its object.
         created_by: { type: string, format: uuid }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
@@ -52326,7 +52880,7 @@ components:
       properties:
         object:
           type: string
-          enum: [contact, company, deal, lead, project, contract]
+          enum: [contact, company, deal, lead, project, contract, activity]
         label: { type: string }
         type:
           type: string
@@ -52348,12 +52902,14 @@ components:
     RenameCustomFieldRequest:
       type: object
       description: >-
-        Merge-PATCH of the two settings a live field may change: `label` and `show_in_create`.
-        At least one is required. `column_name`, `object`, and `type` are absent from this
-        request schema entirely (immutable, not just ignored if sent).
+        Merge-PATCH of the settings a live field may change: `label`, `show_in_create` and
+        `reportable`. At least one is required. `column_name`, `object`, and `type` are absent
+        from this request schema entirely (immutable, not just ignored if sent). `reportable`
+        true on a field that is not a picklist or boolean is refused.
       properties:
         label: { type: string }
         show_in_create: { type: boolean }
+        reportable: { type: boolean }
 
     UpdateCustomFieldOptionsRequest:
       type: object
@@ -54383,11 +54939,92 @@ components:
             line-addressed.
           items: { type: integer, minimum: 1 }
 
+    ApprovalPreviewValue:
+      type: object
+      required: [kind, text]
+      properties:
+        kind:
+          type: string
+          x-extensible-enum: [text, number, boolean, empty, owner, stage, lifecycle, execution, money, structured, unavailable_name, reference, date]
+          description: How the reader should format this value.
+        text:
+          type: string
+          description: Authorized readable value, or a lifecycle code for translation.
+        currency: { type: string, description: ISO currency of a money value in minor units. }
+        entity_type: { type: string }
+        entity_id: { type: string, format: uuid }
+    ApprovalPreviewChange:
+      type: object
+      required: [field, before, after]
+      properties:
+        field:
+          type: string
+          description: Canonical field name, translated by the client where known.
+        before: { $ref: '#/components/schemas/ApprovalPreviewValue' }
+        after: { $ref: '#/components/schemas/ApprovalPreviewValue' }
+    ApprovalPreviewConflict:
+      type: object
+      description: Authorized context that must be considered separately from the proposed effect.
+      required: [kind, summary, blocks_approval]
+      properties:
+        kind:
+          type: string
+          x-extensible-enum: [active_engagement, newer_evidence, unknown_scope, related_proposal]
+        summary:
+          type: string
+          description: A sanitized explanation containing only facts this reader may see.
+        blocks_approval:
+          type: boolean
+          description: Whether the domain requires reconciliation before this proposal can be approved.
+    ApprovalPreview:
+      type: object
+      description: >-
+        A current, authorized explanation of the exact staged effect. It never grants
+        permission or supplies execution arguments. Before values are answered only when
+        the current record still has the staged version; stale records require restaging.
+        Pending proposals alone carry this review-time projection. An approval attempt
+        with stale context returns version_skew. Incomplete, unavailable or conflicting
+        context returns 422 with approval_preview_incomplete, approval_preview_unavailable
+        or approval_preview_conflict respectively, without recording a decision.
+      required: [version, state, changes, reviewer_reason]
+      properties:
+        effects:
+          type: array
+          description: Additional business effects released by this approval. Other proposals remain separate decisions.
+          items:
+            type: string
+            x-extensible-enum: [classify_correspondence, start_project_delivery]
+        evidence:
+          type: array
+          description: Current evidence resolved with the reader's source permissions. An empty array replaces historical evidence.
+          items: { $ref: '#/components/schemas/ApprovalEvidence' }
+        version: { type: integer, minimum: 1 }
+        state:
+          type: string
+          x-extensible-enum: [ready, stale, unavailable, incomplete]
+          description: Whether the full effect can still be explained from authorized records.
+        changes:
+          type: array
+          items: { $ref: '#/components/schemas/ApprovalPreviewChange' }
+        reviewer_reason:
+          type: string
+          x-extensible-enum: [requested_decider, on_behalf_of, record_authority]
+          description: Why this reader can answer the proposal, separate from its business reason.
+        current_version: { type: integer }
+        conflicts:
+          type: array
+          description: >-
+            Current authorized conflicts. Absence means they were not assessed, not that
+            none exist. Related proposals remain separate decisions; approving this
+            proposal never approves them.
+          items: { $ref: '#/components/schemas/ApprovalPreviewConflict' }
     Approval:
       type: object
       description: A staged 🟡 confirm-first action awaiting human decision.
       required: [id, kind, status, proposed_by, created_at]
       properties:
+        preview:
+          $ref: '#/components/schemas/ApprovalPreview'
         assignee_inactive:
           type: boolean
           readOnly: true
@@ -54926,6 +55563,7 @@ components:
       description: The installation's retention posture (GCS-PARAM-6).
       required: [retain_only]
       properties:
+        locks: { $ref: '#/components/schemas/SettingLocks' }
         retain_only:
           type: boolean
           description: |
@@ -55430,6 +56068,7 @@ components:
         Every field is optional and every field is free text. A jurisdiction pack declares WHICH
         disclosures a message carries; these are the words that meet them.
       properties:
+        locks: { $ref: '#/components/schemas/SettingLocks', readOnly: true }
         legal_name:
           type: string
           maxLength: 500
@@ -59245,6 +59884,9 @@ components:
         adds none.
       required: [id, source, actions]
       properties:
+        source_record:
+          allOf: [{ $ref: '#/components/schemas/AttentionSubject' }]
+          description: The evidence record behind this work, distinct from its account or counterparty. Its label is resolved under current read permissions; the reference grants no access.
         requested_decider_id:
           type: string
           format: uuid
@@ -59665,6 +60307,31 @@ components:
         does, widened: a source the caller may not read is named as `withheld`, and one
         that failed to answer is named as `failed`. Both keep the summary from claiming a
         clear day it did not actually see.
+
+        **Units.** A card is one row of `queue`. An item is one piece of underlying work.
+        A folded group (`batch`) is one card that stands for `batch.count` items, so eight
+        duplicate pairs drawn as one card are one card and eight items. Every figure below
+        names its unit; a client compares only figures of the same unit.
+
+        | Figure | Unit | Counted over | Exact or floor |
+        |---|---|---|---|
+        | `summary.*` | items | every candidate this read weighed, before the fold, the filter and the page cut | exact over the sources read |
+        | `summary.buckets.*` | items | the same candidates, frozen at the walk's first page | exact over the sources read |
+        | `counts[].considered`, `reach[].considered` | items | every candidate weighed, before the fold and the filter | floor when `more_available` |
+        | `counts[].shown`, `reach[].shown` | items | the cards on THIS page, each group counted as its members | exact |
+        | `batch.count` | items | the members of one card | floor when `batch.at_least` |
+        | `bands[].shown` | cards | the rows of this page under one heading | exact |
+        | `focus.total` | cards | eligible focus cards before the six-card cut; a group counts once | exact |
+        | `focus.urgent_remaining` | items | urgent items no focus card names | exact |
+        | `walk.new_available`, `walk.changed_since_snapshot` | items | arrivals since the walk froze, and frozen items that left | exact |
+
+        A client that has loaded several pages sums items over its loaded cards (one per
+        card, or `batch.count` for a group) and compares that sum with `considered`. Comparing
+        a count of loaded cards with `considered` mixes the two units. A source listed in
+        `sources_unavailable`, or a figure flagged `more_available`, means the page cannot
+        claim it holds everything, even after `next_cursor` is gone. Items past a source's
+        read limit are not reachable through `next_cursor`. They join a later read as the
+        items in front of them are handled.
       required: [as_of, queue, summary, sources_unavailable, scope, scope_options, reach, counts, readings]
       properties:
         as_of: { type: string, format: date-time, description: 'The instant every source below was read at.' }
@@ -59858,7 +60525,7 @@ components:
         shown:
           type: integer
           minimum: 0
-          description: 'How many of them the queue is carrying after folding, filtering and the page cut.'
+          description: 'How many of them the queue is carrying after folding, filtering and the page cut. A folded group counts as its members, so this is in items, not cards.'
         personal:
           type: boolean
           description: |
@@ -59896,7 +60563,7 @@ components:
         NOT A COUNT. The team board answers "who is carrying what" and routes a lead to a
         contact; this answers "what is going wrong", which is a different question and the
         one a lead opens the page for. A board of three numbers per teammate cannot say
-        that one customer has been waiting past the target while another rep's queue is
+        that one deal carries material revenue risk while another rep's queue is
         merely long.
 
         EVERY EXCEPTION NAMES ITS BASIS. `threshold` says what the row was judged against
@@ -59911,13 +60578,9 @@ components:
           enum: [response_breached, revenue_at_risk, unassigned, repeated_failure]
           x-enum-varnames: [TeamExceptionResponseBreached, TeamExceptionRevenueAtRisk, TeamExceptionUnassigned, TeamExceptionRepeatedFailure]
           description: |
-            Which condition this is. Four, and each is a thing a lead can DO something
-            about: talk to the contact, protect the revenue, give the work an owner, or fix
-            what keeps failing.
-
-            Capacity is deliberately absent. "This rep is overloaded" needs a configured
-            capacity to be a fact rather than an opinion, and this installation has none —
-            so the board's counts are offered as a reading and no exception claims it.
+            Rows identify revenue_at_risk, unassigned or repeated_failure.
+            response_breached is reserved and is not returned. Waiting-message age alone
+            does not establish a response-policy breach.
         owner:
           $ref: '#/components/schemas/WorklistOwner'
         subject:
@@ -59935,9 +60598,6 @@ components:
             The basis this row was judged against, in words a lead can check: the policy
             state that decided it rather than a number chosen for this reading.
 
-            A `response_breached` row names the lead-response policy's own state, which is
-            the same vocabulary the rep's queue uses — so the manager and the rep are
-            reading one rule rather than two that agree today.
         evidence:
           type: string
           description: |
@@ -60336,8 +60996,9 @@ components:
           type: integer
           minimum: 0
           description: |
-            How much work has arrived since this walk started, and is deliberately not in
-            it.
+            How many items have arrived since this walk started, and are deliberately not in
+            it. A folded group counts only its members the walk did not freeze, so an unchanged
+            group adds nothing.
 
             Absent on a first page, where the question has no meaning — the walk was just
             assembled, so nothing can have arrived behind it yet. A client draws this as
@@ -60770,6 +61431,9 @@ components:
         browser does not.
       required: [id, source, category, level, actions, because, consequence]
       properties:
+        source_record:
+          allOf: [{ $ref: '#/components/schemas/AttentionSubject' }]
+          description: The evidence record behind this work, distinct from its account or counterparty. Its label is resolved under current read permissions; the reference grants no access.
         notice_origin: { $ref: '#/components/schemas/NoticeOrigin' }
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
@@ -61495,7 +62159,7 @@ components:
       properties:
         kind:
           type: string
-          enum: [pinned, buyer_wrote_last, waiting_days, overdue, due_today, closing_soon, expected_revenue, material, below_material, quiet_days, no_champion, champion_unknown, promised, approved_and_failed, blocks_customer_work, routine, repeated_failure, legal_deadline, opened_overdue, earlier_requests, first_asked, no_next_step, meeting_soon, meeting_booked, meeting_unprepared, response_overdue, response_due_soon, unassigned, stale, no_reply_history, asks_nothing, addressed_elsewhere, outcome_unrecorded, you_wrote_last, no_reply_days, met_days_ago, nothing_sent_since, no_attendee_on_file, read_only]
+          enum: [pinned, buyer_wrote_last, non_buyer_request, waiting_days, overdue, due_today, closing_soon, expected_revenue, material, below_material, quiet_days, no_champion, champion_unknown, promised, approved_and_failed, blocks_customer_work, routine, repeated_failure, legal_deadline, opened_overdue, earlier_requests, first_asked, no_next_step, meeting_soon, meeting_booked, meeting_unprepared, response_overdue, response_due_soon, unassigned, stale, no_reply_history, asks_nothing, addressed_elsewhere, outcome_unrecorded, you_wrote_last, no_reply_days, met_days_ago, nothing_sent_since, no_attendee_on_file, read_only]
           description: 'Which fact this is. The client writes the phrase. `read_only` says why a row offers no way off the list: the reader may read its record and not change it.'
         value: { $ref: '#/components/schemas/WorklistValue' }
 

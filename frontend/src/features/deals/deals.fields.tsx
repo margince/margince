@@ -5,9 +5,9 @@ import { currencyOptions } from "../../format/currencychoices";
 import type { MessageKey } from "../../i18n/en";
 import { unwrap } from "../../lib/problem";
 import type { AcquisitionSource } from "../../screens/acquisitionsources.queries";
-import type { ProjectOwnerPicker } from "../../screens/projectownerfield";
-import type { Project } from "../../screens/projects.form";
 import { searchCompanyTargets } from "../companies/companyform";
+import type { ProjectOwnerPicker } from "../projects/projectownerfield";
+import type { Project } from "../projects/projects.form";
 import {
   dealCommercialFields,
   MOTION_OPTIONS,

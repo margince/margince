@@ -8,14 +8,15 @@ import { taskWriteKeys } from "../../lib/activitykeys";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import {
   TaskCompleteCheck,
-  TaskDetailModal,
   TaskQuickActions,
   useTaskUpdate,
 } from "./taskactions";
+import { TaskDetailModal } from "./taskdetailmodal";
 
 // Acting on a task from the record it belongs to: the tick, the quick-action
 // row, and the detail modal a next-step row opens into. Mirrors company360.test.tsx's
@@ -91,35 +92,31 @@ function DetailModal({
   filed?: boolean;
 }>) {
   installFetchStub({
-    "GET /activities/m-1": () =>
-      jsonResponse({
-        id: "m-1",
-        kind: "meeting",
-        subject: "Renewal call with Dana",
-        body: TRANSCRIPT,
-        occurred_at: "2026-07-27T14:00:00Z",
-      }),
-    // The email a request was read out of. Unstubbed, both reads fall to the
-    // empty list envelope, and the panel formats an `occurred_at` that is not
-    // there: `RangeError: Invalid time value` from a date formatter.
+    "GET /me": meRoute({ activity: ["read"] }),
     "GET /activities/email-1": () =>
-      jsonResponse({ id: "email-1", kind: "email", body: "" }),
+      jsonResponse({
+        id: "email-1",
+        kind: "email",
+        subject: "Renewal paperwork",
+        occurred_at: "2026-07-27T14:00:00Z",
+        content_state: "available",
+      }),
     "GET /activities/email-1/email-presentation": () =>
       jsonResponse({
         id: "email-1",
         lifecycle: "delivered",
-        occurred_at: "2026-07-26T08:15:00Z",
         version: 1,
+        occurred_at: "2026-07-27T14:00:00Z",
         summary: {
           activity_id: "email-1",
-          occurred_at: "2026-07-26T08:15:00Z",
+          occurred_at: "2026-07-27T14:00:00Z",
           version: 1,
-          subject: "Can you send the renewal paperwork?",
+          subject: "Renewal paperwork",
           display_status: "team",
           move: "needs_reply",
           attachment_count: 0,
         },
-        body: "Dana asked for the paperwork before Friday.",
+        body: "Please send the agreed renewal paperwork.",
         from: [],
         to: [],
         cc: [],
@@ -137,6 +134,14 @@ function DetailModal({
           can_change: false,
           change_mode: "none",
         },
+      }),
+    "GET /activities/m-1": () =>
+      jsonResponse({
+        id: "m-1",
+        kind: "meeting",
+        subject: "Renewal call with Dana",
+        body: TRANSCRIPT,
+        occurred_at: "2026-07-27T14:00:00Z",
       }),
     "GET /activities/a-1": () =>
       jsonResponse({

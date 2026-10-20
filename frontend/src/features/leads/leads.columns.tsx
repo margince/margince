@@ -13,7 +13,7 @@ import {
   lastActivityColumn,
   ownerColumn,
   tagsColumn,
-} from "../../screens/recordlist";
+} from "../records/recordlist";
 import { openTaskCountLabel } from "./leadopentasks";
 import {
   SlaBadge,

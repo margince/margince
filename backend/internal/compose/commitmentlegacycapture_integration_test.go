@@ -30,7 +30,8 @@ func TestLegacyCapturedMailUsesItsOriginalDateInsteadOfArrival(t *testing.T) {
 	ctx := withTranscriptReader(principal.WithWorkspaceID(context.Background(), e.WS), "human:"+e.Rep1.String(), ids.NewV7())
 	dispatcher := NewCommitmentDispatcher(e.Pool, approvals.NewService(e.DB()))
 	c := Commitment{
-		AsOf: asOf, SourceActivityID: source, ReadMessages: []ids.UUID{source}, Extractor: signalScanActor,
+		Meaning: openCommitmentMeaning("", ""),
+		AsOf:    asOf, SourceActivityID: source, ReadMessages: []ids.UUID{source}, Extractor: signalScanActor,
 		Locator: commitmentLocator(source, claimKindOurs, e.Rep1.String(), "Send pricing"), Seat: &e.Rep1, Summary: "Send pricing", Confidence: 0.95,
 	}
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {

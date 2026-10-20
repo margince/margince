@@ -35,6 +35,7 @@ func commitmentReply(t *testing.T, message ids.UUID, promiser, quote, due string
 		"kind": "commitment_made", "message_id": message.String(), "promiser_ref": promiser,
 		"summary": "Send the revised pricing", "quote": quote, "due_date": due,
 		"confidence": 0.95,
+		"commitment": OpenCommitmentMeaning(due, quote),
 	}}})
 	if err != nil {
 		t.Fatalf("build the scripted reply: %v", err)
@@ -145,18 +146,35 @@ func TestAPromiseInPrivateMailStaysWithItsOwner(t *testing.T) {
 
 // A customer's reply quoting our promise back to us is not their promise.
 func TestAQuotedPromiseIsNotTheRepliersPromise(t *testing.T) {
-	e := Setup(t)
-	company := e.SeedCompany(t, "Acme", &e.Rep1)
-	ines := employeeOf(t, e, company, "Ines Huber")
-	message := captureCommitmentMessage(t, e, ines, "thread-quoted", "Re: Pricing",
-		"Thanks, sounds good.\n\nOn Monday, Rep wrote:\n> "+pricingPromise, "inbound",
-		extractClock.Add(-48*time.Hour))
-	party(t, message, "from", nil, &ines)
-
-	extractPass(t, e, &scriptedBrain{reply: commitmentReply(t, message, "contact:"+ines.String(), pricingPromise, "")})
-
-	if n := e.WsCount(t, `SELECT count(*) FROM conversation_claim`); n != 0 {
-		t.Errorf("a promise the customer only quoted was filed as %d claim(s) of theirs", n)
+	for _, tc := range []struct{ name, body string }{
+		{"quoted reply", "Thanks, sounds good.\n\nOn Monday, Rep wrote:\n> " + pricingPromise},
+		{"Apple forward", "FYI.\n\nBegin forwarded message:\nFrom: Rep <rep@workspace.example>\n\n" + pricingPromise},
+		{"Vietnamese forward", "FYI.\n\nThư được chuyển tiếp:\nFrom: Rep <rep@workspace.example>\n\n" + pricingPromise},
+		{"headers after own words", "FYI.\n\nFrom: Rep <rep@workspace.example>\nDate: Monday\n\n" + pricingPromise},
+		{"forwarded message", "For your information.\n\n---------- Forwarded message ---------\nFrom: Rep <rep@workspace.example>\nSubject: Pricing\n\n" + pricingPromise},
+	} {
+		for _, direction := range []string{"inbound", "outbound"} {
+			t.Run(tc.name+"/"+direction, func(t *testing.T) {
+				e := Setup(t)
+				company := e.SeedCompany(t, "Acme", &e.Rep1)
+				ines := employeeOf(t, e, company, "Ines Huber")
+				message := captureCommitmentMessage(t, e, ines, "thread-quoted", "Re: Pricing", tc.body, direction, extractClock.Add(-48*time.Hour))
+				promiser := "contact:" + ines.String()
+				if direction == "outbound" {
+					party(t, message, "from", &e.Rep1, nil)
+					promiser = "seat:" + e.Rep1.String()
+				} else {
+					party(t, message, "from", nil, &ines)
+				}
+				extractPass(t, e, &scriptedBrain{reply: commitmentReply(t, message, promiser, pricingPromise, "")})
+				if n := e.WsCount(t, `SELECT count(*) FROM conversation_claim`); n != 0 {
+					t.Errorf("quoted or forwarded words became %d new claims", n)
+				}
+				if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE kind='task'`); n != 0 {
+					t.Errorf("quoted or forwarded words became %d new tasks", n)
+				}
+			})
+		}
 	}
 }
 

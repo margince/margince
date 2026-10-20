@@ -34,6 +34,7 @@ export type RowReadings = Readonly<{
   href?: string;
   /** Opens what the row is about in place, for a subject with no page. */
   open?: () => void;
+  sourceUnavailable?: boolean;
   /** The clock this row is racing, and what it is worth. */
   when: string | null;
   facts: string | null;
@@ -120,7 +121,14 @@ export function CompactRowLine({
   return (
     <div className="worklist-row-line">
       <p className="t-body worklist-row-title">
-        {named && <RowName title={title} href={href} open={readings.open} />}
+        {named && (
+          <RowName
+            title={title}
+            href={href}
+            open={readings.open}
+            unavailable={readings.sourceUnavailable}
+          />
+        )}
         {/* The day's states ride the name at both densities: a rep scanning for
             the row to open before it starts has to see them without reading
             anything beside them. */}

@@ -6,6 +6,7 @@ package dealrooms
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -77,17 +78,31 @@ func (h Handlers) sendInvite(r *http.Request, issued IssuedInvitation) error {
 		language = h.mailLanguage(r.Context())
 	}
 	words := mailcopy.For(language)
-	body := words.RoomIntro + "\n\n" + mailcopy.OneLine(issued.RoomTitle) + "\n\n" + words.RoomAction + "\n\n" + h.buyerLink(issued.Credential) + "\n\n" + fmt.Sprintf(words.RoomPersonal, issued.ExpiresAt.Format(mailcopy.DateLayout)) + "\n\n" + words.RoomIgnore + "\n\n" + words.RoomDisclosure
+	inviter, company := "", ""
+	if h.inviteContext != nil {
+		var err error
+		inviter, company, err = h.inviteContext(r.Context())
+		if err != nil {
+			slog.WarnContext(r.Context(), "invitation attribution unavailable; sending the access link", "cause", err)
+		}
+	}
+	body := words.RoomMessage(issued.RoomTitle, inviter, company, h.buyerLink(issued.Credential), issued.ExpiresAt.UTC())
 
-	if err := mailer.SendLocalized(r.Context(), h.inviteMailer, string(issued.Participant.Email),
-		words.RoomSubject, body, string(words.Language)); err != nil {
+	if err := mailer.SendProduct(r.Context(), h.inviteMailer, string(issued.Participant.Email),
+		body.Title, body); err != nil {
 		return fmt.Errorf("send deal room invitation: %w", err)
 	}
 	return nil
 }
 
-// WithMailLanguage supplies the inviter’s display language.
+// WithMailLanguage supplies the fallback language for external recipients.
 func (h Handlers) WithMailLanguage(reader func(context.Context) string) Handlers {
 	h.mailLanguage = reader
+	return h
+}
+
+// WithInviteContext identifies the contact and company sharing the documents.
+func (h Handlers) WithInviteContext(reader func(context.Context) (string, string, error)) Handlers {
+	h.inviteContext = reader
 	return h
 }

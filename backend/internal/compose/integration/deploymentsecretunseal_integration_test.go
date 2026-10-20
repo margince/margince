@@ -19,7 +19,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/config"
-	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/mailer"
 	"github.com/margince/margince/backend/internal/platform/settings"
@@ -31,14 +30,10 @@ const unsealedLogLine = "removed a sealed deployment credential on this boot"
 
 // removedMailConfig declares the relay password removed and still names a
 // username. An operator revoking a leaked password most likely has this file.
-func removedMailConfig(t *testing.T, enabled bool) deployconfig.Config {
+func removedMailConfig(t *testing.T, enabled bool) *config.Config {
 	t.Helper()
-	cfg, err := deployconfig.Parse([]byte("version: 1\nemail:\n  enabled: " + strconv.FormatBool(enabled) + "\n  from_address: ops@example.test\n" +
-		"  smtp:\n    host: relay.example.test\n    port: 587\n    username: margince\n    password: ${none}\n"))
-	if err != nil {
-		t.Fatalf("parsing the deployment file: %v", err)
-	}
-	return cfg
+	return mailSettings(t, "version: 1\nemail:\n  enabled: "+strconv.FormatBool(enabled)+"\n  from_address: ops@example.test\n"+
+		"  smtp:\n    host: relay.example.test\n    port: 587\n    username: margince\n    password: ${none}\n")
 }
 
 // smtpRefRows counts the stored ref row itself. An absent row and a row
@@ -56,12 +51,12 @@ func smtpRefRows(t *testing.T, e *Env) int {
 
 // bootWith runs what a serving role runs on this file: the removal at boot,
 // then the relay the mailer is built from.
-func bootWith(t *testing.T, e *Env, vault keyvault.Vault, cfg deployconfig.Config, log *slog.Logger) mailer.SMTP {
+func bootWith(t *testing.T, e *Env, vault keyvault.Vault, cfg *config.Config, log *slog.Logger) mailer.SMTP {
 	t.Helper()
 	if err := compose.RemoveDeclaredAbsentCredentials(sealCtx(), e.Pool, vault, cfg, log); err != nil {
 		t.Fatalf("removing the credentials the deployment declares absent: %v", err)
 	}
-	relay, err := compose.OperatorMailer(sealCtx(), e.Pool, vault, cfg, config.Static(nil), log)
+	relay, err := compose.OperatorMailer(sealCtx(), e.Pool, vault, cfg, log)
 	if err != nil {
 		t.Fatalf("building the relay: %v", err)
 	}
@@ -71,10 +66,7 @@ func bootWith(t *testing.T, e *Env, vault keyvault.Vault, cfg deployconfig.Confi
 func TestADeclaredRemovalDeletesTheSealedPasswordAndTheMailerSendsWithoutOne(t *testing.T) {
 	e := Setup(t)
 	vault := realVault(t, e)
-	if _, err := relayPassword(sealCtx(), e.Pool, vault, mailConfig(t, "SMTP_PASSWORD"),
-		config.Static(map[string]string{"SMTP_PASSWORD": "a-leaked-password"}), slog.New(slog.DiscardHandler)); err != nil {
-		t.Fatalf("sealing the relay password: %v", err)
-	}
+	sealedBefore(t, e, vault, identity.SMTPPasswordRef, "a-leaked-password")
 	if sealedBlobCount(t, e) != 1 || smtpRefRows(t, e) != 1 {
 		t.Fatal("nothing was sealed; the removal below would pass vacuously")
 	}
@@ -107,7 +99,7 @@ func TestADeclaredRemovalDeletesTheSealedPasswordAndTheMailerSendsWithoutOne(t *
 	}
 
 	// And dropping the sentinel afterwards does not bring the leaked password back.
-	after, err := relayPassword(sealCtx(), e.Pool, vault, mailConfig(t, ""), config.Static(nil), log)
+	after, err := relayPassword(sealCtx(), e.Pool, vault, mailConfig(t, ""), log)
 	if err != nil {
 		t.Fatalf("booting with no password key: %v", err)
 	}
@@ -122,11 +114,8 @@ func TestAnAbsentPasswordKeyStillAuthenticatesWithTheSealedCopy(t *testing.T) {
 	e := Setup(t)
 	vault := realVault(t, e)
 	log := slog.New(slog.DiscardHandler)
-	if _, err := relayPassword(sealCtx(), e.Pool, vault, mailConfig(t, "SMTP_PASSWORD"),
-		config.Static(map[string]string{"SMTP_PASSWORD": "a-relay-password"}), log); err != nil {
-		t.Fatalf("sealing the relay password: %v", err)
-	}
-	relay, err := compose.OperatorMailer(sealCtx(), e.Pool, vault, mailConfig(t, ""), config.Static(nil), log)
+	sealedBefore(t, e, vault, identity.SMTPPasswordRef, "a-relay-password")
+	relay, err := compose.OperatorMailer(sealCtx(), e.Pool, vault, mailConfig(t, ""), log)
 	if err != nil {
 		t.Fatalf("booting with no password key: %v", err)
 	}
@@ -144,10 +133,7 @@ func TestADeclaredRemovalHoldsWhileMailIsSwitchedOff(t *testing.T) {
 	e := Setup(t)
 	vault := realVault(t, e)
 	log := slog.New(slog.DiscardHandler)
-	if _, err := relayPassword(sealCtx(), e.Pool, vault, mailConfig(t, "SMTP_PASSWORD"),
-		config.Static(map[string]string{"SMTP_PASSWORD": "a-leaked-password"}), log); err != nil {
-		t.Fatalf("sealing the relay password: %v", err)
-	}
+	sealedBefore(t, e, vault, identity.SMTPPasswordRef, "a-leaked-password")
 	if err := compose.RemoveDeclaredAbsentCredentials(sealCtx(), e.Pool, vault, removedMailConfig(t, false), log); err != nil {
 		t.Fatalf("booting with mail off and the password declared removed: %v", err)
 	}
@@ -164,10 +150,7 @@ func TestARemovalLeavesARefSealedWhileItWasDeciding(t *testing.T) {
 	e := Setup(t)
 	vault := realVault(t, e)
 	log := slog.New(slog.DiscardHandler)
-	if _, err := relayPassword(sealCtx(), e.Pool, vault, mailConfig(t, "SMTP_PASSWORD"),
-		config.Static(map[string]string{"SMTP_PASSWORD": "the-old-password"}), log); err != nil {
-		t.Fatalf("sealing the relay password: %v", err)
-	}
+	sealedBefore(t, e, vault, identity.SMTPPasswordRef, "the-old-password")
 	ws := ids.From[ids.WorkspaceKind](e.WS)
 	fresh, err := vault.Put(sealCtx(), ws, []byte("the-new-password"))
 	if err != nil {

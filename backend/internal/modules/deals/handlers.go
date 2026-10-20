@@ -20,15 +20,18 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/capabilitypath"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 type Handlers struct {
+	// locks reports the settings a boot source sets on each settings response;
+	// nil leaves the field out.
+	locks func(surface []config.Any) *[]crmcontracts.SettingLock
 	store *Store
 	// listMembers resolves the deal list's list_id; nil while lists are off.
 	listMembers storekit.ListMemberFilterResolver
@@ -39,7 +42,7 @@ type Handlers struct {
 	// SetPdfAssetRef seams (offer_render.go) stay blobstore-free.
 	blob blobstore.Store
 	// settings reads and writes the legal review switch; nil answers 501.
-	settings *settings.Store
+	settings *config.Config
 }
 
 // NewHandlers wires the transport over the workspace-bound app pool and the

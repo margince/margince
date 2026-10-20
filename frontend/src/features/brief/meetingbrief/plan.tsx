@@ -12,7 +12,7 @@ import { Eyebrow } from "../../../design-system/eyebrow";
 import { FactList } from "../../../design-system/factlist";
 import { Panel, PanelBody, PanelRow } from "../../../design-system/panel";
 import { useT } from "../../../i18n";
-import { SentenceList } from "../../../screens/record360";
+import { SentenceList } from "../../records/record360";
 
 type MeetingBrief = components["schemas"]["MeetingBrief"];
 type MeetingPlan = NonNullable<MeetingBrief["plan"]>;

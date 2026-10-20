@@ -9,7 +9,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
 import { QuestionBuilder } from "./analytics.questions.builder";
 import { newDraft, type QuestionDraft } from "./analytics.questions.draft";
-import { ENTITIES, STAGES, USERS } from "./analytics.questions.testkit";
+import {
+  CUSTOM_DEALS,
+  ENTITIES,
+  STAGES,
+  USERS,
+} from "./analytics.questions.testkit";
+import type { AnalyticsEntity } from "./analytics.questions.vocab";
 import { render } from "./analytics.testkit";
 
 function jsonResponse(body: unknown) {
@@ -38,11 +44,16 @@ afterEach(() => {
 function Harness({
   start,
   onAsk,
-}: Readonly<{ start: QuestionDraft; onAsk: (draft: QuestionDraft) => void }>) {
+  entities,
+}: Readonly<{
+  start: QuestionDraft;
+  onAsk: (draft: QuestionDraft) => void;
+  entities: readonly AnalyticsEntity[];
+}>) {
   const [draft, setDraft] = useState(start);
   return (
     <QuestionBuilder
-      entities={ENTITIES}
+      entities={entities}
       draft={draft}
       baseCurrency="EUR"
       onChange={setDraft}
@@ -63,9 +74,18 @@ function description(control: HTMLElement): string {
     .trim();
 }
 
-function renderBuilder(start: QuestionDraft = newDraft("")) {
+function renderBuilder(
+  start: QuestionDraft = newDraft(""),
+  entities: readonly AnalyticsEntity[] = ENTITIES,
+) {
   const asked: QuestionDraft[] = [];
-  render(<Harness start={start} onAsk={(draft) => asked.push(draft)} />);
+  render(
+    <Harness
+      start={start}
+      entities={entities}
+      onAsk={(draft) => asked.push(draft)}
+    />,
+  );
   return asked;
 }
 
@@ -147,6 +167,42 @@ describe("the question builder", () => {
       user,
       within(row).getByRole("combobox", { name: "Field, filter 1" }),
       "Converted",
+    );
+    expect(
+      within(row).getByRole("group", { name: "Value, filter 1" }),
+    ).toBeTruthy();
+  });
+
+  it("names the installation's own field by its label and offers its choices", async () => {
+    const user = userEvent.setup();
+    renderBuilder(newDraft("deals-by-stage"), [CUSTOM_DEALS]);
+    await user.click(screen.getByRole("button", { name: "Add filter" }));
+    const row = screen.getByRole("listitem", { name: "Filter 1" });
+    await pickOption(
+      user,
+      within(row).getByRole("combobox", { name: "Field, filter 1" }),
+      "Territory",
+    );
+    await pickOption(
+      user,
+      within(row).getByRole("combobox", { name: "Value, filter 1" }),
+      "APAC",
+    );
+    expect(
+      within(row).getByRole("combobox", { name: "Value, filter 1" })
+        .textContent,
+    ).toContain("APAC");
+  });
+
+  it("takes the installation's own yes-or-no field as a two-way choice", async () => {
+    const user = userEvent.setup();
+    renderBuilder(newDraft("deals-by-stage"), [CUSTOM_DEALS]);
+    await user.click(screen.getByRole("button", { name: "Add filter" }));
+    const row = screen.getByRole("listitem", { name: "Filter 1" });
+    await pickOption(
+      user,
+      within(row).getByRole("combobox", { name: "Field, filter 1" }),
+      "Strategic",
     );
     expect(
       within(row).getByRole("group", { name: "Value, filter 1" }),

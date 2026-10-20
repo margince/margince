@@ -3,12 +3,12 @@ import { EmptyState } from "../../design-system/atoms";
 import { liveProjects } from "../../design-system/projectpicker";
 import type { useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
-import { BillingContactsPanel } from "../../screens/billingcontacts";
-import { PartnerTab } from "../../screens/partners";
-import { openCitation } from "../../screens/record360";
 import { ContactMeetingBrief } from "../brief/meetingbrief";
 import { ComposeModal } from "../mail/compose";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
+import { BillingContactsPanel } from "../projects/billingcontacts";
+import { PartnerTab } from "../projects/partners";
+import { openCitation } from "../records/record360";
 import type { useTaskUpdate } from "../worklist/taskactions";
 import type { Company, Company360View } from "./companies";
 import type { useCitedReceipt } from "./companies.chronology";
@@ -29,6 +29,7 @@ import { CompanyDocumentsCard } from "./companydocuments";
 import { EvidenceModal } from "./companyevidence";
 import { CompanyFinanceCard } from "./companyfinance";
 import type { CompanyTab } from "./companytab";
+import "./company360.css";
 
 // What the composer is anchored on. A reply answers the message it names. An
 // account-started message names the contact it goes to, because it has no

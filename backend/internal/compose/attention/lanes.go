@@ -386,6 +386,7 @@ type Commitments interface {
 // checkable against what was actually written, and a card that showed only the
 // paraphrase would be asking the reader to trust the extractor.
 type Commitment struct {
+	ActivityID  ids.UUID
 	ID          ids.UUID
 	ContactID   ids.UUID
 	Body        string

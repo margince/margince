@@ -118,7 +118,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	// The UI and tools share calculation engines and current-reader disclosure rules.
 	agents.RegisterAnalyticsQueryTool(registry,
 		analyticsQueryToolRunner(InstallationDB(pool)))
-	agents.RegisterAnalyticsVocabularyTool(registry, analyticsVocabularyReader{})
+	agents.RegisterAnalyticsVocabularyTool(registry, analyticsVocabularyReader{db: db})
 	agents.RegisterRecordFieldsTool(registry, agents.RecordFieldsResource{})
 	agents.RegisterReportBlocksTool(registry,
 		agents.NewReportBlocksResource(reportBlockGrammar()))
