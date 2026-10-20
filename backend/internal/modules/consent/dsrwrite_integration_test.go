@@ -221,7 +221,7 @@ func (e *dsrEnv) auditedResolutionClaims(t *testing.T, id ids.UUID) []any {
 	return claims
 }
 
-func TestAnAnswerIsAuditedAsChangedOnlyWhenItChanged(t *testing.T) {
+func TestResendingTheStoredAnswerWritesNoAuditRow(t *testing.T) {
 	e := setupDSR(t)
 	request := e.mustCreate(t, dsrKindAccess, "audit-claim@dsr.test")
 	if w := e.patchDSR(t, request.ID, `{"status":"fulfilled","resolution":"package sent"}`); w.Code != http.StatusOK {
@@ -232,8 +232,8 @@ func TestAnAnswerIsAuditedAsChangedOnlyWhenItChanged(t *testing.T) {
 	}
 
 	claims := e.auditedResolutionClaims(t, request.ID)
-	if len(claims) != 2 || claims[0] != "true" || claims[1] != "false" {
-		t.Fatalf("the update rows claim the answer changed as %v, want [true false]", claims)
+	if len(claims) != 1 || claims[0] != "true" {
+		t.Fatalf("the update rows claim the answer changed as %v, want [true]: the repeat changed nothing and writes no row", claims)
 	}
 }
 
