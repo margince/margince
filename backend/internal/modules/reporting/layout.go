@@ -154,7 +154,7 @@ const maxQuestionBytes = 4096
 
 // validateQuestionCard checks the shape of a card's analytics question. The
 // population is the report's scope and the reader's grants, so the question
-// names neither, and it is asked afresh for each reader rather than saved.
+// names neither. It is asked afresh for each reader rather than saved.
 // Whether its fields exist is the analytics engine's to answer when asked.
 func validateQuestionCard(card crmcontracts.ReportingCard) error {
 	if card.Kind != questionKind || card.Question == nil {

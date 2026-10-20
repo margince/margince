@@ -58,8 +58,9 @@ func TestASavedReportKeepsItsLayout(t *testing.T) {
 	}
 }
 
-// A question card is kept with its question, adds no chart to the evaluation,
-// and reaches the reader through the evaluation's layout for the page to ask.
+// A question card is kept with its question and adds no chart to the
+// evaluation. It reaches the reader in the evaluation's layout, for the page
+// to ask.
 func TestASavedReportKeepsItsQuestionCard(t *testing.T) {
 	f := reportingBusiness(t)
 	question := json.RawMessage(`{"entity":"deals-by-stage","group_by":["owner_id"],"measures":[{"fn":"count"}]}`)
