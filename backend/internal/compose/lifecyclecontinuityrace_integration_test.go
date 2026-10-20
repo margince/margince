@@ -115,7 +115,7 @@ func prepareContinuityChange(t *testing.T, e *integration.Env, company ids.UUID,
 			}
 		}
 		return func(ctx context.Context) error {
-			if agreement.UUID.IsZero() {
+			if agreement.IsZero() {
 				if err := create(ctx); err != nil {
 					return err
 				}
@@ -138,7 +138,7 @@ func prepareContinuityChange(t *testing.T, e *integration.Env, company ids.UUID,
 		}
 	}
 	return func(ctx context.Context) error {
-		if project.UUID.IsZero() {
+		if project.IsZero() {
 			if err := create(ctx); err != nil {
 				return err
 			}
