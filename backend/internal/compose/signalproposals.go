@@ -30,10 +30,12 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/lifecyclereview"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/signals"
@@ -67,10 +69,11 @@ const (
 // sides — a reader deciding "is this right?" needs to see what the record says
 // now, not only what it would say next.
 type lifecycleProposal struct {
-	CompanyID     ids.CompanyID `json:"company_id"`
-	CurrentStage  string        `json:"current_lifecycle"`
-	ProposedStage string        `json:"proposed_lifecycle"`
-	SignalID      ids.UUID      `json:"signal_id"`
+	Evidence      *lifecyclereview.Finding `json:"evidence,omitempty"`
+	CompanyID     ids.CompanyID            `json:"company_id"`
+	CurrentStage  string                   `json:"current_lifecycle"`
+	ProposedStage string                   `json:"proposed_lifecycle"`
+	SignalID      ids.UUID                 `json:"signal_id"`
 	// Because is the signal's own summary, so the card can say why in the
 	// words the conversation used rather than in a rule's words.
 	Because string `json:"because"`
@@ -93,6 +96,7 @@ func lifecycleIdentity(companyID ids.CompanyID, stage string) (json.RawMessage, 
 
 // SignalProposer offers the consequence of a signal to a human.
 type SignalProposer struct {
+	now       func() time.Time
 	pool      *pgxpool.Pool
 	approvals *approvals.Service
 	log       *slog.Logger
@@ -102,11 +106,12 @@ type SignalProposer struct {
 // service — the same instance that decides, so a released effect can redeem
 // what it decides on.
 func NewSignalProposer(pool *pgxpool.Pool, svc *approvals.Service, log *slog.Logger) *SignalProposer {
-	return &SignalProposer{pool: pool, approvals: svc, log: log}
+	return &SignalProposer{pool: pool, approvals: svc, log: log, now: time.Now}
 }
 
 // contradiction is one account whose stage its own mail contradicts.
 type contradiction struct {
+	Finding   lifecyclereview.Finding
 	CompanyID ids.CompanyID
 	Stage     string
 	SignalID  ids.UUID
@@ -131,7 +136,7 @@ func (p *SignalProposer) RunWorkspace(ctx context.Context) (int, error) {
 	var said approvalSummaryCopy
 	if err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
 		var err error
-		if found, err = readContradictions(ctx, tx); err != nil {
+		if found, err = readContradictions(ctx, tx, p.now()); err != nil {
 			return err
 		}
 		said = approvalSummaryCopyIn(ctx, tx)
@@ -152,15 +157,7 @@ func (p *SignalProposer) RunWorkspace(ctx context.Context) (int, error) {
 	return standing, nil
 }
 
-// readContradictions lists the accounts holding an open contract_ended signal
-// while still filed under a stage that reads as live.
-//
-// It is the same comparison the page's lifecycle_conflict card makes, and it
-// is deliberately a second spelling in a second place: the card states the
-// conflict to whoever is looking, this offers the fix to whoever decides. If
-// they ever disagree the card is what a reader sees, so the card is the one
-// with the test that pins the rule.
-func readContradictions(ctx context.Context, tx pgx.Tx) ([]contradiction, error) {
+func readContradictions(ctx context.Context, tx pgx.Tx, now time.Time) ([]contradiction, error) {
 	// ONE row per account, newest signal first. The question this offers is
 	// about the account's stage, and an account whose mail says the contract
 	// ended in three conversations is not three questions — staging once per
@@ -172,7 +169,6 @@ func readContradictions(ctx context.Context, tx pgx.Tx) ([]contradiction, error)
 		  JOIN company o ON o.id = s.resolved_company_id AND o.archived_at IS NULL
 		 WHERE s.kind = '`+signalKindContractEnded+`' AND s.status = 'open'
 		   AND s.archived_at IS NULL
-		   AND o.lifecycle IN ('prospect','opportunity','customer')
 		 ORDER BY o.id, s.detected_at DESC, s.id DESC`)
 	if err != nil {
 		return nil, err
@@ -187,7 +183,29 @@ func readContradictions(ctx context.Context, tx pgx.Tx) ([]contradiction, error)
 		}
 		out = append(out, found)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	rows.Close()
+	kept := out[:0]
+	for _, account := range out {
+		if !lifecyclereview.LiveStage(account.Stage) {
+			continue
+		}
+		finding, err := lifecyclereview.Reconcile(ctx, tx, account.CompanyID, now)
+		if refused(err) {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		if lifecyclereview.Actionable(finding) {
+			account.SignalID, account.Summary = finding.SignalID, finding.Quote
+			account.Finding = finding
+			kept = append(kept, account)
+		}
+	}
+	return kept, nil
 }
 
 // offerStageChange puts one offer in the inbox, reporting whether an offer now
@@ -204,6 +222,7 @@ func (p *SignalProposer) offerStageChange(ctx context.Context, said approvalSumm
 		return false, err
 	}
 	body, err := json.Marshal(lifecycleProposal{
+		Evidence:      &account.Finding,
 		CompanyID:     account.CompanyID,
 		CurrentStage:  account.Stage,
 		ProposedStage: lifecycleEnded,
@@ -223,6 +242,7 @@ func (p *SignalProposer) offerStageChange(ctx context.Context, said approvalSumm
 		TargetID:       account.CompanyID.UUID,
 		Summary:        fmt.Sprintf(said.contractEndedMove, account.Stage, lifecycleEnded),
 		JoinPending:    true,
+		Evidence:       []approvals.Evidence{{Snippet: account.Finding.Quote, SourceType: "activity", SourceID: account.Finding.SourceID}},
 	})
 	if err != nil {
 		return false, err
@@ -240,7 +260,7 @@ func (p *SignalProposer) offerStageChange(ctx context.Context, said approvalSumm
 // right and the reading wrong; the record is already what they want, and the
 // signal stays open because they did not say the mail was wrong, only that
 // the record was not.
-func lifecycleAcceptEffect(svc *approvals.Service, store *contacts.Store) approvals.ApprovedEffect {
+func lifecycleAcceptEffect(svc *approvals.Service, store *contacts.Store, now func() time.Time) approvals.ApprovedEffect {
 	return func(ctx context.Context, approvalID ids.ApprovalID, proposedChange json.RawMessage, diffHash string) error {
 		var proposal lifecycleProposal
 		if err := json.Unmarshal(proposedChange, &proposal); err != nil {
@@ -260,6 +280,9 @@ func lifecycleAcceptEffect(svc *approvals.Service, store *contacts.Store) approv
 			OnBehalfOf: decider.UserID,
 		})
 		return svc.RedeemAndApply(ctx, approvalID, lifecycleProposalKind, diffHash, func(tx pgx.Tx) error {
+			if err := lifecyclereview.Revalidate(ctx, tx, proposal.CompanyID, proposal.SignalID, proposal.Evidence, now()); err != nil {
+				return err
+			}
 			// A false here is the stage having been corrected by a human while
 			// the offer waited: the approval is spent, nothing is written, and
 			// their edit stands.
@@ -268,16 +291,8 @@ func lifecycleAcceptEffect(svc *approvals.Service, store *contacts.Store) approv
 			if err != nil || !moved {
 				return err
 			}
-			// EVERY open contradiction on this account, not just the one the
-			// card quoted. Three conversations can each say the contract is
-			// ending, and the reader answering one has answered all three —
-			// while the record has now left the stage this reconciler looks
-			// for, so no later pass would ever close the others.
-			// execCtx writes (machine provenance, beside the stage move); ctx
-			// carries the human, whose row scope bounds which of the account's
-			// signals may be settled at all.
-			_, err = signals.AcknowledgeOpenForCompanyTx(execCtx, ctx, tx,
-				proposal.CompanyID.UUID, signalKindContractEnded)
+			_, err = signals.AcknowledgeCoveredForCompanyTx(execCtx, ctx, tx,
+				proposal.CompanyID.UUID, signalKindContractEnded, []ids.UUID{proposal.SignalID})
 			return err
 		})
 	}

@@ -161,7 +161,7 @@ func (s *Service) raisesSuggestion(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time, fingerprint string,
 	within *ids.ProjectID,
 ) (bool, error) {
-	facts, err := readSignalFacts(ctx, tx, companyID)
+	facts, err := readSignalFacts(ctx, tx, companyID, now)
 	if err != nil {
 		return false, err
 	}

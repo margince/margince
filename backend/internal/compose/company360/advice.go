@@ -126,7 +126,7 @@ func (s *Service) KeepUndismissed(
 func (s *Service) suggestionInputsFor(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time,
 ) (suggestionInputs, error) {
-	facts, err := readSignalFacts(ctx, tx, companyID)
+	facts, err := readSignalFacts(ctx, tx, companyID, now)
 	if err != nil {
 		return suggestionInputs{}, err
 	}

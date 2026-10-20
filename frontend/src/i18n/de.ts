@@ -33,6 +33,22 @@ export const de = {
     "Kläre die widersprüchlichen Angaben, bevor du diese Änderung freigibst.",
   "history.field.closed_at": "Abgeschlossen am",
   "history.field.amount_minor_base": "Betrag in Basiswährung",
+  "approval.preview.activeContract":
+    "Ein Vertrag ist noch aktiv. Prüfe ihn, bevor du die Kundenbeziehung beendest.",
+  "approval.preview.activeDelivery":
+    "Ein Projekt wird noch geliefert. Prüfe es, bevor du die Kundenbeziehung beendest.",
+  "approval.preview.unknownScope":
+    "Die Quelle belegt nicht, dass die gesamte Kundenbeziehung beendet wurde.",
+  "approval.preview.incompleteEvidence":
+    "Die aktuellen Belege sind unvollständig. Prüfe das Unternehmen, bevor du seinen Status änderst.",
+  "approval.preview.newerEvidence":
+    "Die Quelle wurde nach diesem Vorschlag geändert. Prüfe die aktuellen Belege.",
+  "approval.preview.scopeCompany": "Gesamte Kundenbeziehung",
+  "approval.preview.scopeWorkstream": "Ein Auftrag",
+  "approval.preview.scopeUnknown": "Umfang nicht geklärt",
+  "approval.preview.scope": "Umfang der Beendigung",
+  "approval.preview.sourceDate": "Datum der Quelle",
+  "approval.preview.workstream": "Auftrag",
   "approval.preview.conflict": "Widersprüchlicher Kontext",
   "approval.preview.execution": "Wird beim Anwenden festgelegt",
   "approval.preview.effects": "Weitere Änderungen",

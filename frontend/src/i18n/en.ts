@@ -30,6 +30,22 @@ export const en = {
     "Resolve the conflicting context before approving this change.",
   "history.field.closed_at": "Closed on",
   "history.field.amount_minor_base": "Amount in base currency",
+  "approval.preview.activeContract":
+    "An agreement is still active. Review it before ending the account relationship.",
+  "approval.preview.activeDelivery":
+    "A project is still in delivery. Review it before ending the account relationship.",
+  "approval.preview.unknownScope":
+    "The source does not establish that the whole account relationship ended.",
+  "approval.preview.incompleteEvidence":
+    "The current evidence is incomplete. Review the account before changing its lifecycle.",
+  "approval.preview.newerEvidence":
+    "The source changed after this proposal. Review the current evidence.",
+  "approval.preview.scopeCompany": "Whole account relationship",
+  "approval.preview.scopeWorkstream": "One engagement",
+  "approval.preview.scopeUnknown": "Scope not established",
+  "approval.preview.scope": "Scope of the ending",
+  "approval.preview.sourceDate": "Source date",
+  "approval.preview.workstream": "Engagement",
   "approval.preview.conflict": "Conflicting context",
   "approval.preview.execution": "Set when applied",
   "approval.preview.effects": "Also changes",

@@ -40381,8 +40381,17 @@ export interface components {
             /** @description Whether the domain requires reconciliation before this proposal can be approved. */
             blocks_approval: boolean;
         };
+        /** @description Current readable source and scope supporting a company lifecycle review. */
+        LifecyclePreviewEvidence: {
+            /** @enum {string} */
+            scope: "company" | "workstream" | "unknown";
+            /** Format: date-time */
+            occurred_at: string;
+            workstream?: string;
+        };
         /** @description A current, authorized explanation of the exact staged effect. It never grants permission or supplies execution arguments. Before values are answered only when the current record still has the staged version; stale records require restaging. Pending proposals alone carry this review-time projection. An approval attempt with stale context returns version_skew. Incomplete, unavailable or conflicting context returns 422 with approval_preview_incomplete, approval_preview_unavailable or approval_preview_conflict respectively, without recording a decision. */
         ApprovalPreview: {
+            lifecycle_evidence?: components["schemas"]["LifecyclePreviewEvidence"];
             /** @description Additional business effects released by this approval. Other proposals remain separate decisions. */
             effects?: string[];
             /** @description Current evidence resolved with the reader's source permissions. An empty array replaces historical evidence. */
