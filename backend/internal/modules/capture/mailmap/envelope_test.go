@@ -195,7 +195,7 @@ func TestALongLinkListIsMarkedCutShort(t *testing.T) {
 // An HTML body longer than the walk's bound is marked cut short, so a link past
 // the bound is not silently lost.
 func TestAnHTMLWalkPastItsBoundIsCutShort(t *testing.T) {
-	body := strings.Repeat("<b>x</b>", maxLinkTokens) + `<a href="https://landing.example.org/">x</a>`
+	body := strings.Repeat("<b>x</b>", maxLinkHTMLBytes/8) + `<a href="https://landing.example.org/">x</a>`
 
 	if _, cut := linkHosts("", body); !cut {
 		t.Error("a walk that stopped at its bound did not say so")
@@ -212,69 +212,28 @@ func TestTheEnvelopeCarriesALinkListCutShort(t *testing.T) {
 	}
 }
 
-// A <style> or <script> longer than the tokenizer's buffer holds no link. It
-// does not cut the walk short, and a link after it is still read. Any other
-// token past the buffer still does.
-func TestOnlyAnOverlongStyleOrScriptLeavesTheLinkWalkWhole(t *testing.T) {
+// The walk reads a body as a mail client renders it. Each case is markup a
+// token walk reads otherwise than the reader sees it, so a link would hide.
+func TestTheLinkWalkReadsTheLinksTheReaderSees(t *testing.T) {
 	filler := strings.Repeat("x", maxTokenLen+1000)
 	landing := `<a href="https://landing.example.org/">x</a>`
-	cases := map[string]struct {
-		body  string
-		hosts []string
-		cut   bool
-	}{
-		"a long stylesheet before a link": {
-			body: `<STYLE>` + filler + `</Style >` + landing, hosts: []string{"landing.example.org"},
-		},
-		"a long script before a link": {
-			body: `<script type="text/javascript">` + filler + `</script>` + landing, hosts: []string{"landing.example.org"},
-		},
-		"a long script with no end tag":  {body: landing + `<script>` + filler, hosts: []string{"landing.example.org"}},
-		"a long paragraph before a link": {body: `<p>` + filler + `</p>` + landing, cut: true},
-		"a long stylesheet, then a long paragraph": {
-			body: `<style>` + filler + `</style><p>` + filler + `</p>` + landing, cut: true,
-		},
+	cases := map[string]string{
+		"a long stylesheet before a link":    `<STYLE>` + filler + `</Style >` + landing,
+		"a long script before a link":        `<script>` + filler + `</script>` + landing,
+		"a lookalike end tag":                `<style>` + filler + `</stylex><script></style>` + landing + `</script>`,
+		"an end tag closed with a slash":     `<style>` + filler + `</style/>` + landing,
+		"an escaped end tag inside a script": `<script>` + filler + `<!--<script></script><style>--></script><p>` + landing + `</p></style>`,
+		"a stylesheet inside svg":            `<svg><style><p>` + landing + `</p></style></svg>`,
+		"a title inside math":                `<math><title><p>` + landing + `</p></title></math>`,
+		"a link inside noscript":             `<noscript>` + landing + `</noscript>`,
+		"an image-map area":                  `<map><area href="https://landing.example.org/"></map>`,
 	}
-	for name, tc := range cases {
+	for name, body := range cases {
 		t.Run(name, func(t *testing.T) {
-			hosts, cut := linkHosts("", tc.body)
-			if !slices.Equal(hosts, tc.hosts) || cut != tc.cut {
-				t.Errorf("link hosts are %v (cut %v), want %v (cut %v)", hosts, cut, tc.hosts, tc.cut)
+			if hosts, cut := linkHosts("", body); !slices.Equal(hosts, []string{"landing.example.org"}) || cut {
+				t.Errorf("link hosts are %v (cut %v), want the link the reader sees", hosts, cut)
 			}
 		})
-	}
-}
-
-// The buffer can run out inside the end tag itself. The walk still finds that
-// end tag and the link after it.
-func TestAStylesheetWhoseEndTagStraddlesTheBufferLeavesTheWalkWhole(t *testing.T) {
-	for short := 1; short <= len("</style>")+1; short++ {
-		body := `<style>` + strings.Repeat("x", maxTokenLen-short) + `</style><a href="https://landing.example.org/">x</a>`
-
-		if hosts, cut := linkHosts("", body); !slices.Equal(hosts, []string{"landing.example.org"}) || cut {
-			t.Errorf("content %d bytes short of the buffer: link hosts %v (cut %v), want the link", short, hosts, cut)
-		}
-	}
-}
-
-// A "</stylex>" does not end a stylesheet, so the <script> after it is still
-// stylesheet text and cannot hide the link that follows the real end tag.
-func TestALookalikeEndTagDoesNotEndAStylesheet(t *testing.T) {
-	body := `<style>` + strings.Repeat("x", maxTokenLen+1000) + `</stylex><script></style>` +
-		`<a href="https://landing.example.org/">x</a></script>`
-
-	if hosts, cut := linkHosts("", body); !slices.Equal(hosts, []string{"landing.example.org"}) || cut {
-		t.Errorf("link hosts are %v (cut %v), want the link after the real end tag", hosts, cut)
-	}
-}
-
-// A mail client renders with scripting off, so a link inside <noscript> is
-// one the reader sees.
-func TestALinkInsideNoscriptIsRead(t *testing.T) {
-	hosts, cut := linkHosts("", `<noscript><a href="https://landing.example.org/">Open</a></noscript>`)
-
-	if !slices.Equal(hosts, []string{"landing.example.org"}) || cut {
-		t.Errorf("link hosts are %v (cut %v), want the link inside noscript", hosts, cut)
 	}
 }
 

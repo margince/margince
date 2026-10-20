@@ -8,23 +8,20 @@ package mailmap
 // own website.
 
 import (
-	"errors"
-	"io"
 	"net/url"
 	"regexp"
 	"strings"
 
 	"golang.org/x/net/html"
-	"golang.org/x/net/html/atom"
 )
 
 // maxLinkHosts bounds how many distinct hosts one message reports. Past it the
 // list is marked cut short, so capture still decides.
 const maxLinkHosts = 200
 
-// maxLinkTokens bounds the HTML walk. The body is a stranger's text, and the
-// walk must not cost more than the rendering it sits beside.
-const maxLinkTokens = 20000
+// maxLinkHTMLBytes bounds the HTML the link walk parses. The body is a
+// stranger's text, and the walk must not cost more than the rendering beside it.
+const maxLinkHTMLBytes = 2 << 20
 
 // maxRedirectDepth bounds how many redirect wrappers one link may nest.
 const maxRedirectDepth = 5
@@ -62,101 +59,32 @@ func linkHosts(plain, htmlBody string) (hosts []string, truncated bool) {
 	return hosts, truncated || !complete
 }
 
-// anchorHrefs returns the href of each <a> in an HTML body, and whether the
-// walk reached the end of the body within its bound.
+// anchorHrefs returns the href of each link element in an HTML body, and
+// whether the walk read the whole body. It uses the HTML5 parser with
+// scripting off, because that is how a mail client renders. A token walk
+// reads <svg><style>, script escapes and <noscript> differently, and a sender
+// can hide a link in that gap.
 func anchorHrefs(src string) ([]string, bool) {
-	walk := &anchorWalk{}
-	for {
-		rest, complete, resume := walk.scan(src)
-		if !resume {
-			return walk.hrefs, complete
-		}
-		src = rest
+	complete := len(src) <= maxLinkHTMLBytes
+	if !complete {
+		src = src[:maxLinkHTMLBytes]
 	}
-}
-
-// anchorWalk is one body's walk, carried across the restarts after a raw-text
-// element too long for the tokenizer's buffer.
-type anchorWalk struct {
-	hrefs  []string
-	tokens int
-}
-
-// scan walks src until it ends, the token bound runs out, or a <style> or
-// <script> holds more than the buffer takes. That content can hold no link.
-// So in that one case scan returns the source from the element's end tag on,
-// and asks to resume there.
-func (w *anchorWalk) scan(src string) (rest string, complete, resume bool) {
-	z := html.NewTokenizer(strings.NewReader(src))
-	z.SetMaxBuf(maxTokenLen)
-	// rawFrom is where the content of an open <style> or <script> starts. The
-	// tokenizer hands that content over as text, cut off where the buffer ran
-	// out, possibly inside its end tag.
-	read, rawFrom, rawTag := 0, -1, ""
-	for ; w.tokens < maxLinkTokens; w.tokens++ {
-		kind := z.Next()
-		if kind == html.ErrorToken {
-			if rawFrom >= 0 && errors.Is(z.Err(), html.ErrBufferExceeded) {
-				return pastRawText(src[rawFrom:], rawTag)
+	doc, err := html.ParseWithOptions(strings.NewReader(src), html.ParseOptionEnableScripting(false))
+	if err != nil {
+		return nil, false
+	}
+	var hrefs []string
+	for node := range doc.Descendants() {
+		if node.Type != html.ElementNode || (node.Data != "a" && node.Data != "area") {
+			continue
+		}
+		for _, attr := range node.Attr {
+			if attr.Key == "href" {
+				hrefs = append(hrefs, attr.Val)
 			}
-			// Any other token past the buffer cap also ends here, before the body does.
-			return "", errors.Is(z.Err(), io.EOF), false
-		}
-		read += len(z.Raw())
-		if kind == html.TextToken {
-			continue
-		}
-		rawFrom = -1
-		if kind != html.StartTagToken && kind != html.SelfClosingTagToken {
-			continue
-		}
-		switch token := z.Token(); token.DataAtom {
-		case atom.A:
-			w.hrefs = append(w.hrefs, attrValue(token, "href"))
-		case atom.Style, atom.Script:
-			rawFrom, rawTag = read, token.Data
-		case atom.Noscript:
-			// A mail client renders with scripting off, so the reader sees
-			// this content as markup, links included.
-			z.NextIsNotRawText()
 		}
 	}
-	return "", false, false
-}
-
-// pastRawText returns the source from the end tag that closes a raw-text
-// element. With no end tag the element runs to the end of the body, and so
-// does the walk. The end tag is matched as the HTML tokenizer matches it: a
-// "</stylex" ends nothing, so a fake end cannot open markup the reader never
-// sees, such as a <script> that swallows the real link after it.
-func pastRawText(content, tag string) (rest string, complete, resume bool) {
-	for from := 0; ; {
-		at := strings.Index(content[from:], "</")
-		if at < 0 {
-			return "", true, false
-		}
-		at += from
-		if closesRawText(content[at+2:], tag) {
-			return content[at:], false, true
-		}
-		from = at + 2
-	}
-}
-
-// closesRawText reports whether name, the text after "</", starts with tag
-// followed by whitespace, "/", ">" or the end of input.
-func closesRawText(name, tag string) bool {
-	if len(name) < len(tag) || !strings.EqualFold(name[:len(tag)], tag) {
-		return false
-	}
-	if len(name) == len(tag) {
-		return true
-	}
-	switch name[len(tag)] {
-	case ' ', '\t', '\n', '\f', '\r', '/', '>':
-		return true
-	}
-	return false
+	return hrefs, complete
 }
 
 // linkTarget is the host a web link really leads to, or "" for anything that
