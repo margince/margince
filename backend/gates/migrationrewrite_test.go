@@ -6,6 +6,7 @@
 package gates
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -29,7 +30,7 @@ func rewriteTokens(sql string) ([]rewriteToken, error) {
 	for i := 0; i < len(sql); {
 		if n, closed := gatekit.SQLSpanAt(sql, i); n > 0 {
 			if !closed {
-				return nil, fmt.Errorf("unterminated SQL span")
+				return nil, errors.New("unterminated SQL span")
 			}
 			i += n
 			continue
@@ -51,7 +52,7 @@ func rewriteTokens(sql string) ([]rewriteToken, error) {
 				i++
 			}
 			if !closed {
-				return nil, fmt.Errorf("unterminated SQL identifier")
+				return nil, errors.New("unterminated SQL identifier")
 			}
 			out = append(out, rewriteToken{text: name.String(), quoted: true})
 			continue
@@ -189,7 +190,7 @@ func rewriteWaivers(body string) (map[string]rewriteWaiver, error) {
 		}
 		fields := strings.SplitN(line, "|", 3)
 		if len(fields) != 3 {
-			return nil, fmt.Errorf("expected migration filename | tables | bounded reason")
+			return nil, errors.New("expected migration filename | tables | bounded reason")
 		}
 		file, tables, reason := strings.TrimSpace(fields[0]), strings.TrimSpace(fields[1]), strings.TrimSpace(fields[2])
 		if filepath.Base(file) != file || !strings.HasSuffix(file, ".sql") || tables == "" || len(strings.Fields(reason)) < 5 {
