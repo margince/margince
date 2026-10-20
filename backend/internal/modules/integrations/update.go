@@ -108,7 +108,7 @@ func (s *Store) UpdateConfig(ctx context.Context, name string, patch ConfigPatch
 		if err != nil {
 			return err
 		}
-		out, err = s.presentConnection(ctx, tx, conns[name], desc)
+		out, err = s.presentAfterWrite(ctx, tx, conns[name], desc)
 		return err
 	})
 	if err != nil {

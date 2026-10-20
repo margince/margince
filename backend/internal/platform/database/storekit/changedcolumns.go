@@ -59,8 +59,9 @@ func union(before, after map[string]any) []string {
 // field on the history screen that nobody edited.
 //
 // Two values are also the same when the audit image renders them alike. A
-// stored *string equals the string a request carries. The undo path compares an
-// image with the live row the same way.
+// stored *string equals the string a request carries. A `date` column goes
+// through Patch.SetDate, which renders both sides as text, so this fallback
+// never sees one as a time.Time.
 //
 //craft:ignore naked-any same column-value contract as ChangedColumns
 func sameColumnValue(oldValue, newValue any) bool {
@@ -79,7 +80,8 @@ func sameColumnValue(oldValue, newValue any) bool {
 }
 
 // instants reads two timestamps, by value or by pointer, as moments. One instant
-// in two zones is one value to the column.
+// in two zones is one value to the column. The compose layer's sameInstant
+// compares jsonb text read from SQL, a different input, so the two do not share.
 //
 //craft:ignore naked-any same column-value contract as ChangedColumns
 func instants(a, b any) (time.Time, time.Time, bool) {

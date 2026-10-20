@@ -222,6 +222,34 @@ func (s *Store) presentConnection(
 	return c, nil
 }
 
+// presentAfterWrite is presentConnection for the answer to a write. The write
+// has already landed in this transaction, so a failed spend read must not roll
+// it back: it runs in a savepoint, and on failure the answer carries the stored
+// row and the catalog without spend. A cancelled request still aborts.
+func (s *Store) presentAfterWrite(
+	ctx context.Context, tx pgx.Tx, c Connection, d provider.Descriptor,
+) (Connection, error) {
+	nested, err := tx.Begin(ctx)
+	if err != nil {
+		return Connection{}, fmt.Errorf("integrations: opening the card read: %w", err)
+	}
+	shown, readErr := s.presentConnection(ctx, nested, c, d)
+	if readErr == nil {
+		if err := nested.Commit(ctx); err != nil {
+			return Connection{}, fmt.Errorf("integrations: closing the card read: %w", err)
+		}
+		return shown, nil
+	}
+	if err := nested.Rollback(ctx); err != nil {
+		return Connection{}, errors.Join(readErr, err)
+	}
+	if ctx.Err() != nil {
+		return Connection{}, readErr
+	}
+	c.Catalog = catalogOf(d)
+	return c, nil
+}
+
 // List returns every registered provider's connection state, including the
 // providers that have no row yet — a card that only appeared after connecting
 // would give the admin nowhere to connect FROM.
