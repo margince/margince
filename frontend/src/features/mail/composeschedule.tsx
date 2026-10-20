@@ -24,7 +24,7 @@ import type { MessageKey } from "../../i18n/en";
 // slices have to fit inside, and every line spent moving code is a line not
 // spent on the change under review. What lands here is what was there.
 
-function schedulePresets(now: Date): readonly {
+export function schedulePresets(now: Date): readonly {
   key: MessageKey;
   at: Date;
 }[] {

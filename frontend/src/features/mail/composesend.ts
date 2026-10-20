@@ -27,7 +27,7 @@ import type { Grounding } from "./composedraftcall";
 import type { ComposeFields } from "./composefields";
 import type { RelinkKind } from "./composerelink";
 import type { useSavedDraft } from "./composesaveddraft";
-import { SCHEDULED_SCREEN } from "./scheduledsends";
+import { SCHEDULED_SCREEN } from "./scheduledqueue";
 import { sendReviewOf } from "./sendreview";
 import { useSendPermission } from "./usesendpermission";
 

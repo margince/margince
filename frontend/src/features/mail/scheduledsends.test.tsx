@@ -6,7 +6,7 @@ import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
 import { ScheduledSendsScreen } from "./scheduledsends";
 import {
@@ -182,9 +182,17 @@ function mountRefusing(rows: Send[], refuse: "PATCH" | "POST") {
   );
 }
 
+// Only the clock's date is faked: the fixtures sit on 1 September, and "today",
+// "tomorrow" and the presets are read against now. Timers stay real so the
+// queries settle on their own.
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-08-31T10:00:00Z") });
+});
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 it("puts what needs a contact first, and says why it stopped", async () => {
@@ -193,8 +201,9 @@ it("puts what needs a contact first, and says why it stopped", async () => {
   expect(headings.map((heading) => heading.textContent)).toEqual([
     "Held for your action",
     "Scheduled",
-    "Sent or withdrawn",
   ]);
+  // Settled messages stay on the page, behind one summary row with a count.
+  expect(screen.getByText("Sent or withdrawn (1)")).toBeTruthy();
   // The held reason is words on the row, not a wire token: a rep cannot act on
   // "consent_withdrawn".
   expect(screen.getByText(/withdrew their consent/i)).toBeTruthy();
@@ -209,8 +218,8 @@ it("counts the recipients it is not listing", async () => {
 it("offers no verb on a message that has already gone", async () => {
   mount([SENT]);
   expect(await screen.findByText("Sent")).toBeTruthy();
-  expect(screen.queryByRole("button", { name: "Reschedule" })).toBeNull();
-  expect(screen.queryByRole("button", { name: "Withdraw" })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Reschedule/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Withdraw/ })).toBeNull();
 });
 
 it("names the zone a moment was picked in when it is not the reader's", async () => {
@@ -258,7 +267,7 @@ it.each(["Etc/GMT-1", "Etc/GMT+5", "GMT", "+01:00"])(
 it("pins a move to the version the row was drawn from", async () => {
   const user = userEvent.setup();
   const { calls } = mount([WAITING]);
-  await user.click(await screen.findByRole("button", { name: "Reschedule" }));
+  await user.click(await screen.findByRole("button", { name: /Reschedule: / }));
   const picker = screen.getByLabelText(/New time for/);
   // Seeded from the send's own moment, so a rep who opens the control and saves
   // without touching it does not move the message.
@@ -267,7 +276,7 @@ it("pins a move to the version the row was drawn from", async () => {
   );
   await user.clear(picker);
   await user.type(picker, "2026-09-02T08:30");
-  await user.click(screen.getByRole("button", { name: "Reschedule" }));
+  await user.click(screen.getByRole("button", { name: "Move to this time" }));
   const patch = calls.find((call) => call.method === "PATCH");
   expect(patch?.ifMatch).toBe("3");
   expect(patch?.body).toEqual({
@@ -279,10 +288,12 @@ it("pins a move to the version the row was drawn from", async () => {
 it("refuses to move a message to nowhere", async () => {
   const user = userEvent.setup();
   const { calls } = mount([WAITING]);
-  await user.click(await screen.findByRole("button", { name: "Reschedule" }));
+  await user.click(await screen.findByRole("button", { name: /Reschedule: / }));
   await user.clear(screen.getByLabelText(/New time for/));
   expect(
-    screen.getByRole("button", { name: "Reschedule" }).hasAttribute("disabled"),
+    screen
+      .getByRole("button", { name: "Move to this time" })
+      .hasAttribute("disabled"),
   ).toBe(true);
   expect(calls.some((call) => call.method === "PATCH")).toBe(false);
 });
@@ -290,7 +301,7 @@ it("refuses to move a message to nowhere", async () => {
 it("asks before taking a message back, and sends nothing if the reader declines", async () => {
   const user = userEvent.setup();
   const { calls } = mount([WAITING]);
-  await user.click(await screen.findByRole("button", { name: "Withdraw" }));
+  await user.click(await screen.findByRole("button", { name: /Withdraw: / }));
   expect(screen.getByText(/will not be sent/)).toBeTruthy();
   await user.keyboard("{Escape}");
   expect(calls.some((call) => call.method === "POST")).toBe(false);
@@ -299,7 +310,7 @@ it("asks before taking a message back, and sends nothing if the reader declines"
 it("takes the message back on confirm", async () => {
   const user = userEvent.setup();
   const { calls } = mount([WAITING]);
-  await user.click(await screen.findByRole("button", { name: "Withdraw" }));
+  await user.click(await screen.findByRole("button", { name: /Withdraw: / }));
   await user.click(screen.getByRole("button", { name: "Withdraw message" }));
   const cancel = calls.find((call) => call.method === "POST");
   expect(cancel?.path).toBe(`/v1/scheduled-sends/${WAITING.id}/cancel`);
@@ -308,13 +319,44 @@ it("takes the message back on confirm", async () => {
 it("tells the reader to read the list again when the row is not the row on the server", async () => {
   const user = userEvent.setup();
   mountRefusing([WAITING], "PATCH");
-  await user.click(await screen.findByRole("button", { name: "Reschedule" }));
-  await user.click(screen.getByRole("button", { name: "Reschedule" }));
+  await user.click(await screen.findByRole("button", { name: /Reschedule: / }));
+  await user.click(screen.getByRole("button", { name: "Move to this time" }));
   expect(await screen.findByText(/List out of date/)).toBeTruthy();
   expect(screen.getByRole("button", { name: "Reload" })).toBeTruthy();
   // The raw server detail is the one thing that must not reach the reader: it
   // names a row version, which says nothing about what to do next.
   expect(screen.queryByText(/is not the current version/)).toBeNull();
+});
+
+// The three moments a rep most often wants are one press, and each is written
+// as the instant it names in the reader's own zone.
+it("moves a message to tomorrow morning in one press", async () => {
+  const user = userEvent.setup();
+  const { calls } = mount([WAITING]);
+  await user.click(await screen.findByRole("button", { name: /Reschedule: / }));
+  await user.click(screen.getByRole("button", { name: /Tomorrow morning/ }));
+  const patch = calls.find((call) => call.method === "PATCH");
+  const expected = new Date("2026-08-31T10:00:00Z");
+  expected.setDate(expected.getDate() + 1);
+  expected.setHours(8, 0, 0, 0);
+  expect(patch?.ifMatch).toBe("3");
+  expect(patch?.body).toEqual({
+    scheduled_at: expected.toISOString(),
+    scheduled_tz: readerZone,
+  });
+});
+
+it("says the day a message goes out in words when it is tomorrow", async () => {
+  mount([WAITING]);
+  expect(await screen.findByText(/^Tomorrow · /)).toBeTruthy();
+});
+
+it("narrows to the held messages and hides the timeline", async () => {
+  const user = userEvent.setup();
+  mount([WAITING, HELD]);
+  await user.click(await screen.findByRole("button", { name: /^Held/ }));
+  expect(screen.getByText("The follow-up")).toBeTruthy();
+  expect(screen.queryByText("The renewal quote")).toBeNull();
 });
 
 it("says nothing is scheduled with one sentence, not three", async () => {

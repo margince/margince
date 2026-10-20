@@ -1,21 +1,18 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { api } from "../../api/client";
-import type { components } from "../../api/schema";
-import { ifMatch } from "../../api/version";
-import { SectionHeader } from "../../design-system/atoms";
+import { SectionHeader, SegmentedControl } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
+import { Disclosure } from "../../design-system/disclosure";
 import { QueryStates, WriteRefused } from "../../design-system/querystates";
 import { SurfaceState } from "../../design-system/surfacestate";
+import { formatNumber } from "../../format/format";
+import { formatCountdown, useNow } from "../../format/now";
 import { viewerZone } from "../../format/timezone";
-import { useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
-import { isVersionSkewOf, problemMessageOf, unwrap } from "../../lib/problem";
+import { useLocale, useT } from "../../i18n";
+import { problemMessageOf } from "../../lib/problem";
 import "./scheduledsends.css";
-import { QueueSkewNotice } from "./scheduledsends.notices";
 // The queue behind "send later", and the reason it has to exist: a rep who can
 // schedule a message must be able to reach it again. Without this page the
 // endpoints, the store and the fire path all existed and nothing in the client
@@ -26,148 +23,109 @@ import { QueueSkewNotice } from "./scheduledsends.notices";
 // body and its blind-copy list are not workspace-readable the way a sent
 // activity is, and the server lists only what the caller scheduled. So there is
 // no owner column here and no sharing affordance — the page is one contact's.
+import { type ScheduledSend, useScheduledSends } from "./scheduledqueue";
+import { TimelineDays } from "./scheduledsends.days";
+import { QueueSkewNotice } from "./scheduledsends.notices";
 import { SendRow } from "./scheduledsends.row";
+import { useQueueWrites } from "./scheduledsends.writes";
+import { dayGroups, readQueue } from "./scheduledtimeline";
 
-export type ScheduledSend = components["schemas"]["ScheduledSend"];
+/** The reader's cut through the queue; one at a time, and `all` shows the lot. */
+const VIEWS = ["all", "held", "today"] as const;
 
-export type Status = ScheduledSend["status"];
+type View = (typeof VIEWS)[number];
 
-/** The route this screen answers on, spelled where the screen lives. */
-export const SCHEDULED_SCREEN = "scheduled" as const;
-
-/**
- * The three groups a rep reads this page in, which are NOT the five wire
- * statuses.
- *
- * `held` is first because it is the only group that is waiting on a contact: a
- * gate refused at fire, or the moment passed while nothing was running, and the
- * message will not send itself. `waiting` is the queue proper. `closed` is
- * everything that is no longer going to change on its own — released, sent,
- * cancelled — kept on the page because a rep who cancelled a message wants to
- * see that it is cancelled rather than that it is gone.
- */
-const GROUPS = ["held", "waiting", "closed"] as const;
-
-type Group = (typeof GROUPS)[number];
-
-function groupOf(status: Status): Group {
-  if (status === "held") return "held";
-  if (status === "scheduled") return "waiting";
-  return "closed";
+/** The countdown to the next message, with a clock of its own so the page above it stays still. */
+function NextSend({ at }: Readonly<{ at: string }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const now = useNow(1000);
+  const remaining = Date.parse(at) - now;
+  if (remaining <= 0) return null;
+  return (
+    <p className="scheduledsends-next t-caption">
+      {t("sched.next", { countdown: formatCountdown(remaining, t, locale) })}
+    </p>
+  );
 }
 
-const GROUP_TITLE: Record<Group, MessageKey> = {
-  held: "sched.group.held",
-  waiting: "sched.group.waiting",
-  closed: "sched.group.closed",
-};
-
-// Each group says what there is none OF in its own words, because "there is
-// none" is the one state that has to be specific: a shared sentence under three
-// headings tells the reader the same thing three times and none of it about the
-// heading it sits under.
-//
-// A rep with nothing scheduled at all never reads any of them — the page prints
-// ONE empty state instead of three, which is the difference between an inbox
-// that is clear and a page that looks broken.
-const GROUP_EMPTY: Record<Group, MessageKey> = {
-  held: "sched.group.heldEmpty",
-  waiting: "sched.group.waitingEmpty",
-  closed: "sched.group.closedEmpty",
-};
-
-// The whole write, row identity included. The `mutationFn` takes it as a
-// VARIABLE and never closes over the render's own state: the click belongs to
-// the committed render, so what it passes cannot be older than the control the
-// reader pressed, while what it closes over can be — and here the stale value
-// would be the `If-Match` version, so the reader would be told somebody else
-// moved the message when nobody did.
-export type Move = Readonly<{ id: string; version: number; at: string }>;
-
-type Withdraw = Readonly<{ id: string }>;
-
-/**
- * The caller's own queue, read once.
- *
- * No status filter on the request: the three groups this page reads in ARE the
- * reading, and one unfiltered read fills all of them — asking per group would be
- * three requests to answer one question.
- *
- * Exported because the Tasks page carries this queue's front door and needs the
- * same answer to decide whether to offer it. One cache entry, one request, both
- * consumers — the shape `useRoster` uses for the same reason.
- */
-export function useScheduledSends() {
+/** The cut the reader chooses, with a figure on each, and the clock to the next send. */
+function QueueToolbar({
+  view,
+  onView,
+  counts,
+  nextAt,
+}: Readonly<{
+  view: View;
+  onView: (view: View) => void;
+  counts: Readonly<{ waiting: number; held: number; today: number }>;
+  nextAt: string | undefined;
+}>) {
   const t = useT();
-  return useQuery({
-    queryKey: ["scheduled-sends"],
-    queryFn: async () => {
-      return unwrap(await api.GET("/scheduled-sends", {}), t);
-    },
-    staleTime: 60_000,
-  });
+  return (
+    <div className="scheduledsends-toolbar">
+      <SegmentedControl
+        label={t("sched.view")}
+        options={VIEWS}
+        value={view}
+        onChange={onView}
+        labels={{
+          all: t("sched.view.all"),
+          held: t("sched.view.held"),
+          today: t("sched.view.today"),
+        }}
+        counts={{
+          all: counts.waiting + counts.held,
+          held: counts.held,
+          today: counts.today,
+        }}
+        marks={{ held: counts.held > 0 }}
+      />
+      {nextAt && <NextSend at={nextAt} />}
+    </div>
+  );
 }
 
 export function ScheduledSendsScreen() {
   const t = useT();
-  const queryClient = useQueryClient();
+  const { locale } = useLocale();
   // A moment a rep chose is a personal one, so the page reads in the viewer's
   // own zone unless the send names another (see Moment).
   const readerZone = viewerZone();
   const [withdrawing, setWithdrawing] = useState<ScheduledSend | null>(null);
+  const [view, setView] = useState<View>("all");
+  // Re-read each minute so "today" and the presets stay true on a page left open.
+  const now = new Date(useNow(60_000));
 
   const query = useScheduledSends();
 
-  const move = useMutation({
-    mutationFn: async ({ id, version, at }: Move) => {
-      unwrap(
-        await api.PATCH("/scheduled-sends/{id}", {
-          // Through `ifMatch`, not a hand-written header: it is the one spelling of
-          // the precondition. `src/api/if-match-coverage.test.ts` reads the AST for
-          // that call, so a second spelling reads to the gate as no precondition.
-          params: { path: { id }, ...ifMatch(version) },
-          // The zone travels as a name beside the instant. So a message scheduled
-          // across a DST boundary arrives at the wall time the rep meant, not an
-          // hour either side.
-          body: { scheduled_at: at, scheduled_tz: readerZone },
-        }),
-        t,
-      );
-    },
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["scheduled-sends"] }),
-  });
+  const { move, withdraw, moveWithUndo, skew, writeError } = useQueueWrites(
+    readerZone,
+    () => setWithdrawing(null),
+  );
 
-  const withdraw = useMutation({
-    mutationFn: async ({ id }: Withdraw) => {
-      unwrap(
-        await api.POST("/scheduled-sends/{id}/cancel", {
-          params: { path: { id } },
-        }),
-        t,
-      );
-    },
-    onSuccess: () => {
-      setWithdrawing(null);
-      queryClient.invalidateQueries({ queryKey: ["scheduled-sends"] });
-    },
-  });
+  const { held, waiting, closed, goingToday, next, counts } = readQueue(
+    query.data ?? [],
+    now,
+    readerZone,
+  );
+  const days = dayGroups(view === "today" ? goingToday : waiting, readerZone);
+  const nextId = next?.id;
+  const nextAt = next?.scheduled_at;
 
-  // A 409 on either write says one thing: the row on screen is not the row on
-  // the server. It already fired, somebody withdrew it, or another surface moved
-  // it first — and all three want the same next step, which is to read the list
-  // again rather than to retry a write against a version that is gone. It is
-  // told apart from every other failure because "reload and look" is useless
-  // advice for a 500 and the only useful advice here.
-  const skew =
-    isVersionSkewOf(move.error) || isVersionSkewOf(withdraw.error)
-      ? t("sched.skew")
-      : null;
-  const writeError =
-    skew === null
-      ? ((move.isError ? problemMessageOf(move.error, t) : null) ??
-        (withdraw.isError ? problemMessageOf(withdraw.error, t) : null))
-      : null;
+  const row = (send: ScheduledSend, timeOnly: boolean) => (
+    <SendRow
+      key={send.id}
+      send={send}
+      readerZone={readerZone}
+      now={now}
+      timeOnly={timeOnly}
+      isNext={send.id === nextId}
+      movePending={move.isPending}
+      onMove={(input) => moveWithUndo(input, send)}
+      onWithdraw={setWithdrawing}
+    />
+  );
 
   return (
     // No heading of its own: the shell's PageTitle names this page from
@@ -194,34 +152,53 @@ export function ScheduledSendsScreen() {
         ) : (
           query.data && (
             <div className="arrive-stack">
-              {GROUPS.map((group) => {
-                const rows = query.data.filter(
-                  (send) => groupOf(send.status) === group,
-                );
-                const title = t(GROUP_TITLE[group]);
-                return (
-                  <section key={group} aria-label={title}>
-                    <SectionHeader title={title} />
-                    <SurfaceState
-                      loadingLabel={title}
-                      label={title}
-                      state={rows.length === 0 ? "empty" : "ready"}
-                      emptyLabel={t(GROUP_EMPTY[group])}
-                    >
-                      {rows.map((send) => (
-                        <SendRow
-                          key={send.id}
-                          send={send}
-                          readerZone={readerZone}
-                          movePending={move.isPending}
-                          onMove={(input) => move.mutate(input)}
-                          onWithdraw={setWithdrawing}
-                        />
-                      ))}
-                    </SurfaceState>
-                  </section>
-                );
-              })}
+              <QueueToolbar
+                view={view}
+                onView={setView}
+                counts={{ ...counts, today: goingToday.length }}
+                nextAt={nextAt}
+              />
+              {view !== "today" && held.length > 0 && (
+                <section aria-label={t("sched.group.held")}>
+                  <SectionHeader title={t("sched.group.held")} />
+                  <ol className="scheduledsends-list scheduledsends-heldband">
+                    {held.map((send) => row(send, false))}
+                  </ol>
+                </section>
+              )}
+              {view !== "held" && (
+                <section aria-label={t("sched.group.waiting")}>
+                  <SectionHeader title={t("sched.group.waiting")} />
+                  <SurfaceState
+                    loadingLabel={t("sched.group.waiting")}
+                    label={t("sched.group.waiting")}
+                    state={days.length === 0 ? "empty" : "ready"}
+                    emptyLabel={t(
+                      view === "today"
+                        ? "sched.todayEmpty"
+                        : "sched.group.waitingEmpty",
+                    )}
+                  >
+                    <TimelineDays
+                      days={days}
+                      now={now}
+                      zone={readerZone}
+                      renderRow={(send) => row(send, true)}
+                    />
+                  </SurfaceState>
+                </section>
+              )}
+              {view === "all" && closed.length > 0 && (
+                <Disclosure
+                  summary={t("sched.group.closedCount", {
+                    count: formatNumber(closed.length, locale),
+                  })}
+                >
+                  <ol className="scheduledsends-list">
+                    {closed.map((send) => row(send, false))}
+                  </ol>
+                </Disclosure>
+              )}
             </div>
           )
         )}

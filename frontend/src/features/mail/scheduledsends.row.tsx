@@ -1,17 +1,15 @@
-import { useState } from "react";
-import { Badge, Button, Card, TextInput } from "../../design-system/atoms";
-import { Row } from "../../design-system/stack";
-import { localDateTimeValue } from "../../format/calendarday";
+import { Badge, Button, Card } from "../../design-system/atoms";
 import {
   formatDateTime,
   formatNumber,
+  formatTimeOfDay,
   isRenderableZone,
 } from "../../format/format";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { logUnexpectedError } from "../../lib/problem";
-import { scheduleFields } from "./composesend";
-import type { Move, ScheduledSend, Status } from "./scheduledsends";
+import type { ScheduledSend, Status } from "./scheduledqueue";
+import { type Move, RescheduleMenu } from "./scheduledsends.reschedule";
 import { SendPermission } from "./sendpermission";
 import { useSendPermission } from "./usesendpermission";
 
@@ -94,18 +92,26 @@ function renderZone(wireZone: string, readerZone: string): string {
  * A rep schedules 09:00 from Berlin and reads the page from Hanoi. Told 14:00
  * with no explanation, they read a bug. Told 09:00 with no zone, they read a
  * message that will land at the wrong end of the recipient's morning.
+ *
+ * `timeOnly` is for a row under a day heading, where the date is already said.
  */
 function Moment({
   send,
   readerZone,
-}: Readonly<{ send: ScheduledSend; readerZone: string }>) {
+  timeOnly,
+}: Readonly<{ send: ScheduledSend; readerZone: string; timeOnly: boolean }>) {
   const t = useT();
   const { locale } = useLocale();
   const zone = renderZone(send.scheduled_tz, readerZone);
+  const when = timeOnly
+    ? formatTimeOfDay(send.scheduled_at, locale, zone)
+    : formatDateTime(send.scheduled_at, locale, zone);
   return (
-    <span className="t-caption">
-      {formatDateTime(send.scheduled_at, locale, zone)}
-      {zone !== readerZone && ` · ${t("sched.inZone", { zone })}`}
+    <span className="scheduledsends-moment">
+      {when}
+      {zone !== readerZone && (
+        <span className="t-caption">{t("sched.inZone", { zone })}</span>
+      )}
     </span>
   );
 }
@@ -131,82 +137,27 @@ function recipientLine(
       });
 }
 
-/**
- * The reschedule control: a moment picker that unfolds in place.
- *
- * Time only, which is the contract's own rule. The approval bound to the
- * content, so changing it is cancel-and-recompose. The picker is a
- * `datetime-local`, seeded from the send's moment in the reader's zone. The
- * imported `scheduleFields` reads it back in that zone, as the composer's
- * send-later control does, so the two agree on what a picked moment means.
- */
-function MoveControl({
-  send,
-  pending,
-  onMove,
-}: Readonly<{
-  send: ScheduledSend;
-  pending: boolean;
-  onMove: (move: Move) => void;
-}>) {
-  const t = useT();
-  const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState("");
-
-  if (!open) {
-    return (
-      <Button
-        onClick={() => {
-          setDraft(localDateTimeValue(send.scheduled_at));
-          setOpen(true);
-        }}
-      >
-        {t("sched.move")}
-      </Button>
-    );
-  }
-  // Empty or unparseable yields neither field, and the wire requires both. The
-  // button refuses rather than sending half a schedule the server would 422.
-  const fields = scheduleFields(draft);
-  return (
-    <>
-      <TextInput
-        type="datetime-local"
-        aria-label={t("sched.moveTo", { subject: send.subject })}
-        value={draft}
-        onChange={(event) => setDraft(event.target.value)}
-        className="scheduledsends-move"
-      />
-      <Button
-        variant="primary"
-        disabled={fields.scheduled_at === undefined}
-        pending={pending}
-        onClick={() => {
-          if (fields.scheduled_at === undefined) return;
-          onMove({
-            id: send.id,
-            version: send.version,
-            at: fields.scheduled_at,
-          });
-          setOpen(false);
-        }}
-      >
-        {t("sched.moveSave")}
-      </Button>
-      <Button onClick={() => setOpen(false)}>{t("sched.moveCancel")}</Button>
-    </>
-  );
+/** The first line of a message, for a row that says what the message is. */
+function previewOf(body: string | undefined): string | null {
+  const line = body?.trim().split(/\s*\n\s*/)[0];
+  return line ? line : null;
 }
 
 export function SendRow({
   send,
   readerZone,
+  now,
+  timeOnly,
+  isNext,
   movePending,
   onMove,
   onWithdraw,
 }: Readonly<{
   send: ScheduledSend;
   readerZone: string;
+  now: Date;
+  timeOnly: boolean;
+  isNext: boolean;
   movePending: boolean;
   onMove: (move: Move) => void;
   onWithdraw: (send: ScheduledSend) => void;
@@ -217,6 +168,7 @@ export function SendRow({
   const heldReasonKey = send.held_reason
     ? HELD_REASON_LABEL[send.held_reason]
     : undefined;
+  const preview = previewOf(send.body);
   // What the engine says about this message now, for a message that will still
   // go. It is asked the way the fire asks: every addressee, the frozen claim and
   // the frozen records. So the row cannot say "will send" about a message the
@@ -233,45 +185,70 @@ export function SendRow({
     enabled: actionable,
   });
   return (
-    <Card as="div" className="scheduledsends-send">
-      <Row gap="2">
-        <span className="scheduledsends-summary">
-          <strong>{send.subject}</strong>
-          <span className="t-caption"> · {recipientLine(send, t, locale)}</span>
-          <br />
-          <Moment send={send} readerZone={readerZone} />
-        </span>
-        <Badge tone={STATUS_TONE[send.status]}>
-          {t(STATUS_LABEL[send.status])}
-        </Badge>
+    <Card
+      as="li"
+      className={[
+        "scheduledsends-send",
+        isNext && "scheduledsends-send-next",
+        send.status === "held" && "scheduledsends-send-held",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      <Moment send={send} readerZone={readerZone} timeOnly={timeOnly} />
+      <div className="scheduledsends-summary">
+        <strong>{send.subject}</strong>
+        <span className="t-caption">{recipientLine(send, t, locale)}</span>
+        {preview && (
+          <span className="scheduledsends-preview t-caption">{preview}</span>
+        )}
+        {/* A held message says why on the row rather than in a tooltip. It is the
+            only thing that tells the rep whether to move it or to give up on it,
+            and a reason a rep has to hover for is a reason they do not read. An
+            unmapped token prints nothing rather than the token, since a reason
+            nobody can act on is worse than the sentence above it standing alone. */}
+        {heldReasonKey && (
+          <p className="scheduledsends-held">{t(heldReasonKey)}</p>
+        )}
+        {/* The held reason above says a gate stopped it; this says WHOSE decision
+            that was and whether anybody may change it, in the same words the
+            composer uses. Read-only: the queue moves or withdraws a message, and
+            an override belongs where the message is written. */}
         {actionable && (
-          <MoveControl send={send} pending={movePending} onMove={onMove} />
+          <SendPermission
+            preview={permission.preview}
+            asking={permission.asking}
+            unanswered={permission.unanswered}
+          />
+        )}
+      </div>
+      <div className="scheduledsends-side">
+        {isNext ? (
+          <Badge tone="accent">{t("sched.nextBadge")}</Badge>
+        ) : (
+          send.status !== "scheduled" && (
+            <Badge tone={STATUS_TONE[send.status]}>
+              {t(STATUS_LABEL[send.status])}
+            </Badge>
+          )
         )}
         {actionable && (
-          <Button variant="danger" onClick={() => onWithdraw(send)}>
-            {t("sched.withdraw")}
-          </Button>
+          <div className="scheduledsends-verbs">
+            <RescheduleMenu
+              send={send}
+              now={now}
+              pending={movePending}
+              onMove={onMove}
+            />
+            <Button variant="danger" onClick={() => onWithdraw(send)}>
+              <span aria-hidden>{t("sched.withdraw")}</span>
+              <span className="sr-only">
+                {t("sched.withdrawFor", { subject: send.subject })}
+              </span>
+            </Button>
+          </div>
         )}
-      </Row>
-      {/* A held message says why on the row rather than in a tooltip. It is the
-          only thing that tells the rep whether to move it or to give up on it,
-          and a reason a rep has to hover for is a reason they do not read. An
-          unmapped token prints nothing rather than the token, since a reason
-          nobody can act on is worse than the sentence above it standing alone. */}
-      {heldReasonKey && (
-        <p className="scheduledsends-held">{t(heldReasonKey)}</p>
-      )}
-      {/* The held reason above says a gate stopped it; this says WHOSE decision
-          that was and whether anybody may change it, in the same words the
-          composer uses. Read-only: the queue moves or withdraws a message, and
-          an override belongs where the message is written. */}
-      {actionable && (
-        <SendPermission
-          preview={permission.preview}
-          asking={permission.asking}
-          unanswered={permission.unanswered}
-        />
-      )}
+      </div>
     </Card>
   );
 }
