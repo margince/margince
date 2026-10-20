@@ -10,16 +10,16 @@
   "totals": {
     "tools": 37,
     "resources": 9,
-    "tool_catalog_bytes": 125431,
+    "tool_catalog_bytes": 126059,
     "resource_catalog_bytes": 3588,
-    "approx_wire_tokens_total": 32254,
+    "approx_wire_tokens_total": 32411,
     "largest_tool_bytes": 8748,
     "largest_tool": "preview_import",
     "tool_catalog_composition": {
       "description_bytes": 32375,
-      "input_schema_bytes": 58955,
+      "input_schema_bytes": 59583,
       "output_schema_bytes": 25189,
-      "description_plus_input_schema_bytes": 91330
+      "description_plus_input_schema_bytes": 91958
     }
   },
   "tools": {
@@ -3967,6 +3967,45 @@
                                   ],
                                   "type": "object"
                                 },
+                                "layout": {
+                                  "items": {
+                                    "properties": {
+                                      "cards": {
+                                        "items": {
+                                          "properties": {
+                                            "id": {
+                                              "type": "string"
+                                            },
+                                            "kind": {
+                                              "type": "string"
+                                            },
+                                            "metric": {
+                                              "type": "string"
+                                            },
+                                            "width": {
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": [
+                                            "id",
+                                            "kind",
+                                            "width"
+                                          ],
+                                          "type": "object"
+                                        },
+                                        "type": "array"
+                                      },
+                                      "title": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "cards"
+                                    ],
+                                    "type": "object"
+                                  },
+                                  "type": "array"
+                                },
                                 "metrics": {
                                   "items": {
                                     "type": "string"
@@ -5330,6 +5369,45 @@
                     "start_at"
                   ],
                   "type": "object"
+                },
+                "layout": {
+                  "items": {
+                    "properties": {
+                      "cards": {
+                        "items": {
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "kind": {
+                              "type": "string"
+                            },
+                            "metric": {
+                              "type": "string"
+                            },
+                            "width": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "kind",
+                            "width"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
+                      "title": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "cards"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
                 },
                 "metrics": {
                   "items": {
