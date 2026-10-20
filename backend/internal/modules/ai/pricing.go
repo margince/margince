@@ -206,10 +206,7 @@ func vendorSheetRates(day time.Time) []ModelRate {
 		// visible unknown. Seeding the >200k price instead is the same error
 		// pointed the other way, over-reporting the common case.
 		//
-		// Nothing is billed on it today — no task ladder selects the frontier
-		// tier — so an operator loses nothing now and gains the unknown being
-		// visible the moment one does. Restoring a row wants the context band
-		// the rate model does not have: #1045.
+		// Restoring a row needs the context band the rate model does not have: #1045.
 		//
 		// Explicit caching is the second charge it cannot express: $4.50/MTok
 		// per HOUR HELD, billed for storage rather than per token processed, so
