@@ -69,8 +69,9 @@ func RecordTagTypesServed() []string {
 // whatever their tag grants say — existence stays hidden. Only then does the
 // vocabulary grant decide whether the words themselves come back.
 //
-// An archived record still reads, as its page does: a promoted or
-// disqualified lead is archived, and its page still shows how it was filed.
+// An archived record answers not-found, as the record's lists and applying a
+// tag do: archiving takes the assignments off, so an empty list would claim the
+// record carried no tags.
 func (s *Store) RecordTagsFor(ctx context.Context, entityType string, entityID ids.UUID) (RecordTags, error) {
 	if !recordTagTypes[entityType] {
 		return RecordTags{}, &BadInputError{
@@ -92,7 +93,7 @@ func (s *Store) RecordTagsFor(ctx context.Context, entityType string, entityID i
 		if err := auth.EnsureReadable(ctx, tx, entityType, entityID); err != nil {
 			return err
 		}
-		if err := recordExists(ctx, tx, entityType, entityID); err != nil {
+		if err := recordLive(ctx, tx, entityType, entityID); err != nil {
 			return err
 		}
 		if withheld {
@@ -111,12 +112,12 @@ func (s *Store) RecordTagsFor(ctx context.Context, entityType string, entityID i
 	return out, nil
 }
 
-// recordExists answers not-found for an id no row holds, live or archived.
-// EnsureReadable asks nothing of a caller whose row scope is empty, and an
-// empty panel for a record that does not exist would state a fact about it.
-func recordExists(ctx context.Context, tx pgx.Tx, entityType string, entityID ids.UUID) error {
+// recordLive answers not-found for an id no live row holds. EnsureReadable
+// asks nothing of a caller whose row scope is empty, and an empty panel for a
+// record that does not exist would state a fact about it.
+func recordLive(ctx context.Context, tx pgx.Tx, entityType string, entityID ids.UUID) error {
 	var exists bool
-	query := fmt.Sprintf(`SELECT EXISTS (SELECT 1 FROM %s WHERE id = $1)`,
+	query := fmt.Sprintf(`SELECT EXISTS (SELECT 1 FROM %s WHERE id = $1 AND archived_at IS NULL)`,
 		pgx.Identifier{entityType}.Sanitize())
 	if err := tx.QueryRow(ctx, query, entityID).Scan(&exists); err != nil {
 		return fmt.Errorf("collections: probing the tagged record: %w", err)

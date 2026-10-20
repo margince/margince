@@ -181,6 +181,7 @@ function DealTagsSection({ deal }: Readonly<{ deal: Deal }>) {
     <TagsPanel
       entityType="deal"
       entityID={deal.id}
+      archived={Boolean(deal.archived_at)}
       canEdit={canUpdate && !deal.archived_at}
     />
   );

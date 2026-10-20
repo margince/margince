@@ -77,7 +77,7 @@ Also called: progress bar, time left, import stuck, continue an import.
 
 A ZIP starts with the source name of your last ZIP import, or else with the ZIP's own name. One CSV starts with none. A name has at most 80 characters: letters, numbers, dots, `_` or `-`.
 
-While an import of one source name is still writing, Margince does not test another file under that name. Wait for it to finish.
+While an import of one source name is still writing, Margince does not test another file under that name. Your file waits as a draft in Recent imports. Wait for the other import to finish, then select **Continue** on the draft. A draft that nobody touches for seven days is canceled.
 
 Also called: re-import a ZIP, upload the export again.
 

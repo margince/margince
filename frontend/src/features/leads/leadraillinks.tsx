@@ -99,6 +99,7 @@ function LeadTagsSection({
     <TagsPanel
       entityType="lead"
       entityID={lead.id}
+      archived={Boolean(lead.archived_at)}
       canEdit={canUpdate && !writer.readOnly}
     />
   );

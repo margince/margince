@@ -174,6 +174,7 @@ export function ContactTagsSection({ view }: Readonly<{ view: Contact360 }>) {
     <TagsPanel
       entityType="contact"
       entityID={contact.id}
+      archived={Boolean(contact.archived_at)}
       canEdit={canUpdate && !readOnlyReason}
       employer={contact.employer}
     />

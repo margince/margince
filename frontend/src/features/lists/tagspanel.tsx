@@ -42,13 +42,7 @@ import { useUndoableRemoval } from "../../lib/undoableremoval";
  */
 const VISIBLE_TAGS = 4;
 
-export function TagsPanel({
-  entityType,
-  entityID,
-  canEdit,
-  bare = false,
-  employer,
-}: Readonly<{
+type TagsPanelProps = Readonly<{
   entityType: TaggableType;
   entityID: string;
   /** Drawn as the body of a section something else names, rather than as a
@@ -60,7 +54,30 @@ export function TagsPanel({
   canEdit: boolean;
   /** A contact's current company, which a tag just applied here is offered to. */
   employer?: components["schemas"]["ContactEmployer"];
-}>) {
+}>;
+
+/**
+ * An archived record carries no tags, because archiving takes them off, and the
+ * server answers not-found for its tag list. The panel draws nothing and asks
+ * nothing rather than show "no tags" for a record whose tags were removed.
+ */
+export function TagsPanel({
+  archived = false,
+  ...props
+}: TagsPanelProps & Readonly<{ archived?: boolean }>) {
+  if (archived) {
+    return null;
+  }
+  return <LiveTagsPanel {...props} />;
+}
+
+function LiveTagsPanel({
+  entityType,
+  entityID,
+  canEdit,
+  bare = false,
+  employer,
+}: TagsPanelProps) {
   const t = useT();
   const { locale } = useLocale();
   const [expanded, setExpanded] = useState(false);

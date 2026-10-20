@@ -27,6 +27,7 @@ const REFUSED_FOR_ARCHIVED = [
   "/deals/x/coverage",
   "/deals/x/status",
   "/records/deal/x/lists",
+  "/records/deal/x/tags",
   "/deals/x/legal-reviews",
 ];
 

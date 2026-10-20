@@ -441,7 +441,11 @@ describe("LeadScreen — an archived lead does not ask for what the server refus
   function leadBackend(archivedAt: string | null) {
     return stubFetchWithMe(
       async (url) => {
-        if (url.includes("/score") || url.includes("/lists")) {
+        if (
+          url.includes("/score") ||
+          url.includes("/lists") ||
+          url.includes("/tags")
+        ) {
           return jsonResponse(
             { status: 404, code: "not_found", title: "Not found" },
             404,
@@ -459,7 +463,7 @@ describe("LeadScreen — an archived lead does not ask for what the server refus
     );
   }
 
-  it("never reads the score breakdown or the lists and reports no failed section", async () => {
+  it("never reads the score breakdown, the lists or the tags and reports no failed section", async () => {
     const { urls } = leadBackend("2026-07-13T00:00:00Z");
     render(<LeadScreen id="l-1" />);
 
@@ -472,17 +476,18 @@ describe("LeadScreen — an archived lead does not ask for what the server refus
       expect(urls.some((url) => url.includes("/activities"))).toBe(true),
     );
 
-    expect(urls.filter((url) => /\/(score|lists)/.test(url))).toEqual([]);
+    expect(urls.filter((url) => /\/(score|lists|tags)/.test(url))).toEqual([]);
     expect(screen.queryByText(en["lead.scoreFactorsFailed"])).toBeNull();
   });
 
-  it("reads both for a live lead", async () => {
+  it("reads all three for a live lead", async () => {
     const { urls } = leadBackend(null);
     render(<LeadScreen id="l-1" />);
 
     await waitFor(() => {
       expect(urls.some((url) => url.includes("/score"))).toBe(true);
       expect(urls.some((url) => url.includes("/lists"))).toBe(true);
+      expect(urls.some((url) => url.includes("/tags"))).toBe(true);
     });
   });
 });

@@ -104,6 +104,7 @@ export function ContactDetails({
               <TagsPanel
                 entityType="contact"
                 entityID={contact.id}
+                archived={Boolean(contact.archived_at)}
                 canEdit={canEdit}
                 employer={contact.employer}
                 bare
