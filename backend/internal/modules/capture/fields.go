@@ -68,6 +68,9 @@ type MailEnvelope struct {
 	// LinkHosts are the hosts the body's web links lead to, with a known
 	// redirect wrapper already unwrapped.
 	LinkHosts []string
+	// LinksTruncated says the parser stopped before it read every link, so
+	// LinkHosts may miss one.
+	LinksTruncated bool
 }
 
 // LeadFields is a captured prospect bound for the lead pool — never

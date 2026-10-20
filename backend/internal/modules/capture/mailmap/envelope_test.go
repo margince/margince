@@ -7,7 +7,10 @@ package mailmap
 // links lead. Capture judges Bcc and foreign links from this alone.
 
 import (
+	"fmt"
+	"net/url"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -129,9 +132,82 @@ func TestLinkHostsReadTheRealTargetOfEachLink(t *testing.T) {
 // A sender can put one link in the plain part and another in the HTML part a
 // mail client shows. Both are read.
 func TestLinkHostsReadBothBodies(t *testing.T) {
-	got := linkHosts("See https://example.com/a", `<a href="https://landing.example.org/b">b</a>`)
+	got, cut := linkHosts("See https://example.com/a", `<a href="https://landing.example.org/b">b</a>`)
 
-	if !slices.Equal(got, []string{"example.com", "landing.example.org"}) {
-		t.Errorf("link hosts are %v, want the plain part's and the HTML part's", got)
+	if !slices.Equal(got, []string{"example.com", "landing.example.org"}) || cut {
+		t.Errorf("link hosts are %v (cut %v), want the plain part's and the HTML part's", got, cut)
+	}
+}
+
+// googleRedirect wraps a target in Google's link redirect.
+func googleRedirect(target string) string {
+	return "https://www.google.com/url?q=" + url.QueryEscape(target) + "&sa=D"
+}
+
+func TestLinkTargetFollowsRedirectsToTheirEnd(t *testing.T) {
+	deep := "https://landing.example.org/x"
+	for range maxRedirectDepth + 1 {
+		deep = googleRedirect(deep)
+	}
+	cases := map[string]struct {
+		link     string
+		host     string
+		resolved bool
+	}{
+		"a double-wrapped link": {
+			link: googleRedirect(googleRedirect("https://landing.example.org/x")), host: "landing.example.org", resolved: true,
+		},
+		"a userinfo part is no host": {
+			link: "https://sender.example.com@landing.example.org/x", host: "landing.example.org", resolved: true,
+		},
+		"a wrapper with no web target": {link: googleRedirect("nothing"), resolved: false},
+		"a chain past the depth limit": {link: deep, resolved: false},
+		"a double wrapper ending in no web address": {
+			link: googleRedirect(googleRedirect("https://www.google.com/url?q=x")), resolved: false,
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			host, resolved := linkTarget(tc.link)
+			if host != tc.host || resolved != tc.resolved {
+				t.Errorf("linkTarget(%s) = %q, %v, want %q, %v", tc.link, host, resolved, tc.host, tc.resolved)
+			}
+		})
+	}
+}
+
+// A foreign link after many related ones still reaches the decision. The list
+// is marked cut short at its bound.
+func TestALongLinkListIsMarkedCutShort(t *testing.T) {
+	var body strings.Builder
+	for i := range maxLinkHosts {
+		fmt.Fprintf(&body, `<a href="https://h%d.example.com/">x</a>`, i)
+	}
+	body.WriteString(`<a href="https://landing.example.org/">x</a>`)
+
+	hosts, cut := linkHosts("", body.String())
+
+	if len(hosts) != maxLinkHosts || !cut {
+		t.Errorf("a list past the bound gave %d hosts, cut %v; want %d hosts and cut", len(hosts), cut, maxLinkHosts)
+	}
+}
+
+// An HTML body longer than the walk's bound is marked cut short, so a link past
+// the bound is not silently lost.
+func TestAnHTMLWalkPastItsBoundIsCutShort(t *testing.T) {
+	body := strings.Repeat("<b>x</b>", maxLinkTokens) + `<a href="https://landing.example.org/">x</a>`
+
+	if _, cut := linkHosts("", body); !cut {
+		t.Error("a walk that stopped at its bound did not say so")
+	}
+}
+
+// The redirect wrapper and the truncation reach capture through the envelope.
+func TestTheEnvelopeCarriesALinkListCutShort(t *testing.T) {
+	envelope := envelopeOf(t, "To: "+envelopeOwner, "Content-Type: text/html; charset=utf-8", "",
+		`<a href="`+googleRedirect("nothing")+`">x</a>`)
+
+	if !envelope.LinksTruncated {
+		t.Error("an unresolved redirect did not mark the envelope's links as cut short")
 	}
 }

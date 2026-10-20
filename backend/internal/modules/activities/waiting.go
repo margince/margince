@@ -130,8 +130,8 @@ type WaitingReply struct {
 	// OwnerKnown distinguishes a readable unassigned record from a withheld owner.
 	OwnerKnown bool
 	// SenderWasStranger, BccOnly and ForeignLink are what capture judged about
-	// the mail (strangerMailSQL); false where it judged nothing. BccOnly also
-	// holds that this reader is named in neither To nor Cc.
+	// the mail (strangerMailSQL); false where it judged nothing. BccOnly is
+	// this reader's own import, so a system reader never sees it.
 	SenderWasStranger bool
 	BccOnly           bool
 	ForeignLink       bool

@@ -11,28 +11,31 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// Capture judges Bcc for the mailbox the mail came through. A second reader
-// named in To or Cc of the same message was addressed openly, so the lane
-// reports no Bcc for them.
-func TestABccCopyIsBccOnlyForAReaderNamedNowhere(t *testing.T) {
+// The lane reads Bcc from the reader's own import row only, and a To or Cc row
+// naming one of the reader's addresses overrides it. The capture side is
+// proven through the real sink in compose's strangermail integration test.
+func TestBccIsTheReadersOwnImportUnlessToOrCcNamesThem(t *testing.T) {
 	e := setupLoad(t)
-	contact := e.buyer(t)
-	message := e.waitingFrom(t, "View the document", "sender@example.com", contact)
-	e.exec(t, `UPDATE activity SET bcc_only = true, sender_was_stranger = true, foreign_link = true
-		WHERE id = $1`, message)
-	e.exec(t, `INSERT INTO activity_participant (id, activity_id, role, address)
-		VALUES ($1, $2, 'cc', 'copied@ourco.example')`, ids.NewV7(), message)
+	message := e.waitingFrom(t, "View the document", "sender@example.com", e.buyer(t))
+	e.exec(t, `UPDATE activity SET sender_was_stranger = true, foreign_link = true WHERE id = $1`, message)
 
-	unnamed, ok := present(t, storeAddressing(e, "reader@ourco.example"), e, message)
+	row, ok := present(t, storeAddressing(e, "reader@ourco.example"), e, message)
 	if !ok {
 		t.Fatal("the stranger's mail left the queue; it must be demoted, never hidden")
 	}
-	if !unnamed.BccOnly || !unnamed.SenderWasStranger || !unnamed.ForeignLink {
-		t.Errorf("a reader named nowhere read bcc=%v stranger=%v foreign=%v, want all three",
-			unnamed.BccOnly, unnamed.SenderWasStranger, unnamed.ForeignLink)
+	if row.BccOnly || !row.SenderWasStranger || !row.ForeignLink {
+		t.Errorf("with no import of the reader's: bcc=%v stranger=%v foreign=%v, want no Bcc and both others",
+			row.BccOnly, row.SenderWasStranger, row.ForeignLink)
 	}
-	copied, _ := present(t, storeAddressing(e, "copied@ourco.example"), e, message)
-	if copied.BccOnly {
+
+	e.exec(t, `INSERT INTO capture_import (activity_id, user_id, bcc_only) VALUES ($1, $2, true)`, message, e.rep)
+	if row, _ := present(t, storeAddressing(e, "reader@ourco.example"), e, message); !row.BccOnly {
+		t.Error("the reader's own Bcc import did not reach the lane")
+	}
+
+	e.exec(t, `INSERT INTO activity_participant (id, activity_id, role, address)
+		VALUES ($1, $2, 'cc', 'reader@ourco.example')`, ids.NewV7(), message)
+	if row, _ := present(t, storeAddressing(e, "reader@ourco.example"), e, message); row.BccOnly {
 		t.Error("a reader named in Cc read the message as a Bcc copy")
 	}
 }
@@ -41,6 +44,7 @@ func TestABccCopyIsBccOnlyForAReaderNamedNowhere(t *testing.T) {
 func TestUnjudgedMailCarriesNoStrangerFacts(t *testing.T) {
 	e := setupLoad(t)
 	message := e.waitingFrom(t, "Question", "sender@example.com", e.buyer(t))
+	e.exec(t, `INSERT INTO capture_import (activity_id, user_id) VALUES ($1, $2)`, message, e.rep)
 
 	row, ok := present(t, storeAddressing(e, "reader@ourco.example"), e, message)
 	if !ok {

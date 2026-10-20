@@ -42,10 +42,17 @@ type owedMail struct {
 	spoofed bool
 	// html is an HTML body sent instead of the plain one.
 	html string
+	// deliveredTo is the receiving server's Delivered-To, which proves a Bcc
+	// copy reached the seat.
+	deliveredTo string
 }
 
 func (m owedMail) raw() []byte {
-	lines := []string{"From: " + m.from, "To: " + m.to}
+	var lines []string
+	if m.deliveredTo != "" {
+		lines = append(lines, "Delivered-To: "+m.deliveredTo, "Received: by mx.ws.example")
+	}
+	lines = append(lines, "From: "+m.from, "To: "+m.to)
 	if m.cc != "" {
 		lines = append(lines, "Cc: "+m.cc)
 	}

@@ -93,6 +93,7 @@ type Message struct {
 	// linkHosts where the body's links lead: the evidence capture.MailEnvelope carries.
 	openRecipients []string
 	linkHosts      []string
+	linksCut       bool
 	listMail       bool
 }
 
@@ -216,6 +217,7 @@ func Parse(raw []byte, owner string) (Message, error) {
 		addresses:        allAddresses(fromList, toList, ccList, bccList),
 		openRecipients:   allAddresses(toList, ccList),
 		linkHosts:        walked.links,
+		linksCut:         walked.linksCut,
 		listMail:         viaGroup || header.Get("List-Id") != "" || header.Get("List-Unsubscribe") != "",
 		parts:            parts,
 		partDrops:        drops,
@@ -438,7 +440,7 @@ func (m Message) envelope() *capture.MailEnvelope {
 	if m.listMail {
 		return nil
 	}
-	return &capture.MailEnvelope{OpenRecipients: m.openRecipients, LinkHosts: m.linkHosts}
+	return &capture.MailEnvelope{OpenRecipients: m.openRecipients, LinkHosts: m.linkHosts, LinksTruncated: m.linksCut}
 }
 
 // domainOf returns the lowercased domain part of an address, or "" if the

@@ -15,6 +15,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -61,15 +62,27 @@ func correspondencePositiveTx(ctx context.Context, tx pgx.Tx, email string) (boo
 	if normalized == "" {
 		return false, nil
 	}
+	return correspondedBeforeTx(ctx, tx, []string{normalized}, time.Time{})
+}
+
+// correspondedBeforeTx is correspondencePositiveTx over several spellings of
+// one address, counting only outbound mail strictly before `before`. A zero
+// `before` counts all of it.
+func correspondedBeforeTx(ctx context.Context, tx pgx.Tx, addresses []string, before time.Time) (bool, error) {
+	var bound *time.Time
+	if !before.IsZero() {
+		bound = &before
+	}
 	// Body and subject travel SEPARATELY because only the body carries a quoted
 	// thread. Concatenating them first would leave no way to strip the sender's
 	// own words out of our reply.
 	rows, err := tx.Query(ctx, `
 		SELECT COALESCE(subject, ''), COALESCE(body, '')
 		  FROM activity
-		 WHERE counterparty_email = $1 AND counterparty_outbound_attested
+		 WHERE counterparty_email = ANY($1::text[]) AND counterparty_outbound_attested
+		   AND ($2::timestamptz IS NULL OR occurred_at < $2)
 		   AND `+auth.ActivityAvailableClause("activity")+`
-		 LIMIT 2`, normalized)
+		 LIMIT 2`, addresses, bound)
 	if err != nil {
 		return false, fmt.Errorf("capture: correspondence-positive gate: %w", err)
 	}

@@ -51,7 +51,6 @@ public.activity.archived_at timestamp with time zone gen=- def=-
 public.activity.assignee_id uuid gen=- def=-
 public.activity.audience text NOT NULL gen=- def='workspace'::text
 public.activity.audience_reason text gen=- def=-
-public.activity.bcc_only boolean gen=- def=-
 public.activity.body text gen=- def=-
 public.activity.booking_interval_exact boolean NOT NULL gen=- def=false
 public.activity.bulk_mail_attested boolean NOT NULL gen=- def=false
@@ -1742,6 +1741,7 @@ public.capture_freemail_domain.kind text NOT NULL gen=- def=-
 public.capture_freemail_domain_pkey CREATE UNIQUE INDEX capture_freemail_domain_pkey ON public.capture_freemail_domain USING btree (id)
 public.capture_import acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_import.activity_id uuid NOT NULL gen=- def=-
+public.capture_import.bcc_only boolean gen=- def=-
 public.capture_import.capture_import_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
 public.capture_import.capture_import_activity_user_key UNIQUE (activity_id, user_id)
 public.capture_import.capture_import_pkey PRIMARY KEY (id)

@@ -62,8 +62,9 @@ func extractText(reader *mail.Reader) walkedBody {
 	// Everything the sender named has had its claim on the bounds; what was
 	// held back takes what is left.
 	files.settle()
+	links, linksCut := linkHosts(plain, html)
 	return walkedBody{
-		text: bodyText(plain, html), links: linkHosts(plain, html),
+		text: bodyText(plain, html), links: links, linksCut: linksCut,
 		parts: files.parts, drops: files.drops(), calendar: calendar,
 	}
 }
@@ -73,6 +74,7 @@ func extractText(reader *mail.Reader) walkedBody {
 type walkedBody struct {
 	text     string
 	links    []string
+	linksCut bool
 	parts    []Part
 	drops    []PartDrop
 	calendar calendarPart

@@ -4,23 +4,25 @@
 package capture
 
 // What an inbound mail's envelope says about a stranger's mail, judged once
-// at capture and stored on the activity. The waiting queue reads the three
-// facts to keep a stranger's Bcc or foreign-link mail out of its top band.
+// at capture. The waiting queue reads the facts to keep a stranger's Bcc or
+// foreign-link mail out of its top band.
 
 import (
 	"context"
 	"fmt"
-	"strings"
+	"slices"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/freemail"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-// envelopeFacts are the activity's bcc_only, foreign_link and
-// sender_was_stranger columns. Nil is NULL: not judged, which the queue reads
-// as no evidence.
+// envelopeFacts are capture_import.bcc_only for this seat, and the activity's
+// foreign_link and sender_was_stranger. Nil is NULL: not judged, which the
+// queue reads as no evidence.
 type envelopeFacts struct {
 	bccOnly, foreignLink, senderWasStranger *bool
 }
@@ -34,19 +36,14 @@ func judgeEnvelopeTx(
 	if envelope == nil || fields.Kind != kindEmail || fields.Direction != connector.DirectionInbound || sender == "" {
 		return envelopeFacts{}, nil
 	}
-	own, err := ownDomainsTx(ctx, tx)
+	stranger, err := senderWasStrangerTx(ctx, tx, sender, receivedAt(rec, fields))
 	if err != nil {
 		return envelopeFacts{}, err
 	}
-	corresponded, err := correspondencePositiveTx(ctx, tx, sender)
+	foreign, err := foreignLinkTx(ctx, tx, sender, envelope)
 	if err != nil {
 		return envelopeFacts{}, err
 	}
-	foreign, err := foreignLinkTx(ctx, tx, sender, envelope.LinkHosts, own)
-	if err != nil {
-		return envelopeFacts{}, err
-	}
-	stranger := !corresponded
 	facts := envelopeFacts{foreignLink: &foreign, senderWasStranger: &stranger}
 	self, err := ownerIdentitiesTx(ctx, tx)
 	if err != nil {
@@ -55,84 +52,73 @@ func judgeEnvelopeTx(
 	// With no seat behind the capture, no address of ours is known. The Bcc
 	// question then stays unanswered rather than answered yes.
 	if !self.Empty() {
-		bcc := !addressedOpenly(envelope.OpenRecipients, rec.DeliveredTo, self, own)
+		bcc := !addressedOpenly(envelope.OpenRecipients, rec.DeliveredTo, self)
 		facts.bccOnly = &bcc
 	}
 	return facts, nil
 }
 
-// addressedOpenly reports whether To or Cc names the mailbox. That is a seat
-// address, the address the mail was delivered to, or any address on our own
-// domains. The last covers a team address such as a sales inbox.
-func addressedOpenly(recipients []string, deliveredTo string, self SelfSet, own InternalDomains) bool {
+// receivedAt is when the mail reached the mailbox: the provider's own time,
+// else the mail's Date header. captureActivity has already set a missing Date
+// to the capture time, so this is never zero.
+func receivedAt(rec connector.NormalizedRecord, fields ActivityFields) time.Time {
+	if !rec.ProviderReceivedAt.IsZero() && datasource.InstantInRange(rec.ProviderReceivedAt) {
+		return rec.ProviderReceivedAt
+	}
+	return fields.OccurredAt
+}
+
+// addressedOpenly reports whether To or Cc names this seat's mailbox: one of
+// the seat's own addresses, or the trusted address the mail was delivered to.
+// A seat's domain claim does not count: it names every colleague too, and a
+// colleague in To or Cc leaves this seat a Bcc copy.
+func addressedOpenly(recipients []string, deliveredTo string, self SelfSet) bool {
 	delivered := foldAddress(deliveredTo)
 	for _, recipient := range recipients {
-		if self.Covers(recipient) || own.Covers(recipient) || (delivered != "" && foldAddress(recipient) == delivered) {
+		if self.namesSeat(recipient) || (delivered != "" && foldAddress(recipient) == delivered) {
 			return true
 		}
 	}
 	return false
 }
 
-// foreignLinkTx reports whether any link leads to a site unrelated to the
-// sender. Related means the sender's own registrable domain, one of our own
-// domains, or a domain of a company that also holds the sender's domain.
-func foreignLinkTx(
-	ctx context.Context, tx pgx.Tx, sender string, hosts []string, own InternalDomains,
-) (bool, error) {
-	candidates := unrelatedSites(sender, hosts, own)
-	if len(candidates) == 0 {
+// namesSeat is Covers without the domain arm: an address of the seat's own,
+// proven or identity-only.
+func (s SelfSet) namesSeat(address string) bool {
+	folded := foldAddress(address)
+	_, proven := s.addresses[folded]
+	_, identity := s.identityOnly[folded]
+	return folded != "" && (proven || identity)
+}
+
+// senderWasStrangerTx reports whether, strictly before `before`, the sender
+// was no live contact and the workspace had never written to them. A later
+// contact or reply must not make an earlier mail look known.
+func senderWasStrangerTx(ctx context.Context, tx pgx.Tx, sender string, before time.Time) (bool, error) {
+	spellings := addressSpellings(sender)
+	var contact bool
+	err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+		  SELECT 1 FROM contact_email pe JOIN contact p ON p.id = pe.contact_id
+		   WHERE pe.email = ANY($1::text[]) AND pe.archived_at IS NULL
+		     AND p.archived_at IS NULL AND p.merged_into_id IS NULL AND p.created_at < $2)`,
+		spellings, before).Scan(&contact)
+	if err != nil {
+		return false, fmt.Errorf("capture: asking whether a sender is a contact: %w", err)
+	}
+	if contact {
 		return false, nil
 	}
-	senderDomain := domainOfAddress(sender)
-	siblings, err := companySiblingSitesTx(ctx, tx, senderDomain, freemail.Registrable(senderDomain))
-	if err != nil {
-		return false, err
-	}
-	for _, site := range candidates {
-		if !siblings[site] {
-			return true, nil
-		}
-	}
-	return false, nil
+	corresponded, err := correspondedBeforeTx(ctx, tx, spellings, before)
+	return !corresponded, err
 }
 
-// unrelatedSites returns the registrable domains of the link hosts outside
-// the sender's own site and outside our own domains.
-func unrelatedSites(sender string, hosts []string, own InternalDomains) []string {
-	senderSite := freemail.Registrable(domainOfAddress(sender))
-	var sites []string
-	for _, host := range hosts {
-		site := freemail.Registrable(host)
-		if site == "" || site == senderSite || own.CoversDomain(host) {
-			continue
-		}
-		sites = append(sites, site)
+// addressSpellings is an address as stored columns may hold it: lowercased,
+// and with its domain in IDNA form too. A unicode domain may be stored either way.
+func addressSpellings(address string) []string {
+	spellings := []string{correspondence.Fold(address)}
+	if canonical := foldAddress(address); !slices.Contains(spellings, canonical) {
+		spellings = append(spellings, canonical)
 	}
-	return sites
-}
-
-// companySiblingSitesTx returns the registrable domains of the companies that
-// hold the sender's domain. A link to such a company's other site is the
-// sender's own. It reads domains only, never who the company is.
-func companySiblingSitesTx(ctx context.Context, tx pgx.Tx, senderDomain, senderSite string) (map[string]bool, error) {
-	rows, err := tx.Query(ctx, `
-		SELECT sibling.domain
-		  FROM company_domain held
-		  JOIN company_domain sibling ON sibling.company_id = held.company_id AND sibling.archived_at IS NULL
-		 WHERE held.archived_at IS NULL AND held.domain = ANY($1::text[])`,
-		[]string{senderDomain, senderSite})
-	if err != nil {
-		return nil, fmt.Errorf("capture: reading the sender's company domains: %w", err)
-	}
-	defer rows.Close()
-	sites := map[string]bool{}
-	for rows.Next() {
-		var domain string
-		if err := rows.Scan(&domain); err != nil {
-			return nil, err
-		}
-		sites[freemail.Registrable(strings.TrimPrefix(domain, "www."))] = true
-	}
-	return sites, rows.Err()
+	return spellings
 }
