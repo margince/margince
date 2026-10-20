@@ -5,7 +5,7 @@ import { EmptyState, PendingBody } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
-import { ChartPanel } from "./reporting.charts";
+import { ChartPanel, pageCharts } from "./reporting.charts";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import type { CardChoice } from "./reporting.layout";
 import {
@@ -43,7 +43,7 @@ export function CardPreview({
     return <PendingBody label={t("reporting.previewLoading")} />;
   if (query.isError) return <ErrorLine error={query.error} />;
   const evaluation = query.data;
-  const charts = evaluation.charts.filter(
+  const charts = pageCharts(evaluation).filter(
     (chart) =>
       chart.kind === choice.kind &&
       (!choice.metric || chart.metric === choice.metric),

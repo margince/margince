@@ -215,7 +215,7 @@ function AddCard({
           />
         )}
       </Field>
-      <div className="actions">
+      <div className="reporting-layout-buttons">
         {preview && (
           <Button
             variant="ghost"

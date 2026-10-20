@@ -31,24 +31,7 @@ export function ReportingCharts({
   afterSummary?: ReactNode;
   onEvidence: EvidenceAction;
 }>) {
-  const charts = evaluation.charts.filter(
-    (chart) =>
-      chart.kind !== "metric_reading" &&
-      (chart.kind !== "target_progress" ||
-        chart.points.some((point) => point.target != null)) &&
-      !(
-        chart.kind === "sdr_outcomes" &&
-        chart.metric === "accepted_opportunities" &&
-        // The meetings chart draws both series, unless its own reading
-        // failed; then the acceptance series keeps its own card.
-        evaluation.charts.some(
-          (other) =>
-            other.kind === "sdr_outcomes" &&
-            other.metric === "meetings_held" &&
-            other.coverage.status !== "failed",
-        )
-      ),
-  );
+  const charts = pageCharts(evaluation);
   const sections: readonly LaidOutSection[] = evaluation.selection.layout
     ? laidOut(evaluation.selection.layout, charts)
     : [{ charts, full: [] }];
@@ -69,6 +52,32 @@ export function ReportingCharts({
       ))}
       <MetricsTable evaluation={evaluation} onEvidence={onEvidence} />
     </div>
+  );
+}
+
+/**
+ * The charts the page draws from an evaluation. A target chart with no target
+ * is left out, and the accepted-opportunities series joins the meetings chart.
+ * A preview reads the same list, so it shows what adding the card will.
+ */
+export function pageCharts(evaluation: ReportingEvaluation): ReportingChart[] {
+  return evaluation.charts.filter(
+    (chart) =>
+      chart.kind !== "metric_reading" &&
+      (chart.kind !== "target_progress" ||
+        chart.points.some((point) => point.target != null)) &&
+      !(
+        chart.kind === "sdr_outcomes" &&
+        chart.metric === "accepted_opportunities" &&
+        // The meetings chart draws both series, unless its own reading
+        // failed; then the acceptance series keeps its own card.
+        evaluation.charts.some(
+          (other) =>
+            other.kind === "sdr_outcomes" &&
+            other.metric === "meetings_held" &&
+            other.coverage.status !== "failed",
+        )
+      ),
   );
 }
 

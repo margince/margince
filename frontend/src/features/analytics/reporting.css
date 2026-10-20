@@ -91,6 +91,11 @@
   align-items: center;
   gap: var(--space-2);
 }
+.reporting-layout-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gapActions);
+}
 .reporting-layout-name {
   flex: 1 1 12rem;
 }
