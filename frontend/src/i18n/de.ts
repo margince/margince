@@ -293,6 +293,10 @@ export const de = {
   "reporting.questionLinkInvalid":
     "Den Link einfügen, den Link kopieren bei einem gespeicherten eigenen Bericht liefert.",
   "reporting.addQuestion": "Frage hinzufügen",
+  "reporting.questionNotPreviewed":
+    "In der Rollenvorschau nicht angezeigt. Diese Frage beantwortet beim Öffnen des Berichts der Zugriff des jeweiligen Kontos.",
+  "reporting.questionFiltered":
+    "Dieser eigene Bericht hat Filter, die eine Berichtskarte nicht behalten kann. Eine Kopie ohne Filter speichern; der Umfang des Berichts grenzt die Karte ein.",
   "reporting.previewChart": "Vorschau",
   "reporting.previewLoading": "Vorschau wird geladen…",
   "reporting.previewEmpty":

@@ -46060,7 +46060,9 @@ type ReportingCard struct {
 
 	// Question Present exactly when `kind` is `question`. The page asks it through `/analytics/query`
 	// for each reader, under their own grants and over the report's scope, so it carries no
-	// `scope_kind`, `scope_id` or `save` of its own. A sent edition does not keep its answer.
+	// `scope_kind`, `scope_id` or `save` of its own. Every reader of the report receives the
+	// question, so it carries no `filters` either: a filter value can name a record a reader
+	// may not open. `limit` is 1 to 1000. A sent edition does not keep its answer.
 	Question *json.RawMessage `json:"question,omitempty"`
 
 	// Width `half` shares a row with the next half card. A chart that needs the whole width draws full regardless.

@@ -283,6 +283,10 @@ export const en = {
   "reporting.questionLinkInvalid":
     "Paste the link that Copy link gives on a saved custom report.",
   "reporting.addQuestion": "Add question",
+  "reporting.questionNotPreviewed":
+    "Not shown in a role preview. Each reader’s own access answers this question when they open the report.",
+  "reporting.questionFiltered":
+    "This custom report has filters, which a report card cannot keep. Save a copy without filters; the report’s scope narrows the card.",
   "reporting.previewChart": "Preview",
   "reporting.previewLoading": "Loading the preview…",
   "reporting.previewEmpty":

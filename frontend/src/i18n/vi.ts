@@ -299,6 +299,10 @@ export const vi = {
   "reporting.questionLinkInvalid":
     "Dán liên kết mà Sao chép liên kết đưa ra trên báo cáo tùy chỉnh đã lưu.",
   "reporting.addQuestion": "Thêm câu hỏi",
+  "reporting.questionNotPreviewed":
+    "Không hiển thị trong bản xem trước theo vai trò. Quyền truy cập của mỗi tài khoản đọc sẽ trả lời câu hỏi này khi mở báo cáo.",
+  "reporting.questionFiltered":
+    "Báo cáo tùy chỉnh này có bộ lọc, thẻ báo cáo không thể giữ bộ lọc. Lưu một bản sao không có bộ lọc; phạm vi của báo cáo sẽ thu hẹp thẻ.",
   "reporting.previewChart": "Xem trước",
   "reporting.previewLoading": "Đang tải bản xem trước…",
   "reporting.previewEmpty":

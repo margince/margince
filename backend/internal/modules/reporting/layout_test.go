@@ -71,6 +71,8 @@ func TestALayoutRefusesWhatItCannotDraw(t *testing.T) {
 		{"a chart card carrying a question", []crmcontracts.ReportingSection{{Cards: []crmcontracts.ReportingCard{withQuestion(card("q", "stage_distribution", ""), wonByOwner())}}}},
 		{"a question naming its own scope", []crmcontracts.ReportingSection{{Cards: []crmcontracts.ReportingCard{withQuestion(card("q", "question", ""), scoped(wonByOwner()))}}}},
 		{"a question with a key the engine does not know", []crmcontracts.ReportingSection{{Cards: []crmcontracts.ReportingCard{rawQuestion(card("q", "question", ""), `{"entity":"deals-by-stage","measures":[{"fn":"count"}],"sql":"x"}`)}}}},
+		{"a question with a filter", []crmcontracts.ReportingSection{{Cards: []crmcontracts.ReportingCard{rawQuestion(card("q", "question", ""), `{"entity":"deals-by-stage","measures":[{"fn":"count"}],"filters":[{"field":"company_id","op":"eq","value":"0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b"}]}`)}}}},
+		{"a question with no rows", []crmcontracts.ReportingSection{{Cards: []crmcontracts.ReportingCard{rawQuestion(card("q", "question", ""), `{"entity":"deals-by-stage","measures":[{"fn":"count"}],"limit":0}`)}}}},
 		{"a question with no measure", []crmcontracts.ReportingSection{{Cards: []crmcontracts.ReportingCard{withQuestion(card("q", "question", ""), crmcontracts.AnalyticsQuery{Entity: "deals-by-stage"})}}}},
 		{"a kind for every metric beside one metric's", []crmcontracts.ReportingSection{{Cards: []crmcontracts.ReportingCard{card("a", "bookings_trend", "bookings_won"), card("b", "bookings_trend", "")}}}},
 	}

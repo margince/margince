@@ -28,6 +28,7 @@ export function ReportingCharts({
   editionId,
   afterSummary,
   onEvidence,
+  rolePreview,
 }: Readonly<{
   evaluation: ReportingEvaluation;
   editionId?: string;
@@ -35,6 +36,8 @@ export function ReportingCharts({
   // act on before reading further.
   afterSummary?: ReactNode;
   onEvidence: EvidenceAction;
+  // Set while the page shows the report as a role reads it.
+  rolePreview?: boolean;
 }>) {
   const charts = pageCharts(evaluation);
   const sections: readonly LaidOutSection[] = evaluation.selection.layout
@@ -53,6 +56,7 @@ export function ReportingCharts({
           evaluation={evaluation}
           editionId={editionId}
           onEvidence={onEvidence}
+          questions={questionMode(editionId, rolePreview)}
         />
       ))}
       <MetricsTable evaluation={evaluation} onEvidence={onEvidence} />
@@ -92,11 +96,13 @@ function ChartSection({
   evaluation,
   editionId,
   onEvidence,
+  questions,
 }: Readonly<{
   section: LaidOutSection;
   evaluation: ReportingEvaluation;
   editionId?: string;
   onEvidence: EvidenceAction;
+  questions: "live" | "frozen" | "preview";
 }>) {
   const wide = pairWidths(
     section.items.map(
@@ -128,13 +134,21 @@ function ChartSection({
               card={item.question}
               wide={wide[index] === true}
               evaluation={evaluation}
-              frozen={editionId !== undefined}
+              mode={questions}
             />
           ),
         )}
       </div>
     </section>
   );
+}
+
+function questionMode(
+  editionId: string | undefined,
+  rolePreview: boolean | undefined,
+): "live" | "frozen" | "preview" {
+  if (editionId !== undefined) return "frozen";
+  return rolePreview ? "preview" : "live";
 }
 
 function itemKey(item: LaidOutItem): string {

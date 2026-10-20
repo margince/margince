@@ -89,6 +89,7 @@ export function ReaderPreview({
             <ReportingCharts
               evaluation={evaluation}
               onEvidence={() => setAskedForRecords(true)}
+              rolePreview
             />
           </>
         )}

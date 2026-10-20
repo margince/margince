@@ -152,6 +152,10 @@ func overlaps(placed map[cardTarget]bool, target cardTarget) bool {
 // plan of names rather than data.
 const maxQuestionBytes = 4096
 
+// maxQuestionRows bounds the rows a question card shows, below the engine's own
+// cap so the card's "first N rows" line is the true count.
+const maxQuestionRows = 1000
+
 // validateQuestionCard checks the shape of a card's analytics question. The
 // population is the report's scope and the reader's grants, so the question
 // names neither. It is asked afresh for each reader rather than saved.
@@ -177,6 +181,13 @@ func validateQuestionCard(card crmcontracts.ReportingCard) error {
 		return refuse("selection.layout", "invalid", "a question names its population and at least one measure")
 	case question.ScopeKind != nil || question.ScopeId != nil || question.Save != nil:
 		return refuse("selection.layout", "invalid", "a question card takes the report's scope and is never saved on its own")
+	case question.Filters != nil && len(*question.Filters) > 0:
+		// Every reader of the report receives the card's question, so a filter
+		// value (a company's id, a contact's name) would reach a reader who may
+		// not open that record. The report's scope narrows the card instead.
+		return refuse("selection.layout", "invalid", "a question card takes no filters; the report's scope narrows it")
+	case question.Limit != nil && (*question.Limit < 1 || *question.Limit > maxQuestionRows):
+		return refuse("selection.layout", "out_of_range", "show between one and a thousand rows on a question card")
 	}
 	return nil
 }

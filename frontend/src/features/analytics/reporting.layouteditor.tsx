@@ -272,6 +272,9 @@ function AddQuestion({
 }>) {
   const t = useT();
   const [link, setLink] = useState("");
+  // A filtered question cannot ride a report: every reader receives the
+  // question, and a filter value can name a record they may not open.
+  const [filtered, setFiltered] = useState(false);
   const runId = runIdOf(link);
   const read = useMutation({
     mutationFn: async (id: string) =>
@@ -281,6 +284,10 @@ function AddQuestion({
         }),
       ),
     onSuccess: (run) => {
+      if (run.query.filters?.length) {
+        setFiltered(true);
+        return;
+      }
       onChange(edit.addQuestion(layout, cardQuestion(run.query)));
       setLink("");
     },
@@ -297,11 +304,15 @@ function AddQuestion({
           <TextInput
             {...field}
             value={link}
-            onChange={(event) => setLink(event.target.value)}
+            onChange={(event) => {
+              setLink(event.target.value);
+              setFiltered(false);
+            }}
           />
         )}
       </Field>
       <ErrorLine error={read.error} />
+      {filtered && <p role="alert">{t("reporting.questionFiltered")}</p>}
       <div>
         <Button
           disabled={!runId}
