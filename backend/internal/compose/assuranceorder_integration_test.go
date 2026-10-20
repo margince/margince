@@ -15,7 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// Findings of one severity rank by their amount in the base currency, and a
+// Findings of one severity rank by their amount in the base currency. A
 // finding in a currency with no rate comes after every priced one. The raw
 // amounts here run in the opposite order, so a ranking on them fails.
 func TestFindingsRankByTheirAmountInTheBaseCurrency(t *testing.T) {
