@@ -1152,6 +1152,13 @@ public.approval_autonomy_policy.veto_window interval gen=- def=-
 public.approval_autonomy_policy_pkey CREATE UNIQUE INDEX approval_autonomy_policy_pkey ON public.approval_autonomy_policy USING btree (id)
 public.approval_effect_failed_idx CREATE INDEX approval_effect_failed_idx ON public.approval USING btree (effect_failed_at DESC) WHERE (effect_failed_at IS NOT NULL)
 public.approval_pkey CREATE UNIQUE INDEX approval_pkey ON public.approval USING btree (id)
+public.approval_preference acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.approval_preference.approval_preference_pkey PRIMARY KEY (user_id, kind)
+public.approval_preference.approval_preference_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.approval_preference.kind text NOT NULL gen=- def=-
+public.approval_preference.muted boolean NOT NULL gen=- def=false
+public.approval_preference.user_id uuid NOT NULL gen=- def=-
+public.approval_preference_pkey CREATE UNIQUE INDEX approval_preference_pkey ON public.approval_preference USING btree (user_id, kind)
 public.assert_deal_project_same_company() secdef=false cfg=- acl=- 
 BEGIN
   IF NEW.project_id IS NULL THEN

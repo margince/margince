@@ -5782,6 +5782,10 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
+        - name: include_muted
+          in: query
+          schema: {type: boolean, default: false}
+          description: Include the caller's muted pending proposals for explicit review; all existing visibility checks still apply. A filtered bundle can contain fewer members than its complete review.
         - name: status
           in: query
           schema: {type: string, enum: [pending, approved, rejected]}

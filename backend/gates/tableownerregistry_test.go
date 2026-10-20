@@ -252,6 +252,7 @@ var tableOwners = map[string]string{
 	// proposal, so it sits with the kinds and the decisions it counts.
 	"approval":                 "internal/modules/approvals",
 	"approval_autonomy_policy": "internal/modules/approvals",
+	"approval_preference":      "internal/modules/approvals",
 	// consent (the DSR case queue and the retention-policy catalog are
 	// consent's; the engines that EXECUTE them live in privacy)
 	"consent_purpose":   "internal/modules/consent",

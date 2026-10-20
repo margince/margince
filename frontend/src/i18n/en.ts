@@ -3,6 +3,15 @@
 // use {name} and are filled by t(key, params).
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
+  "approvalPreferences.title": "Personal approval mutes",
+  "approvalPreferences.explain":
+    "Muted kinds leave your queue only. Other readers keep their proposals. Muting or restoring a kind turns off your automatic changes for that kind. Sends, bookings, merges and proposals from agent passports stay visible.",
+  "approvalPreferences.review": "Review including muted",
+  "approvalPreferences.reviewExplain":
+    "This review includes muted proposals and expired items. Bundles in your ordinary queue can show fewer members because of your personal mutes; review each proposal before deciding.",
+  "approvalPreferences.close": "Close review",
+  "approvalPreferences.next": "Next page",
+  "approvalPreferences.first": "First page",
   "approval.preview.nameUnavailable": "Name unavailable",
   "approval.preview.structured": "Structured value: {value}",
   "approval.preview.resolveConflict":

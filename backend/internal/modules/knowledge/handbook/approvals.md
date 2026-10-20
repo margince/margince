@@ -66,6 +66,15 @@ Also called: approver, who signs off, permission to approve.
 To make Margince ask before changing close dates, company names or lifecycle stages, open **Settings → AI access**, then **For developers**, then **Agent rules**. Turn off the matching switch under **Automatic changes**. The switches apply to your work only. A kind you switch off comes back to your Worklist as an approval.
 Also called: autopilot, auto-apply, stop the AI editing my records.
 
+### How do I hide a kind of proposal from my own queue?
+Open **Settings → AI access → For developers → Agent rules → Personal approval mutes**.
+Turn on a kind to hide it from your own queue. Other readers keep their proposals, and nobody has accepted or rejected anything.
+
+Both hiding and showing a kind turn off your automatic changes for that kind. Showing it again does not restore an old automatic choice.
+Sends, bookings, merges and proposals from agent passports stay visible.
+
+Use **Review including muted** to read hidden proposals, including those that have expired. A group in the ordinary queue can have fewer entries because of your choice; check each proposal before deciding.
+
 ### Can I undo what the AI changed?
 Yes. To undo a change the AI or an agent made in Margince, press **Undo** on its row under **Handled for you** in the Worklist. You can also press it on the entry in the record's history.
 1. **Home** → **Show Worklist**: **Handled for you** lists the last 24 hours of actions taken for you, with **Undo** on deals.

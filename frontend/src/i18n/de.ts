@@ -5,6 +5,15 @@ import type { MessageKey } from "./en";
 // build without typechecking still fails loudly. Every value is translated from
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de = {
+  "approvalPreferences.title": "Persönlich stummgeschaltete Freigaben",
+  "approvalPreferences.explain":
+    "Stummgeschaltete Arten verschwinden nur aus Ihrer Warteschlange. Andere Leser behalten ihre Vorschläge. Stummschalten und Wiederherstellen deaktivieren Ihre automatischen Änderungen dieser Art. Versand, Buchungen, Zusammenführungen und Vorschläge mit Agentenpass bleiben sichtbar.",
+  "approvalPreferences.review": "Auch stumme Vorschläge prüfen",
+  "approvalPreferences.reviewExplain":
+    "Diese Ansicht enthält stumme und abgelaufene Vorschläge. Pakete in Ihrer normalen Warteschlange können durch persönliche Einstellungen weniger Einträge zeigen. Prüfen Sie jeden Vorschlag vor der Entscheidung.",
+  "approvalPreferences.close": "Prüfung schließen",
+  "approvalPreferences.next": "Nächste Seite",
+  "approvalPreferences.first": "Erste Seite",
   "approval.preview.nameUnavailable": "Name nicht verfügbar",
   "approval.preview.structured": "Strukturierter Wert: {value}",
   "approval.preview.resolveConflict":

@@ -26118,6 +26118,18 @@ type ApprovalListResponse struct {
 	Page PageInfo   `json:"page"`
 }
 
+// ApprovalPreference defines model for ApprovalPreference.
+type ApprovalPreference struct {
+	// Kind A kind the server permits this reader to mute.
+	Kind  string `json:"kind"`
+	Muted bool   `json:"muted"`
+}
+
+// ApprovalPreferences defines model for ApprovalPreferences.
+type ApprovalPreferences struct {
+	Data []ApprovalPreference `json:"data"`
+}
+
 // ApprovalPreview A current, authorized explanation of the exact staged effect. It never grants permission or supplies execution arguments. Before values are answered only when the current record still has the staged version; stale records require restaging. Pending proposals alone carry this review-time projection. An approval attempt with stale context returns version_skew. Incomplete, unavailable or conflicting context returns 422 with approval_preview_incomplete, approval_preview_unavailable or approval_preview_conflict respectively, without recording a decision.
 type ApprovalPreview struct {
 	Changes []ApprovalPreviewChange `json:"changes"`
@@ -54081,8 +54093,11 @@ type ListApprovalsParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page.
-	Limit  *Limit                     `form:"limit,omitempty" json:"limit,omitempty"`
-	Status *ListApprovalsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// IncludeMuted Include the caller's muted pending proposals for explicit review; all existing visibility checks still apply. A filtered bundle can contain fewer members than its complete review.
+	IncludeMuted *bool                      `form:"include_muted,omitempty" json:"include_muted,omitempty"`
+	Status       *ListApprovalsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
 
 	// Kind Filter by proposal kind (e.g. coldstart, send_email, advance_deal, overnight).
 	Kind *string `form:"kind,omitempty" json:"kind,omitempty"`
@@ -60804,6 +60819,9 @@ type SaveMailDraftJSONRequestBody = MailDraftInput
 
 // SetMyAgentGrantJSONRequestBody defines body for SetMyAgentGrant for application/json ContentType.
 type SetMyAgentGrantJSONRequestBody = SetMyAgentGrantRequest
+
+// UpdateApprovalPreferenceJSONRequestBody defines body for UpdateApprovalPreference for application/json ContentType.
+type UpdateApprovalPreferenceJSONRequestBody = ApprovalPreference
 
 // SaveMyBriefDeliveryJSONRequestBody defines body for SaveMyBriefDelivery for application/json ContentType.
 type SaveMyBriefDeliveryJSONRequestBody = BriefDelivery
@@ -74086,6 +74104,12 @@ type ServerInterface interface {
 	// What the AI is doing for THIS contact, right now and lately.
 	// (GET /me/ai-activity)
 	GetMyAiActivity(w http.ResponseWriter, r *http.Request, params GetMyAiActivityParams)
+	// Read the caller's personal approval queue preferences.
+	// (GET /me/approval-preferences)
+	ListApprovalPreferences(w http.ResponseWriter, r *http.Request)
+	// Mute or restore one kind in the caller's own queue.
+	// (PATCH /me/approval-preferences)
+	UpdateApprovalPreference(w http.ResponseWriter, r *http.Request)
 	// What the product may send you about your day and your week.
 	// (GET /me/brief-delivery)
 	GetMyBriefDelivery(w http.ResponseWriter, r *http.Request)
@@ -78424,6 +78448,18 @@ func (_ Unimplemented) SetMyAgentGrant(w http.ResponseWriter, r *http.Request, s
 // What the AI is doing for THIS contact, right now and lately.
 // (GET /me/ai-activity)
 func (_ Unimplemented) GetMyAiActivity(w http.ResponseWriter, r *http.Request, params GetMyAiActivityParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read the caller's personal approval queue preferences.
+// (GET /me/approval-preferences)
+func (_ Unimplemented) ListApprovalPreferences(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Mute or restore one kind in the caller's own queue.
+// (PATCH /me/approval-preferences)
+func (_ Unimplemented) UpdateApprovalPreference(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -85544,6 +85580,19 @@ func (siw *ServerInterfaceWrapper) ListApprovals(w http.ResponseWriter, r *http.
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "include_muted" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "include_muted", r.URL.Query(), &params.IncludeMuted, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "include_muted"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "include_muted", Err: err})
 		}
 		return
 	}
@@ -104561,6 +104610,46 @@ func (siw *ServerInterfaceWrapper) GetMyAiActivity(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// ListApprovalPreferences operation middleware
+func (siw *ServerInterfaceWrapper) ListApprovalPreferences(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListApprovalPreferences(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateApprovalPreference operation middleware
+func (siw *ServerInterfaceWrapper) UpdateApprovalPreference(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateApprovalPreference(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetMyBriefDelivery operation middleware
 func (siw *ServerInterfaceWrapper) GetMyBriefDelivery(w http.ResponseWriter, r *http.Request) {
 
@@ -118578,6 +118667,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me/ai-activity", wrapper.GetMyAiActivity)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/me/approval-preferences", wrapper.ListApprovalPreferences)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/me/approval-preferences", wrapper.UpdateApprovalPreference)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me/brief-delivery", wrapper.GetMyBriefDelivery)

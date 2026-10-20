@@ -489,6 +489,7 @@ const (
 	ActivityUpdated                       SubscribableEventType = "activity.updated"
 	ApprovalDecided                       SubscribableEventType = "approval.decided"
 	ApprovalFailureAcknowledged           SubscribableEventType = "approval.failure_acknowledged"
+	ApprovalPreferenceChanged             SubscribableEventType = "approval.preference_changed"
 	ApprovalRequested                     SubscribableEventType = "approval.requested"
 	AttachmentArchived                    SubscribableEventType = "attachment.archived"
 	AttachmentCreated                     SubscribableEventType = "attachment.created"
@@ -634,6 +635,8 @@ func (e SubscribableEventType) Valid() bool {
 	case ApprovalDecided:
 		return true
 	case ApprovalFailureAcknowledged:
+		return true
+	case ApprovalPreferenceChanged:
 		return true
 	case ApprovalRequested:
 		return true
@@ -1078,6 +1081,11 @@ type PublicEventApprovalFailureAcknowledged struct {
 	FailedAt time.Time `json:"failed_at"`
 
 	// Kind The approval's kind.
+	Kind string `json:"kind"`
+}
+
+// PublicEventApprovalPreferenceChanged A reader changed a personal approval preference. The private choice is not included.
+type PublicEventApprovalPreferenceChanged struct {
 	Kind string `json:"kind"`
 }
 
@@ -2687,6 +2695,10 @@ func (PublicEventApprovalFailureAcknowledged) EventType() string {
 
 func (PublicEventApprovalFailureAcknowledged) EntityType() string { return "approval" }
 
+func (PublicEventApprovalPreferenceChanged) EventType() string { return "approval.preference_changed" }
+
+func (PublicEventApprovalPreferenceChanged) EntityType() string { return "user" }
+
 func (PublicEventApprovalRequested) EventType() string { return "approval.requested" }
 
 func (PublicEventApprovalRequested) EntityType() string { return "approval" }
@@ -3218,6 +3230,7 @@ var PublicEventVersions = map[string]int{
 	"activity.updated":                          1,
 	"approval.decided":                          1,
 	"approval.failure_acknowledged":             1,
+	"approval.preference_changed":               1,
 	"approval.requested":                        1,
 	"attachment.archived":                       1,
 	"attachment.created":                        1,
@@ -3357,6 +3370,7 @@ var PublicEventSamples = map[string]string{
 	"activity.updated":                          "{\"changed_fields\":{\"assignee_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"audience\":\"workspace\",\"body\":true,\"calendar_method\":\"PUBLISH\",\"commitment_admissions_changed\":true,\"direction\":\"outbound\",\"due_at\":\"2026-10-14T09:12:00Z\",\"is_done\":true,\"meeting_status\":\"booked\",\"occurred_at\":\"2026-10-14T09:12:00Z\",\"outbound_attested\":true,\"project_filing_undone\":true,\"relinked\":{\"entity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"entity_type\":\"Sample entity type\"},\"remind_at\":\"2026-10-14T09:12:00Z\",\"restored\":true,\"subject\":\"Sample subject\"},\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true}",
 	"approval.decided":                          "{\"decided_by\":\"0190a7f2-0000-7000-8000-000000000010\",\"decided_by_system\":true,\"diff_hash\":\"Sample diff hash\",\"edited\":true,\"edited_change\":{},\"kind\":\"Sample kind\",\"verdict\":\"approved\"}",
 	"approval.failure_acknowledged":             "{\"failed_at\":\"2026-10-14T09:12:00Z\",\"kind\":\"Sample kind\"}",
+	"approval.preference_changed":               "{\"kind\":\"Sample kind\"}",
 	"approval.requested":                        "{\"expires_at\":\"2026-10-14T09:12:00Z\",\"kind\":\"Sample kind\",\"summary\":\"Sample summary\",\"target_entity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"target_entity_type\":\"Sample target entity type\"}",
 	"attachment.archived":                       "{\"byte_size\":1,\"content_type\":\"Sample content type\",\"parent_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"parent_type\":\"Sample parent type\"}",
 	"attachment.created":                        "{\"byte_size\":1,\"content_type\":\"Sample content type\",\"parent_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"parent_type\":\"Sample parent type\"}",

@@ -117,6 +117,7 @@ components:
         - activity.marked_handled
         - relationship_nudge.decided
         - notice.read
+        - approval.preference_changed
         - notification.preference_changed
         - intro_request.created
         - intro_request.decided
@@ -2809,6 +2810,17 @@ components:
         notice_id:
           type: string
           format: uuid
+      additionalProperties: false
+
+    PublicEventApprovalPreferenceChanged:
+      type: object
+      x-event-type: approval.preference_changed
+      x-entity-type: user
+      x-version: 1
+      description: A reader changed a personal approval preference. The private choice is not included.
+      required: [kind]
+      properties:
+        kind: { type: string }
       additionalProperties: false
 
     PublicEventNotificationPreferenceChanged:

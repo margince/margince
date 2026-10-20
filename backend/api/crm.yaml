@@ -19328,6 +19328,8 @@ paths:
         and leaves everything already applied where it is — this is a setting, not an
         undo.
 
+        A muted kind cannot be turned on automatically; restore its queue preference first (409).
+
         Human session only, and writes the caller's own row: an agent never widens the
         authority of the contact it acts for.
       requestBody:
@@ -19341,6 +19343,49 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AutonomySettings' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /me/approval-preferences:
+    get:
+      tags: [Approvals]
+      operationId: listApprovalPreferences
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Read the caller's personal approval queue preferences.
+      responses:
+        '200':
+          description: One preference per kind that can be muted.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApprovalPreferences' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    patch:
+      tags: [Approvals]
+      operationId: updateApprovalPreference
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Mute or restore one kind in the caller's own queue.
+      description: |
+        Changes presentation only. Shared proposals remain pending for other readers and
+        expire normally. Passport-bearing rows, sends, bookings and merges cannot be hidden.
+        Both mute and unmute set this caller's automatic-change policy to manual; no previous
+        automatic setting is restored. Muted proposals remain reachable through include_muted.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ApprovalPreference' }
+      responses:
+        '200':
+          description: The caller's preferences after the change.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApprovalPreferences' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -19364,6 +19409,10 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
+        - name: include_muted
+          in: query
+          schema: { type: boolean, default: false }
+          description: Include the caller's muted pending proposals for explicit review; all existing visibility checks still apply. A filtered bundle can contain fewer members than its complete review.
         - name: status
           in: query
           schema: { type: string, enum: [pending, approved, rejected] }
@@ -55288,6 +55337,24 @@ components:
       properties:
         data: { type: array, items: { $ref: '#/components/schemas/Approval' } }
         page: { $ref: '#/components/schemas/PageInfo' }
+
+    ApprovalPreference:
+      type: object
+      additionalProperties: false
+      required: [kind, muted]
+      properties:
+        kind:
+          type: string
+          description: A kind the server permits this reader to mute.
+        muted:
+          type: boolean
+    ApprovalPreferences:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/ApprovalPreference' }
 
     AutonomySettings:
       type: object

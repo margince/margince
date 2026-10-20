@@ -2339,6 +2339,14 @@ func (stubs) GetMyAiActivity(w nethttp.ResponseWriter, r *nethttp.Request, param
 	httperr.NotImplemented(w, r, "GetMyAiActivity")
 }
 
+func (stubs) ListApprovalPreferences(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListApprovalPreferences")
+}
+
+func (stubs) UpdateApprovalPreference(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "UpdateApprovalPreference")
+}
+
 func (stubs) GetMyBriefDelivery(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetMyBriefDelivery")
 }

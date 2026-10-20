@@ -88,6 +88,9 @@ func pageInfo(p storekit.Page) crmcontracts.PageInfo {
 // every record of that type, an id alone every type carrying that id.
 func listInput(params crmcontracts.ListApprovalsParams) (ListInput, *httperr.DetailedError) {
 	in := ListInput{Kind: params.Kind}
+	if params.IncludeMuted != nil {
+		in.IncludeMuted = *params.IncludeMuted
+	}
 	if params.Status != nil {
 		status := string(*params.Status)
 		in.Status = &status

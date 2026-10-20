@@ -393,13 +393,18 @@ func (s *Service) SetAutoApply(ctx context.Context, kind string, on bool) ([]Kin
 	// veto_window stays NULL: the table's CHECK allows one only on 'veto', and
 	// neither rung this writes waits.
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx,
-			`INSERT INTO approval_autonomy_policy (user_id, kind, mode)
-			 VALUES ($1, $2, $3)
-			 ON CONFLICT (user_id, kind) DO UPDATE SET mode = EXCLUDED.mode`,
-			rep.UserID, kind, string(mode))
+		if err := lockPersonalPolicy(ctx, tx, rep.UserID, kind); err != nil {
+			return err
+		}
+		muted, err := preferenceMuted(ctx, tx, rep.UserID, kind)
 		if err != nil {
-			return fmt.Errorf("crmapprovals: setting the autonomy mode: %w", err)
+			return err
+		}
+		if on && muted {
+			return apperrors.ErrConflict
+		}
+		if err := writeAutonomyMode(ctx, tx, rep.UserID, kind, mode); err != nil {
+			return err
 		}
 		settings, err = autonomySettingsInTx(ctx, tx, rep.UserID)
 		return err

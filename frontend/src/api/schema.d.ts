@@ -13148,10 +13148,36 @@ export interface paths {
          *     and leaves everything already applied where it is — this is a setting, not an
          *     undo.
          *
+         *     A muted kind cannot be turned on automatically; restore its queue preference first (409).
+         *
          *     Human session only, and writes the caller's own row: an agent never widens the
          *     authority of the contact it acts for.
          */
         patch: operations["updateAutonomy"];
+        trace?: never;
+    };
+    "/me/approval-preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the caller's personal approval queue preferences. */
+        get: operations["listApprovalPreferences"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Mute or restore one kind in the caller's own queue.
+         * @description Changes presentation only. Shared proposals remain pending for other readers and
+         *     expire normally. Passport-bearing rows, sends, bookings and merges cannot be hidden.
+         *     Both mute and unmute set this caller's automatic-change policy to manual; no previous
+         *     automatic setting is restored. Muted proposals remain reachable through include_muted.
+         */
+        patch: operations["updateApprovalPreference"];
         trace?: never;
     };
     "/approvals": {
@@ -40488,6 +40514,14 @@ export interface components {
         ApprovalListResponse: {
             data: components["schemas"]["Approval"][];
             page: components["schemas"]["PageInfo"];
+        };
+        ApprovalPreference: {
+            /** @description A kind the server permits this reader to mute. */
+            kind: string;
+            muted: boolean;
+        };
+        ApprovalPreferences: {
+            data: components["schemas"]["ApprovalPreference"][];
         };
         /**
          * @description What the reader has decided about answering their own queue: one row per kind
@@ -67892,6 +67926,57 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listApprovalPreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One preference per kind that can be muted. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalPreferences"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    updateApprovalPreference: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApprovalPreference"];
+            };
+        };
+        responses: {
+            /** @description The caller's preferences after the change. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalPreferences"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -67911,6 +67996,8 @@ export interface operations {
                 cursor?: components["parameters"]["Cursor"];
                 /** @description Max items in the page. */
                 limit?: components["parameters"]["Limit"];
+                /** @description Include the caller's muted pending proposals for explicit review; all existing visibility checks still apply. A filtered bundle can contain fewer members than its complete review. */
+                include_muted?: boolean;
                 status?: "pending" | "approved" | "rejected";
                 /** @description Filter by proposal kind (e.g. coldstart, send_email, advance_deal, overnight). */
                 kind?: string;
