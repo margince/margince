@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useT } from "../../i18n";
+import { ReviewActionsProvider } from "../../testing/reviewactions";
 import {
   installFetchStub,
   jsonResponse,
@@ -75,7 +76,9 @@ function renderAnswer(
   });
   return (
     <StoryProviders>
-      <Answer historical={historical} buyerVerified={buyerVerified} />
+      <ReviewActionsProvider>
+        <Answer historical={historical} buyerVerified={buyerVerified} />
+      </ReviewActionsProvider>
     </StoryProviders>
   );
 }
