@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Button, Field, TextInput } from "../../design-system/atoms";
 import { IconAction } from "../../design-system/iconaction";
 import { Select } from "../../design-system/select";
+import { ordinalNumber } from "../../format/format";
 import { type Translator, useT } from "../../i18n";
 import {
   type CardChoice,
@@ -45,8 +46,12 @@ export function LayoutEditor({
           key={at}
           className="form-stack reporting-layout-section"
         >
-          <legend>{t("reporting.sectionN", { n: String(at + 1) })}</legend>
-          <Field label={t("reporting.sectionTitle", { n: String(at + 1) })}>
+          <legend>
+            {t("reporting.sectionN", { n: ordinalNumber(at + 1) })}
+          </legend>
+          <Field
+            label={t("reporting.sectionTitle", { n: ordinalNumber(at + 1) })}
+          >
             {(field) => (
               <TextInput
                 {...field}
@@ -74,7 +79,7 @@ export function LayoutEditor({
                 variant="ghost"
                 onClick={() => onChange(edit.removeSection(layout, at))}
               >
-                {t("reporting.removeSection", { n: String(at + 1) })}
+                {t("reporting.removeSection", { n: ordinalNumber(at + 1) })}
               </Button>
             </div>
           )}
@@ -93,6 +98,9 @@ export function LayoutEditor({
     </div>
   );
 }
+
+// A section option's value names the section to the menu and is never shown.
+const sectionKey = (at: number) => `section-${at}`;
 
 function CardRow({
   layout,
@@ -128,13 +136,20 @@ function CardRow({
       {layout.length > 1 && (
         <Select
           aria-label={t("reporting.cardSection", { chart: name })}
-          value={String(at)}
+          value={sectionKey(at)}
           options={layout.map((_, target) => ({
-            value: String(target),
-            label: t("reporting.sectionN", { n: String(target + 1) }),
+            value: sectionKey(target),
+            label: t("reporting.sectionN", { n: ordinalNumber(target + 1) }),
           }))}
           onChange={(value) =>
-            onChange(edit.moveCardTo(layout, at, index, Number(value)))
+            onChange(
+              edit.moveCardTo(
+                layout,
+                at,
+                index,
+                Number(value.replace("section-", "")),
+              ),
+            )
           }
         />
       )}
@@ -174,7 +189,7 @@ function AddCard({
   const choice = choices.find((candidate) => keyOf(candidate) === picked);
   if (choices.length === 0) return null;
   return (
-    <div className="reporting-layout-add">
+    <div className="form-stack">
       <Field label={t("reporting.chooseChart")}>
         {(field) => (
           <Select
@@ -189,16 +204,18 @@ function AddCard({
           />
         )}
       </Field>
-      <Button
-        disabled={!choice}
-        onClick={() => {
-          if (!choice) return;
-          onChange(edit.addCard(layout, choice));
-          setPicked("");
-        }}
-      >
-        {t("reporting.addChart")}
-      </Button>
+      <div>
+        <Button
+          disabled={!choice}
+          onClick={() => {
+            if (!choice) return;
+            onChange(edit.addCard(layout, choice));
+            setPicked("");
+          }}
+        >
+          {t("reporting.addChart")}
+        </Button>
+      </div>
     </div>
   );
 }
