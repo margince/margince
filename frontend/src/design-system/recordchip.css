@@ -55,6 +55,25 @@
   color: var(--textSecondary);
   flex: none;
 }
+/* Large: the chip in a `--fontLead` sentence, whose 40px line holds its 34px
+   height. The meeting's clock sits on a chip-grey disc the avatar's size. */
+.record-chip-large {
+  gap: var(--space-2);
+  vertical-align: middle;
+  padding: 4px 14px 4px 4px;
+  font: var(--fontBodyLarge);
+  font-weight: var(--fontWeightMedium);
+}
+.record-chip-large .avatar,
+.record-chip-large .record-chip-mark {
+  width: 24px;
+  height: 24px;
+}
+.record-chip-large .record-chip-mark {
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--bgHover);
+}
 .record-chip-label {
   overflow: hidden;
   text-overflow: ellipsis;

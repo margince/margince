@@ -1,11 +1,18 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import { MarginceCoreScene } from "../../design-system/margince-core";
 import { usePrefersReducedMotion } from "../../design-system/motion";
-import { formatDayLong, formatNumber, hourInZone } from "../../format/format";
+import {
+  formatDayLong,
+  formatNumber,
+  formatTimeOfDay,
+  hourInZone,
+} from "../../format/format";
 import { dayInZone, viewerZone } from "../../format/timezone";
-import { useLocale, useT } from "../../i18n";
+import { useLocale, usePlural, useT } from "../../i18n";
 import { readStored, STORAGE_KEYS, writeStored } from "../../lib/storage";
 import type { Worklist } from "../worklist/worklist.queries";
 import { calendarDay } from "./brief.facts";
@@ -15,8 +22,10 @@ import { meetingsReading } from "./brief.readings.meetings";
 
 import "./brief.intro.css";
 
-/** How long the greeting stands before the page shows through. */
-const SHOW_MS = 4500;
+/** How long the greeting stands before it lifts away. */
+export const SHOW_MS = 4500;
+/** How long it takes to lift away and draw up off the page. */
+export const LEAVE_MS = 900;
 
 /**
  * The morning's greeting, over the whole page, once a local day.
@@ -41,6 +50,7 @@ export function BriefIntro({
     () => readStored(STORAGE_KEYS.briefIntroShown) !== today,
   );
   const [ended, setEnded] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   // A read from an earlier day would greet with yesterday's figures and spend
   // today's greeting on them, so only today's read plays it.
   const fresh =
@@ -51,23 +61,30 @@ export function BriefIntro({
     if (!showing) return;
     writeStored(STORAGE_KEYS.briefIntroShown, today);
     const end = () => setEnded(true);
-    const timer = setTimeout(end, SHOW_MS);
+    // Left alone it lifts away; a key or a press is a reader who wants the
+    // page now, so those end it at once.
+    const lift = setTimeout(() => setLeaving(true), SHOW_MS);
+    const timer = setTimeout(end, SHOW_MS + LEAVE_MS);
     globalThis.addEventListener("keydown", end);
     return () => {
+      clearTimeout(lift);
       clearTimeout(timer);
       globalThis.removeEventListener("keydown", end);
     };
   }, [showing, today]);
 
   if (!showing) return null;
-  return (
+  // On the body, over every layer the shell stacks, the phone's tab bar too.
+  return createPortal(
     <IntroCurtain
       firstName={firstName}
       day={day}
       now={now}
       zone={zone}
+      leaving={leaving}
       onEnd={() => setEnded(true)}
-    />
+    />,
+    document.body,
   );
 }
 
@@ -76,16 +93,19 @@ function IntroCurtain({
   day,
   now,
   zone,
+  leaving,
   onEnd,
 }: Readonly<{
   firstName: string | null;
   day: Worklist;
   now: Date;
   zone: string;
+  leaving: boolean;
   onEnd: () => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const plural = usePlural();
   const digest = useMorningDigest();
   // A calendar that is not connected or not readable counts nothing, so its
   // zero is left out rather than shown as a measured day.
@@ -96,31 +116,75 @@ function IntroCurtain({
       : meetingsReading(day, calendar).meetings;
   const emails = digest.data?.capture.messages_synced;
   const figures = [
-    { label: t("brief.intro.waiting"), value: day.summary.total },
-    { label: t("brief.intro.meetings"), value: meetings },
-    { label: t("brief.intro.emails"), value: emails },
+    { label: t("brief.intro.waiting"), value: day.summary.total, tone: "" },
+    {
+      label: t("brief.intro.urgent"),
+      value: day.summary.urgent,
+      tone: day.summary.urgent > 0 ? "warning" : "",
+    },
+    { label: t("brief.intro.meetings"), value: meetings, tone: "" },
   ].filter(
-    (figure): figure is { label: string; value: number } =>
+    (figure): figure is { label: string; value: number; tone: string } =>
       typeof figure.value === "number",
   );
+  const greeting = greetingText(firstName, hourInZone(now, zone), t);
   return (
     // Named by its own text, so a screen reader hears the greeting and its
     // figures and not only the way out.
-    <button type="button" className="brief-intro" onClick={onEnd}>
-      <span className="brief-intro-body arrive-stack">
-        <span className="t-eyebrow brief-intro-date">
-          {formatDayLong(now.toISOString(), locale, zone)}
+    <button
+      type="button"
+      className="brief-intro"
+      data-state={leaving ? "leaving" : undefined}
+      onClick={onEnd}
+    >
+      <span className="brief-intro-body">
+        <span className="brief-intro-topline">
+          {/* The agent's orb: it wrote the brief this greeting opens. */}
+          <MarginceCoreScene size="md" className="brief-intro-core" />
+          <span className="t-eyebrow brief-intro-date">
+            {formatDayLong(now.toISOString(), locale, zone)} ·{" "}
+            {formatTimeOfDay(now.toISOString(), locale, zone)}
+          </span>
         </span>
         <span className="brief-intro-greeting">
-          {greetingText(firstName, hourInZone(now, zone), t)}
+          {greetingWords(greeting).map(({ word, key }, index) => (
+            // The words arrive one after the next; the spaces between them
+            // stay text, so the line still reads as one sentence.
+            <Fragment key={key}>
+              {index > 0 && " "}
+              <span
+                className={
+                  firstName && word.includes(firstName)
+                    ? "brief-intro-word greeting-name"
+                    : "brief-intro-word"
+                }
+                style={{
+                  animationDelay: `calc(var(--dur-enter) + ${index} * var(--dur-state))`,
+                }}
+              >
+                {word}
+              </span>
+            </Fragment>
+          ))}
         </span>
+        {typeof emails === "number" && emails > 0 && (
+          <span className="brief-intro-read">
+            {plural("brief.intro.read", emails, {
+              count: formatNumber(emails, locale),
+            })}
+          </span>
+        )}
+        <span className="brief-intro-rule" aria-hidden="true" />
         <span className="brief-intro-figures">
           {figures.map((figure) => (
             <span className="brief-intro-figure" key={figure.label}>
-              <span className="brief-intro-value t-num">
+              <span
+                className="brief-intro-value t-num"
+                data-tone={figure.tone || undefined}
+              >
                 {formatNumber(figure.value, locale)}
               </span>
-              <span className="t-body brief-intro-label">{figure.label}</span>
+              <span className="brief-intro-label">{figure.label}</span>
             </span>
           ))}
         </span>
@@ -130,4 +194,16 @@ function IntroCurtain({
       </span>
     </button>
   );
+}
+
+/** The greeting's words, each keyed by itself and how often it came before. */
+function greetingWords(
+  greeting: string,
+): readonly { word: string; key: string }[] {
+  const seen = new Map<string, number>();
+  return greeting.split(" ").map((word) => {
+    const count = seen.get(word) ?? 0;
+    seen.set(word, count + 1);
+    return { word, key: `${word}-${count}` };
+  });
 }

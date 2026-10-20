@@ -141,15 +141,21 @@ export function briefSentence(
   // Still the row's own words through the same helpers the row prints them
   // with: a second phrasing here would be a second answer to "what is this row
   // about", and the two drift the first time either moves.
+  const who = whoOf(lead, locale, zone);
+  // The chip already names whom the lead is for, so the title leaves out the
+  // record name it would otherwise carry beside it.
+  const titled =
+    who && lead.subject?.label === who.label
+      ? { ...lead, subject: undefined }
+      : lead;
   const values: Record<string, string> = {
-    lead: itemTitle(lead, t, locale),
+    lead: itemTitle(titled, t, locale),
     rest: String(waiting.length - NAMED),
   };
   // The row's OWN destination, through the helper the feed's rows are linked
   // by. A second rule for where the lead goes would let the sentence open a
   // record the row under it does not.
   const leadHref = rowHref(lead);
-  const who = whoOf(lead, locale, zone);
   const single = waiting.length === NAMED || partial;
   if (who) {
     values.who = who.label;
@@ -238,9 +244,4 @@ export function meetingSentence(
  */
 export function leadOf(day: Worklist | undefined): WorklistItem | undefined {
   return waitingRows(day)[0];
-}
-
-/** Informational notices live in the rail; pins and urgent notices keep priority. */
-export function isBriefUpdate(item: WorklistItem): boolean {
-  return item.source === "notice" && item.level !== 0 && !item.urgent;
 }

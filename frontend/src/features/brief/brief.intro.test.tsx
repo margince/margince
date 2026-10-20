@@ -6,7 +6,7 @@ import { dayInZone, viewerZone } from "../../format/timezone";
 import { en } from "../../i18n/en";
 import { readStored, removeStored, STORAGE_KEYS } from "../../lib/storage";
 import { readingsDay } from "./brief.fixtures";
-import { BriefIntro } from "./brief.intro";
+import { BriefIntro, LEAVE_MS, SHOW_MS } from "./brief.intro";
 import { render, stubApi } from "./brief.testkit";
 
 // The morning's greeting plays once a local day, over a day that has been
@@ -39,9 +39,23 @@ function intro(day = todaysRead()) {
 describe("BriefIntro", () => {
   it("plays on the first visit of the day and records the day", () => {
     intro();
-    expect(screen.getByRole("button", curtain)).toBeTruthy();
-    expect(screen.getByText("Good morning, Ada.")).toBeTruthy();
+    expect(screen.getByRole("button", curtain).textContent).toContain(
+      "Good morning, Ada.",
+    );
     expect(readStored(STORAGE_KEYS.briefIntroShown)).toBe(TODAY);
+  });
+
+  it("lifts away on its own, then leaves the page", () => {
+    vi.useFakeTimers();
+    try {
+      intro();
+      act(() => vi.advanceTimersByTime(SHOW_MS));
+      expect(screen.getByRole("button", curtain).dataset.state).toBe("leaving");
+      act(() => vi.advanceTimersByTime(LEAVE_MS));
+      expect(screen.queryByRole("button", curtain)).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("does not play a second time on the same day", () => {

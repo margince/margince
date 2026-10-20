@@ -99,8 +99,6 @@ const STANDALONE: readonly string[] = [
 const PENDING: readonly string[] = [
   "brief.deck.bundleMembers",
   "brief.deck.bundleSummary",
-  "brief.digestCommitmentCount",
-  "brief.focus.remaining",
   "co.spine.andOthers",
   "co.spine.exchangeCount",
   "compose.carriageAggregate",

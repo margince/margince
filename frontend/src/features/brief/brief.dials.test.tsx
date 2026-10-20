@@ -87,51 +87,17 @@ function stubBrief(
 }
 
 describe("the Brief's dials", () => {
-  // A rep has one scope, so the control would have one option — which asks them
-  // to confirm what they cannot change.
-  it("draws no scope dial for a reader whose scope reaches no team", async () => {
-    stubBrief(["mine"]);
-    render(<BriefScreen />);
-
-    await screen.findByRole("group", { name: en["brief.view.label"] });
-    expect(
-      screen.queryByRole("group", { name: en["brief.scope.label"] }),
-    ).toBeNull();
-  });
-
-  it("draws both dials for a reader whose scope reaches a team", async () => {
+  // Home offers no switch between the reader's own day and the team's: a lead
+  // opens the team's view by its address.
+  it("draws the view dial and no scope dial, even for a lead", async () => {
     stubBrief(["mine", "team"]);
     render(<BriefScreen />);
 
-    // findBy, not getBy: the scope dial appears only once the worklist read
-    // lands, because whether this reader HAS a second scope is that read's
-    // answer. Asserting it synchronously tests the first paint, which is
-    // always a rep.
     expect(
       await screen.findByRole("group", { name: en["brief.view.label"] }),
     ).toBeTruthy();
-    expect(
-      await screen.findByRole("group", { name: en["brief.scope.label"] }),
-    ).toBeTruthy();
-  });
-
-  // A read-only seat reaches the team's live work and is refused the team's
-  // week, so it gets the scope dial on Morning and none on Weekly.
-  it("offers a read-only seat the team's work and not the team's week", async () => {
-    stubBrief(["mine", "unassigned", "team", "all"], "none");
-    render(<BriefScreen />);
-    expect(
-      await screen.findByRole("group", { name: en["brief.scope.label"] }),
-    ).toBeTruthy();
-
-    await userEvent.click(
-      screen.getByRole("button", { name: en["brief.view.weekly"] }),
-    );
-    await waitFor(() =>
-      expect(
-        screen.queryByRole("group", { name: en["brief.scope.label"] }),
-      ).toBeNull(),
-    );
+    await screen.findByTestId("glance-sentence");
+    expect(screen.queryByRole("button", { name: "Team" })).toBeNull();
   });
 
   // The dial writes the address, so a reader can send what they are looking at.
@@ -171,10 +137,10 @@ describe("the Brief's dials", () => {
       expect(globalThis.location.hash).toContain("view=weekly"),
     );
     await userEvent.click(
-      screen.getByRole("button", { name: en["brief.scope.team"] }),
+      screen.getByRole("button", { name: en["brief.view.morning"] }),
     );
     await waitFor(() =>
-      expect(globalThis.location.hash).toContain("scope=team"),
+      expect(globalThis.location.hash).not.toContain("view=weekly"),
     );
 
     expect(globalThis.history.length).toBe(before);
@@ -204,9 +170,9 @@ describe("the Brief's dials", () => {
     // for a reason that has nothing to do with the view, and an id-shaped
     // assertion would pass on that instead. The quiet LINE goes with them: it
     // is the rail reporting on the rail.
-    expect(document.querySelectorAll(".page-zones-aside .panel")).toHaveLength(
-      0,
-    );
+    expect(
+      document.querySelectorAll(".page-zones-aside .brief-section"),
+    ).toHaveLength(0);
     expect(document.querySelector("#brief-quiet")).toBeNull();
     // And the TRACK is gone with them. The <aside> element is gated on having
     // content, but the grid template is on the wrapper and driven by `shape` —
@@ -291,7 +257,7 @@ describe("the Brief's dials", () => {
       ).toBeGreaterThan(0),
     );
     expect(
-      document.querySelectorAll(".page-zones-aside .panel").length,
+      document.querySelectorAll(".page-zones-aside .brief-section").length,
     ).toBeGreaterThan(0);
     expect(document.querySelector(".page-zones-aside")).not.toBeNull();
   });
@@ -394,7 +360,8 @@ it("the team view does not describe a personal queue as team work", async () => 
   stubBrief(["mine", "team"]);
   globalThis.location.hash = "#/home?scope=team";
   const { container } = render(<BriefScreen />);
-  await screen.findByRole("group", { name: en["brief.scope.label"] });
+  await screen.findByRole("group", { name: en["brief.view.label"] });
+  await screen.findByText(en["brief.team.none"]);
   expect(container.querySelector("#brief-today")).toBeNull();
   expect(screen.queryByTestId("brief-readings")).toBeNull();
 });

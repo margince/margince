@@ -2,10 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQueryClient } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { Badge, Button } from "../../design-system/atoms";
 import { Eyebrow } from "../../design-system/eyebrow";
-import { Panel } from "../../design-system/panel";
 import {
   type SectionState,
   SurfaceState,
@@ -13,18 +12,15 @@ import {
 import { formatNumber } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
-import { navigate } from "../../lib/router";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
-import { worklistLaneHref } from "../worklist/worklist.header";
 import {
   type Worklist,
   type WorklistItem,
   worklistKey,
 } from "../worklist/worklist.queries";
-import { WorklistRow } from "../worklist/worklist.row";
 import { identity, Triage } from "./brief.focus";
 import { laneUnread } from "./brief.readings.honesty";
-import { isBriefUpdate, waitingRows } from "./brief.sentence";
+import { waitingRows } from "./brief.sentence";
 
 import "../worklist/worklist.css";
 import "./brief.feed.css";
@@ -36,6 +32,7 @@ export function BriefFeed({
   refreshFailed = false,
   onRetry,
   onContext,
+  queueToggle,
 }: Readonly<{
   day: Worklist | undefined;
   state: SectionState;
@@ -43,6 +40,8 @@ export function BriefFeed({
   refreshFailed?: boolean;
   onRetry?: () => void;
   onContext?: (item: WorklistItem) => void;
+  /** The way into the whole queue, under the day's order. */
+  queueToggle?: ReactNode;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -84,6 +83,14 @@ export function BriefFeed({
             </Badge>
           </a>
         )}
+        {lead && (
+          <span className="t-caption t-num brief-first-position">
+            {t("brief.focus.position", {
+              at: formatNumber(at + 1, locale),
+              count: formatNumber(rows.length, locale),
+            })}
+          </span>
+        )}
       </div>
       {refreshFailed && (
         <p role="alert">
@@ -116,11 +123,7 @@ export function BriefFeed({
           />
         )}
       </SurfaceState>
-      {day && hasFoot(day) && (
-        <p className="t-caption brief-first-foot">
-          <AgendaFoot day={day} />
-        </p>
-      )}
+      {queueToggle && <div className="brief-first-foot">{queueToggle}</div>}
       <OpenEmailDrawer
         activityId={openEmail}
         zone={viewerZone()}
@@ -130,106 +133,5 @@ export function BriefFeed({
         }
       />
     </section>
-  );
-}
-
-/**
- * The focus, ONE ROW AT A TIME: the row in hand drawn whole, and beside it
- * the ranked queue it was taken from, each row a press that puts it in hand.
- *
- * A reader clears a morning by answering one thing and moving to the next,
- * and the page is shaped like that act: the work on the left at the row's
- * full density — its kind, the message, its reasons, what doing nothing
- * costs, and every verb that answers it — and on the right the order the
- * day put the rest in, so the reader always sees where they are in it. The
- * sentence over the page says "First: X. Then N more", and this is that
- * sentence drawn: X in hand, the N in a column.
- */
-function hasFoot(day: Worklist): boolean {
-  return (
-    (day.focus?.urgent_remaining ?? 0) > 0 ||
-    (day.focus !== undefined && day.focus.total > day.focus.items.length)
-  );
-}
-
-function AgendaFoot({ day }: Readonly<{ day: Worklist }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const plural = usePlural();
-  const hidden = day.focus?.urgent_remaining ?? 0;
-  return (
-    <>
-      {hidden > 0 && (
-        <a className="entity-link" href={worklistLaneHref("urgent", day.scope)}>
-          {plural("brief.focus.urgentRemaining", hidden, {
-            count: formatNumber(hidden, locale),
-          })}
-        </a>
-      )}
-      {day.focus && day.focus.total > day.focus.items.length && (
-        <span className="t-caption">
-          {t("brief.focus.remaining", {
-            count: formatNumber(
-              day.focus.total - day.focus.items.length,
-              locale,
-            ),
-          })}
-        </span>
-      )}
-    </>
-  );
-}
-
-/** The plain feed: every row at the queue's own density, in the day's order. */
-function AgendaRows({
-  rows,
-  onOpenEmail,
-}: Readonly<{
-  rows: readonly WorklistItem[];
-  onOpenEmail: (id: string) => void;
-}>) {
-  // A list of nothing is only its own padding: under the sentence saying the
-  // read was incomplete it stood as a blank band the height of two gutters.
-  if (rows.length === 0) return null;
-  return (
-    <ol className="brief-feed-list">
-      {rows.map((item) => (
-        <li key={identity(item)}>
-          <WorklistRow
-            item={item}
-            density="compact"
-            owner=""
-            onOpenEmail={onOpenEmail}
-            onReview={() =>
-              navigate(
-                { screen: "worklist" },
-                new Map([["filter", item.category]]),
-              )
-            }
-          />
-        </li>
-      ))}
-    </ol>
-  );
-}
-
-export function BriefUpdates({ day }: Readonly<{ day: Worklist | undefined }>) {
-  const t = useT();
-  const rows = (day?.queue ?? []).filter(isBriefUpdate);
-  const [openEmail, setOpenEmail] = useState<string | null>(null);
-  const client = useQueryClient();
-  if (rows.length === 0) return null;
-  return (
-    <Panel title={t("brief.updates.title")}>
-      <AgendaRows rows={rows} onOpenEmail={setOpenEmail} />
-      <OpenEmailDrawer
-        activityId={openEmail}
-        zone={viewerZone()}
-        onClose={() => setOpenEmail(null)}
-        onReplySent={() =>
-          void client.invalidateQueries({ queryKey: worklistKey })
-        }
-      />
-    </Panel>
   );
 }

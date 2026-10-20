@@ -5,13 +5,12 @@ import { type ReactNode, useId, useState } from "react";
 import { PageAsideToggle } from "../../components/pageaside";
 import { Modal } from "../../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
+import { Eyebrow } from "../../design-system/eyebrow";
 import { Heading } from "../../design-system/heading";
 import { PageZones } from "../../design-system/pagezones";
-import { formatDateTime } from "../../format/format";
 import { greetingNameOf } from "../../format/greetingname";
 import { useNow } from "../../format/now";
-import { viewerZone } from "../../format/timezone";
-import { useLocale, useT } from "../../i18n";
+import { useT } from "../../i18n";
 import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import { useUrlParams } from "../../lib/urlstate";
@@ -29,13 +28,12 @@ import { changedSinceBrief } from "./brief.changed";
 import { BriefChanges } from "./brief.changes";
 import { BriefDials } from "./brief.dials";
 import { briefDay } from "./brief.facts";
-import { BriefFeed, BriefUpdates } from "./brief.feed";
+import { BriefFeed } from "./brief.feed";
 import { BriefGlance } from "./brief.glance";
 import { BriefIntro } from "./brief.intro";
 import { PlanSection } from "./brief.plan";
 import { useMorningBrief, useWeeklyReview } from "./brief.queries";
 import { BriefQueue } from "./brief.queue";
-import { OvernightDigest } from "./brief.rail.overnight";
 import { BriefReadingsStrip } from "./brief.readings";
 import { SchedulePanel } from "./brief.schedule";
 import { BriefTeamBoard } from "./brief.teamboard";
@@ -86,6 +84,34 @@ export function BriefScreen() {
   const firstName = greetingNameOf(me.data?.user);
   const brief = useMorningBrief();
   const ownMorning = address.view === "morning" && address.scope === "mine";
+  const dials = (
+    <BriefDials
+      address={address}
+      onChange={(next) => setParams(paramsFor(next, params))}
+    />
+  );
+  // The way into the whole queue, with the day's count on it. The count is
+  // the drawer's own total, read off the drawer's own query. It is the figure
+  // the drawer's head sentence ends on, whichever queue it shows.
+  const queueToggle = (
+    <PageAsideToggle
+      prominent={!ownMorning}
+      controlled={{
+        open: params.get("queue") === "1",
+        count: queuedDay ? pillCount(queuedDay, "all") : undefined,
+        labels: {
+          show: t("brief.queue.show"),
+          hide: t("brief.queue.hide"),
+        },
+        onToggle: () => {
+          const next = new Map(params);
+          if (next.get("queue") === "1") next.delete("queue");
+          else next.set("queue", "1");
+          navigate({ screen: "home" }, next);
+        },
+      }}
+    />
+  );
   const glance = (
     <BriefGlance
       view={address.view}
@@ -109,54 +135,20 @@ export function BriefScreen() {
       firstName={firstName}
       now={new Date(nowMs)}
       briefedAt={ownMorning ? brief.data?.generated_at : undefined}
+      controls={ownMorning ? dials : undefined}
     />
   );
-  const controls = (
-    <div className="brief-controls">
-      <BriefDials
-        address={address}
-        offered={teamOffered}
-        onChange={(next) => setParams(paramsFor(next, params))}
-      />
-      {/* The way into the whole queue, as the head's PRIMARY control
-        with the day's count on it: this is the one page whose pane is
-        the day itself, so the switch is the main door and not a
-        detail fold. The count is the DRAWER's own total, read off the
-        drawer's own query — the same figure its head sentence ends
-        on, whichever queue it is showing. */}
-      <PageAsideToggle
-        prominent
-        controlled={{
-          open: params.get("queue") === "1",
-          count: queuedDay ? pillCount(queuedDay, "all") : undefined,
-          labels: {
-            show: t("brief.queue.show"),
-            hide: t("brief.queue.hide"),
-          },
-          onToggle: () => {
-            const next = new Map(params);
-            if (next.get("queue") === "1") next.delete("queue");
-            else next.set("queue", "1");
-            navigate({ screen: "home" }, next);
-          },
-        }}
-      />
-    </div>
-  );
-  // Morning stacks the controls above the sentence, so they come first in
-  // the DOM too: focus order follows the order the page is drawn in.
+  // The reader's own morning puts its dials on the date's line, and the way
+  // into the queue under the day's order. Every other view keeps both at the
+  // head's far edge, where a record keeps its verbs.
   const head = (
     <div className="brief-head">
-      {ownMorning ? (
-        <>
-          {controls}
-          {glance}
-        </>
-      ) : (
-        <>
-          {glance}
-          {controls}
-        </>
+      {glance}
+      {!ownMorning && (
+        <div className="brief-controls">
+          {dials}
+          {queueToggle}
+        </div>
       )}
     </div>
   );
@@ -173,6 +165,7 @@ export function BriefScreen() {
         teamWeek={teamWeek}
         query={query}
         head={head}
+        queueToggle={queueToggle}
       />
       <BriefQueue />
     </div>
@@ -187,12 +180,14 @@ function BriefBody({
   teamWeek,
   query,
   head,
+  queueToggle,
 }: Readonly<{
   address: BriefAddress;
   teamOffered: TeamOffers;
   teamWeek: TeamWeekReach;
   query: ReturnType<typeof useWorklist>;
   head: ReactNode;
+  queueToggle: ReactNode;
 }>) {
   const me = useMe();
   if (address.view === "weekly")
@@ -222,15 +217,21 @@ function BriefBody({
         </BriefTeamSelect>
       </>
     );
-  return <PersonalMorning query={query} head={head} />;
+  return (
+    <PersonalMorning query={query} head={head} queueToggle={queueToggle} />
+  );
 }
 
 function PersonalMorning({
   query,
   head,
-}: Readonly<{ query: ReturnType<typeof useWorklist>; head: ReactNode }>) {
+  queueToggle,
+}: Readonly<{
+  query: ReturnType<typeof useWorklist>;
+  head: ReactNode;
+  queueToggle: ReactNode;
+}>) {
   const t = useT();
-  const { locale } = useLocale();
   const brief = useMorningBrief();
   const [selected, setSelected] = useState("");
   const titleId = useId();
@@ -271,29 +272,28 @@ function PersonalMorning({
               changed={changedSinceBrief(day)}
               refreshFailed={query.isRefetchError}
               onRetry={() => void query.refetch()}
+              queueToggle={queueToggle}
             />
-            <BriefUpdates day={day} />
-            <MagicPanel lead={<BriefChanges />} foot={<OvernightDigest />} />
+            <MagicPanel />
           </>
         }
         aside={
           <>
             {day && (
               <div className="brief-overview">
+                <Eyebrow as="h2" className="brief-section-label">
+                  {t("brief.rail.numbers")}
+                </Eyebrow>
                 <BriefReadingsStrip day={day} />
                 <BriefCoverage
                   day={day}
                   run={brief.data}
                   onRetry={() => void query.refetch()}
                 />
-                <p className="t-caption brief-freshness">
-                  {t("brief.updatedAt", {
-                    when: formatDateTime(day.as_of, locale, viewerZone()),
-                  })}
-                </p>
               </div>
             )}
             <SchedulePanel day={day} state={state} />
+            <BriefChanges />
           </>
         }
       />

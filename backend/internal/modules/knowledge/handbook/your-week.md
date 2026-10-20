@@ -127,8 +127,9 @@ A lead may answer a commitment and nothing else. A lead cannot close it, change 
 
 ## The team's week
 
-A team's week in Margince is on **Home → Weekly** with the scope set to
-**Team**. A lead looking at a team sees the same week from the other side. It shows reply rates,
+A team's week in Margince is on **Home → Weekly** for the team. Home has no switch for it: a lead
+opens it at the address `#/home?view=weekly&scope=team`. A lead looking at a team sees the same
+week from the other side. It shows reply rates,
 meetings with a recorded next step, commitments kept, won and lost, and how many members were
 counted.
 

@@ -71,6 +71,26 @@ export function greetingText(
     : t(anonGreetingKey(hour));
 }
 
+/**
+ * The greeting with the reader's name in the accent ink. The name is found in
+ * the translated line rather than spliced in, so each language keeps its own
+ * word order around it.
+ */
+export function Greeting({
+  text,
+  firstName,
+}: Readonly<{ text: string; firstName: string | null }>) {
+  const at = firstName ? text.lastIndexOf(firstName) : -1;
+  if (!firstName || at < 0) return text;
+  return (
+    <>
+      {text.slice(0, at)}
+      <span className="greeting-name">{firstName}</span>
+      {text.slice(at + firstName.length)}
+    </>
+  );
+}
+
 export type GlanceFacts = Readonly<{
   /** The reader's own name, or null while `/me` is still in flight. */
   firstName: string | null;
@@ -91,6 +111,9 @@ export type GlanceFacts = Readonly<{
   /** When the agent wrote the morning brief, for the provenance badge. Only
    *  the reader's own morning carries one. */
   briefedAt?: string;
+  /** The page's controls, on one line with the date over the greeting. Absent,
+   *  the date stands alone over it. */
+  controls?: ReactNode;
 }>;
 
 export type GlanceProps = GlanceFacts;
@@ -203,6 +226,7 @@ function filled(
         identity={record.id}
         pressed={chips.opened === opened}
         onPress={() => chips.press(opened)}
+        size="large"
       />
     );
   }
@@ -245,6 +269,7 @@ export function BriefGlance({
   view,
   scope = "mine",
   briefedAt,
+  controls,
 }: GlanceProps) {
   const t = useT();
   const hour = hourInZone(now, viewerZone());
@@ -261,22 +286,31 @@ export function BriefGlance({
   return (
     <header className="glance arrive" data-testid="brief-glance">
       <Heading size="xlarge" className="glance-greeting t-display">
-        {greeting}
+        {view === "weekly" ? (
+          greeting
+        ) : (
+          <Greeting text={greeting} firstName={firstName} />
+        )}
       </Heading>
       {date && (
-        <p className="t-eyebrow glance-date">
-          <time dateTime={date}>
-            {/* The morning names its day the way a page over a greeting does
-                — the weekday and the month written out — because a reader
-                arriving at their desk asks "what day is it" before "what is
-                the date". The weekly keeps the numeric form: it names a
-                week's start, which is a date a reader compares, not a day
-                they are in. */}
-            {view === "weekly"
-              ? formatDate(middayInstant(date, recordZone), locale, recordZone)
-              : formatDayLong(date, locale, viewerZone())}
-          </time>
-        </p>
+        <div className="glance-topline">
+          <p className="t-eyebrow glance-date">
+            <time dateTime={date}>
+              {/* The morning names its day the way a page over a greeting
+                  does — the weekday and the month written out. The weekly
+                  keeps the numeric form: it names a week's start, which is a
+                  date a reader compares, not a day they are in. */}
+              {view === "weekly"
+                ? formatDate(
+                    middayInstant(date, recordZone),
+                    locale,
+                    recordZone,
+                  )
+                : formatDayLong(date, locale, viewerZone())}
+            </time>
+          </p>
+          {controls}
+        </div>
       )}
       {sentence ? (
         <GlanceSentence sentence={sentence} meeting={meeting} />

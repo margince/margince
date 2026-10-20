@@ -4,27 +4,20 @@
 /** @vitest-environment happy-dom */
 
 // A notice about a mail or a meeting opens that activity from its name, on the
-// Home page's Updates panel where such notices are read.
+// Worklist where such notices are read.
 
 import "@testing-library/jest-dom/vitest";
-import {
-  focusManager,
-  QueryClient,
-  QueryClientProvider,
-} from "@tanstack/react-query";
-import {
-  act,
-  cleanup,
-  render,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
+import { focusManager } from "@tanstack/react-query";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { LocaleProvider } from "../../i18n";
-import { BriefUpdates } from "../brief/brief.feed";
-import { day, jsonResponse, row, type WorklistItem } from "./worklist.testkit";
+import {
+  day,
+  jsonResponse,
+  renderWorklist,
+  row,
+  type WorklistItem,
+} from "./worklist.testkit";
 
 afterEach(() => {
   cleanup();
@@ -110,9 +103,15 @@ const meeting = {
   body: "We agreed on the rollout.",
 };
 
+// The queue the next render's Worklist read answers.
+let served: WorklistItem[] = [];
+
 function stubServer() {
   const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
     const url = input instanceof Request ? input.url : String(input);
+    if (new URL(url, "http://localhost").pathname.endsWith("/worklist")) {
+      return jsonResponse(day({ queue: served }));
+    }
     if (url.includes(`/activities/${MAIL_ID}/email-presentation`)) {
       return jsonResponse(presentation);
     }
@@ -133,16 +132,8 @@ function readsOf(fetchMock: ReturnType<typeof stubServer>, path: string) {
 }
 
 function renderUpdates(queue: WorklistItem[]) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  return render(
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">
-        <BriefUpdates day={day({ queue })} />
-      </LocaleProvider>
-    </QueryClientProvider>,
-  );
+  served = queue;
+  return renderWorklist();
 }
 
 describe("a notice about an activity", () => {
@@ -150,7 +141,7 @@ describe("a notice about an activity", () => {
     const fetchMock = stubServer();
     renderUpdates([mailNotice]);
 
-    const name = screen.getByRole("button", {
+    const name = await screen.findByRole("button", {
       name: "Summary updated · Pricing for Q4",
     });
     expect(name).toHaveAttribute("aria-haspopup", "dialog");
@@ -180,7 +171,7 @@ describe("a notice about an activity", () => {
     ]);
 
     await userEvent.setup().click(
-      screen.getByRole("button", {
+      await screen.findByRole("button", {
         name: "Summary updated · Quarterly review",
       }),
     );
@@ -205,7 +196,7 @@ describe("a notice about an activity", () => {
       }),
     ]);
     await user.click(
-      screen.getByRole("button", {
+      await screen.findByRole("button", {
         name: "Summary updated · Quarterly review",
       }),
     );
@@ -228,7 +219,7 @@ describe("a notice about an activity", () => {
 
     await userEvent
       .setup()
-      .click(screen.getByRole("button", { name: "Summary updated" }));
+      .click(await screen.findByRole("button", { name: "Summary updated" }));
     await screen.findByText("Here is the price list.");
     expect(readsOf(fetchMock, `/activities/${MAIL_ID}`)).toBe(1);
   });

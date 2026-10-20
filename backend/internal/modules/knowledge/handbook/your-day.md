@@ -1,9 +1,8 @@
 <!-- prose:plain -->
 # Your day
 
-**Home** is where a day starts in Margince. It has two views, **Morning** and **Weekly**, and two
-scopes, **Mine** and **Team**. The team scope appears only if you can see records past your own. The
-week, its review and its plan are in [Your week](your-week.md).
+**Home** is where a day starts in Margince. It has two views, **Morning** and **Weekly**. The week,
+its review and its plan are in [Your week](your-week.md).
 
 The Worklist is the ranked to-do list in Margince: one list of everything waiting on you, in the
 order Margince ranks them. That is buyers to answer, tasks due, promises made, deals at risk and
@@ -120,8 +119,8 @@ list of next steps.
 it fails: "Task was not completed. Retry." Also called: tick off, mark done, close a task.
 
 ### How do I plan my week?
-To plan your week in Margince, open **Home**, switch the view to **Weekly** (scope **Mine**) and add
-items under **This week’s commitments**.
+To plan your week in Margince, open **Home**, switch the view to **Weekly** and add items under
+**This week’s commitments**.
 1. Click **Home**, then **Weekly**.
 2. Under **This week’s commitments**, press **Add commitment** and fill in **Commitment**.
 3. If you like, add a **Due date** and a linked deal, lead, contact, company or project, then press
@@ -137,7 +136,7 @@ of your last closed week sits above your plan.
 
 Margince writes the review on the Monday after the week, and then it is **Frozen**; you cannot make
 it again. Before your first full week it says "No weekly review yet. The first one is created on the
-Monday after your first full week." A team lead switches the scope to **Team** for the team's week.
+Monday after your first full week." The team's week is in [Your week](your-week.md#the-teams-week).
 Also called: weekly report, week in review, weekly summary.
 
 ## Morning
@@ -149,12 +148,14 @@ meeting. Press a name to see where it comes from. A badge says when Margince mad
   order. Press a row to bring it onto the card; **Why first?** says why it ranks there.
   Proposals to answer, commitments due today and meetings to prepare in the next 24 hours sit here;
   tasks due later never do. A quiet day says "No immediate priorities. The full Worklist is available."
-- **Updates**: notices that only tell you something. A stage change notice names the deal, the stage
-  before and after, and who moved it. You get none for a move you made yourself.
-- **Context**: the figures and **Upcoming meetings**. A task or contact opens over the page.
-- **Show Worklist**: the whole list, with its own filters and pages, and work that is not due yet.
+- **Show Worklist**, under the list: the whole list, with its own filters and pages, and work that
+  is not due yet. Notices that only tell you something, such as a stage change, are read there.
+- **Since your last brief**: what Margince did since your last brief, what waits on you and what
+  needs restoring.
+- Beside them: **Numbers**, **Upcoming meetings**, **Waiting for your word**.
 A greeting covers the page on the day's first visit, once per browser, unless your settings turn
-motion off. Press any key or click to go on.
+motion off. It shows the date, the emails synced overnight, and how many items wait, how many are
+urgent and how many meetings you have. Press any key or click to go on.
 Also called: morning brief, daily brief, today, priorities, top cards, welcome screen.
 
 ### What comes first on Morning?
@@ -181,8 +182,8 @@ Morning names each source it could not read, with **Refresh brief**, and never s
 - Meetings count calendar entries still to come. Margince does not say you are prepared unless the
   source says so.
 
-### Changes made for you
-**Changes made for you**, on **Morning**, lists the changes Margince made to your deals that you can
+### Waiting for your word
+**Waiting for your word**, on **Morning**, lists the changes Margince made to your deals that you can
 still accept or undo. Each names the deal, what changed, why and when. A close date fix names the
 old and new date; a change in confidence alone is not called a date change. **Accept** records that
 you reviewed the change and keeps what it set. It does not run the change again, or turn a guessed

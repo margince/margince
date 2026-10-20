@@ -111,13 +111,23 @@
   padding: 0;
 }
 
-/* The day, as the one uppercase line on the page, PAINTED over the greeting:
-   a reader arriving at their desk asks what day it is before anything else.
-   `order` moves the paint and not the tree — the greeting stays the block's
-   first child and a screen reader still meets it first. */
-.glance-date {
+/* The day, PAINTED over the greeting, with the page's controls on its line
+   where the view has them: a reader arriving at their desk asks what day it
+   is before anything else. `order` moves the paint and not the tree — the
+   greeting stays the block's first child and a screen reader meets it first. */
+.glance-topline {
   order: -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+}
+.glance-date {
   margin: 0;
+  color: var(--accentText);
+}
+.greeting-name {
   color: var(--accentText);
 }
 
@@ -225,9 +235,6 @@
 .brief-coverage {
   margin: 0;
 }
-.brief-freshness {
-  margin: 0;
-}
 
 /* ── The work ──────────────────────────────────────────────────────────────
  * The Focus panel across the page, then the zones under it: what was done
@@ -250,29 +257,77 @@
 }
 
 /* ── The morning ───────────────────────────────────────────────────────────
- * The brief and the work in one column, read top to bottom with a section's
- * air between each block, and the figures and the day's meetings beside it.
- * The controls stand on the line over the greeting, so the greeting and its
- * sentence read without the controls cutting across them. */
+ * The greeting, the day in one sentence, the card in hand and the rest of the
+ * order in one column, read top to bottom with a section's air between each
+ * block; beside it, the figures and the day's meetings. The two columns hold
+ * a reading width rather than the window's, so a wide screen gets margins
+ * instead of longer lines. */
+.brief-morning {
+  max-width: 70rem;
+  margin-inline: auto;
+  padding-block-start: var(--space-10);
+}
+@media (min-width: 1201px) {
+  .brief-morning {
+    column-gap: var(--space-16);
+  }
+}
 .brief-morning > .brief-main {
-  gap: var(--space-8);
+  gap: var(--space-12);
 }
 .brief-morning .brief-head {
   flex-direction: column;
+  /* One line: a wrapping column is as wide as its widest item, which pushed
+     the greeting past a phone's edge. */
+  flex-wrap: nowrap;
   align-items: stretch;
   padding-block: 0;
 }
+/* The head is a column here, so the row layout's basis would be a HEIGHT. */
+.brief-morning .brief-head > .glance {
+  flex: none;
+}
+.brief-morning .glance {
+  gap: var(--space-3);
+}
+.brief-morning .glance-greeting {
+  font: var(--fontDisplayLarge);
+}
 .brief-morning .glance-sentence {
+  font: var(--fontLead);
+  max-width: none;
+  margin-block-start: var(--space-3);
   -webkit-line-clamp: 4;
   line-clamp: 4;
+}
+.brief-morning .glance-quote {
+  max-width: none;
 }
 .brief-morning .brief-overview {
   margin: 0;
 }
-@media (min-width: 1200px) {
+/* A section's name on this page is a quiet label over its rows, not a title:
+   the greeting is the page's one headline and the card in hand its second. */
+.t-eyebrow.brief-section-label,
+.brief-morning .brief-first-head > .t-eyebrow,
+.brief-morning .brief-triage-queue-head {
+  margin: 0;
+  font: var(--fontBody);
+  font-weight: var(--fontWeightMedium);
+  color: var(--textSecondary);
+}
+/* A section on the page ground: its label, then its rows. With no box
+   around them, the rows and groups keep no gutter of their own either. */
+.brief-section {
+  --padPanel: 0px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+@media (min-width: 1201px) {
   .brief-morning > .brief-rail {
     position: sticky;
-    top: var(--space-6);
+    top: var(--space-10);
     align-self: start;
   }
 }
@@ -283,7 +338,28 @@
 .brief-rail {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-10);
+}
+/* A reading in the rail: the name and the figure on one line, the basis and
+   the way into its lane under them. */
+.brief-rail .stat-strip:has(.stat-card-narrow-row) .stat-card-narrow-row {
+  grid-template-areas:
+    "label figure"
+    "basis foot";
+  padding-block: var(--space-4);
+  row-gap: var(--space-1);
+}
+.brief-rail
+  .stat-strip:has(.stat-card-narrow-row)
+  .stat-card-narrow-row
+  > .stat-card-foot {
+  justify-self: end;
+}
+.brief-rail
+  .stat-strip:has(.stat-card-narrow-row)
+  .stat-card-narrow-row
+  > .stat-card-label {
+  color: var(--textSecondary);
 }
 
 .rail-count,
@@ -489,75 +565,7 @@
 }
 
 /* ── The receipt ───────────────────────────────────────────────────────────
- * One summary line answering every lane, then a group per lane that has lines
- * in it. The group heads and the seams between them are the panel's own. */
-
-.magic-summary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2) var(--space-5);
-  margin: 0;
-  padding: var(--space-3) var(--space-4);
-  list-style: none;
-  border-radius: var(--r-md);
-  background: var(--bgWell);
-}
-
-/* Tone reaches the glyph and, where the lane holds something, the words: a
-   clear lane stays in body ink so four green sentences do not read as alarms. */
-.magic-summary-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.magic-summary-item > svg {
-  flex: none;
-  color: var(--textSecondary);
-}
-
-.magic-summary-item[data-tone="success"] > svg {
-  color: var(--successText);
-}
-
-.magic-summary-item[data-tone="ai"] {
-  color: var(--aiText);
-}
-
-.magic-summary-item[data-tone="danger"] {
-  color: var(--dangerText);
-}
-
-.magic-summary-item[data-tone="warning"] {
-  color: var(--warningText);
-}
-
-.magic-summary-item:is(
-    [data-tone="ai"],
-    [data-tone="danger"],
-    [data-tone="warning"]
-  )
-  > svg {
-  color: inherit;
-}
-
-.magic-glance {
-  margin-top: var(--space-4);
-}
-
-/* Home's first and widest card takes more air at its edges than a record's
-   panes, and a phone gives back what it cannot spare. Re-bound as the role
-   rather than as one body's padding, so the head, the groups and every
-   hairline move together and stay aligned. */
-.magic-panel {
-  --padPanel: var(--space-8);
-}
-
-@media (max-width: 600px) {
-  .magic-panel {
-    --padPanel: var(--space-5);
-  }
-}
+ * A group per lane that has lines in it, under the section's label. */
 
 /* A line is one row: what happened and the record it is about, read down the
    list without stopping at small print. The list is one grid the lines share,

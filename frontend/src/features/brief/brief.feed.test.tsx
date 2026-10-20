@@ -126,25 +126,6 @@ it("neither grows focus nor links the whole queue when more pages exist", () => 
   expect(container.querySelector('a[href*="filter=all"]')).toBeNull();
 });
 
-it("warns about urgent work beyond the loaded page using server urgency facts", () => {
-  stubApi({});
-  const row = { ...taskRow("t", "Pinned task"), urgent: false };
-  render(
-    <BriefFeed
-      day={{
-        ...readingsDay({}, [row], [], { urgent: 3 }),
-        focus: { items: [row], total: 4, urgent_remaining: 3 },
-      }}
-      state="ready"
-    />,
-  );
-  expect(
-    screen
-      .getByRole("link", { name: "3 more urgent items in the Worklist" })
-      .getAttribute("href"),
-  ).toBe("#/home?filter=urgent&queue=1");
-});
-
 it("shows dates and does not repeat the ranking comparator", () => {
   stubApi({});
   const row = {
@@ -163,14 +144,12 @@ it("does not claim an empty agenda when a source failed", () => {
   day.sources_unavailable = [
     { source: "task", reason: "failed", category: "tasks" },
   ];
-  const { container } = render(<BriefFeed day={day} state="ready" />);
+  render(<BriefFeed day={day} state="ready" />);
   expect(screen.queryByText(en["brief.feed.clear"])).toBeNull();
-  // The sentence stands in the section, and no empty list stands under it. A
-  // list of nothing is only padding: a blank band under the caption.
+  // The sentence stands in the section.
   expect(
     screen.getByText(en["brief.feed.incomplete"]).closest("#brief-today"),
   ).not.toBeNull();
-  expect(container.querySelector(".brief-feed-list")).toBeNull();
 });
 
 it("keeps approvals in the agenda and offers their review action", () => {
@@ -262,19 +241,17 @@ it("ends the row in hand's one line with its menu, the agent's move before it", 
   ).toBeNull();
 });
 
-it("names whose row is in hand, and how the silence runs both ways", () => {
+it("names why the row in hand is first, whose it is, and its inbox", () => {
   stubApi({});
   const row = waitingEmailRow();
   const { container } = render(
     <BriefFeed day={readingsDay({}, [row])} state="ready" />,
   );
-  // Both moments off the row itself, no second read: the drawer draws the
-  // same pair on every row, and a fetch per row is what this field ends.
-  const about = container.querySelector(".brief-triage-about");
-  expect(about?.textContent).toContain(en["worklist.pane.lastInbound"]);
-  expect(about?.textContent).toContain(en["worklist.pane.lastOutbound"]);
-  expect(about?.textContent).toContain("03/09/2026");
-  expect(about?.textContent).toContain("28/08/2026");
+  const head = container.querySelector(".brief-triage-lead-head");
+  expect(head?.querySelector(".brief-triage-label-now")?.textContent).toBe(
+    "Waiting 13 days",
+  );
+  expect(head?.textContent).toContain(en["visibility.team"]);
   expect(
     screen.getByRole("link", { name: "Sonya Beck" }).getAttribute("href"),
   ).toBe("#/contacts/contact-sonya");
@@ -305,7 +282,7 @@ it("claims no moments when the server withheld them", () => {
   expect(screen.queryByText(en["worklist.pane.never"])).toBeNull();
 });
 
-it("names the account a row in hand is about, and which side wrote last", () => {
+it("names the account a row in hand is about", () => {
   stubApi({});
   const row = {
     ...taskRow("renewal", "Send the renewal terms"),
@@ -314,25 +291,12 @@ it("names the account a row in hand is about, and which side wrote last", () => 
       id: "company-nordwind",
       label: "Nordwind",
     },
-    company: {
-      id: "company-nordwind",
-      touch: {
-        last_inbound_at: "2026-09-03T09:00:00Z",
-        last_outbound_at: null,
-      },
-    },
   };
   const { container } = render(
     <BriefFeed day={readingsDay({}, [row])} state="ready" />,
   );
-  const about = container.querySelector(".brief-triage-about");
-  expect(about?.querySelector("a")?.textContent).toBe("Nordwind");
-  expect(about?.textContent).toContain(en["worklist.pane.lastFromCompany"]);
-  expect(about?.textContent).toContain("03/09/2026");
-  expect(about?.textContent).toContain(
-    `${en["worklist.pane.lastToCompany"]} ${en["worklist.pane.never"]}`,
-  );
-  expect(about?.textContent).not.toContain(en["worklist.pane.lastInbound"]);
+  const head = container.querySelector(".brief-triage-lead-head");
+  expect(head?.querySelector("a")?.textContent).toBe("Nordwind");
 });
 
 // THE RANKED COLUMN NAMES ITS ROWS FROM THE CONTACT, not from a message.

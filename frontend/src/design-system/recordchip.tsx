@@ -8,6 +8,9 @@ import "./recordchip.css";
 /** A contact or an account draws its avatar; a meeting draws a clock. */
 export type RecordChipKind = "contact" | "company" | "meeting";
 
+/** `large` sits in a `--fontLead` sentence; `default` in a body line. */
+export type RecordChipSize = "default" | "large";
+
 /**
  * One record named inside a sentence, as a pill the reader can press.
  *
@@ -21,6 +24,7 @@ export function RecordChip({
   identity,
   pressed,
   onPress,
+  size = "default",
 }: Readonly<{
   kind: RecordChipKind;
   label: string;
@@ -28,17 +32,18 @@ export function RecordChip({
   identity: string;
   pressed: boolean;
   onPress: () => void;
+  size?: RecordChipSize;
 }>) {
   return (
     <button
       type="button"
-      className={`record-chip record-chip-${kind}`}
+      className={`record-chip record-chip-${kind}${size === "large" ? " record-chip-large" : ""}`}
       aria-pressed={pressed}
       onClick={onPress}
     >
       {kind === "meeting" ? (
         <span className="record-chip-mark" aria-hidden="true">
-          <CalendarClock size={13} />
+          <CalendarClock size={size === "large" ? 14 : 13} />
         </span>
       ) : (
         // The label names the chip; the initials would only say it twice.

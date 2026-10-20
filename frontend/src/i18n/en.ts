@@ -748,10 +748,6 @@ export const en = {
   "brief.queue.title": "Worklist",
   "brief.queue.show": "Show Worklist",
   "brief.queue.hide": "Hide Worklist",
-  "brief.focus.urgentRemaining_one": "{count} more urgent item in the Worklist",
-  "brief.focus.urgentRemaining_other":
-    "{count} more urgent items in the Worklist",
-  "brief.focus.remaining": "{count} more priorities in the Worklist",
   "brief.team.planUnavailable": "No current plan visible to you for {name}.",
   "brief.team.noCommitments": "{name} has no commitments in this plan.",
   "brief.team.outcomes":
@@ -829,7 +825,6 @@ export const en = {
     "{done} of {total} due commitments were completed.",
   "brief.team.meetingRate":
     "{done} of {total} meetings had a recorded next step.",
-  "brief.digest.messages": "Emails synced",
   "brief.team.week": "Week starting",
   "brief.week.lostLabel": "Lost",
   "brief.feed.refreshFailed":
@@ -862,10 +857,9 @@ export const en = {
   "brief.week.supporting": "Metrics, forecast and observations",
   "brief.coverage.retry": "Refresh brief",
   "brief.reply.owed": "Customer awaiting your reply",
-  "brief.updatedAt": "Agenda updated {when}",
   "brief.changes.superseded":
     "This deal changed again. Open the deal to review its current state.",
-  "brief.changes.title": "Changes made for you",
+  "brief.changes.title": "Waiting for your word",
   "brief.changes.accept": "Accept",
   "brief.changes.accepted": "Accepted",
   "brief.changes.undone": "Undone",
@@ -4310,9 +4304,6 @@ export const en = {
   "brief.view.label": "Home view",
   "brief.view.morning": "Morning",
   "brief.view.weekly": "Weekly",
-  "brief.scope.label": "Whose brief",
-  "brief.scope.mine": "Mine",
-  "brief.scope.team": "Team",
   // The Brief's opening sentence, composed from the rows the page is showing —
   // never model-written, so it cannot say what the rows contradict.
   "brief.sentence.clear": "No immediate priorities found.",
@@ -4328,7 +4319,9 @@ export const en = {
   "brief.first.why": "Why first?",
   "brief.intro.waiting": "Waiting on you",
   "brief.intro.meetings": "Meetings today",
-  "brief.intro.emails": "Emails synced",
+  "brief.intro.urgent": "Urgent",
+  "brief.intro.read_one": "While you slept, Margince synced 1 email.",
+  "brief.intro.read_other": "While you slept, Margince synced {count} emails.",
   "brief.intro.skip": "Press any key or click to continue",
   // What the ORDER could not weigh, as against what scored low. A fragment
   // like the source lines it sits with, and it names no cause: the run says
@@ -4546,19 +4539,6 @@ export const en = {
   "brief.act": "Done",
   "brief.dismiss": "Dismiss",
 
-  "brief.digestSynced": "Sync details",
-  "brief.digestContacts": "Contacts created",
-  "brief.digestCompanies": "Companies created",
-  "brief.digestDedupe": "Duplicates to review",
-  "brief.digestClassify":
-    "Commitments: {commitments} · Meetings: {meetings} · Messages without a sales action: {noise}",
-  "brief.digestProjects": "Projects",
-  "brief.digestPhaseChanges": "Phase changes",
-  "brief.digestNewCommitments": "New commitments",
-  "brief.digestGoneQuiet": "Gone quiet",
-  "brief.digestPhaseChange": "{from} → {to}",
-  "brief.digestCommitmentCount": "{count} new open commitments",
-  "brief.digestQuietDays": "quiet for {days} days",
   "brief.glance.morning": "Good morning, {name}.",
   "brief.glance.morningAnon": "Good morning.",
   "brief.glance.afternoon": "Good afternoon, {name}.",
@@ -4570,14 +4550,11 @@ export const en = {
   "brief.glance.introWeekly": "Review results and plan your next steps.",
   "brief.glance.intro": "Your day at a glance.",
   "brief.panel.decisions": "Approvals",
-  "brief.panel.overnight": "Overnight",
   // The rail's own panel titles, after the rename that made each claim exactly
   // what its rows are. "Promises & tasks" named a thing the product does not
   // have and stood over a standing line of apology for it.
   "brief.rail.quietSchedule": "Nothing booked",
   "brief.panel.schedule": "Upcoming meetings",
-  "brief.overnight.connectorsUnhealthy": "Connectors need attention",
-  "brief.overnight.fixConnector": "Fix connector",
   "brief.readings.label": "Today’s figures",
   // Why a figure on this plate wears a `+`. It rides the whole cell, because a
   // mark that explains itself only to a pointer resting on three characters is
@@ -4619,6 +4596,7 @@ export const en = {
   "brief.readings.leadsBasis": "Planned tasks for prospects",
   "brief.readings.leadsDue": "Next due {value}",
   "brief.rail": "Context",
+  "brief.rail.numbers": "Numbers",
   "brief.deck.later": "Later",
   "brief.deck.showMore": "Show full message",
   "brief.deck.showLess": "Show less",
@@ -14962,30 +14940,7 @@ export const en = {
   // four lanes. The `magic.action.*` and `magic.consequence.*` families are
   // the client half of a mirror the server sends keys against. So the set is
   // the contract (src/features/sign-in/magic.keys.ts), not one screen's copy.
-  "magic.window.label": "Show",
-  "magic.window.brief": "Since my last brief",
-  "magic.window.week": "Last 7 days",
-  "magic.window.month": "Last 30 days",
   "magic.heading.brief": "Since your last brief",
-  "magic.heading.week": "The last 7 days",
-  "magic.heading.month": "The last 30 days",
-  "magic.intro": "What Margince did since {when}.",
-  "magic.summary": "Summary",
-  "magic.clear.done": "Nothing done for you",
-  "magic.clear.needsYou": "Nothing waiting on you",
-  "magic.clear.couldNotComplete": "Nothing failed",
-  "magic.clear.watching": "Every source healthy",
-  "magic.count.keptInSync_one": "{count} kept in sync",
-  "magic.count.keptInSync_other": "{count} kept in sync",
-  "magic.count.done_one": "{count} done for you",
-  "magic.count.done_other": "{count} done for you",
-  "magic.count.needsYou_one": "{count} waiting on you",
-  "magic.count.needsYou_other": "{count} waiting on you",
-  "magic.count.couldNotComplete_one": "{count} could not be finished",
-  "magic.count.couldNotComplete_other": "{count} could not be finished",
-  "magic.count.watching_one": "{count} needs restoring",
-  "magic.count.watching_other": "{count} need restoring",
-  "magic.incomplete": "{lane}: may be incomplete",
   "magic.loading": "Reading what the machinery did",
   "magic.lane.done": "Done for you",
   "magic.lane.needsYou": "Waiting on you",
@@ -15071,26 +15026,6 @@ export const en = {
   "magic.notShown.unadmittedAction": "housekeeping with nothing to tell you",
   "magic.notShown.unknownEntityType": "a record type this page cannot place",
   "magic.notShown.outOfScope": "outside your own records",
-  "magic.glance.label": "What got done",
-  "magic.glance.emailsFiled": "Emails filed",
-  "magic.glance.profilesRead": "Company profiles read",
-  "magic.glance.recordsUpdated": "Records updated",
-  "magic.glance.dealsMoved": "Deals moved on",
-  "magic.glance.leadsPromoted": "Leads turned into deals",
-  "magic.glance.ownersChanged": "Work handed over",
-  "magic.glance.activitiesRelinked": "Exchanges refiled",
-  "magic.glance.messagesSent": "Messages sent",
-  "magic.glance.meetingsBooked": "Meetings booked",
-  "magic.glance.leadsDisqualified": "Leads disqualified",
-  "magic.glance.retention": "Retention applied",
-  "magic.glance.recordsCreated": "Records created",
-  "magic.glance.recordsArchived": "Records archived",
-  "magic.timeline.title": "When it happened",
-  "magic.timeline.agent": "Agents",
-  "magic.timeline.sync": "Sync and rules",
-  "magic.timeline.summary":
-    "When each line in this receipt happened, from {from} to now",
-  "magic.timeline.now": "Now",
   "magic.done.all_one": "{count} change, in full",
   "magic.done.all_other": "All {count} changes, one by one",
   "magic.done.atLeast_one": "{count} change, one by one",

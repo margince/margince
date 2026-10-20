@@ -619,6 +619,23 @@
   --fontHeadingXXSmall:
     var(--fontWeightBold) 0.75rem / 1rem var(--fontFamilyHeading);
 
+  /* Display sizes, for the morning greeting alone: they scale with the window
+     because the greeting is the one line a reader sees whole on arrival. */
+  /* The full-window greeting. */
+  --fontDisplayXLarge:
+    var(--fontWeightBold) clamp(3.25rem, 8vw, 7rem) / 1 var(--fontFamilyHeading);
+  /* The greeting at the head of the page. */
+  --fontDisplayLarge:
+    var(--fontWeightBold) clamp(2.75rem, 5.4vw, 4.25rem) / 1.05
+    var(--fontFamilyHeading);
+  /* A figure under the full-window greeting. */
+  --fontDisplayMedium:
+    var(--fontWeightBold) clamp(2.125rem, 4vw, 3.25rem) / 1.05
+    var(--fontFamilyHeading);
+  /* The one sentence a page opens on. The line is tall enough for a record
+     chip to sit in it without pushing the next line down. */
+  --fontLead: var(--fontWeightRegular) 1.3125rem / 2.5rem var(--fontFamilyBody);
+
   /* Material overlays, NOT part of the §2 Ledger-Green canon and deliberately
    * not pinned by tokens.test.ts's canonical map: a highlight and a scrim are
    * material effects rather than brand colour — pure white and pure black at
