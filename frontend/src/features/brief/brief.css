@@ -192,26 +192,6 @@
   margin: var(--space-1) 0 0;
 }
 
-/* The controls: the two dials, and under them the way into the whole queue.
-   A column at the far edge, on the greeting's top line, so a reader scanning
-   the head meets the greeting first and the controls where the hand expects
-   them — where a record keeps its verbs. */
-/* ONE ROW of controls at the head's trailing edge: the two dials, then the
-   way into the whole queue as the primary. Stacked, the queue's door sat a
-   line below its own dials and the head read as two right-hand columns. They
-   wrap onto their own line only when the head is too narrow to hold both
-   halves. */
-.brief-controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--space-3);
-}
-.brief-controls .brief-dials {
-  margin: 0;
-}
-
 /* ── The readings band ─────────────────────────────────────────────────────
  * Between the head and the work, what describes the WHOLE day: the five
  * readings as the house's reading cards, each a door into its lane with its
@@ -719,15 +699,6 @@
 
   .glance-sentence {
     font: var(--fontBody);
-  }
-
-  /* The controls have wrapped under the greeting, so they take one wrapping
-     row. */
-  .brief-controls {
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    padding-top: 0;
   }
 }
 

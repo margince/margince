@@ -7,6 +7,7 @@ import {
   formatDate,
   formatDateTime,
   formatDayMonth,
+  formatDayRange,
   formatDuration,
   formatMoney,
   formatMoneyCompact,
@@ -413,5 +414,18 @@ describe("a stored file's size", () => {
     expect(formatBytes(999, "en")).toBe("999 bytes");
     expect(formatBytes(1000, "en")).toBe("1 kB");
     expect(formatBytes(21_400, "de")).toBe("21,4 kB");
+  });
+});
+
+describe("formatDayRange", () => {
+  // One span in each locale's own words, the shared month named once where
+  // the locale does that.
+  it("names a week as one span of days", () => {
+    expect(
+      formatDayRange("2026-06-29", "2026-07-05", "de", "Europe/Berlin"),
+    ).toMatch(/^29\. Juni\s*–\s*5\. Juli$/);
+    expect(
+      formatDayRange("2026-06-29", "2026-07-05", "en", "Europe/Berlin"),
+    ).toMatch(/29 June\s*[–-]\s*5 July/);
   });
 });

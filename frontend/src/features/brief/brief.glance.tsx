@@ -6,14 +6,15 @@ import { Badge } from "../../design-system/atoms";
 import { EmailReference } from "../../design-system/emailreference";
 import { Heading } from "../../design-system/heading";
 import { RecordChip } from "../../design-system/recordchip";
-import { middayInstant } from "../../format/calendarday";
+import { isoWeekOf } from "../../format/calendarday";
 import {
-  formatDate,
   formatDayLong,
+  formatDayRange,
+  formatNumber,
   formatTimeOfDay,
   hourInZone,
 } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
+import { startOfDayInZone, viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useRecordZone } from "../../lib/recordzone";
@@ -273,9 +274,19 @@ export function BriefGlance({
   const hour = hourInZone(now, viewerZone());
   const recordZone = useRecordZone();
   const { locale } = useLocale();
+  const weekStart = view === "weekly" ? week?.local_week_start : undefined;
+  // The weekly is a report: its title is the week it covers, and before any
+  // week has closed it names the report itself.
   const greeting =
     view === "weekly"
-      ? t("brief.panel.weekly")
+      ? weekStart
+        ? formatDayRange(
+            weekStart,
+            startOfDayInZone(weekStart, recordZone, 6),
+            locale,
+            recordZone,
+          )
+        : t("brief.panel.weekly")
       : greetingText(firstName, hour, t);
   const sentence = glanceSentence({ view, day, week }, t, locale);
   const meeting =
@@ -290,23 +301,21 @@ export function BriefGlance({
           <Greeting text={greeting} firstName={firstName} />
         )}
       </Heading>
-      {date && (
+      {(date || controls) && (
         <div className="glance-topline">
-          <p className="t-eyebrow glance-date">
-            <time dateTime={date}>
-              {/* The morning names its day the way a page over a greeting
-                  does — the weekday and the month written out. The weekly
-                  keeps the numeric form: it names a week's start, which is a
-                  date a reader compares, not a day they are in. */}
-              {view === "weekly"
-                ? formatDate(
-                    middayInstant(date, recordZone),
-                    locale,
-                    recordZone,
-                  )
-                : formatDayLong(date, locale, viewerZone())}
-            </time>
-          </p>
+          {date && (
+            <p className="t-eyebrow glance-date">
+              <time dateTime={date}>
+                {/* The morning names its day written out; the weekly names
+                    the report and its calendar week, as a report's kicker. */}
+                {view === "weekly"
+                  ? t("brief.report.kicker", {
+                      week: formatNumber(isoWeekOf(date), locale),
+                    })
+                  : formatDayLong(date, locale, viewerZone())}
+              </time>
+            </p>
+          )}
           {controls}
         </div>
       )}

@@ -66,14 +66,14 @@ beside its `font`, or the prose keeps the rhythm of the default.
 | `--fontHeadingXSmall` | The same, tighter still: the title of a flag. |
 | `--fontHeadingXXSmall` | Use with care; it goes with Body S, as small print does. |
 
-Four more sizes are for the greeting on Home and nothing else. The display sizes scale with the
-window, because the greeting is the one line a reader sees whole when the page opens:
+Four more sizes are for the head of Home's two views and nothing else. The display sizes scale with
+the window, because the head is the one line a reader sees whole when the page opens:
 
 | Token | For |
 |---|---|
 | `--fontDisplayXLarge` | The greeting that fills the window once a day. |
-| `--fontDisplayLarge` | The greeting at the head of Home. |
-| `--fontDisplayMedium` | A figure under the full-window greeting. |
+| `--fontDisplayLarge` | The greeting at the head of Home, and the weekly report's title. |
+| `--fontDisplayMedium` | A figure under the full-window greeting, and a headline figure of the weekly report. |
 | `--fontLead` | The sentence under the greeting. Its line is tall enough to hold a large `RecordChip`. |
 
 **A heading's level comes from the structure.** A user of a screen reader moves through a page by

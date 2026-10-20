@@ -77,7 +77,6 @@ export function BriefScreen() {
   // the drawer's head sentence ends on, whichever queue it shows.
   const queueToggle = (
     <PageAsideToggle
-      prominent={!morning}
       controlled={{
         open: params.get("queue") === "1",
         count: queuedDay ? pillCount(queuedDay, "all") : undefined,
@@ -116,23 +115,12 @@ export function BriefScreen() {
       firstName={firstName}
       now={new Date(nowMs)}
       briefedAt={morning ? brief.data?.generated_at : undefined}
-      controls={morning ? dials : undefined}
+      controls={dials}
     />
   );
-  // The morning puts its dial on the date's line, and the way into the queue
-  // under the day's order. The weekly keeps both at the head's far edge,
-  // where a record keeps its verbs.
-  const head = (
-    <div className="brief-head">
-      {glance}
-      {!morning && (
-        <div className="brief-controls">
-          {dials}
-          {queueToggle}
-        </div>
-      )}
-    </div>
-  );
+  // The dial stands on the date's line. The way into the queue closes the
+  // view: under the day's order, or under the report's last line.
+  const head = <div className="brief-head">{glance}</div>;
   return (
     <div className="wrap brief-wrap">
       {/* A link to one decision, from a notice or a receipt, opens it here. */}
@@ -166,11 +154,10 @@ function BriefBody({
 }>) {
   if (address.view === "weekly")
     return (
-      <>
+      <div className="brief-weekly-page">
         {head}
-        <WeeklySection />
-        <PlanSection />
-      </>
+        <WeeklySection plan={<PlanSection />} closing={queueToggle} />
+      </div>
     );
   return (
     <PersonalMorning query={query} head={head} queueToggle={queueToggle} />

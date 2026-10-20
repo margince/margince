@@ -1,42 +1,37 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactNode, useState } from "react";
-import { Badge, Disclosure, StatCard } from "../../design-system/atoms";
-import { Panel, PanelBody } from "../../design-system/panel";
-import { Select } from "../../design-system/select";
-import { StatStrip } from "../../design-system/statstrip";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { type ReactNode, useId, useState } from "react";
+import { Badge, Button } from "../../design-system/atoms";
+import { Heading } from "../../design-system/heading";
 import {
   type SectionState,
   SurfaceState,
 } from "../../design-system/surfacestate";
 import { ProvenanceTag } from "../../design-system/trust";
-import { middayInstant } from "../../format/calendarday";
 import {
   formatDate,
   formatDateTime,
+  formatDayLong,
   formatMoney,
   formatNumber,
-  formatSignedMoney,
-  formatSignedNumber,
 } from "../../format/format";
-import { type Locale, type Translator, useLocale, useT } from "../../i18n";
+import { startOfDayInZone } from "../../format/timezone";
+import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useRecordZone } from "../../lib/recordzone";
 import { routeHash } from "../../lib/router";
 import { useUrlParams } from "../../lib/urlstate";
 import { openAnalyticsSection } from "../analytics/analytics.address";
-import {
-  figureReading,
-  type WeeklyFigure,
-  weeklyNumericStatus,
-} from "./brief.numeric";
+import { weeklyNumericStatus } from "./brief.numeric";
 import {
   useWeeklyReview,
   useWeeklyReviewIndex,
   type WeeklyReview,
 } from "./brief.queries";
 import { OutlookPanel } from "./brief.waterfall";
+import { FiguresTable, HeadlineFigures } from "./brief.weekly.figures";
 import { LearningsPanel } from "./brief.weekly.learnings";
 import { ScorecardPanel } from "./brief.weekly.scorecard";
 import { WeeklyWorkings } from "./brief.weekly.workings";
@@ -48,18 +43,23 @@ import "./brief.weekly.css";
 // panel actually renders.
 type WeeklyReviewDealOutcome = WeeklyReview["deals"][number]["outcome"];
 
-// The week just gone, on Brief.
+// The week just gone, on Brief, as a report read top to bottom.
 //
-// NO NAV ENTRY, deliberately. The product's own argument against one is in
-// nav.ts: Today is the single door to the work that waits on a contact, and
-// three sidebar rows for one question read as three separate piles. A
-// retrospective of the week is a view of that same work, so it lives here and
-// past weeks open through the picker rather than through a second destination.
+// No nav entry: a retrospective of the week is a view of the same work Today
+// opens, so it lives here and past weeks open through the stepper.
 //
 // It renders what was WRITTEN when the week closed. Nothing here recomputes:
 // a retrospective that changed when you reopened it would not be one.
 
-export function WeeklySection() {
+export function WeeklySection({
+  plan,
+  closing,
+}: Readonly<{
+  /** The week ahead's plan, which the report turns into after its outcomes. */
+  plan?: ReactNode;
+  /** The way into the Worklist, under the report's last line. */
+  closing?: ReactNode;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
@@ -71,124 +71,122 @@ export function WeeklySection() {
     setParams(new Map([...params, ["week", next]]));
   const review = useWeeklyReview(week);
   const index = useWeeklyReviewIndex();
-  const [latestWeek] = index.data ?? [];
-
+  const weeks = index.data ?? [];
+  const shown = week ?? weeks[0];
   return (
-    <section id="brief-weekly">
-      <Panel
-        title={t("brief.panel.weekly")}
-        // The mark and the way out of the week, in that order.
-        //
-        // FROZEN is the claim that separates this panel from every other on
-        // Brief: the numbers under it were written when the week closed and can
-        // no longer move, so a rep who acts on Tuesday and re-reads on Thursday
-        // is not looking at a stale figure — they are looking at a record. The
-        // team weekly has said so since it shipped; the rep's, which is the one
-        // a rep actually opens, did not.
-        //
-        // Drawn only over a review that exists, so an empty or failed read does
-        // not certify a week nobody wrote.
-        titleAction={
-          <span className="brief-weekly-mark">
-            {review.data && (
-              <>
-                <Badge>{t("brief.weekly.frozen")}</Badge>
-                {/* Two badges, two different facts: the one beside it says how
-                    settled the week is, this says part of what is under it was
-                    written by a model. Drawn only when a narrative actually
-                    arrived — the numbers under it are a deterministic pass, so
-                    a standing mark would claim the whole panel. */}
-                {narratedByModel(review.data) && (
-                  <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
-                )}
-                {/* When it was written, which is what makes the badge a fact
-                    rather than a decoration — a reader can tell a week closed
-                    an hour ago from one closed on Monday. */}
-                <span className="t-caption">
-                  {t("brief.weekly.written", {
-                    at: formatDateTime(
-                      review.data.generated_at,
-                      locale,
-                      recordZone,
-                    ),
-                  })}
-                </span>
-              </>
-            )}
-            {index.data &&
-              index.data.length > 1 &&
-              latestWeek !== undefined && (
-                <Select
-                  aria-label={t("brief.weekly.pickWeek")}
-                  value={week ?? latestWeek}
-                  onChange={(next) => setWeek(next)}
-                  options={index.data.map((start) => ({
-                    value: start,
-                    label: formatDate(
-                      middayInstant(start, recordZone),
-                      locale,
-                      recordZone,
-                    ),
-                  }))}
-                />
-              )}
+    <article id="brief-weekly" className="brief-report">
+      {review.data && (
+        <div className="brief-report-byline">
+          {/* FROZEN: the figures were written when the week closed and can no
+              longer move. Drawn only over a review that exists, so an empty
+              read does not certify a week nobody wrote. */}
+          <Badge>{t("brief.weekly.frozen")}</Badge>
+          {/* Only where a model wrote the week's sentence: the figures are a
+              deterministic pass, so a standing mark would claim them too. */}
+          {narratedByModel(review.data) && (
+            <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
+          )}
+          <span className="t-caption">
+            {t("brief.weekly.written", {
+              at: formatDateTime(review.data.generated_at, locale, recordZone),
+            })}
           </span>
-        }
-      >
-        {/* No body around the whole week: the panel's sections are its own
-            direct children, so each one takes the pane's interval and the seam
-            between two of them is the panel's rather than a margin a screen
-            picked. */}
-        <WeeklyBody review={review.data ?? null} state={readState(review)} />
-      </Panel>
-    </section>
+          {shown !== undefined && weeks.length > 1 && (
+            <WeekStepper weeks={weeks} shown={shown} onWeek={setWeek} />
+          )}
+        </div>
+      )}
+      <WeeklyBody
+        review={review.data ?? null}
+        state={readState(review)}
+        plan={plan}
+      />
+      {review.data && (
+        <footer className="brief-report-closing">
+          <p className="t-caption">
+            {t("brief.report.next", {
+              date: formatDayLong(
+                startOfDayInZone(review.data.local_week_start, recordZone, 14),
+                locale,
+                recordZone,
+              ),
+            })}
+          </p>
+          {closing}
+        </footer>
+      )}
+    </article>
   );
 }
 
 /**
- * The sentence about the week, above its numbers.
- *
- * THREE STATES, and the third is the one worth the code. A review with no
- * sentence can mean a pass ran and found the week unremarkable, or that no pass
- * ran at all — no model bound, an exhausted budget, a provider outage. Those
- * read identically as silence, so `narrated_at` separates them and the panel
- * says which.
- *
- * Saying nothing in the third case would be the dishonest option: the rep would
- * read a week with no remark and conclude there was nothing to remark on, when
- * in fact nobody looked.
+ * The way to the week before or after this one. The index lists the weeks with
+ * a report, newest first, so a step never lands on a week nobody wrote.
  */
-function WeeklyNarrative({ review }: Readonly<{ review: WeeklyReview }>) {
-  if (!review.narrated_at) {
-    return null;
-  }
-  if (!review.narrative) {
-    return null;
-  }
-  // Indigo on the SENTENCE and not on the panel around it. The panel also
-  // carries the week's outlook, its scorecard and its five frozen figures, and
-  // every one of those is a deterministic pass — a tinted panel head would
-  // claim a model wrote the numbers too.
+function WeekStepper({
+  weeks,
+  shown,
+  onWeek,
+}: Readonly<{
+  weeks: readonly string[];
+  shown: string;
+  onWeek: (week: string) => void;
+}>) {
+  const t = useT();
+  const at = weeks.indexOf(shown);
+  const earlier = at >= 0 ? weeks[at + 1] : undefined;
+  const later = at > 0 ? weeks[at - 1] : undefined;
   return (
-    <Panel tone="ai" className="brief-weekly-narrative">
-      <PanelBody className="brief-weekly-narrative-text">
-        <ProvenanceTag provenance={{ kind: "agent" }} />
-        <p>{review.narrative}</p>
-      </PanelBody>
-    </Panel>
+    <nav
+      className="brief-report-stepper"
+      aria-label={t("brief.weekly.pickWeek")}
+    >
+      <Button
+        variant="ghost"
+        disabled={earlier === undefined}
+        onClick={() => earlier && onWeek(earlier)}
+      >
+        <ChevronLeft aria-hidden="true" />
+        {t("brief.report.earlier")}
+      </Button>
+      <Button
+        variant="ghost"
+        disabled={later === undefined}
+        onClick={() => later && onWeek(later)}
+      >
+        {t("brief.report.later")}
+        <ChevronRight aria-hidden="true" />
+      </Button>
+    </nav>
   );
 }
 
-/** Whether a model actually wrote a sentence about this week — which is neither
- *  "a pass ran" nor "there is a sentence field". Both the head's badge and the
- *  narrative's own tint answer to it, so they cannot come to disagree. */
+/**
+ * The sentence about the week, at the head of its first chapter.
+ *
+ * A review with no sentence can mean a pass ran and found the week
+ * unremarkable, or that no pass ran at all; `narrated_at` separates the two.
+ */
+function WeeklyNarrative({ review }: Readonly<{ review: WeeklyReview }>) {
+  if (!review.narrated_at || !review.narrative) {
+    return null;
+  }
+  return (
+    <div className="brief-report-narrative">
+      <ProvenanceTag provenance={{ kind: "agent" }} />
+      <p>{review.narrative}</p>
+    </div>
+  );
+}
+
+/** Whether a model actually wrote a sentence about this week. The byline's
+ *  badge and the narrative both answer to it, so they cannot disagree. */
 function narratedByModel(review: WeeklyReview): boolean {
   return Boolean(review.narrated_at && review.narrative);
 }
 
-/** The outcome as a word. A lookup rather than a template key, because a
- *  template key built from wire data is an unchecked assertion: the contract's
- *  enum can grow and the interpolation would ask for a message nobody wrote. */
+/** The outcome as a word. A lookup rather than a template key, because the
+ *  contract's enum can grow and a built key would ask for a missing message. */
 function outcomeWord(
   t: (key: MessageKey) => string,
   outcome: WeeklyReviewDealOutcome,
@@ -204,7 +202,7 @@ function outcomeWord(
 }
 
 /** What one read says about itself, in the state vocabulary every section
- *  draws from — the same three-way answer Brief's other panels give. */
+ *  draws from. */
 function readState(
   query: Readonly<{ isError: boolean; isPending: boolean }>,
 ): SectionState {
@@ -214,280 +212,249 @@ function readState(
   return query.isPending ? "loading" : "ready";
 }
 
-// A closed week is comparable only to a priced prior week in the same currency.
-function wonPace(
-  review: WeeklyReview,
-  locale: Locale,
-  t: Translator,
-  zone: string,
-): string | undefined {
-  const pipeline = review.pipeline;
-  if (pipeline === undefined) {
-    return undefined;
-  }
-  const value = formatMoney(pipeline.won_minor, pipeline.currency, locale);
-  const prior = review.prior;
-  const before = prior?.pipeline;
-  if (!prior || before === undefined || before.currency !== pipeline.currency) {
-    return value;
-  }
-  return t("brief.weekly.wonVsPrior", {
-    value,
-    week: formatDate(middayInstant(prior.local_week_start, zone), locale, zone),
-    delta: formatSignedMoney(
-      pipeline.won_minor - before.won_minor,
-      pipeline.currency,
-      locale,
-    ),
-  });
+/** One numbered chapter of the report. */
+function Chapter({
+  number,
+  title,
+  children,
+}: Readonly<{ number: number; title: string; children: ReactNode }>) {
+  const { locale } = useLocale();
+  const id = useId();
+  return (
+    <section className="brief-report-chapter" aria-labelledby={id}>
+      <Heading
+        size="medium"
+        as="h2"
+        id={id}
+        className="brief-report-chapter-title"
+      >
+        <span className="brief-report-chapter-number t-num">
+          {formatNumber(number, locale)}
+        </span>
+        {title}
+      </Heading>
+      {children}
+    </section>
+  );
 }
 
 function WeeklyBody({
   review,
   state,
-}: Readonly<{ review: WeeklyReview | null; state: SectionState }>) {
+  plan,
+}: Readonly<{
+  review: WeeklyReview | null;
+  state: SectionState;
+  plan?: ReactNode;
+}>) {
+  const t = useT();
+  if (state !== "ready" || review === null) {
+    // A rep whose first Monday has not come round yet says so; a page of
+    // zeroes would claim a week that was measured and empty.
+    return (
+      <SurfaceState
+        state={state === "ready" ? "empty" : state}
+        emptyLabel={t("brief.weekly.none")}
+        loadingLabel={t("brief.panel.weekly")}
+      >
+        {null}
+      </SurfaceState>
+    );
+  }
+  const chapters = reportChapters(review, plan);
+  return (
+    <>
+      {chapters.map((chapter, at) => (
+        <Chapter key={chapter.key} number={at + 1} title={t(chapter.title)}>
+          {chapter.body}
+        </Chapter>
+      ))}
+    </>
+  );
+}
+
+type ReportChapter = Readonly<{
+  key: string;
+  title: MessageKey;
+  body: ReactNode;
+}>;
+
+/**
+ * The chapters this week has something to say in, in reading order: what
+ * happened, then what the reader commits to, then the full record. A chapter
+ * with nothing in it is left out, and the numbers close up over the gap.
+ */
+function reportChapters(
+  review: WeeklyReview,
+  plan: ReactNode | undefined,
+): readonly ReportChapter[] {
+  const numeric = weeklyNumericStatus(review.numeric_summary);
+  const closed = review.deals.filter((deal) => deal.outcome !== "moved");
+  const moved = review.deals.filter((deal) => deal.outcome === "moved");
+  const learnings = review.learnings;
+  return [
+    {
+      key: "glance",
+      title: "brief.report.chapter.glance",
+      body: (
+        <>
+          <WeeklyNarrative review={review} />
+          <HeadlineFigures review={review} figures={numeric.figures} />
+        </>
+      ),
+    },
+    ...(closed.length > 0
+      ? [
+          {
+            key: "closed",
+            title: "brief.report.chapter.closed" as const,
+            body: <ClosedDeals review={review} deals={closed} />,
+          },
+        ]
+      : []),
+    {
+      key: "movement",
+      title: "brief.report.chapter.movement",
+      body: <Movement review={review} deals={moved} />,
+    },
+    ...(plan
+      ? [
+          {
+            key: "commitments",
+            title: "brief.report.chapter.commitments" as const,
+            body: plan,
+          },
+        ]
+      : []),
+    {
+      key: "figures",
+      title: "brief.report.chapter.figures",
+      body: (
+        <>
+          <FiguresTable review={review} figures={numeric.figures} />
+          <WeeklyWorkings counts={review.counts} figures={numeric.figures} />
+          <div className="brief-report-flat">
+            <ScorecardPanel scorecard={review.scorecard} />
+          </div>
+          <FiguresFootnote partial={numeric.partial} basis={numeric.basis} />
+        </>
+      ),
+    },
+    ...(learnings
+      ? [
+          {
+            key: "observations",
+            title: "brief.report.chapter.observations" as const,
+            body: (
+              <div className="brief-report-flat">
+                <LearningsPanel learnings={learnings} />
+              </div>
+            ),
+          },
+        ]
+      : []),
+  ];
+}
+
+type Deal = WeeklyReview["deals"][number];
+
+/**
+ * One deal line. The LABEL, not a lookup: it was frozen when the review was
+ * written, so a deal renamed since still reads as it did that week.
+ */
+function DealLine({ deal }: Readonly<{ deal: Deal }>) {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
-  // Which horizon the outlook strip is showing. Per-reader and not persisted:
-  // it is a way of looking at one review, not a setting about the account.
-  const [horizon, setHorizon] = useState<string>("quarter");
-
-  if (state !== "ready") {
-    return (
-      <SurfaceState
-        state={state}
-        emptyLabel={t("brief.weekly.none")}
-        loadingLabel={t("brief.panel.weekly")}
+  return (
+    <li>
+      <a
+        className="brief-weekly-deal-name link-button"
+        href={routeHash({ screen: "deals", id: deal.deal_id })}
       >
-        {null}
-      </SurfaceState>
-    );
-  }
-  if (review === null) {
-    // A rep whose first Monday has not come round yet. Saying so is the honest
-    // answer; a page of zeroes would claim a week that was measured and empty.
-    // Drawn through the same arm the branch above uses for the same sentence —
-    // hand-rolled here, it was the one line on the card set as a caption while
-    // every other absence on the page read as prose.
-    return (
-      <SurfaceState
-        state="empty"
-        emptyLabel={t("brief.weekly.none")}
-        loadingLabel={t("brief.panel.weekly")}
-      >
-        {null}
-      </SurfaceState>
-    );
-  }
-
-  const c = review.counts;
-  const numeric = weeklyNumericStatus(review.numeric_summary);
-  const place = { t, locale, zone: recordZone };
-  // A figure its source did not measure trades its own reading for that fact.
-  const reading = (figure: WeeklyFigure, value: string, detail: ReactNode) =>
-    figureReading(numeric.figures[figure], { value, detail }, place);
-  const prior = review.prior?.counts;
-  // The delta line, or nothing. A reading with no earlier week to measure
-  // against gets no line at all rather than "+0": a rep's first week did not
-  // stay level, it had nothing to stay level against.
-  const since = (now: number, before: number | undefined) => {
-    if (before === undefined) {
-      return undefined;
-    }
-    const delta = now - before;
-    return (
+        {deal.label}
+      </a>
       <span className="t-caption">
-        {t("brief.weekly.sincePrior", {
-          delta: formatSignedNumber(delta, locale),
-          week: formatDate(
-            middayInstant(
-              review.prior?.local_week_start ?? review.local_week_start,
-              recordZone,
-            ),
-            locale,
-            recordZone,
-          ),
-        })}
+        {outcomeWord(t, deal.outcome)}
+        {deal.to_stage_label ? ` · ${deal.to_stage_label}` : ""}
       </span>
-    );
-  };
+      <time
+        className="brief-weekly-deal-when t-caption"
+        dateTime={deal.occurred_at}
+      >
+        {formatDate(deal.occurred_at, locale, recordZone)}
+      </time>
+    </li>
+  );
+}
+
+/** The deals the week won and lost, and what they were worth. */
+function ClosedDeals({
+  review,
+  deals,
+}: Readonly<{ review: WeeklyReview; deals: readonly Deal[] }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const pipeline = review.pipeline;
   return (
     <>
-      {/* The week SAID, in one block: the sentence about it and where it was
-          landing. Two readings of the same week, so they share a body and the
-          body's own stack sets the interval — before this each paid a browser
-          margin and an empty state's padding on top of it, which put two
-          sentences 40px apart with nothing between them. */}
-      <PanelBody className="brief-weekly-outcomes">
-        <p className="t-sub">{t("brief.weekly.basis")}</p>
-        <p className="t-sub">{t(numeric.basis)}</p>
-        {numeric.partial && (
-          <p className="t-sub">{t("brief.weekly.numericPartial")}</p>
-        )}
-        {/* On a phone the strip is a list, not ten boxes stacked. */}
-        <StatStrip testId="weekly-strip" className="brief-weekly-strip">
-          {c.tasks_completed !== undefined && (
-            <StatCard
-              narrow="row"
-              label={t("brief.weekly.tasksCompleted")}
-              {...reading(
-                "tasks",
-                formatNumber(c.tasks_completed, locale),
-                since(c.tasks_completed, prior?.tasks_completed),
-              )}
-            />
-          )}
-          <StatCard
-            narrow="row"
-            label={t("brief.week.lostLabel")}
-            {...reading(
-              "lost",
-              formatNumber(c.deals_lost, locale),
-              since(c.deals_lost, prior?.deals_lost),
-            )}
-          />
-          {/* No stage-change slot: the workings list below already reports the
-              deals that moved without closing, and one fact spelled on two
-              surfaces of one screen makes a reader check whether they differ.
-              The strip carries the week's OUTCOMES; movement is a working. */}
-          <StatCard
-            narrow="row"
-            label={t("brief.weekly.planCommitmentsKept")}
-            {...reading(
-              "commitments",
-              c.commitments_due === 0
-                ? t("brief.weekly.noCommitments")
-                : t("brief.weekly.ofDue", {
-                    done: formatNumber(c.commitments_kept, locale),
-                    due: formatNumber(c.commitments_due, locale),
-                  }),
-              since(c.commitments_kept, prior?.commitments_kept),
-            )}
-          />
-          <StatCard
-            narrow="row"
-            label={t("brief.weekly.dealsWon")}
-            // Value uses the frozen close-time exchange rates.
-            {...reading(
-              "won",
-              formatNumber(c.deals_won, locale),
-              wonPace(review, locale, t, recordZone) ??
-                since(c.deals_won, prior?.deals_won),
-            )}
-          />
-          <StatCard
-            narrow="row"
-            label={t("brief.weekly.leadsAnswered")}
-            {...reading(
-              "leads",
-              c.leads_routed === 0
-                ? t("brief.weekly.noLeads")
-                : t("brief.weekly.ofRouted", {
-                    answered: formatNumber(c.leads_answered_in_target, locale),
-                    routed: formatNumber(c.leads_routed, locale),
-                  }),
-              since(
-                c.leads_answered_in_target,
-                prior?.leads_answered_in_target,
-              ),
-            )}
-          />
-          <StatCard
-            narrow="row"
-            label={t("brief.weekly.meetingsHeld")}
-            {...reading(
-              "meetings",
-              c.meetings_held === 0
-                ? t("brief.weekly.noMeetings")
-                : t("brief.weekly.ofMeetings", {
-                    withStep: formatNumber(c.meetings_with_next_step, locale),
-                    held: formatNumber(c.meetings_held, locale),
-                  }),
-              since(c.meetings_held, prior?.meetings_held),
-            )}
-          />
-          <StatCard
-            narrow="row"
-            label={t("brief.weekly.carriedOver")}
-            {...reading(
-              "tasks",
-              formatNumber(c.tasks_carried_over, locale),
-              since(c.tasks_carried_over, prior?.tasks_carried_over),
-            )}
-          />
-        </StatStrip>
-        <Disclosure summary={t("brief.readings.summary")}>
-          <WeeklyWorkings counts={c} figures={numeric.figures} />
-        </Disclosure>
-      </PanelBody>
-      {review.deals.length > 0 && (
-        <PanelBody>
-          <ul className="brief-weekly-deals">
-            {review.deals.map((deal) => (
-              <li key={`${deal.deal_id}-${deal.occurred_at}`}>
-                {/* The LABEL, not a lookup. It was frozen when the review was
-                    written, so a deal renamed or deleted since still reads as
-                    it did that week — which is why this is a plain anchor and
-                    not `EntityRef`: resolving the name would undo the freeze.
-                    The ADDRESS is safe to build from the frozen id either way;
-                    a deal that has since gone answers 404, which is the honest
-                    outcome for a week that is over. */}
-                <a
-                  className="brief-weekly-deal-name link-button"
-                  href={routeHash({ screen: "deals", id: deal.deal_id })}
-                >
-                  {deal.label}
-                </a>
-                <span className="t-caption">
-                  {outcomeWord(t, deal.outcome)}
-                  {deal.to_stage_label ? ` · ${deal.to_stage_label}` : ""}
-                </span>
-                <time
-                  className="brief-weekly-deal-when t-caption"
-                  dateTime={deal.occurred_at}
-                >
-                  {formatDate(deal.occurred_at, locale, recordZone)}
-                </time>
-              </li>
-            ))}
-          </ul>
-        </PanelBody>
+      <ul className="brief-weekly-deals">
+        {deals.map((deal) => (
+          <DealLine key={`${deal.deal_id}-${deal.occurred_at}`} deal={deal} />
+        ))}
+      </ul>
+      {pipeline && (
+        <p className="brief-report-total t-num">
+          {t("brief.report.closedTotal", {
+            won: formatMoney(pipeline.won_minor, pipeline.currency, locale),
+            lost: formatMoney(pipeline.lost_minor, pipeline.currency, locale),
+          })}
+        </p>
       )}
-      <Disclosure summary={t("brief.week.supporting")}>
-        <PanelBody className="brief-weekly-week">
-          <WeeklyNarrative review={review} />
-          {/* Where the week was landing, before what the rep did about it: a
-            retrospective is read outcome-first, and the counts below answer
-            "what did I do" against the figure this answers "about what". */}
-          <OutlookPanel
-            outlook={review.outlook ?? []}
-            locale={locale}
-            horizon={horizon}
-            onHorizon={setHorizon}
-            onOpenForecast={() => openAnalyticsSection("forecast")}
-          />
-        </PanelBody>
-        {/* How well the week went, after where it was landing and before the
-          outcome strip's tallies. Absent blocks draw nothing at all — the
-          panel never substitutes zeros for work the rep did not have. */}
-        <ScorecardPanel scorecard={review.scorecard} />
-        {/* What the week TAUGHT, after how well it went. Last because it is the
-          only part of the retrospective that is a claim rather than a count,
-          and a reader should meet the numbers before the lessons drawn from
-          them. */}
-        <LearningsPanel learnings={review.learnings} />
-        {/* THE STRIP CARRIES OUTCOMES, THE LIST UNDER IT CARRIES WORKINGS. A
-          strip is read ACROSS as one comparison, and a row that grew to ten
-          was a table wearing a strip's clothes: at 1280 it folded to two ranks
-          and stopped being one reading at all. So what the rep planned and
-          kept, what closed, how fast new business was answered, whether
-          meetings led anywhere and what did not get finished stay in the row,
-          and how the queue was worked, how proposals were decided and how many
-          deals moved without closing read as a list beneath it — still
-          available to anyone who wants them, no longer competing with the
-          outcomes, and each fact on one surface only. */}
-      </Disclosure>
     </>
+  );
+}
+
+/** The deals that changed stage without closing, and where the week was
+ *  landing against the forecast. */
+function Movement({
+  review,
+  deals,
+}: Readonly<{ review: WeeklyReview; deals: readonly Deal[] }>) {
+  const { locale } = useLocale();
+  // Which horizon the outlook is showing. Per-reader and not persisted: it is a
+  // way of looking at one review, not a setting about the account.
+  const [horizon, setHorizon] = useState<string>("quarter");
+  return (
+    <>
+      {deals.length > 0 && (
+        <ul className="brief-weekly-deals">
+          {deals.map((deal) => (
+            <DealLine key={`${deal.deal_id}-${deal.occurred_at}`} deal={deal} />
+          ))}
+        </ul>
+      )}
+      <OutlookPanel
+        outlook={review.outlook ?? []}
+        locale={locale}
+        horizon={horizon}
+        onHorizon={setHorizon}
+        onOpenForecast={() => openAnalyticsSection("forecast")}
+      />
+    </>
+  );
+}
+
+/** What the figures rest on, once, under them. */
+function FiguresFootnote({
+  partial,
+  basis,
+}: Readonly<{ partial: boolean; basis: MessageKey }>) {
+  const t = useT();
+  return (
+    <p className="t-caption brief-report-footnote">
+      {t("brief.weekly.basis")} {t(basis)}
+      {partial && <> {t("brief.weekly.numericPartial")}</>}
+    </p>
   );
 }

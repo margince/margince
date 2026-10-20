@@ -6,9 +6,21 @@ The **Weekly** view of **Home** looks back on a closed week and plans the next o
 
 ## The weekly review
 
-The weekly review in Margince is on **Home → Weekly**. Margince writes it once, on the Monday after
-the week it covers, and marks it **Frozen**. You cannot make it again: the counts are what they
-were.
+The weekly review in Margince is on **Home → Weekly**, and reads as a report. Margince writes it
+once, on the Monday after the week it covers, and marks it **Frozen**. You cannot make it again: the
+counts are what they were.
+
+Its title is the week it covers, with the calendar week above it. Under the title, **Earlier week**
+and **Later week** step through the weeks that have a report. The report's numbered parts are:
+- **At a glance**: what Margince wrote about the week, and four figures with their change on the week
+  before.
+- **Closed deals**: the deals won and lost, and what they were worth.
+- **Pipeline movement**: the deals that changed stage, and the forecast.
+- **Commitments**: your plan for this week.
+- **Figures**: every figure beside the week before, and the scorecard.
+- **Observations**: what worked in the week and what did not, where Margince found something.
+
+A part with nothing in it is left out. The last line says when the next report comes.
 
 If there is none yet: "No weekly review yet. The first one is created on the Monday after your first
 full week."
@@ -32,9 +44,6 @@ showing a change from nothing.
   its own.
 - A meeting has a next step only when a task linked to it was made before the week ended. A task on
   the same contact is not enough.
-
-Behind a button sit more parts: a scorecard, the forecast and how the week moved it, and the
-observations.
 
 ### What the review will not claim
 The weekly review counts recorded work, and says plainly where the record is short.

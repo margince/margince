@@ -1,5 +1,5 @@
-/* The week just gone. The stat strip carries its own spacing; these rules are
-   for the deal lines under it. */
+/* The week just gone, as a report: one reading column, a byline, numbered
+   chapters, and a closing line. */
 .brief-weekly-deals {
   list-style: none;
   margin: 0;
@@ -23,30 +23,6 @@
 /* Pushed to the end of the row so the dates line up down the list. */
 .brief-weekly-deal-when {
   margin-left: auto;
-}
-
-/* The week's sentence, above its numbers. The indigo edge and the badge in the
-   panel head come from `Panel tone="ai"`; what is left here is where it sits. */
-.brief-weekly-narrative {
-  margin: 0;
-}
-
-/* Who wrote it, over what they wrote. */
-.brief-weekly-narrative-text {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.brief-weekly-narrative-text > p {
-  margin: 0;
-}
-
-/* The honest degrade reads quieter: it explains an absence rather than being
-   the remark, and giving it equal weight would let "nobody looked" compete
-   with the week's own numbers for the reader's eye. */
-.brief-weekly-narrative-absent {
-  margin: 0;
 }
 
 /* ── The week's workings ───────────────────────────────────────────────────
@@ -80,56 +56,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* The panel head's far end: the frozen mark, when it was written, and the way
-   to another week — on ONE line, because they are one statement about which
-   week this is and how settled it is. Without the row they stack under each
-   other and push the header to three times its height, which is the shape the
-   band's measured height was never drawn for. */
-.brief-weekly-mark {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-/* ── The blocks inside the week's panel ────────────────────────────────────
- * The panel's sections are its own children, so the interval between two of
- * them is the pane's — a body's padding and, where two bodies meet, the
- * panel's seam. What is left for this sheet is the interval INSIDE a block,
- * and each block declares it once rather than every paragraph carrying a
- * margin of its own. */
-
-/* The week's sentence and where it was landing: two readings of one week, so
-   one stack at a paragraph's interval. */
-.brief-weekly-week {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-/* The outcome strip and the workings list under it. */
-.brief-weekly-outcomes {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-/* A week's figures may be words ("Not recorded") and a basis may carry a date,
-   so the row takes as many equal cards as a word-sized figure fits, leaves no
-   last card stretched under the rest, and lets the basis run a third line.
-   At 40rem and under, the strip's own row fold stands. */
-@container (width > 40rem) {
-  .brief-weekly-strip .stat-strip {
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr));
-    --stat-strip-tail: 1;
-  }
-  .brief-weekly-strip .stat-card-detail {
-    -webkit-line-clamp: 3;
-    line-clamp: 3;
-  }
-}
-
 /* Two strips, one block: the lead block and the deal block are read one after
    the other and touched without this. */
 .brief-weekly-scorecard {
@@ -160,4 +86,112 @@
   gap: var(--space-2);
   margin: var(--space-2) 0 0;
   padding: 0;
+}
+
+/* ── The report ─────────────────────────────────────────────────────────────
+ * One column at a reading width, so the week reads as a document rather than
+ * a dashboard. A chapter sits on the page ground; the plan is the one card. */
+.brief-weekly-page {
+  max-width: 48rem;
+  margin-inline: auto;
+  padding-block: var(--space-10) var(--space-16);
+}
+.brief-weekly-page .glance-greeting {
+  font: var(--fontDisplayLarge);
+}
+.brief-weekly-page .glance-sentence {
+  font: var(--fontLead);
+  max-width: none;
+  margin-block-start: var(--space-3);
+}
+.brief-report {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+/* The scorecard and the lessons are a panel's groups, set here on the page
+   ground: with no box around them they keep no gutter of their own. */
+.brief-report-flat {
+  --padPanel: 0px;
+}
+/* Who wrote the report, when, and the way to another week, on one line. */
+.brief-report-byline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding-block: var(--space-4);
+  border-block: 1px solid var(--borderSubtle);
+}
+.brief-report-stepper {
+  display: flex;
+  gap: var(--gapActions);
+  margin-inline-start: auto;
+}
+.brief-report-chapter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.brief-report-chapter-title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin: 0;
+}
+.brief-report-chapter-number {
+  color: var(--accentText);
+}
+/* The week's sentence, as the report's own opening paragraph. */
+.brief-report-narrative {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  font: var(--fontLead);
+}
+.brief-report-narrative > p {
+  margin: 0;
+}
+/* The headline figures: four across, large, each with what it moved. */
+.brief-report-figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--space-6);
+  margin: 0;
+}
+.brief-report-figure {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.brief-report-figure > dt {
+  color: var(--textSecondary);
+}
+.brief-report-figure > dd {
+  margin: 0;
+}
+.brief-report-figure-value {
+  font: var(--fontDisplayMedium);
+}
+.brief-report-total {
+  margin: 0;
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--borderStrong);
+  font-weight: var(--fontWeightMedium);
+}
+.brief-report-footnote {
+  margin: 0;
+}
+.brief-report-closing {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-block-start: var(--space-4);
+  border-block-start: 1px solid var(--borderSubtle);
+}
+.brief-report-closing > p {
+  margin: 0;
 }

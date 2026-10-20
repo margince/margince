@@ -1,5 +1,6 @@
 /** @vitest-environment happy-dom */
-import { cleanup, screen, within } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { formatDateAbbrev, formatDateTime } from "../../format/format";
 import { en } from "../../i18n/en";
@@ -21,6 +22,19 @@ import { fleetDeal, jsonResponse, render, run, stubApi } from "./brief.testkit";
 // a week of runs rather than against this morning's queue. Everything the two
 // suites share is in brief.testkit.tsx, so an unrouted read answers the same way
 // on both sides of the split.
+
+/** One row of the figures table, as the text of its cells. */
+function row(table: HTMLElement, label: string): (string | null)[] {
+  const found = within(table)
+    .getAllByRole("row")
+    .find(
+      (each) => within(each).queryAllByRole("cell")[0]?.textContent === label,
+    );
+  if (!found) throw new Error(`no row labelled ${label}`);
+  return within(found)
+    .getAllByRole("cell")
+    .map((cell) => cell.textContent);
+}
 
 afterEach(() => {
   cleanup();
@@ -114,7 +128,9 @@ describe("BriefScreen — the weekly retrospective", () => {
     // The review's OWN currency, not the installation's current setting: base
     // currency is operator-mutable, and re-reading it would re-label an old
     // week with a currency its numbers were never in.
-    expect(await screen.findByText(/12.500,00\s*€|€12,500\.00/)).toBeTruthy();
+    expect(
+      (await screen.findAllByText(/12.500,00\s*€|€12,500\.00/)).length,
+    ).toBeGreaterThan(0);
   });
 
   // THE PACE READING. What the wins were worth, and whether that beat the week
@@ -200,7 +216,9 @@ describe("BriefScreen — the weekly retrospective", () => {
     });
     render(<BriefScreen />);
 
-    expect(await screen.findByText(/12.500,00\s*€|€12,500\.00/)).toBeTruthy();
+    expect(
+      (await screen.findAllByText(/12.500,00\s*€|€12,500\.00/)).length,
+    ).toBeGreaterThan(0);
     expect(screen.queryByText(/vs prior|zur Vorwoche/)).toBeNull();
   });
 
@@ -234,7 +252,9 @@ describe("BriefScreen — the weekly retrospective", () => {
     });
     render(<BriefScreen />);
 
-    expect(await screen.findByText(/12.500,00\s*€|€12,500\.00/)).toBeTruthy();
+    expect(
+      (await screen.findAllByText(/12.500,00\s*€|€12,500\.00/)).length,
+    ).toBeGreaterThan(0);
     expect(screen.queryByText(/vs prior|zur Vorwoche/)).toBeNull();
   });
 
@@ -334,19 +354,14 @@ describe("BriefScreen — the weekly retrospective", () => {
     });
     render(<BriefScreen />);
 
-    // The panel formats local_week_start immediately, so a half-shaped answer
+    // The report formats local_week_start immediately, so a half-shaped answer
     // used to take the whole render down with it rather than drawing one honest
-    // empty section.
-    //
-    // What "the rest of the page survives" MEANS moved with the dials: the
-    // morning's queue and this panel are no longer on screen together, so the
-    // surviving surface to look for is the weekly's own — the dials and the
-    // section around the panel that could not draw.
+    // empty section. What survives is the dial and the report's own title.
     expect(
       await screen.findByRole("group", { name: en["brief.view.label"] }),
     ).toBeTruthy();
     expect(
-      screen.getByRole("heading", { name: en["brief.panel.weekly"], level: 2 }),
+      screen.getByRole("heading", { name: en["brief.panel.weekly"], level: 1 }),
     ).toBeTruthy();
   });
 });
@@ -405,13 +420,13 @@ describe("BriefScreen — the week's sentence", () => {
     ).toBeGreaterThan(0);
     const weekly = within(weeklySection());
     expect(weekly.getByText(en["co.assistant.aiTag"])).toBeTruthy();
-    // The tint is around the SENTENCE, not the panel: the outlook, the
-    // scorecard and the five frozen figures under it are a deterministic pass,
-    // and an indigo band over the lot would claim a model wrote the numbers.
-    const tinted = weeklySection().querySelector(".panel-ai");
-    expect(tinted?.contains(sentence)).toBe(true);
+    // The mark is on the SENTENCE, not the report: the outlook, the scorecard
+    // and the frozen figures are a deterministic pass, and a mark over the lot
+    // would claim a model wrote the numbers.
+    const marked = weeklySection().querySelector(".brief-report-narrative");
+    expect(marked?.contains(sentence)).toBe(true);
     expect(
-      tinted?.textContent?.includes(en["brief.weekly.tasksDelivered"]),
+      marked?.textContent?.includes(en["brief.weekly.tasksDelivered"]),
     ).toBe(false);
   });
 
@@ -427,11 +442,11 @@ describe("BriefScreen — the week's sentence", () => {
 
     // Never a blank week, never a silent one: the counts are still the week's,
     // and a rep reading silence would conclude there was nothing to remark on.
-    await screen.findByText(en["brief.weekly.dealsWon"]);
+    await screen.findAllByText(en["brief.weekly.dealsWon"]);
     expect(screen.queryByTestId("weekly-narrative")).toBeNull();
-    // The mirror of the tinted case: no model wrote anything here, so nothing
+    // The mirror of the marked case: no model wrote anything here, so nothing
     // wears the mark that says one did.
-    expect(weeklySection().querySelector(".panel-ai")).toBeNull();
+    expect(weeklySection().querySelector(".brief-report-narrative")).toBeNull();
     expect(
       within(weeklySection()).queryByText(en["co.assistant.aiTag"]),
     ).toBeNull();
@@ -555,52 +570,55 @@ describe("BriefScreen — the week against the one before", () => {
     expect(strip.textContent).not.toContain(marker);
   });
 
-  // ── The outcomes, and the workings under them ──
+  // ── The headline, the table and the workings ──
 
-  // The strip is read ACROSS as one comparison, so its width is the claim. At
-  // ten slots it folded into two ranks at 1280 and stopped being one reading.
-  it("keeps six outcome readings above supporting activity", async () => {
+  // The report opens on the four figures a week is judged by, in that order.
+  it("leads with four headline figures", async () => {
     const strip = await mount(withPrior);
 
-    expect(strip.querySelectorAll(".stat-card")).toHaveLength(6);
-  });
-
-  // ONE FACT, ONE SURFACE. Deals that moved without closing are a working, and
-  // the list under the strip reports them — a slot up here as well would put
-  // the same count in two places on one screen, where the only thing a reader
-  // can do with the pair is check whether they agree.
-  it("reports the deals that moved in the workings and not in the strip", async () => {
-    const strip = await mount(withPrior);
-
-    const labels = [...strip.querySelectorAll(".stat-card-label")].map(
+    const labels = [...strip.querySelectorAll("dt")].map(
       (label) => label.textContent,
     );
     expect(labels).toEqual([
-      en["brief.week.lostLabel"],
-      en["brief.weekly.planCommitmentsKept"],
       en["brief.weekly.dealsWon"],
+      en["brief.weekly.planCommitmentsKept"],
       en["brief.weekly.leadsAnswered"],
       en["brief.weekly.meetingsHeld"],
-      en["brief.weekly.carriedOver"],
     ]);
+  });
+
+  // ONE FACT, ONE SURFACE. Deals that moved without closing are a working, and
+  // the list under the table reports them.
+  it("reports the deals that moved in the workings and not in the headline", async () => {
+    const strip = await mount(withPrior);
+
+    expect(strip.textContent).not.toContain(en["brief.weekly.dealsMoved"]);
     expect(screen.getByText(en["brief.weekly.dealsMoved"])).toBeTruthy();
   });
 
-  // The strip's slots are the week's OUTCOMES: what the rep planned and kept,
-  // what closed, how fast new business was answered, whether meetings led
-  // anywhere, and what did not get finished.
-  it("gives the strip the week's outcomes", async () => {
-    const strip = await mount(withPrior);
+  // Every figure the week carries is in the table, beside the week before.
+  it("keeps every figure in the figures table", async () => {
+    await mount(withPrior);
 
+    const table = screen.getByRole("table", {
+      name: en["brief.report.chapter.figures"],
+    });
     for (const key of [
-      "brief.weekly.planCommitmentsKept",
       "brief.weekly.dealsWon",
+      "brief.week.lostLabel",
+      "brief.weekly.planCommitmentsKept",
       "brief.weekly.leadsAnswered",
       "brief.weekly.meetingsHeld",
       "brief.weekly.carriedOver",
     ] as const) {
-      expect(within(strip).getByText(en[key])).toBeTruthy();
+      expect(within(table).getByText(en[key])).toBeTruthy();
     }
+    expect(row(table, en["brief.weekly.dealsWon"])).toEqual([
+      en["brief.weekly.dealsWon"],
+      "3",
+      "1",
+      "+2",
+    ]);
   });
 
   // Two readings, two names — and neither of them a promise.
@@ -624,7 +642,7 @@ describe("BriefScreen — the week against the one before", () => {
     const planned = en["brief.weekly.planCommitmentsKept"];
     const delivered = en["brief.weekly.tasksDelivered"];
     expect(planned).not.toBe(delivered);
-    expect(screen.getByText(planned)).toBeTruthy();
+    expect(screen.getAllByText(planned).length).toBeGreaterThan(0);
     expect(screen.getByText(delivered)).toBeTruthy();
 
     for (const label of [planned, delivered]) {
@@ -632,11 +650,8 @@ describe("BriefScreen — the week against the one before", () => {
     }
   });
 
-  // Narrowing the strip must not LOSE the other five. They are still the week's
-  // figures and a reader who wants them has to be able to find them — a strip
-  // that got shorter by dropping readings would be a worse answer than the row
-  // that folded.
-  it("keeps supporting activity below the outcome strip", async () => {
+  // The workings stay findable, under the headline rather than in it.
+  it("keeps supporting activity below the headline", async () => {
     const strip = await mount(withPrior);
 
     for (const key of [
@@ -646,8 +661,6 @@ describe("BriefScreen — the week against the one before", () => {
     ] as const) {
       const reading = screen.getByText(en[key]);
       expect(reading).toBeTruthy();
-      // Under the strip, not in it: in a slot they would be back to competing
-      // with the outcomes for the one comparison the row makes.
       expect(strip.contains(reading)).toBe(false);
     }
   });
@@ -682,16 +695,17 @@ describe("BriefScreen — figures whose source had not started", () => {
     return screen.findByTestId("weekly-strip");
   };
   const card = (strip: HTMLElement, label: string) => {
-    const found = [...strip.querySelectorAll<HTMLElement>(".stat-card")].find(
-      (each) =>
-        each.querySelector(".stat-card-label-text")?.textContent === label,
-    );
-    if (!found) throw new Error(`no card labelled ${label}`);
+    const found = [
+      ...strip.querySelectorAll<HTMLElement>(".brief-report-figure"),
+    ].find((each) => each.querySelector("dt")?.textContent === label);
+    if (!found) throw new Error(`no figure labelled ${label}`);
     return {
-      value: found.querySelector(".stat-card-value")?.textContent,
-      detail: found.querySelector(".stat-card-detail")?.textContent,
+      value: found.querySelector(".brief-report-figure-value")?.textContent,
+      detail: found.querySelector(".t-caption")?.textContent,
     };
   };
+  const figuresTable = () =>
+    screen.getByRole("table", { name: en["brief.report.chapter.figures"] });
   const recordedFrom = (iso: string) =>
     en["brief.weekly.recordedFrom"].replace(
       "{date}",
@@ -705,11 +719,20 @@ describe("BriefScreen — figures whose source had not started", () => {
       numeric_summary: beforeHistoryWeeklyNumbers,
     });
 
-    const values = [...strip.querySelectorAll(".stat-card-value")].map(
-      (value) => value.textContent,
-    );
-    expect(values).toHaveLength(7);
+    const values = [
+      ...strip.querySelectorAll(".brief-report-figure-value"),
+    ].map((value) => value.textContent);
+    expect(values).toHaveLength(4);
     expect(new Set(values)).toEqual(new Set([en["brief.weekly.notRecorded"]]));
+    // Every figure in the table says the same, all seven of them.
+    const weekCells = within(figuresTable())
+      .getAllByRole("row")
+      .slice(1)
+      .map((each) => within(each).getAllByRole("cell")[1]?.textContent);
+    expect(weekCells).toHaveLength(7);
+    expect(new Set(weekCells)).toEqual(
+      new Set([en["brief.weekly.notRecorded"]]),
+    );
     expect(card(strip, en["brief.weekly.dealsWon"]).detail).toBe(
       recordedFrom("2026-09-21T09:00:00Z"),
     );
@@ -771,7 +794,97 @@ describe("BriefScreen — figures whose source had not started", () => {
     });
 
     expect(strip.textContent).not.toContain(en["brief.weekly.notRecorded"]);
-    expect(card(strip, en["brief.week.lostLabel"]).value).toBe("1");
+    expect(row(figuresTable(), en["brief.week.lostLabel"])[1]).toBe("1");
     expect(card(strip, en["brief.weekly.dealsWon"]).value).toBe("0");
+  });
+});
+
+// ── The report's own shape ──
+
+describe("BriefScreen — the weekly report", () => {
+  const review = {
+    id: "01a04000-0000-7000-8000-00000000000a",
+    local_week_start: "2026-06-29",
+    generated_at: "2026-07-06T06:00:00Z",
+    as_of: "2026-07-06T06:00:00Z",
+    counts: { ...zeroWeekCounts, deals_won: 1 },
+    deals: [],
+  };
+
+  const mount = (weeks: readonly string[]) => {
+    stubApi({
+      "GET /weekly-reviews/latest": () => jsonResponse(review),
+      "GET /weekly-reviews": () => jsonResponse({ weeks }),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+    });
+    render(
+      <RecordZoneProvider zone="Europe/Berlin">
+        <BriefScreen />
+      </RecordZoneProvider>,
+    );
+  };
+
+  it("titles the report by the week it covers, and names its calendar week", async () => {
+    mount(["2026-06-29"]);
+
+    expect(
+      await screen.findByRole("heading", {
+        level: 1,
+        name: /^29 June\s*[–-]\s*5 July$/,
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(en["brief.report.kicker"].replace("{week}", "27")),
+    ).toBeTruthy();
+  });
+
+  // A chapter with nothing to say is left out, and the numbers close up: a
+  // report that reads 1, 3, 4 looks like it lost a page.
+  it("numbers its chapters with no gap where one is left out", async () => {
+    mount(["2026-06-29"]);
+
+    await screen.findByText(en["brief.report.chapter.figures"], {
+      selector: "h2",
+    });
+    const numbers = [
+      ...document.querySelectorAll(".brief-report-chapter-number"),
+    ].map((number) => number.textContent);
+    expect(numbers).toEqual(numbers.map((_, at) => String(at + 1)));
+    // No deal closed this week, so there is no chapter for closed deals.
+    expect(
+      screen.queryByRole("heading", {
+        name: new RegExp(en["brief.report.chapter.closed"]),
+      }),
+    ).toBeNull();
+  });
+
+  // The stepper reaches only weeks that have a report, and writes the week
+  // into the address so the page can be sent on.
+  it("steps to the week before, and not past the newest", async () => {
+    mount(["2026-06-29", "2026-06-22"]);
+    const user = userEvent.setup();
+
+    const later = await screen.findByRole("button", {
+      name: en["brief.report.later"],
+    });
+    expect(later).toHaveProperty("disabled", true);
+    await user.click(
+      screen.getByRole("button", { name: en["brief.report.earlier"] }),
+    );
+    await waitFor(() =>
+      expect(window.location.hash).toContain("week=2026-06-22"),
+    );
+  });
+
+  it("says when the next report comes", async () => {
+    mount(["2026-06-29"]);
+
+    expect(
+      await screen.findByText(
+        new RegExp(
+          `^${en["brief.report.next"].replace("{date}", "Monday,? 13 July")}$`,
+        ),
+      ),
+    ).toBeTruthy();
   });
 });

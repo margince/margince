@@ -6,6 +6,7 @@ import {
   calendarDay,
   calendarMonth,
   dueInstant,
+  isoWeekOf,
   isRealCalendarDay,
   localDateTimeValue,
   middayInstant,
@@ -291,5 +292,19 @@ describe("isRealCalendarDay", () => {
     expect(isRealCalendarDay("2026-9-27")).toBe(false);
     expect(isRealCalendarDay("2026-09-27T00:00:00Z")).toBe(false);
     expect(isRealCalendarDay("")).toBe(false);
+  });
+});
+
+// ISO 8601 weeks, at the year's edges where a naive count goes wrong: the
+// last days of December can open the next year's week 1, and the first days
+// of January can still be the year before's week 53.
+describe("isoWeekOf", () => {
+  it("numbers a week by its Thursday, across the year's edges", () => {
+    expect(isoWeekOf("2026-06-29")).toBe(27);
+    expect(isoWeekOf("2026-01-01")).toBe(1);
+    expect(isoWeekOf("2025-12-29")).toBe(1);
+    expect(isoWeekOf("2026-12-31")).toBe(53);
+    expect(isoWeekOf("2027-01-01")).toBe(53);
+    expect(isoWeekOf("2021-01-03")).toBe(53);
   });
 });
