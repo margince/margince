@@ -11,11 +11,14 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"golang.org/x/net/idna"
 
 	"github.com/margince/margince/backend/internal/platform/captureorigin"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -38,6 +41,13 @@ func judgeEnvelopeTx(
 		return envelopeFacts{}, nil
 	}
 	stranger, err := senderWasStrangerTx(ctx, tx, sender, receivedAt(rec, fields))
+	if err == nil && stranger {
+		// A reply committing beside this capture repairs only rows it can see.
+		// Waiting on its lock and asking again leaves no row unseen.
+		if err = storekit.LockWriteIdentity(ctx, tx, correspondence.LockEntity, correspondence.LockIdentity(sender)); err == nil {
+			stranger, err = senderWasStrangerTx(ctx, tx, sender, receivedAt(rec, fields))
+		}
+	}
 	if err != nil {
 		return envelopeFacts{}, err
 	}
@@ -50,9 +60,10 @@ func judgeEnvelopeTx(
 	if err != nil {
 		return envelopeFacts{}, err
 	}
-	// With no seat behind the capture, no address of ours is known. The Bcc
-	// question then stays unanswered rather than answered yes.
-	if !self.Empty() {
+	// With no seat behind the capture, no address of ours is known, and an
+	// unreadable To or Cc may have named the seat. Either way the Bcc question
+	// stays unanswered rather than answered yes.
+	if !self.Empty() && !envelope.RecipientsUnreadable {
 		bcc := !addressedOpenly(envelope.OpenRecipients, rec.DeliveredTo, self)
 		facts.bccOnly = &bcc
 	}
@@ -125,6 +136,50 @@ func addressSpellings(address string) []string {
 	spellings := []string{correspondence.Fold(address)}
 	if canonical := foldAddress(address); !slices.Contains(spellings, canonical) {
 		spellings = append(spellings, canonical)
+	}
+	return spellings
+}
+
+// repairStrangerFactsTx runs after an attested outbound mail is stored. It
+// clears sender_was_stranger on mail from that recipient which arrived after
+// the workspace came to write to them. An import that reads a mailbox newest
+// first stores the stranger's mail before the older reply, and the fact must
+// not depend on that order.
+func repairStrangerFactsTx(ctx context.Context, tx pgx.Tx, recipient string) error {
+	for _, sender := range storedSpellings(recipient) {
+		since, writes, err := correspondingSinceTx(ctx, tx, addressSpellings(sender))
+		if err != nil {
+			return err
+		}
+		if !writes {
+			continue
+		}
+		// Arrival as receivedAt reads it: the earliest provider time a seat
+		// recorded, else the Date header.
+		if _, err := tx.Exec(ctx, `
+			UPDATE activity a SET sender_was_stranger = false
+			 WHERE a.counterparty_email = $1 AND a.sender_was_stranger
+			   AND coalesce((SELECT min(ci.provider_received_at) FROM capture_import ci WHERE ci.activity_id = a.id),
+			                a.occurred_at) > $2`, sender, since); err != nil {
+			return fmt.Errorf("capture: clearing the stranger mark on mail the workspace has answered: %w", err)
+		}
+	}
+	return nil
+}
+
+// storedSpellings adds to addressSpellings the address with its domain in
+// unicode. Mail from one sender may store its counterparty_email in either
+// form.
+func storedSpellings(address string) []string {
+	spellings := addressSpellings(address)
+	canonical := foldAddress(address)
+	at := strings.LastIndex(canonical, "@")
+	if at < 0 {
+		return spellings
+	}
+	unicode, err := idna.Lookup.ToUnicode(canonical[at+1:])
+	if err == nil && !slices.Contains(spellings, canonical[:at+1]+unicode) {
+		spellings = append(spellings, canonical[:at+1]+unicode)
 	}
 	return spellings
 }

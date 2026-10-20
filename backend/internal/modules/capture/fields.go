@@ -65,6 +65,9 @@ type MailEnvelope struct {
 	// OpenRecipients holds the To and Cc addresses, the mailbox owner's included.
 	// Empty for a mail sent to undisclosed recipients.
 	OpenRecipients []string
+	// RecipientsUnreadable says a To or Cc header would not parse, so
+	// OpenRecipients may miss the reader's own address.
+	RecipientsUnreadable bool
 	// LinkHosts are the hosts the body's web links lead to, with a known
 	// redirect wrapper already unwrapped.
 	LinkHosts []string

@@ -85,3 +85,18 @@ func TestALinkIsUnrelatedOnlyWhenItLeavesTheSendersSite(t *testing.T) {
 		})
 	}
 }
+
+// Mail from one sender may store its address with the domain in IDNA form or in
+// unicode. The repair after a reply reaches both.
+func TestStoredSpellingsCoverBothFormsOfAUnicodeDomain(t *testing.T) {
+	cases := map[string][]string{
+		"Sam@Example.com":           {"sam@example.com"},
+		"sam@xn--bcher-kva.example": {"sam@xn--bcher-kva.example", "sam@bücher.example"},
+		"sam@Bücher.example":        {"sam@bücher.example", "sam@xn--bcher-kva.example"},
+	}
+	for address, want := range cases {
+		if got := storedSpellings(address); !slices.Equal(got, want) {
+			t.Errorf("storedSpellings(%s) = %v, want %v", address, got, want)
+		}
+	}
+}

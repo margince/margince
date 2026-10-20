@@ -211,3 +211,82 @@ func TestTheEnvelopeCarriesALinkListCutShort(t *testing.T) {
 		t.Error("an unresolved redirect did not mark the envelope's links as cut short")
 	}
 }
+
+// A <style> or <script> longer than the tokenizer's buffer holds no link. It
+// does not cut the walk short, and a link after it is still read. Any other
+// token past the buffer still does.
+func TestOnlyAnOverlongStyleOrScriptLeavesTheLinkWalkWhole(t *testing.T) {
+	filler := strings.Repeat("x", maxTokenLen+1000)
+	landing := `<a href="https://landing.example.org/">x</a>`
+	cases := map[string]struct {
+		body  string
+		hosts []string
+		cut   bool
+	}{
+		"a long stylesheet before a link": {
+			body: `<STYLE>` + filler + `</Style >` + landing, hosts: []string{"landing.example.org"},
+		},
+		"a long script before a link": {
+			body: `<script type="text/javascript">` + filler + `</script>` + landing, hosts: []string{"landing.example.org"},
+		},
+		"a long script with no end tag":  {body: landing + `<script>` + filler, hosts: []string{"landing.example.org"}},
+		"a long paragraph before a link": {body: `<p>` + filler + `</p>` + landing, cut: true},
+		"a long stylesheet, then a long paragraph": {
+			body: `<style>` + filler + `</style><p>` + filler + `</p>` + landing, cut: true,
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			hosts, cut := linkHosts("", tc.body)
+			if !slices.Equal(hosts, tc.hosts) || cut != tc.cut {
+				t.Errorf("link hosts are %v (cut %v), want %v (cut %v)", hosts, cut, tc.hosts, tc.cut)
+			}
+		})
+	}
+}
+
+// The buffer can run out inside the end tag itself. The walk still finds that
+// end tag and the link after it.
+func TestAStylesheetWhoseEndTagStraddlesTheBufferLeavesTheWalkWhole(t *testing.T) {
+	for short := 1; short <= len("</style>")+1; short++ {
+		body := `<style>` + strings.Repeat("x", maxTokenLen-short) + `</style><a href="https://landing.example.org/">x</a>`
+
+		if hosts, cut := linkHosts("", body); !slices.Equal(hosts, []string{"landing.example.org"}) || cut {
+			t.Errorf("content %d bytes short of the buffer: link hosts %v (cut %v), want the link", short, hosts, cut)
+		}
+	}
+}
+
+// A mail client renders with scripting off, so a link inside <noscript> is
+// one the reader sees.
+func TestALinkInsideNoscriptIsRead(t *testing.T) {
+	hosts, cut := linkHosts("", `<noscript><a href="https://landing.example.org/">Open</a></noscript>`)
+
+	if !slices.Equal(hosts, []string{"landing.example.org"}) || cut {
+		t.Errorf("link hosts are %v (cut %v), want the link inside noscript", hosts, cut)
+	}
+}
+
+// A To or Cc header that will not parse may have named the reader. The
+// envelope says so, and does not read as a Bcc copy.
+func TestAnUnreadableRecipientHeaderIsMarked(t *testing.T) {
+	cases := map[string]struct {
+		headers []string
+		want    bool
+	}{
+		"a To that will not parse": {headers: []string{"To: Reader <" + envelopeOwner}, want: true},
+		"a Cc that will not parse": {
+			headers: []string{"To: other@example.com", "Cc: \"Reader <" + envelopeOwner + ">"}, want: true,
+		},
+		"headers that parse": {headers: []string{"To: other@example.com", "Cc: " + envelopeOwner}},
+		"no Cc at all":       {headers: []string{"To: other@example.com"}},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			envelope := envelopeOf(t, append(tc.headers, plainBody("Hello")...)...)
+			if envelope.RecipientsUnreadable != tc.want {
+				t.Errorf("recipients unreadable = %v, want %v", envelope.RecipientsUnreadable, tc.want)
+			}
+		})
+	}
+}

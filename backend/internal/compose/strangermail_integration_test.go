@@ -333,3 +333,40 @@ func TestMailWithNoCapturedFactsRanksAsBefore(t *testing.T) {
 		t.Errorf("mail with no captured facts is at level %d with reasons %v, want the top band", row.Level, row.Because)
 	}
 }
+
+// A history import reads a mailbox newest first, so a stranger's mail can land
+// before the reply the seat sent ahead of it. That reply still makes the mail
+// known. A reply sent after the mail arrived does not.
+func TestAReplyCapturedAfterTheMailItPrecededMakesItsSenderKnown(t *testing.T) {
+	o := setupOwed(t)
+	arrived := o.now.Add(-2 * 24 * time.Hour)
+	answeredEarlier := o.capture(t, o.strangerMail("sender@example.com", "Following up", arrived))
+	answeredLater := o.capture(t, o.strangerMail("late@example.com", "First note", arrived))
+	if !o.strangerFact(t, answeredEarlier) || !o.strangerFact(t, answeredLater) {
+		t.Fatal("mail captured before any reply was not recorded as a stranger's; the case needs it")
+	}
+
+	o.weWrite(t, owedMail{to: "sender@example.com", subject: "Our offer", at: arrived.Add(-24 * time.Hour)})
+	o.weWrite(t, owedMail{to: "late@example.com", subject: "Thanks for writing", at: arrived.Add(time.Hour)})
+
+	if o.strangerFact(t, answeredEarlier) {
+		t.Error("a reply sent before the mail arrived, captured after it, left the sender a stranger")
+	}
+	if !o.strangerFact(t, answeredLater) {
+		t.Error("a reply sent after the mail arrived made the sender of that mail known")
+	}
+}
+
+// A To header that will not parse may have named the seat, so capture records
+// no Bcc for it.
+func TestAnUnreadableToLeavesTheBccQuestionOpen(t *testing.T) {
+	o := setupOwed(t)
+	m := o.strangerMail("sender@example.com", "View the document", o.now.Add(-2*time.Hour))
+	m.to = "Reader <" + o.seat
+	message := o.capture(t, m)
+
+	if n := o.count(t, `SELECT count(*) FROM capture_import WHERE activity_id = $1 AND user_id = $2 AND bcc_only IS NULL`,
+		message, o.owner); n != 1 {
+		t.Errorf("a mail whose To would not parse has %d import rows with no Bcc judgement, want 1", n)
+	}
+}

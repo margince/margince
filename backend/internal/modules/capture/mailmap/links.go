@@ -65,25 +65,81 @@ func linkHosts(plain, htmlBody string) (hosts []string, truncated bool) {
 // anchorHrefs returns the href of each <a> in an HTML body, and whether the
 // walk reached the end of the body within its bound.
 func anchorHrefs(src string) ([]string, bool) {
-	if src == "" {
-		return nil, true
+	walk := &anchorWalk{}
+	for {
+		rest, complete, resume := walk.scan(src)
+		if !resume {
+			return walk.hrefs, complete
+		}
+		src = rest
 	}
+}
+
+// anchorWalk is one body's walk, carried across the restarts after a raw-text
+// element too long for the tokenizer's buffer.
+type anchorWalk struct {
+	hrefs  []string
+	tokens int
+}
+
+// scan walks src until it ends, the token bound runs out, or a <style> or
+// <script> holds more than the buffer takes. That content can hold no link.
+// So in that one case scan returns the source from the element's end tag on,
+// and asks to resume there.
+func (w *anchorWalk) scan(src string) (rest string, complete, resume bool) {
 	z := html.NewTokenizer(strings.NewReader(src))
 	z.SetMaxBuf(maxTokenLen)
-	var hrefs []string
-	for range maxLinkTokens {
-		switch z.Next() {
-		case html.ErrorToken:
-			// A token past the buffer cap also ends here, before the body does.
-			return hrefs, errors.Is(z.Err(), io.EOF)
-		case html.StartTagToken, html.SelfClosingTagToken:
-			token := z.Token()
-			if token.DataAtom == atom.A {
-				hrefs = append(hrefs, attrValue(token, "href"))
+	// rawFrom is where the content of an open <style> or <script> starts. The
+	// tokenizer hands that content over as text, cut off where the buffer ran
+	// out, possibly inside its end tag.
+	read, rawFrom, rawTag := 0, -1, ""
+	for ; w.tokens < maxLinkTokens; w.tokens++ {
+		kind := z.Next()
+		if kind == html.ErrorToken {
+			if rawFrom >= 0 && errors.Is(z.Err(), html.ErrBufferExceeded) {
+				return pastRawText(src[rawFrom:], rawTag)
 			}
+			// Any other token past the buffer cap also ends here, before the body does.
+			return "", errors.Is(z.Err(), io.EOF), false
+		}
+		read += len(z.Raw())
+		if kind == html.TextToken {
+			continue
+		}
+		rawFrom = -1
+		if kind != html.StartTagToken && kind != html.SelfClosingTagToken {
+			continue
+		}
+		switch token := z.Token(); token.DataAtom {
+		case atom.A:
+			w.hrefs = append(w.hrefs, attrValue(token, "href"))
+		case atom.Style, atom.Script:
+			rawFrom, rawTag = read, token.Data
+		case atom.Noscript:
+			// A mail client renders with scripting off, so the reader sees
+			// this content as markup, links included.
+			z.NextIsNotRawText()
 		}
 	}
-	return hrefs, false
+	return "", false, false
+}
+
+// pastRawText returns the source from the end tag that closes a raw-text
+// element. With no end tag the element runs to the end of the body, and so
+// does the walk. Any "</style" counts as that end tag, even one the browser
+// would read as text, so the walk can only read more markup as links.
+func pastRawText(content, tag string) (rest string, complete, resume bool) {
+	for from := 0; ; {
+		at := strings.Index(content[from:], "</")
+		if at < 0 {
+			return "", true, false
+		}
+		at += from
+		if name := content[at+2:]; len(name) >= len(tag) && strings.EqualFold(name[:len(tag)], tag) {
+			return content[at:], false, true
+		}
+		from = at + 2
+	}
 }
 
 // linkTarget is the host a web link really leads to, or "" for anything that

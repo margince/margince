@@ -399,6 +399,11 @@ func (s *Sink) upsertActivity(
 		if err := storekit.StampFields(ctx, tx, "activity", id.UUID, captureSource(rec), rec.CapturedBy, stamps); err != nil {
 			return ids.ActivityID{}, false, err
 		}
+		if rec.Counterparty.SentByOwner() {
+			if err := repairStrangerFactsTx(ctx, tx, rec.Counterparty.Email); err != nil {
+				return ids.ActivityID{}, false, err
+			}
+		}
 		return id, true, nil
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {

@@ -7,8 +7,9 @@
 -- activity.sender_was_stranger: before the mail arrived, the sender was no live
 -- contact and the workspace had never written to them.
 --
--- NULL means not judged: anything but inbound mail, and mail captured before
--- these columns. The waiting queue reads NULL as no evidence.
+-- NULL means not judged: anything but inbound mail, a Bcc question that an
+-- unreadable To or Cc leaves open, and mail captured before these columns. The
+-- waiting queue reads NULL as no evidence.
 SET LOCAL lock_timeout = '3s';
 
 ALTER TABLE capture_import ADD COLUMN bcc_only boolean;

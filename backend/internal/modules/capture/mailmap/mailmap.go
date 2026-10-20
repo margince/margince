@@ -91,10 +91,11 @@ type Message struct {
 	partDrops []PartDrop
 	// openRecipients holds the To and Cc addresses, the owner's own included, and
 	// linkHosts where the body's links lead: the evidence capture.MailEnvelope carries.
-	openRecipients []string
-	linkHosts      []string
-	linksCut       bool
-	listMail       bool
+	openRecipients   []string
+	recipientsUnread bool
+	linkHosts        []string
+	linksCut         bool
+	listMail         bool
 }
 
 // AttestSentByOwner returns a copy carrying the provider's own attestation
@@ -139,11 +140,11 @@ func Parse(raw []byte, owner string) (Message, error) {
 	if viaGroup {
 		fromList = groupOriginal
 	}
-	toList, _ := addressList(header, "To")
+	toList, toErr := addressList(header, "To")
 	// A malformed Cc line yields no addresses rather than failing the message:
 	// the mail is already read off the wire, and losing the CCs is a smaller
 	// loss than dropping the correspondence.
-	ccList, _ := addressList(header, "Cc")
+	ccList, ccErr := addressList(header, "Cc")
 	// Bcc survives only on the sender's OWN copy — a recipient's copy never
 	// carries it. Where it does survive it is a real party to the message, and
 	// the internal-vs-external decision has to see it: a colleague who blind-
@@ -216,6 +217,7 @@ func Parse(raw []byte, owner string) (Message, error) {
 		participants:     otherParties(toList, ccList, bccList, ownerLower, participantExclusion(counterparty, calendarNotice)),
 		addresses:        allAddresses(fromList, toList, ccList, bccList),
 		openRecipients:   allAddresses(toList, ccList),
+		recipientsUnread: toErr != nil || ccErr != nil,
 		linkHosts:        walked.links,
 		linksCut:         walked.linksCut,
 		listMail:         viaGroup || header.Get("List-Id") != "" || header.Get("List-Unsubscribe") != "",
@@ -440,7 +442,10 @@ func (m Message) envelope() *capture.MailEnvelope {
 	if m.listMail {
 		return nil
 	}
-	return &capture.MailEnvelope{OpenRecipients: m.openRecipients, LinkHosts: m.linkHosts, LinksTruncated: m.linksCut}
+	return &capture.MailEnvelope{
+		OpenRecipients: m.openRecipients, RecipientsUnreadable: m.recipientsUnread,
+		LinkHosts: m.linkHosts, LinksTruncated: m.linksCut,
+	}
 }
 
 // domainOf returns the lowercased domain part of an address, or "" if the
