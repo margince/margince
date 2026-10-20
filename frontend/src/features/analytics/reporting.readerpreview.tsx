@@ -7,7 +7,7 @@ import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
-import { useRoles } from "../settings/roles.queries";
+import { useRoles } from "../../lib/roles.queries";
 import { ReportingCharts } from "./reporting.charts";
 
 /**
