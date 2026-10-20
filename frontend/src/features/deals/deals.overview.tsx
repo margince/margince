@@ -255,10 +255,13 @@ export function DealOverviewPane({
           (the deal's two sides), then what the customer committed to. */}
       <RecordReading>
         {/* The call and the committee are read from endpoints the server
-            refuses for an archived deal. The thread the call holds is the
-            page's own timeline, so it stands alone. */}
+            refuses for an archived deal. The stage path and the thread are the
+            page's own, so they stand alone. */}
         {deal.archived_at ? (
-          spine
+          <>
+            {path}
+            {spine}
+          </>
         ) : (
           <DealStatusCardPanel
             dealId={deal.id}
