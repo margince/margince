@@ -234,7 +234,13 @@ function DomainReviewRow({ row }: Readonly<{ row: DomainQuestion }>) {
             {t("worklist.domainReview.exclude")}
           </Button>
         </ActionRow>
-        <p className="t-caption">{t("worklist.domainReview.effects")}</p>
+        <p className="t-caption">
+          {t(
+            row.reason_code === "forwarded_identity"
+              ? "worklist.domainReview.forwardedEffects"
+              : "worklist.domainReview.effects",
+          )}
+        </p>
         <p className="t-caption">{t("worklist.domainReview.deferEffect")}</p>
       </PanelBody>
     </Panel>

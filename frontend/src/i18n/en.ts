@@ -8571,6 +8571,8 @@ export const en = {
   "worklist.domainReview.create": "Create company",
   "worklist.domainReview.retry": "Retry site read",
   "worklist.domainReview.exclude": "Exclude domain",
+  "worklist.domainReview.forwardedEffects":
+    "Retry keeps identity undecided. Exclude stops capture for your mailboxes.",
   "worklist.domainReview.effects":
     "Create adds a company. Retry keeps identity undecided. Exclude stops capture for your mailboxes.",
   "worklist.batch.domain_questions_one": "Review {count} domain",

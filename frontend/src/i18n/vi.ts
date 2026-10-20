@@ -8296,6 +8296,8 @@ export const vi = {
   "worklist.domainReview.create": "Tạo công ty",
   "worklist.domainReview.retry": "Đọc lại trang",
   "worklist.domainReview.exclude": "Loại tên miền",
+  "worklist.domainReview.forwardedEffects":
+    "Đọc lại giữ danh tính chưa xác định. Loại sẽ ngừng ghi nhận cho hộp thư của bạn.",
   "worklist.domainReview.effects":
     "Tạo sẽ thêm công ty. Đọc lại giữ danh tính chưa xác định. Loại sẽ ngừng ghi nhận cho hộp thư của bạn.",
   "worklist.batch.domain_questions_one": "Xem xét {count} tên miền",

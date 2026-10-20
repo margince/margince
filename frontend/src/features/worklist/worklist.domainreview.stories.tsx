@@ -77,6 +77,11 @@ export const BatchEvidenceDark: Story = {
   ...BatchEvidence,
   globals: { theme: "dark" },
 };
+export const BatchEvidencePhone: Story = {
+  ...BatchEvidence,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
 export const Empty: Story = { render: review([]) };
 export const SingleUndated: Story = {
   render: review(questions.filter((row) => row.reason_code === "unevidenced")),

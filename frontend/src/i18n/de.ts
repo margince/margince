@@ -8509,6 +8509,8 @@ export const de = {
   "worklist.domainReview.create": "Firma erstellen",
   "worklist.domainReview.retry": "Website erneut lesen",
   "worklist.domainReview.exclude": "Domain ausschließen",
+  "worklist.domainReview.forwardedEffects":
+    "Erneut lesen lässt die Identität offen. Ausschließen stoppt die Erfassung für deine Postfächer.",
   "worklist.domainReview.effects":
     "Erstellen legt eine Firma an. Erneut lesen lässt die Identität offen. Ausschließen stoppt die Erfassung für deine Postfächer.",
   "worklist.batch.domain_questions_one": "{count} Domain prüfen",
