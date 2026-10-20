@@ -24,6 +24,28 @@ export const vi = {
   "approvalPreferences.next": "Trang tiếp",
   "approvalPreferences.first": "Trang đầu",
 
+  "dealSuggestion.linkedUnlinked":
+    "Đã liên kết bằng chứng. Một số bằng chứng giữ nguyên vì không có quyền di chuyển.",
+  "dealSuggestion.searchExisting": "Tìm giao dịch",
+  "dealSuggestion.existingDeal": "Giao dịch hiện có",
+  "dealSuggestion.moreDeals": "Tải thêm giao dịch",
+  "dealSuggestion.noMatchingDeals":
+    "Không có giao dịch phù hợp tại công ty này.",
+  "dealSuggestion.changed":
+    "Đề xuất này không còn khả dụng. Tải lại các mục cần kiểm tra để xem trạng thái hiện tại.",
+  "dealSuggestion.linkExisting": "Liên kết với giao dịch hiện có",
+  "dealSuggestion.linked": "Đã liên kết bằng chứng với giao dịch.",
+  "dealSuggestion.dismissTitle": "Bỏ qua đề xuất giao dịch",
+  "dealSuggestion.linkEffect":
+    "Liên kết bằng chứng được trích dẫn với giao dịch tại {company}; không tạo giao dịch mới.",
+  "dealSuggestion.dismissEffect":
+    "Đóng đề xuất này cho {company} và lưu lý do.",
+  "dealSuggestion.dismissReason": "Lý do",
+  "dealSuggestion.dismissReason.not_a_deal": "Không có ý định mua",
+  "dealSuggestion.dismissReason.already_tracked": "Đã được theo dõi",
+  "dealSuggestion.dismissReason.wrong_company": "Sai công ty",
+  "dealSuggestion.dismissReason.historical": "Hoạt động trong quá khứ",
+  "dealSuggestion.dismissReason.other": "Lý do khác",
   "approval.preview.nameUnavailable": "Không có tên",
   "approval.preview.structured": "Giá trị có cấu trúc: {value}",
   "approval.preview.resolveConflict":
@@ -5437,6 +5459,12 @@ export const vi = {
   "analytics.share.closeBody":
     "Liên kết sẽ ngừng hoạt động ngay với bất kỳ ai có liên kết. Không thể mở lại liên kết đã đóng.",
   "analytics.frame": "Tính đến {asOf} · {zone}",
+  "review.unlinkedSignal": "Nhu cầu mua chưa có cơ hội bán hàng",
+  "review.signalOccurred": "Ngày của nguồn: {date}",
+  "review.uncertainBuyer":
+    "Xác nhận ai là người mua và họ đại diện cho công ty nào trước khi tạo thương vụ.",
+  "review.historicalSignal":
+    "Nguồn này đã cũ. Kiểm tra xem cơ hội còn hiện tại trước khi liên kết.",
   "review.title": "Kiểm tra trước khi đưa nhận định",
   "review.ready": "Sẵn sàng",
   "review.readyWithExceptions": "Sẵn sàng, có lưu ý",

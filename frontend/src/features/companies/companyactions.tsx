@@ -58,6 +58,7 @@ export function NewDealAction({
   companyId,
   companyName,
   projectId,
+  onCreated,
 }: Readonly<{
   companyId: string;
   companyName: string;
@@ -65,6 +66,7 @@ export function NewDealAction({
   // project page. The deal then names the project at birth, which is the only
   // moment the deal and the project are guaranteed to share a company.
   projectId?: string;
+  onCreated?: (deal: components["schemas"]["Deal"]) => void;
 }>) {
   const t = useT();
   const target = useDealTarget();
@@ -132,6 +134,8 @@ export function NewDealAction({
       create={createDeal}
       fields={fields}
       aboutId={companyId}
+      stay={onCreated !== undefined}
+      onCreated={onCreated}
     />
   );
 }

@@ -30,6 +30,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // resolutionResolved is a derived signal's resolution state: a producer that
@@ -105,9 +107,14 @@ func nullableOwner(owner ids.UUID) *ids.UUID {
 // is the article, and storing the article's text instead of its address is the
 // thing this product does not do.
 type DerivedEvidence struct {
-	Snippet    string
-	ActivityID ids.UUID
-	SourceURL  string
+	SourceQuote    *values.QuoteProof
+	LifecycleScope string
+	Workstream     string
+	BuyerContactID *ids.UUID
+	CommercialRole string
+	Snippet        string
+	ActivityID     ids.UUID
+	SourceURL      string
 }
 
 // RecordDerived writes one derived signal inside the caller's transaction, or
@@ -208,6 +215,21 @@ func derivedEvidenceRows(in []DerivedEvidence) []map[string]any {
 	out := make([]map[string]any, 0, len(in))
 	for _, cited := range in {
 		row := map[string]any{"snippet": cited.Snippet}
+		if cited.SourceQuote != nil {
+			row["source_quote"] = cited.SourceQuote
+		}
+		if cited.LifecycleScope != "" {
+			row["lifecycle_scope"] = cited.LifecycleScope
+		}
+		if cited.Workstream != "" {
+			row["workstream"] = cited.Workstream
+		}
+		if cited.BuyerContactID != nil {
+			row["buyer_contact_id"] = *cited.BuyerContactID
+		}
+		if cited.CommercialRole != "" {
+			row["commercial_role"] = cited.CommercialRole
+		}
 		if cited.SourceURL != "" {
 			// `page` is the contract's own word for a cited web page
 			// (SignalEvidence.source_type). Inventing a second one here would
@@ -257,22 +279,23 @@ func DismissedTx(ctx context.Context, tx pgx.Tx, fingerprint string) (bool, erro
 	return dismissed, nil
 }
 
-// AcknowledgeTx marks one open signal acknowledged inside the caller's
-// transaction, and reports whether it moved.
-//
-// It exists for the approval effects and for an accepted Deal Scout
-// suggestion: a human accepting the consequence of a signal has, by that act,
-// seen it, and a page that moved the account while still shouting the signal
-// that moved it contradicts itself. The move rides the SAME transaction as the
-// structural write, so neither can land alone. source names which of the two
-// decided it on the signal_resolution row.
-//
-// Unlike UpdateSignal this takes no version pin. The caller is a released
-// approval, not an editor with a stale copy in a browser tab: the only thing
-// it needs to be true is that the signal is still open, and the WHERE clause
-// is that check. A signal a human already triaged is left exactly as they
-// left it, and the false says so.
+// AcknowledgeTx shares the consequence's transaction and preserves an earlier human decision.
 func AcknowledgeTx(ctx context.Context, tx pgx.Tx, signalID ids.UUID, source string) (bool, error) {
+	return settleSignalTx(ctx, tx, signalID, source, "acknowledged")
+}
+
+// DismissTx preserves earlier decisions while settling the authorized signal.
+func DismissTx(ctx context.Context, tx pgx.Tx, signalID ids.UUID, source string) (bool, error) {
+	if err := auth.Require(ctx, "signal", principal.ActionUpdate); err != nil {
+		return false, err
+	}
+	if err := auth.EnsureSignalVisibleLive(ctx, tx, signalID); err != nil {
+		return false, err
+	}
+	return settleSignalTx(ctx, tx, signalID, source, "dismissed")
+}
+
+func settleSignalTx(ctx context.Context, tx pgx.Tx, signalID ids.UUID, source, outcome string) (bool, error) {
 	actor, err := storekit.Actor(ctx)
 	if err != nil {
 		return false, err
@@ -280,11 +303,12 @@ func AcknowledgeTx(ctx context.Context, tx pgx.Tx, signalID ids.UUID, source str
 	// The status predicate IS the CAS: a signal a human already triaged has
 	// left 'open' behind, the update matches nothing, and the false below says
 	// their judgement stands.
+	var args []any
+	arg := func(value any) string { args = append(args, value); return fmt.Sprintf("$%d", len(args)) }
 	tag, err := tx.Exec(ctx, `
-		UPDATE signal SET status = 'acknowledged'
-		 WHERE id = $1 AND status = 'open' AND archived_at IS NULL`, signalID)
+ UPDATE signal SET status = `+arg(outcome)+` WHERE id = `+arg(signalID)+` AND status = 'open' AND archived_at IS NULL`, args...)
 	if err != nil {
-		return false, fmt.Errorf("acknowledge the signal: %w", err)
+		return false, fmt.Errorf("settle the signal: %w", err)
 	}
 	if tag.RowsAffected() == 0 {
 		return false, nil
@@ -292,16 +316,15 @@ func AcknowledgeTx(ctx context.Context, tx pgx.Tx, signalID ids.UUID, source str
 	// The append-only human-outcome row (data-model §12.5), the same one the
 	// triage endpoint writes — the outcome is a human's, whoever's hands the
 	// write passed through.
+	args = nil
 	if _, err := tx.Exec(ctx,
 		`INSERT INTO signal_resolution (id, signal_id, outcome, resolved_by, source, captured_by)
-		 VALUES ($1, $2, 'acknowledged', $3, $4, $5)`,
-		ids.NewV7(), signalID,
-		storekit.UUIDOrNil(actor.UserID), source, actor.ID); err != nil {
+ VALUES (`+arg(ids.NewV7())+`, `+arg(signalID)+`, `+arg(outcome)+`, `+arg(storekit.UUIDOrNil(actor.UserID))+`, `+arg(source)+`, `+arg(actor.ID)+`)`, args...); err != nil {
 		return false, fmt.Errorf("append the signal outcome: %w", err)
 	}
 	if _, err := storekit.Audit(ctx, tx, "update", "signal", signalID,
 		map[string]any{columnStatus: statusOpen},
-		map[string]any{columnStatus: "acknowledged"}); err != nil {
+		map[string]any{columnStatus: outcome}); err != nil {
 		return false, fmt.Errorf("audit the acknowledgement: %w", err)
 	}
 	return true, nil

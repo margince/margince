@@ -343,3 +343,11 @@ func attachEvidence(ctx context.Context, tx pgx.Tx, list []Suggestion) error {
 	}
 	return rows.Err()
 }
+
+// ReadableSuggestionClause shares the suggestion reader's evidence authorization with projections.
+func ReadableSuggestionClause(ctx context.Context, arg func(any) int) (string, error) {
+	if !auth.ReadGranted(ctx, "deal") || !auth.ReadGranted(ctx, "company") {
+		return "false", nil
+	}
+	return suggestionVisibleClause(ctx, arg)
+}

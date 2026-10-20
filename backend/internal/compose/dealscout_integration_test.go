@@ -160,14 +160,19 @@ func (e *scoutEnv) reading(t *testing.T, attachment ids.UUID, fields ...extracti
 }
 
 // signal records one derived signal on the company citing the mail.
-func (e *scoutEnv) signal(t *testing.T, kind string, company, cited ids.UUID, at time.Time, privateTo ids.UUID) ids.UUID {
+func (e *scoutEnv) signal(t *testing.T, kind string, company, cited ids.UUID, at time.Time, privateTo ids.UUID, buyers ...ids.UUID) ids.UUID {
 	t.Helper()
+	var buyer *ids.UUID
+	role := ""
+	if len(buyers) > 0 {
+		buyer, role = &buyers[0], "buyer"
+	}
 	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "agent:signal-scan")
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := signals.RecordDerived(ctx, tx, signals.DerivedSignal{
 			Kind: kind, CompanyID: company, Summary: kind + " on the account", Severity: "info",
 			Fingerprint: kind + ":" + cited.String(),
-			Evidence:    []signals.DerivedEvidence{{Snippet: kind, ActivityID: cited}},
+			Evidence:    []signals.DerivedEvidence{{Snippet: kind, ActivityID: cited, BuyerContactID: buyer, CommercialRole: role}},
 			PrivateTo:   privateTo,
 		}, at)
 		return err
@@ -206,26 +211,13 @@ func (e *scoutEnv) signalReader() context.Context {
 	return e.As(e.AdminUser, nil, integration.AdminWithSignals)
 }
 
-func TestAHeldMeetingWithSomebodyAtACompanySuggestsOneDeal(t *testing.T) {
+func TestAHeldMeetingAloneDoesNotProposeADeal(t *testing.T) {
 	e := setupScout(t)
-	acme := e.SeedCompany(t, "Acme GmbH", nil)
-	dana := e.employee(t, "Dana Buyer", acme)
-	meeting := e.meeting(e.Admin(), t, "Scoping workshop", &dana, e.daysAgo(3))
-
-	if pass := e.pass(t); pass.Raised != 1 {
-		t.Fatalf("first pass raised %d, want 1", pass.Raised)
-	}
-	e.pass(t)
-	shown := e.suggestions(e.Admin(), t, acme)
-	if len(shown) != 1 {
-		t.Fatalf("after two passes the company shows %d suggestions, want exactly 1", len(shown))
-	}
-	got := shown[0]
-	if got.NameHint != deals.HintMeetingHeld || got.CompanyName != "Acme GmbH" || got.AmountMinor != nil || len(got.Evidence) != 1 {
-		t.Fatalf("suggestion = %+v, want Acme with the meeting hint, no amount, one piece of evidence", got)
-	}
-	if ev := got.Evidence[0]; ev.Kind != deals.EvidenceMeeting || *ev.ActivityID != meeting || ev.Title != "Scoping workshop" {
-		t.Fatalf("evidence = %+v, want the meeting by its subject", ev)
+	company := e.SeedCompany(t, "Maple Studio", nil)
+	buyer := e.employee(t, "Mira Buyer", company)
+	e.meeting(e.Admin(), t, "Networking meeting", &buyer, e.daysAgo(3))
+	if pass := e.pass(t); pass.Raised != 0 {
+		t.Fatalf("meeting alone raised %d proposals", pass.Raised)
 	}
 }
 
@@ -259,6 +251,7 @@ func TestACompanyWithAnOpenDealIsNotSuggested(t *testing.T) {
 		t.Fatalf("opening the deal: %v", err)
 	}
 
+	e.buyerPair(t, acme, e.daysAgo(6))
 	e.pass(t)
 	if n := e.stored(t, acme, deals.SuggestionOpen); n != 0 {
 		t.Fatalf("a company with an open deal got %d suggestions, want none", n)
@@ -284,6 +277,7 @@ func TestADealClosedAfterTheEvidenceKeepsItFromBeingSuggested(t *testing.T) {
 		t.Fatalf("winning the deal: %v", err)
 	}
 
+	e.buyerPair(t, acme, e.daysAgo(6))
 	e.pass(t)
 	if n := e.stored(t, acme, deals.SuggestionOpen); n != 0 {
 		t.Fatalf("evidence from before the win raised %d suggestions, want none", n)
@@ -291,6 +285,7 @@ func TestADealClosedAfterTheEvidenceKeepsItFromBeingSuggested(t *testing.T) {
 	later := e.employee(t, "Lee Buyer", acme)
 	e.now = e.now.Add(time.Hour)
 	e.meeting(e.Admin(), t, "Phase two", &later, e.now.Add(-time.Minute))
+	e.buyerPair(t, acme, e.now.Add(-time.Minute))
 	e.pass(t)
 	if n := e.stored(t, acme, deals.SuggestionOpen); n != 1 {
 		t.Fatalf("a meeting after the win raised %d suggestions, want 1", n)
@@ -304,15 +299,17 @@ func TestTheTwoSignalsWithinThirtyDaysSuggestADeal(t *testing.T) {
 	initech := e.SeedCompany(t, "Initech", nil)
 	mailAt := e.daysAgo(20)
 
-	// Acme: both kinds, ten days apart.
-	acmeMail := e.email(t, "Next steps", "inbound", acme, mailAt)
-	e.signal(t, "new_opportunity", acme, acmeMail, e.daysAgo(15), ids.Nil)
-	e.signal(t, "commitment_made", acme, e.email(t, "Confirmed", "inbound", acme, mailAt), e.daysAgo(5), ids.Nil)
+	// Detection dates do not replace the shared source date.
+	acmeMail, buyer := e.buyingEmail(t, acme, mailAt)
+	e.signal(t, "new_opportunity", acme, acmeMail, e.daysAgo(15), ids.Nil, buyer)
+	e.signal(t, "commitment_made", acme, acmeMail, e.daysAgo(5), ids.Nil)
 	// Globex: only one of the two.
-	e.signal(t, "new_opportunity", globex, e.email(t, "Idea", "inbound", globex, mailAt), e.daysAgo(5), ids.Nil)
+	globexMail, globexBuyer := e.buyingEmail(t, globex, mailAt)
+	e.signal(t, "new_opportunity", globex, globexMail, e.daysAgo(5), ids.Nil, globexBuyer)
 	// Initech: both, but the commitment is private to one seat.
-	e.signal(t, "new_opportunity", initech, e.email(t, "Idea", "inbound", initech, mailAt), e.daysAgo(5), ids.Nil)
-	e.signal(t, "commitment_made", initech, e.email(t, "Yes", "inbound", initech, mailAt), e.daysAgo(4), e.Rep1)
+	initechMail, initechBuyer := e.buyingEmail(t, initech, mailAt)
+	e.signal(t, "new_opportunity", initech, initechMail, e.daysAgo(5), ids.Nil, initechBuyer)
+	e.signal(t, "commitment_made", initech, initechMail, e.daysAgo(4), e.Rep1)
 
 	e.pass(t)
 	shown := e.suggestions(e.signalReader(), t, acme)
@@ -330,9 +327,10 @@ func TestTheTwoSignalsWithinThirtyDaysSuggestADeal(t *testing.T) {
 func TestSignalsFurtherApartThanThirtyDaysSuggestNothing(t *testing.T) {
 	e := setupScout(t)
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
-	mail := e.email(t, "Next steps", "inbound", acme, e.daysAgo(80))
-	e.signal(t, "new_opportunity", acme, mail, e.daysAgo(75), ids.Nil)
-	e.signal(t, "commitment_made", acme, e.email(t, "Yes", "inbound", acme, e.daysAgo(80)), e.daysAgo(5), ids.Nil)
+	mail, buyer := e.buyingEmail(t, acme, e.daysAgo(75), "buying-matter")
+	recent, _ := e.buyingEmail(t, acme, e.daysAgo(5), "buying-matter")
+	e.signal(t, "new_opportunity", acme, mail, e.now, ids.Nil, buyer)
+	e.signal(t, "commitment_made", acme, recent, e.now, ids.Nil)
 
 	e.pass(t)
 	if n := e.stored(t, acme, deals.SuggestionOpen); n != 0 {
@@ -340,7 +338,7 @@ func TestSignalsFurtherApartThanThirtyDaysSuggestNothing(t *testing.T) {
 	}
 }
 
-func TestASentProposalSuggestsADeal(t *testing.T) {
+func TestASentProposalCorroboratesAVerifiedBuyerRequest(t *testing.T) {
 	e := setupScout(t)
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
 	inbound := e.SeedCompany(t, "Inbound AG", nil)
@@ -352,8 +350,9 @@ func TestASentProposalSuggestsADeal(t *testing.T) {
 	e.document(t, e.email(t, "Logo", "outbound", image, e.daysAgo(2)), "Angebot.png", "image/png")
 	e.document(t, e.email(t, "Newsletter", "outbound", news, e.daysAgo(2)), "Newsletter_Angebote.pdf", pdf)
 
+	e.buyerPair(t, acme, e.daysAgo(6))
 	e.pass(t)
-	shown := e.suggestions(e.Admin(), t, acme)
+	shown := e.suggestions(e.signalReader(), t, acme)
 	if len(shown) != 1 || shown[0].NameHint != deals.HintProposalSent {
 		t.Fatalf("Acme shows %+v, want one suggestion led by the proposal", shown)
 	}
@@ -362,7 +361,7 @@ func TestASentProposalSuggestsADeal(t *testing.T) {
 		 WHERE row_to_json(s)::text ILIKE '%angebot%' OR row_to_json(ev)::text ILIKE '%angebot%'`); n != 0 {
 		t.Fatalf("%d stored rows repeat the file name; a suggestion stores no text from the evidence", n)
 	}
-	if ev := shown[0].Evidence; len(ev) != 1 || *ev[0].AttachmentID != proposal {
+	if ev := shown[0].Evidence; len(ev) != 3 || ev[0].AttachmentID == nil || *ev[0].AttachmentID != proposal {
 		t.Fatalf("evidence = %+v, want the proposal document", ev)
 	}
 	for name, company := range map[string]ids.UUID{"inbound": inbound, "an image": image, "a newsletter": news} {
@@ -386,12 +385,14 @@ func TestAProposedAmountNeedsBothTheAmountAndTheCurrency(t *testing.T) {
 		extraction.ExtractedField{Field: "amount_minor", Value: "990000", Confidence: "high"},
 		extraction.ExtractedField{Field: "currency", Omitted: true, OmittedReason: "not_found"})
 
+	e.buyerPair(t, priced, e.daysAgo(6))
+	e.buyerPair(t, bare, e.daysAgo(6))
 	e.pass(t)
-	got := e.suggestions(e.Admin(), t, priced)
+	got := e.suggestions(e.signalReader(), t, priced)
 	if len(got) != 1 || got[0].AmountMinor == nil || *got[0].AmountMinor != 1250000 || *got[0].Currency != "EUR" {
 		t.Fatalf("the priced proposal suggested %+v, want 12,500.00 EUR", got)
 	}
-	unpriced := e.suggestions(e.Admin(), t, bare)
+	unpriced := e.suggestions(e.signalReader(), t, bare)
 	if len(unpriced) != 1 || unpriced[0].AmountMinor != nil || unpriced[0].Currency != nil {
 		t.Fatalf("an amount without a currency suggested %+v, want a suggestion with no amount", unpriced)
 	}
