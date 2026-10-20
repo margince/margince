@@ -23,7 +23,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 )
@@ -92,10 +92,10 @@ func (s *Store) DisclosuresFor(
 	if len(rules.Disclosures) == 0 {
 		return nil, nil
 	}
-	// ApplyTx, not GetTx: the particulars must reach whoever composes the
+	// StoredApplyTx, not StoredValTx: the particulars must reach whoever composes the
 	// message, and a worker dispatching a scheduled send holds no settings
 	// grant. See ControllerIdentity's own note on why that is safe here.
-	particulars, err := settings.ApplyTx(ctx, tx, ControllerIdentity)
+	particulars, err := config.StoredApplyTx(ctx, tx, config.Bound(), ControllerIdentity)
 	if err != nil {
 		return nil, err
 	}

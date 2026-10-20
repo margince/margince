@@ -14,7 +14,7 @@ import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
-import { AddDocumentDialog } from "../../screens/adddocument";
+import { AddDocumentDialog } from "../voice-knowledge/adddocument";
 import "./contact360.css";
 
 // The contact's own files: unlike the sibling tabs in contacttabs.tsx, this one

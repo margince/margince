@@ -10,11 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/margince/margince/backend/internal/compose"
 	contracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -47,9 +44,7 @@ func TestContactMomentLanguageDoesNotReopenDismissedWork(t *testing.T) {
 		{"de", "Sie schulden ihnen: Original promise", "Fällig in 2 Tagen."},
 		{"vi", "Bạn cần thực hiện cho họ: Original promise", "Đến hạn sau 2 ngày."},
 	} {
-		if err := settings.Set(ctx, compose.NewSettingsStore(e.Pool), identity.BaseLanguage, tc.language); err != nil {
-			t.Fatal(err)
-		}
+		SetBaseLanguage(ctx, t, e.Pool, tc.language)
 		hidden, err := svc.Assemble(ctx, contact)
 		if err != nil {
 			t.Fatal(err)

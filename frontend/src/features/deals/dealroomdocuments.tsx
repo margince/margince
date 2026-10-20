@@ -10,7 +10,7 @@ import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { unwrap } from "../../lib/problem";
-import { AddDocumentDialog } from "../../screens/adddocument";
+import { AddDocumentDialog } from "../voice-knowledge/adddocument";
 import "./dealroomdocuments.css";
 
 // The seller's verbs on a Deal Room's documents: which of the deal's files the

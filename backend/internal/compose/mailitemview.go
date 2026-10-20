@@ -14,6 +14,9 @@ import (
 )
 
 func mailWorkItem(item crmcontracts.WorklistItem, words mailcopy.Copy, zone *time.Location) string {
+	if item.Source == crmcontracts.WorklistItemSourceApproval && !slices.Contains(item.Actions, crmcontracts.WorklistItemActions("decide")) {
+		return ""
+	}
 	label := ""
 	if item.Subject != nil && item.Subject.Label != nil {
 		label = *item.Subject.Label

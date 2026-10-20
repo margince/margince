@@ -15,6 +15,7 @@ import { useLocale, useT } from "../../i18n";
 import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import { useUrlParams } from "../../lib/urlstate";
+import { pillCount } from "../../lib/worklistcounts";
 import { LinkedApprovalDrawer } from "../automations/approvaldrawer";
 import { MagicPanel } from "../sign-in/magic";
 import { useTaskUpdate } from "../worklist/taskactions";
@@ -127,7 +128,7 @@ export function BriefScreen() {
         prominent
         controlled={{
           open: params.get("queue") === "1",
-          count: queuedDay?.summary.total,
+          count: queuedDay ? pillCount(queuedDay, "all") : undefined,
           labels: {
             show: t("brief.queue.show"),
             hide: t("brief.queue.hide"),

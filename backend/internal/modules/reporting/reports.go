@@ -23,13 +23,13 @@ import (
 )
 
 const (
-	reportColumns = "d.id,d.owner_id,d.name,d.audience,d.audience_team_id,d.revision,d.version,d.created_at,d.archived_at,r.selection"
+	reportColumns = "d.id,d.owner_id,d.name,d.audience,d.audience_team_id,d.revision,d.version,d.created_at,d.archived_at,r.selection,d.draft_revision"
 	reportFrom    = " FROM report_definition d JOIN report_definition_revision r ON r.report_id=d.id AND r.revision=d.revision"
 )
 
 func scanReport(row pgx.Row) (crmcontracts.ReportingReport, error) {
 	var report crmcontracts.ReportingReport
-	err := row.Scan(&report.Id, &report.OwnerId, &report.Name, &report.Audience, &report.AudienceTeamId, &report.Revision, &report.Version, &report.CreatedAt, &report.ArchivedAt, &report.Selection)
+	err := row.Scan(&report.Id, &report.OwnerId, &report.Name, &report.Audience, &report.AudienceTeamId, &report.Revision, &report.Version, &report.CreatedAt, &report.ArchivedAt, &report.Selection, &report.DraftRevision)
 	return report, storedError(err)
 }
 
@@ -68,6 +68,10 @@ func (s *Service) report(ctx context.Context, tx pgx.Tx, id ids.UUID, lock bool)
 	}
 	manage := allowed == nil
 	report.CanManage = &manage
+	// A draft is the editors' work in progress, so a reader is not told of it.
+	if !manage {
+		report.DraftRevision = nil
+	}
 	return report, nil
 }
 
@@ -110,7 +114,11 @@ func (s *Service) ListReports(ctx context.Context, after *ids.UUID, limit int, s
 		if err != nil {
 			return err
 		}
-		out.Data, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (crmcontracts.ReportingReport, error) { return scanReport(row) })
+		out.Data, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (crmcontracts.ReportingReport, error) {
+			report, err := scanReport(row)
+			report.DraftRevision = nil
+			return report, err
+		})
 		if err != nil {
 			return err
 		}
@@ -128,33 +136,41 @@ func (s *Service) validateReport(ctx context.Context, tx pgx.Tx, in *crmcontract
 	if !values.HasVisibleText(in.Name) || utf8.RuneCountInString(in.Name) > 160 {
 		return invalid("name the report in at most 160 characters")
 	}
-	if err := s.validateSelection(ctx, in.Selection); err != nil {
+	if err := s.validateRevision(ctx, tx, &in.Selection); err != nil {
 		return err
 	}
-	scope, err := s.authority.Scope(ctx, tx, in.Selection.Scope, false)
+	return s.validateReportAudience(ctx, tx, in)
+}
+
+// validateRevision checks what one revision holds, and resolves its scope. A
+// draft and a published revision pass the same checks.
+func (s *Service) validateRevision(ctx context.Context, tx pgx.Tx, selection *crmcontracts.ReportingSelection) error {
+	if err := s.validateSelection(ctx, *selection); err != nil {
+		return err
+	}
+	scope, err := s.authority.Scope(ctx, tx, selection.Scope, false)
 	if err != nil {
 		return err
 	}
-	in.Selection.Scope = scope
-	if err := s.authority.Pipeline(ctx, tx, (*ids.UUID)(in.Selection.PipelineId)); err != nil {
+	selection.Scope = scope
+	if err := s.authority.Pipeline(ctx, tx, (*ids.UUID)(selection.PipelineId)); err != nil {
 		return err
 	}
 	calendar, err := s.calendar(ctx, tx)
 	if err != nil {
 		return err
 	}
-	interval, err := Interval(in.Selection, calendar, s.now())
+	interval, err := Interval(*selection, calendar, s.now())
 	if err != nil {
 		return err
 	}
-	if _, err := TargetWindow(interval, string(in.Selection.TargetBasis), calendar); err != nil {
+	if _, err := TargetWindow(interval, string(selection.TargetBasis), calendar); err != nil {
 		return err
 	}
-	if in.Selection.CloseWindow != "all_open" && in.Selection.CloseWindow != reportingFiscalQuarter {
+	if selection.CloseWindow != "all_open" && selection.CloseWindow != reportingFiscalQuarter {
 		return invalid("choose the expected-close window")
 	}
-
-	return s.validateReportAudience(ctx, tx, in)
+	return nil
 }
 
 func (s *Service) validateSelection(ctx context.Context, selection crmcontracts.ReportingSelection) error {
@@ -264,18 +280,12 @@ func (s *Service) UpdateReport(ctx context.Context, id ids.UUID, version int64, 
 	}
 	var out crmcontracts.ReportingReport
 	err := s.store.db.Tx(ctx, func(tx pgx.Tx) error {
-		before, err := s.report(ctx, tx, id, true)
+		before, err := s.editableReport(ctx, tx, id, version)
 		if err != nil {
 			return err
 		}
-		if err := s.canEditReport(ctx, tx, before); err != nil {
+		if err := refuseOpenDraft(before); err != nil {
 			return err
-		}
-		if before.ArchivedAt != nil {
-			return apperrors.ErrNotFound
-		}
-		if before.Version != version {
-			return apperrors.ErrVersionSkew
 		}
 		if err := s.validateReport(ctx, tx, &in); err != nil {
 			return err

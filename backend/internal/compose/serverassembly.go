@@ -41,7 +41,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/modules/reporting"
-	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -65,7 +64,8 @@ func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 		WithFieldCatalog(customfields.NewService(pool, nil)).
 		WithMatchStager(linkedInMatchStager(pool)).
 		WithVCardReviewStager(vcardCreateStager(pool)).
-		WithSettings(NewSettingsStore(pool)).
+		WithSettings(StoredConfig(pool)).
+		WithLocks(loadedLocks).
 		WithSeatReadsLeads(seatReadsLeads(pool)).
 		WithDealOpener(leadDealOpener{deals: deals.NewStore(InstallationDB(pool), DealsInstallation())}).
 		// A merge carries the retiring subject's stops, or it refuses. consent
@@ -102,7 +102,9 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 	// subsystem is shaped to prevent.
 	gate := consentGateFor(pool)
 	return activities.NewHandlers(InstallationDB(pool)).
-		WithSettings(NewSettingsStore(pool)).
+		WithFieldCatalog(customfields.NewService(pool, nil)).
+		WithSettings(StoredConfig(pool)).
+		WithLocks(loadedLocks).
 		WithConsent(gate).
 		WithSendPreview(gate).
 		// The SAME seam the check_availability tool reads, so the two doors
@@ -251,12 +253,12 @@ func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
 func (s *Server) wireCaptureSettingsSurface(pool *pgxpool.Pool, log *slog.Logger) {
 	// The workspace capture-settings surface (CAP-WIRE-7, ADR-0072):
 	// read the auto-enrich posture (all roles), toggle it (admin/ops).
-	s.captureSettingsHandlers = captureSettingsHandlers{store: capture.NewSettings(NewSettingsStore(pool))}
+	s.captureSettingsHandlers = captureSettingsHandlers{store: capture.NewSettings(NewSettingsStore(pool), StoredConfig(pool))}
 	// Whether contacts are looked up automatically for the details the provider
 	// charges nothing for. Always wired, including where no provider is
 	// connected: the posture is the installation's answer, not the
 	// connection's, and an operator must be able to set it before connecting.
-	s.integrationsSettingsHandlers = integrationsSettingsHandlers{store: integrations.NewSettings(NewSettingsStore(pool))}
+	s.integrationsSettingsHandlers = integrationsSettingsHandlers{store: integrations.NewSettings(NewSettingsStore(pool), StoredConfig(pool))}
 	// The tier→model binding (ai-operational-spec §1.4): read it, replace it
 	// without a restart. Always wired, including on an installation that has
 	// bound nothing — an operator binding models for the first time reaches it
@@ -266,12 +268,12 @@ func (s *Server) wireCaptureSettingsSurface(pool *pgxpool.Pool, log *slog.Logger
 	// needs no tenant credential, so there is no "no provider connected"
 	// configuration to honor here.
 	s.priceCatalogues = newAIPriceCatalogues()
-	routing := ai.NewRoutingStore(NewSettingsStore(pool), config.FromOS).WithCatalogue(s.priceCatalogues.broker)
+	routing := ai.NewRoutingStore(NewSettingsStore(pool), StoredConfig(pool)).WithCatalogue(s.priceCatalogues.broker)
 	s.aiRoutingHandlers = aiRoutingHandlers{store: routing}
 	// The sync reads the picker's broker cache. s.vault is nil until WithKeyvault,
 	// which rebuilds the sync over the vault it brings.
-	s.voiceHandlers = s.WithPriceSync(newAIPriceSync(pool, s.vault, config.FromOS, log, s.priceCatalogues))
-	s.aiAdminHandlers = aiAdminHandlers{store: ai.NewAdminStore(InstallationDB(pool), NewSettingsStore(pool), budgetFullUsers, aiDeferredWork(pool))}
+	s.voiceHandlers = s.WithPriceSync(newAIPriceSync(pool, s.vault, log, s.priceCatalogues))
+	s.aiAdminHandlers = aiAdminHandlers{store: ai.NewAdminStore(InstallationDB(pool), NewSettingsStore(pool), StoredConfig(pool), budgetFullUsers, aiDeferredWork(pool))}
 	s.ownDomainHandlers = ownDomainHandlers{store: capture.NewOwnDomainStore(InstallationDB(pool))}
 	// The installation's own identity and reporting basis (ADR-0090/A135):
 	// name, reporting zone, base currency — the last of which locks once a
@@ -386,7 +388,8 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	// The importer maps only core columns (see importTargets for why custom
 	// fields are not among them), so it needs no field catalog of its own.
 	s.importHandlers = importHandlers{db: InstallationDB(pool), uploadLimit: s.uploadLimits.CSVImport}
-	s.company360Svc = company360.NewService(pool, s.contactsStore, s.dealsStore, ProjectsStore(pool), newApprovalsService(InstallationDB(pool)), time.Now)
+	s.company360Svc = company360.NewService(pool, s.contactsStore, s.dealsStore, ProjectsStore(pool), NewApprovalsService(InstallationDB(pool)), time.Now).
+		WithActivityFields(activities.NewStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil)))
 	s.companyBriefSvc = companybrief.NewService(pool, s.company360Svc, s.contactsStore, nil, "", time.Now).
 		WithEmailSummaries(emailRows(pool))
 	s.companyBriefHandlers = companybrief.NewHandlers(s.companyBriefSvc)
@@ -467,7 +470,8 @@ func newConsentHandlers(pool *pgxpool.Pool) consent.Handlers {
 		WithMailLanguage(consent.MailLanguageFunc(identity.LanguageOf)).
 		// The controller particulars form reads and writes through the settings
 		// store; without it every read and write of the form is a server fault.
-		WithSettings(NewSettingsStore(pool)).
+		WithSettings(StoredConfig(pool)).
+		WithLocks(loadedLocks).
 		// The edge that writes an accepted correction, through contacts' own
 		// update path — so the subject's correction is governed by the same
 		// gates as any other edit to that field.

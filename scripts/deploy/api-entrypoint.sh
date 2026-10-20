@@ -11,30 +11,41 @@
 # container holds no superuser credential.
 set -eu
 
-# Optional convenience: source an env file if one is mounted at /.env. The
-# primary path is real environment variables set by the orchestrator. `set -a`
-# auto-exports every var the file defines so the exec'd binary actually inherits
-# them (a bare `KEY=value` line otherwise sets only a shell var, not the child's
-# environment).
+# Optional convenience: an env file mounted at /.env. The primary path is real
+# environment variables set by the orchestrator. The programs read the file
+# themselves through --env-file, below the environment, as everywhere else; it
+# is not exported, or every value in it would rank as the environment.
+#
+# from_env_file NAME prints NAME's value in /.env, parsed by a clean shell, for
+# the few values this script reads itself.
+from_env_file() {
+    # shellcheck disable=SC2016
+    env -i /bin/sh -c 'set -a; . /.env >/dev/null; eval "printf %s \"\${$1:-}\""' sh "$1"
+}
+schema_dsn_in_file=""
 if [ -f /.env ]; then
-    set -a
-    # shellcheck disable=SC1091
-    . /.env
-    set +a
+    set -- --env-file /.env
+    MARGINCE_OWNER_DSN="${MARGINCE_OWNER_DSN:-$(from_env_file MARGINCE_OWNER_DSN)}"
+    MARGINCE_DSN="${MARGINCE_DSN:-$(from_env_file MARGINCE_DSN)}"
+    MARGINCE_ADMIN_PASSWORD="${MARGINCE_ADMIN_PASSWORD:-$(from_env_file MARGINCE_ADMIN_PASSWORD)}"
+    schema_dsn_in_file="$(from_env_file MARGINCE_SCHEMA_DSN)"
 fi
 
 : "${MARGINCE_OWNER_DSN:?MARGINCE_OWNER_DSN is required (owner role DSN for migrations + custom-fields DDL)}"
 : "${MARGINCE_DSN:?MARGINCE_DSN is required (app role DSN the api serves under, via the --dsn env fallback)}"
 
 # The custom-fields runtime-DDL pool runs as the same owner role migrate uses,
-# unless the deployment set its own MARGINCE_SCHEMA_DSN.
-export MARGINCE_SCHEMA_DSN="${MARGINCE_SCHEMA_DSN:-$MARGINCE_OWNER_DSN}"
+# unless the deployment set its own MARGINCE_SCHEMA_DSN, in the environment or
+# in /.env.
+if [ -z "${MARGINCE_SCHEMA_DSN:-}" ] && [ -z "$schema_dsn_in_file" ]; then
+    export MARGINCE_SCHEMA_DSN="$MARGINCE_OWNER_DSN"
+fi
 
 echo "entrypoint: applying core + custom migrations (owner role)…"
 # No --dsn: cmd/migrate reads MARGINCE_OWNER_DSN itself, and the assertion above
 # has already refused to start without it. Passing it as an argument would put the
 # owner credential in this container's process list.
-margince-migrate up
+margince-migrate up "$@"
 
 # First-boot bootstrap admin password (from the environment) → the file the
 # mounted margince.yaml's `password_file` references. Written 0600, never baked
@@ -64,7 +75,7 @@ if [ -n "${MARGINCE_ADMIN_PASSWORD:-}" ] || [ -e "$admin_password_file" ]; then
     # outcome this block exists to prevent. `workspace-exists` prints its answer
     # precisely so a caller can tell "no" from "could not ask"; this is the
     # shape ensure_template in scripts/lib-testdb.sh already uses.
-    if ! provisioned="$(margince-migrate workspace-exists)"; then
+    if ! provisioned="$(margince-migrate workspace-exists "$@")"; then
         echo "FAIL: could not determine whether this installation already has a company — fix the error above; a failed probe is not 'unprovisioned', and treating it as one would write a plaintext credential onto a live installation" >&2
         exit 1
     fi
@@ -97,4 +108,4 @@ if [ -n "${MARGINCE_ADMIN_PASSWORD:-}" ] || [ -e "$admin_password_file" ]; then
 fi
 
 echo "entrypoint: starting api…"
-exec margince-api
+exec margince-api "$@"

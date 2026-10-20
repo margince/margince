@@ -3,6 +3,8 @@
 
 package ai
 
+import "github.com/margince/margince/backend/internal/platform/config"
+
 // providerDescriptor is every fact this package knows about one provider word.
 // Each per-provider table the package reads (the accepted names, sovereign
 // eligibility, egress lane, key variable, served-identity source, local
@@ -26,9 +28,9 @@ type providerDescriptor struct {
 	// egress is the one place a provider's reach is decided, read by both the
 	// dialer and the write-time rule. The zero value is the strict lane.
 	egress egressClass
-	// keyEnv is the environment variable a BYOK key is read from; empty means
-	// the adapter takes no key.
-	keyEnv string
+	// key is the setting a BYOK key is read through; nil means the adapter
+	// takes no key.
+	key *config.Setting[string]
 	// servedSource is how far the adapter's reported served model is trusted:
 	// a Call.ServedIdentitySource label, or servedIdentityPerReply.
 	servedSource string
@@ -61,11 +63,11 @@ type providerDescriptor struct {
 	// wildcardReason is why this adapter's carriage keeps a wildcard; empty
 	// means the adapter names its decoders.
 	wildcardReason string
-	// keyOptional marks an adapter that sends its keyEnv credential when one is
-	// held and calls without one otherwise: a self-hosted server needs none, so
-	// nothing that asks whether a binding can be served demands the key.
+	// keyOptional marks an adapter that sends its key when one is held, and
+	// calls without one otherwise. A self-hosted server needs none, so nothing
+	// that asks whether a binding can be served demands the key.
 	keyOptional bool
-	// serviceAccountKey marks an adapter whose keyEnv credential is a Google
+	// serviceAccountKey marks an adapter whose key credential is a Google
 	// service-account JSON rather than an API key.
 	serviceAccountKey bool
 	// measuredBy is the provider whose certification records grade this one:
@@ -121,7 +123,7 @@ var providerRegistry = []providerDescriptor{
 	},
 	{
 		priceSource: modelsDevSource("anthropic"),
-		name:        providerAnthropic, caps: capChat, egress: egressPublicOnly, keyEnv: "ANTHROPIC_API_KEY", pathsUnderV1: true,
+		name:        providerAnthropic, caps: capChat, egress: egressPublicOnly, key: AnthropicKey, pathsUnderV1: true,
 		servedSource: servedIdentitySourceResponse, vendorHosted: true, vendorBaseURL: defaultAnthropicBaseURL, public: true,
 		carriage: anthropicCarries, thinkingFloor: anthropicTakesThinkingFloor, floorSkipsTools: true,
 	},
@@ -158,20 +160,20 @@ var providerRegistry = []providerDescriptor{
 		// variable is namespaced because it has no vendor convention.
 		priceSource: priceSource{kind: priceFromBroker},
 		name:        providerOpenAICompatible, caps: capChat, egress: egressOperatorEndpoint,
-		keyEnv: "OPENAI_COMPATIBLE_API_KEY", servedSource: servedIdentitySourceEcho, pathsUnderV1: true,
+		key: OpenAICompatibleKey, servedSource: servedIdentitySourceEcho, pathsUnderV1: true,
 		public: true, carriage: carriesImages,
 		wildcardReason: "serves whichever vendor the operator pointed base_url at",
 		thinkingFloor:  openRouterTakesThinkingFloor, floorSkipsTools: true,
 	},
 	{
 		priceSource: modelsDevSource("openai"),
-		name:        providerOpenAI, caps: capChat, egress: egressPublicOnly, keyEnv: "OPENAI_API_KEY", pathsUnderV1: true,
+		name:        providerOpenAI, caps: capChat, egress: egressPublicOnly, key: OpenAIKey, pathsUnderV1: true,
 		servedSource: servedIdentitySourceResponse, vendorHosted: true, vendorBaseURL: defaultOpenAIBaseURL, public: true,
 		carriage: openAICarries, thinkingFloor: openaiTakesThinkingFloor,
 	},
 	{
 		priceSource: modelsDevSource("google"),
-		name:        providerGemini, caps: capChat, egress: egressPublicOnly, keyEnv: "GEMINI_API_KEY",
+		name:        providerGemini, caps: capChat, egress: egressPublicOnly, key: GeminiKey,
 		servedSource: servedIdentitySourceResponse, vendorHosted: true, vendorBaseURL: defaultGeminiBaseURL, public: true,
 		carriage: geminiCarries, thinkingFloor: geminiTakesThinkingFloor,
 	},
@@ -179,7 +181,7 @@ var providerRegistry = []providerDescriptor{
 		// The Gemini wire served by Vertex AI. Its key is a service-account
 		// JSON, and its host is derived from the binding's location.
 		priceSource: modelsDevSource("google-vertex"),
-		name:        providerGeminiVertex, caps: capChat, egress: egressPublicOnly, keyEnv: "GEMINI_VERTEX_SA_JSON",
+		name:        providerGeminiVertex, caps: capChat, egress: egressPublicOnly, key: GeminiVertexKey,
 		serviceAccountKey: true, measuredBy: providerGemini, pricedBy: providerGemini,
 		servedSource: servedIdentitySourceResponse, vendorHosted: true, public: true,
 		carriage: geminiCarries, thinkingFloor: geminiTakesThinkingFloor,
@@ -188,7 +190,7 @@ var providerRegistry = []providerDescriptor{
 		// TypeSafe's own API: a vendor cloud, so never local and never pinned
 		// to an EU host.
 		priceSource: priceSource{kind: priceNotPublished},
-		name:        providerJev, caps: capDecision, egress: egressPublicOnly, keyEnv: "TYPESAFE_API_KEY",
+		name:        providerJev, caps: capDecision, egress: egressPublicOnly, key: JevKey,
 		servedSource: servedIdentitySourceResponse, vendorHosted: true, defaultEndpoint: defaultJevEndpoint,
 	},
 	{
@@ -200,7 +202,7 @@ var providerRegistry = []providerDescriptor{
 		// back, so its served identity is graded per reply.
 		priceSource: priceSource{kind: priceFromBroker},
 		name:        providerJevCompatible, caps: capDecision, egress: egressOperatorEndpoint,
-		keyEnv: "JEV_COMPATIBLE_API_KEY", keyOptional: true, servedSource: servedIdentityPerReply,
+		key: JevCompatibleKey, keyOptional: true, servedSource: servedIdentityPerReply,
 		localByEndpoint: true,
 	},
 }

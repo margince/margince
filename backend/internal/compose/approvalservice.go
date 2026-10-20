@@ -9,6 +9,10 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 )
 
-func newApprovalsService(db *database.DB) *approvals.Service {
-	return approvals.NewService(db).WithAssigneeCheck(activities.SeatCanHoldAutomaticWork)
+// NewApprovalsService binds decisions to current context and responsibility checks.
+func NewApprovalsService(db *database.DB) *approvals.Service {
+	preview := newApprovalPreviewReader(db)
+	return approvals.NewService(db).
+		WithAssigneeCheck(activities.SeatCanHoldAutomaticWork).
+		WithPreview(preview.read)
 }

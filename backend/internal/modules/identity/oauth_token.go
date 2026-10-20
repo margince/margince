@@ -185,7 +185,7 @@ func (h Handlers) exchangeAuthCode(r *http.Request, code, verifier string) (issu
 		// The label names the client the consent was for; the grant is what
 		// actually binds the passport to it.
 		label := oauthPassportLabel(redeemed.ClientID)
-		ttl, err := oauthAccessTokenTTL(ctx, tx)
+		ttl, err := h.svc.oauthAccessTokenTTL(ctx, tx)
 		if err != nil {
 			return err
 		}

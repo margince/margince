@@ -263,7 +263,7 @@ To log an activity in Margince, open the contact, company, lead or deal and choo
 2. Set the **Date** (or **Due date** for a task), and the **Assignee** for a task.
 3. For a call or meeting, add the contacts who took part under **Other attendees**, or **Attendees** on a company. Add colleagues who took part under **Colleagues who attended**.
 4. Enter a **Subject** (required) and the **Details**. **Details** keeps its format, such as lists, headings and links. You can paste it from a document or as markdown. If you enter a meeting transcript, tick **This text is a transcript**. The text then stays plain, and you can paste it or use **Or upload a file** (`.txt` only).
-5. Choose **Log**. A call or meeting shows in the History of each contact you named, and of their companies.
+5. Add any files under **Attach files**, then choose **Log**. A call or meeting shows in the History of each contact you named, and of their companies.
 Without permission you see "You do not have permission to log activities on this record."
 Also called: add a note, record a call, write a comment.
 
@@ -335,19 +335,19 @@ Also called: edit conflict, simultaneous editing, someone overwrote my change.
 
 ## Custom fields
 
-Custom fields in Margince are fields your company adds to the ones every Margince has. The types are **text**, **number**, **date**, **currency**, **picklist**, **multiple choice** and **yes/no**, on contacts, companies, deals, leads, projects and contracts. A field of many choices holds many answers at once, and a filter finds the record by any one of them.
+Custom fields in Margince are fields your company adds to the ones every Margince has. The types are **text**, **number**, **date**, **currency**, **picklist**, **multiple choice** and **yes/no**, on contacts, companies, deals, leads, projects, contracts and activities. A field of many choices holds many answers at once, and a filter finds the record by any one of them.
 
 ### How do I add a custom field?
 To add a custom field in Margince, open Settings → **Fields**, pick the **Object**, and choose **New field**.
-1. Choose the **Object**: Deal, Company, Contact, Lead, Project or Contract.
+1. Choose the **Object**: Deal, Company, Contact, Lead, Project, Contract or Activity.
 2. Choose **New field**, enter a **Label** and pick a **Type**. A picklist needs its choices, and a currency field needs its currency. Untick **In create forms** to keep the field out of the dialog that creates a record.
 3. Confirm with **Add field**.
 The new field then shows on the record page, and in the create form unless you unticked it. Without the right to change fields you see **Read-only settings** at the top of the page. More on fields is in [Settings](settings.md).
 Also called: custom property, extra column, new attribute, hide a field on new records.
 
-**Activities cannot hold a custom field.**
+**A custom field on activities** is offered on every call, meeting, note and task you log, and cannot be kept to one kind. You fill it in **Log activity** and read it when you open the activity. The activity's edit form does not change it, and a colleague who may not read the activity does not see it.
 
-Renaming a field changes its label and keeps your reports working. To take a field out of create forms later, turn off its switch under **In create forms**. The record page still shows it, and you can edit it there.
+Renaming a field changes its label and keeps your reports working. To take a field out of create forms later, turn off its switch under **In create forms**. The record page still shows it, and you can edit it there. A deal picklist or yes/no field has a switch under **In reports**. Turn it on to group and filter deal reports by that field. Everyone who reads deal reports then sees the field's name and choices.
 
 ## Tags
 

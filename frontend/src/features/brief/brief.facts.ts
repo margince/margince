@@ -4,49 +4,11 @@
 import { formatDateAbbrev } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import type { Locale } from "../../i18n";
-import {
-  loadedQueue,
-  type Worklist,
-  type WorklistItem,
-} from "../worklist/worklist.queries";
+import type { Worklist, WorklistItem } from "../worklist/worklist.queries";
 
 type Source = WorklistItem["source"];
 
-/** Preserve the server's order across the pages the reader has requested. */
-export function briefDay(
-  pages: readonly Worklist[] | undefined,
-): Worklist | undefined {
-  const first = pages?.[0];
-  if (!first || !pages) return undefined;
-  const queue = loadedQueue(pages);
-  const counts = first.counts.map((entry) => ({
-    ...entry,
-    more_available: pages.some((page) =>
-      page.counts.some(
-        (count) => count.category === entry.category && count.more_available,
-      ),
-    ),
-    shown: queue
-      .filter((item) => item.category === entry.category)
-      .reduce((total, item) => total + (item.batch?.count ?? 1), 0),
-  }));
-  const unavailable = new Map(
-    pages
-      .flatMap((page) => page.sources_unavailable)
-      .map((entry) => [entry.source, entry]),
-  );
-  return {
-    ...first,
-    queue,
-    counts,
-    sources_unavailable: [...unavailable.values()],
-    readings: {
-      ...first.readings,
-      more_available: pages.some((page) => page.readings.more_available),
-    },
-    next_cursor: pages.at(-1)?.next_cursor,
-  };
-}
+export { accumulatedDay as briefDay } from "../worklist/worklist.reads";
 
 export function sourceComplete(day: Worklist, source: Source): boolean {
   if (day.sources_unavailable.some((entry) => entry.source === source))

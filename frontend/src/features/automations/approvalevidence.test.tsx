@@ -155,3 +155,37 @@ it("renders a date without a trailing separator when the source has no subject",
   ).toHaveTextContent(formatDateTime(WHEN, "en", RECORD_ZONE));
   expect(screen.queryByText(/ · $/)).not.toBeInTheDocument();
 });
+
+it("opens a lifecycle proposal's authorized original meeting once", async () => {
+  show({
+    ...proposal,
+    kind: "lifecycle_change",
+    target_entity_type: "company",
+    target_entity_id: "company",
+    preview: {
+      version: 1,
+      state: "ready",
+      changes: [],
+      reviewer_reason: "record_authority",
+      evidence: [
+        {
+          source_type: "activity",
+          source_id: SOURCE,
+          evidence_snippet: "Contract ended",
+        },
+        {
+          source_type: "activity",
+          source_id: SOURCE,
+          evidence_snippet: "No renewal",
+        },
+      ],
+    },
+  });
+  expect(await screen.findByText(/Review meeting/)).toBeInTheDocument();
+  const buttons = screen.getAllByRole("button", {
+    name: translate("en", "tasks.openSource"),
+  });
+  expect(buttons).toHaveLength(1);
+  await userEvent.setup().click(buttons[0]);
+  expect(await screen.findByRole("dialog")).toHaveTextContent("Recorded words");
+});

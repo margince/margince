@@ -110,7 +110,7 @@ func (h Handlers) RenameCustomField(w http.ResponseWriter, r *http.Request, id c
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	patch := FieldPatch{Label: req.Label, ShowInCreate: req.ShowInCreate}
+	patch := FieldPatch{Label: req.Label, ShowInCreate: req.ShowInCreate, Reportable: req.Reportable}
 	field, err := h.svc.Update(r.Context(), ids.UUID(id), patch, ifVersion)
 	if err != nil {
 		writeCustomFieldErr(w, r, err)

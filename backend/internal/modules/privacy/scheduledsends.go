@@ -174,18 +174,20 @@ func closeReviewsForErasedMessages(ctx context.Context, tx pgx.Tx, reason string
 	// Forced expiry rather than deletion, matching that sweep: a decider who
 	// had the card open learns the question ended instead of finding an empty
 	// row where their work was.
+	const pendingReviews = `status = 'pending' AND id IN (
+ SELECT approval_id FROM communication_review
+ WHERE delivery_intent_id = ANY(@intents) AND resolved_at IS NULL AND approval_id IS NOT NULL)`
+	args := pgx.StrictNamedArgs{"intents": intents}
+	if err := eraseApprovalNoticesMatching(ctx, tx, reason, causeContactErasure, pendingReviews, args); err != nil {
+		return err
+	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE approval
 		   SET `+blankStagedProposal+`,
 		       status = 'expired',
 		       decision_reason = '`+subjectWithdrawal+`',
 		       decided_at = now()
-		 WHERE status = 'pending'
-		   AND id IN (
-		         SELECT approval_id FROM communication_review
-		          WHERE delivery_intent_id = ANY($1::uuid[])
-		            AND resolved_at IS NULL
-		            AND approval_id IS NOT NULL)`, intents); err != nil {
+		 WHERE `+pendingReviews, args); err != nil {
 		return fmt.Errorf("retracting the cards asking about the subject's erased messages: %w", err)
 	}
 	// RETURNING the ids, so each closure can be tombstoned below. An erasure

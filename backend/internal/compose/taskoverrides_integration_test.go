@@ -19,12 +19,11 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func taskOverrideHandlers(e *integration.Env) aiRoutingHandlers {
-	return aiRoutingHandlers{store: ai.NewRoutingStore(NewSettingsStore(e.Pool), config.Static(nil))}
+	return aiRoutingHandlers{store: ai.NewRoutingStore(NewSettingsStore(e.Pool), StoredConfig(e.Pool))}
 }
 
 func overrideSeat(e *integration.Env) context.Context {
@@ -115,7 +114,7 @@ func TestTheStatusMarksATaskWithAnOverride(t *testing.T) {
 	if rec := putTaskOverrides(ctx, taskOverrideHandlers(e), `{"cold_start":{"thinking":"high"}}`, ""); rec.Code != http.StatusOK {
 		t.Fatalf("PUT = %d %s", rec.Code, rec.Body)
 	}
-	store := ai.NewAdminStore(e.DB(), NewSettingsStore(e.Pool), budgetFullUsers, aiDeferredWork(e.Pool))
+	store := ai.NewAdminStore(e.DB(), NewSettingsStore(e.Pool), StoredConfig(e.Pool), budgetFullUsers, aiDeferredWork(e.Pool))
 
 	status, err := store.ReadStatus(ctx)
 	if err != nil {

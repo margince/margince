@@ -111,6 +111,8 @@ function mount(
   report: ReturnType<typeof setupReport>,
   /** Paths whose write should fail, so a half-finished run can be exercised. */
   refuse: readonly string[] = [],
+  /** The routing read's locks; given, the reader may read the routing. */
+  routingLocks?: unknown[],
 ) {
   const writes: { url: string; body: unknown }[] = [];
   const fetchMock = vi.fn(async (request: Request) => {
@@ -128,7 +130,12 @@ function mount(
     // The platform question's "Not now" is remembered against the account that
     // gave it, so the gate reads the session before it can hide the step.
     if (url.endsWith("/me")) {
-      return jsonResponse(meFixture({ allow: {} }));
+      return jsonResponse(
+        meFixture({ allow: routingLocks ? { ai_routing: ["read"] } : {} }),
+      );
+    }
+    if (routingLocks && url.endsWith("/ai/routing")) {
+      return jsonResponse({ locks: routingLocks });
     }
     if (url.includes("/installation/oauth-apps/")) {
       return jsonResponse({
@@ -416,6 +423,31 @@ describe("the first-run setup gate", () => {
     await waitFor(() => expect(writes.length).toBe(2));
     expect(writes[0].url).toBe("/v1/ai/provider-keys/gemini");
     expect(writes[1].url).toBe("/v1/ai/routing");
+  });
+
+  it("stores only the key when a boot source sets the routing, and says where", async () => {
+    const user = userEvent.setup();
+    const { writes } = mount(
+      setupReport(false, false),
+      [],
+      [
+        {
+          key: "ai.routing",
+          origin: { source: "env", name: "MARGINCE_AI_ROUTING" },
+        },
+      ],
+    );
+    expect(
+      await screen.findByText(
+        "Set by MARGINCE_AI_ROUTING (environment). Change it there.",
+      ),
+    ).toBeTruthy();
+    await user.type(screen.getByLabelText("API key"), "AIza-secret");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await screen.findByRole("heading", { name: "Model connected" });
+    expect(writes.map((write) => write.url)).toEqual([
+      "/v1/ai/provider-keys/gemini",
+    ]);
   });
 
   it("drops the step's status line once the binding lands", async () => {

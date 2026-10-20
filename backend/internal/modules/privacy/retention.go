@@ -27,7 +27,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -457,7 +456,7 @@ func (s *RetentionService) retainOnly(ctx context.Context) (bool, error) {
 	var held bool
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		held, err = settings.GetTx(ctx, tx, RetainOnly)
+		held, err = retainOnlyTx(ctx, tx)
 		return err
 	})
 	if err != nil {

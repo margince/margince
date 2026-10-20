@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { commercialApproval } from "../../testing/commercial-approval";
 import {
   installFetchStub,
   jsonResponse,
@@ -161,4 +162,19 @@ export const Loading: Story = {
 // say.
 export const ReadFailed: Story = {
   args: { ...BASE, items: [], state: "failed" },
+};
+
+export const CommercialDecision: Story = {
+  args: { ...BASE, items: deckItems([commercialApproval()]) },
+  play: RowOpen.play,
+};
+
+export const CommercialDecisionDark: Story = {
+  ...CommercialDecision,
+  globals: { theme: "dark" },
+};
+
+export const CommercialDecisionDeck: Story = {
+  args: { ...BASE, items: deckItems([commercialApproval()]) },
+  play: Deck.play,
 };

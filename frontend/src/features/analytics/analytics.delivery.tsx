@@ -11,7 +11,7 @@ import {
 import { type Locale, useT } from "../../i18n";
 import { ENTITY } from "../../lib/entity";
 import { routeHash } from "../../lib/router";
-import { isProjectPhase, PHASE_LABEL } from "../../screens/projects.form";
+import { isProjectPhase, PHASE_LABEL } from "../projects/projects.form";
 import {
   BarFigure,
   columnScale,

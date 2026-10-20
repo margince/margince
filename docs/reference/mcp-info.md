@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 9 |
 | Tool catalog | 122.2 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 32192 |
+| Approx. wire tokens | 32189 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,7 +34,7 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 24.6 KB | 20% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 31.5 KB | 25% | Yes, every step |
-| Input schemas | 57.5 KB | 46% | Yes, every step |
+| Input schemas | 57.4 KB | 46% | Yes, every step |
 | _Names, annotations, punctuation_ | 8.7 KB | 7% | Partly |
 | **Description + input schema** | **88.9 KB** | **72%** | **the recurring cost** |
 
@@ -81,7 +81,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_attention`](#read_attention) | See what needs attention | yes |  | 326 |
 | [`read_context`](#read_context) | Get the story so far | yes |  | 395 |
-| [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes |  | 826 |
+| [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes |  | 824 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 220 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 745 |
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 292 |
@@ -5010,16 +5010,16 @@ in EUR is EUR 31,000.
       "type": "string"
     },
     "scope_id": {
-      "description": "readings only: The team or owner, for those scopes. Refused with scope_kind=workspace, which names no subject.",
+      "description": "input_exceptions, readings only: The team or owner, for a team or owner scope_kind",
       "format": "uuid",
       "type": "string"
     },
     "scope_kind": {
-      "description": "readings only: Whose forecast. Omit for this caller's own default population; a wider one is refused.",
+      "description": "input_exceptions, readings only: Only the findings on the deals of this population. Omit for every finding you can see.",
       "enum": [
-        "workspace",
+        "owner",
         "team",
-        "owner"
+        "workspace"
       ],
       "type": "string"
     },

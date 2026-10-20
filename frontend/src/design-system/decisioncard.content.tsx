@@ -117,7 +117,7 @@ export function DecisionContent({
       {diffs.map((diff) => (
         <div className="dcard-diff" key={diff.field}>
           <span className="t-eyebrow dcard-draft-label">
-            {diff.field.replaceAll("_", " ")}
+            {diff.label ?? diff.field.replaceAll("_", " ")}
           </span>
           <FieldDiff oldValue={diff.from} newValue={diff.to} />
         </div>

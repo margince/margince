@@ -69,23 +69,37 @@ export function reviewWork(
  * completeness line above the queue, deliberately — one page should not have
  * two different ways of admitting it is showing part of something.
  */
+export type ReviewShortfall = Readonly<{
+  loaded: number;
+  total: number;
+  /** A loaded group was cut at its read limit, so no total is known. */
+  floor: boolean;
+}>;
+
 export function reviewShortfall(
   loaded: number,
   total: number | undefined,
-): { loaded: number; total: number } | null {
+  floor = false,
+  filter: WorklistFilter = "all",
+): ReviewShortfall | null {
+  const scopedTotal = filter === "all" ? total : undefined;
+  // A floor is never complete, whatever the day's total says.
+  if (floor) {
+    return { loaded, total: scopedTotal ?? loaded, floor: true };
+  }
   // An older server sends no partition. Saying nothing is right: a figure
   // invented here would be a claim about a day this client cannot count.
-  if (total === undefined) {
+  if (scopedTotal === undefined) {
     return null;
   }
   // A total BELOW what is loaded is not a shortfall to report. The two are
   // counted over different populations — the day's candidates against the rows
   // this walk has served — and a walk that outran its own total would draw
   // "5 of 3", which reads as a bug in the product rather than in the number.
-  if (loaded >= total) {
+  if (loaded >= scopedTotal) {
     return null;
   }
-  return { loaded, total };
+  return { loaded, total: scopedTotal, floor: false };
 }
 
 // Which narrowing actually CONTAINS this group's members.

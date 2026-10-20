@@ -71,7 +71,7 @@ func contractAPI(srv Server, pool *pgxpool.Pool, identitySvc *identity.Service) 
 	// provider seam: agentGate's StageResolver reads exactly what the MCP
 	// registry's tools read.
 	provider := NewProvider(pool)
-	staging := approvalsAdapter{svc: newApprovalsService(InstallationDB(pool))}
+	staging := approvalsAdapter{svc: NewApprovalsService(InstallationDB(pool))}
 	// Wrap order: the generated router applies the slice left-to-right
 	// around the handler, so the LAST entry is outermost — idempotency
 	// must sit outside the agent gate so a staged-approval refusal is
@@ -410,7 +410,7 @@ func WithBootstrapSeeds(seeds deployconfig.Seeds) Option {
 // is the only arrangement in which they cannot disagree. Without the option the
 // compiled-in defaults stand — the composition is still fully bounded, it just
 // was never told about a deployment file.
-func WithUploadLimits(limits deployconfig.UploadLimits) Option {
+func WithUploadLimits(limits UploadLimits) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
 		s.uploadLimits = limits
 		s.activitiesHandlers = s.activitiesHandlers.WithUploadLimit(limits.Attachment)

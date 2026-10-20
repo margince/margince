@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -27,15 +28,20 @@ type Settings struct {
 // SettingsStore is the store over that posture.
 type SettingsStore struct {
 	settings *settings.Store
+	// config answers a value a boot source sets and refuses a change to it.
+	config *config.Config
 }
 
-// NewSettings builds the settings store over the settings mechanism.
-func NewSettings(s *settings.Store) *SettingsStore { return &SettingsStore{settings: s} }
+// NewSettings builds the settings store over the settings mechanism, under the
+// boot locks cfg holds.
+func NewSettings(s *settings.Store, cfg *config.Config) *SettingsStore {
+	return &SettingsStore{settings: s, config: cfg}
+}
 
 // Get reads the posture. The read gate lives on the entry, so there is no
 // second gate to keep in step here.
 func (s *SettingsStore) Get(ctx context.Context) (Settings, error) {
-	automatic, err := settings.Get(ctx, s.settings, AutomaticLookup)
+	automatic, err := config.StoredVal(ctx, s.config, AutomaticLookup)
 	if err != nil {
 		return Settings{}, fmt.Errorf("integrations: reading settings: %w", err)
 	}
@@ -54,7 +60,7 @@ func (s *SettingsStore) Update(ctx context.Context, automaticLookup *bool) (Sett
 	}
 	if automaticLookup != nil {
 		if err := s.settings.WriteTx(ctx, func(tx pgx.Tx) error {
-			return settings.SetTx(ctx, s.settings, tx, AutomaticLookup, *automaticLookup)
+			return config.SaveTx(ctx, s.config, tx, AutomaticLookup, *automaticLookup)
 		}); err != nil {
 			return Settings{}, err
 		}
@@ -71,7 +77,7 @@ func (s *SettingsStore) Update(ctx context.Context, automaticLookup *bool) (Sett
 // differently.
 // Held by: TestOnlyOneReaderAnswersTheAutomaticLookupPosture (settings_test.go)
 func automaticLookupEnabled(ctx context.Context, tx pgx.Tx) (bool, error) {
-	on, err := settings.ApplyTx(ctx, tx, AutomaticLookup)
+	on, err := config.StoredApplyTx(ctx, tx, config.Bound(), AutomaticLookup)
 	if err != nil {
 		return false, fmt.Errorf("integrations: reading the automatic-lookup posture: %w", err)
 	}

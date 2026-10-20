@@ -14,6 +14,16 @@ import type { EntityKind } from "../../lib/entity";
 // the draft lives in logactivity.tsx; this is the projection alone, so a test
 // can pin the body the server sees without mounting a component.
 
+/** Whether a value the kind picker handed back is a kind the draft holds. */
+export function isActivityKind(value: string): value is ActivityDraft["kind"] {
+  return (
+    value === "note" ||
+    value === "task" ||
+    value === "call" ||
+    value === "meeting"
+  );
+}
+
 export type ActivityDraft = {
   kind: "note" | "task" | "meeting" | "call";
   subject: string;
@@ -34,6 +44,8 @@ export type ActivityDraft = {
   assigneeId: string;
   sourceActivityId?: string;
   followUp?: TaskDraft;
+  // The workspace's custom-field values, as the create body's cf_ keys.
+  custom?: Record<string, unknown>;
 };
 
 export type TaskDraft = Pick<
@@ -148,6 +160,7 @@ export function activityRequestBody(
     ...(withAttendees && attendees.colleagueIds.length > 0
       ? { attendee_user_ids: [...attendees.colleagueIds] }
       : {}),
+    ...input.custom,
     source: "manual",
   };
 }
@@ -169,4 +182,28 @@ function meetingLinks(
     }
   }
   return links.length > 0 ? links : [record];
+}
+
+const EMPTY_DRAFT: ActivityDraft = {
+  kind: "note",
+  subject: "",
+  body: "",
+  day: "",
+  asTranscript: false,
+  assigneeId: "",
+};
+
+// The record zone keeps the entered day aligned with the stored deadline.
+export function todayDay(
+  _kind: ActivityDraft["kind"],
+  recordZone: string,
+): string {
+  return calendarDay(new Date(), recordZone);
+}
+
+export function freshDraft(
+  recordZone: string,
+  kind: ActivityDraft["kind"] = "note",
+): ActivityDraft {
+  return { ...EMPTY_DRAFT, kind, day: todayDay(kind, recordZone) };
 }

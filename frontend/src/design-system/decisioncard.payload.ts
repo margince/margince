@@ -14,9 +14,16 @@
 // Every function here returns DATA. The card owns the element each field is
 // drawn in, so a caption's markup cannot be decided in two places.
 
+import type { DecisionApproval } from "./decisionstatus";
+
+export function decisionEvidence(approval: DecisionApproval) {
+  return approval.preview?.evidence ?? approval.evidence;
+}
+
 /** The old→new sides of one field the proposal would change. */
 export type DecisionDiff = Readonly<{
   field: string;
+  label?: string;
   from: string | null;
   to: string | null;
 }>;
@@ -45,6 +52,8 @@ export type DecisionDisplay = Readonly<{
   /** The value, already formatted — a date on the reader's calendar, an enum
    *  in words. Null where the payload does not carry the field. */
   value: string | null;
+  /** Null refuses inferred differences from the executable payload. */
+  comparison?: Pick<DecisionDiff, "from" | "to"> | null;
   /** Leads the body as a sentence rather than sitting in the fact list. */
   lead?: boolean;
 }>;
@@ -183,7 +192,7 @@ export function restFields(
 ): readonly PayloadField[] {
   if (display.length > 0) {
     return display.flatMap((entry) =>
-      entry.lead || entry.value === null
+      entry.lead || entry.comparison || entry.value === null
         ? []
         : [{ key: entry.field, label: entry.label, value: entry.value }],
     );

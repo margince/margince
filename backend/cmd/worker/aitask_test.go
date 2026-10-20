@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/programsettings"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
@@ -85,11 +86,11 @@ func TestArtifactsDefaultIntoTheGitignoredWorkDir(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parseAITaskFlags: %v", err)
 	}
-	if cfg.workDir != workDirDefault {
-		t.Errorf("workDir = %q, want the gitignored default %q", cfg.workDir, workDirDefault)
+	if cfg.workDir != programsettings.DefaultAITaskDir {
+		t.Errorf("workDir = %q, want the gitignored default %q", cfg.workDir, programsettings.DefaultAITaskDir)
 	}
 	got := cfg.artifactOut(fetchArtifactName(cfg.arg))
-	want := filepath.Join(workDirDefault, "fetch-example.test_pricing.txt")
+	want := filepath.Join(programsettings.DefaultAITaskDir, "fetch-example.test_pricing.txt")
 	if got != want {
 		t.Errorf("artifactOut = %q, want %q", got, want)
 	}
@@ -202,13 +203,13 @@ func TestTheWorkDirIsActuallyIgnored(t *testing.T) {
 	// Every .gitignore on the probe's path, since git reads them out of the test
 	// cache's sight.
 	ignoreFiles := []string{"../../../.gitignore"}
-	for dir := workDirDefault; dir != "."; dir = filepath.Dir(dir) {
+	for dir := programsettings.DefaultAITaskDir; dir != "."; dir = filepath.Dir(dir) {
 		ignoreFiles = append(ignoreFiles, filepath.Join("../..", dir, ".gitignore"))
 	}
 	if err := gatekit.DeclareInputs(os.Getenv, append(ignoreFiles, "../../.gitignore")...); err != nil {
 		t.Fatal(err)
 	}
-	out, err := exec.Command("git", "-C", "../..", "check-ignore", "-q", workDirDefault+"/probe.txt").CombinedOutput()
+	out, err := exec.Command("git", "-C", "../..", "check-ignore", "-q", programsettings.DefaultAITaskDir+"/probe.txt").CombinedOutput()
 	if err == nil {
 		return // exit 0: the path is ignored, which is what this pins
 	}
@@ -219,5 +220,5 @@ func TestTheWorkDirIsActuallyIgnored(t *testing.T) {
 	if !errors.As(err, &exitErr) || exitErr.ExitCode() != 1 {
 		t.Skipf("git cannot answer here (%v); the ignore rule is unverifiable in this checkout\n%s", err, out)
 	}
-	t.Fatalf("git does not ignore %s: probe artifacts carry whatever the source carried and must never be committable", workDirDefault)
+	t.Fatalf("git does not ignore %s: probe artifacts carry whatever the source carried and must never be committable", programsettings.DefaultAITaskDir)
 }

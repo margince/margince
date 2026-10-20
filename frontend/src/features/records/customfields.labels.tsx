@@ -30,5 +30,6 @@ export function objectLabels(
     lead: t("cf.obj.lead"),
     project: t("cf.obj.project"),
     contract: t("cf.obj.contract"),
+    activity: t("cf.obj.activity"),
   };
 }

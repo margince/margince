@@ -29,14 +29,18 @@ type OAuthAppResponse = {
   configured: boolean;
   client_id: string;
   tenant?: string;
-  source: "stored" | "environment" | "none";
+  locks?: {
+    key: string;
+    origin: {
+      source: "env" | "flag" | "env_file" | "config_file";
+      name: string;
+    };
+  }[];
   redirect_uris: { purpose: string; url: string }[];
 };
 
-// The three sources the card has to tell apart. `configured` alone cannot:
-// it is true for both a stored app and one the deployment supplies, and the
-// card said "no app stored" for the second — telling an operator Gmail could
-// not be connected on an installation where it demonstrably could.
+// The three states the card has to tell apart. `configured` is true for both a
+// stored app and one the deployment supplies; the lock tells the two apart.
 const SIGN_IN_URI = "https://api.acme.test/v1/auth/oidc/google/callback";
 const CONNECT_URI = "https://api.acme.test/v1/connectors/google/callback";
 
@@ -45,7 +49,7 @@ function stored(): OAuthAppResponse {
     provider: "google",
     configured: true,
     client_id: CLIENT_ID,
-    source: "stored",
+    locks: [],
     redirect_uris: [
       { purpose: "sign_in", url: SIGN_IN_URI },
       { purpose: "mailbox_connect", url: CONNECT_URI },
@@ -58,7 +62,12 @@ function fromEnvironment(): OAuthAppResponse {
     provider: "google",
     configured: true,
     client_id: CLIENT_ID,
-    source: "environment",
+    locks: [
+      {
+        key: "capture.google_app",
+        origin: { source: "env", name: "MARGINCE_GMAIL_CLIENT_ID" },
+      },
+    ],
     redirect_uris: [{ purpose: "mailbox_connect", url: CONNECT_URI }],
   };
 }
@@ -68,7 +77,6 @@ function absent(): OAuthAppResponse {
     provider: "google",
     configured: false,
     client_id: "",
-    source: "none",
     redirect_uris: [],
   };
 }
@@ -142,15 +150,34 @@ describe("the Google app card", () => {
   // installation configured.
   it("reports an app the deployment supplies, rather than claiming there is none", async () => {
     mount(fromEnvironment());
-    expect(
-      await screen.findByText(
-        new RegExp(
-          `In use from this installation.s configuration: ${CLIENT_ID}`,
-        ),
-      ),
-    ).toBeTruthy();
+    expect(await screen.findByText(`In use: ${CLIENT_ID}`)).toBeTruthy();
     expect(screen.queryByText(/No app is available/)).toBeNull();
     // Nothing is STORED, so there is nothing to remove.
+    expect(screen.queryByRole("button", { name: "Remove app" })).toBeNull();
+  });
+
+  // The deployment's app is the one every connect uses, so the form is locked
+  // and says where the app is set. Its secret refuses every value, so no verb
+  // is offered and no field holds one.
+  it("locks the form under an app the environment sets, and names the variable", async () => {
+    mount(fromEnvironment());
+    const clientId =
+      await screen.findByLabelText<HTMLInputElement>("Client ID");
+    const secret = screen.getByLabelText<HTMLInputElement>("Client secret");
+    expect(clientId.disabled).toBe(true);
+    expect(secret.disabled).toBe(true);
+    expect(secret.value).toBe("");
+    expect(clientId.value).toBe("");
+    const reason = screen.getByText(
+      "Set by MARGINCE_GMAIL_CLIENT_ID (environment). Change it there.",
+    );
+    for (const input of [clientId, secret]) {
+      expect(input.getAttribute("aria-describedby")?.split(" ")).toContain(
+        reason.id,
+      );
+    }
+    expect(screen.queryByRole("button", { name: "Store app" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Replace app" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Remove app" })).toBeNull();
   });
 
@@ -342,7 +369,7 @@ describe("the Microsoft app card", () => {
       configured: true,
       client_id: ENTRA_ID,
       tenant: DIRECTORY,
-      source: "stored",
+      locks: [],
       redirect_uris: [{ purpose: "mailbox_connect", url: GRAPH_CONNECT_URI }],
     };
   }
@@ -359,7 +386,12 @@ describe("the Microsoft app card", () => {
   // with no way to see that the directory is the reason.
   it("reports the directory even when the app came from the environment", async () => {
     const app = microsoft();
-    app.source = "environment";
+    app.locks = [
+      {
+        key: "capture.microsoft_app",
+        origin: { source: "env", name: "MARGINCE_GRAPH_CLIENT_ID" },
+      },
+    ];
     mount(app, "microsoft");
     expect(
       await screen.findByText(`Pinned to directory ${DIRECTORY}.`),

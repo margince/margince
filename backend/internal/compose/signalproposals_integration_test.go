@@ -313,11 +313,12 @@ func TestAcceptingSettlesOnlyTheContradictionsTheDeciderCanSee(t *testing.T) {
 	// team-scoped decider must own the account they are deciding on.
 	e.WsExec(t, "UPDATE company SET owner_id = $1 WHERE id = $2", e.Rep1, company)
 	mine := seedOpenContractEnded(t, e, company)
+	// The proposal cites visible evidence; a later private signal must remain open.
+	proposePass(t, e)
 	// Same account, but its subject is a contact capture-private to the OTHER
 	// team's rep — the one state that still hides an identity row from a seat.
 	theirs := seedOpenContractEndedOnContact(t, e, company, seedCapturePrivateContactOf(t, e, e.Rep3))
 
-	proposePass(t, e)
 	if _, err := approvalsServiceWithEffects(e.Pool).Decide(
 		e.As(e.Rep1, nil, teamScopedDecider),
 		ids.From[ids.ApprovalKind](stagedOffer(t, e, company)), true, nil); err != nil {

@@ -7,7 +7,7 @@ import type { components } from "../../api/schema";
 import type { ProjectScope } from "../../design-system/projectpicker";
 import type { useT } from "../../i18n";
 import { throwProblem } from "../../lib/problem";
-import { stripEveryKeyTag, withSubjectTag } from "../../screens/projectrecord";
+import { stripEveryKeyTag, withSubjectTag } from "../projects/projectrecord";
 import type { RelinkKind } from "./composerelink";
 
 type EmailDraft = components["schemas"]["EmailDraft"];

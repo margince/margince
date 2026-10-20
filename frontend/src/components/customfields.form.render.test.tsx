@@ -48,6 +48,7 @@ const ceilingCf: CustomField = {
   status: "active",
   column_name: "cf_budget_ceiling",
   show_in_create: true,
+  reportable: false,
   currency: "EUR",
   created_by: "u1",
   created_at: "2026-01-01T00:00:00Z",

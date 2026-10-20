@@ -19,6 +19,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/currencylock"
@@ -105,12 +106,13 @@ type InstallationPatch struct {
 	AgentAllowances AgentAllowancePatch
 }
 
-// pendingWrite is one field of a sparse patch, already reduced to the two
-// things the write loop needs: which setting to write under, and the JSON to
-// write. `raw` nil means the field was absent and nothing is written.
+// pendingWrite is one field of a sparse patch, already reduced to the setting
+// it writes, its JSON, and the write itself. `raw` nil means the field was
+// absent and nothing is written.
 type pendingWrite struct {
-	entry settings.Definition
-	raw   []byte
+	key  string
+	raw  []byte
+	save func(ctx context.Context, tx pgx.Tx, s *InstallationSettingsStore) error
 }
 
 // encodePatchField reduces one patch field to a pendingWrite, encoding it here
@@ -123,13 +125,31 @@ type pendingWrite struct {
 // interface.
 func encodePatchField[T any](entry settings.Definition, value *T) (pendingWrite, error) {
 	if value == nil {
-		return pendingWrite{entry: entry}, nil
+		return pendingWrite{key: entry.Key()}, nil
 	}
 	raw, err := json.Marshal(*value)
 	if err != nil {
 		return pendingWrite{}, fmt.Errorf("identity: encoding %s: %w", entry.Key(), err)
 	}
-	return pendingWrite{entry: entry, raw: raw}, nil
+	return pendingWrite{key: entry.Key(), raw: raw, save: func(ctx context.Context, tx pgx.Tx, s *InstallationSettingsStore) error {
+		return s.settings.SetRawTx(ctx, tx, entry.Key(), raw)
+	}}, nil
+}
+
+// encodeStoredField is encodePatchField for a setting in the configuration
+// registry, whose save refuses a value a boot source sets.
+func encodeStoredField[T any](setting *config.Setting[T], value *T) (pendingWrite, error) {
+	if value == nil {
+		return pendingWrite{key: setting.Key()}, nil
+	}
+	raw, err := json.Marshal(*value)
+	if err != nil {
+		return pendingWrite{}, fmt.Errorf("identity: encoding %s: %w", setting.Key(), err)
+	}
+	next := *value
+	return pendingWrite{key: setting.Key(), raw: raw, save: func(ctx context.Context, tx pgx.Tx, s *InstallationSettingsStore) error {
+		return config.SaveTx(ctx, s.config, tx, setting, next)
+	}}, nil
 }
 
 // InstallationSettingsStore reads and patches the installation settings.
@@ -139,6 +159,9 @@ type InstallationSettingsStore struct {
 	// answer: whether the currency has become immutable.
 	db       *database.DB
 	settings *settings.Store
+	// config reads and saves the settings in the configuration registry, so a
+	// value a boot source sets reads as that value and refuses a change.
+	config *config.Config
 	// onCountryChange runs inside the transaction that changes the country.
 	onCountryChange CountryChange
 	// now dates a window change, which takes over at the next reset after it.
@@ -160,8 +183,8 @@ func (s *InstallationSettingsStore) WithCountryChange(hook CountryChange) *Insta
 
 // NewInstallationSettings builds the store over the settings mechanism, on a
 // handle already bound to the workspace it serves.
-func NewInstallationSettings(db *database.DB, s *settings.Store) *InstallationSettingsStore {
-	return &InstallationSettingsStore{db: db, settings: s, now: time.Now}
+func NewInstallationSettings(db *database.DB, s *settings.Store, c *config.Config) *InstallationSettingsStore {
+	return &InstallationSettingsStore{db: db, settings: s, config: c, now: time.Now}
 }
 
 // WithClock replaces the clock a window change is scheduled against.
@@ -181,7 +204,7 @@ func (s *InstallationSettingsStore) WithClock(now func() time.Time) *Installatio
 // whose waivers say plainly that neither has a principal to gate yet. A
 // distinct name keeps those two honestly reported as ungated.
 func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (InstallationSettings, error) {
-	name, err := settings.Get(ctx, s.settings, Name)
+	name, err := config.StoredVal(ctx, s.config, Name)
 	if err != nil {
 		return InstallationSettings{}, err
 	}
@@ -193,27 +216,27 @@ func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (Instal
 	if err != nil {
 		return InstallationSettings{}, err
 	}
-	language, err := settings.Get(ctx, s.settings, BaseLanguage)
+	language, err := config.StoredVal(ctx, s.config, BaseLanguage)
 	if err != nil {
 		return InstallationSettings{}, err
 	}
-	fiscalStart, err := settings.Get(ctx, s.settings, FiscalYearStartMonth)
+	fiscalStart, err := config.StoredVal(ctx, s.config, FiscalYearStartMonth)
 	if err != nil {
 		return InstallationSettings{}, err
 	}
-	bannerHours, err := settings.Get(ctx, s.settings, DeadWorkBannerHours)
+	bannerHours, err := config.StoredVal(ctx, s.config, DeadWorkBannerHours)
 	if err != nil {
 		return InstallationSettings{}, err
 	}
-	tokenTTL, err := settings.Get(ctx, s.settings, OAuthAccessTokenTTLMinutes)
+	tokenTTL, err := config.StoredVal(ctx, s.config, OAuthAccessTokenTTLMinutes)
 	if err != nil {
 		return InstallationSettings{}, err
 	}
-	measure, err := settings.Get(ctx, s.settings, ForecastForwardMeasure)
+	measure, err := config.StoredVal(ctx, s.config, ForecastForwardMeasure)
 	if err != nil {
 		return InstallationSettings{}, err
 	}
-	providers, err := settings.Get(ctx, s.settings, EnabledOidcProviders)
+	providers, err := config.StoredVal(ctx, s.config, EnabledOidcProviders)
 	if err != nil {
 		return InstallationSettings{}, err
 	}
@@ -281,7 +304,7 @@ func (s *InstallationSettingsStore) baseCurrencyLock(ctx context.Context) (curre
 // first field whose type has a MarshalJSON that can fail arrives without
 // touching this function.
 func encodeInstallationPatch(in InstallationPatch) ([]pendingWrite, error) {
-	name, err := encodePatchField(Name, in.Name)
+	name, err := encodeStoredField(Name, in.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -293,51 +316,51 @@ func encodeInstallationPatch(in InstallationPatch) ([]pendingWrite, error) {
 	if err != nil {
 		return nil, err
 	}
-	language, err := encodePatchField(BaseLanguage, in.BaseLanguage)
+	language, err := encodeStoredField(BaseLanguage, in.BaseLanguage)
 	if err != nil {
 		return nil, err
 	}
-	fiscal, err := encodePatchField(FiscalYearStartMonth, in.FiscalYearStartMonth)
+	fiscal, err := encodeStoredField(FiscalYearStartMonth, in.FiscalYearStartMonth)
 	if err != nil {
 		return nil, err
 	}
-	bannerHours, err := encodePatchField(DeadWorkBannerHours, in.DeadWorkBannerHours)
+	bannerHours, err := encodeStoredField(DeadWorkBannerHours, in.DeadWorkBannerHours)
 	if err != nil {
 		return nil, err
 	}
-	tokenTTL, err := encodePatchField(OAuthAccessTokenTTLMinutes, in.OAuthAccessTokenTTLMinutes)
+	tokenTTL, err := encodeStoredField(OAuthAccessTokenTTLMinutes, in.OAuthAccessTokenTTLMinutes)
 	if err != nil {
 		return nil, err
 	}
-	measure, err := encodePatchField(ForecastForwardMeasure, in.ForecastForwardMeasure)
+	measure, err := encodeStoredField(ForecastForwardMeasure, in.ForecastForwardMeasure)
 	if err != nil {
 		return nil, err
 	}
-	providers, err := encodePatchField(EnabledOidcProviders, in.EnabledOidcProviders)
+	providers, err := encodeStoredField(EnabledOidcProviders, in.EnabledOidcProviders)
 	if err != nil {
 		return nil, err
 	}
-	dateFormat, err := encodePatchField(DateFormat, in.DateFormat)
+	dateFormat, err := encodeStoredField(DateFormat, in.DateFormat)
 	if err != nil {
 		return nil, err
 	}
-	timeFormat, err := encodePatchField(TimeFormat, in.TimeFormat)
+	timeFormat, err := encodeStoredField(TimeFormat, in.TimeFormat)
 	if err != nil {
 		return nil, err
 	}
-	requireSSO, err := encodePatchField(RequireSSO, in.RequireSSO)
+	requireSSO, err := encodeStoredField(RequireSSO, in.RequireSSO)
 	if err != nil {
 		return nil, err
 	}
-	requireMFA, err := encodePatchField(RequireMFA, in.RequireMFA)
+	requireMFA, err := encodeStoredField(RequireMFA, in.RequireMFA)
 	if err != nil {
 		return nil, err
 	}
-	groupRoleMap, err := encodePatchField(OidcGroupRoleMap, in.OidcGroupRoleMap)
+	groupRoleMap, err := encodeStoredField(OidcGroupRoleMap, in.OidcGroupRoleMap)
 	if err != nil {
 		return nil, err
 	}
-	country, err := encodePatchField(Country, in.Country)
+	country, err := encodeStoredField(Country, in.Country)
 	if err != nil {
 		return nil, err
 	}
@@ -377,7 +400,7 @@ func (s *InstallationSettingsStore) UpdateInstallation(ctx context.Context, in I
 		return InstallationSettings{}, err
 	}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := refuseRenameTx(ctx, tx, in.Name); err != nil {
+		if err := refuseRenameTx(ctx, tx, s.config, in.Name); err != nil {
 			return err
 		}
 		if err := s.changeCountryTx(ctx, tx, in.Country); err != nil {
@@ -390,7 +413,7 @@ func (s *InstallationSettingsStore) UpdateInstallation(ctx context.Context, in I
 			if w.raw == nil {
 				continue
 			}
-			if err := s.settings.SetRawTx(ctx, tx, w.entry.Key(), w.raw); err != nil {
+			if err := w.save(ctx, tx, s); err != nil {
 				return err
 			}
 		}
@@ -405,31 +428,33 @@ func (s *InstallationSettingsStore) UpdateInstallation(ctx context.Context, in I
 // refuseRenameTx admits only the name the installation already holds. The
 // anchor company's display name is that name, and a rename here would drift
 // from it. An older client resending the name it read still saves.
-func refuseRenameTx(ctx context.Context, tx pgx.Tx, next *string) error {
+func refuseRenameTx(ctx context.Context, tx pgx.Tx, c *config.Config, next *string) error {
 	if next == nil {
 		return nil
 	}
 	if err := settings.LockForWrite(ctx, tx, Name.Key()); err != nil {
 		return err
 	}
-	current, err := settings.GetTx(ctx, tx, Name)
+	current, err := config.StoredValTx(ctx, tx, c, Name)
 	if err != nil {
 		return err
 	}
 	if *next == current {
 		return nil
 	}
-	return settings.InvalidValue{
+	return c.LockFirst(Name.Key(), settings.InvalidValue{
 		Setting: Name.Key(), Code: "set_on_company_profile",
 		Reason: "the installation's name is the company's name; change it on the company profile",
-	}
+	})
 }
 
 // changeCountryTx runs the country-change hook under the setting's write lock,
 // before the new value is written. So the hook reads the country being
 // replaced, and no second change interleaves.
 func (s *InstallationSettingsStore) changeCountryTx(ctx context.Context, tx pgx.Tx, next *string) error {
-	if next == nil {
+	// A boot-set country never changes, so its save alone decides: a no-op,
+	// or a refusal as locked whether or not the value sent is valid.
+	if _, locked := s.config.Locked(Country.Key()); next == nil || locked {
 		return nil
 	}
 	raw, err := json.Marshal(*next)

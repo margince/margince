@@ -55,7 +55,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
-	"github.com/margince/margince/backend/internal/platform/deployconfig"
 )
 
 // seededDefaults is the matrix identity seeds, as identity itself renders it.
@@ -671,14 +670,14 @@ func bootstrapInstallation(t *testing.T, e *apptest.AppEnv) {
 	if err := os.WriteFile(pwFile, []byte("a-long-enough-password"), 0o600); err != nil {
 		t.Fatalf("writing the bootstrap password: %v", err)
 	}
-	cfg, err := deployconfig.Parse([]byte(`version: 1
+	cfg, err := bootstrapFrom(t, `version: 1
 workspace:
   name: RBAC Seed Parity
 bootstrap_admin:
   email: admin@rbacparity.test
   display_name: Parity Admin
-  password_file: ` + pwFile + `
-`))
+  password_file: `+pwFile+`
+`)
 	if err != nil {
 		t.Fatalf("parsing the deployment file: %v", err)
 	}

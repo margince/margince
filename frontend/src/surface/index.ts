@@ -37,6 +37,8 @@ export { formatBytes, formatDateTime, formatNumber } from "../format/format";
 // screen the way the app actually runs it.
 export { LocaleProvider, useLocale } from "../i18n";
 export { useCan, useCanWrite } from "../lib/capability";
+// The record an entry on a core screen opened the unit on, for prefill.
+export { type EntryRecord, useEntryContext } from "../lib/extensionentries";
 
 /**
  * The catalogue lookup, widened to a unit's own keys.

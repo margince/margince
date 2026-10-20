@@ -96,7 +96,7 @@ type accountScanWorker struct {
 func newAccountScanWorker(pool *pgxpool.Pool, brain completer, routingVersion func() string, log *slog.Logger) *accountScanWorker {
 	view := company360.NewService(pool, contacts.NewStore(InstallationDB(pool)),
 		deals.NewStore(InstallationDB(pool), DealsInstallation()), ProjectsStore(pool),
-		newApprovalsService(InstallationDB(pool)), time.Now)
+		NewApprovalsService(InstallationDB(pool)), time.Now)
 	return &accountScanWorker{
 		svc:   companyscan.NewService(pool, view, view, brain, nil, routingVersion, time.Now, log),
 		users: identity.NewService(pool),

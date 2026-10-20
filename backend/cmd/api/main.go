@@ -31,10 +31,10 @@ import (
 	"github.com/margince/margince/composition"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/programsettings"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
@@ -56,7 +56,7 @@ func main() {
 // listener — and the order it reads in is the order the process depends on;
 // boot.go holds the phases.
 func run(ctx context.Context, args []string, stdout io.Writer) error {
-	cfg, err := parseAPIFlags(args)
+	cfg, loaded, err := loadAPIConfig(args, config.Environ())
 	if err != nil {
 		return err
 	}
@@ -79,15 +79,15 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
-	config.WarnUndeclared(logger, cfg.unknownVars)
+	loaded.Report(logger)
 
-	pool, vault, err := openInstallation(ctx, cfg.dsn)
+	pool, vault, err := openInstallation(ctx, cfg)
 	if err != nil {
 		return err
 	}
 	defer pool.Close()
 
-	deployCfg, license, err := bindInstallation(ctx, cfg, pool, vault, logger)
+	bootstrap, license, err := bindInstallation(ctx, cfg, pool, vault, logger)
 	if err != nil {
 		return err
 	}
@@ -100,12 +100,11 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		return err
 	}
 
-	// AllowTestMailbox is an operations.* kill switch (deployconfig.Operations),
-	// not a capture.* tuning knob, so it is set here rather than folded into
-	// CaptureConfigFromDeploy's own deployconfig.Capture-scoped contract.
-	captureCfg := compose.CaptureConfigFromDeploy(deployCfg.Capture, logger)
-	compose.WarnStaleRates(deployCfg.Rates, logger)
-	captureCfg.AllowTestMailbox = deployCfg.Operations.AllowTestMailbox
+	// AllowTestMailbox is an operations.* kill switch, not a capture.* tuning
+	// knob, so it is set here rather than folded into CaptureConfigFromDeploy.
+	captureCfg := compose.CaptureConfigFromDeploy(cfg.settings, logger)
+	compose.WarnStaleRates(cfg.settings, logger)
+	captureCfg.AllowTestMailbox = config.Val(cfg.settings, programsettings.AllowTestMailbox)
 	opts, schemaPool, closeSchemaPool, err := baseComposeOptions(ctx, cfg, captureCfg, pool, vault, logger, stdout, license)
 	if err != nil {
 		return err
@@ -122,7 +121,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// where the client it shares is opened.
 	shareThroughRedis(ctx, rdb)
 
-	surfaceOpts, resetLane, err := declaredSurfaceOptions(ctx, cfg, deployCfg, pool, schemaPool, vault, rdb, logger, stdout)
+	surfaceOpts, resetLane, err := declaredSurfaceOptions(ctx, cfg, bootstrap, pool, schemaPool, vault, rdb, logger, stdout)
 	if err != nil {
 		return err
 	}
@@ -148,16 +147,16 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// The model path comes back already bound to volumeMeter (MCP-SESS-COST);
 	// boot.go carries why that binding belongs with the path, not here.
 	//nolint:contextcheck // boot-time wiring: the model path outlives any request context
-	modelOpts, modelPath, err := modelAndHandoffOptions(ctx, cfg, deployCfg, pool, logger, volumeMeter)
+	modelOpts, modelPath, err := modelAndHandoffOptions(ctx, cfg, bootstrap, pool, logger, volumeMeter)
 	if err != nil {
 		return err
 	}
 	opts = append(opts, modelOpts...)
-	opts = append(opts, compose.WithCompanyContextRollout(string(deployCfg.CompanyContext.EffectiveRollout())))
-	opts = append(opts, compose.WithListsEnabled(deployCfg.Lists.Enabled))
-	opts = append(opts, compose.SecurityTxtOption(deployCfg.Web, time.Now(), logger))
+	opts = append(opts, compose.WithCompanyContextRollout(config.Val(cfg.settings, compose.CompanyContextRollout)))
+	opts = append(opts, compose.WithListsEnabled(config.Val(cfg.settings, programsettings.ListsEnabled)))
+	opts = append(opts, compose.SecurityTxtOption(cfg.settings, time.Now(), logger))
 
-	viewOpts, stopViewRefresh, err := mcpAppViewsLane(ctx, cfg, deployCfg, logger)
+	viewOpts, stopViewRefresh, err := mcpAppViewsLane(ctx, cfg, logger)
 	if err != nil {
 		return err
 	}
@@ -170,7 +169,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// An admin re-points a lane through this role, but the WORKER is a separate
 	// process that never sees that write. Both re-read on the same interval, so
 	// neither serves a binding the installation has replaced (compose/routingwatcher).
-	go compose.NewRoutingWatcher(pool, modelPath, config.FromOS, logger).Run(ctx)
+	go compose.NewRoutingWatcher(pool, modelPath, compose.RoutingKeys(cfg.settings), logger).Run(ctx)
 	return serveUntilSignal(ctx, cfg, apiHandler, stdout)
 }
 
@@ -192,12 +191,12 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 // closes it here instead, because there is no pool to return alongside an error.
 //
 //nolint:ireturn // the vault seam has two providers behind one Vault; returning the interface is the design, and this only carries what ForRole handed back.
-func openInstallation(ctx context.Context, dsn string) (*pgxpool.Pool, keyvault.Vault, error) {
-	pool, err := boundPool(ctx, dsn)
+func openInstallation(ctx context.Context, cfg apiConfig) (*pgxpool.Pool, keyvault.Vault, error) {
+	pool, err := boundPool(ctx, cfg.dsn)
 	if err != nil {
 		return nil, nil, err
 	}
-	vault, err := keyvault.ForRole(ctx, "api", pool, config.FromOS)
+	vault, err := keyvault.ForRole(ctx, "api", pool, cfg.settings)
 	if err != nil {
 		pool.Close()
 		return nil, nil, err
@@ -304,7 +303,7 @@ func baseComposeOptions(ctx context.Context, cfg apiConfig, capCfg compose.Captu
 		logger.Info("api: per-IP rate limits key on X-Forwarded-For from trusted proxies", "trusted_proxies", cfg.trustedProxies.String())
 	}
 	switch {
-	case cfg.metricsAccess == metricsAccessOpen:
+	case cfg.metricsAccess == programsettings.MetricsAccessOpen:
 		opts = append(opts, compose.WithOpenMetrics())
 		logger.Warn("api: MARGINCE_METRICS_ACCESS=open — /metrics is served to anything that reaches this port, and its exposition names every route and carries workspace ids; keep the port contained")
 	case cfg.metricsToken == "":
@@ -330,13 +329,13 @@ func baseComposeOptions(ctx context.Context, cfg apiConfig, capCfg compose.Captu
 	// come from one value rather than two that can drift.
 	opts = append(opts, compose.WithCaptureTrace(capCfg.TracePayloads))
 
-	blobOpts, err := blobstoreOptions(ctx, stdout)
+	blobOpts, err := blobstoreOptions(ctx, cfg.settings, stdout)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 	opts = append(opts, blobOpts...)
 
-	kvOpts, err := keyvaultOptions(pool, vault, stdout)
+	kvOpts, err := keyvaultOptions(pool, vault, cfg.settings, stdout)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -381,8 +380,8 @@ func baseComposeOptions(ctx context.Context, cfg apiConfig, capCfg compose.Captu
 // canonical external base — with email enabled, a missing
 // --public-base-url is a boot error, never a link derived from a
 // request Host.
-func passwordResetOptions(ctx context.Context, deployCfg deployconfig.Config, pool *pgxpool.Pool, vault keyvault.Vault, publicBaseURL string, logger *slog.Logger, stdout io.Writer) ([]compose.Option, error) {
-	if !deployCfg.Email.Enabled {
+func passwordResetOptions(ctx context.Context, settings *config.Config, pool *pgxpool.Pool, vault keyvault.Vault, publicBaseURL string, logger *slog.Logger, stdout io.Writer) ([]compose.Option, error) {
+	if !config.Val(settings, compose.EmailEnabled) {
 		return nil, nil
 	}
 	if publicBaseURL == "" {
@@ -390,7 +389,7 @@ func passwordResetOptions(ctx context.Context, deployCfg deployconfig.Config, po
 	}
 	// The relay password is sealed into the vault on the boot that first sees
 	// it, and read back from there once the deployment stops declaring it.
-	m, err := compose.OperatorMailer(ctx, pool, vault, deployCfg, config.FromOS, logger)
+	m, err := compose.OperatorMailer(ctx, pool, vault, settings, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -413,8 +412,8 @@ func passwordResetOptions(ctx context.Context, deployCfg deployconfig.Config, po
 // blobstoreOptions wires the attachment endpoints (and their /readyz probe +
 // erase-path object purge) only when an object store is configured; without
 // one the endpoints answer 501 rather than nil-deref at request time.
-func blobstoreOptions(ctx context.Context, stdout io.Writer) ([]compose.Option, error) {
-	blob, configured, err := blobstore.FromEnv(ctx, config.FromOS)
+func blobstoreOptions(ctx context.Context, settings *config.Config, stdout io.Writer) ([]compose.Option, error) {
+	blob, configured, err := blobstore.FromConfig(ctx, settings)
 	if err != nil {
 		return nil, fmt.Errorf("api: blobstore: %w", err)
 	}

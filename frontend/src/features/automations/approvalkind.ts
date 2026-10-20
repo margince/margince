@@ -77,7 +77,7 @@ const COMPANY_LIFECYCLE_STAGES = [
 // The same catalog keys the account page's stage badge reads, so the inbox and
 // the record cannot call one stage two things. Keyed off the list above:
 // a stage added there with no entry here fails the type.
-const COMPANY_LIFECYCLE_LABELS: Readonly<
+export const COMPANY_LIFECYCLE_LABELS: Readonly<
   Record<(typeof COMPANY_LIFECYCLE_STAGES)[number], MessageKey>
 > = {
   unknown: "company.lifecycle.unknown",

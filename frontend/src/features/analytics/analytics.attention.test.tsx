@@ -22,12 +22,20 @@ afterEach(() => {
   window.location.hash = "";
 });
 
-const finding = (id: string) => ({
+const finding = (
+  id: string,
+  severity: "high" | "medium" | "low" = "high",
+  amount: number | null = 500000,
+) => ({
   id,
-  type: "close_date_passed",
+  type: "close_past",
   subject_kind: "deal",
   subject_id: `deal-${id}`,
-  severity: "high",
+  subject: { type: "deal", id: `deal-${id}`, label: `Deal ${id}` },
+  severity,
+  affected_minor: amount ?? undefined,
+  currency: "EUR",
+  owner_id: "u-owner",
   status: "open",
   first_seen_at: "2026-09-01T02:00:00Z",
   last_seen_at: "2026-09-14T02:00:00Z",
@@ -77,6 +85,8 @@ function routes(overrides: RouteMap = {}): RouteMap {
           { source: "offers", state: "not_connected" },
         ],
       }),
+    "GET /users/names": () =>
+      jsonResponse({ data: [{ id: "u-owner", display_name: "Riley Rep" }] }),
     ...overrides,
   };
 }
@@ -89,7 +99,13 @@ it("lists what stands between the reader and numbers they can trust", async () =
   expect(
     await screen.findByRole("heading", { name: "Needs your attention" }),
   ).toBeTruthy();
-  expect(await screen.findByText("2 forecast checks to answer")).toBeTruthy();
+  expect(await screen.findByText("Deal a")).toBeTruthy();
+  expect(screen.getByText("Deal b")).toBeTruthy();
+  expect(screen.getAllByText("Close date has passed")).toHaveLength(2);
+  expect((await screen.findAllByText(/^Riley Rep · .+ at stake$/)).length).toBe(
+    2,
+  );
+  expect(screen.queryByText("2 forecast checks to answer")).toBeNull();
   expect(
     await screen.findByText("10 of 12 open deals are priced"),
   ).toBeTruthy();
@@ -105,7 +121,7 @@ it("opens the section where each item is answered", async () => {
   render(<AnalyticsScreen />);
 
   await user.click(
-    await screen.findByRole("button", { name: "Review in Forecast" }),
+    (await screen.findAllByRole("button", { name: "Review" }))[0],
   );
   await waitFor(() =>
     expect(
@@ -129,7 +145,82 @@ it("keeps the list when the performance evaluation fails", async () => {
   expect(
     await screen.findByRole("heading", { name: "Needs your attention" }),
   ).toBeTruthy();
-  expect(await screen.findByText("2 forecast checks to answer")).toBeTruthy();
+  expect(await screen.findByText("Deal a")).toBeTruthy();
+});
+
+it("names the first five findings in the server's order and counts the rest", async () => {
+  window.location.hash = "#/analytics/performance";
+  installFetchStub(
+    routes({
+      "GET /forecast/assurance/exceptions": () =>
+        jsonResponse({
+          data: ["one", "two", "three", "four", "five", "six", "seven"].map(
+            (id) => finding(id),
+          ),
+        }),
+    }),
+  );
+  render(<AnalyticsScreen />);
+
+  expect(await screen.findByText("7 forecast checks to answer")).toBeTruthy();
+  expect(screen.getAllByText(/^Deal /).map((node) => node.textContent)).toEqual(
+    ["Deal one", "Deal two", "Deal three", "Deal four", "Deal five"],
+  );
+});
+
+it("asks for the findings of the record scope Performance shows", async () => {
+  const asked: string[] = [];
+  window.location.hash = "#/analytics/performance?scope=team:t-1";
+  installFetchStub(
+    routes({
+      "GET /analytics/context": () =>
+        jsonResponse({
+          default_scope: { kind: "workspace", label: "Whole company" },
+          allowed_scopes: [
+            { kind: "workspace", label: "Whole company" },
+            { kind: "team", id: "t-1", label: "North" },
+          ],
+          capabilities: {
+            view_manager_forecast: true,
+            submit_manager_forecast: true,
+          },
+          as_of: "2026-09-04T00:00:00Z",
+          timezone: REPORTING_FIXTURE_ZONE,
+          base_currency: "EUR",
+        }),
+    }),
+  );
+  const stub = globalThis.fetch;
+  globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+    const url = input instanceof Request ? input.url : String(input);
+    if (url.includes("/forecast/assurance/exceptions")) {
+      asked.push(url);
+    }
+    return stub(input, init);
+  }) as typeof fetch;
+  render(<AnalyticsScreen />);
+
+  await screen.findByText("Deal a");
+  expect(
+    asked.some(
+      (url) => /scope_kind=team/.test(url) && /scope_id=t-1/.test(url),
+    ),
+  ).toBe(true);
+});
+
+it("leaves out an owner whose name has not arrived instead of calling the deal unowned", async () => {
+  window.location.hash = "#/analytics/performance";
+  installFetchStub(
+    routes({
+      "GET /users/names": () =>
+        jsonResponse({ status: 500, title: "Internal Server Error" }, 500),
+    }),
+  );
+  render(<AnalyticsScreen />);
+
+  expect(await screen.findByText("Deal a")).toBeTruthy();
+  expect(screen.queryByText(/No owner/)).toBeNull();
+  expect(screen.getAllByText(/^.+ at stake$/).length).toBe(2);
 });
 
 it("draws no panel when nothing needs the reader", async () => {

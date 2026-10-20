@@ -12,8 +12,6 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -22,10 +20,7 @@ func TestTeamSummaryKeepsItsWriteLanguageOnReplayAndRead(t *testing.T) {
 		t.Run(tc.language, func(t *testing.T) {
 			e := setupWeekly(t)
 			e.engine.WithForecast(&stubForecast{coverage: []Coverage{{PeriodKind: "month", Basis: "manager_call", BaseCurrency: "EUR", CoverageBp: 6400, ReplanRecommended: true}}})
-			store := settings.New(e.Pool, settings.NewRegistry(identity.BaseLanguage))
-			if err := settings.Set(e.Admin(), store, identity.BaseLanguage, tc.language); err != nil {
-				t.Fatal(err)
-			}
+			integration.SetBaseLanguage(e.Admin(), t, e.Pool, tc.language)
 			members := []TeamMember{{UserID: e.Rep1, DisplayName: "Original Name"}}
 			empty, _, err := e.engine.AssembleTeamFor(e.repCtx, e.Team1, "Original Team", members, weekClock)
 			if err != nil {
@@ -53,9 +48,7 @@ func TestTeamSummaryKeepsItsWriteLanguageOnReplayAndRead(t *testing.T) {
 			if tc.language == "vi" {
 				nextLanguage = "de"
 			}
-			if err := settings.Set(e.Admin(), store, identity.BaseLanguage, nextLanguage); err != nil {
-				t.Fatal(err)
-			}
+			integration.SetBaseLanguage(e.Admin(), t, e.Pool, nextLanguage)
 			replay, wrote, err := e.engine.AssembleTeamFor(e.repCtx, e.Team1, "Renamed", members, weekClock)
 			if err != nil {
 				t.Fatal(err)
@@ -108,10 +101,7 @@ func TestLegacyTeamSummaryWithoutLanguageReadsInEnglish(t *testing.T) {
 	if _, err := integration.OwnerConn(t).Exec(context.Background(), `UPDATE team_weekly_review SET summary_language = NULL WHERE id = $1`, first.ID); err != nil {
 		t.Fatal(err)
 	}
-	store := settings.New(e.Pool, settings.NewRegistry(identity.BaseLanguage))
-	if err := settings.Set(e.Admin(), store, identity.BaseLanguage, "de"); err != nil {
-		t.Fatal(err)
-	}
+	integration.SetBaseLanguage(e.Admin(), t, e.Pool, "de")
 	latest, err := e.engine.LatestTeamReview(e.repCtx, e.Team1, nil)
 	if err != nil {
 		t.Fatal(err)

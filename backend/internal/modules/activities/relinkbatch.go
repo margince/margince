@@ -91,7 +91,10 @@ func (s *Store) RelinkActivity(ctx context.Context, id ids.ActivityID, in Relink
 	if errors.Is(err, pgx.ErrNoRows) {
 		return crmcontracts.Activity{}, apperrors.ErrNotFound
 	}
-	return out, err
+	if err != nil {
+		return out, err
+	}
+	return out, s.attachCustomValues(ctx, &out)
 }
 
 // RelinkActivityInTx is the single relink on the CALLER's transaction: the

@@ -42,7 +42,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/modules/weeklyplan"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
-	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 )
 
@@ -58,7 +57,8 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	dealsH := deals.NewHandlers(InstallationDB(pool), DealsInstallation()).
 		WithFieldCatalog(customfields.NewService(pool, nil)).
 		WithSuggestionEffects(dealSuggestionEffects{}).
-		WithSettings(NewSettingsStore(pool)).
+		WithSettings(StoredConfig(pool)).
+		WithLocks(loadedLocks).
 		WithLegalReviewDocuments(legalReviewDocuments{store: activities.NewStore(InstallationDB(pool))})
 	// Bootstrap happens at boot from deployment configuration
 	// (EnsureInstallation, A107/ADR-0061) — the HTTP surface only ever
@@ -68,8 +68,9 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// dedicated settings-store handle rather than the one the settings HANDLERS
 	// hold: both are stateless readers over the same rows, and the login service
 	// is composed here while that store is assembled elsewhere.
-	authPolicy := identity.NewInstallationSettings(InstallationDB(pool), NewSettingsStore(pool))
+	authPolicy := identity.NewInstallationSettings(InstallationDB(pool), NewSettingsStore(pool), StoredConfig(pool))
 	identitySvc := identity.NewService(pool).
+		WithConfig(StoredConfig(pool)).
 		WithRequireSSO(authPolicy.SSOEnforced).
 		WithRequireMFA(authPolicy.MFARequired).
 		WithGroupRoleMap(authPolicy.GroupRoleMap)
@@ -155,7 +156,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 	// The compiled-in ceilings, taken from the deployment-config defaults rather
 	// than restated here: one place resolves a default, so no composition can
 	// disagree with the file about what "unconfigured" means.
-	limits := deployconfig.Config{}.EffectiveUploads()
+	limits := DefaultUploadLimits()
 	// ONE introductions store for the two surfaces that read it: the ask's own
 	// handlers, and the Network tab asking which routes are already spoken
 	// for. Two stores would be two clocks, and an ask could be born already
@@ -233,7 +234,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// the purger above is not: a role that forgot it would answer 404 to a
 		// controller placing a litigation hold, which reads as "no such record"
 		// rather than as "this installation cannot hold one".
-		privacyHandlers: privacy.NewHandlers(InstallationDB(pool), NewSettingsStore(pool)).
+		privacyHandlers: privacy.NewHandlers(InstallationDB(pool), StoredConfig(pool)).WithLocks(loadedLocks).
 			WithCountry(identity.CountryForDecision).
 			WithRawCapturePurger(RawCapturePurgerFor(InstallationDB(pool))).
 			WithLegalHoldWriter(NewLegalHoldSeam(pool)).
@@ -250,7 +251,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		automationHandlers: automation.NewHandlers(InstallationDB(pool)).
 			WithFieldCatalog(customfields.NewService(pool, nil)).
 			WithRetryEngine(NewWorkflowEngine(InstallationDB(pool))),
-		voiceHandlers: ai.NewHandlers(InstallationDB(pool), NewSeatBudget(pool)).
+		voiceHandlers: ai.NewHandlers(InstallationDB(pool), NewSeatBudget(pool)).WithLocks(loadedLocks).
 			WithVoiceKnownSpeakers(voiceKnownSpeakers(pool)),
 		// The names seam is the WEB surface's: a reader reading "explain this
 		// number" meets the deals by name, while the MCP provider leaves it
@@ -278,7 +279,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// is a job rather than a request, so the handler set is a read.
 		assuranceHandlers: assurance.NewHandlers(
 			assurance.NewStore(InstallationDB(pool)),
-			AssuranceExceptions,
+			AssuranceExceptionsIn,
 			func() time.Time { return time.Now().UTC() },
 		),
 		// One assembler, shared with the test that drives this handler: the

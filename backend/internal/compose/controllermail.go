@@ -30,8 +30,8 @@ import (
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/jobs"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -81,7 +81,7 @@ func (q controllerMailQueue) QueueConfirmationTx(ctx context.Context, tx pgx.Tx,
 	}
 	subject, body := in.Rendered.Subject, in.Rendered.Body
 	if in.Rendered.Language != "" || in.Rendered.HTMLBody != "" {
-		brand, err := settings.ApplyTx(ctx, tx, identity.Name)
+		brand, err := config.StoredApplyTx(ctx, tx, loadedConfig(), identity.Name)
 		if err != nil {
 			return ids.UUID{}, err
 		}

@@ -21,7 +21,7 @@ func discardLogger() *slog.Logger {
 }
 
 func TestEnsureInstallationRefusesAnAdminWithoutAWorkspace(t *testing.T) {
-	cfg := deployconfig.Config{
+	cfg := deployconfig.Bootstrap{
 		Version: 1,
 		BootstrapAdmin: &deployconfig.BootstrapAdmin{
 			Email: "a@b.test", DisplayName: "A", PasswordFile: "/nowhere",

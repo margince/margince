@@ -6,6 +6,7 @@ import type { components } from "../../api/schema";
 import { Field } from "../../design-system/atoms";
 import { Select } from "../../design-system/select";
 import { SettingRow } from "../../design-system/settingrow";
+import { lockFor } from "../../format/settinglocks";
 import { useT } from "../../i18n";
 
 type InstallationSettings = components["schemas"]["InstallationSettings"];
@@ -39,30 +40,38 @@ export function RegionalSettingsRows({
 }
 
 export function RegionalSettingsFields({
+  locks,
   draft,
   canManage,
   refused,
   onChange,
 }: Readonly<{
+  locks?: InstallationSettings["locks"];
   draft: InstallationSettings;
   canManage: boolean;
   refused: Map<string, string>;
   onChange: (next: InstallationSettings) => void;
 }>) {
   const t = useT();
+  const dateFormat = lockFor(locks, "installation.date_format", t);
+  const timeFormat = lockFor(locks, "installation.time_format", t);
   return (
     <>
       <div data-fact="date_format">
         <Field
           label={t("installationSettings.dateFormat")}
-          hint={t("installationSettings.formatsHint")}
+          hint={
+            dateFormat.disabled
+              ? dateFormat.reason
+              : t("installationSettings.formatsHint")
+          }
           error={refused.get("date_format")}
         >
           {(control) => (
             <Select
               {...control}
               value={draft.date_format ?? "locale"}
-              disabled={!canManage}
+              disabled={!canManage || dateFormat.disabled}
               options={[
                 {
                   value: "locale",
@@ -97,14 +106,18 @@ export function RegionalSettingsFields({
       <div data-fact="time_format">
         <Field
           label={t("installationSettings.timeFormat")}
-          hint={t("installationSettings.formatsHint")}
+          hint={
+            timeFormat.disabled
+              ? timeFormat.reason
+              : t("installationSettings.formatsHint")
+          }
           error={refused.get("time_format")}
         >
           {(control) => (
             <Select
               {...control}
               value={draft.time_format ?? "locale"}
-              disabled={!canManage}
+              disabled={!canManage || timeFormat.disabled}
               options={[
                 {
                   value: "locale",

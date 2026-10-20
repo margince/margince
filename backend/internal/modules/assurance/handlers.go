@@ -24,7 +24,14 @@ import (
 // Injected rather than imported: the scope clause is over `deal`, which this
 // module does not own and may not import. Applying it in the composition layer
 // is also where the caller's authority already sits.
-type ExceptionsFunc func(ctx context.Context, tx pgx.Tx) ([]Exception, error)
+type ExceptionsFunc func(ctx context.Context, tx pgx.Tx, population Population) ([]Exception, error)
+
+// Population narrows a list to the deals of one team, owner or the whole
+// workspace. The zero value narrows nothing beyond what the caller may see.
+type Population struct {
+	Kind string
+	ID   *ids.UUID
+}
 
 // Handlers is the assurance surface.
 type Handlers struct {
@@ -41,11 +48,15 @@ func NewHandlers(store *Store, exceptions ExceptionsFunc, now func() time.Time) 
 }
 
 // ListInputChecks answers the open findings this caller can see.
-func (h Handlers) ListInputChecks(w http.ResponseWriter, r *http.Request) {
+func (h Handlers) ListInputChecks(w http.ResponseWriter, r *http.Request, params crmcontracts.ListInputChecksParams) {
+	population := Population{ID: (*ids.UUID)(params.ScopeId)}
+	if params.ScopeKind != nil {
+		population.Kind = string(*params.ScopeKind)
+	}
 	var found []Exception
 	err := h.store.InTx(r.Context(), func(ctx context.Context, tx pgx.Tx) error {
 		var err error
-		found, err = h.exceptions(ctx, tx)
+		found, err = h.exceptions(ctx, tx, population)
 		return err
 	})
 	if err != nil {

@@ -51,13 +51,8 @@ export function WalkNotice({
     <Callout
       kind="event"
       title={t("worklist.walk.title")}
-      /* The way to act on it. Refreshing starts a new walk, which is what
-         brings the arrived work in — the notice without it would name a
-         problem and leave the reader to find the remedy. */
       actions={
-        arrived > 0 ? (
-          <Button onClick={onRefresh}>{t("worklist.walk.refresh")}</Button>
-        ) : undefined
+        <Button onClick={onRefresh}>{t("worklist.walk.refresh")}</Button>
       }
     >
       {noticeText(arrived, gone, t, locale)}

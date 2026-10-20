@@ -63,3 +63,14 @@ func TestDateOnlyPromiseDoesNotInventOrShiftADeadlineTime(t *testing.T) {
 		t.Fatalf("timed task lost its instant: %s", got)
 	}
 }
+
+func TestAnApprovalWithoutADecisionActionDoesNotAskForAttentionByMail(t *testing.T) {
+	item := crmcontracts.WorklistItem{Source: crmcontracts.WorklistItemSourceApproval, Title: new("Review the stage change")}
+	if got := mailWorkItem(item, mailcopy.For("en"), nil); got != "" {
+		t.Fatalf("unactionable approval mailed: %s", got)
+	}
+	item.Actions = []crmcontracts.WorklistItemActions{"decide"}
+	if got := mailWorkItem(item, mailcopy.For("en"), nil); got == "" {
+		t.Fatal("ready approval omitted")
+	}
+}

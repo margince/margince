@@ -382,6 +382,7 @@ func (t logActivity) Spec() mcp.ToolSpec {
 			"source_activity_id":{"type":"string","format":"uuid","description":` + followUpSourceDescription + `},
 			"follow_up_task":` + string(schemaFor[crmcontracts.ActivityFollowUpTask]()) + `,
 			"source_system":{"type":"string"},"source_id":{"type":"string"}},
+			"patternProperties":{"^cf_[a-z0-9_]+$":{"description":"An activity custom field, by its cf_ key from describe_vocabulary. A key no active activity field names is refused."}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[wireRecord](),
 	}

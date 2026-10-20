@@ -1,6 +1,6 @@
 import { Panel } from "../../design-system/panel";
-import { AssistantPanel } from "../../screens/assistant";
 import { CompanySuggestions } from "../deals/dealsuggestion";
+import { AssistantPanel } from "../voice-knowledge/assistant";
 import type { Company360View } from "./companies";
 import { recordNamesIn } from "./company360";
 import { DossierPanel } from "./companydossier";

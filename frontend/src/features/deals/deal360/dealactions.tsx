@@ -18,6 +18,7 @@ import { useId, useState } from "react";
 import { api } from "../../../api/client";
 import type { components } from "../../../api/schema";
 import { ifMatch, requireVersion } from "../../../api/version";
+import { ExtensionEntries } from "../../../components/extensionentries";
 import { Button, OverflowMenu } from "../../../design-system/atoms";
 import { ConfirmModal } from "../../../design-system/confirmmodal";
 import { ErrorLine } from "../../../design-system/errorline";
@@ -218,6 +219,10 @@ export function DealActions({
       >
         <CheckSquare aria-hidden="true" /> {t("log.addTask")}
       </Button>
+      <ExtensionEntries
+        slot="record_header.deal"
+        record={{ type: "deal", id: deal.id }}
+      />
       {drawer && (
         <LogActivityAction
           entityType="deal"

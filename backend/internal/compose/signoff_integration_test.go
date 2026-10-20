@@ -92,7 +92,7 @@ func TestATemplateSignsAPlainSendInMarkupAndText(t *testing.T) {
 	perms.Objects["company"] = principal.ObjectGrant{Read: true}
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, perms)
 
-	if _, err := contacts.NewStore(InstallationDB(e.Pool)).WithSettings(NewSettingsStore(e.Pool)).
+	if _, err := contacts.NewStore(InstallationDB(e.Pool)).WithSettings(StoredConfig(e.Pool)).
 		SaveSignatureTemplate(e.Admin(), `<p>{logo}<b>{name}</b><br>{title}<br><span style="color:#2a7">{phone}</span></p>`); err != nil {
 		t.Fatalf("save template: %v", err)
 	}

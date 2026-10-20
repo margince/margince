@@ -9,17 +9,16 @@
 # migrated.
 set -eu
 
-# Optional convenience: source an env file if one is mounted at /.env. `set -a`
-# auto-exports every var so the exec'd binary inherits them (a bare `KEY=value`
-# line otherwise sets only a shell var, not the child's environment).
+# Optional convenience: an env file mounted at /.env, which the worker reads
+# itself through --env-file, below the environment. The DSN check below reads
+# its one value from the file in a clean shell, without exporting it.
 if [ -f /.env ]; then
-    set -a
-    # shellcheck disable=SC1091
-    . /.env
-    set +a
+    set -- --env-file /.env
+    # shellcheck disable=SC2016
+    MARGINCE_DSN="${MARGINCE_DSN:-$(env -i /bin/sh -c 'set -a; . /.env >/dev/null; printf %s "${MARGINCE_DSN:-}"')}"
 fi
 
 : "${MARGINCE_DSN:?MARGINCE_DSN is required (app role DSN, via the --dsn env fallback)}"
 
 echo "entrypoint: starting worker…"
-exec margince-worker
+exec margince-worker "$@"

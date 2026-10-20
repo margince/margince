@@ -16,9 +16,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
-import { project } from "../../screens/projects.fixtures";
 import { meFixture } from "../../testing/mefixture";
 import { jsonResponse } from "../companies/company.fixtures";
+import { project } from "../projects/projects.fixtures";
 import { dealProjectFields } from "./dealproject";
 import { DealScreen, DealsScreen } from "./deals";
 

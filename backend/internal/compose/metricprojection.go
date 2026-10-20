@@ -154,7 +154,7 @@ func projectReportingCharts(out *reporting.Evaluation) error {
 				continue
 			}
 			chart := crmcontracts.ReportingChart{Kind: block, Metric: metric.Id, Unit: metric.Unit, Coverage: metric.Coverage, ContextId: metric.Evidence.ContextId, Points: []crmcontracts.ReportingPoint{}}
-			if metric.Coverage.Status == reportingUnavailable || metric.Coverage.Status == "unsupported" || metric.Coverage.Status == "not_configured" {
+			if metric.Coverage.Status == reportingUnavailable || metric.Coverage.Status == reportingFailed || metric.Coverage.Status == "unsupported" || metric.Coverage.Status == "not_configured" {
 				out.Result.Charts = append(out.Result.Charts, chart)
 				continue
 			}

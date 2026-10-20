@@ -582,7 +582,9 @@ describe("editing the tree", () => {
 });
 
 describe("the join between conditions", () => {
-  const MATCH_ALL = "and: match all of these. Press to match any.";
+  const MATCH_ALL =
+    "and: the conditions on both sides must match. Press for or.";
+  const MATCH_ANY = "or: a match on either side is enough. Press for and.";
 
   it("draws no connector until there are two conditions", () => {
     resetIDsForTest();
@@ -593,38 +595,90 @@ describe("the join between conditions", () => {
     expect(screen.queryByRole("button", { name: MATCH_ALL })).toBeNull();
   });
 
-  it("flips the whole group from either connector", async () => {
+  const owner = { field: "owner_id", op: "eq", value: "u1" };
+  const name = { field: "full_name", op: "eq", value: "ann" };
+  const score = { field: "cf_deal_score", op: "gt", value: 3 };
+
+  function threeConditions(join: "and" | "or") {
+    return newGroup(join, [
+      newLeaf("owner_id", "eq", "u1"),
+      newLeaf("full_name", "eq", "ann"),
+      newLeaf("cf_deal_score", "gt", 3),
+    ]);
+  }
+
+  function words(): (string | null)[] {
+    return screen
+      .getAllByRole("button", { name: /^(and|or): / })
+      .map((button) => button.textContent);
+  }
+
+  it("flips only the connector pressed, and boxes the and run", async () => {
+    resetIDsForTest();
+    const user = userEvent.setup();
+    render(<Harness start={threeConditions("and")} />);
+
+    expect(words()).toEqual(["and", "and"]);
+    await user.click(screen.getAllByRole("button", { name: MATCH_ALL })[1]);
+
+    // "and" binds tighter, so the first two stay together as one run.
+    expect(wire()).toEqual({ or: [{ and: [owner, name] }, score] });
+    expect(words()).toEqual(["and", "or"]);
+    expect(screen.getByRole("group", { name: "All of these" })).toBeTruthy();
+  });
+
+  it("flips the first connector alone, leaving the second as it was", async () => {
+    resetIDsForTest();
+    const user = userEvent.setup();
+    render(<Harness start={threeConditions("and")} />);
+
+    await user.click(screen.getAllByRole("button", { name: MATCH_ALL })[0]);
+
+    expect(wire()).toEqual({ or: [owner, { and: [name, score] }] });
+    expect(words()).toEqual(["or", "and"]);
+  });
+
+  it("joins a run back from its own connector", async () => {
+    resetIDsForTest();
+    const user = userEvent.setup();
+    render(<Harness start={threeConditions("and")} />);
+
+    await user.click(screen.getAllByRole("button", { name: MATCH_ALL })[1]);
+    await user.click(screen.getByRole("button", { name: MATCH_ANY }));
+
+    expect(wire()).toEqual({ and: [owner, name, score] });
+    expect(words()).toEqual(["and", "and"]);
+    expect(screen.queryByRole("group")).toBeNull();
+  });
+
+  it("splits a run from the connector inside it", async () => {
     resetIDsForTest();
     const user = userEvent.setup();
     render(
       <Harness
-        start={newGroup("and", [
-          newLeaf("owner_id", "eq", "u1"),
-          newLeaf("full_name", "eq", "ann"),
+        start={newGroup("or", [
+          newGroup("and", [
+            newLeaf("owner_id", "eq", "u1"),
+            newLeaf("full_name", "eq", "ann"),
+          ]),
           newLeaf("cf_deal_score", "gt", 3),
         ])}
       />,
     );
 
-    const connectors = screen.getAllByRole("button", { name: MATCH_ALL });
-    expect(connectors.map((button) => button.textContent)).toEqual([
-      "and",
-      "and",
-    ]);
-    await user.click(connectors[1]);
+    const run = screen.getByRole("group", { name: "All of these" });
+    await user.click(within(run).getByRole("button", { name: MATCH_ALL }));
 
-    // One group has one join, so every word between its rows changes at once.
-    expect(wire()).toEqual({
-      or: [
-        { field: "owner_id", op: "eq", value: "u1" },
-        { field: "full_name", op: "eq", value: "ann" },
-        { field: "cf_deal_score", op: "gt", value: 3 },
-      ],
-    });
-    const flipped = screen.getAllByRole("button", {
-      name: "or: match any of these. Press to match all.",
-    });
-    expect(flipped.map((button) => button.textContent)).toEqual(["or", "or"]);
+    expect(wire()).toEqual({ or: [owner, name, score] });
+    expect(words()).toEqual(["or", "or"]);
+  });
+
+  it("keeps an all-or filter as it was until a connector is pressed", () => {
+    resetIDsForTest();
+    render(<Harness start={threeConditions("or")} />);
+
+    expect(words()).toEqual(["or", "or"]);
+    expect(wire()).toEqual({ or: [owner, name, score] });
   });
 });
 

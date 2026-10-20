@@ -44,6 +44,8 @@ export function useReportDetailQueries(
   reportId: string,
   editionId: string | undefined,
   can: Readonly<{ editions: boolean; schedules: boolean }>,
+  // An editor's draft, previewed in place of the published revision.
+  revision?: number,
 ) {
   const report = useQuery({
     queryKey: ["reporting-report", reportId],
@@ -57,11 +59,14 @@ export function useReportDetailQueries(
   });
   const live = useQuery({
     enabled: !editionId,
-    queryKey: ["reporting-live", reportId],
+    queryKey: ["reporting-live", reportId, revision ?? "published"],
     queryFn: async () => {
       return unwrap(
         await api.GET("/analytics/reports/{id}/evaluation", {
-          params: { path: { id: reportId } },
+          params: {
+            path: { id: reportId },
+            query: revision === undefined ? undefined : { revision },
+          },
         }),
       );
     },

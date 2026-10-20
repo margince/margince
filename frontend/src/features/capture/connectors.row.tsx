@@ -9,7 +9,7 @@ import { Callout } from "../../design-system/callout";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { RowOpen } from "../../design-system/rowopen";
-import { SettingRow } from "../../design-system/settingrow";
+import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { isMailIcon, providerName } from "../../format/connectorprovider";
 import { formatDateTime } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
@@ -23,6 +23,7 @@ import {
   statusLabel,
   statusTone,
 } from "./connector-status";
+import { HistoryBaselineRow } from "./connectors.historybaseline";
 import { ConnectionDrawer } from "./connectors.settings";
 
 type CaptureConnection = components["schemas"]["CaptureConnection"];
@@ -218,7 +219,15 @@ function ImportDialog({
       <Heading size="large" id={titleId} className="t-h2 modal-title">
         {conn.account_label ?? providerName(conn.provider, t)}
       </Heading>
-      <BackfillPanel provider={conn.provider} initial={conn.backfill} />
+      <BackfillPanel
+        provider={conn.provider}
+        initial={conn.backfill}
+        baseline={
+          <SettingList testId={`connector-${conn.provider}-import-baseline`}>
+            <HistoryBaselineRow conn={conn} />
+          </SettingList>
+        }
+      />
     </Modal>
   );
 }

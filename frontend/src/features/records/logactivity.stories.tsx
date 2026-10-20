@@ -8,6 +8,7 @@ import { en } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import { LogActivity, LogActivityAction } from "./logactivity";
@@ -146,5 +147,73 @@ export const WithFollowUp: Story = {
 };
 export const WithFollowUpDark: Story = {
   ...WithFollowUp,
+  globals: { theme: "dark" },
+};
+
+// Files picked while logging wait in the form, each removable, and are uploaded
+// against the activity once it is created. The hint states the installation's
+// limit.
+export const WithFiles: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": meRoute({ activity: ["create", "update"] }),
+      "GET /installation/settings": () =>
+        jsonResponse({ max_upload_bytes: 25_000_000 }),
+    });
+    return (
+      <StoryProviders>
+        <LogActivity entityType="contact" entityId="p1" askedKind="call" />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.upload(await canvas.findByLabelText(en["log.files"]), [
+      new File(["prices"], "price-list-2026.pdf", { type: "application/pdf" }),
+      new File(["agenda"], "agenda.docx"),
+    ]);
+    await expect(
+      await canvas.findByRole("button", { name: /price-list-2026\.pdf/ }),
+    ).toBeVisible();
+  },
+};
+export const WithFilesDark: Story = {
+  ...WithFiles,
+  globals: { theme: "dark" },
+};
+
+// A workspace that added a field to activities: the form offers it under the
+// body, for whichever kind is being logged.
+const visitType = {
+  id: "cf-visit-type",
+  object: "activity",
+  label: "Visit type",
+  slug: "visit_type",
+  type: "picklist",
+  options: ["On site", "Remote"],
+  status: "active",
+  column_name: "cf_visit_type",
+  show_in_create: true,
+  created_by: "human:u-1",
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
+};
+
+export const WithCustomFields: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": admin(),
+      "GET /custom-fields": () =>
+        jsonResponse({ data: [visitType], page: { has_more: false } }),
+    });
+    return (
+      <StoryProviders>
+        <LogActivity entityType="contact" entityId="p1" askedKind="call" />
+      </StoryProviders>
+    );
+  },
+};
+export const WithCustomFieldsDark: Story = {
+  ...WithCustomFields,
   globals: { theme: "dark" },
 };

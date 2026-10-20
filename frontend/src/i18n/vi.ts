@@ -14,6 +14,37 @@ import type { MessageKey } from "./en";
 //     "pháp nhân" (onboarding's legal-block copy). The two senses share no
 //     string in this catalog and must stay that way.
 export const vi = {
+  "approval.preview.nameUnavailable": "Không có tên",
+  "approval.preview.structured": "Giá trị có cấu trúc: {value}",
+  "approval.preview.resolveConflict":
+    "Làm rõ thông tin mâu thuẫn trước khi phê duyệt thay đổi này.",
+  "history.field.closed_at": "Ngày chốt",
+  "history.field.amount_minor_base": "Giá trị theo tiền tệ cơ sở",
+  "approval.preview.conflict": "Thông tin mâu thuẫn",
+  "approval.preview.execution": "Được xác định khi áp dụng",
+  "approval.preview.effects": "Thay đổi kèm theo",
+  "approval.preview.correspondence":
+    "Phân loại thư từ liên quan là hồ sơ kinh doanh.",
+  "approval.preview.delivery":
+    "Bắt đầu triển khai các dự án liên quan đủ điều kiện.",
+  "approval.preview.minorUnits":
+    "{amount} {currency} theo đơn vị tiền tệ nhỏ nhất",
+  "approval.preview.empty": "Chưa đặt",
+  "approval.preview.status": "Ngữ cảnh phê duyệt",
+  "approval.preview.stale":
+    "Hồ sơ đã thay đổi sau khi đề xuất được tạo. Yêu cầu đề xuất mới trước khi duyệt.",
+  "approval.preview.incomplete":
+    "Không thể hiển thị đầy đủ thay đổi. Yêu cầu đề xuất mới trước khi duyệt.",
+  "approval.preview.unavailable":
+    "Ngữ cảnh phê duyệt không có sẵn. Tải lại hoặc yêu cầu đề xuất mới.",
+  "approval.preview.change": "Từ {before} thành {after}",
+  "approval.preview.authorityUnknown":
+    "Không có thông tin về lý do bạn có thể duyệt thay đổi này.",
+  "approval.preview.reviewer": "Quyền phê duyệt",
+  "approval.preview.requested": "Bạn được yêu cầu xem xét đề xuất này.",
+  "approval.preview.onBehalf":
+    "Trợ lý AI đã đề xuất thay đổi này thay mặt bạn.",
+  "approval.preview.authority": "Bạn có quyền thực hiện thay đổi này.",
   "aiWait.provider":
     "Nhà cung cấp AI hiện không khả dụng. Công việc sẽ tự động tiếp tục khi nhà cung cấp hoạt động trở lại.",
   "aiWait.budget":
@@ -104,6 +135,9 @@ export const vi = {
     "Đang chờ chụp. Ảnh chụp sẽ hiện ở đây khi sẵn sàng.",
   "reporting.createReport": "Tạo từ Hiệu suất",
   "reporting.newCustomReport": "Báo cáo tùy chỉnh mới",
+  "reporting.stageAmountDeals_one": "{amount} · gồm {count} deal có giá",
+  "reporting.stageAmountDeals_other": "{amount} · gồm {count} deal có giá",
+  "reporting.stageDeals": "Deal có giá",
   "reporting.observations_one": "Quan sát: {count}",
   "reporting.observations_other": "Quan sát: {count}",
   "reporting.observationsUnavailable": "Không rõ cỡ mẫu",
@@ -115,6 +149,7 @@ export const vi = {
   "reporting.back": "Trang trước",
   "reporting.status.insufficient_sample": "Quá ít quan sát",
   "reporting.status.unavailable": "Không khả dụng",
+  "reporting.status.failed": "Không thể tính toán",
   "reporting.status.unsupported": "Không hỗ trợ",
   "reporting.status.not_configured": "Cần thiết lập",
   "reporting.status.no_data": "Không có hồ sơ phù hợp",
@@ -136,6 +171,29 @@ export const vi = {
   "brief.weekly.numericPartial":
     "Một số bằng chứng nguồn không khả dụng. Số liệu chỉ gồm các hồ sơ có quyền xem và đã định giá.",
   "reporting.edit": "Sửa báo cáo",
+  "reporting.saveDraft": "Lưu bản nháp",
+  "reporting.draftKeepsName":
+    "Bản nháp giữ nguyên tên và phạm vi xem của báo cáo. Để đổi những điều này, hãy lưu trực tiếp báo cáo.",
+  "reporting.draftEditNote":
+    "Thao tác này lưu các biểu đồ thành bản nháp. Để đổi tên hoặc phạm vi xem, hãy công bố hoặc bỏ bản nháp trước.",
+  "reporting.draftOpen": "Bản nháp {revision} chưa được công bố",
+  "reporting.draftHidden":
+    "Ai đọc báo cáo vẫn thấy bản đã công bố. Hãy xem trước bản nháp rồi mới công bố.",
+  "reporting.draftPreviewing":
+    "Bạn đang xem bản nháp. Ai đọc báo cáo vẫn thấy bản đã công bố.",
+  "reporting.previewDraft": "Xem trước bản nháp",
+  "reporting.showPublished": "Hiện bản đã công bố",
+  "reporting.publishDraft": "Công bố bản nháp",
+  "reporting.discardDraft": "Bỏ bản nháp",
+  "reporting.versions": "Các phiên bản",
+  "reporting.versionN": "Phiên bản {revision}",
+  "reporting.savedBy": "Lưu bởi",
+  "reporting.revisionState.draft": "bản nháp",
+  "reporting.revisionState.published": "đã công bố",
+  "reporting.revisionState.earlier": "trước đây",
+  "reporting.restoreRevision": "Khôi phục phiên bản {revision}",
+  "reporting.restoreBlocked":
+    "Hãy công bố hoặc bỏ bản nháp trước khi khôi phục một phiên bản trước.",
   "reporting.moveUp": "Chuyển lên",
   "reporting.moveDown": "Chuyển xuống",
   "reporting.exportCsv": "Xuất CSV",
@@ -194,7 +252,46 @@ export const vi = {
   "reporting.pipeline": "Pipeline",
   "reporting.allPipelines": "Tất cả pipeline",
   "reporting.resultsThrough": "Kết quả tính đến {at}",
+  "reporting.writtenNoneWon": "Chưa chốt doanh số nào trong {period}.",
+  "reporting.writtenWon": "Đã chốt trong {period}: {amount}.",
+  "reporting.writtenTarget":
+    "Mục tiêu cho {targetPeriod}: {target}, đã đạt {percent}% với {actual}.",
+  "reporting.writtenLanding":
+    "Dự báo cuối quý tài chính, tính đến {date}: {amount}.",
+  "reporting.writtenOpen_one":
+    "Đang mở ngày {date}: {amount} trong {count} deal.",
+  "reporting.writtenOpen_other":
+    "Đang mở ngày {date}: {amount} trong {count} deal.",
+  "reporting.prepared.title": "Báo cáo soạn sẵn",
+  "reporting.prepared.open": "Mở",
+  "reporting.prepared.preview": "Xem trước",
+  "reporting.prepared.saveCopy": "Lưu bản sao",
+  "reporting.prepared.weeklyTitle": "Tổng kết bán hàng hằng tuần",
+  "reporting.prepared.weeklyPurpose":
+    "Doanh số đã chốt tuần trước, pipeline đang mở theo giai đoạn và kết quả của từng thành viên.",
+  "reporting.prepared.healthTitle": "Sức khỏe pipeline",
+  "reporting.prepared.healthPurpose":
+    "Deal đang mở theo giai đoạn, đã nằm ở đó bao lâu, và những gì đã thay đổi.",
+  "reporting.prepared.ownerTitle": "Kết quả theo thành viên chịu trách nhiệm",
+  "reporting.prepared.ownerPurpose":
+    "Doanh số đã chốt quý này của từng thành viên so với mục tiêu nếu có, kèm tỷ lệ thắng của cả nhóm.",
+  "reporting.prepared.qualificationTitle": "Đánh giá đủ điều kiện",
+  "reporting.prepared.qualificationPurpose":
+    "Pipeline đủ điều kiện tháng này, ghi nhận cho thành viên chịu trách nhiệm lúc deal đủ điều kiện.",
+  "reporting.prepared.personalTitle": "Kết quả cá nhân",
+  "reporting.prepared.personalPurpose":
+    "Deal đang mở và cuộc họp của bạn, trong Kết quả của tôi.",
+  "reporting.prepared.accountsTitle": "Deal đang mở theo công ty",
+  "reporting.prepared.accountsPurpose":
+    "Deal đang mở theo công ty và tỷ trọng trong pipeline, trong Pipeline.",
+  "reporting.prepared.deliveryTitle": "Đánh giá triển khai",
+  "reporting.prepared.deliveryPurpose":
+    "Cam kết dự án, dự án im ắng và các giai đoạn, trong Triển khai.",
   "reporting.noSalesWon": "Chưa có doanh số đã chốt",
+  "reporting.openPipelineAsOf": "Tính đến {at}",
+  "reporting.openPipelineBasis_one": "Deal đang mở: {count} · tính đến {at}",
+  "reporting.openPipelineBasis_other": "Deal đang mở: {count} · tính đến {at}",
+  "reporting.forecastLandingBasis": "Quý tài chính này, theo dự báo deal",
   "reporting.this_month": "Tháng này",
   "reporting.last_month": "Tháng trước",
   "reporting.last_week": "Tuần đã hoàn tất gần nhất",
@@ -224,6 +321,13 @@ export const vi = {
   "reporting.targetBasis": "Kỳ mục tiêu",
   "reporting.month": "Tháng",
   "reporting.fiscal_quarter": "Quý tài chính",
+  "reporting.creditCapturedOwner":
+    "Ghi nhận cho thành viên chịu trách nhiệm deal lúc lưu bản này",
+  "reporting.creditCurrentOwner":
+    "Ghi nhận cho thành viên đang chịu trách nhiệm deal",
+  "reporting.creditQualifyingOwner":
+    "Ghi nhận cho thành viên chịu trách nhiệm lúc deal đủ điều kiện",
+  "reporting.targetPeriodElapsed": "Đã qua {percent}% thời gian mục tiêu",
   "reporting.closeWindow": "Khoảng dự kiến chốt",
   "reporting.all_open": "Tất cả deal đang mở",
   "reporting.median": "Số ngày trung vị",
@@ -748,6 +852,7 @@ export const vi = {
   "brief.team.plan": "Xem lại kế hoạch hiện tại",
   "brief.approval.approve": "Duyệt",
   "brief.approval.email": "Duyệt email",
+  "brief.coverage.source.domain_question": "Xét duyệt tên miền",
   "brief.coverage.source.approval": "Đề xuất",
   "brief.coverage.source.task": "Việc cần làm",
   "brief.coverage.source.dsr": "Yêu cầu về quyền riêng tư",
@@ -849,6 +954,7 @@ export const vi = {
   "systemJob.ai_price_sync": "Cập nhật giá mô hình",
   "systemJob.alias_discovery": "Tìm địa chỉ email",
   "systemJob.approval_expiry": "Hết hạn phê duyệt",
+  "systemJob.approval_notice_reconcile": "Dọn thông báo phê duyệt đang chờ",
   "systemJob.approval_notice_retract": "Thu hồi thông báo phê duyệt",
   "systemJob.approval_notify": "Thông báo phê duyệt",
   "systemJob.assign_owner_release": "Gỡ phân công người chịu trách nhiệm",
@@ -2430,6 +2536,7 @@ export const vi = {
   "co.brief.cite.activity": "hoạt động",
   "co.brief.cite.contact": "liên hệ",
   "co.brief.cite.company": "công ty",
+  "co.brief.cite.lead": "lead",
   "co.brief.cite.fact": "dữ kiện",
   "co.brief.cite.profile_field": "trường hồ sơ",
   // Several sources of one kind that have no screen to open collapse into one
@@ -2438,6 +2545,7 @@ export const vi = {
   "co.brief.cite.activity.many": "{count} hoạt động",
   "co.brief.cite.contact.many": "{count} liên hệ",
   "co.brief.cite.company.many": "{count} công ty",
+  "co.brief.cite.lead.many": "{count} lead",
   "co.brief.cite.fact.many": "{count} dữ kiện",
   "co.brief.cite.profile_field.many": "{count} trường hồ sơ",
   "approval.kind.advance_deal": "Đẩy deal tiến lên",
@@ -2763,6 +2871,8 @@ export const vi = {
   "commitment.review.detail":
     "Chưa tạo việc từ các kết quả này. Xem lại nguồn và phản hồi sau đó trước khi thêm việc tiếp theo từ hồ sơ liên kết.",
   "commitment.review.historical": "Cam kết cũ không có hạn chót hiện tại.",
+  "commitment.review.beforeBaseline":
+    "Gửi trước ngày hộp thư này bắt đầu gợi ý cam kết.",
   "commitment.review.incomplete":
     "Chưa đọc hết các tin nhắn sau đó. Cam kết có thể đã được hoàn thành.",
   "commitment.review.unknownDate": "Chưa xác minh được ngày của nguồn.",
@@ -2785,6 +2895,8 @@ export const vi = {
   "activity.detail.none": "Hoạt động này",
   "activity.followUps": "Công việc tiếp theo",
   "activity.noFollowUps": "Chưa có công việc tiếp theo",
+  "activity.files.empty": "Hoạt động này chưa có tệp nào.",
+  "activity.files.title": "Tệp của {subject}",
   "activity.followUpOpen": "Chưa hoàn thành",
   "activity.detail.withheldReason": "Nội dung hoạt động bị giữ lại",
   "activity.detail.when": "Thời gian",
@@ -4775,6 +4887,12 @@ export const vi = {
   "log.transcriptUpload": "Hoặc tải lên tệp",
   "log.transcriptUploadRejected": "Chỉ chấp nhận tệp .txt.",
   "log.transcriptUploadFailed": "Không thể đọc tệp. Dán trực tiếp văn bản vào.",
+  "log.files": "Đính kèm tệp",
+  "log.filesEmpty": "Thả tệp vào đây, hoặc bấm để chọn tệp",
+  "log.fileUnattached":
+    "Đã ghi hoạt động, nhưng chưa đính kèm được {filename}. {reason}",
+  "log.fileUncertain":
+    "Đã ghi hoạt động, nhưng việc tải lên {filename} chưa hoàn tất. Hãy kiểm tra tệp của hoạt động trước khi thêm lại.",
   "log.attendee": "Người tham dự",
   "log.otherAttendees": "Người tham dự khác",
   "log.removeAttendee": "Xóa {name}",
@@ -5179,7 +5297,14 @@ export const vi = {
   "analytics.sectionReports": "Báo cáo",
   "analytics.setup": "Thiết lập",
   "analytics.filters": "Bộ lọc",
+  "analytics.firstRunTitle": "Chưa có deal nào để phân tích",
+  "analytics.firstRunBody":
+    "Phân tích sẽ có dữ liệu khi các deal bạn xem được được ghi nhận. Mở Deal để tạo mới hoặc nhập dữ liệu.",
+  "analytics.firstRunAction": "Mở Deal",
   "analytics.attention": "Cần chú ý",
+  "analytics.attentionNoOwner": "Chưa giao",
+  "analytics.attentionAtStake": "{amount} bị ảnh hưởng",
+  "analytics.attentionReview": "Xem xét",
   "analytics.attentionChecks_one": "1 mục kiểm tra dự báo cần trả lời",
   "analytics.attentionChecks_other": "{count} mục kiểm tra dự báo cần trả lời",
   "analytics.attentionChecksDetail":
@@ -5196,7 +5321,7 @@ export const vi = {
   "analytics.attentionCoverageAction": "Xem độ bao phủ dữ liệu",
   "analytics.reportDealsByStage": "Tất cả deal theo giai đoạn",
   "analytics.reportLeadsByStatus": "Lead theo trạng thái",
-  "analytics.reportActivitiesByKind": "Hoạt động theo loại",
+  "analytics.reportActivitiesByKind": "Cuộc họp và việc cần làm",
   "analytics.reportMeetingConversion": "Chuyển đổi cuộc họp",
   "analytics.field.amount_base_minor": "Số tiền quy đổi",
   "analytics.field.amount_minor": "Số tiền",
@@ -5215,6 +5340,7 @@ export const vi = {
   "analytics.field.open_commitments": "Cam kết đang mở",
   "analytics.field.open_deal_value_minor": "Giá trị deal đang mở",
   "analytics.field.overdue_commitments": "Cam kết quá hạn",
+  "analytics.field.close_month": "Tháng chốt",
   "analytics.field.owner_id": "Người chịu trách nhiệm",
   "analytics.field.partner_company_id": "Công ty đối tác",
   "analytics.field.partner_sourced": "Do đối tác mang về",
@@ -5525,6 +5651,10 @@ export const vi = {
   "forecast.confirmed": "Đã xác nhận ngày chốt",
   "forecast.fxMissing": "Thiếu tỷ giá",
   "analytics.reportForecast": "Danh mục dự báo",
+  "analytics.shareOfOpenPipeline": "Tỷ trọng pipeline đang mở",
+  "analytics.reportPipelineByCloseMonth": "Pipeline đang mở theo tháng chốt",
+  "analytics.closeMonth": "Tháng chốt",
+  "analytics.noCloseDate": "Chưa có ngày chốt",
   "analytics.reportOpenByCompany": "Deal đang mở theo công ty",
   "analytics.retiredPipeline": "{name} (đã ngừng dùng)",
   "analytics.forecastBanner":
@@ -5551,6 +5681,17 @@ export const vi = {
   "settings.removedItem": "Đã gỡ “{name}”",
   "settings.removed": "Đã gỡ",
   "settings.saved": "Đã lưu",
+  "settings.lockedBy.flag": "Đặt bởi {name} (dòng lệnh). Đổi giá trị tại đó.",
+  "settings.lockedBy.env":
+    "Đặt bởi {name} (biến môi trường). Đổi giá trị tại đó.",
+  "settings.lockedBy.env_file":
+    "Đặt bởi {name} trong {file}. Đổi giá trị tại đó.",
+  "settings.lockedBy.config_file":
+    "Đặt bởi {name} trong {file}. Đổi giá trị tại đó.",
+  "settings.lockedBy.env_file_unnamed":
+    "Đặt bởi {name} (tệp .env). Đổi giá trị tại đó.",
+  "settings.lockedBy.config_file_unnamed":
+    "Đặt bởi {name} (tệp cấu hình). Đổi giá trị tại đó.",
   "settings.signatureFromTemplate": "Mẫu của công ty",
   "settings.signatureTemplateHint":
     "Thư gửi đi dùng mẫu chữ ký của công ty. Mẫu tự điền tên, chức danh và số điện thoại.",
@@ -7797,6 +7938,13 @@ export const vi = {
     "Theo cài đặt của công ty. Đổi ở đây thì hộp thư này sẽ có cài đặt riêng.",
   "connectors.signatureEnrich.ownAnswer":
     "Cài đặt riêng của hộp thư này, độc lập với cài đặt của công ty.",
+  "connectors.historyBaseline.label": "Gợi ý cam kết từ ngày",
+  "connectors.historyBaseline.help":
+    "Thư gửi trước ngày này sẽ không tự động gợi ý cam kết cho bạn. Thư vẫn được lưu và tìm kiếm được. Đổi hoặc xóa ngày không hoàn thành hay xóa mục nào.",
+  "connectors.historyBaseline.current":
+    "Đã đặt là {date} ({zone}), chỉ cho hộp thư này.",
+  "connectors.historyBaseline.save": "Lưu ngày",
+  "connectors.historyBaseline.clear": "Xóa ngày",
   "hold.sectionTitle": "Trao đổi riêng tư",
   "hold.notHeld": "Thư với liên hệ này tuân theo cài đặt hộp thư của bạn.",
   "hold.heldByAddress":
@@ -9158,6 +9306,7 @@ export const vi = {
   "cf.obj.lead": "Lead",
   "cf.obj.project": "Dự án",
   "cf.obj.contract": "Hợp đồng",
+  "cf.obj.activity": "Hoạt động",
   "cf.listLabel": "Trường trên {object}",
   "cf.col.field": "Trường",
   "cf.col.type": "Loại",
@@ -9175,6 +9324,8 @@ export const vi = {
     "Chưa có trường tùy chỉnh nào trên Dự án. Thêm một trường để theo dõi dữ liệu triển khai dự án mà trường lõi chưa bao quát.",
   "cf.empty.contract":
     "Chưa có trường tùy chỉnh nào trên Hợp đồng. Thêm một trường cho cách phân loại mà điều khoản chuẩn chưa bao quát.",
+  "cf.empty.activity":
+    "Chưa có trường tùy chỉnh nào trên Hoạt động. Trường thêm ở đây xuất hiện trên mọi cuộc gọi, cuộc họp, ghi chú và việc cần làm bạn ghi lại.",
   "cf.emptyReadOnly": "Chưa có trường tùy chỉnh nào trên {object}.",
   "cf.type.text": "Văn bản",
   "cf.type.number": "Số",
@@ -9227,6 +9378,11 @@ export const vi = {
   "cf.shownInCreate": "Đã hiện “{label}” trong biểu mẫu tạo mới",
   "cf.hiddenFromCreate":
     "Đã ẩn “{label}” khỏi biểu mẫu tạo mới, vẫn còn trên trang bản ghi",
+  "cf.col.inReports": "Trong báo cáo",
+  "cf.reportableFor": "Dùng “{label}” trong báo cáo",
+  "cf.addedToReports":
+    "Đã thêm “{label}” vào báo cáo. Ai đọc báo cáo cũng thấy tên và các lựa chọn của trường.",
+  "cf.removedFromReports": "Đã gỡ “{label}” khỏi báo cáo",
   "cf.audit.title": "Thay đổi trường gần đây",
   "audit.kind.customField": "Trường tùy chỉnh",
   "cf.audit.empty": "Chưa có thay đổi nào về trường tùy chỉnh.",
@@ -9363,6 +9519,35 @@ export const vi = {
   "settings.tab.model-calls": "Nhật ký lượt gọi AI",
   "settings.tab.audit": "Nhật ký hoạt động",
   "settings.tab.system-health": "Tình trạng hệ thống",
+  "settings.page.configuration.sub": "Mọi thiết lập và nguồn của giá trị.",
+  "settings.tab.configuration": "Cấu hình",
+  "configuration.title": "Cấu hình",
+  "configuration.sub":
+    "Mọi thiết lập mà bản cài đặt này đọc, giá trị và nguồn của nó. Trang này chỉ hiển thị. Thiết lập bị khóa được đổi ở nơi nguồn của nó chỉ ra.",
+  "configuration.search": "Lọc theo khóa hoặc biến môi trường",
+  "configuration.noMatch": "Không có thiết lập nào khớp với bộ lọc này.",
+  "configuration.col.key": "Khóa",
+  "configuration.col.value": "Giá trị",
+  "configuration.col.source": "Nguồn",
+  "configuration.col.detail": "Chi tiết",
+  "configuration.secret": "Bí mật",
+  "configuration.unset": "Chưa đặt",
+  "configuration.emptyValue": "Trống",
+  "configuration.source.database": "Đã lưu trong ứng dụng",
+  "configuration.source.default": "Giá trị mặc định",
+  "configuration.source.unset": "Chưa đặt ở đây",
+  "configuration.source.flag": "Dòng lệnh",
+  "configuration.source.env": "Môi trường",
+  "configuration.source.env_file": "Tệp .env",
+  "configuration.source.config_file": "Tệp cấu hình",
+  "configuration.noValue": "Không có giá trị",
+  "configuration.toggle": "Xem chi tiết của {key}",
+  "configuration.detail.value": "Giá trị đầy đủ",
+  "configuration.detail.default": "Mặc định: {value}",
+  "configuration.detail.none": "không có",
+  "configuration.detail.type": "Kiểu: {type}",
+  "configuration.detail.flag": "Cờ: {flag}",
+  "configuration.detail.readBy": "Chương trình đọc: {programs}",
   "settings.tab.reset": "Đặt lại dữ liệu",
   "settings.group.me": "Cá nhân",
   "settings.group.company": "Công ty",
@@ -10687,6 +10872,9 @@ export const vi = {
   "forecast.landing": "Dự kiến cuối kỳ",
   "forecast.landingFrom": "Dự kiến · {won} đã chốt + {remaining} sắp tới",
   "forecast.landingFromCall": "Theo nhận định · {won} đã chốt đến nay",
+  "forecast.landingRecords": "Theo dữ liệu deal",
+  "forecast.landingRecordsDetail":
+    "Đã chốt cộng các deal Commit có ngày chốt đã xác nhận, chưa tính dự báo của quản lý",
   "forecast.landingCaveat": "Dự kiến cuối kỳ có lưu ý",
   "forecast.landing.caveat.call_absent":
     "Kỳ này chưa có nhận định nào, nên số này hiển thị bằng chứng Commit.",
@@ -10797,8 +10985,6 @@ export const vi = {
   "oauthApp.microsoft.removeConfirmBody":
     "Không thể đọc lại client secret, nên muốn khôi phục ứng dụng phải nhập lại client ID và secret từ cổng Entra. Kết nối thư và lịch Outlook dùng ứng dụng này; hộp thư Google và IMAP không bị ảnh hưởng. Bước thiết lập ban đầu sẽ hỏi lại ứng dụng.",
   "oauthApp.configured": "Đang dùng: {clientId}",
-  "oauthApp.fromEnvironment":
-    "Đang dùng theo cấu hình của bản cài đặt này: {clientId}. Ứng dụng lưu tại đây sẽ thay thế cấu hình này cho đến khi bị gỡ.",
   "oauthApp.pinnedToDirectory": "Đã gắn với thư mục {tenant}.",
   "oauthApp.replaceHint":
     "Cặp mới sẽ thay thế cặp đã lưu. Các kết nối hiện có vẫn hoạt động cho đến khi kết nối lại.",
@@ -12777,10 +12963,10 @@ export const vi = {
   "filters.start.buildBody":
     "Chọn một trường, cách so sánh và một giá trị. Thêm điều kiện khác khi cần.",
   "filters.describeChanges": "Mô tả thay đổi bằng ngôn ngữ thông thường",
-  "filters.connector.matchAll":
-    "{word}: khớp tất cả các điều kiện này. Nhấn để chuyển sang khớp bất kỳ điều kiện nào.",
-  "filters.connector.matchAny":
-    "{word}: khớp bất kỳ điều kiện nào. Nhấn để chuyển sang khớp tất cả.",
+  "filters.connector.and":
+    "{word}: điều kiện ở cả hai bên đều phải khớp. Nhấn để đổi sang “{other}”.",
+  "filters.connector.or":
+    "{word}: chỉ cần một bên khớp. Nhấn để đổi sang “{other}”.",
   "filters.group.all": "Tất cả các điều kiện này",
   "filters.group.any": "Bất kỳ điều kiện nào",
   "filters.addGroupToGroup": "Thêm nhóm con",
@@ -13478,14 +13664,33 @@ export const vi = {
     "{urgent} khẩn · {due} đến hạn · {lower} thường lệ · tổng {total}",
   "worklist.summary.wholeDay": "Cả ngày: {sentence}",
   "worklist.summary.split": "{today} hôm nay · {review} cần xem lại",
-  "worklist.completeness": "Hiển thị {shown} trên {considered}",
+  "worklist.completeness": "Hiển thị {shown} trên {considered} việc",
+  "worklist.completeness.floor_one": "Hiển thị {shown} việc",
+  "worklist.completeness.floor_other": "Hiển thị {shown} việc",
+  "worklist.completeness.cards_one": "{cards} thẻ trên màn hình",
+  "worklist.completeness.cards_other": "{cards} thẻ trên màn hình",
+  "worklist.completeness.bounded":
+    "Đã đạt giới hạn đọc ở {kinds}. Xem giới hạn của từng nguồn.",
+  "worklist.completeness.unread_one": "{count} nguồn chưa tải được",
+  "worklist.completeness.unread_other": "{count} nguồn chưa tải được",
   "worklist.review.partial":
     "Hiển thị {loaded} trên {total}. Tải thêm ở bên dưới để xem phần còn lại.",
+  "worklist.limits.title": "Giới hạn đọc của nguồn",
+  "worklist.limits.source": "{source}: đã đạt giới hạn đọc · {scope}",
+  "worklist.emptyPage": "Trang này chưa có mục nào. Tải thêm để tiếp tục.",
+  "worklist.review.more":
+    "Các trang tiếp theo có thể chứa mục cần xét duyệt. Tải thêm bên dưới để tiếp tục.",
+  "worklist.limits.boundary":
+    "Tải thêm tiếp tục lần xem này. Thao tác này không đọc vượt giới hạn của nguồn.",
+  "worklist.limits.personal": "nguồn cá nhân của bạn",
+  "worklist.limits.selected": "phạm vi hồ sơ đã chọn",
+  "worklist.limits.remedy":
+    "Xem xét các mục hiện có rồi làm mới. Nếu vẫn thiếu công việc cần xử lý, hãy liên hệ quản trị viên để kiểm tra giới hạn đọc của nguồn.",
+  "worklist.review.snapshotChanged":
+    "Hiển thị {loaded} trên {total} mục của lần xem ban đầu. Công việc đã thay đổi; hãy làm mới để cập nhật tổng số.",
   "worklist.review.partialDone": "Hiển thị {loaded} trên {total}.",
-  "worklist.completeness.bounded_one":
-    "Hiển thị {shown} · {sources} nguồn còn thêm việc",
-  "worklist.completeness.bounded_other":
-    "Hiển thị {shown} · {sources} nguồn còn thêm việc",
+  "worklist.review.floor":
+    "Hiển thị {loaded}+. Một nguồn đã đạt giới hạn đọc; xem giới hạn của từng nguồn.",
   "worklist.clear": "Không có việc nào đang chờ bạn.",
   "worklist.clearFor": "Không có việc nào đang chờ {name}.",
   "worklist.clearOfTasksToday":

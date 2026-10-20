@@ -140,20 +140,6 @@ type jobLane interface {
 	StopAndCancel(ctx context.Context) error
 }
 
-// defaultJobDrainWindow is --job-drain-window's default: how long a job caught
-// mid-flight by shutdown gets to finish on its own terms.
-//
-// It is one term of the shutdown budget, and the budget is what an operator
-// sizes the pod's termination grace period against: the drain window, then
-// jobCancelWindow, then the teardown that closes the bus and the pool. Twenty
-// seconds leaves the whole of it inside a thirty-second grace period, which is
-// the common default; a deployment that raises the window raises the grace
-// period with it.
-const defaultJobDrainWindow = 20 * time.Second
-
-// jobDrainWindowEnv backs --job-drain-window with the environment.
-const jobDrainWindowEnv = "MARGINCE_JOB_DRAIN_WINDOW"
-
 // jobCancelWindow bounds the wait AFTER the work contexts are cancelled. Short,
 // because nothing is being given time to finish here — only to notice it was
 // cancelled and return.

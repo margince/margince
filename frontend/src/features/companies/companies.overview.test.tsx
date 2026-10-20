@@ -2,7 +2,7 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { AssistantPanel } from "../../screens/assistant";
+import { AssistantPanel } from "../voice-knowledge/assistant";
 import { CompanyScreen } from "./companies";
 import { openProfile, render } from "./companies.testkit";
 import {

@@ -3,6 +3,7 @@ import { type ReactNode, useId, useState } from "react";
 import { api } from "../../api/client";
 import { useIdempotencyKey } from "../../api/idempotencykey";
 import { TaskAssigneeField } from "../../components/assigneepicker";
+import { LogActivityEntries } from "../../components/extensionentries";
 import {
   Button,
   Checkbox,
@@ -20,9 +21,9 @@ import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { useSinglePress } from "../../design-system/presslatch";
 import { Select } from "../../design-system/select";
-import { calendarDay } from "../../format/calendarday";
 import { useT } from "../../i18n";
 import {
+  activityFileStaleKeys,
   activityFollowUpsKey,
   loggedActivityKeys,
   TASK_QUEUE_KEY,
@@ -36,50 +37,28 @@ import { worklistKey } from "../worklist/worklist.queries";
 import {
   type ActivityDraft,
   activityRequestBody,
+  freshDraft,
+  isActivityKind,
   KINDS_WITH_A_CONTACT,
   type MeetingAttendees,
   NO_ATTENDEES,
+  todayDay,
 } from "./activitybody";
 import { ActivityBodyField } from "./activitybodyfield";
 import "./logactivity.css";
 import { FollowUpTaskFields } from "../../screens/followuptaskfields";
+import { useActivityCustomFields } from "./logactivity.custom";
+import {
+  attachLoggedFiles,
+  LogActivityFilesField,
+  type PickedFile,
+  TranscriptUploadField,
+  useReportUnattached,
+} from "./logactivityfiles";
 import { MeetingAttendeeFields } from "./meetingattendees";
-
-const EMPTY_DRAFT: ActivityDraft = {
-  kind: "note",
-  subject: "",
-  body: "",
-  day: "",
-  asTranscript: false,
-  assigneeId: "",
-};
-
-// Plain text keeps transcript citations aligned with spoken lines, without cue headers.
-const ACCEPTED_TRANSCRIPT_EXTENSION = ".txt";
 
 // Meetings arrive through the calendar rather than a preselected form address.
 type OpeningKind = "note" | "task" | "call";
-
-// The record zone keeps the entered day aligned with the stored deadline.
-function todayDay(_kind: ActivityDraft["kind"], recordZone: string): string {
-  return calendarDay(new Date(), recordZone);
-}
-
-function isKind(value: string): value is ActivityDraft["kind"] {
-  return (
-    value === "note" ||
-    value === "task" ||
-    value === "call" ||
-    value === "meeting"
-  );
-}
-
-function freshDraft(
-  recordZone: string,
-  kind: ActivityDraft["kind"] = "note",
-): ActivityDraft {
-  return { ...EMPTY_DRAFT, kind, day: todayDay(kind, recordZone) };
-}
 
 // One form serves record cards and drawers; banded callers own its frame.
 export function LogActivityForm({
@@ -105,6 +84,7 @@ export function LogActivityForm({
   const formId = useId();
   const queryClient = useQueryClient();
   const recordZone = useRecordZone();
+  const reportUnattached = useReportUnattached();
   const [draft, setDraft] = useState<ActivityDraft>(() =>
     freshDraft(recordZone, askedKind),
   );
@@ -116,7 +96,8 @@ export function LogActivityForm({
       setDraft((current) => ({ ...current, kind: askedKind }));
     }
   }
-  const [fileError, setFileError] = useState<string | null>(null);
+  const [files, setFiles] = useState<readonly PickedFile[]>([]);
+  const custom = useActivityCustomFields();
   // Who was in the room, asked for the kinds that are with a contact (see
   // KINDS_WITH_A_CONTACT). Only a company page cannot send one without a name.
   const [attendees, setAttendees] = useState<MeetingAttendees>(NO_ATTENDEES);
@@ -137,8 +118,9 @@ export function LogActivityForm({
       zone: string;
       attendees: MeetingAttendees;
       idempotencyKey: string;
+      files: readonly File[];
     }) => {
-      return unwrap(
+      const created = unwrap(
         await api.POST("/activities", {
           params: { header: { "Idempotency-Key": input.idempotencyKey } },
           body: activityRequestBody(
@@ -151,8 +133,12 @@ export function LogActivityForm({
         }),
         t,
       );
+      // After the create: a file needs the activity's id as its parent.
+      const unattached = await attachLoggedFiles(created.id, input.files);
+      return { id: created.id, unattached };
     },
-    onSuccess: (_data, input) => {
+    onSuccess: (logged, input) => {
+      reportUnattached(logged.unattached);
       const keys =
         entityType && entityId
           ? loggedActivityKeys(
@@ -167,9 +153,13 @@ export function LogActivityForm({
       if (input.draft.sourceActivityId)
         keys.push(activityFollowUpsKey(input.draft.sourceActivityId));
       keys.push(worklistKey);
+      if (input.files.length > 0)
+        keys.push(...activityFileStaleKeys(logged.id));
       for (const queryKey of keys) queryClient.invalidateQueries({ queryKey });
       setDraft(freshDraft(input.zone, onlyTasks ? "task" : undefined));
       setAttendees(NO_ATTENDEES);
+      setFiles([]);
+      custom.reset();
       renewKey();
       onLogged?.();
     },
@@ -210,10 +200,11 @@ export function LogActivityForm({
       onSubmit={singlePress((event) => {
         event.preventDefault();
         log.mutate({
-          draft: { ...draft, sourceActivityId },
+          draft: { ...draft, sourceActivityId, custom: custom.body() },
           zone: recordZone,
           attendees,
           idempotencyKey,
+          files: files.map((held) => held.file),
         });
       })}
     >
@@ -235,7 +226,7 @@ export function LogActivityForm({
                 // to the ordinary kind rather than a refusal.
                 onChange={(value) =>
                   setField({
-                    kind: isKind(value) ? value : "note",
+                    kind: isActivityKind(value) ? value : "note",
                   })
                 }
               />
@@ -321,6 +312,7 @@ export function LogActivityForm({
         value={draft.body}
         onChange={(body) => setField({ body })}
       />
+      {custom.controls}
       {draft.kind !== "task" && (
         <FollowUpTaskFields
           value={draft.followUp}
@@ -328,38 +320,18 @@ export function LogActivityForm({
         />
       )}
       {transcript && (
-        <Field label={t("log.transcriptUpload")} hint={fileError ?? undefined}>
-          {(control) => (
-            <TextInput
-              {...control}
-              type="file"
-              accept={ACCEPTED_TRANSCRIPT_EXTENSION}
-              onChange={async (event) => {
-                const file = event.target.files?.[0];
-                event.target.value = "";
-                if (!file) {
-                  return;
-                }
-                if (
-                  !file.name
-                    .toLowerCase()
-                    .endsWith(ACCEPTED_TRANSCRIPT_EXTENSION)
-                ) {
-                  setFileError(t("log.transcriptUploadRejected"));
-                  return;
-                }
-                try {
-                  const text = await file.text();
-                  setFileError(null);
-                  setField({ body: text });
-                } catch {
-                  setFileError(t("log.transcriptUploadFailed"));
-                }
-              }}
-            />
-          )}
-        </Field>
+        <TranscriptUploadField onText={(body) => setField({ body })} />
       )}
+      <LogActivityEntries
+        onlyTasks={onlyTasks}
+        entityType={entityType}
+        entityId={entityId}
+      />
+      <LogActivityFilesField
+        files={files}
+        onChange={setFiles}
+        disabled={log.isPending}
+      />
       <ErrorLine error={log.error} />
       {actions}
     </form>

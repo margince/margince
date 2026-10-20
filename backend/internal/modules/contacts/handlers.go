@@ -15,16 +15,20 @@ import (
 	"net/http"
 	"sync"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 type Handlers struct {
+	// locks reports the settings a boot source sets on each settings response;
+	// nil leaves the field out.
+	locks func(surface []config.Any) *[]crmcontracts.SettingLock
 	// stageMatches turns suggested LinkedIn matches into approvals. See
 	// WithMatchStager for why it is injected.
 	stageMatches func(context.Context) error
@@ -122,10 +126,10 @@ func (h Handlers) WithFieldCatalog(catalog fieldcatalog.Reader) Handlers {
 	return h
 }
 
-// WithSettings wires the installation settings store the lead-settings
-// endpoints write through.
-func (h Handlers) WithSettings(store *settings.Store) Handlers {
-	h.store = h.store.WithSettings(store)
+// WithSettings wires the configuration the lead-settings endpoints read and
+// save through.
+func (h Handlers) WithSettings(cfg *config.Config) Handlers {
+	h.store = h.store.WithSettings(cfg)
 	return h
 }
 

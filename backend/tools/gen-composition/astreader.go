@@ -62,6 +62,7 @@ func readUnitManifest(u extensionUnit, vocab map[string]string, verbs []declared
 		return unitManifest{}, fmt.Errorf("extensions/%s: %w", u.Name, err)
 	}
 	r := &unitReader{
+		unit:            u.Name,
 		fset:            fset,
 		vocab:           vocab,
 		verbs:           verbs,
@@ -121,6 +122,8 @@ func encodeUnitManifest(m unitManifest) ([]byte, error) {
 // return a literal so the manifest derives without compiling — a computed
 // value is a hard error naming the position, never a silent gap.
 type unitReader struct {
+	// unit is the directory name, which the Name field must equal.
+	unit  string
 	fset  *token.FileSet
 	vocab map[string]string
 	// verbs are the operations this unit's contract fragments declare, read
@@ -428,6 +431,8 @@ func (r *unitReader) readExtensionField(elt ast.Expr, file *ast.File, m *unitMan
 		if err == nil {
 			m.FinanceSources = append(m.FinanceSources, sources...)
 		}
+	case "Entries":
+		m.Entries, err = r.readEntries(kv.Value, file)
 	case "Inbound":
 		var endpoints []inboundEndpoint
 		endpoints, err = r.readInbound(kv.Value, file)

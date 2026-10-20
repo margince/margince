@@ -11,8 +11,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -32,18 +32,19 @@ import (
 // No freeze, unlike BaseCurrency. Changing it re-means nothing already stored:
 // old artifacts stay in the language they were written in, and nothing converts
 // against the answer the way money does.
-var BaseLanguage = settings.Define[string](
-	"installation.base_language",
-	installationSettingsObject,
-	"update",
-	string(textlang.English),
-	func(v string) error {
+var BaseLanguage = config.DefineStored(config.Spec[string]{
+	Key:     "installation.base_language",
+	Env:     "MARGINCE_INSTALLATION_BASE_LANGUAGE",
+	Type:    config.String,
+	Default: config.Some(string(textlang.English)),
+	Validate: func(v string) error {
 		if !textlang.Known(v) {
 			return errors.New("a base language is one of en, de, vi")
 		}
 		return nil
 	},
-).AsInstallationIdentity().MachineryApplied()
+	Doc: "The language AI writes the shared record in: en, de or vi.",
+}, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, MachineryApplied: true, SurvivesDataReset: true})
 
 // BaseLanguageOf resolves the language shared AI writing is written in, inside
 // a transaction the caller already holds.
@@ -57,7 +58,7 @@ var BaseLanguage = settings.Define[string](
 // is worse than one that comes out in English, which is what those
 // installations get today anyway.
 func BaseLanguageOf(ctx context.Context, tx pgx.Tx) (string, error) {
-	return settings.GetTx(ctx, tx, BaseLanguage)
+	return config.StoredValTx(ctx, tx, config.Bound(), BaseLanguage)
 }
 
 // BaseLanguageForPrompt resolves the base language for a caller that holds a

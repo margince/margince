@@ -22,6 +22,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // DraftInputActivities bounds how much of the conversation the draft reads. A
@@ -102,8 +103,11 @@ type Input struct {
 
 // RecipientIn is who the draft is addressed to and how we stand with them.
 type RecipientIn struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID string `json:"id"`
+	// Kind is the type of record the draft is written for. A lead's draft folds
+	// into this input too, so the model, the citation and the grounding read it here.
+	Kind datasource.EntityType `json:"entity_type"`
+	Name string                `json:"name"`
 	// FirstName is what a familiar greeting uses. Split here rather than in
 	// the prompt: a model asked to shorten a name will shorten "Dr. Anne-Marie
 	// Weiß-Konrad" differently on every call.

@@ -388,7 +388,7 @@ describe("unsaved edits", () => {
 
 describe("the transient confirmation", () => {
   // The defect this is derived from was real, and nothing caught it.
-  // `screens/commissiondecide.tsx` called `useToast` and rendered no region.
+  // `features/projects/commissiondecide.tsx` called `useToast` and rendered no region.
   // So every approve/pay/void confirmation it showed went into a `useState`
   // nobody read. Nothing failed: the suite only rendered the toast's own
   // harness. A confirmation shown to nobody looks the same as one nobody

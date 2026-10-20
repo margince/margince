@@ -101,7 +101,7 @@ func (s *Service) EvaluateReport(ctx context.Context, id ids.UUID, revision *int
 		if revision != nil {
 			chosen = *revision
 		}
-		selection, frameworkID, err := s.reportRevision(ctx, tx, report, chosen)
+		selection, frameworkID, err := s.evaluableRevision(ctx, tx, report, chosen)
 		if err != nil {
 			return err
 		}

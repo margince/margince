@@ -67,7 +67,7 @@ func NewProviderFor(db *database.DB) *Provider {
 			WithInstallationRenamer(installationRenamer(pool)),
 		deals:       deals.NewProvider(db, DealsInstallation()).WithFieldCatalog(customfields.NewService(pool, nil)),
 		projects:    projects.ProviderOver(ProjectsStoreOver(db)),
-		activities:  activities.NewProvider(InstallationDB(pool)),
+		activities:  activities.NewProvider(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil)),
 		commissions: commissions.NewProvider(db),
 		dealRooms:   dealrooms.NewProvider(db),
 		reports:     newReportEngine(pool),

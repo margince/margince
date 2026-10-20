@@ -55,7 +55,7 @@
 1 react-hooks/set-state-in-effect src/features/automations/automations.instances.tsx
 1 react-hooks/set-state-in-effect src/features/automations/automations.tsx
 1 react-hooks/set-state-in-effect src/features/import/backfill-run.ts
-1 react-hooks/set-state-in-effect src/screens/billingcontactmodal.tsx
+1 react-hooks/set-state-in-effect src/features/projects/billingcontactmodal.tsx
 3 react-hooks/refs src/features/brief/brief.readings.tsx
 1 react-hooks/set-state-in-effect src/features/capture/capture-purge-dialog.tsx
 6 react-hooks/refs src/features/companies/companies.body.tsx
@@ -74,10 +74,10 @@
 1 react-hooks/set-state-in-effect src/features/contacts/contactdrawers.tsx
 1 react-hooks/preserve-manual-memoization src/features/contacts/contactemployers.tsx
 2 react-hooks/refs src/features/contacts/contactpage.drawers.tsx
-1 react-hooks/refs src/screens/contractcustomseed.ts
-1 react-hooks/set-state-in-effect src/screens/contractform.tsx
-3 react-hooks/set-state-in-effect src/screens/contractlifecycle.tsx
-1 react-hooks/set-state-in-effect src/screens/corpusask.tsx
+1 react-hooks/refs src/features/projects/contractcustomseed.ts
+1 react-hooks/set-state-in-effect src/features/projects/contractform.tsx
+3 react-hooks/set-state-in-effect src/features/projects/contractlifecycle.tsx
+1 react-hooks/set-state-in-effect src/features/voice-knowledge/corpusask.tsx
 3 react-hooks/refs src/features/deals/deal360/outcomereviewmodal.tsx
 1 react-hooks/set-state-in-effect src/screens/embedreindex.tsx
 3 react-hooks/refs src/features/lists/filtereditor.tsx
@@ -85,7 +85,7 @@
 1 react-hooks/set-state-in-effect src/features/lists/filterslibrary.tsx
 1 react-hooks/refs src/features/lists/filterview.tsx
 1 react-hooks/set-state-in-effect src/features/records/historyfields.tsx
-1 react-hooks/refs src/screens/knowledge.documents.tsx
+1 react-hooks/refs src/features/voice-knowledge/knowledge.documents.tsx
 1 react-hooks/set-state-in-effect src/features/leads/leadfillfromcontact.tsx
 1 react-hooks/set-state-in-effect src/features/leads/leadraillinks.tsx
 1 react-hooks/set-state-in-effect src/features/leads/leads.actions.tsx
@@ -107,8 +107,8 @@
 2 react-hooks/refs src/features/mail/openemaildrawer.tsx
 1 react-hooks/set-state-in-effect src/screens/preferences.tsx
 1 react-hooks/refs src/features/privacy/privacy.caselink.ts
-1 react-hooks/refs src/screens/projecthealthmodal.tsx
-1 react-hooks/set-state-in-effect src/screens/projecthealthmodal.tsx
+1 react-hooks/refs src/features/projects/projecthealthmodal.tsx
+1 react-hooks/set-state-in-effect src/features/projects/projecthealthmodal.tsx
 1 react-hooks/set-state-in-effect src/screens/rate-manual.tsx
 1 react-hooks/set-state-in-effect src/features/records/recordaccess.tsx
 1 react-hooks/refs src/features/records/recordteamassign.tsx
@@ -116,5 +116,5 @@
 1 react-hooks/set-state-in-effect src/features/records/relationships.tsx
 3 react-hooks/refs src/features/lists/tagspanel.tsx
 1 react-hooks/set-state-in-effect src/features/ai/vertex-model-probe.ts
-1 react-hooks/refs src/screens/voice-samples.tsx
+1 react-hooks/refs src/features/voice-knowledge/voice-samples.tsx
 3 react-hooks/refs src/features/worklist/worklist.row.compact.tsx

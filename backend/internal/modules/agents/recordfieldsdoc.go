@@ -282,11 +282,9 @@ func customFieldNotes(shapes map[datasource.EntityType]reflect.Type) []string {
 		"key is REFUSED by name, so an unknown field is never a silent loss. A cf_ key whose custom " +
 		"field is not ACTIVE in this workspace is the one that is: the write reports success and drops " +
 		"the value, so re-read the record if you are unsure a cf_ value landed."}
-	// …but not for every record type, and the exception is this surface's own
-	// decision: a type takes custom fields only if its contract shape carries the
-	// additionalProperties bag a cf_ value travels in, and activity and
-	// relationship carry none. Promising carriage there would send an agent to
-	// write a key the strict decoder refuses.
+	// …but not for every record type. A type takes custom fields only if its
+	// contract shape carries the additionalProperties bag a cf_ value travels in.
+	// Promising carriage elsewhere sends an agent to write a key the decoder refuses.
 	//
 	// DERIVED from the shapes, not listed: the exclusion is a property of the
 	// generated contract, and agents may not import customfields to ask it (a

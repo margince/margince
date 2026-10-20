@@ -36,8 +36,8 @@ func buildReportWhere(
 	// dropped here rather than paid for with a `TRUE` in every such spec — a
 	// spec should not have to spell a no-op to say it has no restriction.
 	var where []string
-	if spec.baseWhere != "" {
-		where = append(where, spec.baseWhere)
+	if population := spec.populationWhere(); population != "" {
+		where = append(where, population)
 	}
 	// Deterministic filter order — the plan echo and the SQL must not
 	// depend on map iteration.
@@ -74,6 +74,9 @@ func buildReportWhere(
 		if req.Filters[key] == nil {
 			where = append(where, expr+" IS NULL")
 			continue
+		}
+		if err := filterDomain(spec, expr).Admits(key, req.Filters[key]); err != nil {
+			return nil, "", err
 		}
 		value, err := reportFilterValue(key, req.Filters[key])
 		if err != nil {

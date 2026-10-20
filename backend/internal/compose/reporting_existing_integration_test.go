@@ -11,13 +11,12 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -77,10 +76,7 @@ func TestReportingUnassignedWinDoesNotRetainThePreviousOwner(t *testing.T) {
 
 func reportingUnassignedLanguage(t *testing.T, language, label string) {
 	e := setupForecast(t)
-	config := settings.New(e.Pool, settings.NewRegistry(identity.BaseLanguage))
-	if err := settings.Set(reportingActor(e), config, identity.BaseLanguage, language); err != nil {
-		t.Fatal(err)
-	}
+	integration.SetBaseLanguage(reportingActor(e), t, e.Pool, language)
 	closed, store, writer := reportingWrittenClose(t, e)
 	if _, err := store.UpdateDeal(writer, ids.From[ids.DealKind](ids.UUID(closed.Id)), deals.UpdateDealInput{Clear: []string{"owner_id"}}); err != nil {
 		t.Fatal(err)

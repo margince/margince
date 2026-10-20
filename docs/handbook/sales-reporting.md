@@ -7,6 +7,10 @@ Open **Analytics → Performance**. Choose **Sales** for sales won, pipeline sta
 
 Sales won follows the close time span you picked and the deal owner of today. If a deal gets a new owner, its live sales and target results move to the new owner. Saved snapshots keep the owner and results from that time. Open pipeline and stage age show the pipeline as it is now, with the time window for expected closes printed next to the chart.
 
+Above the figures, a few sentences sum up the position. They say what was won against the target, where the quarter should end, and what is still open. They are written from the figures below them, and a figure that was not measured is left out.
+
+The row of figures at the top shows sales won and open pipeline, with the number of open deals and the date it was read. With the time span set to this quarter, it also shows **Forecast landing**. That is where the deal forecast expects this fiscal quarter to end, and it needs forecast access. Click sales won or open pipeline to open the records behind it. Click **Forecast landing** to open the **Forecast** section, where each part links to its deals.
+
 A salesperson's target is for the month or the fiscal quarter that holds the end of the time span you picked. If the cutoff of today comes first, it is the month or quarter that holds that cutoff. It is compared with the real result for that month or quarter. Changing the time span does not turn today's pipeline into history.
 
 “This month” and “This quarter” follow the calendar of your Margince and start again when that time span starts. The dates next to the numbers name the time span measured. A custom time span can be up to 12 months long. If the end date is today or later, real results stop at the reporting cutoff of today, shown above the charts. Future sales are not counted. A time span that is all in the future is refused; choose a start date before the cutoff.
@@ -18,9 +22,10 @@ Every chart can also be read as numbers. Select a mark, with a click or the keys
 ## What does each graph mean?
 
 - **Sales won:** won value added up over time, and the time span before it when the two can be compared. It also shows a target for the full time span. The target is for the whole time span; it does not ask for the same amount each day.
-- **Pipeline stages:** open value of today for each stage in order, all measured the same way.
+- **Pipeline stages:** open value of today for each stage in order, all measured the same way, with the number of priced deals in each stage.
 - **Sales by salesperson:** real result and target for the same target time span. A missing target and a zero
   target are two different states; a missing target does not mean low results.
+  The chart says whom it credits and how much of the target time span has passed.
 - **Stage age:** the middle age and the age that 75% of open deals stay under, for open deals of today. Small groups
   are held back. These numbers describe the whole group; they do not warn you that one deal has stopped moving.
 - **SDR outcomes:** meetings held and accepted opportunities for each week, counted
@@ -40,6 +45,10 @@ Open **Definitions** to see how each number is worked out, the rules for credit,
 ## How do I save or share a report?
 
 Choose **Save report**, name it and choose **Visible to**. Use **Customize report** to change numbers, graphs or their order. The saved report keeps its graphs, their order, scope, pipeline and time span rules. Open it from **Reports** to see its values of today. Copy a report to keep a setup of its own; editing creates a new version.
+
+To change a shared report without readers seeing it half done, choose **Save as draft** in **Edit report**. Readers keep the published report. Use **Preview draft** to see it, then **Publish draft** or **Discard draft**. While a draft is open, edits go into it.
+
+Under **History and schedules**, **Versions** lists who saved each version and when. **Restore version** publishes an earlier version again as the newest one. Snapshots and schedules keep the version they were made from. Only someone who may edit the report sees drafts and versions.
 
 To read a report, a user needs access to the report and access to the numbers under it. A shared report does not give access to records.
 

@@ -4,6 +4,8 @@
 package crm
 
 import (
+	"encoding/json"
+	"fmt"
 	"time"
 )
 
@@ -415,6 +417,9 @@ func (e EmailSummaryMove) Valid() bool {
 // what the DB CHECK would reject, rather than 500-ing at write time).
 // `channel_provider` is the same kind of constraint in both directions: non-null exactly
 // when `kind=message` (ADR-0107).
+// **Custom fields**: the values of the workspace's activity custom fields arrive as extra
+// top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
+// `withheld`.
 type Activity struct {
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
@@ -519,7 +524,8 @@ type Activity struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty"`
+	Version              *RowVersion            `json:"version,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
 // ActivityCaptureLabel What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary".
@@ -603,7 +609,7 @@ type CommitmentMeaning struct {
 	State string `json:"state"`
 }
 
-// CreateActivityRequest defines model for CreateActivityRequest.
+// CreateActivityRequest The workspace's active activity custom fields travel as extra top-level `cf_` keys. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`.
 type CreateActivityRequest struct {
 	AssigneeId *string `json:"assignee_id,omitempty"`
 
@@ -671,7 +677,8 @@ type CreateActivityRequest struct {
 	Subject          *string `json:"subject,omitempty"`
 
 	// ThreadKey The conversation this message belongs to. Email only. Defaults to `rfc_message_id` when absent, which files a message under itself — the same root a captured message takes when it starts a thread.
-	ThreadKey *string `json:"thread_key,omitempty"`
+	ThreadKey            *string                `json:"thread_key,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
 // CreateActivityRequestDirection defines model for CreateActivityRequest.Direction.
@@ -871,4 +878,1097 @@ type SourceAuthor struct {
 	// Via Which system the record came from (`hubspot`), so a surface can say where the attribution comes from rather than presenting it as something typed here. Null when the origin was not recorded.
 	// An import writes its rows inside a reserved `mirror:` namespace, which is machinery for the replay key and is never what a reader should see. The prefix is stripped here: a row stored as `mirror:hubspot` reads `hubspot`.
 	Via *string `json:"via,omitempty"`
+}
+
+// Getter for additional properties for Activity. Returns the specified
+// element and whether it was found
+func (a Activity) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for Activity
+func (a *Activity) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for Activity to handle AdditionalProperties
+func (a *Activity) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["archived_at"]; found {
+		err = json.Unmarshal(raw, &a.ArchivedAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'archived_at': %w", err)
+		}
+		delete(object, "archived_at")
+	}
+
+	if raw, found := object["assignee_id"]; found {
+		err = json.Unmarshal(raw, &a.AssigneeId)
+		if err != nil {
+			return fmt.Errorf("error reading 'assignee_id': %w", err)
+		}
+		delete(object, "assignee_id")
+	}
+
+	if raw, found := object["audience"]; found {
+		err = json.Unmarshal(raw, &a.Audience)
+		if err != nil {
+			return fmt.Errorf("error reading 'audience': %w", err)
+		}
+		delete(object, "audience")
+	}
+
+	if raw, found := object["audience_reason"]; found {
+		err = json.Unmarshal(raw, &a.AudienceReason)
+		if err != nil {
+			return fmt.Errorf("error reading 'audience_reason': %w", err)
+		}
+		delete(object, "audience_reason")
+	}
+
+	if raw, found := object["author"]; found {
+		err = json.Unmarshal(raw, &a.Author)
+		if err != nil {
+			return fmt.Errorf("error reading 'author': %w", err)
+		}
+		delete(object, "author")
+	}
+
+	if raw, found := object["body"]; found {
+		err = json.Unmarshal(raw, &a.Body)
+		if err != nil {
+			return fmt.Errorf("error reading 'body': %w", err)
+		}
+		delete(object, "body")
+	}
+
+	if raw, found := object["bulk_mail_attested"]; found {
+		err = json.Unmarshal(raw, &a.BulkMailAttested)
+		if err != nil {
+			return fmt.Errorf("error reading 'bulk_mail_attested': %w", err)
+		}
+		delete(object, "bulk_mail_attested")
+	}
+
+	if raw, found := object["capture_label"]; found {
+		err = json.Unmarshal(raw, &a.CaptureLabel)
+		if err != nil {
+			return fmt.Errorf("error reading 'capture_label': %w", err)
+		}
+		delete(object, "capture_label")
+	}
+
+	if raw, found := object["captured_by"]; found {
+		err = json.Unmarshal(raw, &a.CapturedBy)
+		if err != nil {
+			return fmt.Errorf("error reading 'captured_by': %w", err)
+		}
+		delete(object, "captured_by")
+	}
+
+	if raw, found := object["channel_provider"]; found {
+		err = json.Unmarshal(raw, &a.ChannelProvider)
+		if err != nil {
+			return fmt.Errorf("error reading 'channel_provider': %w", err)
+		}
+		delete(object, "channel_provider")
+	}
+
+	if raw, found := object["colleague_ids"]; found {
+		err = json.Unmarshal(raw, &a.ColleagueIds)
+		if err != nil {
+			return fmt.Errorf("error reading 'colleague_ids': %w", err)
+		}
+		delete(object, "colleague_ids")
+	}
+
+	if raw, found := object["commitment_admissions"]; found {
+		err = json.Unmarshal(raw, &a.CommitmentAdmissions)
+		if err != nil {
+			return fmt.Errorf("error reading 'commitment_admissions': %w", err)
+		}
+		delete(object, "commitment_admissions")
+	}
+
+	if raw, found := object["content_state"]; found {
+		err = json.Unmarshal(raw, &a.ContentState)
+		if err != nil {
+			return fmt.Errorf("error reading 'content_state': %w", err)
+		}
+		delete(object, "content_state")
+	}
+
+	if raw, found := object["created_at"]; found {
+		err = json.Unmarshal(raw, &a.CreatedAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'created_at': %w", err)
+		}
+		delete(object, "created_at")
+	}
+
+	if raw, found := object["direction"]; found {
+		err = json.Unmarshal(raw, &a.Direction)
+		if err != nil {
+			return fmt.Errorf("error reading 'direction': %w", err)
+		}
+		delete(object, "direction")
+	}
+
+	if raw, found := object["done_at"]; found {
+		err = json.Unmarshal(raw, &a.DoneAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'done_at': %w", err)
+		}
+		delete(object, "done_at")
+	}
+
+	if raw, found := object["due_at"]; found {
+		err = json.Unmarshal(raw, &a.DueAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'due_at': %w", err)
+		}
+		delete(object, "due_at")
+	}
+
+	if raw, found := object["duration_seconds"]; found {
+		err = json.Unmarshal(raw, &a.DurationSeconds)
+		if err != nil {
+			return fmt.Errorf("error reading 'duration_seconds': %w", err)
+		}
+		delete(object, "duration_seconds")
+	}
+
+	if raw, found := object["email_summary"]; found {
+		err = json.Unmarshal(raw, &a.EmailSummary)
+		if err != nil {
+			return fmt.Errorf("error reading 'email_summary': %w", err)
+		}
+		delete(object, "email_summary")
+	}
+
+	if raw, found := object["host_user_id"]; found {
+		err = json.Unmarshal(raw, &a.HostUserId)
+		if err != nil {
+			return fmt.Errorf("error reading 'host_user_id': %w", err)
+		}
+		delete(object, "host_user_id")
+	}
+
+	if raw, found := object["id"]; found {
+		err = json.Unmarshal(raw, &a.Id)
+		if err != nil {
+			return fmt.Errorf("error reading 'id': %w", err)
+		}
+		delete(object, "id")
+	}
+
+	if raw, found := object["imported_from"]; found {
+		err = json.Unmarshal(raw, &a.ImportedFrom)
+		if err != nil {
+			return fmt.Errorf("error reading 'imported_from': %w", err)
+		}
+		delete(object, "imported_from")
+	}
+
+	if raw, found := object["invitation_status"]; found {
+		err = json.Unmarshal(raw, &a.InvitationStatus)
+		if err != nil {
+			return fmt.Errorf("error reading 'invitation_status': %w", err)
+		}
+		delete(object, "invitation_status")
+	}
+
+	if raw, found := object["is_done"]; found {
+		err = json.Unmarshal(raw, &a.IsDone)
+		if err != nil {
+			return fmt.Errorf("error reading 'is_done': %w", err)
+		}
+		delete(object, "is_done")
+	}
+
+	if raw, found := object["kind"]; found {
+		err = json.Unmarshal(raw, &a.Kind)
+		if err != nil {
+			return fmt.Errorf("error reading 'kind': %w", err)
+		}
+		delete(object, "kind")
+	}
+
+	if raw, found := object["language"]; found {
+		err = json.Unmarshal(raw, &a.Language)
+		if err != nil {
+			return fmt.Errorf("error reading 'language': %w", err)
+		}
+		delete(object, "language")
+	}
+
+	if raw, found := object["links"]; found {
+		err = json.Unmarshal(raw, &a.Links)
+		if err != nil {
+			return fmt.Errorf("error reading 'links': %w", err)
+		}
+		delete(object, "links")
+	}
+
+	if raw, found := object["meeting_status"]; found {
+		err = json.Unmarshal(raw, &a.MeetingStatus)
+		if err != nil {
+			return fmt.Errorf("error reading 'meeting_status': %w", err)
+		}
+		delete(object, "meeting_status")
+	}
+
+	if raw, found := object["occurred_at"]; found {
+		err = json.Unmarshal(raw, &a.OccurredAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'occurred_at': %w", err)
+		}
+		delete(object, "occurred_at")
+	}
+
+	if raw, found := object["raw"]; found {
+		err = json.Unmarshal(raw, &a.Raw)
+		if err != nil {
+			return fmt.Errorf("error reading 'raw': %w", err)
+		}
+		delete(object, "raw")
+	}
+
+	if raw, found := object["remind_at"]; found {
+		err = json.Unmarshal(raw, &a.RemindAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'remind_at': %w", err)
+		}
+		delete(object, "remind_at")
+	}
+
+	if raw, found := object["source"]; found {
+		err = json.Unmarshal(raw, &a.Source)
+		if err != nil {
+			return fmt.Errorf("error reading 'source': %w", err)
+		}
+		delete(object, "source")
+	}
+
+	if raw, found := object["source_activity_id"]; found {
+		err = json.Unmarshal(raw, &a.SourceActivityId)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_activity_id': %w", err)
+		}
+		delete(object, "source_activity_id")
+	}
+
+	if raw, found := object["source_id"]; found {
+		err = json.Unmarshal(raw, &a.SourceId)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_id': %w", err)
+		}
+		delete(object, "source_id")
+	}
+
+	if raw, found := object["source_system"]; found {
+		err = json.Unmarshal(raw, &a.SourceSystem)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_system': %w", err)
+		}
+		delete(object, "source_system")
+	}
+
+	if raw, found := object["subject"]; found {
+		err = json.Unmarshal(raw, &a.Subject)
+		if err != nil {
+			return fmt.Errorf("error reading 'subject': %w", err)
+		}
+		delete(object, "subject")
+	}
+
+	if raw, found := object["thread_key"]; found {
+		err = json.Unmarshal(raw, &a.ThreadKey)
+		if err != nil {
+			return fmt.Errorf("error reading 'thread_key': %w", err)
+		}
+		delete(object, "thread_key")
+	}
+
+	if raw, found := object["updated_at"]; found {
+		err = json.Unmarshal(raw, &a.UpdatedAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'updated_at': %w", err)
+		}
+		delete(object, "updated_at")
+	}
+
+	if raw, found := object["version"]; found {
+		err = json.Unmarshal(raw, &a.Version)
+		if err != nil {
+			return fmt.Errorf("error reading 'version': %w", err)
+		}
+		delete(object, "version")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for Activity to handle AdditionalProperties
+func (a Activity) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.ArchivedAt != nil {
+		object["archived_at"], err = json.Marshal(a.ArchivedAt)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'archived_at': %w", err)
+		}
+	}
+
+	if a.AssigneeId != nil {
+		object["assignee_id"], err = json.Marshal(a.AssigneeId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'assignee_id': %w", err)
+		}
+	}
+
+	if a.Audience != nil {
+		object["audience"], err = json.Marshal(a.Audience)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'audience': %w", err)
+		}
+	}
+
+	if a.AudienceReason != nil {
+		object["audience_reason"], err = json.Marshal(a.AudienceReason)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'audience_reason': %w", err)
+		}
+	}
+
+	if a.Author != nil {
+		object["author"], err = json.Marshal(a.Author)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'author': %w", err)
+		}
+	}
+
+	if a.Body != nil {
+		object["body"], err = json.Marshal(a.Body)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'body': %w", err)
+		}
+	}
+
+	if a.BulkMailAttested != nil {
+		object["bulk_mail_attested"], err = json.Marshal(a.BulkMailAttested)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'bulk_mail_attested': %w", err)
+		}
+	}
+
+	if a.CaptureLabel != nil {
+		object["capture_label"], err = json.Marshal(a.CaptureLabel)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'capture_label': %w", err)
+		}
+	}
+
+	object["captured_by"], err = json.Marshal(a.CapturedBy)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'captured_by': %w", err)
+	}
+
+	if a.ChannelProvider != nil {
+		object["channel_provider"], err = json.Marshal(a.ChannelProvider)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'channel_provider': %w", err)
+		}
+	}
+
+	if a.ColleagueIds != nil {
+		object["colleague_ids"], err = json.Marshal(a.ColleagueIds)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'colleague_ids': %w", err)
+		}
+	}
+
+	if a.CommitmentAdmissions != nil {
+		object["commitment_admissions"], err = json.Marshal(a.CommitmentAdmissions)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'commitment_admissions': %w", err)
+		}
+	}
+
+	if a.ContentState != nil {
+		object["content_state"], err = json.Marshal(a.ContentState)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'content_state': %w", err)
+		}
+	}
+
+	object["created_at"], err = json.Marshal(a.CreatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'created_at': %w", err)
+	}
+
+	if a.Direction != nil {
+		object["direction"], err = json.Marshal(a.Direction)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'direction': %w", err)
+		}
+	}
+
+	if a.DoneAt != nil {
+		object["done_at"], err = json.Marshal(a.DoneAt)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'done_at': %w", err)
+		}
+	}
+
+	if a.DueAt != nil {
+		object["due_at"], err = json.Marshal(a.DueAt)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'due_at': %w", err)
+		}
+	}
+
+	if a.DurationSeconds != nil {
+		object["duration_seconds"], err = json.Marshal(a.DurationSeconds)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'duration_seconds': %w", err)
+		}
+	}
+
+	if a.EmailSummary != nil {
+		object["email_summary"], err = json.Marshal(a.EmailSummary)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'email_summary': %w", err)
+		}
+	}
+
+	if a.HostUserId != nil {
+		object["host_user_id"], err = json.Marshal(a.HostUserId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'host_user_id': %w", err)
+		}
+	}
+
+	object["id"], err = json.Marshal(a.Id)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'id': %w", err)
+	}
+
+	if a.ImportedFrom != nil {
+		object["imported_from"], err = json.Marshal(a.ImportedFrom)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'imported_from': %w", err)
+		}
+	}
+
+	if a.InvitationStatus != nil {
+		object["invitation_status"], err = json.Marshal(a.InvitationStatus)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'invitation_status': %w", err)
+		}
+	}
+
+	if a.IsDone != nil {
+		object["is_done"], err = json.Marshal(a.IsDone)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'is_done': %w", err)
+		}
+	}
+
+	object["kind"], err = json.Marshal(a.Kind)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'kind': %w", err)
+	}
+
+	if a.Language != nil {
+		object["language"], err = json.Marshal(a.Language)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'language': %w", err)
+		}
+	}
+
+	if a.Links != nil {
+		object["links"], err = json.Marshal(a.Links)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'links': %w", err)
+		}
+	}
+
+	if a.MeetingStatus != nil {
+		object["meeting_status"], err = json.Marshal(a.MeetingStatus)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'meeting_status': %w", err)
+		}
+	}
+
+	object["occurred_at"], err = json.Marshal(a.OccurredAt)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'occurred_at': %w", err)
+	}
+
+	if a.Raw != nil {
+		object["raw"], err = json.Marshal(a.Raw)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'raw': %w", err)
+		}
+	}
+
+	if a.RemindAt != nil {
+		object["remind_at"], err = json.Marshal(a.RemindAt)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'remind_at': %w", err)
+		}
+	}
+
+	object["source"], err = json.Marshal(a.Source)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'source': %w", err)
+	}
+
+	if a.SourceActivityId != nil {
+		object["source_activity_id"], err = json.Marshal(a.SourceActivityId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_activity_id': %w", err)
+		}
+	}
+
+	if a.SourceId != nil {
+		object["source_id"], err = json.Marshal(a.SourceId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_id': %w", err)
+		}
+	}
+
+	if a.SourceSystem != nil {
+		object["source_system"], err = json.Marshal(a.SourceSystem)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_system': %w", err)
+		}
+	}
+
+	if a.Subject != nil {
+		object["subject"], err = json.Marshal(a.Subject)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'subject': %w", err)
+		}
+	}
+
+	if a.ThreadKey != nil {
+		object["thread_key"], err = json.Marshal(a.ThreadKey)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'thread_key': %w", err)
+		}
+	}
+
+	object["updated_at"], err = json.Marshal(a.UpdatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'updated_at': %w", err)
+	}
+
+	if a.Version != nil {
+		object["version"], err = json.Marshal(a.Version)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'version': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for CreateActivityRequest. Returns the specified
+// element and whether it was found
+func (a CreateActivityRequest) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for CreateActivityRequest
+func (a *CreateActivityRequest) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for CreateActivityRequest to handle AdditionalProperties
+func (a *CreateActivityRequest) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["assignee_id"]; found {
+		err = json.Unmarshal(raw, &a.AssigneeId)
+		if err != nil {
+			return fmt.Errorf("error reading 'assignee_id': %w", err)
+		}
+		delete(object, "assignee_id")
+	}
+
+	if raw, found := object["attendee_user_ids"]; found {
+		err = json.Unmarshal(raw, &a.AttendeeUserIds)
+		if err != nil {
+			return fmt.Errorf("error reading 'attendee_user_ids': %w", err)
+		}
+		delete(object, "attendee_user_ids")
+	}
+
+	if raw, found := object["body"]; found {
+		err = json.Unmarshal(raw, &a.Body)
+		if err != nil {
+			return fmt.Errorf("error reading 'body': %w", err)
+		}
+		delete(object, "body")
+	}
+
+	if raw, found := object["channel_provider"]; found {
+		err = json.Unmarshal(raw, &a.ChannelProvider)
+		if err != nil {
+			return fmt.Errorf("error reading 'channel_provider': %w", err)
+		}
+		delete(object, "channel_provider")
+	}
+
+	if raw, found := object["direction"]; found {
+		err = json.Unmarshal(raw, &a.Direction)
+		if err != nil {
+			return fmt.Errorf("error reading 'direction': %w", err)
+		}
+		delete(object, "direction")
+	}
+
+	if raw, found := object["due_at"]; found {
+		err = json.Unmarshal(raw, &a.DueAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'due_at': %w", err)
+		}
+		delete(object, "due_at")
+	}
+
+	if raw, found := object["duration_seconds"]; found {
+		err = json.Unmarshal(raw, &a.DurationSeconds)
+		if err != nil {
+			return fmt.Errorf("error reading 'duration_seconds': %w", err)
+		}
+		delete(object, "duration_seconds")
+	}
+
+	if raw, found := object["follow_up_task"]; found {
+		err = json.Unmarshal(raw, &a.FollowUpTask)
+		if err != nil {
+			return fmt.Errorf("error reading 'follow_up_task': %w", err)
+		}
+		delete(object, "follow_up_task")
+	}
+
+	if raw, found := object["host_user_id"]; found {
+		err = json.Unmarshal(raw, &a.HostUserId)
+		if err != nil {
+			return fmt.Errorf("error reading 'host_user_id': %w", err)
+		}
+		delete(object, "host_user_id")
+	}
+
+	if raw, found := object["ical_instance"]; found {
+		err = json.Unmarshal(raw, &a.IcalInstance)
+		if err != nil {
+			return fmt.Errorf("error reading 'ical_instance': %w", err)
+		}
+		delete(object, "ical_instance")
+	}
+
+	if raw, found := object["ical_uid"]; found {
+		err = json.Unmarshal(raw, &a.IcalUid)
+		if err != nil {
+			return fmt.Errorf("error reading 'ical_uid': %w", err)
+		}
+		delete(object, "ical_uid")
+	}
+
+	if raw, found := object["kind"]; found {
+		err = json.Unmarshal(raw, &a.Kind)
+		if err != nil {
+			return fmt.Errorf("error reading 'kind': %w", err)
+		}
+		delete(object, "kind")
+	}
+
+	if raw, found := object["links"]; found {
+		err = json.Unmarshal(raw, &a.Links)
+		if err != nil {
+			return fmt.Errorf("error reading 'links': %w", err)
+		}
+		delete(object, "links")
+	}
+
+	if raw, found := object["meeting_status"]; found {
+		err = json.Unmarshal(raw, &a.MeetingStatus)
+		if err != nil {
+			return fmt.Errorf("error reading 'meeting_status': %w", err)
+		}
+		delete(object, "meeting_status")
+	}
+
+	if raw, found := object["occurred_at"]; found {
+		err = json.Unmarshal(raw, &a.OccurredAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'occurred_at': %w", err)
+		}
+		delete(object, "occurred_at")
+	}
+
+	if raw, found := object["participants"]; found {
+		err = json.Unmarshal(raw, &a.Participants)
+		if err != nil {
+			return fmt.Errorf("error reading 'participants': %w", err)
+		}
+		delete(object, "participants")
+	}
+
+	if raw, found := object["raw"]; found {
+		err = json.Unmarshal(raw, &a.Raw)
+		if err != nil {
+			return fmt.Errorf("error reading 'raw': %w", err)
+		}
+		delete(object, "raw")
+	}
+
+	if raw, found := object["remind_at"]; found {
+		err = json.Unmarshal(raw, &a.RemindAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'remind_at': %w", err)
+		}
+		delete(object, "remind_at")
+	}
+
+	if raw, found := object["request_activity_id"]; found {
+		err = json.Unmarshal(raw, &a.RequestActivityId)
+		if err != nil {
+			return fmt.Errorf("error reading 'request_activity_id': %w", err)
+		}
+		delete(object, "request_activity_id")
+	}
+
+	if raw, found := object["rfc_message_id"]; found {
+		err = json.Unmarshal(raw, &a.RfcMessageId)
+		if err != nil {
+			return fmt.Errorf("error reading 'rfc_message_id': %w", err)
+		}
+		delete(object, "rfc_message_id")
+	}
+
+	if raw, found := object["source"]; found {
+		err = json.Unmarshal(raw, &a.Source)
+		if err != nil {
+			return fmt.Errorf("error reading 'source': %w", err)
+		}
+		delete(object, "source")
+	}
+
+	if raw, found := object["source_activity_id"]; found {
+		err = json.Unmarshal(raw, &a.SourceActivityId)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_activity_id': %w", err)
+		}
+		delete(object, "source_activity_id")
+	}
+
+	if raw, found := object["source_author_id"]; found {
+		err = json.Unmarshal(raw, &a.SourceAuthorId)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_author_id': %w", err)
+		}
+		delete(object, "source_author_id")
+	}
+
+	if raw, found := object["source_author_name"]; found {
+		err = json.Unmarshal(raw, &a.SourceAuthorName)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_author_name': %w", err)
+		}
+		delete(object, "source_author_name")
+	}
+
+	if raw, found := object["source_id"]; found {
+		err = json.Unmarshal(raw, &a.SourceId)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_id': %w", err)
+		}
+		delete(object, "source_id")
+	}
+
+	if raw, found := object["source_system"]; found {
+		err = json.Unmarshal(raw, &a.SourceSystem)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_system': %w", err)
+		}
+		delete(object, "source_system")
+	}
+
+	if raw, found := object["subject"]; found {
+		err = json.Unmarshal(raw, &a.Subject)
+		if err != nil {
+			return fmt.Errorf("error reading 'subject': %w", err)
+		}
+		delete(object, "subject")
+	}
+
+	if raw, found := object["thread_key"]; found {
+		err = json.Unmarshal(raw, &a.ThreadKey)
+		if err != nil {
+			return fmt.Errorf("error reading 'thread_key': %w", err)
+		}
+		delete(object, "thread_key")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for CreateActivityRequest to handle AdditionalProperties
+func (a CreateActivityRequest) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.AssigneeId != nil {
+		object["assignee_id"], err = json.Marshal(a.AssigneeId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'assignee_id': %w", err)
+		}
+	}
+
+	if a.AttendeeUserIds != nil {
+		object["attendee_user_ids"], err = json.Marshal(a.AttendeeUserIds)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'attendee_user_ids': %w", err)
+		}
+	}
+
+	if a.Body != nil {
+		object["body"], err = json.Marshal(a.Body)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'body': %w", err)
+		}
+	}
+
+	if a.ChannelProvider != nil {
+		object["channel_provider"], err = json.Marshal(a.ChannelProvider)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'channel_provider': %w", err)
+		}
+	}
+
+	if a.Direction != nil {
+		object["direction"], err = json.Marshal(a.Direction)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'direction': %w", err)
+		}
+	}
+
+	if a.DueAt != nil {
+		object["due_at"], err = json.Marshal(a.DueAt)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'due_at': %w", err)
+		}
+	}
+
+	if a.DurationSeconds != nil {
+		object["duration_seconds"], err = json.Marshal(a.DurationSeconds)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'duration_seconds': %w", err)
+		}
+	}
+
+	if a.FollowUpTask != nil {
+		object["follow_up_task"], err = json.Marshal(a.FollowUpTask)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'follow_up_task': %w", err)
+		}
+	}
+
+	if a.HostUserId != nil {
+		object["host_user_id"], err = json.Marshal(a.HostUserId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'host_user_id': %w", err)
+		}
+	}
+
+	if a.IcalInstance != nil {
+		object["ical_instance"], err = json.Marshal(a.IcalInstance)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'ical_instance': %w", err)
+		}
+	}
+
+	if a.IcalUid != nil {
+		object["ical_uid"], err = json.Marshal(a.IcalUid)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'ical_uid': %w", err)
+		}
+	}
+
+	object["kind"], err = json.Marshal(a.Kind)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'kind': %w", err)
+	}
+
+	if a.Links != nil {
+		object["links"], err = json.Marshal(a.Links)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'links': %w", err)
+		}
+	}
+
+	if a.MeetingStatus != nil {
+		object["meeting_status"], err = json.Marshal(a.MeetingStatus)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'meeting_status': %w", err)
+		}
+	}
+
+	if a.OccurredAt != nil {
+		object["occurred_at"], err = json.Marshal(a.OccurredAt)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'occurred_at': %w", err)
+		}
+	}
+
+	if a.Participants != nil {
+		object["participants"], err = json.Marshal(a.Participants)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'participants': %w", err)
+		}
+	}
+
+	if a.Raw != nil {
+		object["raw"], err = json.Marshal(a.Raw)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'raw': %w", err)
+		}
+	}
+
+	if a.RemindAt != nil {
+		object["remind_at"], err = json.Marshal(a.RemindAt)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'remind_at': %w", err)
+		}
+	}
+
+	if a.RequestActivityId != nil {
+		object["request_activity_id"], err = json.Marshal(a.RequestActivityId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'request_activity_id': %w", err)
+		}
+	}
+
+	if a.RfcMessageId != nil {
+		object["rfc_message_id"], err = json.Marshal(a.RfcMessageId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'rfc_message_id': %w", err)
+		}
+	}
+
+	object["source"], err = json.Marshal(a.Source)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'source': %w", err)
+	}
+
+	if a.SourceActivityId != nil {
+		object["source_activity_id"], err = json.Marshal(a.SourceActivityId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_activity_id': %w", err)
+		}
+	}
+
+	if a.SourceAuthorId != nil {
+		object["source_author_id"], err = json.Marshal(a.SourceAuthorId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_author_id': %w", err)
+		}
+	}
+
+	if a.SourceAuthorName != nil {
+		object["source_author_name"], err = json.Marshal(a.SourceAuthorName)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_author_name': %w", err)
+		}
+	}
+
+	if a.SourceId != nil {
+		object["source_id"], err = json.Marshal(a.SourceId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_id': %w", err)
+		}
+	}
+
+	if a.SourceSystem != nil {
+		object["source_system"], err = json.Marshal(a.SourceSystem)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_system': %w", err)
+		}
+	}
+
+	if a.Subject != nil {
+		object["subject"], err = json.Marshal(a.Subject)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'subject': %w", err)
+		}
+	}
+
+	if a.ThreadKey != nil {
+		object["thread_key"], err = json.Marshal(a.ThreadKey)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'thread_key': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
 }

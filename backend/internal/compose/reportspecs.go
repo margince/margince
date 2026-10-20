@@ -269,7 +269,7 @@ var prebuiltReports = map[string]reportSpec{
 		// scope and not the identity-table TRUE a deal's is.
 		population:   measureEveryReadableRow,
 		baseWhere:    whereArchivedNull,
-		basePlain:    "live (unarchived) activities",
+		basePlain:    "live (unarchived) meetings and tasks; email, messages, calls and notes are not counted",
 		activityWalk: true,
 		dimensions: map[string]string{
 			fieldKind:      colKind,

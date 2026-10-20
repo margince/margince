@@ -3,7 +3,7 @@ openapi: 3.1.0
 info:
   title: Margince API
   version: 1.0.0-draft
-  summary: AI-native, open-source CRM core — contacts, companies, deals, pipelines, activities, leads, plus the agent/AI surface.
+  summary: AI-native, source-available CRM core — contacts, companies, deals, pipelines, activities, leads, plus the agent/AI surface.
   description: |-
     The V1 core CRM contract.
   license:
@@ -624,7 +624,11 @@ paths:
               schema: {$ref: '#/components/schemas/Company'}
         '403': {$ref: '#/components/responses/PermissionDenied'}
         '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        '409':
+          description: 'A state conflict (a concurrent edit or a duplicate). Or the company is the installations anchor, its name changes, and a boot source sets `installation.name` (`code: setting_locked_by_boot_source`).'
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
         '422': {$ref: '#/components/responses/ValidationError'}
     delete:
       tags: [Companies]
@@ -2456,6 +2460,7 @@ paths:
       tags: [Activities]
       operationId: listActivities
       summary: List activities (the timeline; cursor-paginated, filterable by type/entity).
+      description: A `cf_<slug>=<value>` query parameter narrows the list to activities whose custom field holds that value. It names an active activity custom field, and it reads content, so a row whose content the caller may not read is left out rather than listed withheld.
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
@@ -2528,7 +2533,6 @@ paths:
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
-      description: List activities (the timeline; cursor-paginated, filterable by type/entity).
     post:
       tags: [Activities]
       operationId: logActivity
@@ -5983,7 +5987,7 @@ paths:
         - name: object
           in: query
           required: true
-          schema: {type: string, enum: [contact, company, deal, lead, project, contract]}
+          schema: {type: string, enum: [contact, company, deal, lead, project, contract, activity]}
           description: Target core object.
         - name: status
           in: query
@@ -7050,6 +7054,17 @@ paths:
       description: |-
         What the nightly check found, ordered the way a manager with ten minutes before a
         call needs it: high severity first, then by the money at stake.
+      parameters:
+        - name: scope_kind
+          in: query
+          schema: {type: string, enum: [workspace, team, owner]}
+          description: >-
+            Narrows the findings to the deals of one population, as the forecast and the reports measure it. Omitted means every finding the caller can see. A scope the caller may not measure is refused.
+        - name: scope_id
+          in: query
+          schema: {type: string, format: uuid}
+          description: >-
+            The team or owner, for a team or owner scope. Refused with the workspace scope, which names no subject.
       responses:
         '200':
           description: The open findings, most material first.
@@ -7063,8 +7078,14 @@ paths:
                     type: array
                     items: {$ref: '#/components/schemas/InputCheck'}
                 additionalProperties: false
+        '400':
+          description: A scope the request cannot mean, such as an id without a kind or a workspace scope with an id.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
   /forecast/movement:
     get:
       tags: [Reports]
@@ -7717,7 +7738,11 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/PermissionDenied'}
         '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/VersionConflict'}
+        '409':
+          description: 'The company changed since the version in If-Match (`code: version_skew`). Or the company is the installations anchor, its name changes, and a boot source sets `installation.name` (`code: setting_locked_by_boot_source`).'
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /companies/{id}/profile-fields/{field}/confirm:
     parameters:
@@ -7749,7 +7774,11 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/PermissionDenied'}
         '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/VersionConflict'}
+        '409':
+          description: 'The company changed since the version in If-Match (`code: version_skew`). Or the company is the installations anchor, its name changes, and a boot source sets `installation.name` (`code: setting_locked_by_boot_source`).'
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /companies/{id}/facts/{factKey}:
     parameters:
@@ -8120,6 +8149,36 @@ components:
           type: string
           description: A field belonging to `category`; the pairing is checked, so a market field under `company` is a 422 rather than a row nobody can read back.
         value: {type: string, minLength: 1}
+    SettingOrigin:
+      type: object
+      additionalProperties: false
+      description: Where the value in force came from.
+      required: [source, name]
+      properties:
+        source:
+          type: string
+          enum: [flag, env, env_file, config_file, database, default, unset]
+          description: |-
+            `flag`, `env`, `env_file` and `config_file` are boot sources, and a setting one of them
+            sets is locked. `config_file` covers both the base file and the `--config-file` file;
+            `file` says which. `database` is a value an administrator saved, `default` the
+            declared default, and `unset` no value at all.
+        name: {type: string, description: 'The flag, environment variable or YAML key that set the value. Empty for `database`, `default` and `unset`.'}
+        file: {type: string, description: 'The file that held the value, for a .env or YAML source or a secret file.'}
+    SettingLock:
+      type: object
+      additionalProperties: false
+      description: A setting a boot source sets. A write that changes it is refused with 409 `setting_locked_by_boot_source`.
+      required: [key, origin]
+      properties:
+        key: {type: string, description: 'The setting''s key, such as `capture.auto_enrich_daily_cap`.'}
+        origin: {$ref: '#/components/schemas/SettingOrigin'}
+    SettingLocks:
+      type: array
+      description: |-
+        The settings in this response that a boot source sets, each with its source. A client
+        shows each as read-only. Empty when nothing is locked. A write ignores it.
+      items: {$ref: '#/components/schemas/SettingLock'}
     SourceAuthor:
       type: object
       description: |-
@@ -9906,7 +9965,7 @@ components:
       description: One record a brief sentence was written from.
       required: [entity_type, entity_id]
       properties:
-        entity_type: {type: string, enum: [deal, activity, contact, company, fact, profile_field]}
+        entity_type: {type: string, enum: [deal, activity, contact, company, lead, fact, profile_field]}
         entity_id: {type: string, format: uuid}
         name:
           type: string
@@ -12670,6 +12729,7 @@ components:
       type: object
       required: [template]
       properties:
+        locks: {$ref: '#/components/schemas/SettingLocks', readOnly: true}
         template:
           type: string
           maxLength: 4000
@@ -14493,6 +14553,9 @@ components:
         `duration_seconds` only for meeting/call; `direction` is null for note/task. Setting a
         disallowed field for the kind returns `422 code: field_not_valid_for_kind` (the API rejects
         what the DB CHECK would reject, rather than 500-ing at write time).
+        **Custom fields**: the values of the workspace's activity custom fields arrive as extra
+        top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
+        `withheld`.
       required: [id, kind, occurred_at, source, captured_by, created_at, updated_at]
       properties:
         commitment_admissions:
@@ -14610,6 +14673,7 @@ components:
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
         archived_at: {type: [string, 'null'], format: date-time}
+      additionalProperties: true
     ProviderRef:
       type: string
       pattern: '^[a-z][a-z0-9_]*$'
@@ -14843,6 +14907,9 @@ components:
           type: [string, 'null']
           description: >-
             Which occurrence of `ical_uid` this is — the occurrence's own original start, as the calendar states it. Meeting only. Required whenever `ical_uid` is given, because a series without an occurrence names every meeting in it at once.
+      additionalProperties: true
+      description: >-
+        The workspace's active activity custom fields travel as extra top-level `cf_` keys. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`.
     ActivityAudience:
       type: string
       enum: [workspace, participants, selected]
@@ -14875,6 +14942,9 @@ components:
             `field_not_valid_for_kind` fault on the field otherwise — the same refusal create
             gives, held against the kind the row already carries rather than one the
             patch names, because a patch cannot change a kind.
+      additionalProperties: true
+      description: >-
+        A sparse patch. The workspace's active activity custom fields travel as extra top-level `cf_` keys, and an explicit `null` clears one. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`.
     ActivityListResponse:
       type: object
       required: [data, page]
@@ -15870,6 +15940,7 @@ components:
       type: object
       required: [follow_up_after_days]
       properties:
+        locks: {$ref: '#/components/schemas/SettingLocks', readOnly: true}
         follow_up_after_days:
           type: integer
           minimum: 1
@@ -15879,6 +15950,7 @@ components:
       type: object
       required: [first_response_enabled, first_response_target_minutes]
       properties:
+        locks: {$ref: '#/components/schemas/SettingLocks'}
         first_response_enabled: {type: boolean, description: 'Whether the first-response target is tracked at all. Off by default.'}
         first_response_target_minutes: {type: integer, description: 'How long a lead may wait for its first genuine response once the clock starts (routing, else creation). 15..10080.'}
         unassigned_escalation_user_id:
@@ -16583,6 +16655,10 @@ components:
         - metric_reading
     ReportingStatus:
       type: string
+      description: |-
+        `failed` means the database could not calculate this figure on this
+        read. The other figures in the same evaluation are unaffected, and a
+        later read may succeed.
       enum:
         - ok
         - no_data
@@ -16591,6 +16667,7 @@ components:
         - partial
         - unsupported
         - unavailable
+        - failed
     ReportingScope:
       type: object
       additionalProperties: false
@@ -17025,6 +17102,12 @@ components:
         archived_at:
           type: string
           format: date-time
+        draft_revision:
+          type: integer
+          format: int64
+          description: |-
+            The unpublished draft revision, shown only to an editor of the report. Absent when there
+            is no draft. Evaluate it with `revision` to preview it.
     ReportingTargetInput:
       type: object
       additionalProperties: false
@@ -17649,6 +17732,11 @@ components:
           format: int64
           description: >-
             The forward half. Zero for a manager call, which is a single authored TOTAL rather than a remainder — a call is not added to won_minor, and a reconciliation line drawing this must say the call instead of a split.
+        system_minor:
+          type: integer
+          format: int64
+          description: >-
+            Beside a manager call only: what the deal records alone project, won plus commit evidence. The call replaces this figure, so a reader comparing the call with the records needs both. Absent for every other measure, whose amount_minor already is the records' projection.
         caveat:
           type: string
           enum: [call_absent, call_below_actual]
@@ -18134,12 +18222,12 @@ components:
         and filtering while the column and its values are preserved. Deliberately carries no
         `source`/`captured_by` — the catalog row itself has no such columns; provenance
         on create lives in the audit row.
-      required: [id, object, label, slug, type, status, column_name, show_in_create, created_by, created_at, updated_at]
+      required: [id, object, label, slug, type, status, column_name, show_in_create, reportable, created_by, created_at, updated_at]
       properties:
         id: {type: string, format: uuid}
         object:
           type: string
-          enum: [contact, company, deal, lead, project, contract]
+          enum: [contact, company, deal, lead, project, contract, activity]
           description: The existing core object this field is added to.
         label: {type: string, description: 'Display label; a rename changes it, and never the slug or column_name.'}
         slug: {type: string, description: Admin-facing key the column_name derives from.}
@@ -18168,6 +18256,10 @@ components:
           type: boolean
           description: >-
             Whether the field is offered in the create dialog of its object. Off keeps it out of create dialogs only: the record page still shows the field and edits its value.
+        reportable:
+          type: boolean
+          description: >-
+            Whether reports may group and filter by this field. Off by default, and only a picklist or boolean field can be on: one value per record keeps a grouped total from counting a record twice. On publishes the field's label and choices to every reader of the reports over its object.
         created_by: {type: string, format: uuid}
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
@@ -18710,11 +18802,79 @@ components:
           description: >-
             1-based line numbers within the source record's body that this claim was read from, for a source whose body is line-addressed (a meeting transcript today,: line N is the Nth newline-split segment of activity.body). Absent for a source that is not line-addressed.
           items: {type: integer, minimum: 1}
+    ApprovalPreviewValue:
+      type: object
+      required: [kind, text]
+      properties:
+        kind:
+          type: string
+          description: How the reader should format this value.
+        text:
+          type: string
+          description: Authorized readable value, or a lifecycle code for translation.
+        currency: {type: string, description: ISO currency of a money value in minor units.}
+        entity_type: {type: string}
+        entity_id: {type: string, format: uuid}
+    ApprovalPreviewChange:
+      type: object
+      required: [field, before, after]
+      properties:
+        field:
+          type: string
+          description: Canonical field name, translated by the client where known.
+        before: {$ref: '#/components/schemas/ApprovalPreviewValue'}
+        after: {$ref: '#/components/schemas/ApprovalPreviewValue'}
+    ApprovalPreviewConflict:
+      type: object
+      description: Authorized context that must be considered separately from the proposed effect.
+      required: [kind, summary, blocks_approval]
+      properties:
+        kind:
+          type: string
+        summary:
+          type: string
+          description: A sanitized explanation containing only facts this reader may see.
+        blocks_approval:
+          type: boolean
+          description: Whether the domain requires reconciliation before this proposal can be approved.
+    ApprovalPreview:
+      type: object
+      description: >-
+        A current, authorized explanation of the exact staged effect. It never grants permission or supplies execution arguments. Before values are answered only when the current record still has the staged version; stale records require restaging. Pending proposals alone carry this review-time projection. An approval attempt with stale context returns version_skew. Incomplete, unavailable or conflicting context returns 422 with approval_preview_incomplete, approval_preview_unavailable or approval_preview_conflict respectively, without recording a decision.
+      required: [version, state, changes, reviewer_reason]
+      properties:
+        effects:
+          type: array
+          description: Additional business effects released by this approval. Other proposals remain separate decisions.
+          items:
+            type: string
+        evidence:
+          type: array
+          description: Current evidence resolved with the reader's source permissions. An empty array replaces historical evidence.
+          items: {$ref: '#/components/schemas/ApprovalEvidence'}
+        version: {type: integer, minimum: 1}
+        state:
+          type: string
+          description: Whether the full effect can still be explained from authorized records.
+        changes:
+          type: array
+          items: {$ref: '#/components/schemas/ApprovalPreviewChange'}
+        reviewer_reason:
+          type: string
+          description: Why this reader can answer the proposal, separate from its business reason.
+        current_version: {type: integer}
+        conflicts:
+          type: array
+          description: >-
+            Current authorized conflicts. Absence means they were not assessed, not that none exist. Related proposals remain separate decisions; approving this proposal never approves them.
+          items: {$ref: '#/components/schemas/ApprovalPreviewConflict'}
     Approval:
       type: object
       description: A staged confirm-first action awaiting human decision.
       required: [id, kind, status, proposed_by, created_at]
       properties:
+        preview:
+          $ref: '#/components/schemas/ApprovalPreview'
         assignee_inactive:
           type: boolean
           readOnly: true

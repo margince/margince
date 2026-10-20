@@ -8,6 +8,11 @@ package privacy
 // runs them without knowing what retention is.
 
 import (
+	"context"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
@@ -39,16 +44,30 @@ const retentionPolicyObject = "retention_policy"
 // No validator: both values are legitimate postures, and one here would be
 // ceremony. No freeze probe: a posture that could stop being changeable would
 // be a trap — the obligation that justified it can lapse.
-var RetainOnly = settings.Define[bool](
-	"privacy.retain_only",
-	retentionPolicyObject,
-	"update",
-	false,
-	nil,
-)
+var RetainOnly = config.DefineStored(config.Spec[bool]{
+	Key:     "privacy.retain_only",
+	Env:     "MARGINCE_PRIVACY_RETAIN_ONLY",
+	Type:    config.Bool,
+	Default: config.Some(false),
+	Doc:     "Keep everything: the nightly retention pass erases nothing and strips no personal data, whatever a policy says.",
+}, config.Store{RBACObject: retentionPolicyObject, AuditVerb: settingsAuditVerb})
 
-// Definitions is privacy's contribution to the settings registry; compose
-// concatenates each module's list.
+// settingsAuditVerb is the audit action every privacy settings change records.
+const settingsAuditVerb = "update"
+
+// retainOnlyTx is the posture every retention decision reads, inside the
+// caller's transaction, under the boot value the program bound.
+func retainOnlyTx(ctx context.Context, tx pgx.Tx) (bool, error) {
+	return config.StoredValTx(ctx, tx, config.Bound(), RetainOnly)
+}
+
+// ConfigSettings are this module's settings in the configuration registry.
+func ConfigSettings() []config.Any {
+	return []config.Any{RetainOnly}
+}
+
+// Definitions is privacy's settings.Define entry: the carried floor, which a
+// jurisdiction change writes and no operator sets.
 func Definitions() []settings.Definition {
-	return []settings.Definition{RetainOnly, RetentionFloorCarry}
+	return []settings.Definition{RetentionFloorCarry}
 }

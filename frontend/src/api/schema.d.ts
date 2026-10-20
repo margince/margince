@@ -4931,7 +4931,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List activities (the timeline; cursor-paginated, filterable by type/entity). */
+        /**
+         * List activities (the timeline; cursor-paginated, filterable by type/entity).
+         * @description A `cf_<slug>=<value>` query parameter narrows the list to activities whose custom field holds that value. It names an active activity custom field, and it reads content, so a row whose content the caller may not read is left out rather than listed withheld.
+         */
         get: operations["listActivities"];
         put?: never;
         /**
@@ -8047,6 +8050,103 @@ export interface paths {
         patch: operations["updateReportingReport"];
         trace?: never;
     };
+    "/analytics/reports/{id}/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Save a reporting report draft
+         * @description Saves the next revision as a draft that only the report's editors see. Readers keep the published revision. A second save replaces the draft.
+         */
+        put: operations["saveReportingReportDraft"];
+        post?: never;
+        /**
+         * Discard a reporting report draft
+         * @description Removes the draft. The published revision is unchanged.
+         */
+        delete: operations["discardReportingReportDraft"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/reports/{id}/draft/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Publish a reporting report draft
+         * @description Makes the draft the revision every reader sees. Editions and schedules keep the revision they were made from.
+         */
+        post: operations["publishReportingReportDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/reports/{id}/revisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List reporting report revisions
+         * @description Every revision of the report, newest first, with who saved it and when. Only an editor of the report may list them.
+         */
+        get: operations["listReportingReportRevisions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/reports/{id}/revisions/{revision}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                revision: number;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Restore a reporting report revision
+         * @description Publishes a copy of an earlier revision as the newest one. Earlier revisions, editions and schedules are not rewritten. Refused while a draft is open.
+         */
+        post: operations["restoreReportingReportRevision"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/analytics/reports/{id}/evaluation": {
         parameters: {
             query?: never;
@@ -10557,6 +10657,55 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/connectors/{provider}/history-baseline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
+                 *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
+                 *     consent each, so a contact can bring one without the other and disconnect either.
+                 *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
+                 */
+                provider: components["parameters"]["CaptureProvider"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set the date this mailbox's automatic commitment suggestions start from.
+         * @description The mailbox owner's own answer, and only for their own mailbox: the write matches on the
+         *     authenticated user, so there is no id that reaches a colleague's connection.
+         *
+         *     Mail this mailbox delivered on a local day strictly before `date`, in `timezone`, suggests
+         *     no automatic commitments for this seat. Mail on the date itself is not excluded. The mail
+         *     stays captured and searchable, and a withheld promise is listed for review with the
+         *     reason `before_mailbox_history_baseline`.
+         *
+         *     It applies only to mail this mailbox is proven to have delivered, and only to work that
+         *     would go to this seat. A message another mailbox also delivered follows that mailbox's own
+         *     answer, and a colleague's commitments are never withheld by it. Meeting transcripts are
+         *     not mail and are never affected.
+         *
+         *     A null `date` clears it. Setting, moving or clearing the date completes, archives and
+         *     deletes nothing: it changes which new automatic suggestions are admitted. Audited like
+         *     every other change to a connection. Human-only, like every per-mailbox setting.
+         */
+        put: operations["setConnectorHistoryBaseline"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/connectors/{provider}/context-tag": {
         parameters: {
             query?: never;
@@ -11061,17 +11210,9 @@ export interface paths {
         };
         /**
          * What is going wrong on this lead's team, and what it was judged against.
-         * @description The lead's own page. `/worklist/team` answers "who is carrying what" and routes to
-         *     a contact; this answers "what is going wrong", which is the question a lead opens
-         *     the page for and which counts structurally cannot answer — a board of three
-         *     numbers per teammate cannot say that one customer has waited past the target while
-         *     another rep's queue is merely long.
-         *
-         *     EVERY ROW NAMES ITS BASIS. `threshold` carries the policy state that decided the
-         *     row rather than a number invented for this reading, so a lead disputing it can see
-         *     the rule. The response-breach rows read the SAME lead-response policy the rep's own
-         *     queue reads, which is what stops the manager and the rep holding two rules that
-         *     agree today and drift tomorrow.
+         * @description Team exceptions identify material revenue risk, unassigned work and repeated
+         *     failures. Each row names the basis used by the shared Worklist classification.
+         *     Waiting-message age alone does not establish a breached response deadline.
          *
          *     Gated to the lead tier and read under the caller's visibility, like every figure on
          *     this surface. A rep gets 403 rather than an empty list: a refusal that answered
@@ -11349,6 +11490,33 @@ export interface paths {
          *     in week one. Audit-only write (no event stream, EVT-NOEVT-3).
          */
         patch: operations["updateInstallationSettings"];
+        trace?: never;
+    };
+    "/installation/configuration": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Every setting the programs read, with its value and source (admin/ops).
+         * @description Lists every registered setting of the api, worker and migrate programs, sorted by key:
+         *     its environment variable and flag, its type, the programs that read it, the value in
+         *     force and where that value came from. A secret answers `secret: true` and a null value
+         *     and default; no response carries a secret. Settings the product writes itself are not
+         *     configuration and are not listed.
+         *
+         *     Admin/ops only: governed by the `installation_settings` RBAC object's update grant, the
+         *     grant of those who change the installation.
+         */
+        get: operations["getInstallationConfiguration"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/installation/setup": {
@@ -20494,6 +20662,7 @@ export interface components {
             unlisted: string[];
         };
         AiPriceSync: {
+            locks?: components["schemas"]["SettingLocks"];
             /** @description Whether the daily job syncs model prices. */
             auto_sync: boolean;
             last_run?: components["schemas"]["AiPriceSyncRun"];
@@ -20661,11 +20830,64 @@ export interface components {
             data: components["schemas"]["WebhookDelivery"][];
             page: components["schemas"]["PageInfo"];
         };
+        /** @description Where the value in force came from. */
+        SettingOrigin: {
+            /**
+             * @description `flag`, `env`, `env_file` and `config_file` are boot sources, and a setting one of them
+             *     sets is locked. `config_file` covers both the base file and the `--config-file` file;
+             *     `file` says which. `database` is a value an administrator saved, `default` the
+             *     declared default, and `unset` no value at all.
+             * @enum {string}
+             */
+            source: "flag" | "env" | "env_file" | "config_file" | "database" | "default" | "unset";
+            /** @description The flag, environment variable or YAML key that set the value. Empty for `database`, `default` and `unset`. */
+            name: string;
+            /** @description The file that held the value, for a .env or YAML source or a secret file. */
+            file?: string;
+        };
+        /** @description A setting a boot source sets. A write that changes it is refused with 409 `setting_locked_by_boot_source`. */
+        SettingLock: {
+            /** @description The setting's key, such as `capture.auto_enrich_daily_cap`. */
+            key: string;
+            origin: components["schemas"]["SettingOrigin"];
+        };
+        /**
+         * @description The settings in this response that a boot source sets, each with its source. A client
+         *     shows each as read-only. Empty when nothing is locked. A write ignores it.
+         */
+        SettingLocks: components["schemas"]["SettingLock"][];
+        /** @description One registered setting, as the api program loaded it. */
+        ConfigurationEntry: {
+            key: string;
+            /** @description The environment variable that sets it. */
+            env: string;
+            /** @description The command-line flag that sets it, without dashes. Absent when none does. */
+            flag?: string;
+            /** @description The value's type, as the reference documentation names it. */
+            type: string;
+            doc: string;
+            /** @description The programs that read the setting. */
+            roles: ("api" | "worker" | "migrate")[];
+            /** @description True for a secret, whose value and default this answer never carries. */
+            secret: boolean;
+            /** @description True when an administrator may also save it in the product. */
+            stored: boolean;
+            /**
+             * @description The value in force, written as an operator writes it. Null for a secret, for a setting
+             *     with no value, and for a setting the api does not read: another program's sources are
+             *     not visible to the api.
+             */
+            value: string | null;
+            /** @description The declared default, written as an operator writes it. Null for a secret and when none is declared. */
+            default: string | null;
+            origin: components["schemas"]["SettingOrigin"];
+        };
         /**
          * @description The installation's identity and reporting basis (ADR-0090). Read by every role,
          *     changed only by admin/ops.
          */
         InstallationSettings: {
+            locks?: components["schemas"]["SettingLocks"];
             /**
              * @description The company's display name. An administrator saving the anchor company's `display_name`
              *     (`PUT /company`, a profile-field correction or a company edit) sets it in the same
@@ -21198,6 +21420,7 @@ export interface components {
          *     changed only by admin/ops.
          */
         CaptureSettings: {
+            locks?: components["schemas"]["SettingLocks"];
             /**
              * @description The installation-wide ceiling on AUTOMATIC website reads started in one UTC day.
              *     Company auto-enrichment and domain triage spend it from one counter. It paces and only
@@ -21281,19 +21504,21 @@ export interface components {
             blocking: boolean;
         };
         ConnectorApp: {
+            locks?: components["schemas"]["SettingLocks"];
             /**
              * @description Which vendor's app this describes, echoed so a cached response cannot be misread.
              * @enum {string}
              */
             provider: "google" | "microsoft";
-            /** @description Whether this vendor's app is available to this installation from any source — true when `source` is `stored` or `environment`. It answers "can this vendor's mail and calendar be connected", which is a different question from where the app came from. */
+            /** @description Whether this vendor's app is available to this installation from any source — one stored through this surface, or the deployment's own. It answers "can this vendor's mail and calendar be connected", which is a different question from where the app came from: an entry in `locks` says the deployment set it. */
             configured: boolean;
             /** @description The vendor's public identifier for the app in use, or empty when there is none. Returned in the clear because it is not a secret — it travels in every authorization redirect — and an operator needs it to check which app the installation uses. */
             client_id: string;
             /** @description The Entra directory (tenant) id a Microsoft app is pinned to. OMITTED, not empty, when the app authorizes any company — and always omitted for `google`, which has no such concept, where a value would be a field that silently does nothing. A client that expects a string here reads the unpinned case as the wrong shape rather than as absent. */
             tenant?: string;
             /**
-             * @description Where the app in use comes from. `stored` is one saved through this surface, which wins over the deployment's. `environment` is the pair the deployment composed, used whenever nothing is stored — so removing a stored app reverts to it rather than leaving the installation with none. `none` means neither source can supply one.
+             * @deprecated
+             * @description Deprecated: read `locks` instead, which names the flag, variable or file that sets the deployment's app. `environment` is that app, which wins and locks the stored one; `stored` is one saved through this surface; `none` means neither can supply one.
              * @enum {string}
              */
             source: "stored" | "environment" | "none";
@@ -21480,6 +21705,7 @@ export interface components {
             tenant?: string;
         };
         AiProviderKeyList: {
+            locks?: components["schemas"]["SettingLocks"];
             providers: components["schemas"]["AiProviderKeyStatus"][];
         };
         /**
@@ -21598,6 +21824,8 @@ export interface components {
          *     copy free to drift from the generated one.
          */
         AiRouting: {
+            /** @description The settings a boot source sets among the binding and the task overrides; `/ai/task-overrides` is a map of tasks, so its lock is reported here. */
+            readonly locks?: components["schemas"]["SettingLocks"];
             /**
              * @description The location ladder (§4). `sovereign` means zero egress by construction: a cloud
              *     provider on any tier is refused, and so is a local provider pointed at another host.
@@ -21863,6 +22091,7 @@ export interface components {
          *     admin/ops.
          */
         IntegrationsSettings: {
+            locks?: components["schemas"]["SettingLocks"];
             /**
              * @description When true, every contact is looked up once against the connected data provider for
              *     the details it charges nothing for — the professional profile link, the current role
@@ -22241,6 +22470,7 @@ export interface components {
              */
             readonly mail_posture?: "shared" | "classified" | "held";
             context_tag?: components["schemas"]["ConnectorContextTag"];
+            history_baseline?: components["schemas"]["MailHistoryBaseline"];
             /** Format: date-time */
             readonly created_at?: string;
             /** Format: date-time */
@@ -22284,6 +22514,32 @@ export interface components {
              *     capture must never fail over a word somebody archived afterwards.
              */
             tag_id: string | null;
+        };
+        /**
+         * @description The local date this mailbox's automatic commitment suggestions start from. Absent when the
+         *     owner chose none, which keeps the normal policy. Set and cleared through
+         *     PUT /connectors/{provider}/history-baseline.
+         */
+        MailHistoryBaseline: {
+            /**
+             * Format: date
+             * @description Mail from a local day strictly before this date suggests no automatic commitments.
+             */
+            date: string;
+            /** @description The IANA zone the date is read in, such as Europe/Berlin. */
+            timezone: string;
+            /** Format: date-time */
+            set_at: string;
+        };
+        /** @description The date one mailbox's automatic commitment suggestions start from. */
+        SetMailHistoryBaselineRequest: {
+            /**
+             * Format: date
+             * @description The first local day that suggests automatic commitments. Null clears the baseline.
+             */
+            date: string | null;
+            /** @description The IANA zone `date` is read in. Required with a date; ignored when clearing. */
+            timezone?: string;
         };
         /** @description One mailbox's answer to the nightly signature pass. */
         SetSignatureEnrichmentRequest: {
@@ -23536,6 +23792,7 @@ export interface components {
             comments?: string | null;
         };
         LegalReviewSettings: {
+            readonly locks?: components["schemas"]["SettingLocks"];
             enabled: boolean;
         };
         /** @description One Deal Scout suggestion: a deal the evidence says should exist on a company with no open deal. */
@@ -23783,6 +24040,7 @@ export interface components {
             expected_revision: string;
         };
         AiBudgetSnapshot: {
+            locks?: components["schemas"]["SettingLocks"];
             config: components["schemas"]["AiBudgetConfig"];
             revision: string;
             /** Format: int64 */
@@ -26652,7 +26910,7 @@ export interface components {
         /** @description One record a brief sentence was written from. */
         CompanyBriefEvidence: {
             /** @enum {string} */
-            entity_type: "deal" | "activity" | "contact" | "company" | "fact" | "profile_field";
+            entity_type: "deal" | "activity" | "contact" | "company" | "lead" | "fact" | "profile_field";
             /** Format: uuid */
             entity_id: string;
             /**
@@ -29686,6 +29944,7 @@ export interface components {
             updated_at?: string | null;
         };
         EmailSignatureTemplate: {
+            readonly locks?: components["schemas"]["SettingLocks"];
             /**
              * @description The workspace's signature layout as HTML, with the placeholders `{name}`, `{title}`,
              *     `{phone}` and `{logo}`. `{logo}` embeds the workspace's own company logo, sized for
@@ -32569,6 +32828,9 @@ export interface components {
          *     what the DB CHECK would reject, rather than 500-ing at write time).
          *     `channel_provider` is the same kind of constraint in both directions: non-null exactly
          *     when `kind=message` (ADR-0107).
+         *     **Custom fields**: the values of the workspace's activity custom fields arrive as extra
+         *     top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
+         *     `withheld`.
          */
         Activity: {
             /** @description Decisions about promises read from this source, included on list and detail reads when its content is visible. */
@@ -32692,6 +32954,8 @@ export interface components {
             updated_at: string;
             /** Format: date-time */
             archived_at?: string | null;
+        } & {
+            [key: string]: unknown;
         };
         /**
          * @description A reference to a messaging transport registered in THIS installation
@@ -32853,6 +33117,7 @@ export interface components {
             }[];
             source: string;
         };
+        /** @description The workspace's active activity custom fields travel as extra top-level `cf_` keys. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. */
         CreateActivityRequest: {
             /**
              * Format: uuid
@@ -32935,6 +33200,8 @@ export interface components {
             ical_uid?: string | null;
             /** @description Which occurrence of `ical_uid` this is — the occurrence's own original start, as the calendar states it. Meeting only. Required whenever `ical_uid` is given, because a series without an occurrence names every meeting in it at once. */
             ical_instance?: string | null;
+        } & {
+            [key: string]: unknown;
         };
         /**
          * @description Who may read an activity's content — see Activity.audience.
@@ -33016,6 +33283,7 @@ export interface components {
             /** @description The users and teams admitted besides the participants. Read only when `audience` is `selected`; replaces the previous set. */
             members?: components["schemas"]["AudienceMember"][];
         };
+        /** @description A sparse patch. The workspace's active activity custom fields travel as extra top-level `cf_` keys, and an explicit `null` clears one. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. */
         UpdateActivityRequest: {
             subject?: string | null;
             body?: string | null;
@@ -33049,6 +33317,8 @@ export interface components {
              * @enum {string|null}
              */
             meeting_status?: null | "booked" | "held" | "no_show" | "canceled";
+        } & {
+            [key: string]: unknown;
         };
         ActivityListResponse: {
             data: components["schemas"]["Activity"][];
@@ -34816,10 +35086,12 @@ export interface components {
             active?: boolean;
         };
         FollowUpSettings: {
+            readonly locks?: components["schemas"]["SettingLocks"];
             /** @description Days a sent message may stay unanswered before its sender is reminded to follow up. */
             follow_up_after_days: number;
         };
         LeadSettings: {
+            locks?: components["schemas"]["SettingLocks"];
             /** @description Whether the first-response target is tracked at all. Off by default. */
             first_response_enabled: boolean;
             /** @description How long a lead may wait for its first genuine response once the clock starts (routing, else creation). 15..10080. */
@@ -35989,8 +36261,13 @@ export interface components {
         ReportingMetricID: "bookings_won" | "closed_win_rate" | "open_pipeline" | "stage_age" | "qualified_pipeline_created" | "meetings_held" | "accepted_opportunities" | "forecast_landing";
         /** @enum {string} */
         ReportingBlockKind: "bookings_trend" | "stage_distribution" | "owner_attainment" | "stage_age" | "sdr_outcomes" | "target_progress" | "forecast_support" | "pipeline_movement" | "metric_reading";
-        /** @enum {string} */
-        ReportingStatus: "ok" | "no_data" | "not_configured" | "insufficient_sample" | "partial" | "unsupported" | "unavailable";
+        /**
+         * @description `failed` means the database could not calculate this figure on this
+         *     read. The other figures in the same evaluation are unaffected, and a
+         *     later read may succeed.
+         * @enum {string}
+         */
+        ReportingStatus: "ok" | "no_data" | "not_configured" | "insufficient_sample" | "partial" | "unsupported" | "unavailable" | "failed";
         ReportingScope: {
             /** @enum {string} */
             kind: "owner" | "team" | "workspace" | "managed_teams";
@@ -36199,6 +36476,32 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             archived_at?: string;
+            /**
+             * Format: int64
+             * @description The unpublished draft revision, shown only to an editor of the report. Absent when there
+             *     is no draft. Evaluate it with `revision` to preview it.
+             */
+            draft_revision?: number;
+        };
+        ReportingReportDraftInput: {
+            selection: components["schemas"]["ReportingSelection"];
+        };
+        ReportingReportRevision: {
+            /** Format: int64 */
+            revision: number;
+            selection: components["schemas"]["ReportingSelection"];
+            /**
+             * @description The draft, the revision readers see, or one published before it.
+             * @enum {string}
+             */
+            state: "draft" | "published" | "earlier";
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            created_by: string;
+        };
+        ReportingReportRevisionList: {
+            data: components["schemas"]["ReportingReportRevision"][];
         };
         ReportingTargetInput: {
             /** @description Excludes this allocation from live progress while preserving its revisions and saved snapshots. */
@@ -36841,6 +37144,11 @@ export interface components {
              */
             remaining_minor: number;
             /**
+             * Format: int64
+             * @description Beside a manager call only: what the deal records alone project, won plus commit evidence. The call replaces this figure, so a reader comparing the call with the records needs both. Absent for every other measure, whose amount_minor already is the records' projection.
+             */
+            system_minor?: number;
+            /**
              * @description Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it.
              * @enum {string}
              */
@@ -37253,6 +37561,28 @@ export interface components {
             group_by: string[];
             /** @description The fields this population can be aggregated over. */
             measures: string[];
+            /**
+             * @description The installation's own fields among `group_by`, with the label and choices an
+             *     administrator gave them. A field an administrator opted into reporting shows here, and
+             *     only such a field: its label and choices are published to every reader of the population.
+             */
+            custom_fields?: components["schemas"]["AnalyticsCustomField"][];
+        };
+        AnalyticsCustomField: {
+            /** @description The field as `group_by` and a filter name it. */
+            name: string;
+            /** @description The name an administrator gave the field. */
+            label: string;
+            /**
+             * @description The value shape. A picklist holds one of `options`; a boolean holds yes or no.
+             * @enum {string}
+             */
+            type: "picklist" | "boolean";
+            /**
+             * @description The choices a picklist offers today, empty for a boolean. A record may still hold a
+             *     choice an administrator has since removed.
+             */
+            options: string[];
         };
         /** @description One question, in the vocabulary the schema returned. */
         AnalyticsQuery: {
@@ -38183,7 +38513,7 @@ export interface components {
              * @description The existing core object this field is added to.
              * @enum {string}
              */
-            object: "contact" | "company" | "deal" | "lead" | "project" | "contract";
+            object: "contact" | "company" | "deal" | "lead" | "project" | "contract" | "activity";
             /** @description Display label; a rename changes it, and never the slug or column_name. */
             label: string;
             /** @description Admin-facing key the column_name derives from. */
@@ -38206,6 +38536,8 @@ export interface components {
             options?: string[] | null;
             /** @description Whether the field is offered in the create dialog of its object. Off keeps it out of create dialogs only: the record page still shows the field and edits its value. */
             show_in_create: boolean;
+            /** @description Whether reports may group and filter by this field. Off by default, and only a picklist or boolean field can be on: one value per record keeps a grouped total from counting a record twice. On publishes the field's label and choices to every reader of the reports over its object. */
+            reportable: boolean;
             /** Format: uuid */
             created_by: string;
             /** Format: date-time */
@@ -38246,7 +38578,7 @@ export interface components {
          */
         CreateCustomFieldRequest: {
             /** @enum {string} */
-            object: "contact" | "company" | "deal" | "lead" | "project" | "contract";
+            object: "contact" | "company" | "deal" | "lead" | "project" | "contract" | "activity";
             label: string;
             /** @enum {string} */
             type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean";
@@ -38259,10 +38591,11 @@ export interface components {
              */
             show_in_create: boolean;
         };
-        /** @description Merge-PATCH of the two settings a live field may change: `label` and `show_in_create`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). */
+        /** @description Merge-PATCH of the settings a live field may change: `label`, `show_in_create` and `reportable`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). `reportable` true on a field that is not a picklist or boolean is refused. */
         RenameCustomFieldRequest: {
             label?: string;
             show_in_create?: boolean;
+            reportable?: boolean;
         };
         /** @description CUSTOM-FIELDS-PARAM-5. Replaces the picklist's full allowed-option set (ordered); at least one option is required — an empty array is rejected (422). */
         UpdateCustomFieldOptionsRequest: {
@@ -39843,8 +40176,50 @@ export interface components {
             /** @description 1-based line numbers within the source record's body that this claim was read from, for a source whose body is line-addressed (a meeting transcript today, (ADR-0058): line N is the Nth newline-split segment of activity.body). Absent for a source that is not line-addressed. */
             source_lines?: number[];
         };
+        ApprovalPreviewValue: {
+            /** @description How the reader should format this value. */
+            kind: string;
+            /** @description Authorized readable value, or a lifecycle code for translation. */
+            text: string;
+            /** @description ISO currency of a money value in minor units. */
+            currency?: string;
+            entity_type?: string;
+            /** Format: uuid */
+            entity_id?: string;
+        };
+        ApprovalPreviewChange: {
+            /** @description Canonical field name, translated by the client where known. */
+            field: string;
+            before: components["schemas"]["ApprovalPreviewValue"];
+            after: components["schemas"]["ApprovalPreviewValue"];
+        };
+        /** @description Authorized context that must be considered separately from the proposed effect. */
+        ApprovalPreviewConflict: {
+            kind: string;
+            /** @description A sanitized explanation containing only facts this reader may see. */
+            summary: string;
+            /** @description Whether the domain requires reconciliation before this proposal can be approved. */
+            blocks_approval: boolean;
+        };
+        /** @description A current, authorized explanation of the exact staged effect. It never grants permission or supplies execution arguments. Before values are answered only when the current record still has the staged version; stale records require restaging. Pending proposals alone carry this review-time projection. An approval attempt with stale context returns version_skew. Incomplete, unavailable or conflicting context returns 422 with approval_preview_incomplete, approval_preview_unavailable or approval_preview_conflict respectively, without recording a decision. */
+        ApprovalPreview: {
+            /** @description Additional business effects released by this approval. Other proposals remain separate decisions. */
+            effects?: string[];
+            /** @description Current evidence resolved with the reader's source permissions. An empty array replaces historical evidence. */
+            evidence?: components["schemas"]["ApprovalEvidence"][];
+            version: number;
+            /** @description Whether the full effect can still be explained from authorized records. */
+            state: string;
+            changes: components["schemas"]["ApprovalPreviewChange"][];
+            /** @description Why this reader can answer the proposal, separate from its business reason. */
+            reviewer_reason: string;
+            current_version?: number;
+            /** @description Current authorized conflicts. Absence means they were not assessed, not that none exist. Related proposals remain separate decisions; approving this proposal never approves them. */
+            conflicts?: components["schemas"]["ApprovalPreviewConflict"][];
+        };
         /** @description A staged 🟡 confirm-first action awaiting human decision. */
         Approval: {
+            preview?: components["schemas"]["ApprovalPreview"];
             /** @description For a pending commitment, whether its named task assignee cannot receive the task. True for invited, deactivated, archived, missing, or agent seats. Absent for an unassigned proposal. This is current decision context, not a change to the staged assignee. */
             readonly assignee_inactive?: boolean;
             /**
@@ -40292,6 +40667,7 @@ export interface components {
         };
         /** @description The installation's retention posture (GCS-PARAM-6). */
         RetentionSettings: {
+            locks?: components["schemas"]["SettingLocks"];
             /**
              * @description When true, the nightly evaluator applies no `anonymize` and no `erase` — whatever any
              *     policy row says. `archive` is unaffected. Default false: storage limitation
@@ -40767,6 +41143,7 @@ export interface components {
          *     disclosures a message carries; these are the words that meet them.
          */
         ControllerParticulars: {
+            readonly locks?: components["schemas"]["SettingLocks"];
             /** @description Who is writing, as the law would name them. Art. 13(1)(a) GDPR's identity of the controller, and the advertiser under Decree 91/2020. */
             legal_name?: string;
             /** @description Where they are, as a block of lines — including a register court and number where a business letter needs one. */
@@ -44711,6 +45088,31 @@ export interface components {
          *     does, widened: a source the caller may not read is named as `withheld`, and one
          *     that failed to answer is named as `failed`. Both keep the summary from claiming a
          *     clear day it did not actually see.
+         *
+         *     **Units.** A card is one row of `queue`. An item is one piece of underlying work.
+         *     A folded group (`batch`) is one card that stands for `batch.count` items, so eight
+         *     duplicate pairs drawn as one card are one card and eight items. Every figure below
+         *     names its unit; a client compares only figures of the same unit.
+         *
+         *     | Figure | Unit | Counted over | Exact or floor |
+         *     |---|---|---|---|
+         *     | `summary.*` | items | every candidate this read weighed, before the fold, the filter and the page cut | exact over the sources read |
+         *     | `summary.buckets.*` | items | the same candidates, frozen at the walk's first page | exact over the sources read |
+         *     | `counts[].considered`, `reach[].considered` | items | every candidate weighed, before the fold and the filter | floor when `more_available` |
+         *     | `counts[].shown`, `reach[].shown` | items | the cards on THIS page, each group counted as its members | exact |
+         *     | `batch.count` | items | the members of one card | floor when `batch.at_least` |
+         *     | `bands[].shown` | cards | the rows of this page under one heading | exact |
+         *     | `focus.total` | cards | eligible focus cards before the six-card cut; a group counts once | exact |
+         *     | `focus.urgent_remaining` | items | urgent items no focus card names | exact |
+         *     | `walk.new_available`, `walk.changed_since_snapshot` | items | arrivals since the walk froze, and frozen items that left | exact |
+         *
+         *     A client that has loaded several pages sums items over its loaded cards (one per
+         *     card, or `batch.count` for a group) and compares that sum with `considered`. Comparing
+         *     a count of loaded cards with `considered` mixes the two units. A source listed in
+         *     `sources_unavailable`, or a figure flagged `more_available`, means the page cannot
+         *     claim it holds everything, even after `next_cursor` is gone. Items past a source's
+         *     read limit are not reachable through `next_cursor`. They join a later read as the
+         *     items in front of them are handled.
          */
         Worklist: {
             /**
@@ -44895,7 +45297,7 @@ export interface components {
             source: "approval" | "dedupe_candidate" | "deal_suggestion" | "tag_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "awaiting_reply" | "meeting_follow_up" | "batch";
             /** @description How many candidates from this source were read and ranked. */
             considered: number;
-            /** @description How many of them the queue is carrying after folding, filtering and the page cut. */
+            /** @description How many of them the queue is carrying after folding, filtering and the page cut. A folded group counts as its members, so this is in items, not cards. */
             shown: number;
             /**
              * @description True when this source answers for the ACTING USER only, whatever `scope` was
@@ -44932,7 +45334,7 @@ export interface components {
          *     NOT A COUNT. The team board answers "who is carrying what" and routes a lead to a
          *     contact; this answers "what is going wrong", which is a different question and the
          *     one a lead opens the page for. A board of three numbers per teammate cannot say
-         *     that one customer has been waiting past the target while another rep's queue is
+         *     that one deal carries material revenue risk while another rep's queue is
          *     merely long.
          *
          *     EVERY EXCEPTION NAMES ITS BASIS. `threshold` says what the row was judged against
@@ -44943,13 +45345,9 @@ export interface components {
          */
         TeamException: {
             /**
-             * @description Which condition this is. Four, and each is a thing a lead can DO something
-             *     about: talk to the contact, protect the revenue, give the work an owner, or fix
-             *     what keeps failing.
-             *
-             *     Capacity is deliberately absent. "This rep is overloaded" needs a configured
-             *     capacity to be a fact rather than an opinion, and this installation has none —
-             *     so the board's counts are offered as a reading and no exception claims it.
+             * @description Rows identify revenue_at_risk, unassigned or repeated_failure.
+             *     response_breached is reserved and is not returned. Waiting-message age alone
+             *     does not establish a response-policy breach.
              * @enum {string}
              */
             kind: "response_breached" | "revenue_at_risk" | "unassigned" | "repeated_failure";
@@ -44965,10 +45363,6 @@ export interface components {
             /**
              * @description The basis this row was judged against, in words a lead can check: the policy
              *     state that decided it rather than a number chosen for this reading.
-             *
-             *     A `response_breached` row names the lead-response policy's own state, which is
-             *     the same vocabulary the rep's queue uses — so the manager and the rep are
-             *     reading one rule rather than two that agree today.
              */
             threshold: string;
             /**
@@ -45350,8 +45744,9 @@ export interface components {
              */
             changed_since_snapshot: number;
             /**
-             * @description How much work has arrived since this walk started, and is deliberately not in
-             *     it.
+             * @description How many items have arrived since this walk started, and are deliberately not in
+             *     it. A folded group counts only its members the walk did not freeze, so an unchanged
+             *     group adds nothing.
              *
              *     Absent on a first page, where the question has no meaning — the walk was just
              *     assembled, so nothing can have arrived behind it yet. A client draws this as
@@ -46931,6 +47326,15 @@ export interface components {
         };
         /** @description Optimistic-lock failure — the entity changed since the version in If-Match (`code: version_skew`). */
         VersionConflict: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description A boot source (a flag, the environment, a .env file or a YAML file) sets a setting this write would change (`code: setting_locked_by_boot_source`). The detail names the setting and its source; change it there. Sending the value in force is accepted, except for a secret, which refuses every value. */
+        SettingLocked: {
             headers: {
                 [name: string]: unknown;
             };
@@ -49389,6 +49793,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            409: components["responses"]["SettingLocked"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -50009,7 +50414,15 @@ export interface operations {
             };
             403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
+            /** @description A state conflict (a concurrent edit or a duplicate). Or the company is the installations anchor, its name changes, and a boot source sets `installation.name` (`code: setting_locked_by_boot_source`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
         };
     };
@@ -52018,6 +52431,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            409: components["responses"]["SettingLocked"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -58360,6 +58774,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            409: components["responses"]["SettingLocked"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -58409,6 +58824,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            409: components["responses"]["SettingLocked"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -58456,6 +58872,7 @@ export interface operations {
                 };
             };
             403: components["responses"]["Forbidden"];
+            409: components["responses"]["SettingLocked"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -60772,6 +61189,159 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    saveReportingReportDraft: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportingReportDraftInput"];
+            };
+        };
+        responses: {
+            /** @description Reporting result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportingReport"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    discardReportingReportDraft: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reporting result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportingReport"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    publishReportingReportDraft: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reporting result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportingReport"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listReportingReportRevisions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reporting result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportingReportRevisionList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    restoreReportingReportRevision: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                revision: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reporting result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportingReport"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -63092,6 +63662,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            409: components["responses"]["SettingLocked"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -63520,7 +64091,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description The draft cannot be confirmed as submitted, and `code` says which of the three it is: `already_confirmed` (this dossier was confirmed already — reload the company), `not_confirmable` (the read has produced no draft yet — wait for it or start a new one), or `version_skew` (the draft moved since it was reviewed — inspect it again). */
+            /** @description The draft cannot be confirmed as submitted, and `code` says which of the three it is: `already_confirmed` (this dossier was confirmed already — reload the company), `not_confirmable` (the read has produced no draft yet — wait for it or start a new one), or `version_skew` (the draft moved since it was reviewed — inspect it again). It is also `setting_locked_by_boot_source` when the draft renames the company and a boot source sets `installation.name`. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -64320,6 +64891,48 @@ export interface operations {
         };
         responses: {
             /** @description The connection, with its posture as it now stands. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptureConnection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    setConnectorHistoryBaseline: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
+                 *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
+                 *     consent each, so a contact can bring one without the other and disconnect either.
+                 *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
+                 */
+                provider: components["parameters"]["CaptureProvider"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetMailHistoryBaselineRequest"];
+            };
+        };
+        responses: {
+            /** @description The connection, with its baseline as it now stands. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -65145,7 +65758,30 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            409: components["responses"]["SettingLocked"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    getInstallationConfiguration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The configuration overview. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfigurationEntry"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
         };
     };
     getInstallationSetup: {
@@ -65247,6 +65883,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            409: components["responses"]["SettingLocked"];
             422: components["responses"]["ValidationError"];
             /** @description This installation has no key vault, so the client secret cannot be stored. The remedy is the operator's — the vault root key — not anything the caller sent. */
             503: {
@@ -65289,6 +65926,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            409: components["responses"]["SettingLocked"];
             /** @description This installation has no key vault, so there is no sealed secret to remove. The remedy is the operator's — the vault root key — not anything the caller sent. */
             503: {
                 headers: {
@@ -65489,6 +66127,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            409: components["responses"]["SettingLocked"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -65915,12 +66554,14 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
-            /** @description The configuration changed; reload before saving. */
+            /** @description The configuration changed; reload before saving. Or a boot source sets the allowance (`code: setting_locked_by_boot_source`): change it there. */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
             };
             422: components["responses"]["ValidationError"];
         };
@@ -66037,12 +66678,14 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
-            /** @description Someone saved the overrides since they were read; reload before saving. */
+            /** @description Someone saved the overrides since they were read; reload before saving. Or a boot source sets the overrides (`code: setting_locked_by_boot_source`): change it there. */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
             };
             422: components["responses"]["ValidationError"];
         };
@@ -66258,12 +66901,14 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
-            /** @description The supplied configuration revision is stale, or, with no revision supplied, the document kept changing while its Vertex AI bindings were being checked. Read it again and retry. */
+            /** @description The supplied configuration revision is stale, or, with no revision supplied, the document kept changing while its Vertex AI bindings were being checked (`code: version_skew` or `conflict`): read it again and retry. Or a boot source sets the binding (`code: setting_locked_by_boot_source`): change it there. */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
             };
             422: components["responses"]["ValidationError"];
         };
@@ -66386,6 +67031,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
+            409: components["responses"]["SettingLocked"];
             422: components["responses"]["ValidationError"];
             /** @description This installation has no key vault, so a provider key cannot be stored. The remedy is the operator's — the vault root key — not anything the caller sent. */
             503: {
@@ -66419,6 +67065,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
+            409: components["responses"]["SettingLocked"];
             /** @description This installation has no key vault, so there is no sealed credential to remove. The remedy is the operator's — the vault root key — not anything the caller sent. */
             503: {
                 headers: {
@@ -66460,12 +67107,14 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
-            /** @description The routing document kept changing while its Vertex AI bindings were being checked against the new location. Read it again and retry. */
+            /** @description The routing document kept changing while its Vertex AI bindings were being checked: read it again and retry. Or a boot source sets the binding (`code: setting_locked_by_boot_source`): change it there. */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
             };
             422: components["responses"]["ValidationError"];
         };
@@ -67235,6 +67884,7 @@ export interface operations {
                     "application/json": components["schemas"]["ControllerParticulars"];
                 };
             };
+            409: components["responses"]["SettingLocked"];
         };
     };
     listNoticeCases: {
@@ -67875,7 +68525,7 @@ export interface operations {
                  */
                 sort?: components["parameters"]["Sort"];
                 /** @description Target core object (CUSTOM-FIELDS-PARAM-2). */
-                object: "contact" | "company" | "deal" | "lead" | "project" | "contract";
+                object: "contact" | "company" | "deal" | "lead" | "project" | "contract" | "activity";
                 /** @description Filter to one lifecycle state. Omitted returns both active and retired — this admin list intentionally does not default-exclude retired rows. */
                 status?: "active" | "retired";
             };
@@ -68311,6 +68961,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            409: components["responses"]["SettingLocked"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -73646,7 +74297,12 @@ export interface operations {
     };
     listInputChecks: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Narrows the findings to the deals of one population, as the forecast and the reports measure it. Omitted means every finding the caller can see. A scope the caller may not measure is refused. */
+                scope_kind?: "workspace" | "team" | "owner";
+                /** @description The team or owner, for a team or owner scope. Refused with the workspace scope, which names no subject. */
+                scope_id?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -73664,8 +74320,18 @@ export interface operations {
                     };
                 };
             };
+            /** @description A scope the request cannot mean, such as an id without a kind or a workspace scope with an id. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     resolveInputCheck: {
@@ -76935,6 +77601,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
+            409: components["responses"]["SettingLocked"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -77037,7 +77704,15 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
-            409: components["responses"]["VersionConflict"];
+            /** @description The company changed since the version in If-Match (`code: version_skew`). Or the company is the installations anchor, its name changes, and a boot source sets `installation.name` (`code: setting_locked_by_boot_source`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
         };
     };
@@ -77107,7 +77782,15 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
-            409: components["responses"]["VersionConflict"];
+            /** @description The company changed since the version in If-Match (`code: version_skew`). Or the company is the installations anchor, its name changes, and a boot source sets `installation.name` (`code: setting_locked_by_boot_source`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
         };
     };

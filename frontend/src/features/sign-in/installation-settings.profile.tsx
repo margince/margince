@@ -18,6 +18,7 @@ import { Heading } from "../../design-system/heading";
 import { Select } from "../../design-system/select";
 import { fiscalYearLabel } from "../../format/fiscalyear";
 import { identifierNumber, monthName } from "../../format/format";
+import { lockFor } from "../../format/settinglocks";
 import {
   LOCALES,
   type Locale,
@@ -109,6 +110,11 @@ export function InstallationProfileDialog({
   const t = useT();
   const currencyNote = useCurrencyNote();
   const refusalTitle = t("installationSettings.saveFailed");
+  const lockOf = (fact: EditedFact) =>
+    lockFor(settings.locks, `installation.${fact}`, t);
+  const baseLanguage = lockOf("base_language");
+  const fiscalYearStart = lockOf("fiscal_year_start_month");
+  const forwardMeasure = lockOf("forecast_forward_measure");
   const { locale } = useLocale();
   const titleId = useId();
   const formId = useId();
@@ -191,6 +197,7 @@ export function InstallationProfileDialog({
           </Field>
 
           <RegionalSettingsFields
+            locks={settings.locks}
             draft={draft}
             canManage={canManage}
             refused={refused}
@@ -199,7 +206,11 @@ export function InstallationProfileDialog({
           <div data-fact="base_language">
             <Field
               label={t("installationSettings.baseLanguage")}
-              hint={t("installationSettings.baseLanguageHint")}
+              hint={
+                baseLanguage.disabled
+                  ? baseLanguage.reason
+                  : t("installationSettings.baseLanguageHint")
+              }
               error={refused.get("base_language")}
             >
               {(control) => (
@@ -211,7 +222,7 @@ export function InstallationProfileDialog({
                   // reads that same id back out of the DOM.
                   aria-describedby={describe(control)}
                   value={draft.base_language}
-                  disabled={!canManage}
+                  disabled={!canManage || baseLanguage.disabled}
                   // Language names are proper nouns and stay untranslated, so each
                   // option is in a language other than the page's. WCAG 2.2 AA
                   // 3.1.2 asks for `lang`, and our locale codes are its BCP 47 subtags.
@@ -237,7 +248,11 @@ export function InstallationProfileDialog({
           <div data-fact="fiscal_year_start_month">
             <Field
               label={t("installationSettings.fiscalYearStart")}
-              hint={t("installationSettings.fiscalYearStartHint")}
+              hint={
+                fiscalYearStart.disabled
+                  ? fiscalYearStart.reason
+                  : t("installationSettings.fiscalYearStartHint")
+              }
               error={refused.get("fiscal_year_start_month")}
             >
               {(control) => (
@@ -245,7 +260,7 @@ export function InstallationProfileDialog({
                   {...control}
                   aria-describedby={describe(control)}
                   value={identifierNumber(draft.fiscal_year_start_month)}
-                  disabled={!canManage}
+                  disabled={!canManage || fiscalYearStart.disabled}
                   // Twelve months, each labelled with what a report would then be
                   // called, such as April with FY2026/27. A bare number would make the admin work out the
                   // consequence of every option; this states it.
@@ -276,7 +291,11 @@ export function InstallationProfileDialog({
           <div data-fact="forecast_forward_measure">
             <Field
               label={t("installationSettings.forwardMeasure")}
-              hint={t("installationSettings.forwardMeasureHint")}
+              hint={
+                forwardMeasure.disabled
+                  ? forwardMeasure.reason
+                  : t("installationSettings.forwardMeasureHint")
+              }
               error={refused.get("forecast_forward_measure")}
             >
               {(control) => (
@@ -284,7 +303,7 @@ export function InstallationProfileDialog({
                   {...control}
                   aria-describedby={describe(control)}
                   value={draft.forecast_forward_measure}
-                  disabled={!canManage}
+                  disabled={!canManage || forwardMeasure.disabled}
                   options={FORWARD_MEASURES.map((measure) => ({
                     value: measure,
                     label: t(`installationSettings.forwardMeasure.${measure}`),

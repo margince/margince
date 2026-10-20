@@ -47,6 +47,7 @@ import {
   approvalKindLabel,
   decisionSkewKey,
 } from "./approvalkind";
+import { editedCommercialPreview } from "./approvalpreview";
 import { approvalAcceptable, useApprovalNames } from "./approvalresponsibility";
 import type { Approval } from "./approvals.queries";
 import { stagedSendOf } from "./approvalsend";
@@ -287,6 +288,8 @@ export function ApprovalRow({
     approvalNames,
     approval.requested_decider_id,
     approval.assignee_inactive,
+    editedCommercialPreview(approval.preview, draft, editing),
+    locale,
   );
 
   const problem =

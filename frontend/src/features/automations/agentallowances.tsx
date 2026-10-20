@@ -17,43 +17,29 @@ import { StatStrip } from "../../design-system/statstrip";
 import { boundsText } from "../../format/bounds";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { formatInterval } from "../../format/interval";
+import { type FieldLock, lockFor } from "../../format/settinglocks";
 import { UTC_ZONE } from "../../format/timezone";
-import { type Locale, useLocale, useT } from "../../i18n";
+import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { problemMessageOf } from "../../lib/problem";
 import { useInstallationSettings } from "../../lib/uploadlimit";
 import { useUpdateInstallationSettings } from "../sign-in/installation-settings";
+import {
+  AGENT_ALLOWANCE_BOUNDS,
+  type Allowances,
+  COUNTS,
+  type Counts,
+  changesOf,
+  chosenWindow,
+  type Draft,
+  defaultsDraft,
+  draftOf,
+  hasRefusal,
+  parseDraft,
+} from "./agentallowances.draft";
 import { useResetLine } from "./agentusage";
 
-type Allowances = components["schemas"]["AgentAllowanceSettings"];
-type Counts =
-  | "agent_writes_per_window"
-  | "agent_egress_per_window"
-  | "agent_calls_per_window";
-type Draft = Readonly<Record<Counts | "agent_window_hours", string>>;
-
-// The bounds the API refuses past, mirrored so a value out of range is refused
-// in the box. Keyed by the wire property, which is how
-// backend/gates/settingbounds_test.go holds each to the contract.
-const AGENT_ALLOWANCE_BOUNDS = {
-  agent_writes_per_window: { min: 10, max: 5_000 },
-  agent_egress_per_window: { min: 1, max: 200 },
-  agent_calls_per_window: { min: 50, max: 20_000 },
-  agent_window_hours: { min: 1, max: 168 },
-} as const satisfies Record<
-  Counts | "agent_window_hours",
-  { min: number; max: number }
->;
-
-const COUNTS = [
-  { property: "agent_writes_per_window", copy: "writes", release: true },
-  { property: "agent_egress_per_window", copy: "egress", release: false },
-  { property: "agent_calls_per_window", copy: "calls", release: false },
-] as const satisfies readonly {
-  property: Counts;
-  copy: string;
-  release: boolean;
-}[];
+type Locks = components["schemas"]["InstallationSettings"]["locks"];
 
 // The lengths an admin picks from. The one already saved is added when it is
 // not among them, so a value set through the API still shows and keeps.
@@ -86,6 +72,7 @@ export function AgentAllowancesCard() {
           return (
             <AllowancesBody
               allowances={settings.agent_allowances}
+              locks={settings.locks}
               canManage={canManage}
             />
           );
@@ -95,10 +82,28 @@ export function AgentAllowancesCard() {
   );
 }
 
+// Edit's refusal when a boot source sets every allowance, each reason once:
+// the form would open with nothing in it to change.
+function lockedEditReason(locks: Locks, t: Translator): string | undefined {
+  const properties = [
+    ...COUNTS.map((row) => row.property),
+    "agent_window_hours",
+  ];
+  const reasons = properties.map((property) => {
+    const lock = lockFor(locks, `installation.${property}`, t);
+    return lock.disabled ? lock.reason : null;
+  });
+  if (reasons.includes(null)) {
+    return undefined;
+  }
+  return [...new Set(reasons)].join(" ");
+}
+
 function AllowancesBody({
   allowances,
+  locks,
   canManage,
-}: Readonly<{ allowances: Allowances; canManage: boolean }>) {
+}: Readonly<{ allowances: Allowances; locks: Locks; canManage: boolean }>) {
   const t = useT();
   const { locale } = useLocale();
   const queryClient = useQueryClient();
@@ -119,6 +124,7 @@ function AllowancesBody({
       ) : (
         <AllowanceForm
           allowances={allowances}
+          locks={locks}
           draft={draft}
           locale={locale}
           busy={update.isPending}
@@ -146,6 +152,7 @@ function AllowancesBody({
         {draft === null && canManage && (
           <div className="card-actions">
             <Button
+              reason={lockedEditReason(locks, t)}
               onClick={() => {
                 update.reset();
                 setDraft(draftOf(allowances));
@@ -176,31 +183,6 @@ function AllowancesBody({
       </PanelBody>
     </>
   );
-}
-
-// The window field shows the length the admin chose, waiting or not. Choosing
-// the length in force again is then an edit, and it cancels the waiting change.
-function chosenWindow(allowances: Allowances): number {
-  return allowances.agent_window_next_hours ?? allowances.agent_window_hours;
-}
-
-function draftOf(allowances: Allowances): Draft {
-  return {
-    agent_writes_per_window: String(allowances.agent_writes_per_window),
-    agent_egress_per_window: String(allowances.agent_egress_per_window),
-    agent_calls_per_window: String(allowances.agent_calls_per_window),
-    agent_window_hours: String(chosenWindow(allowances)),
-  };
-}
-
-function defaultsDraft(allowances: Allowances): Draft {
-  const defaults = allowances.defaults;
-  return {
-    agent_writes_per_window: String(defaults.agent_writes_per_window),
-    agent_egress_per_window: String(defaults.agent_egress_per_window),
-    agent_calls_per_window: String(defaults.agent_calls_per_window),
-    agent_window_hours: String(defaults.agent_window_hours),
-  };
 }
 
 function AllowanceReadout({
@@ -250,6 +232,7 @@ function DefaultsNote({ allowances }: Readonly<{ allowances: Allowances }>) {
 
 function AllowanceForm({
   allowances,
+  locks,
   draft,
   locale,
   busy,
@@ -258,6 +241,7 @@ function AllowanceForm({
   onCancel,
 }: Readonly<{
   allowances: Allowances;
+  locks: Locks;
   draft: Draft;
   locale: Locale;
   busy: boolean;
@@ -268,6 +252,9 @@ function AllowanceForm({
   onCancel: () => void;
 }>) {
   const t = useT();
+  const lockOf = (property: keyof Draft): FieldLock =>
+    lockFor(locks, `installation.${property}`, t);
+  const windowLock = lockOf("agent_window_hours");
   const parsed = parseDraft(draft);
   const patch = changesOf(allowances, parsed);
   const changed = Object.keys(patch).length > 0;
@@ -276,6 +263,7 @@ function AllowanceForm({
       <SettingList bleed="settings">
         {COUNTS.map((row) => {
           const refused = parsed[row.property] === null;
+          const lock = lockOf(row.property);
           return (
             <SettingRow
               key={row.property}
@@ -294,26 +282,28 @@ function AllowanceForm({
                     )}
                     aria-invalid={refused ? true : undefined}
                     value={draft[row.property]}
-                    disabled={busy}
+                    disabled={busy || lock.disabled}
                     onChange={(e) =>
                       onDraft({ ...draft, [row.property]: e.target.value })
                     }
                   />
                   <span id={`${control.id}-note`} className="t-caption">
-                    {refused
-                      ? t(
-                          "operations.refusal.count",
-                          boundsText(
-                            AGENT_ALLOWANCE_BOUNDS[row.property],
-                            locale,
-                          ),
-                        )
-                      : t("agentAllowances.default", {
-                          value: formatNumber(
-                            allowances.defaults[row.property],
-                            locale,
-                          ),
-                        })}
+                    {lock.disabled
+                      ? lock.reason
+                      : refused
+                        ? t(
+                            "operations.refusal.count",
+                            boundsText(
+                              AGENT_ALLOWANCE_BOUNDS[row.property],
+                              locale,
+                            ),
+                          )
+                        : t("agentAllowances.default", {
+                            value: formatNumber(
+                              allowances.defaults[row.property],
+                              locale,
+                            ),
+                          })}
                   </span>
                 </div>
               )}
@@ -322,12 +312,16 @@ function AllowanceForm({
         })}
         <SettingRow
           label={t("agentAllowances.window.label")}
-          description={t("agentAllowances.window.help")}
+          description={
+            windowLock.disabled
+              ? windowLock.reason
+              : t("agentAllowances.window.help")
+          }
           control={(control) => (
             <Select
               {...control}
               value={draft.agent_window_hours}
-              disabled={busy}
+              disabled={busy || windowLock.disabled}
               options={windowOptions(allowances, locale)}
               onChange={(value) =>
                 onDraft({ ...draft, agent_window_hours: value })
@@ -355,7 +349,14 @@ function AllowanceForm({
           </Button>
           <Button
             disabled={busy}
-            onClick={() => onDraft(defaultsDraft(allowances))}
+            onClick={() =>
+              onDraft(
+                defaultsDraft(
+                  allowances,
+                  (property) => lockOf(property).disabled,
+                ),
+              )
+            }
           >
             {t("agentAllowances.useDefaults")}
           </Button>
@@ -363,51 +364,6 @@ function AllowanceForm({
       </PanelBody>
     </>
   );
-}
-
-type Parsed = Readonly<Record<Counts | "agent_window_hours", number | null>>;
-
-// Digits only, inside the bounds the API refuses past: `Number` would also
-// read "1e3" and " -5 " as numbers.
-function parseDraft(draft: Draft): Parsed {
-  const read = (property: keyof Draft): number | null => {
-    const text = draft[property].trim();
-    if (!/^\d+$/.test(text)) {
-      return null;
-    }
-    const { min, max } = AGENT_ALLOWANCE_BOUNDS[property];
-    const value = Number(text);
-    return value >= min && value <= max ? value : null;
-  };
-  return {
-    agent_writes_per_window: read("agent_writes_per_window"),
-    agent_egress_per_window: read("agent_egress_per_window"),
-    agent_calls_per_window: read("agent_calls_per_window"),
-    agent_window_hours: read("agent_window_hours"),
-  };
-}
-
-function hasRefusal(parsed: Parsed): boolean {
-  return Object.values(parsed).some((value) => value === null);
-}
-
-// Only what moved is sent, so an untouched count leaves no audit entry.
-function changesOf(
-  allowances: Allowances,
-  parsed: Parsed,
-): Partial<Record<Counts | "agent_window_hours", number>> {
-  const patch: Partial<Record<Counts | "agent_window_hours", number>> = {};
-  for (const row of COUNTS) {
-    const next = parsed[row.property];
-    if (next !== null && next !== allowances[row.property]) {
-      patch[row.property] = next;
-    }
-  }
-  const hours = parsed.agent_window_hours;
-  if (hours !== null && hours !== chosenWindow(allowances)) {
-    patch.agent_window_hours = hours;
-  }
-  return patch;
 }
 
 function windowOptions(allowances: Allowances, locale: Locale) {

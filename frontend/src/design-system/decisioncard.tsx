@@ -6,7 +6,7 @@ import { type ReactNode, useId } from "react";
 import { ActionRow } from "./actionrow";
 import { Button, OverflowMenu } from "./atoms";
 import { DecisionContent, DecisionEvidence } from "./decisioncard.content";
-import type { DecisionDisplay } from "./decisioncard.payload";
+import { type DecisionDisplay, decisionEvidence } from "./decisioncard.payload";
 import { IconAction } from "./iconaction";
 import { Popover } from "./popover";
 import type { SectionState } from "./surfacestate";
@@ -216,7 +216,7 @@ export function DecisionCard({
       </div>
       <div className="dcard-evidence">
         <DecisionEvidence
-          evidence={approval.evidence}
+          evidence={decisionEvidence(approval)}
           collapsed={layout === "row"}
         />
       </div>

@@ -128,31 +128,6 @@ func TestTheSchemaVersionMovesWhenTheVocabularyDoes(t *testing.T) {
 	}
 }
 
-// The resource and the vocabulary tool's reader serve one document. The two
-// doors share analyticsVocabularyText today; this holds the sharing, so a
-// second rendering cannot arrive under either door without failing here.
-func TestTheAnalyticsResourceAndTheToolReaderServeOneDocument(t *testing.T) {
-	t.Parallel()
-	ctx := seatWith("deal", "activity", "contact", "company", "project", "partner")
-	contents, err := analyticsSchemaResource{}.ReadResource(ctx, AnalyticsSchemaURI)
-	if err != nil {
-		t.Fatalf("the resource: %v", err)
-	}
-	viaTool, err := analyticsVocabularyReader{}.AnalyticsVocabularyDocument(ctx)
-	if err != nil {
-		t.Fatalf("the tool's reader: %v", err)
-	}
-	if contents.Text != viaTool {
-		t.Errorf("the resource and the tool serve two documents:\nresource: %q\ntool:     %q",
-			contents.Text, viaTool)
-	}
-	// The equality above must be over a real vocabulary, not two empty
-	// strings agreeing.
-	if !strings.Contains(viaTool, "group by") {
-		t.Errorf("the shared document describes no population, so the equality proved nothing: %q", viaTool)
-	}
-}
-
 // A population whose base entity the seat may not read is absent from the
 // derived schema — not narrowed, not refused by name: absent. The vocabulary
 // document and the unknown-name refusal both serve the schema, so this is

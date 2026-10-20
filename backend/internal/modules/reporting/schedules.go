@@ -60,11 +60,7 @@ func (s *Service) reportRevision(ctx context.Context, tx pgx.Tx, report crmcontr
 	if revision < 1 || revision > report.Revision {
 		return crmcontracts.ReportingSelection{}, 0, apperrors.ErrNotFound
 	}
-	var selection crmcontracts.ReportingSelection
-	var framework int64
-	var b bindings
-	err := tx.QueryRow(ctx, "SELECT selection,framework_revision FROM report_definition_revision WHERE report_id="+b.add(report.Id)+" AND revision="+b.add(revision), b.values...).Scan(&selection, &framework)
-	return selection, framework, storedError(err)
+	return s.revisionSelection(ctx, tx, ids.UUID(report.Id), revision)
 }
 
 func (s *Service) validateSchedule(ctx context.Context, tx pgx.Tx, report crmcontracts.ReportingReport, in crmcontracts.ReportingScheduleInput) error {

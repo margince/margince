@@ -3,7 +3,7 @@
 
 import { type ComponentProps, useState } from "react";
 import { useRecordZone } from "../../lib/recordzone";
-import { OpenActivityDrawer } from "../../screens/activitydrawer";
+import { OpenActivityDrawer } from "../voice-knowledge/activitydrawer";
 import { TaskDetailDialog } from "./taskactions";
 
 export function TaskDetailModal(

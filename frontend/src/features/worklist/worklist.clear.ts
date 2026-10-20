@@ -33,7 +33,9 @@ export function clearSentence(
   filter: WorklistFilter,
   colleague: string | null,
   t: Translator,
+  hasMore = false,
 ): string {
+  if (hasMore) return t("worklist.emptyPage");
   if (partial) {
     return t("worklist.clearOfWhatWasRead");
   }

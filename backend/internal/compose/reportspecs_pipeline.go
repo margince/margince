@@ -45,6 +45,7 @@ func pipelineCurrentSpec() reportSpec {
 			// currency is comparable with the others.
 			fieldCurrency:         colCurrency,
 			fieldPartnerCompanyID: colPartnerCompanyID,
+			fieldCloseMonth:       colCloseMonth,
 		},
 		// BASE-CURRENCY measures only, and the native ones are deliberately
 		// absent.
@@ -92,6 +93,15 @@ func pipelineCurrentSpec() reportSpec {
 		},
 	}
 }
+
+// fieldCloseMonth groups open deals by the month they are expected to close.
+// A DATE has no zone, and a month is the same under every fiscal start, so it
+// is read straight off the column. It is text, so a drill-through binds back
+// the value it grouped by. A deal with no date is NULL.
+const (
+	fieldCloseMonth = "close_month"
+	colCloseMonth   = "to_char(t.expected_close_date, 'YYYY-MM')"
+)
 
 // The base-currency measures. What they LEAVE OUT is said by counting them:
 // count(amount_base_minor) is how many deals the money covers, against the bare

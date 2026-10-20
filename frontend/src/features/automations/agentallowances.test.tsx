@@ -34,6 +34,7 @@ const READER: GrantSpec = { installation_settings: ["read"] };
 function backendFor(
   allow: GrantSpec,
   allowances: object = defaultAgentAllowances,
+  locks: unknown[] = [],
 ) {
   let agent_allowances = { ...allowances };
   const patches: unknown[] = [];
@@ -51,7 +52,7 @@ function backendFor(
           patches.push(patch);
           agent_allowances = { ...agent_allowances, ...(patch as object) };
         }
-        return jsonResponse({ agent_allowances });
+        return jsonResponse({ agent_allowances, locks });
       }
       throw new Error(`unexpected request: ${req.method} ${url.pathname}`);
     },
@@ -301,6 +302,58 @@ describe("AgentAllowancesCard", () => {
     expect(
       screen.getByText(/Every allowance resets .*2026.* UTC/),
     ).toBeTruthy();
+  });
+
+  it("refuses Edit, with the reason, when a boot source sets every allowance", async () => {
+    const reason =
+      "Set by agent.allowances in /etc/margince/margince.yaml. Change it there.";
+    const locks = [
+      "agent_writes_per_window",
+      "agent_egress_per_window",
+      "agent_calls_per_window",
+      "agent_window_hours",
+    ].map((property) => ({
+      key: `installation.${property}`,
+      origin: {
+        source: "config_file",
+        name: "agent.allowances",
+        file: "/etc/margince/margince.yaml",
+      },
+    }));
+    vi.stubGlobal(
+      "fetch",
+      backendFor(EDITOR, defaultAgentAllowances, locks).fetchMock,
+    );
+    render(<AgentAllowancesCard />);
+
+    const edit = await screen.findByRole("button", {
+      name: translate("en", "agentAllowances.edit"),
+    });
+    expect(edit).toBeDisabled();
+    expect(screen.getAllByText(reason)).toHaveLength(1);
+  });
+
+  it("keeps Edit open while any allowance is the administrator's", async () => {
+    const locks = [
+      {
+        key: "installation.agent_window_hours",
+        origin: {
+          source: "env",
+          name: "MARGINCE_INSTALLATION_AGENT_WINDOW_HOURS",
+        },
+      },
+    ];
+    vi.stubGlobal(
+      "fetch",
+      backendFor(EDITOR, defaultAgentAllowances, locks).fetchMock,
+    );
+    render(<AgentAllowancesCard />);
+
+    expect(
+      await screen.findByRole("button", {
+        name: translate("en", "agentAllowances.edit"),
+      }),
+    ).toBeEnabled();
   });
 
   it("offers no Edit button to a seat without the update grant", async () => {

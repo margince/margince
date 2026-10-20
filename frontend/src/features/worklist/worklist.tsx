@@ -34,6 +34,7 @@ import "./worklist.css";
 export { WORKLIST_FILTER_PARAM };
 
 import { WorklistBody } from "./worklist.body";
+import { accumulatedDay } from "./worklist.reads";
 
 // The Worklist screen.
 export function WorklistScreen({
@@ -83,16 +84,8 @@ export function WorklistScreen({
       : lostTheDay
         ? "failed"
         : "ready";
-  // The FIRST page carries the day's own figures — summary, counts, reach,
-  // scope options. Those describe the assembled day and do not change as the
-  // reader pages, so they are read from page one rather than from the latest
-  // page, whose numbers describe only its own slice.
-  const first = day.data?.pages[0];
-  // The WALK is the exception to the rule above, and the reason it is spelled
-  // apart from it. `changed_since_snapshot` and `new_available` answer over the
-  // whole walk and are recomputed on every page, so page one's copy is stale
-  // the moment a reader pages once — the opposite of the day figures beside it,
-  // which describe an assembly that does not move.
+  const loadedDay = accumulatedDay(day.data?.pages);
+  // Arrival and departure counts describe the latest page's view of the whole walk.
   const walk = day.data?.pages.at(-1)?.walk;
   // The rows, which DO grow. Deduped in the query, because a re-rank between
   // reads can serve one row on two pages.
@@ -121,10 +114,10 @@ export function WorklistScreen({
             : { onRetry: () => void day.refetch() }
         }
       >
-        {first && (
+        {loadedDay && (
           <WorklistBody
             embedded={embedded}
-            day={first}
+            day={loadedDay}
             walk={walk}
             // Refreshing starts a NEW walk, which is what brings in the work
             // that arrived behind the reader — and a refetch is NOT that: it

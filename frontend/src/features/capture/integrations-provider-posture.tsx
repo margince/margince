@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import { SettingRow } from "../../design-system/settingrow";
 import { Switch } from "../../design-system/switch";
+import { lockReasonOr } from "../../format/settinglocks";
 import { useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { PostureRefused } from "./integrations-provider.notices";
@@ -102,7 +103,12 @@ export function LookupPostureRow({ canEdit }: Readonly<{ canEdit: boolean }>) {
             // replaces. The answer belongs to the installation rather than to
             // the connection, and an operator deciding it BEFORE connecting a
             // provider is the order this setting is meant to support.
-            reason={canEdit ? undefined : t("captureSettings.adminOnly")}
+            reason={lockReasonOr(
+              posture.data?.locks,
+              "integrations.automatic_lookup",
+              t,
+              canEdit ? undefined : t("captureSettings.adminOnly"),
+            )}
             disabled={!canEdit || posture.isPending || posture.isError}
             pending={patch.isPending}
             // The row already draws this name on the left, so the switch keeps

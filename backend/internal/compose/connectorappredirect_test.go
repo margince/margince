@@ -203,10 +203,14 @@ func TestGoogleAppReportsWhichSourceTheConnectorWillActuallyUse(t *testing.T) {
 			envClientID: "env-id", wantSource: crmcontracts.ConnectorAppSourceEnvironment,
 			wantID: "env-id", wantUsable: true,
 		},
-		// Stored wins, exactly as it does at the moment of a connect — anything
-		// else would describe a resolution the connector does not perform.
-		"a stored app wins over the deployment's": {
+		// The deployment wins, as it does at the moment of a connect. The
+		// stored app is locked behind it.
+		"the deployment's app wins over a stored one": {
 			stored: true, storedID: "stored-id", envClientID: "env-id",
+			wantSource: crmcontracts.ConnectorAppSourceEnvironment, wantID: "env-id", wantUsable: true,
+		},
+		"a stored app answers where the deployment supplies none": {
+			stored: true, storedID: "stored-id",
 			wantSource: crmcontracts.ConnectorAppSourceStored, wantID: "stored-id", wantUsable: true,
 		},
 	} {

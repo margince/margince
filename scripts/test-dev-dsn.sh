@@ -136,7 +136,8 @@ for database in margince margince_dev_alpha; do
             dev_owner_url="$(with_database 'postgres://owner:secret@db/base?sslmode=require' "$database")"
             dev_app_url="$(with_database 'postgres://app:secret@db/base?sslmode=require' "$database")"
             api_port=18093 MINIO_PORT=29000 blob_bucket=probe
-            deploy_cfg=probe.yaml REDIS_ADDR=localhost:16379
+            deploy_cfg=probe.yaml dev_cfg=probe-dev.yaml REDIS_ADDR=localhost:16379
+            env_file_flag=(--env-file probe.env)
             public_base_url_flag=(--public-base-url http://localhost:8093)
             ai_flag=() gmail_api_flags=()
             log_as() { cat > api.log; }

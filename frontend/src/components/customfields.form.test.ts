@@ -26,6 +26,7 @@ function cf(overrides: Partial<CustomField>): CustomField {
     status: "active",
     column_name: "cf_field",
     show_in_create: true,
+    reportable: false,
     created_by: "u1",
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",

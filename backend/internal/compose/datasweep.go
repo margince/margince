@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
@@ -461,29 +462,23 @@ func orphanedSecretRefs(ctx context.Context, tx pgx.Tx) ([]string, error) {
 		referenced = append(referenced,
 			`SELECT `+column+` AS ref FROM `+table+` WHERE `+column+` IS NOT NULL`)
 	}
-	// A SECOND source, and leaving it out is what makes this census
-	// destructive rather than merely incomplete. The deployment credentials —
-	// the license token and the SMTP password — hold their vault ref in a
-	// SETTINGS entry, not in a column named `*_ref`, so the derivation above
-	// cannot see them; they are also the two refs that must SURVIVE a reset,
-	// because the sweep preserves the rows naming them. A census that reads
-	// short here does not under-report, it deletes a live credential, and the
-	// installation loses its licence on a wipe that was supposed to leave the
-	// deployment intact.
-	//
-	// Keyed from the seal path's own declarations rather than a list here, so a
-	// third deployment credential is covered by being declared.
-	keys := deploymentSecretRefKeys()
+	// A second source, and leaving it out makes this census destructive. A
+	// provider key, a connector app's secret and the deployment credentials
+	// hold their vault ref in a settings row, which the derivation above
+	// cannot see. Their rows survive the reset, so a census short here deletes
+	// a live credential. The keys come from the declarations.
+	keys := sealedRefKeys()
 	if len(keys) == 0 {
-		return nil, errors.New("data reset: no deployment credential declares a settings key for its vault " +
-			"ref, so the refs that must SURVIVE the reset would read as orphaned and be purged")
+		return nil, errors.New("data reset: no setting declares a vault ref, so the refs that must SURVIVE " +
+			"the reset would read as orphaned and be purged")
 	}
 	referenced = append(referenced,
-		`SELECT trim(both '"' from value::text) AS ref FROM setting WHERE key = ANY($1)`)
+		`SELECT trim(both '"' from value::text) AS ref FROM setting WHERE key = ANY($1)`,
+		`SELECT value->>'client_secret_ref' AS ref FROM setting WHERE key = ANY($2)`)
 	rows, err := tx.Query(ctx, `
 		SELECT v.ref FROM vault_secret v
 		 WHERE NOT EXISTS (SELECT 1 FROM (`+strings.Join(referenced, " UNION ALL ")+`) held
-		                    WHERE held.ref = v.ref)`, keys)
+		                    WHERE held.ref = v.ref)`, keys, capture.AppSettingKeys())
 	if err != nil {
 		return nil, fmt.Errorf("data reset: reading sealed credentials no handle references: %w", err)
 	}

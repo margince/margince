@@ -195,7 +195,7 @@ export const ConnectorFlippedToOr: Story = {
     await addCity(user, canvas, "Hamburg");
     await user.click(
       canvas.getByRole("button", {
-        name: "and: match all of these. Press to match any.",
+        name: "and: the conditions on both sides must match. Press for or.",
       }),
     );
   },

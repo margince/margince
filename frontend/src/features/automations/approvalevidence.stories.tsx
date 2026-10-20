@@ -46,3 +46,50 @@ export const SourceUnavailable: StoryObj = {
     );
   },
 };
+
+export const LifecycleMeeting: StoryObj = {
+  render: () => {
+    installFetchStub({
+      [`GET /activities/${source}`]: () =>
+        jsonResponse({
+          id: source,
+          kind: "meeting",
+          subject: "Contract review",
+          body: "The buyer ended the agreement.",
+          occurred_at: "2026-09-01T09:00:00Z",
+          is_done: true,
+          source: "manual",
+          captured_by: "human:reviewer",
+          created_at: "2026-09-01T09:00:00Z",
+          updated_at: "2026-09-01T09:00:00Z",
+          links: [],
+          version: 1,
+        }),
+    });
+    return (
+      <StoryProviders>
+        <ApprovalEvidence
+          approval={{
+            ...proposal,
+            kind: "lifecycle_change",
+            target_entity_type: "company",
+            target_entity_id: "company",
+            preview: {
+              version: 1,
+              state: "ready",
+              changes: [],
+              reviewer_reason: "record_authority",
+              evidence: [
+                {
+                  source_type: "activity",
+                  source_id: source,
+                  evidence_snippet: "The buyer ended the agreement.",
+                },
+              ],
+            },
+          }}
+        />
+      </StoryProviders>
+    );
+  },
+};

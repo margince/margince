@@ -56,6 +56,7 @@ const NOTES: ExtensionDescriptor = {
       rbacObject: "ext_notes_note",
     },
   ],
+  entries: [],
 };
 
 const COMPOSED: readonly ExtensionDescriptor[] = [NOTES];
@@ -139,6 +140,7 @@ describe("placing a unit by its declared secret scope", () => {
     title: "extDispactConnector.title",
     secretScope: "user",
     verbs: [],
+    entries: [],
   };
   // A unit declaring no secret: de in the shipped tree.
   const YOGI: ExtensionDescriptor = {
@@ -146,6 +148,7 @@ describe("placing a unit by its declared secret scope", () => {
     title: "",
     secretScope: "",
     verbs: [],
+    entries: [],
   };
   const REGISTRY = [DISPACT, NOTES, YOGI];
 
@@ -189,6 +192,7 @@ describe("naming a unit", () => {
     title: "extDispactConnector.title",
     secretScope: "user",
     verbs: [],
+    entries: [],
   };
   const REGISTRY = [DISPACT, NOTES];
 

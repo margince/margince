@@ -5,6 +5,7 @@ import { Button, Field, Textarea } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
+import { lockFor } from "../../format/settinglocks";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { throwProblem, unwrap } from "../../lib/problem";
@@ -72,6 +73,11 @@ export function SignatureTemplateCard() {
         <QueryGate query={query} pendingLabel={t("signatureTemplate.title")}>
           {(stored) => {
             const shown = draft ?? stored.template;
+            const lock = lockFor(
+              stored.locks,
+              "contacts.signature_template",
+              t,
+            );
             return (
               <form
                 className="form-stack"
@@ -80,13 +86,16 @@ export function SignatureTemplateCard() {
                   save.mutate(shown, { onSuccess: () => setDraft(null) });
                 }}
               >
-                <Field label={t("signatureTemplate.label")}>
+                <Field
+                  label={t("signatureTemplate.label")}
+                  hint={lock.disabled ? lock.reason : undefined}
+                >
                   {(control) => (
                     <Textarea
                       {...control}
                       rows={6}
                       value={shown}
-                      disabled={!canEdit}
+                      disabled={!canEdit || lock.disabled}
                       placeholder={t("signatureTemplate.placeholder")}
                       onChange={(event) => setDraft(event.target.value)}
                     />
@@ -94,7 +103,7 @@ export function SignatureTemplateCard() {
                 </Field>
                 <p className="t-caption">{t("signatureTemplate.hint")}</p>
                 <ErrorLine error={save.isError ? save.error : undefined} />
-                {canEdit && (
+                {canEdit && !lock.disabled && (
                   <div className="actions">
                     <Button
                       type="submit"

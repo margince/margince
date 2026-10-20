@@ -94,7 +94,7 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "record_types", Values: []string{"contact", "company", "deal", "lead", "project"}, Array: true, Explode: true},
 	},
 	"GET /v1/custom-fields": {
-		{Name: "object", Values: []string{"contact", "company", "deal", "lead", "project", "contract"}, Array: false, Explode: true},
+		{Name: "object", Values: []string{"contact", "company", "deal", "lead", "project", "contract", "activity"}, Array: false, Explode: true},
 		{Name: "status", Values: []string{"active", "retired"}, Array: false, Explode: true},
 	},
 	"GET /v1/data-subject-requests": {
@@ -133,6 +133,9 @@ var queryEnumTable = map[string][]queryEnum{
 	},
 	"GET /v1/forecast": {
 		{Name: "period", Values: []string{"quarter", "month", "week"}, Array: false, Explode: true},
+		{Name: "scope_kind", Values: []string{"workspace", "team", "owner"}, Array: false, Explode: true},
+	},
+	"GET /v1/forecast/assurance/exceptions": {
 		{Name: "scope_kind", Values: []string{"workspace", "team", "owner"}, Array: false, Explode: true},
 	},
 	"GET /v1/forecast/calls": {

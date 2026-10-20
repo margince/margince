@@ -40,6 +40,8 @@ type BackendOptions = {
   lockedReason?: string;
   /** What the server refuses the PATCH with, as an RFC-7807 validation body. */
   refuse?: { field: string; code: string; message: string }[];
+  /** The settings a boot source sets, as the read reports them. */
+  locks?: unknown[];
 };
 
 // backendFor answers /me with the given grants and /installation/settings with
@@ -53,6 +55,7 @@ function backendFor(allow: GrantSpec, opts: BackendOptions = {}) {
     ...(opts.lockedReason
       ? { base_currency_locked_reason: opts.lockedReason }
       : {}),
+    ...(opts.locks ? { locks: opts.locks } : {}),
   };
   let capturedPatch: unknown = null;
   const fetchMock = vi.fn(
@@ -268,6 +271,47 @@ describe("InstallationSettingsCard", () => {
       /reporting timezone/i,
     ) as HTMLInputElement;
     expect(zone.disabled).toBe(false);
+  });
+
+  it("refuses a fact a boot source sets, says where to change it, and saves the rest", async () => {
+    const user = userEvent.setup();
+    const reason =
+      "Set by MARGINCE_INSTALLATION_BASE_LANGUAGE (environment). Change it there.";
+    const { fetchMock, patch } = backendFor(SETTINGS_EDITOR, {
+      locks: [
+        {
+          key: "installation.base_language",
+          origin: {
+            source: "env",
+            name: "MARGINCE_INSTALLATION_BASE_LANGUAGE",
+          },
+        },
+      ],
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<InstallationSettingsCard />);
+
+    // The row's own verb is refused with the reason, before any dialog opens.
+    const languageEdit = await screen.findByRole<HTMLButtonElement>("button", {
+      name: /edit base language/i,
+    });
+    expect(languageEdit.disabled).toBe(true);
+    expect(screen.getByText(reason)).toBeTruthy();
+
+    const dialog = await openFrom(user, /edit reporting timezone/i);
+    expect(
+      within(dialog).getByLabelText<HTMLButtonElement>(/base language/i)
+        .disabled,
+    ).toBe(true);
+    expect(within(dialog).getByText(reason)).toBeTruthy();
+    const zone =
+      within(dialog).getByLabelText<HTMLInputElement>(/reporting timezone/i);
+    expect(zone.disabled).toBe(false);
+    await user.clear(zone);
+    await user.type(zone, "Europe/Vienna");
+    await user.click(within(dialog).getByRole("button", { name: /^save/i }));
+    await waitFor(() => expect(patch()).toEqual({ timezone: "Europe/Vienna" }));
   });
 
   // Three facts, ONE record, one save. The server takes ONE sparse PATCH, so

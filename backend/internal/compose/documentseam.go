@@ -17,7 +17,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -122,7 +121,7 @@ func (d documentSeam) MaxBytes(context.Context) int64 {
 	if d.srv != nil {
 		return d.srv.uploadLimits.Attachment
 	}
-	return deployconfig.Config{}.EffectiveUploads().Attachment
+	return DefaultUploadLimits().Attachment
 }
 
 // attachedDocument is the wire row without what an agent has no use for; the

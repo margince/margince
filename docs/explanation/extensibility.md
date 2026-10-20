@@ -120,6 +120,7 @@ already exists:
 | `Jobs` | Scheduled work: a job that runs on a fixed schedule and starts one worker run per tenant |
 | `Secrets` | The secret keys the unit will use, by name and scope. It is a request; it grants nothing |
 | `Migrations` | The SQL schema layer the unit owns, built into the binary instead of read from the tree |
+| `Entries` | Buttons on core screens that open the unit's screen. The unit names a slot, a label key, an icon and an RBAC object, and the core draws and places the button |
 
 `Channels` and `Ingress` are separate fields, and neither one means the other. A unit may capture from a
 provider it cannot send on, and the channel declaration says which.
@@ -208,6 +209,7 @@ the harm could go before turning the unit on:
 | `ingress` | `Ingress` | Which providers it lands records from, which kinds, and which identity keys the source **stands behind** (`merges`) |
 | `channels` | `Channels` | Which providers it supplies, whose credential each one uses (`credential_model`: required, no default), and whether it supplies a **transport** (`supplies_transport`) or only captures |
 | `finance_sources` | `FinanceSources` | Which accounting systems it reads |
+| `entries` | `Entries` | Which core screens offer a way into the unit, and the object a reader needs `read` on to see it |
 
 The `extension.Extension` value the unit returns, and every field the manifest derives, must be written
 out in full in the source. A field the generate step does not know fails it, with the place in the file.

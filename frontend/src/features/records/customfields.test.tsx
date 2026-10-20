@@ -16,6 +16,7 @@ import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { catalogs, LocaleProvider, translate } from "../../i18n";
 import { en } from "../../i18n/en";
 import { LOCALES } from "../../i18n/locale";
+import { ANALYTICS_SCHEMA_KEY } from "../../lib/analyticskeys";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { CustomFieldsAdmin } from "./customfields";
 import { FieldBuilder } from "./customfields.builder";
@@ -186,6 +187,7 @@ const field = (over: Partial<CustomField> = {}): CustomField => ({
   status: "active",
   column_name: "cf_renewal_date",
   show_in_create: true,
+  reportable: false,
   created_by: "u1",
   created_at: "2026-06-22T14:09:00Z",
   updated_at: "2026-06-22T14:09:00Z",
@@ -219,7 +221,7 @@ describe("FieldTable", () => {
         meUserId="u1"
         onRename={() => {}}
         onArchive={() => {}}
-        onShowInCreate={() => {}}
+        onSetting={() => {}}
       />,
     );
     expect(screen.getByText("Renewal date")).toBeInTheDocument();
@@ -237,7 +239,7 @@ describe("FieldTable", () => {
         meUserId="u1"
         onRename={() => {}}
         onArchive={() => {}}
-        onShowInCreate={() => {}}
+        onSetting={() => {}}
       />,
     );
     const menu = await openFieldMenu("Renewal date");
@@ -258,7 +260,7 @@ describe("FieldTable", () => {
         meUserId="u1"
         onRename={() => {}}
         onArchive={() => {}}
-        onShowInCreate={() => {}}
+        onSetting={() => {}}
       />,
     );
     expect(
@@ -276,7 +278,7 @@ describe("FieldTable", () => {
         meUserId="u1"
         onRename={() => {}}
         onArchive={() => {}}
-        onShowInCreate={() => {}}
+        onSetting={() => {}}
       />,
     );
     expect(screen.getByText(en["cf.retired"])).toBeInTheDocument();
@@ -342,7 +344,10 @@ function customFieldsBackend(
     if (url.includes("/custom-fields") && method === "PATCH") {
       const body = await readBody();
       calls.push({ method, url, body });
-      return jsonResponse(field({ label: String(body.label) }));
+      // The saved row: the field the URL names, with the patch applied.
+      const id = new URL(url).pathname.split("/").pop();
+      const saved = [...dealFields, ...companyFields].find((f) => f.id === id);
+      return jsonResponse({ ...(saved ?? field()), ...body });
     }
     if (url.includes("/custom-fields") && method === "POST") {
       const body = await readBody();
@@ -373,10 +378,11 @@ function customFieldsBackend(
   });
 }
 
-const renderAdmin = () => {
-  const client = new QueryClient({
+const renderAdmin = (
+  client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
-  });
+  }),
+) => {
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
@@ -835,11 +841,112 @@ describe("the create-form setting on the field table", () => {
         meUserId="u1"
         onRename={() => {}}
         onArchive={() => {}}
-        onShowInCreate={() => {}}
+        onSetting={() => {}}
       />,
     );
     expect(screen.queryByRole("switch")).toBeNull();
     expect(screen.getByText(en["field.no"])).toBeInTheDocument();
+  });
+});
+
+describe("the reporting setting on the field table", () => {
+  it("adds a deal picklist to reports from its row switch", async () => {
+    const calls: Recorded[] = [];
+    vi.stubGlobal(
+      "fetch",
+      customFieldsBackend(
+        [
+          field({
+            id: "d1",
+            label: "Territory",
+            type: "picklist",
+            options: ["EMEA"],
+          }),
+        ],
+        [],
+        calls,
+      ),
+    );
+    renderAdmin();
+    const toggle = await screen.findByRole("switch", {
+      name: "Use “Territory” in reports",
+    });
+    expect(toggle).toHaveAttribute("aria-checked", "false");
+    await userEvent.click(toggle);
+    await waitFor(() =>
+      expect(calls.some((call) => call.method === "PATCH")).toBe(true),
+    );
+    const patch = calls.find((call) => call.method === "PATCH");
+    expect(patch?.body).toEqual({ reportable: true });
+    expect(await screen.findByText(/added to reports/)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        screen.getByRole("switch", { name: "Use “Territory” in reports" }),
+      ).toHaveAttribute("aria-checked", "true"),
+    );
+  });
+
+  it("makes the analytics vocabulary stale, so the builder offers the field", async () => {
+    vi.stubGlobal(
+      "fetch",
+      customFieldsBackend(
+        [
+          field({
+            id: "d1",
+            label: "Territory",
+            type: "picklist",
+            options: ["EMEA"],
+          }),
+        ],
+        [],
+        [],
+      ),
+    );
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    client.setQueryData(ANALYTICS_SCHEMA_KEY, { version: "v1", entities: [] });
+    renderAdmin(client);
+    await userEvent.click(
+      await screen.findByRole("switch", { name: "Use “Territory” in reports" }),
+    );
+    await waitFor(() =>
+      expect(client.getQueryState(ANALYTICS_SCHEMA_KEY)?.isInvalidated).toBe(
+        true,
+      ),
+    );
+  });
+
+  it("offers no switch for a field reports cannot group by", () => {
+    wrap(
+      <FieldTable
+        object="deal"
+        fields={[field({ label: "Renewal date", type: "date" })]}
+        canEdit
+        meUserId="u1"
+        onRename={() => {}}
+        onArchive={() => {}}
+        onSetting={() => {}}
+      />,
+    );
+    expect(
+      screen.queryByRole("switch", { name: "Use “Renewal date” in reports" }),
+    ).toBeNull();
+  });
+
+  it("offers no reporting column on an object reports do not group", () => {
+    wrap(
+      <FieldTable
+        object="company"
+        fields={[field({ object: "company", type: "boolean" })]}
+        canEdit
+        meUserId="u1"
+        onRename={() => {}}
+        onArchive={() => {}}
+        onSetting={() => {}}
+      />,
+    );
+    expect(screen.queryByText(en["cf.col.inReports"])).toBeNull();
   });
 });
 

@@ -118,7 +118,7 @@ func (s *Server) mcpHandler(pool *pgxpool.Pool, auth *identity.Service, log *slo
 		agents.WithResourceProvider(composeResources(
 			mcpResourceProviders(
 				agents.NewCapabilitiesResource(s.toolRegistry),
-				search.NewQuerySchemaResource(queryVocabulary(pool)), s.appViews)...,
+				search.NewQuerySchemaResource(queryVocabulary(pool)), InstallationDB(pool), s.appViews)...,
 		)),
 		// And the OTHER half of the same promise. A tool's UI.ResourceURI is a
 		// constant baked at registration; whether that document arrived is a
@@ -134,7 +134,7 @@ func (s *Server) mcpHandler(pool *pgxpool.Pool, auth *identity.Service, log *slo
 		// per-kind effects belong to the DECIDE path, and a task neither decides
 		// nor triggers one. What it does is read a decision and then take the
 		// ordinary redemption route through Registry.Invoke.
-		agents.WithTaskStore(toolTasks(pool), approvalsAdapter{svc: newApprovalsService(InstallationDB(pool))}))
+		agents.WithTaskStore(toolTasks(pool), approvalsAdapter{svc: NewApprovalsService(InstallationDB(pool))}))
 }
 
 // mcpAuthenticate binds one request to its agent principal. It runs on EVERY

@@ -111,14 +111,14 @@ func offThreadAnswerArms(inbound, until string) []answerArm {
 	return []answerArm{
 		{at: "answer_mail.occurred_at", id: "answer_mail.id", from: `FROM activity_participant answer_asker
 	  ` + senderAddresses + `
-	  CROSS JOIN LATERAL (SELECT answer_mail.* FROM activity answer_mail
+	  CROSS JOIN LATERAL (SELECT ` + answerMailColumns + ` FROM activity answer_mail
 	     WHERE answer_mail.counterparty_email = answer_address.address
 	       AND ` + ourMailIndexed + ` OFFSET 0) answer_mail
 	  WHERE ` + asker + `
 	    AND ` + ourMail},
 		{at: "answer_mail.occurred_at", id: "answer_mail.id", from: `FROM activity_participant answer_asker
 	  ` + senderAddresses + `
-	  CROSS JOIN LATERAL (SELECT answer_mail.* FROM activity_participant answer_told
+	  CROSS JOIN LATERAL (SELECT ` + answerMailColumns + ` FROM activity_participant answer_told
 	     JOIN activity answer_mail ON answer_mail.id = answer_told.activity_id
 	     WHERE lower(answer_told.address) = answer_address.address
 	       AND answer_told.role IN ('to', 'cc') OFFSET 0) answer_mail
@@ -130,6 +130,13 @@ func offThreadAnswerArms(inbound, until string) []answerArm {
 	     WHERE answer_attendee.contact_id = answer_asker.contact_id`),
 	}
 }
+
+// answerMailColumns are the columns the mail arms read off a lateral row, named
+// because an administrator can add a custom-field column to activity at runtime.
+const answerMailColumns = `answer_mail.id, answer_mail.kind, answer_mail.channel_provider,
+	answer_mail.direction, answer_mail.counterparty_outbound_attested, answer_mail.restricted_at,
+	answer_mail.audience, answer_mail.source_activity_id, answer_mail.archived_at,
+	answer_mail.occurred_at, answer_mail.subject`
 
 // touchAnswerArm is a logged call or held meeting among the activities walk
 // names for the sender's contact.

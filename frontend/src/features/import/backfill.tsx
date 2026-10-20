@@ -1,5 +1,5 @@
 import { History } from "lucide-react";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
@@ -76,11 +76,14 @@ function classifyBackfillErrors(
 export function BackfillPanel({
   provider,
   initial,
+  baseline,
 }: {
   provider: Provider;
   // The run row already embedded in GET /connectors (CaptureConnection.
   // backfill) — seeds the first render so a live run shows immediately.
   initial?: BackfillStatus;
+  /** The mailbox's history-baseline control, offered beside the window. */
+  baseline?: ReactNode;
 }) {
   const t = useT();
   const [skipped, setSkipped] = useState(false);
@@ -128,6 +131,7 @@ export function BackfillPanel({
         }
         onStart={() => importRun.begin(window)}
         onSkip={() => setSkipped(true)}
+        baseline={baseline}
       />
     );
   }
@@ -164,6 +168,7 @@ function BackfillSetup({
   startErrorMessage,
   onStart,
   onSkip,
+  baseline,
 }: {
   window: ImportWindow;
   onWindowChange: (w: ImportWindow) => void;
@@ -178,6 +183,7 @@ function BackfillSetup({
   startErrorMessage: string | null;
   onStart: () => void;
   onSkip: () => void;
+  baseline?: ReactNode;
 }) {
   const t = useT();
 
@@ -208,6 +214,7 @@ function BackfillSetup({
         offered={offeredWindows}
       />
       <p className="t-caption">{t("backfill.extendNote")}</p>
+      {baseline}
       {previewErrorMessage && <ErrorLine>{previewErrorMessage}</ErrorLine>}
       <EstimateCard
         preview={previewData}

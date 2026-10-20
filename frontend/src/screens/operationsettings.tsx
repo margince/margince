@@ -12,12 +12,14 @@ import { useUpdateInstallationSettings } from "../features/sign-in/installation-
 import { boundsText } from "../format/bounds";
 import { formatNumber } from "../format/format";
 import { formatInterval } from "../format/interval";
+import { lockReasonOr } from "../format/settinglocks";
 import { useLocale, usePlural, useT, type Words } from "../i18n";
 import { useCan, useCanWrite } from "../lib/capability";
 import { problemMessageOf } from "../lib/problem";
 import { useInstallationSettings } from "../lib/uploadlimit";
 
 type Operations = components["schemas"]["OperationSettings"];
+type InstallationSettings = components["schemas"]["InstallationSettings"];
 
 // The bounds the API refuses past, mirrored so a value out of range is refused
 // in the box before the request. Keyed by the wire property, which is how
@@ -184,7 +186,7 @@ function OperationsCard({
   if (!canRead) {
     return null;
   }
-  const listOf = (operations: Operations) => (
+  const listOf = ({ operations, locks }: InstallationSettings) => (
     <SettingList bleed={fold ? undefined : "settings"}>
       {rows.map((row) => (
         <NumberSettingRow
@@ -198,6 +200,12 @@ function OperationsCard({
           refusal={refusalOf(row, words)}
           reading={inWords(row, words)}
           disabled={!canManage || update.isPending}
+          reason={lockReasonOr(
+            locks,
+            `installation.${row.property}`,
+            t,
+            undefined,
+          )}
           onCommit={(next) => update.mutate({ [row.property]: next })}
         />
       ))}
@@ -208,9 +216,9 @@ function OperationsCard({
     <QueryGate query={query} pendingLabel={title}>
       {(settings) =>
         fold ? (
-          <Disclosure summary={fold}>{listOf(settings.operations)}</Disclosure>
+          <Disclosure summary={fold}>{listOf(settings)}</Disclosure>
         ) : (
-          listOf(settings.operations)
+          listOf(settings)
         )
       }
     </QueryGate>

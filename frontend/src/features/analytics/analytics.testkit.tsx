@@ -65,12 +65,17 @@ export type ReportsStubOpts = {
   phaseRows?: Record<string, unknown>[];
   commitmentRows?: Record<string, unknown>[];
   quietRows?: Record<string, unknown>[];
+  closeMonthRows?: Record<string, unknown>[];
   // The coverage read: a payload, a status (403 for a seat without the ops
   // grant, 404 for a fresh installation), or omitted for the default 403.
   coverage?: { status: number; body?: unknown };
   derivation?: Record<string, unknown>;
   onDerivation?: (url: string) => void;
   context?: Record<string, unknown>;
+  // A refused context read, for a seat that reads deals without forecasts.
+  contextStatus?: number;
+  // A seat that may also read deals, for the views that probe them.
+  dealRead?: boolean;
 };
 
 // The rows one report answers with.
@@ -115,6 +120,7 @@ function meAnswer(opts: ReportsStubOpts) {
       report_definition: ["read"],
       reporting_framework: ["read"],
       data_coverage: granted ? ["read"] : [],
+      ...(opts.dealRead ? { deal: ["read"] } : {}),
     },
   });
 }
@@ -225,8 +231,15 @@ type Route = Readonly<{
 
 async function reportRoute(asked: Asked, opts: ReportsStubOpts) {
   const key = asked.url.match(/\/reports\/([^/?]+)/)?.[1] ?? "";
-  opts.onRun?.(key, await asked.json());
-  return jsonResponse(reportAnswer(key, opts));
+  const body = await asked.json();
+  opts.onRun?.(key, body);
+  // One report asked by close month is its own answer, not the stage rows.
+  const groupBy = Array.isArray(body.group_by) ? body.group_by : [];
+  return jsonResponse(
+    groupBy.includes("close_month")
+      ? { ...reportAnswer(key, opts), rows: opts.closeMonthRows ?? [] }
+      : reportAnswer(key, opts),
+  );
 }
 
 // The endpoints an Analytics suite meets, and what each answers. A TABLE and
@@ -244,7 +257,13 @@ const ROUTES: readonly Route[] = [
   },
   {
     when: ({ url }) => url.includes("/analytics/context"),
-    answer: (_asked, opts) => jsonResponse(contextAnswer(opts)),
+    answer: (_asked, opts) =>
+      opts.contextStatus === undefined
+        ? jsonResponse(contextAnswer(opts))
+        : jsonResponse(
+            { title: "Refused", status: opts.contextStatus },
+            opts.contextStatus,
+          ),
   },
   {
     when: ({ url, method }) => method === "GET" && url.includes("/derivation"),

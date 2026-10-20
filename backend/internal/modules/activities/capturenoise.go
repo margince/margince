@@ -99,10 +99,16 @@ func (s *Store) HideCapturedNoiseTx(ctx context.Context, tx pgx.Tx, activityIDs 
 //
 // What survives is the row, its links, its source key and its provenance: the
 // tombstone that stops a replay re-capturing what was just redacted.
-func (s *Store) RedactCapturedNoiseTx(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) ([]ids.UUID, error) {
+//
+// erasable names every custom-field column, retired ones included: a value is
+// content, and a retired field still holds what was written into it.
+func (s *Store) RedactCapturedNoiseTx(
+	ctx context.Context, tx pgx.Tx, erasable ErasableColumns, activityIDs []ids.UUID,
+) ([]ids.UUID, error) {
 	if len(activityIDs) == 0 {
 		return nil, nil
 	}
+	held, clears := erasable.contentTests()
 	// Two different questions, and conflating them is what made an earlier
 	// version skip its own follow-up work. AUTHORITY to destroy is "this message
 	// is still hidden" — a human who un-archived one during the undo window has
@@ -111,9 +117,9 @@ func (s *Store) RedactCapturedNoiseTx(ctx context.Context, tx pgx.Tx, activityID
 	// original survives is unfinished work, and the caller still has to purge
 	// that original. So the target set is the archived ones, and only the subset
 	// that actually held content is audited as an erasure.
-	rows, err := tx.Query(ctx, `
+	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		WITH target AS (
-		  SELECT id, (subject IS NOT NULL OR body IS NOT NULL OR raw IS NOT NULL) AS had_content
+		  SELECT id, (subject IS NOT NULL OR body IS NOT NULL OR raw IS NOT NULL%s) AS had_content
 		    FROM activity
 		   WHERE id = ANY($1) AND archived_at IS NOT NULL
 		     -- A record held under a statutory obligation is out of reach of
@@ -126,11 +132,11 @@ func (s *Store) RedactCapturedNoiseTx(ctx context.Context, tx pgx.Tx, activityID
 		     SET subject = NULL, body = NULL, raw = NULL,
 		         -- Read from the words being emptied, so they go with them.
 		         language = NULL, source_author_name = NULL,
-		         reply_verdict = NULL, reply_verdict_at = NULL, reply_verdict_by = NULL
+		         reply_verdict = NULL, reply_verdict_at = NULL, reply_verdict_by = NULL%s
 		    FROM target t
 		   WHERE a.id = t.id AND t.had_content
 		)
-		SELECT id, had_content FROM target`, activityIDs)
+		SELECT id, had_content FROM target`, held, clears), activityIDs)
 	if err != nil {
 		return nil, fmt.Errorf("activities: redacting noise-dispositioned mail: %w", err)
 	}

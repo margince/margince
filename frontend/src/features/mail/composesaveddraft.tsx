@@ -22,7 +22,7 @@ import {
   problemMessageOf,
   throwProblem,
 } from "../../lib/problem";
-import { stripEveryKeyTag } from "../../screens/projectrecord";
+import { stripEveryKeyTag } from "../projects/projectrecord";
 import type { RelinkKind } from "./composerelink";
 
 // The rep's own unsent message, kept on the server so closing the composer does

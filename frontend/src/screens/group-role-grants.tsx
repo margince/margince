@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Button, EmptyState, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
@@ -10,6 +10,7 @@ import { IconAction } from "../design-system/iconaction";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { Select, type SelectOption } from "../design-system/select";
 import { useSaveSignInPolicy } from "../features/sign-in/sign-in-policy";
+import type { FieldLock } from "../format/settinglocks";
 import { useT } from "../i18n";
 import { problemMessageOf } from "../lib/problem";
 import {
@@ -87,7 +88,12 @@ function draftChanged(
 export function GroupRoleGrants({
   initial,
   canManage,
-}: Readonly<{ initial: Record<string, string>; canManage: boolean }>) {
+  lock,
+}: Readonly<{
+  initial: Record<string, string>;
+  canManage: boolean;
+  lock: FieldLock;
+}>) {
   const t = useT();
   const save = useSaveSignInPolicy();
   // Asked only of a reader who may write the map: the list is the invite's own
@@ -106,7 +112,10 @@ export function GroupRoleGrants({
   const firstGroup = useRef<HTMLInputElement>(null);
   const handBack = useRef(false);
   const refusal = grantRefusal(rows, t);
-  const locked = !canManage || save.isPending;
+  const locked = !canManage || save.isPending || lock.disabled;
+  // One drawn reason, which every control the lock refuses points at.
+  const lockId = useId();
+  const lockReasonId = lock.disabled ? lockId : undefined;
   const draft = Object.fromEntries(rows.map((row) => [row.group, row.role]));
   const dirty = draftChanged(rows, initial);
   const commit = () =>
@@ -146,6 +155,7 @@ export function GroupRoleGrants({
           placeholder={t("groupRoles.groupPlaceholder")}
           value={row.group}
           autoComplete="off"
+          aria-describedby={lockReasonId}
           disabled={locked}
           onChange={(event) => editRow(row.id, { group: event.target.value })}
         />
@@ -160,6 +170,7 @@ export function GroupRoleGrants({
           aria-label={t("groupRoles.role")}
           options={grantRoleOptions(row.role, t, offered)}
           value={row.role}
+          aria-describedby={lockReasonId}
           disabled={locked}
           onChange={(role) => editRow(row.id, { role })}
         />
@@ -181,6 +192,7 @@ export function GroupRoleGrants({
                 : t("groupRoles.removeNamed", { group: row.group })
             }
             disabled={locked}
+            reasonId={lockReasonId}
             onClick={() =>
               setRows((current) => current.filter((each) => each.id !== row.id))
             }
@@ -197,8 +209,9 @@ export function GroupRoleGrants({
           <Button
             ref={addButton}
             disabled={save.isPending}
+            reasonId={lockReasonId}
             reason={
-              rows.length >= MAX_GROUP_GRANTS
+              rows.length >= MAX_GROUP_GRANTS && !lock.disabled
                 ? t("groupRoles.tooMany")
                 : undefined
             }
@@ -222,7 +235,8 @@ export function GroupRoleGrants({
             <Button
               variant="primary"
               pending={save.isPending}
-              reason={refusal ?? undefined}
+              reasonId={lockReasonId}
+              reason={lock.disabled ? undefined : (refusal ?? undefined)}
               onClick={commit}
             >
               {t("groupRoles.save")}
@@ -233,6 +247,11 @@ export function GroupRoleGrants({
     >
       <PanelBody>
         <PanelIntro>{t("groupRoles.sub")}</PanelIntro>
+        {lock.disabled && (
+          <p id={lockId} className="t-caption">
+            {lock.reason}
+          </p>
+        )}
         {/* The cost of a mapping, shown once there is one to weigh. */}
         {rows.length > 0 && (
           <Callout

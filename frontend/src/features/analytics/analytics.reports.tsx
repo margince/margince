@@ -13,7 +13,13 @@ import type { MessageKey } from "../../i18n/en";
 import { unwrap } from "../../lib/problem";
 import type { Section } from "./analytics.address";
 import { FIELD_CURRENCY, type ReportRow, type Stage } from "./analytics.cells";
+import { CloseMonthTable } from "./analytics.closemonth";
 import { CompanyTable } from "./analytics.company";
+import {
+  type AnalyticsScope,
+  reportScope,
+  scopeKey,
+} from "./analytics.context";
 import {
   ProjectCommitmentsTable,
   ProjectsByPhaseTable,
@@ -31,6 +37,26 @@ type ReportKey =
   | "project-commitments"
   | "projects-gone-quiet";
 
+// A card is one report asked one way. Most cards are their report; a card that
+// asks a report a second question names which report it runs.
+type CardKey = ReportKey | "pipeline-by-close-month";
+
+const CARD_REPORT: Record<CardKey, ReportKey> = {
+  "pipeline-current": "pipeline-current",
+  "pipeline-by-close-month": "pipeline-current",
+  forecast: "forecast",
+  "open-deals-per-company": "open-deals-per-company",
+  "projects-by-phase": "projects-by-phase",
+  "project-commitments": "project-commitments",
+  "projects-gone-quiet": "projects-gone-quiet",
+};
+
+const reportOf = (card: CardKey): ReportKey => CARD_REPORT[card];
+
+const CARD_TITLE: Partial<Record<CardKey, MessageKey>> = {
+  "pipeline-by-close-month": "analytics.reportPipelineByCloseMonth",
+};
+
 // Which results each section holds, in the order they are drawn. The tab strip
 // and the bodies both read this, so a section cannot come to list a report it
 // does not draw.
@@ -44,7 +70,12 @@ export const SECTION_REPORTS = {
   // The forecast-category breakdown lives here. It is a real report and the
   // only place a reader sees how the pipeline divides by category. It is not
   // the forecast, which is an answer rather than a table.
-  pipeline: ["pipeline-current", "forecast", "open-deals-per-company"],
+  pipeline: [
+    "pipeline-current",
+    "pipeline-by-close-month",
+    "forecast",
+    "open-deals-per-company",
+  ],
   performance: [],
   // The rep's own week: a composed view like the forecast, not report cards.
   outcomes: [],
@@ -53,7 +84,7 @@ export const SECTION_REPORTS = {
   // What was sold becoming what is delivered: the three project reports.
   delivery: ["project-commitments", "projects-gone-quiet", "projects-by-phase"],
   questions: [],
-} as const satisfies Record<Section, readonly ReportKey[]>;
+} as const satisfies Record<Section, readonly CardKey[]>;
 
 // A plan that sums native money groups by currency as well as by its own
 // dimension. amount_minor is a minor-unit integer in the deal's own currency,
@@ -62,8 +93,9 @@ export const SECTION_REPORTS = {
 // pipeline-current does not, because the server converted each deal before
 // summing. One stage is one row in the installation's base currency; that is
 // why the report exists beside deals-by-stage rather than replacing it.
-const REPORT_GROUP_BY: Record<ReportKey, string[]> = {
+const REPORT_GROUP_BY: Record<CardKey, string[]> = {
   "pipeline-current": ["stage_id"],
+  "pipeline-by-close-month": ["close_month"],
   forecast: ["forecast_category"],
   "open-deals-per-company": ["company_id", FIELD_CURRENCY],
   // The specs' own defaults: an empty plan takes each report's declared
@@ -76,7 +108,7 @@ const REPORT_GROUP_BY: Record<ReportKey, string[]> = {
 // The line under a report's title, for the reports whose copy says something
 // the card's own title does not. A report absent from here gets no caption: an
 // explanation beside a report it does not describe is worse than none.
-const reportSub: Partial<Record<ReportKey, MessageKey>> = {
+const reportSub: Partial<Record<CardKey, MessageKey>> = {
   "pipeline-current": "analytics.sub",
 };
 
@@ -88,7 +120,13 @@ type ReportAggregate = NonNullable<
 // per-spec measures). `weighted_amount_minor` only exists where a stage join
 // computes it (deals-by-stage, forecast). Requesting it against
 // open-deals-per-company's narrower vocabulary would 422.
-const REPORT_AGGREGATES: Record<ReportKey, ReportAggregate[]> = {
+const REPORT_AGGREGATES: Record<CardKey, ReportAggregate[]> = {
+  "pipeline-by-close-month": [
+    { fn: "sum", field: "amount_base_minor", as: "raw_minor" },
+    { fn: "sum", field: "weighted_base_minor", as: "weighted_minor" },
+    { fn: "count", as: "deal_count" },
+    { fn: "count", field: "amount_base_minor", as: "priced_deals" },
+  ],
   "pipeline-current": [
     { fn: "sum", field: "amount_base_minor", as: "raw_minor" },
     { fn: "sum", field: "weighted_base_minor", as: "weighted_minor" },
@@ -123,11 +161,12 @@ function ReportBody({
   stages,
   locale,
 }: Readonly<{
-  report: ReportKey;
+  report: CardKey;
   run: {
     rows: ReportRow[];
     base_currency?: string | null;
     timezone?: string | null;
+    excluded_by_permission?: number | null;
   };
   complete: boolean;
   stages: readonly Stage[];
@@ -141,7 +180,16 @@ function ReportBody({
       );
     case "open-deals-per-company":
       return (
-        <CompanyTable rows={run.rows} complete={complete} locale={locale} />
+        <CompanyTable
+          rows={run.rows}
+          complete={complete}
+          withheld={run.excluded_by_permission ?? 0}
+          locale={locale}
+        />
+      );
+    case "pipeline-by-close-month":
+      return (
+        <CloseMonthTable rows={run.rows} locale={locale} baseCurrency={base} />
       );
     case "pipeline-current":
       return (
@@ -206,20 +254,26 @@ function ReportRemainder({
 // own. A single query per screen would show one spinner for both of a
 // section's two results, and one error for either.
 export function ReportCard({
-  report,
+  report: card,
   stages,
   locale,
+  scope,
 }: Readonly<{
-  report: ReportKey;
+  report: CardKey;
   stages: readonly Stage[];
   locale: Locale;
+  // The picker's record scope. Absent, the report measures its own default:
+  // the reader's lens for deals, every readable project for delivery.
+  scope?: AnalyticsScope;
 }>) {
   const t = useT();
   const [explain, setExplain] = useState(false);
   const explainId = useId();
+  const report = reportOf(card);
+  const title = t(CARD_TITLE[card] ?? ENTITY_LABEL_KEY[report]);
 
   const reportQuery = useQuery({
-    queryKey: ["report", report],
+    queryKey: ["report", card, scope ? scopeKey(scope) : null],
     queryFn: async () => {
       return unwrap(
         await api.POST("/reports/{report}", {
@@ -228,8 +282,9 @@ export function ReportCard({
           // (report.go branches on len==0). So the delivery reports' empty plans ask
           // for what their specs declare.
           body: {
-            group_by: REPORT_GROUP_BY[report],
-            aggregates: REPORT_AGGREGATES[report],
+            scope: scope ? reportScope(scope) : undefined,
+            group_by: REPORT_GROUP_BY[card],
+            aggregates: REPORT_AGGREGATES[card],
           },
         }),
       );
@@ -237,7 +292,7 @@ export function ReportCard({
   });
 
   return (
-    <QueryGate query={reportQuery} pendingLabel={t(ENTITY_LABEL_KEY[report])}>
+    <QueryGate query={reportQuery} pendingLabel={title}>
       {(run) => (
         <ExplainFrame
           frame={{
@@ -246,7 +301,7 @@ export function ReportCard({
           }}
         >
           <Panel
-            title={t(ENTITY_LABEL_KEY[report])}
+            title={title}
             // The verb that reveals the derivation under this panel, in the
             // head beside the title it explains. It announces its open state
             // and names what it controls, so a reader who cannot see the panel
@@ -284,15 +339,15 @@ export function ReportCard({
             }
           >
             <PanelBody>
-              {reportSub[report] && (
+              {reportSub[card] && (
                 <PanelIntro>
-                  {t(reportSub[report], { currency: run.base_currency ?? "" })}
+                  {t(reportSub[card], { currency: run.base_currency ?? "" })}
                 </PanelIntro>
               )}
-              <ReportRemainder run={run} label={t(ENTITY_LABEL_KEY[report])}>
+              <ReportRemainder run={run} label={title}>
                 {(complete) => (
                   <ReportBody
-                    report={report}
+                    report={card}
                     run={run}
                     complete={complete}
                     stages={stages}

@@ -51,7 +51,11 @@ type AnalyticsExplanation struct {
 func ExplainAnalyticsCell(
 	ctx context.Context, tx pgx.Tx, in analyticsquery.Explain, floor analyticsquery.Floor,
 ) (AnalyticsExplanation, error) {
-	spec, ok := prebuiltReports[in.Query.Entity]
+	schema, specs, err := AnalyticsSchemaIn(ctx, tx)
+	if err != nil {
+		return AnalyticsExplanation{}, err
+	}
+	spec, ok := specs[in.Query.Entity]
 	if !ok {
 		return AnalyticsExplanation{}, &analyticsquery.RefusalError{
 			Kind:    analyticsquery.RefusalUnsupported,
@@ -74,7 +78,6 @@ func ExplainAnalyticsCell(
 		return AnalyticsExplanation{Withheld: true}, nil
 	}
 
-	schema := AnalyticsSchemaFor(ctx)
 	// The SAME population the count was taken over — the Explain carries the
 	// whole query, scope included. A drill-through narrowed differently from
 	// its own headline opens records the number never counted.

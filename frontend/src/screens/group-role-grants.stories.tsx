@@ -28,7 +28,11 @@ function story(
     });
     return (
       <StoryProviders>
-        <GroupRoleGrants initial={initial} canManage={canManage} />
+        <GroupRoleGrants
+          initial={initial}
+          canManage={canManage}
+          lock={{ disabled: false }}
+        />
       </StoryProviders>
     );
   };
@@ -40,7 +44,7 @@ const meta = {
   title: "Settings/Company/Sign-in and apps/Group role grants",
   component: GroupRoleGrants,
   parameters: { layout: "padded" },
-  args: { initial: {}, canManage: true },
+  args: { initial: {}, canManage: true, lock: { disabled: false } },
 } satisfies Meta<typeof GroupRoleGrants>;
 export default meta;
 type Story = StoryObj<typeof meta>;

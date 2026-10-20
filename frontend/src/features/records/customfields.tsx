@@ -17,6 +17,7 @@ import { Select } from "../../design-system/select";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
+import { ANALYTICS_SCHEMA_KEY } from "../../lib/analyticskeys";
 import { useCan, useCanWrite } from "../../lib/capability";
 import {
   CF_OBJECTS,
@@ -33,7 +34,9 @@ import {
   AuditRail,
   auditState,
   type CustomField,
+  type FieldSetting,
   FieldTable,
+  SETTING_TOAST,
   STAGED_ID,
 } from "./customfields.table";
 import "./customfields.css";
@@ -96,6 +99,7 @@ function stagedField(draft: NewFieldDraft, createdBy: string): CustomField {
         ? cleanOptions(draft.options)
         : null,
     show_in_create: draft.showInCreate,
+    reportable: false,
     created_by: createdBy,
     created_at: now,
     updated_at: now,
@@ -160,6 +164,7 @@ export function CustomFieldsAdmin() {
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["custom-fields", object] });
     queryClient.invalidateQueries({ queryKey: ["cf-audit"] });
+    queryClient.invalidateQueries({ queryKey: ANALYTICS_SCHEMA_KEY });
   };
 
   const create = useMutation({
@@ -229,8 +234,12 @@ export function CustomFieldsAdmin() {
   // straight into the list of the field's own object. A refetch keyed by the
   // object picked now could miss it, and the next flip would send a stale
   // version.
-  const showInCreate = useMutation({
-    mutationFn: async (input: { field: CustomField; show: boolean }) => {
+  const setting = useMutation({
+    mutationFn: async (input: {
+      field: CustomField;
+      setting: FieldSetting;
+      on: boolean;
+    }) => {
       return unwrap(
         await api.PATCH("/custom-fields/{id}", {
           params: {
@@ -239,7 +248,7 @@ export function CustomFieldsAdmin() {
               ? { "If-Match": String(input.field.version) }
               : undefined,
           },
-          body: { show_in_create: input.show },
+          body: { [input.setting]: input.on },
         }),
       );
     },
@@ -253,8 +262,9 @@ export function CustomFieldsAdmin() {
           },
       );
       queryClient.invalidateQueries({ queryKey: ["cf-audit"] });
+      queryClient.invalidateQueries({ queryKey: ANALYTICS_SCHEMA_KEY });
       toast.show(
-        t(input.show ? "cf.shownInCreate" : "cf.hiddenFromCreate", {
+        t(SETTING_TOAST[input.setting][input.on ? "on" : "off"], {
           label: input.field.label,
         }),
       );
@@ -340,11 +350,11 @@ export function CustomFieldsAdmin() {
           meUserId={meUserId}
           onRename={startRename}
           onArchive={setRetiring}
-          onShowInCreate={(field, show) => showInCreate.mutate({ field, show })}
-          savingShowInCreate={
-            showInCreate.isPending
-              ? showInCreate.variables?.field.id
-              : undefined
+          onSetting={(field, name, on) =>
+            setting.mutate({ field, setting: name, on })
+          }
+          savingField={
+            setting.isPending ? setting.variables?.field.id : undefined
           }
         />
       )}

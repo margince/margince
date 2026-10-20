@@ -124,6 +124,30 @@ function forecastStub(opts: StubOpts = {}) {
 }
 
 describe("ForecastView", () => {
+  // The strip lays out one column per child. The records' figure beside a
+  // call is a child of its own, or it wraps into a half row.
+  it("gives the deal records' figure its own slot beside the call", async () => {
+    vi.stubGlobal(
+      "fetch",
+      forecastStub({
+        readings: readings({
+          landing: {
+            amount_minor: 200_000,
+            measure: "manager_call",
+            won_minor: 40_000,
+            remaining_minor: 0,
+            system_minor: 160_000,
+          },
+        }),
+      }),
+    );
+    render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
+    const records = await screen.findByText("From the deal records");
+    const strip = records.closest<HTMLElement>("[style*='--stat-strip-slots']");
+    expect(strip?.style.getPropertyValue("--stat-strip-slots")).toBe("2");
+    expect(strip?.children).toHaveLength(2);
+  });
+
   // The answer names BOTH figures. Shown only the call, a reader cannot tell
   // whether it runs ahead of the evidence or behind it — which is the one
   // thing the sentence exists to say.

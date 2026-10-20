@@ -290,6 +290,9 @@ func AssembleSAR(ctx context.Context, db *database.DB, contactID ids.ContactID) 
 			}
 			*section.dest = rows
 		}
+		if err := appendActivityCustomValues(ctx, tx, pkg.Activities); err != nil {
+			return err
+		}
 
 		_, err = storekit.Audit(ctx, tx, "export", "contact", contactID.UUID, nil, map[string]any{
 			"kind": "sar", "activities": len(pkg.Activities), "raw_rows": len(pkg.RawCapture),

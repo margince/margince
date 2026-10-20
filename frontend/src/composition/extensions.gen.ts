@@ -30,6 +30,18 @@ export type ExtensionVerbDescriptor = {
   readonly rbacObject: string;
 };
 
+/**
+ * One way into a unit's screen from a core screen. Slot and icon are plain
+ * strings here; lib/extensions.ts narrows them to the lists the core renders.
+ */
+export type ExtensionEntryDescriptor = {
+  readonly slot: string;
+  readonly label: `ext${string}`;
+  readonly icon: string;
+  readonly target: string;
+  readonly object: string;
+};
+
 /** One enabled extension unit, as the composed installation publishes it. */
 export type ExtensionDescriptor = {
   readonly name: string;
@@ -39,6 +51,7 @@ export type ExtensionDescriptor = {
    */
   readonly title: `ext${string}.title` | "";
   readonly verbs: readonly ExtensionVerbDescriptor[];
+  readonly entries: readonly ExtensionEntryDescriptor[];
   /**
    * The scope the unit's declared secrets ask for, or "" when it declares
    * none. A unit spanning both scopes is refused at generation time, so this

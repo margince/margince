@@ -31,8 +31,7 @@ describe("the catalog's shape", () => {
   });
 
   it("leaves no group empty", () => {
-    // An empty group renders as a heading with nothing under it. Catching it
-    // here is cheaper than noticing it in a screenshot.
+    // An empty group renders as a heading with nothing under it.
     for (const group of SETTINGS_GROUPS) {
       expect(SETTINGS_PAGES.some((page) => page.group === group)).toBe(true);
     }
@@ -101,6 +100,7 @@ describe("the scope each page declares", () => {
     jurisdiction: "installation",
     // POST /embeddings/reindex rebuilds the installation's embed store.
     "system-health": "installation",
+    configuration: "installation",
     reset: "installation",
 
     // One workspace's state.
@@ -274,6 +274,7 @@ describe("what each page lets a reader change", () => {
     "system-health":
       "any(all(full-seat, any(any(embedding_reindex:update))), all(full-seat, any(any(installation_settings:update))), job_health:read)",
     extensions: "all(full-seat, any(any(role_admin:update)))",
+    configuration: "all(full-seat, any(any(installation_settings:update)))",
     reset: "all(full-seat, system_reset:delete, flag:data_reset_available)",
   };
 

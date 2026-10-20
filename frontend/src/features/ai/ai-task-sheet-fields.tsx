@@ -3,6 +3,7 @@
 
 import { Button, Field } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
+import { describedByIds } from "../../design-system/describedby";
 import { Select } from "../../design-system/select";
 import { formatNumber, identifierNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
@@ -67,6 +68,7 @@ export function TimeoutField({
   value,
   fallback,
   disabled,
+  reasonId,
   onChange,
 }: Readonly<{
   label: string;
@@ -75,6 +77,8 @@ export function TimeoutField({
   value: number;
   fallback: number;
   disabled: boolean;
+  /** The sentence that refuses the field, when one is drawn. */
+  reasonId?: string;
   onChange: (seconds: number) => void;
 }>) {
   const t = useT();
@@ -84,6 +88,10 @@ export function TimeoutField({
       {(control) => (
         <Select
           {...control}
+          aria-describedby={describedByIds(
+            control["aria-describedby"],
+            reasonId,
+          )}
           value={identifierNumber(value)}
           disabled={disabled}
           options={timeoutOptions(bounds, fallback, value).map((s) => ({

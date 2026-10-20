@@ -17,6 +17,7 @@ import { type Locale, useLocale, useT } from "../../i18n";
 import { isEntityKind } from "../../lib/entity";
 import { throwProblem, unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
+import { type AnalyticsScope, scopeQuery } from "./analytics.context";
 import { FirstCheck, Recheck } from "./analytics.forecast.firstcheck";
 
 type InputCheck = components["schemas"]["InputCheck"];
@@ -75,12 +76,19 @@ export function ForecastReview() {
 
 // The open findings this reader may see, under the one key every reader of
 // them shares, so answering one here clears it everywhere it is counted.
-export function useInputChecks(enabled = true) {
+// The findings, for one record scope when given; without one, every finding
+// the reader may see, which is what the forecast review lists.
+export function useInputChecks(enabled = true, scope?: AnalyticsScope) {
+  const query = scope ? scopeQuery(scope) : {};
   return useQuery({
     enabled,
-    queryKey: ["input-checks"],
+    queryKey: ["input-checks", query],
     queryFn: async () => {
-      const data = unwrap(await api.GET("/forecast/assurance/exceptions", {}));
+      const data = unwrap(
+        await api.GET("/forecast/assurance/exceptions", {
+          params: { query },
+        }),
+      );
       return data.data;
     },
   });

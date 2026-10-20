@@ -45,11 +45,14 @@ const namespaces = [
   { prefix: "errorboundary-", home: "app/errorboundary.css" },
   { prefix: "historyfields-", home: "features/records/historyfields.css" },
   { prefix: "leadsignals-", home: "features/leads/leadsignals.css" },
-  { prefix: "library-", home: "screens/library.css" },
+  { prefix: "library-", home: "features/voice-knowledge/library.css" },
   { prefix: "listquery-", home: "components/listquery.css" },
   { prefix: "oauthconsent-", home: "features/automations/oauthconsent.css" },
   { prefix: "offers-", home: "features/deals/offers.css" },
-  { prefix: "partnercommissions-", home: "screens/partnercommissions.css" },
+  {
+    prefix: "partnercommissions-",
+    home: "features/projects/partnercommissions.css",
+  },
   { prefix: "querygate-", home: "design-system/querystates.css" },
   {
     prefix: "relationshiprows-",

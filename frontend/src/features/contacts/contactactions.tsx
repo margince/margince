@@ -4,6 +4,7 @@
 import { CalendarDays, CheckSquare, FileText, Phone } from "lucide-react";
 import type { ReactNode } from "react";
 import { useId } from "react";
+import { ExtensionEntries } from "../../components/extensionentries";
 import { Button, OverflowMenu } from "../../design-system/atoms";
 import { IconAction } from "../../design-system/iconaction";
 import { useT } from "../../i18n";
@@ -158,6 +159,10 @@ export function ContactActions({
       <Button disabled={logPending} reasonId={logRefused} onClick={onAddTask}>
         <CheckSquare aria-hidden="true" /> {t("contact.action.addTask")}
       </Button>
+      <ExtensionEntries
+        slot="record_header.contact"
+        record={{ type: "contact", id: contactId }}
+      />
       {/* Every secondary verb, behind one control. A header that put edit,
           merge and archive beside the daily verbs made the destructive one as
           easy to reach as the routine one, and read as a toolbar rather than

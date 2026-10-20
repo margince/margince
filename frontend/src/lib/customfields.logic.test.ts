@@ -23,6 +23,7 @@ describe("custom-fields logic", () => {
       "lead",
       "project",
       "contract",
+      "activity",
     ] as const;
     expect([...CF_OBJECTS].sort()).toEqual([...admitted].sort());
   });

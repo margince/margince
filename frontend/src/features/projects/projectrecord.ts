@@ -1,0 +1,261 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import { skipToken, useQuery } from "@tanstack/react-query";
+import { api } from "../../api/client";
+import type { Project } from "./projects.form";
+
+/**
+ * One project, whole — for the callers that need more of it than its name.
+ *
+ * `useEntityName` answers the question every EntityRef asks ("what do I call
+ * this id?") and caches a bare string under a key they all share. The composer
+ * needs the project KEY as well, to put in a subject line, and widening that
+ * cache entry would change what every other reference holds. So this is a
+ * second reader with its own key rather than a wider first one.
+ *
+ * Undefined id means no read: a caller with nothing to look up asks nothing.
+ */
+export function useProjectRecord(
+  id?: string,
+  enabled = true,
+): {
+  project: Project | null;
+  settled: boolean;
+} {
+  const query = useQuery({
+    // Under the ["project", id] prefix the edit and archive paths already
+    // invalidate, so a renamed or archived project reaches this reader too. A
+    // key outside that prefix would keep serving the old record for its whole
+    // freshness window.
+    queryKey: ["project", id, "record"],
+    queryFn: id
+      ? async () => {
+          const { data, error } = await api.GET("/projects/{id}", {
+            params: { path: { id } },
+          });
+          // A project the reader may not open is not an error to shout about
+          // here. The caller draws nothing either way, and a throw would take
+          // the composer down over a record it only wanted to name.
+          return error ? null : data;
+        }
+      : skipToken,
+    enabled,
+    staleTime: 60_000,
+  });
+  return {
+    project: query.data ?? null,
+    // Whether the read has finished, however it finished. A caller that states
+    // a filing must not state it while the answer is still on its way.
+    settled: Boolean(id) && !query.isPending,
+  };
+}
+
+/**
+ * The bracketed key a subject carries so the customer's reply files itself.
+ *
+ * The capture side reads `[KEY]` out of an inbound subject (the T1 rung of the
+ * attribution ladder) and matches it case-insensitively against live project
+ * keys. Writing the same shape on the way out is what closes that loop: a
+ * conversation started here comes back filed under the project it started in,
+ * even when the mail thread is broken by a forward or a new subject.
+ *
+ * A project with no key gets no tag rather than an empty `[]`, which the
+ * matcher reads as nothing anyway.
+ */
+export function subjectTag(project: Project | null): string {
+  // An ARCHIVED project's key is not ours to write. A key is unique among LIVE
+  // projects only, so an archived one may already have been taken by a new
+  // project — stamping it would route the customer's reply to whichever project
+  // holds that key now, which is not the one this message is about.
+  if (!project?.key || project.archived_at) {
+    return "";
+  }
+  return `[${project.key}]`;
+}
+
+/**
+ * `subject` carrying `tag` exactly once, at the front.
+ *
+ * Idempotent on purpose, and called on EVERY edit while a project is chosen:
+ * the tag is kept at the front of the subject rather than written once, so
+ * re-applying must neither stack (`[N2P-1] [N2P-1] Re: …`) nor disturb the
+ * text around it. The rest of the subject comes back byte for byte — it is
+ * what the rep is typing, and tidying it would rewrite their words under the
+ * cursor.
+ */
+export function withSubjectTag(subject: string, tag: string): string {
+  if (!tag) {
+    return subject;
+  }
+  return prefixed(stripEveryKeyTag(subject), tag);
+}
+
+/**
+ * `subject` with every bracketed project key removed, wherever it sits.
+ *
+ * Not only the leading one, and not only ours: the inbound matcher reads EVERY
+ * `[...]` group in a subject, and two live keys make the attribution ambiguous
+ * — it resolves to neither. So a subject that already names another project, or
+ * names one mid-line, has to be cleared before this one is written, or the tag
+ * added here silently cancels itself out.
+ *
+ * Only key-SHAPED groups go. `[FYI]` is prose to the matcher and prose here.
+ */
+export function stripEveryKeyTag(subject: string): string {
+  let out = "";
+  let cursor = 0;
+  for (const group of bracketedGroups(subject)) {
+    // A removed tag takes ONE of the spaces that surrounded it with it, so
+    // "Re: [KEY] Hallo" becomes "Re: Hallo" rather than "Re:  Hallo". The rest
+    // of the line is returned byte for byte: this runs over a subject the rep
+    // is typing, and a global whitespace collapse would rewrite their spacing —
+    // eating the second space of "Re:  Kurzer" that they put there on purpose.
+    // Exactly ONE space on each side is eligible — the separator this module
+    // writes. A second space is the rep's own and stays, and a separator the
+    // group before this one already took is gone: two adjacent tags do not
+    // share one.
+    const leading = group.start > cursor && subject[group.start - 1] === " ";
+    const trailing = subject[group.end] === " ";
+    const from = leading ? group.start - 1 : group.start;
+    out += subject.slice(cursor, from);
+    cursor = trailing ? group.end + 1 : group.end;
+    if (!keyShaped(group.inner)) {
+      out += subject.slice(from, cursor);
+      continue;
+    }
+    // Keep one separator when the tag sat BETWEEN two things; keep none when it
+    // sat at either end.
+    if (leading && trailing) {
+      out += " ";
+    }
+  }
+  return out + subject.slice(cursor);
+}
+
+/** One `[...]` group: where it sits in the subject, and what it holds. */
+type BracketGroup = Readonly<{
+  /** Index of the `[`. */
+  start: number;
+  /** Index just past the `]`. */
+  end: number;
+  /** The text between the brackets, untrimmed. */
+  inner: string;
+}>;
+
+/**
+ * Every `[...]` group in `subject`, read the way the capture side's own
+ * tokenizer reads it: from each `[` to the NEXT `]`, non-overlapping, and an
+ * unclosed `[` ends the scan — a subject trailing off mid-marker names no key,
+ * and treating the rest of the line as one would turn a stray `[` into a match.
+ *
+ * A single pass rather than a regular expression, and that is the property to
+ * keep. A bracket matcher of the form ` ?\[[^\]]*\] ?` re-reads the tail of the
+ * line at every `[` it then fails to close, so a subject whose brackets all sit
+ * after its last `]` costs time quadratic in the subject's length — and a
+ * subject is attacker-supplied text, reaching this composer through the reply it
+ * seeds. Two `indexOf` walks reach the end of the line once.
+ */
+function bracketedGroups(subject: string): BracketGroup[] {
+  const groups: BracketGroup[] = [];
+  let open = subject.indexOf("[");
+  while (open >= 0) {
+    const shut = subject.indexOf("]", open + 1);
+    if (shut < 0) {
+      return groups;
+    }
+    groups.push({
+      start: open,
+      end: shut + 1,
+      inner: subject.slice(open + 1, shut),
+    });
+    open = subject.indexOf("[", shut + 1);
+  }
+  return groups;
+}
+
+/**
+ * `subject` with a leading `tag` removed, if it carries one — along with the
+ * ONE space this module puts after it, and no more.
+ *
+ * What Margince manages is the tag plus a single separator. Everything after
+ * that is the rep's, including a second space they typed themselves: stripping
+ * every leading space would take `[KEY]  Re:` down to `Re:` and quietly change
+ * what they wrote.
+ */
+export function stripSubjectTag(subject: string, tag: string): string {
+  if (!tag || !subject.startsWith(tag)) {
+    return subject;
+  }
+  const rest = subject.slice(tag.length);
+  return rest.startsWith(" ") ? rest.slice(1) : rest;
+}
+
+/**
+ * `body` behind `tag`, with the one separator this module owns.
+ *
+ * `body` arrives already stripped of the tag and its separator, so it is used
+ * verbatim — leading spaces included, because those are the rep's.
+ */
+function prefixed(body: string, tag: string): string {
+  return body === "" ? tag : `${tag} ${body}`;
+}
+
+/**
+ * Whether one bracketed token could be a project key — the frontend reading of
+ * the rule the capture side applies (`project_key_shape`): letter-led, then
+ * letters, digits, underscores and hyphens, bounded in length. A bare number is
+ * deliberately excluded, so `[2026]` and `[4711]` stay prose.
+ *
+ * The UNDERSCORE is part of that constraint, and a shape narrower here than the
+ * CHECK is what this whole class of divergence costs: a project keyed
+ * `alpha_two` is a key the matcher reads, so leaving its tag standing while ours
+ * goes in beside it hands the message two live keys, and it files under neither.
+ */
+function keyShaped(token: string): boolean {
+  return /^[a-z][a-z0-9_-]{1,23}$/i.test(token.trim());
+}
+
+/** Where a send files, and what the composer should say about it. */
+export type Filing =
+  /** Nothing to say: no project is in reach. */
+  | { kind: "none" }
+  /**
+   * One project, derived rather than chosen — the thread's own, or the deal's
+   * when the thread carries none. The composer STATES it and offers to opt out.
+   */
+  | { kind: "derived"; projectId: string; from: "thread" | "deal" }
+  /** Several in reach and none derivable: the rep is asked. */
+  | { kind: "choose" };
+
+/**
+ * Which project a send files under, before the rep touches anything.
+ *
+ * The order is the one the capture ladder already uses on the way in, so a
+ * message this composer sends lands where a message it captured would: the
+ * thread's own filing wins, because a conversation is about one body of work
+ * and a sibling already settled it. A deal's project is the fallback for a
+ * thread that predates it — the common case for a deal whose project was
+ * attached after the conversation started.
+ *
+ * `choose` is reserved for genuine ambiguity: several projects in reach and
+ * nothing naming one of them. A single reachable project is not ambiguous, and
+ * asking about it would be a question with one answer.
+ */
+export function filingFor(input: {
+  threadProjectId?: string | null;
+  dealProjectId?: string | null;
+  reachable: readonly { id: string }[];
+}): Filing {
+  if (input.threadProjectId) {
+    return {
+      kind: "derived",
+      projectId: input.threadProjectId,
+      from: "thread",
+    };
+  }
+  if (input.dealProjectId) {
+    return { kind: "derived", projectId: input.dealProjectId, from: "deal" };
+  }
+  return input.reachable.length > 1 ? { kind: "choose" } : { kind: "none" };
+}

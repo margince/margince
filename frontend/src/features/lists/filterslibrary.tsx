@@ -35,7 +35,7 @@ import {
   pillCounts,
   typeOf,
   visibleGroups,
-} from "../../screens/library";
+} from "../voice-knowledge/library";
 import {
   type LibraryAnchor,
   type LibraryType,
@@ -54,7 +54,7 @@ import {
   useCaptions,
   useLibraryReads,
 } from "./filterslibrary.reads";
-import "../../screens/library.css";
+import "../voice-knowledge/library.css";
 import { useListsAvailable } from "../../lib/lists.queries";
 import {
   LibraryTable,

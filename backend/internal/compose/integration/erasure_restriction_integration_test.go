@@ -27,10 +27,10 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -268,7 +268,7 @@ func TestExpiredRestrictionCompletesTheSuspendedErasureUnderRetainOnly(t *testin
 		t.Fatalf("erasing the subject → %v", err)
 	}
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		_, err := settings.SeedValue(context.Background(), tx, privacy.RetainOnly, true)
+		_, err := config.SeedTx(context.Background(), tx, nil, privacy.RetainOnly, true)
 		return err
 	}); err != nil {
 		t.Fatal(err)

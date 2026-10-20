@@ -14,6 +14,8 @@ the same rules as its users.
 
 The product site is [margince.com](https://margince.com). This repository holds the source code.
 
+Margince is source-available, not open source. [LICENSING.md](LICENSING.md) explains what you may do with it.
+
 ## Use it
 
 The [handbook](docs/handbook/README.md) explains the app for the teams who use it. It has no code.
@@ -83,8 +85,9 @@ for it.
 
 ## License
 
-Margince uses the Business Source License 1.1 ([LICENSE](LICENSE)). The source is public. You may read,
-run and change it. [LICENSING.md](LICENSING.md) explains the license, and why you accept [CLA.md](CLA.md) to send code.
+Margince is source-available under the Business Source License 1.1 ([LICENSE](LICENSE)). The source is
+public. You may read, run and change it. [LICENSING.md](LICENSING.md) explains the license, and why you
+accept [CLA.md](CLA.md) to send code.
 
 - You may use it free in production for your own company, up to 10 seats. The limit is for all your
   installations and the companies you own or that own you. A seat is a named user. AI agents and

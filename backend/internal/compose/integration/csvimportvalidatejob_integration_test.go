@@ -26,7 +26,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/jobtest"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
-	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 )
 
@@ -173,7 +172,7 @@ func testRunnerApp(t *testing.T) (*apptest.AppEnv, *jobs.Runner) {
 	e := apptest.SetupAppWithOptions(t, compose.WithBlobstore(store))
 	e.BootstrapWorkspace(t)
 	runner, _, _ := jobtest.StartTestJobRunner(t, e.Pool, compose.JobRunnerConfig{
-		Blobstore: store, ImportUploadCap: deployconfig.Config{}.EffectiveUploads().CSVImport,
+		Blobstore: store, ImportUploadCap: compose.DefaultUploadLimits().CSVImport,
 	})
 	return e, runner
 }

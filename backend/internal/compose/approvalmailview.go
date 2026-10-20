@@ -23,7 +23,8 @@ func refreshApprovalNotice(ctx context.Context, pool *pgxpool.Pool, attempt noti
 		}
 		return attempt, true, nil
 	}
-	approval, err := approvals.NewService(InstallationDB(pool)).Get(ctx, *attempt.ApprovalID)
+	service := NewApprovalsService(InstallationDB(pool))
+	approval, err := service.Get(ctx, *attempt.ApprovalID)
 	if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
 		return attempt, false, nil
 	}
@@ -32,6 +33,16 @@ func refreshApprovalNotice(ctx context.Context, pool *pgxpool.Pool, attempt noti
 	}
 	if !approval.PendingAt(now) {
 		return attempt, false, nil
+	}
+	current, err := service.GetWire(ctx, *attempt.ApprovalID)
+	if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
+		return attempt, false, nil
+	}
+	if err != nil {
+		return attempt, false, err
+	}
+	if approvals.PreviewRefusal(current.Preview) != nil {
+		return attempt, false, nil //nolint:nilerr // A refused preview suppresses mail; delivery itself has not failed.
 	}
 	if approval.Summary != nil && *approval.Summary != "" {
 		attempt.Notice.Subject = *approval.Summary

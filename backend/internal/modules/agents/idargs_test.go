@@ -301,7 +301,7 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	RegisterAssuranceTool(r, func(context.Context) (json.RawMessage, error) {
 		return nil, errSeamReached
 	})
-	RegisterInputChecksTool(r, func(context.Context) (json.RawMessage, error) {
+	RegisterInputChecksTool(r, func(context.Context, InputChecksArgs) (json.RawMessage, error) {
 		return nil, errSeamReached
 	})
 	RegisterCoverageTool(r, func(context.Context) (json.RawMessage, error) {

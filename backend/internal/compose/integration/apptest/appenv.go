@@ -364,7 +364,7 @@ func BootstrapWorkspaceSession(t *testing.T, e *AppEnv, workspaceName, adminEmai
 	if err := os.WriteFile(pwFile, []byte(operatorSupplied), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	cfg := deployconfig.Config{
+	cfg := deployconfig.Bootstrap{
 		Version:   1,
 		Workspace: deployconfig.Workspace{Name: workspaceName},
 		BootstrapAdmin: &deployconfig.BootstrapAdmin{

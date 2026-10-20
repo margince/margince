@@ -142,6 +142,18 @@ function code(path: string, source: string): string {
 // output moved with the machine it ran on would assert nothing.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "features/capture/connectors.historybaseline.stories.tsx",
+    why: "A mailbox history baseline stores the zone its owner picked the date in; the fixture carries that stored zone.",
+  },
+  {
+    file: "features/capture/connectors.historybaseline.test.tsx",
+    why: "A mailbox history baseline stores the zone its owner picked the date in; the fixture carries that stored zone.",
+  },
+  {
+    file: "features/automations/approvalpreview.test.ts",
+    why: "The preview must use the card's supplied date formatter and zone in every locale, independent of the test machine's zone.",
+  },
+  {
     file: "features/analytics/reporting.fixtures.ts",
     why: "The report API fixture carries the installation timezone so schedule and frozen-period rendering remain independent of the browser zone.",
   },
@@ -206,7 +218,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Proves a date-only provisional close keeps its day east and west of UTC.",
   },
   {
-    file: "screens/projectheaderfacts.test.tsx",
+    file: "features/projects/projectheaderfacts.test.tsx",
     why: "The head's target-end cell prints a date and the count of mornings to it, and the case is that the two name the SAME day — which needs a record zone far enough east of UTC that they would not. It is supplied through RecordZoneProvider, the seam the product itself reads; the other cases pass UTC so the count in the assertion is the one a reader on that day sees.",
   },
   {
@@ -386,7 +398,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Pins viewerZone()'s answer and its UTC fallback by pretending to be in a named zone.",
   },
   {
-    file: "screens/adddocument.test.tsx",
+    file: "features/voice-knowledge/adddocument.test.tsx",
     why: "Installation-settings fixture: the company timezone the document form reads back.",
   },
   {
@@ -406,11 +418,11 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Proves the record/viewer split on one row, which only works by naming both zones and a boundary-straddling instant.",
   },
   {
-    file: "screens/contractform.currency.test.tsx",
+    file: "features/projects/contractform.currency.test.tsx",
     why: "Installation-settings fixture: the company timezone the contract form reads back.",
   },
   {
-    file: "screens/contractform.customseed.test.tsx",
+    file: "features/projects/contractform.customseed.test.tsx",
     why: "The same installation-settings fixture, behind the contract form's custom-field seeding cases.",
   },
   {

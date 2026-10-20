@@ -4,9 +4,14 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
+import { formatMoneyCompact } from "../../format/format";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
-import { LandingCard, SufficiencyCard } from "./analytics.forecast.landing";
+import {
+  LandingCard,
+  RecordsLandingCard,
+  SufficiencyCard,
+} from "./analytics.forecast.landing";
 
 type Readings = components["schemas"]["ForecastReadings"];
 type Landing = NonNullable<Readings["landing"]>;
@@ -188,5 +193,17 @@ describe("whether the open deals support the reference", () => {
       screen.getByText(en["forecast.pipelineAbsent.insufficient_history"]),
     ).toBeTruthy();
     expect(screen.queryByText(/of the deal value this needs/i)).toBeNull();
+  });
+});
+
+describe("a manager's call beside the records", () => {
+  it("shows the deal records' projection as its own card", () => {
+    draw(
+      <RecordsLandingCard systemMinor={650_00} currency="EUR" locale="en" />,
+    );
+    expect(screen.getByText(en["forecast.landingRecords"])).toBeTruthy();
+    expect(
+      screen.getByText(formatMoneyCompact(650_00, "EUR", "en")),
+    ).toBeTruthy();
   });
 });

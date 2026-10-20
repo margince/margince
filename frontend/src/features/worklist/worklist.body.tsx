@@ -5,6 +5,7 @@ import { PageZones } from "../../design-system/pagezones";
 import { Panel } from "../../design-system/panel";
 import { useT } from "../../i18n";
 import { useMemberNames } from "../../lib/membernames";
+import { represented } from "../../lib/worklistunits";
 import {
   bandSections,
   canReportEmptyBands,
@@ -105,12 +106,20 @@ export function WorklistBody({
   // derived here from `source` or `category` would drift from those figures.
   const today = sellerWork(queue);
   const review = reviewWork(queue);
-  // How much review work the day holds that this panel has not loaded.
+  // How much review work the day holds that this panel has not loaded, in
+  // items: `buckets.review` counts a folded group as its members.
+  const reviewItems = represented(review);
   const reviewMissing = reviewShortfall(
-    review.length,
+    reviewItems.items,
     day.summary.buckets?.review,
+    reviewItems.floor,
+    filter,
   );
   const selection = useWorklistPicks(queue, `${scope}/${filter}/${owner}`);
+  const openOwnerDay = (next: string) => {
+    onFilter("all");
+    onOwner(next);
+  };
 
   const rowProps: RowContext = {
     // Numbered within the panel each row is drawn in, not across the day.
@@ -148,7 +157,7 @@ export function WorklistBody({
         <div className="worklist-lanes">
           <WorklistHeader
             day={day}
-            loaded={queue.length}
+            loaded={queue}
             scope={scope}
             filter={filter}
             owner={owner}
@@ -186,7 +195,7 @@ export function WorklistBody({
           <WalkNotice walk={walk} onRefresh={onRefresh} />
           {/* A day cannot read as clear while something that would have filled it
           was never read. */}
-          <DayUnread day={day} />
+          <DayUnread day={day} loaded={queue} />
           <WorklistBulkBar selection={selection} />
           {queue.length === 0 ? (
             // One line, not a panel. No card is drawn to report a zero.
@@ -203,7 +212,13 @@ export function WorklistBody({
             // you" read as "you have no work" to a rep who could see three tasks
             // on the company beside it. The page offered nothing to reconcile them.
             <p className="t-body worklist-clear">
-              {clearSentence(dayPartlyRead(day), filter, colleague, t)}
+              {clearSentence(
+                dayPartlyRead(day, queue),
+                filter,
+                colleague,
+                t,
+                hasMore,
+              )}
             </p>
           ) : (
             // The queue, and beside it what the selected row is about.
@@ -280,10 +295,11 @@ export function WorklistBody({
             items={review}
             shortfall={reviewMissing}
             more={hasMore}
+            changed={Boolean(walk?.changed_since_snapshot)}
             rows={rowProps}
           />
           {/* One way on for the whole day, below both panels it fills. */}
-          {queue.length > 0 && hasMore && (
+          {hasMore && (
             <LoadMoreOfTheDay
               pending={loadingMore}
               failed={moreFailed}
@@ -297,7 +313,7 @@ export function WorklistBody({
             day.scope_options.includes("team") && (
               <TeamExceptionsPanel
                 enabled={day.scope_options.includes("team")}
-                onOwner={onOwner}
+                onOwner={openOwnerDay}
               />
             )}
           {owner === "" &&
@@ -305,8 +321,11 @@ export function WorklistBody({
             scope !== "unassigned" &&
             day.scope_options.includes("team") && (
               <TeamBoard
-                onOwner={onOwner}
-                onUnassigned={() => onScope("unassigned")}
+                onOwner={openOwnerDay}
+                onUnassigned={() => {
+                  onFilter("all");
+                  onScope("unassigned");
+                }}
               />
             )}
           {/* This diagnostic counts all readable history, not personal obligations. */}

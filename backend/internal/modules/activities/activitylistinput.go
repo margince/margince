@@ -202,4 +202,11 @@ type ListActivitiesInput struct {
 	// row is reached, and the reader who most needs to see next week's deadline
 	// is exactly the reader who never does.
 	OpenAndDueAfter *time.Time
+	// CustomFilters are the request's cf_ equality filters. They read content, so
+	// a row whose content the caller may not read drops out.
+	CustomFilters map[string]string
+	// Columns are the active custom fields the filters are checked against and
+	// the page is filled from. The store sets them; a composite page reads them
+	// with ActiveActivityColumns before its transaction opens. Zero fills nothing.
+	Columns CustomColumns
 }

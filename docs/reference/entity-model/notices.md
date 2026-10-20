@@ -42,7 +42,9 @@ The 3 tables owned by `notices`, as the migrations build them. [Back to the enti
 
 **Indexes**
 
+- `notice_dedupe_key`: `btree (dedupe_key) WHERE (dedupe_key IS NOT NULL)`
 - `notice_history`: `btree (recipient_user_id, created_at DESC, id DESC)`
+- `notice_outstanding_kind_id`: `btree (kind, id) WHERE (retracted_at IS NULL)`
 - `notice_pkey`: `unique, btree (id)`
 - `notice_unread`: `btree (recipient_user_id, created_at DESC) WHERE (read_at IS NULL)`
 - `uq_notice_dedupe`: `unique, btree (recipient_user_id, dedupe_key) WHERE (dedupe_key IS NOT NULL)`

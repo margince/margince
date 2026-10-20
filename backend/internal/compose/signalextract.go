@@ -123,7 +123,7 @@ type SignalExtractor struct {
 func NewSignalExtractor(pool *pgxpool.Pool, brain completer, now func() time.Time, log *slog.Logger) *SignalExtractor {
 	return &SignalExtractor{
 		pool: pool, brain: brain, now: now, log: log,
-		dispatch: NewCommitmentDispatcher(pool, newApprovalsService(InstallationDB(pool))),
+		dispatch: NewCommitmentDispatcher(pool, NewApprovalsService(InstallationDB(pool))),
 		messages: activities.NewStore(InstallationDB(pool)),
 	}
 }

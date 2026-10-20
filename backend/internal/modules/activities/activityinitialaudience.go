@@ -20,6 +20,7 @@ import (
 // not describe this new task's audience. Its source link records the derivation.
 func recordInitialActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in LogActivityInput) error {
 	after := map[string]any{fieldKind: in.Kind, fieldSubject: in.Subject}
+	maps.Copy(after, in.CustomFields)
 	if len(in.audienceMembers) > 0 {
 		args := []any{id}
 		if result, err := tx.Exec(ctx, fmt.Sprintf(`UPDATE activity SET audience = 'selected' WHERE id = $%d AND archived_at IS NULL AND restricted_at IS NULL`, len(args)), args...); err != nil {

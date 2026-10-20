@@ -99,3 +99,15 @@ func (h dataResetHandlers) sealedRefsToPurge(ctx context.Context, counts *resetC
 	}
 	return refs, nil
 }
+
+// sealedRefKeys are the settings keys whose row is a vault ref: every stored
+// secret, which the registry holds sealed, and each deployment credential.
+func sealedRefKeys() []string {
+	keys := deploymentSecretRefKeys()
+	for _, s := range StoredSettings() {
+		if s.Secret() {
+			keys = append(keys, s.Key())
+		}
+	}
+	return keys
+}

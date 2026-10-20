@@ -347,9 +347,8 @@ func (s *Store) applyMoneyInvariants(ctx context.Context, tx pgx.Tx,
 	}
 	if string(current.Status) != string(DealOpen) && resultingAmount != nil && (amountMoved || currencyMoved) {
 		// deal_closed_at guarantees ClosedAt on a non-open row.
-		rateBefore, rateDateBefore := frozenBefore(current)
 		if err := s.freezeBaseRate(ctx, tx, p, current.Id, string(*resultingCurrency),
-			*resultingAmount, *current.ClosedAt, rateBefore, rateDateBefore); err != nil {
+			*resultingAmount, *current.ClosedAt); err != nil {
 			return fmt.Errorf("re-freeze fx for closed deal: %w", err)
 		}
 	}

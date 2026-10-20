@@ -219,6 +219,14 @@ it("counts the queue the button actually opens", async () => {
           ? {
               ...readingsDay({}, [], undefined, { total: 42 }),
               scope: "team",
+              counts: [
+                {
+                  category: "tasks",
+                  considered: 42,
+                  shown: 0,
+                  more_available: false,
+                },
+              ],
             }
           : readingsDay({}, [taskRow("t", "Call Weber")], undefined, {
               total: 3,
@@ -240,3 +248,34 @@ it("counts the queue the button actually opens", async () => {
     ).toContain("42");
   });
 });
+
+it.each(["failed", "bounded", "scope"])(
+  "does not claim an exact drawer total for %s coverage",
+  async (gap) => {
+    const day = readingsDay({}, [], undefined, { total: 42 });
+    day.counts = [
+      {
+        category: "tasks",
+        considered: 42,
+        shown: 0,
+        more_available: gap === "bounded",
+      },
+    ];
+    if (gap === "failed")
+      day.sources_unavailable = [
+        { source: "task", reason: "failed", category: "tasks" },
+      ];
+    if (gap === "scope") day.scope_truncated = true;
+    stubApi({ "GET /worklist": () => jsonResponse(day) });
+    const { client } = render(<BriefScreen />);
+    const toggle = await screen.findByRole("button", {
+      name: en["brief.queue.show"],
+    });
+    await waitFor(() =>
+      expect(
+        client.getQueryState(["worklist", "mine", "all", ""])?.status,
+      ).toBe("success"),
+    );
+    expect(toggle.querySelector(".optioncount")).toBeNull();
+  },
+);

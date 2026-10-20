@@ -21,7 +21,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/platform/config"
 )
 
 // TaskOverridesKey is the settings key the overrides are stored under.
@@ -32,11 +32,11 @@ const TaskOverridesKey = "ai.task_overrides"
 type TaskOverride struct {
 	// Thinking is the exact level every site of the task is sent at. It
 	// outranks the binding's level and the site's floor.
-	Thinking string `json:"thinking,omitempty"`
+	Thinking string `json:"thinking,omitempty" yaml:"thinking"`
 	// DecisionTimeoutMs bounds the decision-model call of a deciding task.
-	DecisionTimeoutMs int `json:"decision_timeout_ms,omitempty"`
+	DecisionTimeoutMs int `json:"decision_timeout_ms,omitempty" yaml:"decision_timeout_ms"`
 	// AttemptTimeoutMs bounds each model call on the task's ladder.
-	AttemptTimeoutMs int `json:"attempt_timeout_ms,omitempty"`
+	AttemptTimeoutMs int `json:"attempt_timeout_ms,omitempty" yaml:"attempt_timeout_ms"`
 }
 
 // TaskOverrides holds one override per task that has one, keyed by task.
@@ -60,13 +60,14 @@ var TaskThinkingLevels = []string{effortMinimal, effortLow, effortMedium, effort
 // TaskOverridesSetting stores the overrides installation-wide, under the same
 // object as the binding: deciding how an installation's requests are sent is
 // the routing admin's decision.
-var TaskOverridesSetting = settings.Define[TaskOverrides](
-	TaskOverridesKey,
-	routingSettingsObject,
-	"update",
-	TaskOverrides{},
-	validateTaskOverrides,
-).AsInstallationIdentity()
+var TaskOverridesSetting = config.DefineStored(config.Spec[TaskOverrides]{
+	Key:      "ai.task_overrides",
+	Env:      "MARGINCE_AI_TASK_OVERRIDES",
+	Type:     config.Struct[TaskOverrides](),
+	Default:  config.Some(TaskOverrides{}),
+	Validate: validateTaskOverrides,
+	Doc:      "Each task's thinking level and timeouts, as the JSON object PUT /ai/task-overrides takes. Unset keeps the product's values.",
+}, config.Store{RBACObject: routingSettingsObject, AuditVerb: settingsAuditVerb, SurvivesDataReset: true})
 
 // validateTaskOverrides refuses each bad field by its path, `<task>.<field>`.
 //
