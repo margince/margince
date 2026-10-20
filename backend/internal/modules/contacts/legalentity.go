@@ -105,9 +105,7 @@ func readLegalEntity(ctx context.Context, tx pgx.Tx, id ids.LegalEntityID) (Lega
 }
 
 // ResolveEntityIdentity resolves one entity's identity inside the caller's
-// transaction. It is the only reader of an entity's identity: a booking page,
-// a signature and an offer all resolve it here, so the default entity reads the
-// anchor company in one place.
+// transaction, with the default entity's fields read from the anchor company.
 //
 // No grant is asked, for the reason ConfirmedIssuerLegalName gives: what the
 // installation calls itself on its own documents is a fact every seat already

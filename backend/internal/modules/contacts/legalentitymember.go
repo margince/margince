@@ -18,6 +18,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -69,6 +70,9 @@ func (s *Store) AssignLegalEntityMember(ctx context.Context, id ids.LegalEntityI
 			return err
 		}
 	}
+	if err := httperr.RequireBodyID("user_id", user.UUID); err != nil {
+		return err
+	}
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return err
@@ -88,7 +92,7 @@ func (s *Store) AssignLegalEntityMember(ctx context.Context, id ids.LegalEntityI
 		if err := writeMembership(ctx, tx, id, user, by); err != nil {
 			return err
 		}
-		auditID, err := storekit.Audit(ctx, tx, actionAssign, legalEntityTable, id.UUID,
+		auditID, err := storekit.Audit(ctx, tx, actionAssign, legalEntityObject, id.UUID,
 			map[string]any{"user_id": user, "legal_entity_id": previous},
 			map[string]any{"user_id": user, "legal_entity_id": id})
 		if err != nil {

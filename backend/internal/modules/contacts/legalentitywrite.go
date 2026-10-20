@@ -80,7 +80,7 @@ func (s *Store) CreateLegalEntity(ctx context.Context, in LegalEntityInput) (Leg
 		if err != nil {
 			return fmt.Errorf("insert legal entity: %w", err)
 		}
-		auditID, err := storekit.Audit(ctx, tx, actionCreate, legalEntityTable, id, nil, after)
+		auditID, err := storekit.Audit(ctx, tx, actionCreate, legalEntityObject, id, nil, after)
 		if err != nil {
 			return err
 		}
@@ -127,7 +127,7 @@ func (s *Store) UpdateLegalEntity(ctx context.Context, id ids.LegalEntityID, in 
 		} else if err != nil {
 			return err
 		}
-		auditID, err := storekit.Audit(ctx, tx, actionUpdate, legalEntityTable, id.UUID, p.Before(), p.After())
+		auditID, err := storekit.Audit(ctx, tx, actionUpdate, legalEntityObject, id.UUID, p.Before(), p.After())
 		if err != nil {
 			return err
 		}
@@ -213,7 +213,7 @@ func (s *Store) ArchiveLegalEntity(ctx context.Context, id ids.LegalEntityID) (L
 		if _, err := tx.Exec(ctx, `UPDATE legal_entity SET archived_at = now() WHERE id = $1`, id); err != nil {
 			return fmt.Errorf("archive legal entity: %w", err)
 		}
-		auditID, err := storekit.Audit(ctx, tx, actionArchive, legalEntityTable, id.UUID, nil, nil)
+		auditID, err := storekit.Audit(ctx, tx, actionArchive, legalEntityObject, id.UUID, nil, nil)
 		if err != nil {
 			return err
 		}

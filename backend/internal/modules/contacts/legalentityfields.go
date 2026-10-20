@@ -8,7 +8,6 @@ package contacts
 // table, so a field cannot be checked on one path and not the other.
 
 import (
-	"math/big"
 	"regexp"
 	"strings"
 	"unicode/utf8"
@@ -125,7 +124,7 @@ var (
 	bicShape  = regexp.MustCompile(`^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$`)
 )
 
-// cleanIBAN removes the spaces people type and refuses a number whose check
+// cleanIBAN removes the spaces a reader types and refuses a number whose check
 // digits do not match (ISO 13616 mod 97), which catches a mistyped digit
 // before it reaches an offer.
 func cleanIBAN(raw string) (string, error) {
@@ -137,17 +136,19 @@ func cleanIBAN(raw string) (string, error) {
 	return iban, nil
 }
 
+// ibanChecksumHolds folds the rearranged number into a running remainder, a
+// digit at a time, so no value ever grows past three digits.
 func ibanChecksumHolds(iban string) bool {
-	var digits strings.Builder
+	remainder := 0
 	for _, r := range iban[4:] + iban[:4] {
+		value := int(r - '0')
 		if r >= 'A' && r <= 'Z' {
-			digits.WriteString(big.NewInt(int64(r - 'A' + 10)).String())
-			continue
+			value = int(r-'A') + 10
+			remainder *= 10
 		}
-		digits.WriteRune(r)
+		remainder = (remainder*10 + value) % 97
 	}
-	n, ok := new(big.Int).SetString(digits.String(), 10)
-	return ok && new(big.Int).Mod(n, big.NewInt(97)).Int64() == 1
+	return remainder == 1
 }
 
 func cleanBIC(raw string) (string, error) {

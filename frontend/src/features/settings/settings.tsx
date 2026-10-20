@@ -57,6 +57,7 @@ import { AcquisitionSourcesCard } from "./acquisitionsources";
 import { FinanceSourceCard } from "./financesource";
 import { FollowUpSettingsCard } from "./followupsettings";
 import { InstallationConfigurationPage } from "./installation-configuration";
+import { LegalEntitiesCard } from "./legalentities";
 import { LicenseCard } from "./license";
 import { MailSharingCard, MailSharingPostureRow } from "./mail-sharing";
 import { NotificationSettingsCard } from "./notification-settings";
@@ -144,6 +145,7 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
       return (
         <>
           <CompanyContextCard />
+          <LegalEntitiesCard />
           <InstallationSettingsCard />
           <FxRatesCard />
           <FollowUpSettingsCard />

@@ -68,7 +68,7 @@ func (s *Store) writeLegalEntityLogo(ctx context.Context, id ids.LegalEntityID, 
 				return err
 			}
 		}
-		auditID, err := storekit.Audit(ctx, tx, actionUpdate, legalEntityTable, id.UUID,
+		auditID, err := storekit.Audit(ctx, tx, actionUpdate, legalEntityObject, id.UUID,
 			map[string]any{"logo_object_key": superseded}, map[string]any{"logo_object_key": objectKey})
 		if err != nil {
 			return err
