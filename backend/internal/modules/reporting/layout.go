@@ -4,11 +4,14 @@
 package reporting
 
 import (
+	"bytes"
+	"encoding/json"
 	"regexp"
 	"slices"
 	"unicode/utf8"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // cardID is the short id a client mints for a card, the contract's pattern.
@@ -24,8 +27,9 @@ func deriveLayoutBlocks(selection *crmcontracts.ReportingSelection) {
 	blocks := []crmcontracts.ReportingBlockKind{}
 	for _, section := range *selection.Layout {
 		for _, card := range section.Cards {
-			if !slices.Contains(blocks, card.Kind) {
-				blocks = append(blocks, card.Kind)
+			kind := crmcontracts.ReportingBlockKind(card.Kind)
+			if card.Kind != questionKind && !slices.Contains(blocks, kind) {
+				blocks = append(blocks, kind)
 			}
 		}
 	}
@@ -40,6 +44,10 @@ var oneChartKinds = []crmcontracts.ReportingBlockKind{reportingOwnerAttainment, 
 // metric_reading is the metric details table, which the page always draws
 // below the charts. It is never a chart, so no card can place it.
 const unplacedKind crmcontracts.ReportingBlockKind = "metric_reading"
+
+// questionKind is a card that asks a custom analytics question. It is not a
+// chart of the evaluation, so it adds no block.
+const questionKind crmcontracts.ReportingCardKind = "question"
 
 // cardTarget is what one card draws. Two cards with one target draw the same
 // chart twice, which no reader asked for.
@@ -76,6 +84,12 @@ func validateLayout(
 			if card.Width != crmcontracts.ReportingCardWidthFull && card.Width != crmcontracts.ReportingCardWidthHalf {
 				return refuse("selection.layout", "invalid", "make a card full or half width")
 			}
+			if card.Kind == questionKind || card.Question != nil {
+				if err := validateQuestionCard(card); err != nil {
+					return err
+				}
+				continue
+			}
 			target, err := cardTargetOf(card, metricBlocks)
 			if err != nil {
 				return err
@@ -95,21 +109,22 @@ func cardTargetOf(
 	card crmcontracts.ReportingCard,
 	metricBlocks map[crmcontracts.ReportingMetricID][]crmcontracts.ReportingBlockKind,
 ) (cardTarget, error) {
-	if card.Kind == unplacedKind {
+	kind := crmcontracts.ReportingBlockKind(card.Kind)
+	if kind == unplacedKind {
 		return cardTarget{}, refuse("selection.layout", "invalid", "the metric details table is not a card")
 	}
-	if card.Metric != nil && slices.Contains(oneChartKinds, card.Kind) {
+	if card.Metric != nil && slices.Contains(oneChartKinds, kind) {
 		return cardTarget{}, refuse("selection.layout", "invalid", "this chart covers every selected metric, so place it without one")
 	}
 	if card.Metric != nil {
-		if !slices.Contains(metricBlocks[*card.Metric], card.Kind) {
+		if !slices.Contains(metricBlocks[*card.Metric], kind) {
 			return cardTarget{}, refuse("selection.layout", "invalid", "place a chart of a selected metric that has it")
 		}
-		return cardTarget{kind: card.Kind, metric: *card.Metric}, nil
+		return cardTarget{kind: kind, metric: *card.Metric}, nil
 	}
 	for _, blocks := range metricBlocks {
-		if slices.Contains(blocks, card.Kind) {
-			return cardTarget{kind: card.Kind}, nil
+		if slices.Contains(blocks, kind) {
+			return cardTarget{kind: kind}, nil
 		}
 	}
 	return cardTarget{}, refuse("selection.layout", "invalid", "place a chart of a selected metric that has it")
@@ -131,4 +146,37 @@ func overlaps(placed map[cardTarget]bool, target cardTarget) bool {
 		}
 	}
 	return false
+}
+
+// maxQuestionBytes bounds the analytics question a card stores, which is a
+// plan of names rather than data.
+const maxQuestionBytes = 4096
+
+// validateQuestionCard checks the shape of a card's analytics question. The
+// population is the report's scope and the reader's grants, so the question
+// names neither, and it is asked afresh for each reader rather than saved.
+// Whether its fields exist is the analytics engine's to answer when asked.
+func validateQuestionCard(card crmcontracts.ReportingCard) error {
+	if card.Kind != questionKind || card.Question == nil {
+		return refuse("selection.layout", "invalid", "a question card carries its question, and only a question card does")
+	}
+	if card.Metric != nil {
+		return refuse("selection.layout", "invalid", "a question card names no metric")
+	}
+	if len(*card.Question) > maxQuestionBytes {
+		return refuse("selection.layout", "out_of_range", "keep a card's question under four kilobytes")
+	}
+	var question crmcontracts.AnalyticsQuery
+	decoder := json.NewDecoder(bytes.NewReader(*card.Question))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&question); err != nil {
+		return refuse("selection.layout", "invalid", "a card's question is an analytics question")
+	}
+	switch {
+	case !values.HasVisibleText(question.Entity) || len(question.Measures) == 0:
+		return refuse("selection.layout", "invalid", "a question names its population and at least one measure")
+	case question.ScopeKind != nil || question.ScopeId != nil || question.Save != nil:
+		return refuse("selection.layout", "invalid", "a question card takes the report's scope and is never saved on its own")
+	}
+	return nil
 }

@@ -36605,10 +36605,21 @@ export interface components {
             title?: string;
             cards: components["schemas"]["ReportingCard"][];
         };
+        /**
+         * @description A chart kind, or `question`, a custom analytics question the card asks for each reader.
+         * @enum {string}
+         */
+        ReportingCardKind: "bookings_trend" | "stage_distribution" | "owner_attainment" | "stage_age" | "sdr_outcomes" | "target_progress" | "forecast_support" | "pipeline_movement" | "metric_reading" | "question";
         ReportingCard: {
             /** @description A short id the client mints. Unique within the report, so one chart kind can be placed twice. */
             id: string;
-            kind: components["schemas"]["ReportingBlockKind"];
+            kind: components["schemas"]["ReportingCardKind"];
+            /**
+             * @description Present exactly when `kind` is `question`. The page asks it through `/analytics/query`
+             *     for each reader, under their own grants and over the report's scope, so it carries no
+             *     `scope_kind`, `scope_id` or `save` of its own. A sent edition does not keep its answer.
+             */
+            question?: components["schemas"]["AnalyticsQuery"];
             /** @description The one metric this card draws. Absent draws the kind for every selected metric that has it. */
             metric?: components["schemas"]["ReportingMetricID"];
             /**

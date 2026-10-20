@@ -6,7 +6,9 @@
 package compose
 
 import (
+	"encoding/json"
 	"slices"
+	"strings"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -53,5 +55,35 @@ func TestASavedReportKeepsItsLayout(t *testing.T) {
 		if chart.Kind == "owner_attainment" {
 			t.Errorf("the evaluation drew owner_attainment, which the layout left out")
 		}
+	}
+}
+
+// A question card is kept with its question, adds no chart to the evaluation,
+// and reaches the reader through the evaluation's layout for the page to ask.
+func TestASavedReportKeepsItsQuestionCard(t *testing.T) {
+	f := reportingBusiness(t)
+	question := json.RawMessage(`{"entity":"deals-by-stage","group_by":["owner_id"],"measures":[{"fn":"count"}]}`)
+	layout := []crmcontracts.ReportingSection{{Cards: []crmcontracts.ReportingCard{
+		{Id: "stages", Kind: "stage_distribution", Width: crmcontracts.ReportingCardWidthHalf},
+		{Id: "by-owner", Kind: "question", Question: &question, Width: crmcontracts.ReportingCardWidthHalf},
+	}}}
+	selection := f.selection()
+	selection.Layout = &layout
+	created, err := f.service.CreateReport(f.human, crmcontracts.ReportingReportInput{
+		Name: "With a question", Audience: "private", Selection: selection,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []crmcontracts.ReportingBlockKind{"stage_distribution"}; !slices.Equal(created.Selection.Blocks, want) {
+		t.Errorf("blocks %v, want %v: a question is not a chart", created.Selection.Blocks, want)
+	}
+	evaluation, err := f.service.EvaluateReport(f.human, ids.UUID(created.Id), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cards := (*evaluation.Selection.Layout)[0].Cards
+	if cards[1].Question == nil || !strings.Contains(string(*cards[1].Question), `"deals-by-stage"`) {
+		t.Fatalf("the evaluation's layout carries %+v, want the question card as saved", cards[1])
 	}
 }

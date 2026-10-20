@@ -16802,6 +16802,20 @@ components:
           maxItems: 20
           items:
             $ref: '#/components/schemas/ReportingCard'
+    ReportingCardKind:
+      type: string
+      description: A chart kind, or `question`, a custom analytics question the card asks for each reader.
+      enum:
+        - bookings_trend
+        - stage_distribution
+        - owner_attainment
+        - stage_age
+        - sdr_outcomes
+        - target_progress
+        - forecast_support
+        - pipeline_movement
+        - metric_reading
+        - question
     ReportingCard:
       type: object
       additionalProperties: false
@@ -16812,7 +16826,14 @@ components:
           pattern: '^[a-z0-9-]{1,32}$'
           description: A short id the client mints. Unique within the report, so one chart kind can be placed twice.
         kind:
-          $ref: '#/components/schemas/ReportingBlockKind'
+          $ref: '#/components/schemas/ReportingCardKind'
+        question:
+          allOf:
+            - $ref: '#/components/schemas/AnalyticsQuery'
+          description: |-
+            Present exactly when `kind` is `question`. The page asks it through `/analytics/query`
+            for each reader, under their own grants and over the report's scope, so it carries no
+            `scope_kind`, `scope_id` or `save` of its own. A sent edition does not keep its answer.
         metric:
           $ref: '#/components/schemas/ReportingMetricID'
           description: The one metric this card draws. Absent draws the kind for every selected metric that has it.
