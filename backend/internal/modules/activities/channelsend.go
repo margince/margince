@@ -272,7 +272,7 @@ func (s *Store) SendMessage(ctx context.Context, anchorID ids.ActivityID, in Sen
 	// the transaction holds writes only, and the whole send is refused when one
 	// file cannot be resolved, because a message carrying fewer files than the
 	// sender attached is one nobody is told is wrong.
-	files, err := s.resolveAttachments(ctx, in.AttachmentIDs)
+	files, err := s.PreviewSendAttachments(ctx, in.AttachmentIDs)
 	if err != nil {
 		return crmcontracts.Activity{}, err
 	}

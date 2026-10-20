@@ -121,12 +121,7 @@ func (s *Store) ArchiveCompanyTx(ctx context.Context, tx pgx.Tx, id ids.CompanyI
 func archiveCompanyTx(
 	ctx context.Context, tx pgx.Tx, id ids.CompanyID, ifVersion *int64, active []fieldcatalog.Column,
 ) (crmcontracts.Company, error) {
-	if err := refuseIfAnchor(ctx, tx, id, "id", "it cannot be archived. Archive a different company, or edit this one on the company page"); err != nil {
-		return crmcontracts.Company{}, err
-	}
-	// The cascade below takes this company off every project it is on. A
-	// project that would be left with none is refused rather than stranded.
-	if err := refuseIfSoleCompanyOnALiveProject(ctx, tx, id); err != nil {
+	if err := companyArchiveAllowed(ctx, tx, id); err != nil {
 		return crmcontracts.Company{}, err
 	}
 	if _, err := readCompany(ctx, tx, id, storekit.LiveOnly, active); err != nil {
@@ -177,15 +172,19 @@ func retireCompanyCascade(ctx context.Context, tx pgx.Tx, id ids.CompanyID, now 
 		// longer a partner by relationship type while partner.go's own
 		// live-row reads still answer for it.
 		{tablePartner, `UPDATE partner SET archived_at = $2 WHERE company_id = $1 AND archived_at IS NULL RETURNING id`},
-		{tableRelationship, `UPDATE relationship SET archived_at = $2 WHERE (company_id = $1 OR counterparty_company_id = $1) AND archived_at IS NULL RETURNING id`},
 	} {
 		if err := cascade.Retire(ctx, tx, retire.table, retire.statement, id, now); err != nil {
 			return storekit.ArchiveCascade{}, fmt.Errorf("retire what hangs off the account: %w", err)
 		}
 	}
+	if err := cascade.Retire(ctx, tx, tableRelationship,
+		`UPDATE relationship SET archived_at = @archived WHERE `+companyArchiveRelationships+` RETURNING id`,
+		pgx.StrictNamedArgs{"record": id, "archived": now}); err != nil {
+		return storekit.ArchiveCascade{}, fmt.Errorf("retire company relationships: %w", err)
+	}
 	if err := cascade.DropMemberships(ctx, tx,
 		`WITH gone AS (
-			DELETE FROM list_member WHERE entity_type = 'company' AND entity_id = @record
+			DELETE FROM list_member WHERE `+companyArchiveMemberships+`
 			RETURNING list_id, entity_type, entity_id, added_by, created_at, note),
 		logged AS (
 			INSERT INTO list_member_event (list_id, entity_type, entity_id, action, reason, actor)
@@ -194,7 +193,7 @@ func retireCompanyCascade(ctx context.Context, tx pgx.Tx, id ids.CompanyID, now 
 		return storekit.ArchiveCascade{}, fmt.Errorf("drop the account's list memberships: %w", err)
 	}
 	if err := cascade.DropTags(ctx, tx,
-		`DELETE FROM taggable WHERE entity_type = 'company' AND entity_id = $1 RETURNING tag_id, assigned_by, assigned_by_kind, assigned_at`, id.UUID); err != nil {
+		`DELETE FROM taggable WHERE `+companyArchiveMemberships+` RETURNING tag_id, assigned_by, assigned_by_kind, assigned_at`, pgx.StrictNamedArgs{"record": id.UUID}); err != nil {
 		return storekit.ArchiveCascade{}, fmt.Errorf("drop the account's tags: %w", err)
 	}
 	return cascade, nil

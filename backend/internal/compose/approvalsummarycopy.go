@@ -30,6 +30,7 @@ import (
 // and the census walks the struct itself, so a field added here is covered
 // without anybody remembering to list it.
 type approvalSummaryCopy struct {
+	signaturePrivate string
 	// draftedReplyWaiting: a follow-up reply is drafted. %q is its subject.
 	draftedReplyWaiting string
 	// counterpartyWorthKeeping asks about an unresolved sender. %s is the address.
@@ -94,6 +95,7 @@ type approvalSummaryCopy struct {
 // walk textlang.Shipped and ask this map directly.
 var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 	textlang.English: {
+		signaturePrivate: "The sender’s private signature cannot be shown to this reviewer. Ask the sender to review this message.",
 		draftedReplyWaiting: "A reply to %q is drafted and waiting to be sent — " +
 			"the conversation left no next step planned",
 		counterpartyWorthKeeping: "Is %s a contact worth keeping?",
@@ -132,6 +134,7 @@ var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 		acts: agentActsEnglish,
 	},
 	textlang.German: {
+		signaturePrivate: "Die private Signatur des Absenders ist für diese Prüfung nicht freigegeben. Den Absender um Prüfung dieser Nachricht bitten.",
 		draftedReplyWaiting: "Eine Antwort auf %q ist entworfen und wartet auf den Versand: " +
 			"Das Gespräch endete ohne geplanten nächsten Schritt",
 		counterpartyWorthKeeping: "Lohnt es sich, %s als Kontakt zu behalten?",
@@ -171,6 +174,7 @@ var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 		acts: agentActsGerman,
 	},
 	textlang.Vietnamese: {
+		signaturePrivate: "Không thể hiển thị chữ ký riêng của người gửi cho người xem xét này. Hãy yêu cầu người gửi xem xét tin nhắn.",
 		draftedReplyWaiting: "Một thư trả lời cho %q đã được soạn và đang chờ gửi: " +
 			"cuộc trò chuyện không để lại bước tiếp theo nào được lên kế hoạch",
 		counterpartyWorthKeeping: "%s có phải là một liên hệ đáng giữ lại không?",

@@ -72,6 +72,7 @@ func (w *csvWriters) createContact(ctx context.Context, row migration.Row, typed
 // email, phone and LinkedIn handle onto what the contact holds, because the
 // store replaces each of those wholesale.
 func (w *csvWriters) applyContact(ctx context.Context, id ids.UUID, in contacts.UpdateContactInput, current []byte, source string) error {
+	in.IfVersion = w.reviewedVersion(id)
 	// Emails and phones added by an update carry the provenance the create
 	// path stamps; without it their source lands empty.
 	in.Source = source

@@ -365,7 +365,7 @@ func (s *Store) RefuseArchiveActivity(ctx context.Context, id ids.ActivityID) er
 			return err
 		}
 		if !held {
-			return nil
+			return refuseActiveInvitationPatch(ctx, tx, id.UUID)
 		}
 		_, err = tx.Exec(ctx, `UPDATE activity SET archived_at = archived_at WHERE id = $1`, id.UUID)
 		return err

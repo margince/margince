@@ -163,27 +163,16 @@ func (s *Store) CreateOfferTemplate(ctx context.Context, in CreateOfferTemplateI
 	if err := auth.Require(ctx, "offer_template", principal.ActionCreate); err != nil {
 		return crmcontracts.OfferTemplate{}, err
 	}
-	locale := in.Locale
-	if locale == "" {
-		locale = defaultOfferTemplateLocale
-	}
-	layout := in.Layout
-	if layout == nil {
-		layout = map[string]any{}
-	}
+	in = readyTemplateCreation(in)
+	locale, layout := in.Locale, in.Layout
 
 	var out crmcontracts.OfferTemplate
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		id := ids.New[ids.OfferTemplateKind]()
-		var noExclusion ids.OfferTemplateID
-		if err := s.checkTemplateNameConflict(ctx, tx, noExclusion, in.Name); err != nil {
+		if err := s.admitTemplateCreation(ctx, tx, in); err != nil {
 			return err
 		}
-		if in.IsDefault {
-			if err := s.checkTemplateDefaultConflict(ctx, tx, noExclusion, locale); err != nil {
-				return err
-			}
-		}
+
 		if _, err := tx.Exec(ctx,
 			`INSERT INTO offer_template (id, name, locale, is_default, layout, version)
 			 VALUES ($1, $2, $3, $4, $5, 1)`,
@@ -381,6 +370,10 @@ func (s *Store) UpdateOfferTemplate(ctx context.Context, id ids.OfferTemplateID,
 // no-op returning the same entity, writing no second audit row (the
 // Quota precedent).
 func (s *Store) ArchiveOfferTemplate(ctx context.Context, id ids.OfferTemplateID) (crmcontracts.OfferTemplate, error) {
+	return s.ArchiveOfferTemplateAt(ctx, id, nil)
+}
+
+func (s *Store) ArchiveOfferTemplateAt(ctx context.Context, id ids.OfferTemplateID, ifVersion *int64) (crmcontracts.OfferTemplate, error) {
 	if err := auth.Require(ctx, "offer_template", principal.ActionDelete); err != nil {
 		return crmcontracts.OfferTemplate{}, err
 	}
@@ -391,11 +384,15 @@ func (s *Store) ArchiveOfferTemplate(ctx context.Context, id ids.OfferTemplateID
 			return err
 		}
 		if current.ArchivedAt != nil {
+			if err := storekit.EnsureIfMatchIn(ctx, tx, "offer_template", id.UUID, ifVersion, storekit.IncludeArchived); err != nil {
+				return err
+			}
 			out = current
 			return nil
 		}
-		if _, err := tx.Exec(ctx,
-			`UPDATE offer_template SET archived_at = now() WHERE id = $1 AND archived_at IS NULL`, id); err != nil {
+		patch := storekit.NewPatch()
+		patch.Set("archived_at", nil, time.Now().UTC())
+		if err := patch.ApplyGuarded(ctx, tx, "offer_template", id.UUID, ifVersion); err != nil {
 			return fmt.Errorf("archive offer_template: %w", err)
 		}
 		if _, err := storekit.Audit(ctx, tx, "archive", "offer_template", id.UUID, nil, nil); err != nil {

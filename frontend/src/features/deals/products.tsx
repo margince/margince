@@ -18,6 +18,7 @@ import { sortState } from "../../design-system/listtable.query";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { formatMoney } from "../../format/format";
 import { toMajorUnits, toMinorUnits } from "../../format/minorunits";
+import { billingModelLabel } from "../../format/productbilling";
 import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCanWrite } from "../../lib/capability";
@@ -118,9 +119,9 @@ function productFields(t: Translator): CreateField[] {
       label: "product.billingModel",
       type: "select",
       options: [
-        { value: "", label: t("product.billingUnclassified") },
-        { value: "one_time", label: t("product.billingOneTime") },
-        { value: "recurring", label: t("product.billingRecurring") },
+        { value: "", label: billingModelLabel(null, t) },
+        { value: "one_time", label: billingModelLabel("one_time", t) },
+        { value: "recurring", label: billingModelLabel("recurring", t) },
       ],
     },
     {
@@ -158,12 +159,8 @@ const PRICE_PER: Readonly<Record<BillingMonths, MessageKey>> = {
 };
 
 function billingLabel(p: Product, t: Translator): string {
-  if (p.billing_model === "one_time") {
-    return t("product.billingOneTime");
-  }
-  if (p.billing_model !== "recurring") {
-    return t("product.billingUnclassified");
-  }
+  if (p.billing_model !== "recurring")
+    return billingModelLabel(p.billing_model, t);
   return p.billing_interval_months
     ? t(CADENCE[p.billing_interval_months])
     : t("product.billingRecurring");
@@ -377,7 +374,10 @@ export function ProductsAdmin() {
               archive={async () => {
                 const data = unwrap(
                   await api.DELETE("/products/{id}", {
-                    params: { path: { id: p.id } },
+                    params: {
+                      path: { id: p.id },
+                      ...ifMatch(requireVersion(p.version)),
+                    },
                   }),
                 );
                 return data ?? p;

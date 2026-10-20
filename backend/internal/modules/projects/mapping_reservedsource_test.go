@@ -25,7 +25,7 @@ func TestProjectCreateInputRefusesTheImporterNamespace(t *testing.T) {
 	reserved := "mirror:legacy_crm"
 
 	var onSystem *provenance.ReservedError
-	if _, err := projectCreateInput(crmcontracts.CreateProjectRequest{
+	if _, err := ProjectCreationInput(crmcontracts.CreateProjectRequest{
 		Name: "Planted", CompanyId: company, Source: "manual", SourceSystem: &reserved,
 	}); !errors.As(err, &onSystem) {
 		t.Fatalf("source_system: err = %v, want the namespace refused", err)
@@ -34,7 +34,7 @@ func TestProjectCreateInputRefusesTheImporterNamespace(t *testing.T) {
 	}
 
 	var onSource *provenance.ReservedError
-	if _, err := projectCreateInput(crmcontracts.CreateProjectRequest{
+	if _, err := ProjectCreationInput(crmcontracts.CreateProjectRequest{
 		Name: "Planted", CompanyId: company, Source: reserved,
 	}); !errors.As(err, &onSource) {
 		t.Fatalf("source: err = %v, want the namespace refused", err)
@@ -47,7 +47,7 @@ func TestProjectCreateInputRefusesTheImporterNamespace(t *testing.T) {
 // every real import, and this test is the only thing that tells the two apart.
 func TestProjectCreateInputCarriesAnOrdinarySourceSystem(t *testing.T) {
 	ordinary := "legacy_crm"
-	in, err := projectCreateInput(crmcontracts.CreateProjectRequest{
+	in, err := ProjectCreationInput(crmcontracts.CreateProjectRequest{
 		Name:         "Real",
 		CompanyId:    openapi_types.UUID(ids.NewV7()),
 		Source:       "manual",
@@ -77,7 +77,7 @@ func TestProjectImporterDoorAdmitsItsNamespaceAndNothingElse(t *testing.T) {
 	if _, err := projectCreateInputFromImporter(body(provenance.NoActivityReminderSource)); err == nil {
 		t.Error("the importer door admitted an engine identity")
 	}
-	if _, err := projectCreateInput(body("mirror:hubspot")); err == nil {
+	if _, err := ProjectCreationInput(body("mirror:hubspot")); err == nil {
 		t.Error("the client door admitted the importer namespace")
 	}
 }

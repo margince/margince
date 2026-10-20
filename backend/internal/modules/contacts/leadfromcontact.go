@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -42,6 +43,10 @@ func (s *Store) fillLeadFromContact(ctx context.Context, in CreateLeadInput) (Cr
 	if err != nil {
 		return in, err
 	}
+	return leadFromContactDefaults(in, contact), nil
+}
+
+func leadFromContactDefaults(in CreateLeadInput, contact crmcontracts.Contact) CreateLeadInput {
 	in.FullName = keptOrContact(in.FullName, contact.FullName)
 	in.Title = keptOrContactPtr(in.Title, contact.Title)
 	if contact.PrimaryEmail != nil {
@@ -57,7 +62,7 @@ func (s *Store) fillLeadFromContact(ctx context.Context, in CreateLeadInput) (Cr
 			}
 		}
 	}
-	return in, nil
+	return in
 }
 
 // linkedInProfileOf answers the contact's LinkedIn value as a profile URL, or

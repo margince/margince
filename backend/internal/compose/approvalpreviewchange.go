@@ -5,14 +5,17 @@ package compose
 
 import (
 	"encoding/json"
+	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func commercialChanges(approval crmcontracts.Approval) (map[string]json.RawMessage, bool, error) {
 	switch approval.Kind {
-	case previewAdvanceDeal, previewProgressDeal, toolUpdateRecord, "assign_owner", lifecycleProposalKind:
+	case deals.StageProgressionKind, "merge_tags", "archive_record", "emit_flow_event", "create_record", "relink_activity", "relink_activities", "relink_thread", "promote_lead", "demote_lead", "send_message", "invite_meeting", "book_meeting", "enrich", "disqualify_lead", previewSendEmail, previewSendCompanyEmail, previewAdvanceDeal, previewProgressDeal, "advance_project_phase", toolUpdateRecord, "assign_owner", lifecycleProposalKind:
 	default:
 		return nil, false, nil
 	}
@@ -24,18 +27,32 @@ func commercialChanges(approval crmcontracts.Approval) (map[string]json.RawMessa
 		return nil, true, err
 	}
 	switch approval.Kind {
-	case previewAdvanceDeal, previewProgressDeal:
+	case "disqualify_lead":
+		return map[string]json.RawMessage{"status": json.RawMessage(`"disqualified"`)}, true, nil
+	case "merge_tags", "archive_record", "emit_flow_event", "create_record", "relink_activity", "relink_activities", "relink_thread", "promote_lead", "demote_lead", "send_message", "invite_meeting", "book_meeting", "enrich", previewSendEmail, previewSendCompanyEmail:
+		return map[string]json.RawMessage{}, true, nil
+	case previewAdvanceDeal, previewProgressDeal, deals.StageProgressionKind:
 		changes := map[string]json.RawMessage{fieldStageID: args["to_stage_id"]}
-		for _, key := range []string{"lost_reason", "won_without_contract_reason", "won_without_contract_detail", bulkParamNote} {
+		keys := []string{"won_without_contract_reason", "won_without_contract_detail"}
+		if approval.Kind != deals.StageProgressionKind {
+			keys = append(keys, "lost_reason", bulkParamNote)
+		}
+		for _, key := range keys {
 			if value, ok := args[key]; ok {
 				changes[key] = value
 			}
 		}
 		return changes, true, nil
+	case "advance_project_phase":
+		return map[string]json.RawMessage{"phase": args["to_phase"]}, true, nil
 	case lifecycleProposalKind:
 		return map[string]json.RawMessage{previewLifecycle: args["proposed_lifecycle"]}, true, nil
 	case "assign_owner":
-		return map[string]json.RawMessage{bulkParamOwner: args[bulkParamOwner]}, true, nil
+		owner, present := args[bulkParamOwner]
+		if !present {
+			return nil, true, apperrors.ErrInvalidArgument
+		}
+		return map[string]json.RawMessage{bulkParamOwner: owner}, true, nil
 	default:
 		if fields, ok := args["fields"]; ok {
 			args = nil
@@ -43,8 +60,7 @@ func commercialChanges(approval crmcontracts.Approval) (map[string]json.RawMessa
 				return nil, true, apperrors.ErrInvalidArgument
 			}
 		}
-		_, covered := args[bulkParamOwner]
-		return args, covered, nil
+		return args, true, nil
 	}
 }
 
@@ -65,4 +81,34 @@ func commercialArguments(approval crmcontracts.Approval) (map[string]json.RawMes
 		}
 	}
 	return args, nil
+}
+
+func commercialRequest[T any](approval crmcontracts.Approval) (T, error) {
+	var empty T
+	args, err := commercialArguments(approval)
+	if err != nil {
+		return empty, err
+	}
+	raw, err := json.Marshal(args)
+	if err != nil {
+		return empty, err
+	}
+	return commandBody[T](raw)
+}
+
+func previewRouteMatches(args map[string]any, tool, recordType string, id ids.UUID, method string) bool {
+	operation, valid := args["operation"].(string)
+	if !valid {
+		return false
+	}
+	path, valid := args["path"].(string)
+	if !valid {
+		return false
+	}
+	for route, policy := range agentPolicies {
+		if policy.Op == operation && policy.Tool == tool && string(policy.RecordType) == recordType && strings.ReplaceAll(route, "{id}", id.String()) == method+" "+path {
+			return true
+		}
+	}
+	return false
 }

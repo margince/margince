@@ -346,6 +346,9 @@ func (s *Store) RefuseArchiveRelationship(ctx context.Context, id ids.UUID) erro
 		if err != nil {
 			return err
 		}
+		if err := refuseGenericProjectCompany(current.Kind); err != nil {
+			return err
+		}
 		anchorObject, _ := relationshipAnchor(current.Kind)
 		if err := auth.Require(ctx, anchorObject, principal.ActionUpdate); err != nil {
 			return err

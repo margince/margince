@@ -340,17 +340,9 @@ func (s *Store) deliverability(
 	// German objection route and the Vietnamese advertiser contact — from
 	// exactly the sends that carry an unsubscribe surface and are therefore
 	// advertising by the product's own reckoning.
-	owed, err := s.disclosuresFor(ctx, string(surface.disclosureCategory()))
+	owed, err := s.requiredDisclosures(ctx, string(surface.disclosureCategory()))
 	if err != nil {
 		return sendDeliverability{}, err
-	}
-	// REFUSED, not shipped short. A line the installation never stated is left
-	// out of the body by appendDisclosures — printing "unknown" where the
-	// controller's name belongs discloses nothing — and this is where that
-	// omission stops being silent. It runs before the early returns below for
-	// the same reason the append does: every arm owes the same disclosures.
-	if kinds := unmeetable(owed); len(kinds) > 0 {
-		return sendDeliverability{}, &UndisclosableError{Kinds: kinds}
 	}
 	body = appendDisclosures(body, owed)
 	untokenized := sendDeliverability{

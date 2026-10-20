@@ -67,12 +67,7 @@ func (s *Store) CreateRelationship(ctx context.Context, in CreateRelationshipInp
 		return relationshipRow{}, err
 	}
 	anchorObject, _ := relationshipAnchor(in.Kind)
-	if err := auth.Require(ctx, "relationship", principal.ActionCreate); err != nil {
-		return relationshipRow{}, err
-	}
-	if err := auth.Require(ctx, anchorObject, principal.ActionUpdate); err != nil {
-		// The edge annotates its anchor: without the anchor's write
-		// grant, an edge would be an RBAC side door onto it.
+	if err := requireRelationshipCreate(ctx, anchorObject); err != nil {
 		return relationshipRow{}, err
 	}
 	capturedBy, err := storekit.CapturedBy(ctx)
@@ -104,10 +99,7 @@ func (s *Store) CreateRelationshipTx(ctx context.Context, tx pgx.Tx, in CreateRe
 		return relationshipRow{}, err
 	}
 	anchorObject, _ := relationshipAnchor(in.Kind)
-	if err := auth.Require(ctx, "relationship", principal.ActionCreate); err != nil {
-		return relationshipRow{}, err
-	}
-	if err := auth.Require(ctx, anchorObject, principal.ActionUpdate); err != nil {
+	if err := requireRelationshipCreate(ctx, anchorObject); err != nil {
 		return relationshipRow{}, err
 	}
 	capturedBy, err := storekit.CapturedBy(ctx)
@@ -240,4 +232,11 @@ func untypedPtr[K ids.EntityKind](id *ids.ID[K]) *ids.UUID {
 		return nil
 	}
 	return &id.UUID
+}
+
+func requireRelationshipCreate(ctx context.Context, anchor string) error {
+	if err := auth.Require(ctx, "relationship", principal.ActionCreate); err != nil {
+		return err
+	}
+	return auth.Require(ctx, anchor, principal.ActionUpdate)
 }

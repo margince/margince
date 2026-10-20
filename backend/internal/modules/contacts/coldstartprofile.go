@@ -247,25 +247,12 @@ func resolveOrCreateColdStartCompany(ctx context.Context, tx pgx.Tx, host, by st
 	// ('dossier') — read from the site and human-confirmed, but NOT a raw human
 	// edit ('human' is reserved for UpdateCompany) — so a later human edit
 	// still wins while a weaker signature/domain source cannot clobber it.
-	displayName := DisplayNameFromDomain(host)
-	if displayName == "" {
-		displayName = host
-	}
-	nameSource := nameSourceDomain
-	legal := fieldValue(fields, fieldLegalName)
-	if legal != "" {
-		displayName = legal
-		nameSource = nameSourceDossier
-	}
-
+	candidate, nameSource := coldStartCandidate(host, fields)
+	displayName := candidate.DisplayName
 	// PO-F-2 rather than a bare domain lookup: the site's own legal name is the
 	// strongest signal this path has, and a company already captured from a
 	// different domain collides on exactly that name and on nothing else.
-	match, err := DedupeCompanyForCreate(ctx, tx, CompanyCandidate{
-		DisplayName: displayName,
-		LegalName:   legal,
-		Domains:     []string{host},
-	})
+	match, err := DedupeCompanyForCreate(ctx, tx, candidate)
 	if err != nil {
 		return ids.CompanyID{}, false, err
 	}
@@ -420,4 +407,19 @@ func UnmarshalColdStartFields(raw json.RawMessage) (string, []ColdStartFieldInpu
 		})
 	}
 	return proposal.SourceURL, fields, nil
+}
+
+func coldStartCandidate(host string, fields []ColdStartFieldInput) (CompanyCandidate, string) {
+	displayName := DisplayNameFromDomain(host)
+	if displayName == "" {
+		displayName = host
+	}
+	nameSource := nameSourceDomain
+	legal := fieldValue(fields, fieldLegalName)
+	if legal != "" {
+		displayName = legal
+		nameSource = nameSourceDossier
+	}
+
+	return CompanyCandidate{DisplayName: displayName, LegalName: legal, Domains: []string{host}}, nameSource
 }

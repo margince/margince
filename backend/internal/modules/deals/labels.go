@@ -80,6 +80,10 @@ func (s *Store) ProductLabels(ctx context.Context, want []ids.UUID) (map[ids.UUI
 	return s.catalogLabels(ctx, "product", "product", want)
 }
 
+func (s *Store) OfferTemplateLabels(ctx context.Context, want []ids.UUID) (map[ids.UUID]string, error) {
+	return s.catalogLabels(ctx, "offer_template", "offer_template", want)
+}
+
 // catalogLabels reads names off a table with no owner, where the object grant
 // is the whole gate. Both names are constants from the callers above.
 func (s *Store) catalogLabels(ctx context.Context, object, table string, want []ids.UUID) (map[ids.UUID]string, error) {

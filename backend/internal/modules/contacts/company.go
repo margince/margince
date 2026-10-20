@@ -166,25 +166,10 @@ func createCompanyInTx(ctx context.Context, tx pgx.Tx, in CreateCompanyInput, by
 	}
 	in.OwnerID = owner
 
-	if err := ensureCompanyDomainsUnclaimed(ctx, tx, in.Domains); err != nil {
-		return crmcontracts.Company{}, err
-	}
-
-	match, err := manualDedupeCompany(ctx, tx, in)
+	match, err := admitAndDedupeCompanyCreate(ctx, tx, in)
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
-
-	// Naming a parent is a read of the parent: the child discloses the
-	// hierarchy edge, so the target must be visible under the caller's
-	// row scope, not merely same-workspace (H1 — an FK argument to a
-	// row-scoped record is a read of that record).
-	if in.ParentCompanyID != nil {
-		if err := auth.EnsureLinkTarget(ctx, tx, "company", in.ParentCompanyID.UUID); err != nil {
-			return crmcontracts.Company{}, err
-		}
-	}
-
 	id, err := createCompany(ctx, tx, match, CompanySpec{
 		DisplayName:     in.DisplayName,
 		LegalName:       in.LegalName,
@@ -233,4 +218,26 @@ func createCompanyInTx(ctx context.Context, tx pgx.Tx, in CreateCompanyInput, by
 		return crmcontracts.Company{}, fmt.Errorf("read created company: %w", err)
 	}
 	return out, nil
+}
+
+func admitAndDedupeCompanyCreate(ctx context.Context, tx pgx.Tx, in CreateCompanyInput) (CompanyMatch, error) {
+	if err := ensureCompanyLinkedInUnclaimed(ctx, tx, in.LinkedInURL); err != nil {
+		return CompanyMatch{}, err
+	}
+	if err := ensureCompanyDomainsUnclaimed(ctx, tx, in.Domains); err != nil {
+		return CompanyMatch{}, err
+	}
+
+	match, err := manualDedupeCompany(ctx, tx, in)
+	if err != nil {
+		return CompanyMatch{}, err
+	}
+
+	if in.ParentCompanyID != nil {
+		if err := auth.EnsureLinkTarget(ctx, tx, "company", in.ParentCompanyID.UUID); err != nil {
+			return CompanyMatch{}, err
+		}
+	}
+
+	return match, nil
 }

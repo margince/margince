@@ -75,12 +75,6 @@ func RegisterEnrichTool(r *Registry, p datasource.SystemOfRecordProvider, enrich
 	r.Register(enrichCompany{p: p, enricher: enricher, language: r.language})
 }
 
-type enrichArgs struct {
-	CompanyID ids.UUID    `json:"company_id"`
-	URL       string      `json:"url"`
-	Depth     EnrichDepth `json:"depth"`
-}
-
 type enrichCompany struct {
 	p        datasource.SystemOfRecordProvider
 	enricher CompanyEnricher
@@ -131,15 +125,15 @@ func (t enrichCompany) Spec() mcp.ToolSpec {
 // the two depths — so the vocabulary check belongs to the door that has a
 // string to check, and the command carries only the resolved value.
 func (t enrichCompany) StageInfo(ctx context.Context, in json.RawMessage) (StageInfo, error) {
-	args, err := readEnrichArgs(in)
+	args, err := DecodeEnrichCommand(in)
 	if err != nil {
 		return StageInfo{}, err
 	}
-	return StageSubject(ctx, NewEnrichCall(t.p, t.language, EnrichCommand(args)))
+	return StageSubject(ctx, NewEnrichCall(t.p, t.language, args))
 }
 
 func (t enrichCompany) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
-	args, err := readEnrichArgs(in)
+	args, err := DecodeEnrichCommand(in)
 	if err != nil {
 		return nil, err
 	}
@@ -150,20 +144,12 @@ func (t enrichCompany) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 	return t.enricher.EnrichCompany(ctx, args.CompanyID, args.URL, args.Depth)
 }
 
-// readEnrichArgs decodes, defaults the depth and admits the override URL in one
-// place, so a call this refuses can never reach a human's inbox on the staging
-// path and then be refused differently on the execution path.
-//
-// The URL admission is the resolver's own function (requireEnrichURL,
-// commandrecord.go), not a second copy of it. It is asked TWICE on the staging
-// path — once here, once in Guards — because StageInfo needs this function for
-// the depth defaulting anyway; that redundancy is the price of Handle, which an
-// approved retry re-enters without passing Guards, sharing the one spelling
-// rather than keeping its own.
-func readEnrichArgs(in json.RawMessage) (enrichArgs, error) {
-	var args enrichArgs
+// DecodeEnrichCommand shares defaults and URL admission across staging and
+// execution. Approved retries enter Handle without passing the resolver's Guards.
+func DecodeEnrichCommand(in json.RawMessage) (EnrichCommand, error) {
+	var args EnrichCommand
 	if err := decodeArgs(in, &args); err != nil {
-		return enrichArgs{}, err
+		return EnrichCommand{}, err
 	}
 	if args.Depth == "" {
 		args.Depth = EnrichDepthPage
@@ -173,7 +159,7 @@ func readEnrichArgs(in json.RawMessage) (enrichArgs, error) {
 		// rides in Guidance, which is ours. Both in Cause meant a long depth
 		// erased the three names the caller needed — the shape BadArgsError's
 		// own doc prescribes, applied.
-		return enrichArgs{}, &BadArgsError{
+		return EnrichCommand{}, &BadArgsError{
 			Cause: fmt.Errorf("depth %q is not one this tool takes", args.Depth),
 			Field: "depth",
 			Guidance: fmt.Sprintf("use %s, %s or %s",
@@ -181,7 +167,7 @@ func readEnrichArgs(in json.RawMessage) (enrichArgs, error) {
 		}
 	}
 	if err := requireEnrichURL(args.URL); err != nil {
-		return enrichArgs{}, err
+		return EnrichCommand{}, err
 	}
 	return args, nil
 }

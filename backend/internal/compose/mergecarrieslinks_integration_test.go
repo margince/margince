@@ -22,12 +22,14 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"maps"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -37,6 +39,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // carryEnv is one installation with the merge wired exactly as compose wires
@@ -56,11 +59,14 @@ func setupCarry(t *testing.T) *carryEnv {
 	consentStore := consent.NewStore(e.DB())
 	intros := introductions.NewStore(e.DB(), time.Now)
 	grants := identity.NewServiceFor(e.DB())
-	return &carryEnv{
+	c := &carryEnv{
 		e: e, admin: e.Admin(), consent: consentStore, intros: intros, grants: grants,
 		contacts: contacts.NewStore(e.DB()).WithStopCarrier(consentStore).
-			WithSatelliteCarriers(consentStore, intros).WithGrantCarrier(grants),
+			WithSatelliteCarriers(consentStore, intros).WithGrantCarrier(grants).
+			WithParticipantRosterReader(activities.EnsureParticipantRosterVisibleTx),
 	}
+	c.admin = c.asker()
+	return c
 }
 
 // contactAt creates a contact holding one live primary address.
@@ -232,6 +238,13 @@ func TestAMergedContactsPreferenceLinkOpensTheSurvivorsCentre(t *testing.T) {
 	row := c.emailRow(t, retired, "pref@carry.test")
 	token := c.preferenceLink(t, "pref@carry.test")
 
+	scope, err := c.contacts.PreviewMergeSurvivorship(c.admin, "contact", retired.UUID, survivor.UUID, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(scope.PreferenceLinks) != 1 || scope.PreferenceLinks[0].WillRetire != false {
+		t.Fatalf("preference carry preview = %+v", scope.PreferenceLinks)
+	}
 	c.merge(t, retired, survivor)
 
 	ref, err := c.consent.ResolvePreferenceToken(context.Background(), token)
@@ -263,6 +276,13 @@ func TestALinkToAnAddressLeftBehindOpensTheSurvivorsPageForThatAddress(t *testin
 	survivor := c.contactAt(t, "Archived Survivor", "moved@carry.test")
 	survivorToken := c.preferenceLink(t, "moved@carry.test")
 
+	scope, err := c.contacts.PreviewMergeSurvivorship(c.admin, "contact", retired.UUID, survivor.UUID, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(scope.PreferenceLinks) != 1 || scope.PreferenceLinks[0].WillRetire != true {
+		t.Fatalf("preference carry preview = %+v", scope.PreferenceLinks)
+	}
 	c.merge(t, retired, survivor)
 
 	var reason *string
@@ -309,6 +329,13 @@ func TestAMergedContactsConfirmLinkAnswersOnTheSurvivor(t *testing.T) {
 		t.Fatalf("issuing the confirm link: %v", err)
 	}
 
+	scope, previewErr := c.contacts.PreviewMergeSurvivorship(c.admin, "contact", retired.UUID, survivor.UUID, nil, nil)
+	if previewErr != nil {
+		t.Fatal(previewErr)
+	}
+	if len(scope.ConsentLinks.Confirmations) != 1 || scope.ConsentLinks.Confirmations[0].Address != "confirm@carry.test" {
+		t.Fatalf("carried links preview = %+v", scope)
+	}
 	c.merge(t, retired, survivor)
 
 	if _, err := lane.SubmitConfirmation(c.admin, issued.Token, consent.ConfirmSubmission{
@@ -334,7 +361,15 @@ func TestAMergeCarriesQualifyingEventsWithoutDoublingOne(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("recording the hand-written event: %v", err)
 	}
-	booking, ownBooking := ids.NewV7(), ids.NewV7()
+	makeInquiry := func(subject string) ids.UUID {
+		activity, _, err := c.e.Activities.LogActivity(c.admin, activities.LogActivityInput{Kind: "note", Subject: &subject, Source: "manual",
+			Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: retired.UUID}}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return ids.UUID(activity.Id)
+	}
+	booking, ownBooking := makeInquiry("Shared inquiry"), makeInquiry("Source inquiry")
 	for _, who := range []ids.ContactID{retired, survivor} {
 		if err := c.consent.RecordInquiry(c.admin, who, booking); err != nil {
 			t.Fatalf("recording the inquiry: %v", err)
@@ -344,6 +379,59 @@ func TestAMergeCarriesQualifyingEventsWithoutDoublingOne(t *testing.T) {
 		t.Fatalf("recording the retired contact's own inquiry: %v", err)
 	}
 
+	pipeline, stage, _ := integration.DealFixture(t, c.e)
+	deal := c.e.SeedDeal(t, "Consent evidence", pipeline, stage, &c.e.Rep1)
+	if err := c.e.DB().Tx(c.admin, func(tx pgx.Tx) error {
+		return consent.RecordDerivedQualifyingEvent(c.admin, tx, retired.String(), consent.QualifyingEvent{
+			Kind: "active_deal", SourceEntityType: "deal", SourceEntityID: deal.String(), OccurredAt: time.Date(2026, 10, 1, 12, 0, 0, 0, time.UTC),
+		}, "human:"+c.e.AdminUser.String())
+	}); err != nil {
+		t.Fatal(err)
+	}
+	scope, err := c.contacts.PreviewMergeSurvivorship(c.admin, "contact", retired.UUID, survivor.UUID, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(scope.ConsentLinks.QualifyingEvents) != 4 {
+		t.Fatalf("qualifying scope = %+v", scope.ConsentLinks)
+	}
+	for _, event := range scope.ConsentLinks.QualifyingEvents {
+		wantCollapsed := event.SourceID != nil && *event.SourceID == booking
+		if event.Collapsed != wantCollapsed {
+			t.Fatalf("wrong event outcome: %+v", event)
+		}
+	}
+	actor, ok := principal.Actor(c.admin)
+	if !ok {
+		t.Fatal("missing actor")
+	}
+	actor.Permissions.Objects = maps.Clone(actor.Permissions.Objects)
+	actor.Permissions.Objects["deal"] = principal.ObjectGrant{Read: true}
+	readable := principal.WithActor(c.admin, actor)
+	if err := c.e.DB().Tx(readable, func(tx pgx.Tx) error {
+		scope, err := c.consent.PreviewConsentLinksTx(readable, tx, commsauthz.ContactStopSubject(retired), commsauthz.ContactStopSubject(survivor))
+		if err != nil {
+			return err
+		}
+		if len(scope.QualifyingEvents) != 4 {
+			t.Fatalf("read-only evidence scope = %+v", scope)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	actor.Permissions.Objects = maps.Clone(actor.Permissions.Objects)
+	actor.Permissions.Objects["activity"] = principal.ObjectGrant{}
+	hidden := principal.WithActor(c.admin, actor)
+	if err := c.e.DB().Tx(hidden, func(tx pgx.Tx) error {
+		denied, err := c.consent.PreviewConsentLinksTx(hidden, tx, commsauthz.ContactStopSubject(retired), commsauthz.ContactStopSubject(survivor))
+		if !errors.Is(err, apperrors.ErrPermissionDenied) || len(denied.QualifyingEvents) != 0 {
+			t.Fatalf("unreadable evidence returned %+v, %v", denied, err)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
 	c.merge(t, retired, survivor)
 
 	if n := c.count(t, `SELECT count(*) FROM consent_qualifying_event WHERE contact_id = $1 AND kind = 'in_person'`, survivor); n != 1 {
@@ -377,6 +465,13 @@ func TestAMergeCarriesDoubleOptInHistory(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	scope, previewErr := c.contacts.PreviewMergeSurvivorship(c.admin, "contact", retired.UUID, survivor.UUID, nil, nil)
+	if previewErr != nil {
+		t.Fatal(previewErr)
+	}
+	if len(scope.ConsentLinks.DoubleOptIns) != 1 || scope.ConsentLinks.DoubleOptIns[0].PurposeID != purpose.ID.UUID {
+		t.Fatalf("carried links preview = %+v", scope)
+	}
 	c.merge(t, retired, survivor)
 
 	if n := c.count(t, `SELECT count(*) FROM consent_doi_token WHERE contact_id = $1`, survivor); n != 1 {
@@ -454,6 +549,13 @@ func TestALegacyAddresslessLinkCollidesOnTheNullSlot(t *testing.T) {
 		}
 	}
 
+	scope, previewErr := c.contacts.PreviewMergeSurvivorship(c.admin, "contact", retired.UUID, survivor.UUID, nil, nil)
+	if previewErr != nil {
+		t.Fatal(previewErr)
+	}
+	if len(scope.PreferenceLinks) != 1 || !scope.PreferenceLinks[0].WillRetire || scope.PreferenceLinks[0].EmailID != nil {
+		t.Fatalf("carried links preview = %+v", scope)
+	}
 	c.merge(t, retired, survivor)
 
 	carried, err := c.consent.ResolvePreferenceToken(context.Background(), retiredToken)

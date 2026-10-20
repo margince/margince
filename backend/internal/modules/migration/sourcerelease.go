@@ -21,7 +21,8 @@ import (
 func releaseSource(ctx context.Context, tx pgx.Tx, id RunID) error {
 	var sourceRef string
 	err := tx.QueryRow(ctx, `
-		UPDATE import_run SET source_released_at = now(), profile = NULL, updated_at = now()
+		UPDATE import_run SET source_released_at = now(), profile = NULL,
+			report = report - 'review_plan', updated_at = now()
 		 WHERE id = $1 AND connector = $2 AND source_released_at IS NULL
 		RETURNING source_ref`, id, ConnectorCSV).Scan(&sourceRef)
 	if errors.Is(err, pgx.ErrNoRows) {

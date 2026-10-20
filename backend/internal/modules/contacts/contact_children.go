@@ -32,14 +32,10 @@ func replaceContactSocial(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, 
 		`DELETE FROM contact_social WHERE contact_id = $1`, contactID); err != nil {
 		return fmt.Errorf("clear contact social rows: %w", err)
 	}
-	for platform, handle := range social {
-		text := fmt.Sprintf("%v", handle)
-		if strings.TrimSpace(platform) == "" || strings.TrimSpace(text) == "" {
-			continue
-		}
+	for _, row := range contactSocialInputs(social) {
 		if _, err := tx.Exec(ctx,
 			`INSERT INTO contact_social (contact_id, platform, handle) VALUES ($1, $2, $3)`,
-			contactID, platform, text); err != nil {
+			contactID, row.Platform, row.Handle); err != nil {
 			return fmt.Errorf("insert contact social row: %w", err)
 		}
 	}

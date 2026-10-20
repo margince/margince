@@ -18,6 +18,7 @@ import (
 
 // Binding is a landed identity and the state of the run that landed it.
 type Binding struct {
+	RunID     RunID
 	NativeID  ids.UUID
 	RunStatus string
 	Origin    Origin
@@ -37,10 +38,10 @@ func (s *RunStore) LookupBinding(ctx context.Context, sourceSystem, object, exte
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx, `
 			-- The workspace predicate is the lookup's own: tenant isolation
-			SELECT m.native_id, r.status, m.origin FROM import_record_map m
+			SELECT m.native_id, r.status, m.origin, r.id FROM import_record_map m
 			  JOIN import_run r ON r.id = m.import_run_id
 			WHERE m.source_system = $1 AND m.object = $2 AND m.external_id = $3`,
-			sourceSystem, object, externalID).Scan(&binding.NativeID, &binding.RunStatus, &binding.Origin)
+			sourceSystem, object, externalID).Scan(&binding.NativeID, &binding.RunStatus, &binding.Origin, &binding.RunID)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}

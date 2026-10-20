@@ -1,5 +1,6 @@
 import type { components } from "../../api/schema";
 import { Badge } from "../../design-system/atoms";
+import { LEAD_STATUS_LABEL } from "../../format/leadstatus";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { isOpenStatus } from "./leadpresentation.board";
@@ -14,17 +15,6 @@ export {
 
 export type Lead = components["schemas"]["Lead"];
 
-// The word for every rung, TOTAL over the contract's union: a status the server
-// can send has a word here or this file does not compile, so no surface is left
-// with a branch for a raw enum to reach a reader through.
-const STATUS_LABEL: Record<Lead["status"], MessageKey> = {
-  new: "lead.statusNew",
-  contacted: "lead.statusContacted",
-  engaged: "lead.statusEngaged",
-  promoted: "lead.statusPromoted",
-  disqualified: "lead.statusDisqualified",
-};
-
 // The picker's ORDER, the one thing the map above does not carry: the ladder
 // reads as a progression, not an alphabet. Annotated because inferring
 // `MessageKey` five times over is more than the compiler will serialise.
@@ -32,14 +22,14 @@ type StatusOption = Readonly<{ value: Lead["status"]; label: MessageKey }>;
 
 export const LEAD_STATUS_FILTER_OPTIONS: readonly StatusOption[] = (
   ["new", "contacted", "engaged", "promoted", "disqualified"] as const
-).map((value) => ({ value, label: STATUS_LABEL[value] }));
+).map((value) => ({ value, label: LEAD_STATUS_LABEL[value] }));
 
 /**
  * The catalogue key for a status, shared by the badge and the readings strip,
  * so one lead cannot read "Qualified" in a pill and "promoted" beside it.
  */
 export function leadStatusLabel(status: Lead["status"]): MessageKey {
-  return STATUS_LABEL[status];
+  return LEAD_STATUS_LABEL[status];
 }
 
 // The ladder's colours: a new lead is quiet, contact is in motion, engaged

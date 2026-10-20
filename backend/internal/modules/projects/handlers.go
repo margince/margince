@@ -55,7 +55,7 @@ func (h Handlers) CreateProject(w http.ResponseWriter, r *http.Request, _ crmcon
 	// A declared importer (a HUMAN holding import_run:create) may stamp the
 	// reserved mirror: namespace; everyone else, an agent carrying that human's
 	// grants included, gets the closed door.
-	mapInput := projectCreateInput
+	mapInput := ProjectCreationInput
 	if auth.DeclaredImporter(r.Context()) {
 		mapInput = projectCreateInputFromImporter
 	}
@@ -187,13 +187,12 @@ func (h Handlers) ArchiveProject(w http.ResponseWriter, r *http.Request, id crmc
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func projectCreateInput(req crmcontracts.CreateProjectRequest) (CreateProjectInput, error) {
+func ProjectCreationInput(req crmcontracts.CreateProjectRequest) (CreateProjectInput, error) {
 	return projectCreateInputAdmitting(req, false)
 }
 
-// projectCreateInputFromImporter is projectCreateInput for a declared importer
-// (auth.DeclaredImporter, asked by the handler): it may stamp the mirror:
-// namespace. provider.go keeps the closed door.
+// Only declared human importers may stamp reserved source namespaces.
+// The provider uses the ordinary mapper even when acting for an importer.
 func projectCreateInputFromImporter(req crmcontracts.CreateProjectRequest) (CreateProjectInput, error) {
 	return projectCreateInputAdmitting(req, true)
 }

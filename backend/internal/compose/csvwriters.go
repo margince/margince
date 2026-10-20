@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/freemail"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -39,6 +40,7 @@ import (
 // and answering "unchanged" would write nothing, silently. So a match here
 // compares the mapped fields and updates the ones that differ.
 type csvWriters struct {
+	reviewRows map[string]migration.ReviewRow
 	pool       *pgxpool.Pool
 	contacts   *contacts.Store
 	identities *migration.RunStore
@@ -198,18 +200,6 @@ func (w *csvWriters) Associate(ctx context.Context, a migration.Assoc) (migratio
 	return notLinkedFor(migration.Why(migration.ReasonLinkEdgeUnsupported, "from", a.FromType, "to", a.ToType)), nil
 }
 
-// Ensure lands one row: created the first time, updated when the file has
-// since changed, unchanged when it has not. It skips a row the importer may
-// not create, then a row with a cell the store would refuse. A contact whose
-// company link finds no single company follows the run's policy.
-func (w *csvWriters) Ensure(ctx context.Context, object string, row migration.Row) (migration.EnsureResult, error) {
-	landed, err := w.ensureOne(ctx, object, row)
-	if err == nil && landed.Skipped {
-		w.links.markRefused(object, row.ExternalID)
-	}
-	return landed, err
-}
-
 func (w *csvWriters) ensureOne(ctx context.Context, object string, row migration.Row) (migration.EnsureResult, error) {
 	if refused := w.createRefusal(ctx, row); refused != nil {
 		return skippedWithProblem(refused), nil
@@ -242,6 +232,9 @@ func (w *csvWriters) ensureRow(ctx context.Context, object string, row migration
 	// file said which company this is; nothing the importer could infer beats
 	// that, and inferring anyway is what made name-based updating unsafe.
 	if target.named {
+		if err := w.reviewedTarget(row.ExternalID, target.id); err != nil {
+			return migration.EnsureResult{}, err
+		}
 		if err := w.bind(ctx, row, target.id); err != nil {
 			return migration.EnsureResult{}, err
 		}
@@ -255,7 +248,13 @@ func (w *csvWriters) ensureRow(ctx context.Context, object string, row migration
 		return migration.EnsureResult{}, err
 	}
 	if found {
+		if replay, err := w.reviewedBinding(ctx, row, id); err != nil || replay {
+			return migration.EnsureResult{Unchanged: replay}, err
+		}
 		return w.reconcile(ctx, id, row, typed)
+	}
+	if expected, reviewed := w.reviewRows[row.ExternalID]; reviewed && expected.TargetID != "" {
+		return migration.EnsureResult{}, apperrors.ErrVersionSkew
 	}
 	// Not a row this importer has landed before — but the estate may hold the
 	// record anyway, and the run says what to do about that. The check runs on
@@ -389,10 +388,13 @@ func (w *csvWriters) apply(
 	ctx = contacts.WithBulkWrite(ctx)
 	switch w.object {
 	case migration.ObjectLead:
-		_, err := w.contacts.UpdateLead(ctx, ids.From[ids.LeadKind](id), leadUpdateFrom(changed, typed))
+		in := leadUpdateFrom(changed, typed)
+		in.IfVersion = w.reviewedVersion(id)
+		_, err := w.contacts.UpdateLead(ctx, ids.From[ids.LeadKind](id), in)
 		return err
 	case migration.ObjectCompany:
 		in := companyUpdateFrom(changed, typed)
+		in.IfVersion = w.reviewedVersion(id)
 		merged, given, err := addressMergedOnto(current, in.Address)
 		if err != nil {
 			return err

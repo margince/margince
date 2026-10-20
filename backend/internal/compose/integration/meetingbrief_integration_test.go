@@ -57,13 +57,6 @@ func meetingBriefServiceAt(e *Env, now time.Time) *meetingbrief.Service {
 }
 
 // identityTeammates is the membership reader, in the shape the brief takes.
-// The typed id stays inside identity, exactly as compose's own seam does.
-type identityTeammates struct{ svc *identity.Service }
-
-func (t identityTeammates) SharesLiveTeamWithCaller(ctx context.Context, other ids.UUID) (bool, error) {
-	return t.svc.SharesLiveTeamWithCaller(ctx, ids.From[ids.UserKind](other))
-}
-
 // The object grant is checked before any row is read. Without it a reader whose
 // role grants no activity read still reaches a brief describing a meeting, its
 // attendees and their commitments — through a door every sibling read refuses.

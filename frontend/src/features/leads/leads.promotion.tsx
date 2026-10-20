@@ -6,32 +6,13 @@ import { Button, Field, Textarea } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { formatDateAbbrev } from "../../format/format";
+import { promotionTriggerLabel } from "../../format/promotion";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
 import { leadWriteKeys } from "../../lib/leadkeys";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useRecordHistory } from "../records/history";
 import type { Lead } from "./leads";
-
-// The recorded trigger, as the outcome card names it. The wire token never
-// reaches the reader.
-function promotionTriggerLabel(
-  trigger: string | null | undefined,
-): MessageKey | null {
-  switch (trigger) {
-    case "inbound_reply":
-      return "lead.trigger.inboundReply";
-    case "meeting_booked":
-      return "lead.trigger.meetingBooked";
-    case "meeting_held":
-      return "lead.trigger.meetingHeld";
-    case "human_qualify":
-      return "lead.trigger.humanQualify";
-    default:
-      return null;
-  }
-}
 
 /**
  * What the promotion did, read from the promote audit row it wrote.
@@ -105,11 +86,11 @@ function DemoteAction({ id }: Readonly<{ id: string }>) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
   const demote = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (input: { id: string; reason: string }) => {
       return unwrap(
         await api.POST("/leads/{id}/demote", {
-          params: { path: { id } },
-          body: { reason: reason.trim() },
+          params: { path: { id: input.id } },
+          body: { reason: input.reason },
         }),
         t,
       );
@@ -137,7 +118,7 @@ function DemoteAction({ id }: Readonly<{ id: string }>) {
         confirmReason={
           reason.trim() === "" ? t("lead.demoteReasonRequired") : undefined
         }
-        onConfirm={() => demote.mutate()}
+        onConfirm={() => demote.mutate({ id, reason: reason.trim() })}
         pending={demote.isPending}
         error={demote.isError ? problemMessageOf(demote.error, t) : undefined}
       >

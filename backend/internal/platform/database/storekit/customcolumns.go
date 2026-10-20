@@ -85,13 +85,10 @@ func SelectSuffix(active []fieldcatalog.Column) string {
 func InsertFragments(active []fieldcatalog.Column, rawExtra map[string]any, base []any) (cols, placeholders string, args []any) {
 	var names, holders []string
 	custom := make([]any, 0, len(active))
+	values := CreateFieldValues(active, rawExtra)
 	for _, c := range active {
-		v, present := rawExtra[c.Name]
+		sv, present := values[c.Name]
 		if !present {
-			continue
-		}
-		sv, ok := SQLValue(c, v)
-		if !ok {
 			continue
 		}
 		names = append(names, quoteColumnIdentifier(c.Name))
@@ -353,4 +350,21 @@ func stringSet(raw any) ([]string, bool) {
 		}
 	}
 	return out, true
+}
+
+// CreateFieldValues is the exact active, type-compatible subset inserted by a
+// record create. Preview readers use it to avoid promising discarded values.
+func CreateFieldValues(active []fieldcatalog.Column, rawExtra map[string]any) map[string]any {
+	values := make(map[string]any)
+	for _, column := range active {
+		value, present := rawExtra[column.Name]
+		if !present {
+			continue
+		}
+		converted, ok := SQLValue(column, value)
+		if ok {
+			values[column.Name] = converted
+		}
+	}
+	return values
 }

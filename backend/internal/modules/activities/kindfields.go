@@ -90,7 +90,7 @@ func CheckLinkTypes(kind string, entityTypes []string) error {
 		if linkColumn(entityType) == "" {
 			return &InvalidLinkTypeError{EntityType: entityType}
 		}
-		if err := refuseACompanyMeeting(kind, ActivityLinkInput{EntityType: entityType}); err != nil {
+		if err := CheckActivityLinkKind(kind, ActivityLinkInput{EntityType: entityType}); err != nil {
 			return err
 		}
 	}

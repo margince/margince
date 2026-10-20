@@ -18,6 +18,7 @@ import (
 	"html"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -99,6 +100,13 @@ func (o SignOff) under(body string) string {
 //
 // One lookup for both renderings. Two would be two chances for the plain part
 // and the markup part of one message to disagree about who signed it.
+func (s *Store) PreviewMailSignOff(ctx context.Context, body, subject string) (SignOff, error) {
+	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
+		return SignOff{}, err
+	}
+	return s.signOff(ctx, body, subject)
+}
+
 func (s *Store) signOff(ctx context.Context, body, subject string) (SignOff, error) {
 	name, err := s.senderDisplayName(ctx)
 	if err != nil {

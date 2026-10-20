@@ -79,28 +79,11 @@ func (p *Provider) searchOffers(ctx context.Context, text *string, limit int, cu
 // createOffer makes an offer on the deal its fields name, as POST
 // /deals/{id}/offers makes one on the deal its path names.
 func (p *Provider) createOffer(ctx context.Context, raw json.RawMessage, source string) (datasource.EntityRef, error) {
-	var fields map[string]json.RawMessage
-	if err := json.Unmarshal(raw, &fields); err != nil {
-		return datasource.EntityRef{}, httperr.Validation("fields", "malformed_json", err.Error())
-	}
-	var dealID ids.UUID
-	if err := json.Unmarshal(fields[filterOfferDealID], &dealID); err != nil || dealID.IsZero() {
-		return datasource.EntityRef{}, httperr.Validation(filterOfferDealID, "required", "an offer is made on a deal: name its deal_id")
-	}
-	delete(fields, filterOfferDealID)
-	var err error
-	if fields["source"], err = json.Marshal(source); err != nil {
-		return datasource.EntityRef{}, err
-	}
-	body, err := json.Marshal(fields)
+	dealID, in, err := OfferCreationFromFields(raw, source)
 	if err != nil {
 		return datasource.EntityRef{}, err
 	}
-	in, err := offerCreateInput(body)
-	if err != nil {
-		return datasource.EntityRef{}, err
-	}
-	v, err := p.store.CreateOffer(ctx, ids.From[ids.DealKind](dealID), in)
+	v, err := p.store.CreateOffer(ctx, dealID, in)
 	return datasource.EntityRef{Type: datasource.EntityOffer, ID: ids.UUID(v.Id)}, err
 }
 
@@ -131,8 +114,8 @@ func (p *Provider) refuseArchiveOffer(ctx context.Context, r datasource.EntityRe
 	return p.store.RefuseArchiveOffer(ctx, ids.From[ids.OfferKind](r.ID))
 }
 
-func (p *Provider) archiveOffer(ctx context.Context, r datasource.EntityRef) (datasource.EntityRef, error) {
-	v, err := p.store.ArchiveOffer(ctx, ids.From[ids.OfferKind](r.ID))
+func (p *Provider) archiveOffer(ctx context.Context, in datasource.ArchiveInput) (datasource.EntityRef, error) {
+	v, err := p.store.ArchiveOfferAt(ctx, ids.From[ids.OfferKind](in.Ref.ID), in.IfVersion)
 	return datasource.EntityRef{Type: datasource.EntityOffer, ID: ids.UUID(v.Id)}, err
 }
 
@@ -159,4 +142,29 @@ func (p *Provider) UpdateOfferLine(ctx context.Context, offerID, lineID ids.UUID
 // RemoveOfferLine removes one line item, as the DELETE route does.
 func (p *Provider) RemoveOfferLine(ctx context.Context, offerID, lineID ids.UUID) (crmcontracts.Offer, error) {
 	return p.store.RemoveOfferLineItem(ctx, ids.From[ids.OfferKind](offerID), lineID)
+}
+
+func OfferCreationFromFields(raw json.RawMessage, source string) (ids.DealID, CreateOfferInput, error) {
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &fields); err != nil {
+		return ids.DealID{}, CreateOfferInput{}, httperr.Validation("fields", "malformed_json", err.Error())
+	}
+	var dealID ids.UUID
+	if err := json.Unmarshal(fields[filterOfferDealID], &dealID); err != nil || dealID.IsZero() {
+		return ids.DealID{}, CreateOfferInput{}, httperr.Validation(filterOfferDealID, "required", "an offer is made on a deal: name its deal_id")
+	}
+	delete(fields, filterOfferDealID)
+	var err error
+	if fields["source"], err = json.Marshal(source); err != nil {
+		return ids.DealID{}, CreateOfferInput{}, err
+	}
+	body, err := json.Marshal(fields)
+	if err != nil {
+		return ids.DealID{}, CreateOfferInput{}, err
+	}
+	in, err := OfferCreationInput(body)
+	if err != nil {
+		return ids.DealID{}, CreateOfferInput{}, err
+	}
+	return ids.From[ids.DealKind](dealID), in, nil
 }

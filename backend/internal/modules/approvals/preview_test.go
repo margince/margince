@@ -5,6 +5,7 @@ package approvals
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 	"time"
@@ -13,6 +14,23 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
+
+func TestOnlySupportedCompletePreviewVersionsCanBeApproved(t *testing.T) {
+	for _, version := range []int{0, 1, 2, 3} {
+		for _, state := range []string{"ready", "incomplete", "unavailable", "stale"} {
+			for _, blocks := range []bool{false, true} {
+				preview := &crmcontracts.ApprovalPreview{
+					Version: version, State: state,
+					Conflicts: &[]crmcontracts.ApprovalPreviewConflict{{Kind: "scope_changed", BlocksApproval: blocks}},
+				}
+				want := (version == 1 || version == 2) && state == "ready" && !blocks
+				if allowed := PreviewRefusal(preview) == nil; allowed != want {
+					t.Fatalf("version=%d state=%s blocks=%t allowed=%t", version, state, blocks, allowed)
+				}
+			}
+		}
+	}
+}
 
 func TestAConflictCanRefuseAnOtherwiseReadyPreview(t *testing.T) {
 	for _, blocked := range []bool{false, true} {
@@ -86,7 +104,7 @@ func TestUnavailablePreviewDoesNotPublishAnExecutableComparison(t *testing.T) {
 
 func TestStagePreviewPinMustNameTheProposedDestination(t *testing.T) {
 	stage := ids.NewV7()
-	subject := row{CoTargetType: new("stage"), CoTargetID: &stage, CoTargetVersion: new(int64(1))}
+	subject := row{Kind: "advance_deal", CoTargetType: new("stage"), CoTargetID: &stage, CoTargetVersion: new(int64(1))}
 	for _, rest := range []bool{false, true} {
 		for _, same := range []bool{false, true} {
 			destination := ids.NewV7()
@@ -97,7 +115,7 @@ func TestStagePreviewPinMustNameTheProposedDestination(t *testing.T) {
 			if rest {
 				payload = map[string]any{"operation": "advanceDeal", "body": payload}
 			}
-			if got := stagePreviewPinned(subject, crmcontracts.Approval{ProposedChange: &payload}); got != same {
+			if got := previewCoTargetPinned(subject, crmcontracts.Approval{ProposedChange: &payload}); got != same {
 				t.Fatalf("REST=%v same destination=%v pinned=%v", rest, same, got)
 			}
 		}
@@ -122,5 +140,71 @@ func TestCommittedVerdictsSurviveContextOutagesWithoutEnablingPendingMembers(t *
 		if err := PreviewRefusal(got.Preview); err == nil {
 			t.Fatal("missing context permits another decision")
 		}
+	}
+}
+
+func TestTagMergePreviewCannotRetargetItsPinnedSurvivor(t *testing.T) {
+	survivor := ids.NewV7()
+	subject := row{Kind: "merge_tags", CoTargetType: new("tag"), CoTargetID: &survivor, CoTargetVersion: new(int64(1))}
+	for _, rest := range []bool{false, true} {
+		for _, same := range []bool{false, true} {
+			destination := ids.NewV7()
+			if same {
+				destination = survivor
+			}
+			payload := map[string]any{"into_tag_id": destination.String()}
+			if rest {
+				payload = map[string]any{"operation": "mergeTags", "body": payload}
+			}
+			if got := previewCoTargetPinned(subject, crmcontracts.Approval{ProposedChange: &payload}); got != same {
+				t.Fatalf("REST=%v same=%v pinned=%v", rest, same, got)
+			}
+		}
+	}
+	subject.CoTargetVersion = nil
+	payload := map[string]any{"into_tag_id": survivor.String()}
+	if previewCoTargetPinned(subject, crmcontracts.Approval{ProposedChange: &payload}) {
+		t.Fatal("legacy unpinned survivor treated as ready")
+	}
+}
+
+func TestAnEditedTagMergeCannotSpendAnotherSurvivorsPin(t *testing.T) {
+	survivor := ids.NewV7()
+	subject := row{Kind: "merge_tags", CoTargetType: new("tag"), CoTargetID: &survivor, CoTargetVersion: new(int64(1))}
+	service := NewService(nil).WithPreview(func(context.Context, crmcontracts.Approval) (*crmcontracts.ApprovalPreview, error) {
+		return &crmcontracts.ApprovalPreview{Version: 1, State: "ready", Changes: []crmcontracts.ApprovalPreviewChange{}, Effects: &[]string{"merge_tags_release_source"}}, nil
+	})
+	for _, rest := range []bool{false, true} {
+		payload := map[string]any{"into_tag_id": ids.NewV7().String()}
+		if rest {
+			payload = map[string]any{"operation": "mergeTags", "body": payload}
+		}
+		edited, err := json.Marshal(payload)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var refusal *PreviewContextError
+		if err := service.checkPreview(context.Background(), subject, edited); !errors.As(err, &refusal) || refusal.State != "incomplete" {
+			t.Fatalf("edited survivor accepted: %v", err)
+		}
+	}
+}
+
+func TestProgressionPreviewRequiresItsOriginalDestinationPin(t *testing.T) {
+	destination := ids.NewV7()
+	subject := row{Kind: "stage_progression", CoTargetType: new("stage"), CoTargetID: &destination, CoTargetVersion: new(int64(1))}
+	payload := map[string]any{"to_stage_id": destination.String()}
+	proposal := crmcontracts.Approval{ProposedChange: &payload}
+	if !previewCoTargetPinned(subject, proposal) {
+		t.Fatal("matching destination refused")
+	}
+	payload["to_stage_id"] = ids.NewV7().String()
+	if previewCoTargetPinned(subject, proposal) {
+		t.Fatal("edited destination spent another pin")
+	}
+	payload["to_stage_id"] = destination.String()
+	subject.CoTargetVersion = nil
+	if previewCoTargetPinned(subject, proposal) {
+		t.Fatal("legacy proposal without a stage pin appears ready")
 	}
 }

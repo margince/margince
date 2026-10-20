@@ -44,9 +44,9 @@ func TestTheRecordImporterDoorsCarryTheAuthor(t *testing.T) {
 func TestTheRecordClientDoorsRefuseAnAuthor(t *testing.T) {
 	legacy := "legacy_crm"
 	name := "Anna Müller"
-	_, contactErr := contactCreateInput(crmcontracts.CreateContactRequest{Source: "manual", FullName: "X", SourceSystem: &legacy, SourceAuthorName: &name})
-	_, companyErr := companyCreateInput(crmcontracts.CreateCompanyRequest{Source: "manual", DisplayName: "X", SourceSystem: &legacy, SourceAuthorName: &name})
-	_, leadErr := leadCreateInput(crmcontracts.CreateLeadRequest{Source: "manual", FullName: new("X"), SourceSystem: &legacy, SourceAuthorName: &name})
+	_, contactErr := ContactCreationInput(crmcontracts.CreateContactRequest{Source: "manual", FullName: "X", SourceSystem: &legacy, SourceAuthorName: &name})
+	_, companyErr := CompanyCreationInput(crmcontracts.CreateCompanyRequest{Source: "manual", DisplayName: "X", SourceSystem: &legacy, SourceAuthorName: &name})
+	_, leadErr := LeadCreationInput(crmcontracts.CreateLeadRequest{Source: "manual", FullName: new("X"), SourceSystem: &legacy, SourceAuthorName: &name})
 	for record, err := range map[string]error{"contact": contactErr, "company": companyErr, "lead": leadErr} {
 		assertAuthorRefused(t, record, err, "reserved_source_author")
 	}

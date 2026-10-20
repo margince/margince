@@ -16,8 +16,8 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -269,7 +269,9 @@ func TestAPendingRetiredTranscriptCardCannotBeApproved(t *testing.T) {
 		 target_entity_type, target_entity_id)
 		VALUES ($1, 'transcript_proposal', 'pending', 'agent:transcript-proposer', $2, '{}', 'retired-2',
 		        now() + interval '1 day', 'activity', $3)`, e.Rep1, e.activity.UUID)
-	if _, err := e.svc.Decide(e.ctx, ids.From[ids.ApprovalKind](id), true, nil); !errors.Is(err, apperrors.ErrConflict) {
-		t.Errorf("approving a retired card: err = %v, want a conflict", err)
+	_, err := e.svc.Decide(e.ctx, ids.From[ids.ApprovalKind](id), true, nil)
+	refusal, ok := errors.AsType[*approvals.PreviewContextError](err)
+	if !ok || refusal.State != "unavailable" {
+		t.Errorf("approving a retired card: err = %v, want unavailable decision context", err)
 	}
 }

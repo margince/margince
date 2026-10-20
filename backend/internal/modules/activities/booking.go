@@ -27,6 +27,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+const DefaultMeetingSubject = "Meeting"
+
 // BookMeetingInput is one slot a caller is committing: whose calendar it lands
 // on, when, what it is called, and the records it is about.
 type BookMeetingInput struct {
@@ -78,7 +80,7 @@ func (s *Store) BookMeeting(ctx context.Context, in BookMeetingInput) (crmcontra
 
 	subject := in.Subject
 	if subject == "" {
-		subject = "Meeting"
+		subject = DefaultMeetingSubject
 	}
 	source := in.Source
 	if source == "" {
@@ -189,23 +191,20 @@ func (h Handlers) BookMeeting(w http.ResponseWriter, r *http.Request, _ crmcontr
 // a lead-only booking cannot carry consent through this endpoint yet —
 // that refuses loudly rather than accepting a consent it would not
 // record. Returns false after writing the response.
-func consentSubjectLink(w http.ResponseWriter, r *http.Request, links []ActivityLinkInput) (ids.UUID, bool) {
+// BookingConsentSubject preserves the authenticated booking's one-contact rule.
+func BookingConsentSubject(links []ActivityLinkInput) (ids.UUID, error) {
 	var contacts []ids.UUID
-	for _, l := range links {
-		if l.EntityType == linkEntityContact {
-			contacts = append(contacts, l.EntityID)
+	for _, link := range links {
+		if link.EntityType == linkEntityContact {
+			contacts = append(contacts, link.EntityID)
 		}
 	}
 	switch len(contacts) {
 	case 1:
-		return contacts[0], true
+		return contacts[0], nil
 	case 0:
-		httperr.Write(w, r, httperr.Validation("consent", "subject_required",
-			"recording consent with a booking requires a linked contact to attach it to"))
-		return ids.UUID{}, false
+		return ids.Nil, httperr.Validation("consent", "subject_required", "recording consent with a booking requires a linked contact to attach it to")
 	default:
-		httperr.Write(w, r, httperr.Validation("consent", "subject_ambiguous",
-			"recording consent with a booking requires exactly one linked contact"))
-		return ids.UUID{}, false
+		return ids.Nil, httperr.Validation("consent", "subject_ambiguous", "recording consent with a booking requires exactly one linked contact")
 	}
 }

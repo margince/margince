@@ -13,6 +13,9 @@ package compose
 
 import (
 	"context"
+	"github.com/margince/margince/backend/internal/compose/profileverdicts"
+	"github.com/margince/margince/backend/internal/modules/notices"
+	"github.com/margince/margince/backend/internal/modules/signals"
 	"log/slog"
 	"time"
 
@@ -75,6 +78,14 @@ func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 		WithStopCarrier(consent.NewStore(InstallationDB(pool))).
 		WithSatelliteCarriers(consent.NewStore(InstallationDB(pool)),
 			introductions.NewStore(InstallationDB(pool), time.Now)).
+		WithParticipantRosterReader(activities.EnsureParticipantRosterVisibleTx).
+		WithProviderRunReader(integrations.ReadRunForContactTx).
+		WithMergeSignalReader(signals.PreviewSignalCarryTx).
+		WithMergeCommitmentReader(weeklyPlanStore(pool).PreviewCommitmentCarryTx).
+		WithMergeNoticeReader(notices.PreviewNoticeCarryTx).
+		WithMergeContentReader(activities.NewStore(InstallationDB(pool))).
+		WithProfileVerdictReader(profileverdicts.MergeReader(InstallationDB(pool))).
+		WithFeedbackCarryReader(ai.NewFeedbackStore(InstallationDB(pool))).
 		WithGrantCarrier(identity.NewServiceFor(InstallationDB(pool))).
 		WithInstallationRenamer(installationRenamer(pool))
 }

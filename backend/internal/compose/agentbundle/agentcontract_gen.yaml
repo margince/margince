@@ -6240,12 +6240,16 @@ paths:
       tags: [Offers]
       operationId: archiveProduct
       summary: Archive (soft-delete) a product. Lines referencing it survive with their snapshot.
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
       responses:
         '200':
           description: Archived product.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/Product'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
         '404': {$ref: '#/components/responses/NotFound'}
       description: |-
         Archive (soft-delete) a product. Lines referencing it survive with their snapshot.
@@ -6601,6 +6605,8 @@ paths:
         Needs the passport permission Change records.
 
         Runs at once.
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
       responses:
         '200':
           description: Archived offer template.
@@ -6609,6 +6615,8 @@ paths:
               schema: {$ref: '#/components/schemas/OfferTemplate'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
         '404': {$ref: '#/components/responses/NotFound'}
   /deals/{id}/outcome-reviews:
     parameters:
@@ -6746,12 +6754,15 @@ paths:
         Needs the passport permission Change records.
 
         Runs at once.
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
       responses:
         '200':
           description: Archived offer.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/Offer'}
+        '422': {$ref: '#/components/responses/ValidationError'}
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
   /offers/{id}/line-items:
@@ -18901,6 +18912,39 @@ components:
           description: Canonical field name, translated by the client where known.
         before: {$ref: '#/components/schemas/ApprovalPreviewValue'}
         after: {$ref: '#/components/schemas/ApprovalPreviewValue'}
+    ApprovalPreviewDetail:
+      type: object
+      required: [field, value]
+      properties:
+        field: {type: string, description: Semantic field key translated by the client.}
+        value: {$ref: '#/components/schemas/ApprovalPreviewValue'}
+    ApprovalPreviewImportRow:
+      type: object
+      description: One complete import row effect, using the same checked values as the import writer.
+      required: [object, source_key, line, outcome, changes, details, effects]
+      properties:
+        object: {type: string}
+        source_key: {type: string}
+        line: {type: integer}
+        outcome: {type: string, enum: [create, create_duplicate, update, unchanged, skip]}
+        target: {$ref: '#/components/schemas/ApprovalPreviewValue'}
+        changes:
+          type: array
+          items: {$ref: '#/components/schemas/ApprovalPreviewChange'}
+        details:
+          type: array
+          items: {$ref: '#/components/schemas/ApprovalPreviewDetail'}
+        effects:
+          type: array
+          items: {type: string}
+    ApprovalPreviewFile:
+      type: object
+      required: [id, filename, content_type, byte_size]
+      properties:
+        id: {type: string, format: uuid}
+        filename: {type: string}
+        content_type: {type: string}
+        byte_size: {type: integer, format: int64}
     ApprovalPreviewConflict:
       type: object
       description: Authorized context that must be considered separately from the proposed effect.
@@ -18928,8 +18972,20 @@ components:
         A current, authorized explanation of the exact staged effect. It never grants permission or supplies execution arguments. Before values are answered only when the current record still has the staged version; stale records require restaging. Pending proposals alone carry this review-time projection. An approval attempt with stale context returns version_skew. Incomplete, unavailable or conflicting context returns 422 with approval_preview_incomplete, approval_preview_unavailable or approval_preview_conflict respectively, without recording a decision.
       required: [version, state, changes, reviewer_reason]
       properties:
+        import_rows:
+          type: array
+          description: The complete bounded row plan. An incomplete plan cannot authorize an import.
+          items: {$ref: '#/components/schemas/ApprovalPreviewImportRow'}
         lifecycle_evidence:
           $ref: '#/components/schemas/LifecyclePreviewEvidence'
+        details:
+          type: array
+          description: Version 2 action operands, read with current permissions and kept separate from execution arguments.
+          items: {$ref: '#/components/schemas/ApprovalPreviewDetail'}
+        files:
+          type: array
+          description: The complete authorized set of files the action will send. Version 2 clients provide the normal file review controls.
+          items: {$ref: '#/components/schemas/ApprovalPreviewFile'}
         effects:
           type: array
           description: Additional business effects released by this approval. Other proposals remain separate decisions.

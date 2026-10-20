@@ -98,18 +98,9 @@ func (e *NoSendOriginError) Error() string {
 	return "send has no origin: name the activity it replies to, or the records it starts from"
 }
 
-// resolve reads whatever the origin needs BEFORE the guard sequence runs, so
-// a record the caller cannot see answers with the row-scope verdict and
-// nothing else.
-//
-// BOTH origins probe here, and the account one has to. Deferring its links to
-// the insert would let a caller name a company they cannot see and still reach
-// the consent gate, which answers about the RECIPIENTS — so the refusal they
-// got back would disclose whether strangers had consented, and it would be a
-// 409 where the row-scope answer is 404. The probe at insert stays: it runs
-// inside the staging transaction and still catches a target archived between
-// the two reads.
-func (o SendOrigin) resolve(ctx context.Context, s *Store) ([]ActivityLinkInput, error) {
+// Resolve checks origin visibility before consent can disclose recipient information.
+// The writer rechecks links in its transaction to catch intervening archival.
+func (o SendOrigin) Resolve(ctx context.Context, s *Store) ([]ActivityLinkInput, error) {
 	if !o.isReply() {
 		if len(o.links) == 0 {
 			return nil, &NoSendOriginError{}

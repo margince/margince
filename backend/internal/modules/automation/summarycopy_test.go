@@ -36,6 +36,7 @@ func TestEveryShippedLanguageWritesItsOwnAutomationSummaries(t *testing.T) {
 			}{
 				{"stagedAction", said.stagedAction, english.stagedAction, 3},
 				{"heldDraft", said.heldDraft, english.heldDraft, 1},
+				{"confirmation", said.confirmation, english.confirmation, 1},
 			} {
 				if field.got == "" {
 					t.Errorf("%s is empty, and a blank summary reaches the inbox as nothing at all", field.name)
@@ -72,7 +73,7 @@ func germanInstallation(context.Context) textlang.Lang { return textlang.German 
 func TestAStagedActionSummaryFollowsTheInjectedLanguage(t *testing.T) {
 	approvals := &fakeApprovals{id: ids.New[ids.ApprovalKind]()}
 	target := datasource.EntityRef{Type: datasource.EntityDeal, ID: ids.NewV7()}
-	action := workflow.Action{Kind: workflow.ActionEmitFlowEvent, Target: target, Args: json.RawMessage(`{}`)}
+	action := workflow.Action{Kind: workflow.ActionEmitFlowEvent, Target: target, Args: json.RawMessage(`{"question":"Ist die Prüfung abgeschlossen?"}`)}
 
 	_, err := ApplyActions(context.Background(), Executors{Approvals: approvals, Language: germanInstallation},
 		workflow.Effect{Actions: []workflow.Action{action}})
@@ -80,7 +81,7 @@ func TestAStagedActionSummaryFollowsTheInjectedLanguage(t *testing.T) {
 	if !errors.As(err, &staged) || len(approvals.calls) != 1 {
 		t.Fatalf("ApplyActions err = %v with %d stagings, want exactly one staged approval", err, len(approvals.calls))
 	}
-	want := "Eine Automatisierung möchte emit_flow_event für deal " + target.ID.String() + " ausführen"
+	want := "Bestätigung erbeten: Ist die Prüfung abgeschlossen?"
 	if got := approvals.calls[0].Summary; got != want {
 		t.Errorf("summary = %q, want %q", got, want)
 	}

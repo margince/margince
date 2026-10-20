@@ -178,28 +178,27 @@ func (s *Store) Current(ctx context.Context, now time.Time) (Plan, error) {
 	return s.planForOwner(ctx, owner, now)
 }
 
-// PlanFor answers a named rep's current plan, for their lead.
-//
-// The SECOND reader, and the only one that names a contact. Gated on the same
-// teammate question attention.resolveOwner and notices.RaiseCoachNotice ask,
-// through the same seam — never a fourth spelling of "is this my colleague".
-//
-// A reader who is not their lead gets ErrNotFound rather than a refusal: whether
-// a contact has a plan is itself something a stranger may not learn.
+// Another reader's plan is visible only through the shared teammate gate.
+// A refusal hides whether that reader has started a plan.
 func (s *Store) PlanFor(ctx context.Context, owner ids.UUID, now time.Time) (Plan, error) {
-	if err := auth.Require(ctx, "weekly_plan", principal.ActionRead); err != nil {
+	if err := s.requirePlanReader(ctx, owner); err != nil {
 		return Plan{}, err
+	}
+	return s.planForOwner(ctx, owner, now)
+}
+
+func (s *Store) requirePlanReader(ctx context.Context, owner ids.UUID) error {
+	if err := auth.Require(ctx, "weekly_plan", principal.ActionRead); err != nil {
+		return err
 	}
 	me, err := planUser(ctx)
 	if err != nil {
-		return Plan{}, err
+		return err
 	}
 	if owner != me {
-		if err := s.requireLeadOf(ctx, owner); err != nil {
-			return Plan{}, err
-		}
+		return s.requireLeadOf(ctx, owner)
 	}
-	return s.planForOwner(ctx, owner, now)
+	return nil
 }
 
 // requireLeadOf refuses a caller who does not lead the named rep.

@@ -40,6 +40,15 @@ func TestQualifyOpensTheDealAndSeatsTheContactInOneTransaction(t *testing.T) {
 	}
 	leadID := ids.From[ids.LeadKind](ids.UUID(lead.Id))
 
+	preview, err := contactsStore.PreviewLeadContactChange(admin, leadID, contacts.PromoteLeadInput{
+		Trigger: "human_qualify", Deal: &contacts.QualifyDealInput{},
+	})
+	if err != nil || preview.Deal == nil {
+		t.Fatalf("preview qualified deal: %+v, %v", preview, err)
+	}
+	if e.WsCount(t, `SELECT count(*) FROM deal`) != 0 {
+		t.Fatal("preview created a deal")
+	}
 	out, err := contactsStore.QualifyLead(admin, leadID, contacts.PromoteLeadInput{
 		Trigger: "human_qualify", Deal: &contacts.QualifyDealInput{},
 	})
@@ -52,6 +61,12 @@ func TestQualifyOpensTheDealAndSeatsTheContactInOneTransaction(t *testing.T) {
 	deal, err := dealsStore.GetDeal(admin, ids.From[ids.DealKind](*out.DealID), storekit.LiveOnly)
 	if err != nil {
 		t.Fatalf("the deal does not read back: %v", err)
+	}
+	if preview.Deal.Name != deal.Name || preview.Deal.PipelineID == nil || preview.Deal.StageID == nil ||
+		deal.PipelineId == nil || deal.StageId == nil ||
+		*preview.Deal.PipelineID != ids.UUID(*deal.PipelineId) || *preview.Deal.StageID != ids.UUID(*deal.StageId) ||
+		preview.Deal.OwnerID != nil || deal.OwnerId != nil {
+		t.Fatalf("preview %+v differs from created deal %+v", preview.Deal, deal)
 	}
 	if deal.Name != company {
 		t.Errorf("deal name = %q, want the lead's company %q", deal.Name, company)
@@ -108,6 +123,12 @@ func TestQualifyWithDealNeedsTheRelationshipGrant(t *testing.T) {
 			"pipeline": {Read: true},
 		},
 	})
+	preview, err := contactsStore.PreviewLeadContactChange(narrow, ids.From[ids.LeadKind](ids.UUID(lead.Id)), contacts.PromoteLeadInput{
+		Trigger: "human_qualify", Deal: &contacts.QualifyDealInput{},
+	})
+	if !errors.Is(err, apperrors.ErrPermissionDenied) || preview.Deal != nil {
+		t.Fatalf("preview without relationship:create = %+v, %v", preview, err)
+	}
 	_, err = contactsStore.QualifyLead(narrow, ids.From[ids.LeadKind](ids.UUID(lead.Id)), contacts.PromoteLeadInput{
 		Trigger: "human_qualify", Deal: &contacts.QualifyDealInput{},
 	})
@@ -141,6 +162,12 @@ func TestQualifyRollsBackWhenTheDealIsRefused(t *testing.T) {
 		t.Fatal(err)
 	}
 	pipelineID := ids.UUID(pipeline.Id)
+	preview, err := contactsStore.PreviewLeadContactChange(admin, leadID, contacts.PromoteLeadInput{
+		Trigger: "human_qualify", Deal: &contacts.QualifyDealInput{PipelineID: &pipelineID, StageID: &ghost},
+	})
+	if !errors.Is(err, apperrors.ErrNotFound) || preview.Deal != nil {
+		t.Fatalf("preview with ghost stage = %+v, %v", preview, err)
+	}
 	_, err = contactsStore.QualifyLead(admin, leadID, contacts.PromoteLeadInput{
 		Trigger: "human_qualify", Deal: &contacts.QualifyDealInput{PipelineID: &pipelineID, StageID: &ghost},
 	})

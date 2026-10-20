@@ -4,6 +4,8 @@
 package deals
 
 import (
+	"encoding/json"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"slices"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -82,7 +84,7 @@ func productUpdateInput(req crmcontracts.UpdateProductRequest, cleared []string,
 	}, nil
 }
 
-func offerTemplateCreateInput(req crmcontracts.CreateOfferTemplateRequest) (CreateOfferTemplateInput, error) {
+func OfferTemplateCreationInput(req crmcontracts.CreateOfferTemplateRequest) (CreateOfferTemplateInput, error) {
 	name, err := httperr.RequireNonBlank(offerTemplateNameField, req.Name)
 	if err != nil {
 		return CreateOfferTemplateInput{}, err
@@ -113,4 +115,16 @@ func offerTemplateUpdateInput(req crmcontracts.UpdateOfferTemplateRequest, ifVer
 	return UpdateOfferTemplateInput{
 		Name: name, Locale: req.Locale, IsDefault: req.IsDefault, Layout: req.Layout, IfVersion: ifVersion,
 	}, nil
+}
+
+// Preserve price presence: an omitted price must never become a free product.
+func ProductCreationFromJSON(raw json.RawMessage, sourceOverride *string) (CreateProductInput, error) {
+	var req crmcontracts.CreateProductRequest
+	if err := datasource.StrictDecode(raw, &req); err != nil {
+		return CreateProductInput{}, err
+	}
+	if sourceOverride != nil {
+		req.Source = *sourceOverride
+	}
+	return productCreateInput(req, statesAValue(raw, "unit_price_minor"))
 }

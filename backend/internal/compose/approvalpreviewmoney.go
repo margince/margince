@@ -19,7 +19,7 @@ func (r approvalPreviewReader) moneyValue(ctx context.Context, field string, val
 	}
 	var currency string
 	switch field {
-	case acceptFieldAmountMinor, "expected_arr_minor":
+	case acceptFieldAmountMinor, "expected_arr_minor", "unit_price_minor", "net_minor", "tax_minor", "gross_minor", "arr_minor", "net_tcv_minor", "line_net_minor", "line_tax_minor", "line_total_minor":
 		if err := json.Unmarshal(fields["currency"], &currency); err != nil || currency == "" {
 			return apperrors.ErrInvalidArgument
 		}

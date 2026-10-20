@@ -51,7 +51,7 @@ const scheduledSendColumns = `
 	` + scheduledSendStatusExpr + ` AS status,
 	scheduled_at, scheduled_tz, origin_kind,
 	anchor_activity_id, payload, scheduled_by, activity_id,
-	held_reason, version, created_at, updated_at, origin_links`
+	held_reason, version, created_at, updated_at, origin_links, also_links, payload_version, principal_kind`
 
 // ListScheduledSends returns the caller's pending and held messages.
 func (s *Store) ListScheduledSends(ctx context.Context, status string) ([]ScheduledSend, error) {
@@ -181,11 +181,14 @@ func readScheduledSendTx(ctx context.Context, tx pgx.Tx, id ids.UUID) (Scheduled
 	if err != nil {
 		return ScheduledSend{}, err
 	}
+	return readScheduledSendForSeatTx(ctx, tx, id, actor.UserID)
+}
+
+func readScheduledSendForSeatTx(ctx context.Context, tx pgx.Tx, id, seat ids.UUID) (ScheduledSend, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT`+scheduledSendColumns+`
 		  FROM scheduled_send
-		 WHERE id = $1 AND scheduled_by = $2`,
-		id, actor.UserID)
+		 WHERE id = @id AND scheduled_by = @seat`, pgx.NamedArgs{"id": id, "seat": seat})
 	if err != nil {
 		return ScheduledSend{}, fmt.Errorf("scheduled send: reading: %w", err)
 	}
@@ -403,12 +406,13 @@ func scanScheduledSend(rows pgx.Rows) (ScheduledSend, error) {
 		// SQL NULL on a reply row, which the origin-shape CHECK requires: a
 		// reply's records come from its anchor, and the ones it adds beyond
 		// those travel in also_links, which the fire reads and this does not.
-		originLinks []byte
+		originLinks     []byte
+		additionalLinks []byte
 	)
 	if err := rows.Scan(
 		&row.ID, &row.Status, &row.ScheduledAt, &row.ScheduledTZ, &row.OriginKind,
 		&anchor, &payloadRaw, &row.ScheduledBy, &activityID,
-		&heldReason, &row.Version, &row.CreatedAt, &row.UpdatedAt, &originLinks,
+		&heldReason, &row.Version, &row.CreatedAt, &row.UpdatedAt, &originLinks, &additionalLinks, &row.PayloadVersion, &row.PrincipalKind,
 	); err != nil {
 		return ScheduledSend{}, fmt.Errorf("scheduled send: reading a row: %w", err)
 	}
@@ -425,6 +429,7 @@ func scanScheduledSend(rows pgx.Rows) (ScheduledSend, error) {
 		return ScheduledSend{}, err
 	}
 	row.Links = links
+	row.additionalLinks, row.frozen = additionalLinks, payload
 	evidence, err := payload.Evidence.thaw()
 	if err != nil {
 		return ScheduledSend{}, err

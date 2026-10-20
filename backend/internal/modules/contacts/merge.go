@@ -18,7 +18,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -290,14 +289,7 @@ func buildSurvivorshipPatch(target, source crmcontracts.Contact) *storekit.Patch
 	if target.ConvertedFromLeadId == nil && source.ConvertedFromLeadId != nil {
 		p.Set("converted_from_lead_id", nil, ids.UUID(*source.ConvertedFromLeadId))
 	}
-	if target.Address == nil && source.Address != nil {
-		p.Set("address_line1", nil, source.Address.Line1)
-		p.Set("address_line2", nil, source.Address.Line2)
-		p.Set("address_city", nil, source.Address.City)
-		p.Set("address_region", nil, source.Address.Region)
-		p.Set("address_postal_code", nil, source.Address.PostalCode)
-		p.Set("address_country", nil, source.Address.Country)
-	}
+	fillMergeAddress(p, target.Address, source.Address)
 	return p
 }
 
@@ -316,23 +308,11 @@ func relinkContactEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.C
 	if err := foldFirstObservations(ctx, tx, contactFK, sourceID.UUID, targetID.UUID); err != nil {
 		return 0, err
 	}
-	if _, err := tx.Exec(ctx, `
-		UPDATE relationship a SET archived_at = $3
-		WHERE a.contact_id = $1 AND a.kind <> 'works_with' AND a.archived_at IS NULL AND EXISTS (
-		  SELECT 1 FROM relationship b
-		  WHERE b.contact_id = $2 AND b.kind = a.kind AND b.archived_at IS NULL
-		    AND b.company_id IS NOT DISTINCT FROM a.company_id
-		    AND b.deal_id IS NOT DISTINCT FROM a.deal_id
-		    AND `+roleKeyedDuplicateSQL+`)`,
-		sourceID, targetID, time.Now().UTC()); err != nil {
+	args := pgx.NamedArgs{"source": sourceID, "target": targetID, "archived": time.Now().UTC()}
+	if _, err := tx.Exec(ctx, `UPDATE relationship a SET archived_at = @archived WHERE `+mergeContactEdgeSource+` AND `+mergeContactEdgeDuplicate, args); err != nil {
 		return 0, err
 	}
-	tag, err := tx.Exec(ctx, `
-		UPDATE relationship a SET contact_id = $2,
-		  is_current_primary = a.is_current_primary AND NOT EXISTS (
-		    SELECT 1 FROM relationship b
-		    WHERE b.contact_id = $2 AND `+employment.CurrentPrimarySlotSQL("b")+`)
-		WHERE a.contact_id = $1 AND a.kind <> 'works_with' AND a.archived_at IS NULL`, sourceID, targetID)
+	tag, err := tx.Exec(ctx, `UPDATE relationship a SET contact_id = @target, is_current_primary = `+mergeContactEdgePrimary+` WHERE `+mergeContactEdgeSource, args)
 	return moved + tag.RowsAffected(), err
 }
 
@@ -342,28 +322,14 @@ func relinkContactEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.C
 // orientation — would double it; both are archived instead, because the
 // surviving record already states the fact.
 func relinkWorksWithEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID) (int64, error) {
-	if _, err := tx.Exec(ctx, `
-		UPDATE relationship a SET archived_at = $3
-		WHERE a.kind = 'works_with' AND a.archived_at IS NULL
-		  AND (a.contact_id = $1 OR a.counterparty_contact_id = $1)
-		  AND (
-		    a.contact_id = $2 OR a.counterparty_contact_id = $2
-		    OR EXISTS (
-		      SELECT 1 FROM relationship b
-		      WHERE b.kind = 'works_with' AND b.archived_at IS NULL AND b.id <> a.id
-		        AND LEAST(b.contact_id, b.counterparty_contact_id) =
-		            LEAST($2::uuid, CASE WHEN a.contact_id = $1 THEN a.counterparty_contact_id ELSE a.contact_id END)
-		        AND GREATEST(b.contact_id, b.counterparty_contact_id) =
-		            GREATEST($2::uuid, CASE WHEN a.contact_id = $1 THEN a.counterparty_contact_id ELSE a.contact_id END)))`,
-		sourceID, targetID, time.Now().UTC()); err != nil {
+	args := pgx.NamedArgs{"source": sourceID, "target": targetID, "archived": time.Now().UTC()}
+	if _, err := tx.Exec(ctx, `UPDATE relationship a SET archived_at = @archived WHERE `+mergeWorksWithSource+` AND `+mergeWorksWithDuplicate, args); err != nil {
 		return 0, err
 	}
-	tag, err := tx.Exec(ctx, `
-		UPDATE relationship SET
-		  contact_id              = CASE WHEN contact_id = $1 THEN $2::uuid ELSE contact_id END,
-		  counterparty_contact_id = CASE WHEN counterparty_contact_id = $1 THEN $2::uuid ELSE counterparty_contact_id END
-		WHERE kind = 'works_with' AND archived_at IS NULL
-		  AND (contact_id = $1 OR counterparty_contact_id = $1)`, sourceID, targetID)
+	tag, err := tx.Exec(ctx, `UPDATE relationship a SET
+ contact_id = CASE WHEN a.contact_id = @source THEN @target::uuid ELSE a.contact_id END,
+ counterparty_contact_id = CASE WHEN a.counterparty_contact_id = @source THEN @target::uuid ELSE a.counterparty_contact_id END
+ WHERE `+mergeWorksWithSource, args)
 	if err != nil {
 		return 0, err
 	}
@@ -375,17 +341,16 @@ func relinkWorksWithEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids
 // retired copy is dropped. activity_link has no provenance; the list note is
 // kept, and the earlier adder or tagger of a duplicate is not.
 func relinkLinkRows(ctx context.Context, tx pgx.Tx, entityType string, sourceID, targetID ids.UUID) (int64, error) {
-	column := entityType + "_id" // contact_id | company_id
-	if _, err := tx.Exec(ctx, `
-		DELETE FROM activity_link a
-		WHERE a.`+column+` = $1 AND EXISTS (
-		  SELECT 1 FROM activity_link b
-		  WHERE b.activity_id = a.activity_id AND b.`+column+` = $2)`,
-		sourceID, targetID); err != nil {
+	column, source, duplicate, err := mergeActivityPredicates(entityType)
+	if err != nil {
 		return 0, err
 	}
-	tag, err := tx.Exec(ctx,
-		`UPDATE activity_link SET `+column+` = $2 WHERE `+column+` = $1`, sourceID, targetID)
+	args := pgx.NamedArgs{"source": sourceID, "target": targetID, "kind": entityType}
+	if _, err := tx.Exec(ctx, `DELETE FROM activity_link a
+ WHERE `+source+` AND `+duplicate, args); err != nil {
+		return 0, err
+	}
+	tag, err := tx.Exec(ctx, `UPDATE activity_link a SET `+column+` = @target WHERE `+source, args)
 	if err != nil {
 		return 0, err
 	}
@@ -394,24 +359,16 @@ func relinkLinkRows(ctx context.Context, tx pgx.Tx, entityType string, sourceID,
 	// Spelled out per table: the company-merge coverage census reads these
 	// statements, and a table name assembled at runtime is invisible to it.
 	for _, stmt := range []string{
-		// The membership the survivor already holds stands, but a note only the
-		// retired one carried is kept.
 		`UPDATE list_member b SET note = a.note FROM list_member a
-		 WHERE a.entity_type = $3 AND a.entity_id = $1 AND b.entity_type = $3
-		   AND b.entity_id = $2 AND b.list_id = a.list_id
-		   AND b.note IS NULL AND a.note IS NOT NULL`,
+ WHERE ` + mergeMembershipSource + ` AND ` + mergeMembershipTarget + ` AND b.list_id = a.list_id AND ` + mergeListNoteFill,
 		`DELETE FROM list_member a
-		 WHERE a.entity_type = $3 AND a.entity_id = $1 AND EXISTS (
-		   SELECT 1 FROM list_member b
-		   WHERE b.list_id = a.list_id AND b.entity_type = $3 AND b.entity_id = $2)`,
-		`UPDATE list_member SET entity_id = $2 WHERE entity_type = $3 AND entity_id = $1`,
+ WHERE ` + mergeMembershipSource + ` AND ` + mergeListDuplicate,
+		`UPDATE list_member a SET entity_id = @target WHERE ` + mergeMembershipSource,
 		`DELETE FROM taggable a
-		 WHERE a.entity_type = $3 AND a.entity_id = $1 AND EXISTS (
-		   SELECT 1 FROM taggable b
-		   WHERE b.tag_id = a.tag_id AND b.entity_type = $3 AND b.entity_id = $2)`,
-		`UPDATE taggable SET entity_id = $2 WHERE entity_type = $3 AND entity_id = $1`,
+ WHERE ` + mergeMembershipSource + ` AND ` + mergeTagDuplicate,
+		`UPDATE taggable a SET entity_id = @target WHERE ` + mergeMembershipSource,
 	} {
-		if _, err := tx.Exec(ctx, stmt, sourceID, targetID, entityType); err != nil {
+		if _, err := tx.Exec(ctx, stmt, args); err != nil {
 			return 0, err
 		}
 	}

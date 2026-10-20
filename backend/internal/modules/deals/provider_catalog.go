@@ -100,12 +100,7 @@ func catalogRecords[V any](t datasource.EntityType, rows []V, page storekit.Page
 
 func (p *Provider) createCatalog(ctx context.Context, t datasource.EntityType, raw json.RawMessage, source string) (datasource.EntityRef, error) {
 	if t == datasource.EntityProduct {
-		var req crmcontracts.CreateProductRequest
-		if err := datasource.StrictDecode(raw, &req); err != nil {
-			return datasource.EntityRef{}, err
-		}
-		req.Source = source
-		in, err := productCreateInput(req, statesAValue(raw, "unit_price_minor"))
+		in, err := ProductCreationFromJSON(raw, &source)
 		if err != nil {
 			return datasource.EntityRef{}, err
 		}
@@ -116,7 +111,7 @@ func (p *Provider) createCatalog(ctx context.Context, t datasource.EntityType, r
 	if err := datasource.StrictDecode(raw, &req); err != nil {
 		return datasource.EntityRef{}, err
 	}
-	in, err := offerTemplateCreateInput(req)
+	in, err := OfferTemplateCreationInput(req)
 	if err != nil {
 		return datasource.EntityRef{}, err
 	}
@@ -167,12 +162,13 @@ func (p *Provider) readCatalogLive(ctx context.Context, r datasource.EntityRef) 
 	return v.Id, err
 }
 
-func (p *Provider) archiveCatalog(ctx context.Context, r datasource.EntityRef) (datasource.EntityRef, error) {
+func (p *Provider) archiveCatalog(ctx context.Context, in datasource.ArchiveInput) (datasource.EntityRef, error) {
+	r := in.Ref
 	if r.Type == datasource.EntityProduct {
-		v, err := p.store.ArchiveProduct(ctx, ids.From[ids.ProductKind](r.ID))
+		v, err := p.store.ArchiveProductAt(ctx, ids.From[ids.ProductKind](r.ID), in.IfVersion)
 		return ref(r.Type, v.Id), err
 	}
-	v, err := p.store.ArchiveOfferTemplate(ctx, ids.From[ids.OfferTemplateKind](r.ID))
+	v, err := p.store.ArchiveOfferTemplateAt(ctx, ids.From[ids.OfferTemplateKind](r.ID), in.IfVersion)
 	return ref(r.Type, v.Id), err
 }
 

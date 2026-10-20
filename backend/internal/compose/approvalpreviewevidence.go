@@ -15,6 +15,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -125,6 +126,9 @@ func (r approvalPreviewReader) signalActivityEvidence(ctx context.Context, signa
 }
 
 func (r approvalPreviewReader) currentEvidence(ctx context.Context, approval crmcontracts.Approval, preview *crmcontracts.ApprovalPreview) error {
+	if approval.Kind == deals.StageProgressionKind {
+		return r.progressionEvidencePreview(ctx, approval, preview)
+	}
 	if approval.Kind == lifecycleProposalKind {
 		return r.lifecycleEvidence(ctx, approval, preview)
 	}

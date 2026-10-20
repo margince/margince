@@ -80,8 +80,12 @@ func (h Handlers) UpdateProduct(w http.ResponseWriter, r *http.Request, id crmco
 	httperr.WriteJSON(w, http.StatusOK, product)
 }
 
-func (h Handlers) ArchiveProduct(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	product, err := h.store.ArchiveProduct(r.Context(), pathID[ids.ProductKind](id))
+func (h Handlers) ArchiveProduct(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.ArchiveProductParams) {
+	ifVersion, ok := httperr.IfMatchVersion(w, r)
+	if !ok {
+		return
+	}
+	product, err := h.store.ArchiveProductAt(r.Context(), pathID[ids.ProductKind](id), ifVersion)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return

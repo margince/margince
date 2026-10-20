@@ -147,28 +147,11 @@ func insertCarriedOverrides(
 	ctx context.Context, tx pgx.Tx, from, to commsauthz.StopSubject, by string,
 ) ([]carriedOverride, error) {
 	rows, err := tx.Query(ctx, `
-		INSERT INTO communication_override
-		  (contact_id, lead_id, category, reason, decided_by_level, captured_by, carried_from)
-		SELECT DISTINCT ON (live.category)
-		       $3, $4, live.category, live.reason, live.decided_by_level, $5, live.id
-		  FROM communication_override live
-		 WHERE (($1::uuid IS NOT NULL AND live.contact_id = $1)
-		     OR ($2::uuid IS NOT NULL AND live.lead_id = $2))
-		   AND live.revoked_at IS NULL
-		   AND NOT EXISTS (
-		         SELECT 1 FROM communication_override held
-		          WHERE (($3::uuid IS NOT NULL AND held.contact_id = $3)
-		              OR ($4::uuid IS NOT NULL AND held.lead_id = $4))
-		            AND held.category = live.category
-		            AND held.revoked_at IS NULL
-		            AND coalesce(array_position($6::text[], held.decided_by_level), array_length($6::text[], 1) + 1)
-		                >= coalesce(array_position($6::text[], live.decided_by_level), array_length($6::text[], 1) + 1))
-		 ORDER BY live.category,
-		          coalesce(array_position($6::text[], live.decided_by_level), array_length($6::text[], 1) + 1) DESC,
-		          live.recorded_at DESC
-		RETURNING id, category, decided_by_level`,
-		zeroAsNull(from.ContactID.UUID), zeroAsNull(from.LeadID.UUID),
-		zeroAsNull(to.ContactID.UUID), zeroAsNull(to.LeadID.UUID), by, authorityLadder())
+ INSERT INTO communication_override
+ (contact_id, lead_id, category, reason, decided_by_level, captured_by, carried_from)
+ SELECT @to_contact, @to_lead, category, reason, decided_by_level, @by, id
+ FROM (`+overrideCarryCandidates+`) candidates
+ RETURNING id, category, decided_by_level`, carryAuthorityArgs(from, to, by))
 	if err != nil {
 		return nil, fmt.Errorf("consent: carrying the subject's overrides onto the surviving record: %w", err)
 	}

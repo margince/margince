@@ -84,7 +84,7 @@ func (s *Store) PreviewSend(ctx context.Context, origin SendOrigin, in PreviewSe
 		// missing gate: absence of the engine never reads as permission.
 		return commsauthz.DecisionSet{}, errNoPreviewAuthority
 	}
-	links, err := origin.resolve(ctx, s)
+	links, err := origin.Resolve(ctx, s)
 	if err != nil {
 		return commsauthz.DecisionSet{}, err
 	}

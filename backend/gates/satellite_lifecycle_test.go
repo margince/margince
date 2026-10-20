@@ -168,7 +168,7 @@ var carriedThroughAPort = map[string]portCarry{
 	"communication_basis":       {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
 	"consent_qualifying_event":  {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
 	"consent_doi_token":         {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
-	"intro_request":             {introductionsPkg, "Store.CarryIntrosTx", "Store.carryIntrosTx"},
+	"intro_request":             {introductionsPkg, "Store.CarryIntrosTx", "refuseUnwiredIntroCarry"},
 }
 
 var (

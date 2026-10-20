@@ -262,7 +262,7 @@ func TestACreateBodyCarriesItsPartnerThroughToTheStore(t *testing.T) {
 	partner := openapi_types.UUID(ids.New[ids.CompanyKind]().UUID)
 	claim := crmcontracts.CreateDealRequestPartnerAttribution(attributionInfluenced)
 
-	in, err := dealCreateInput(crmcontracts.CreateDealRequest{
+	in, err := DealCreationInput(crmcontracts.CreateDealRequest{
 		Name:               "Northgate rollout",
 		PipelineId:         openapi_types.UUID(ids.New[ids.PipelineKind]().UUID),
 		StageId:            openapi_types.UUID(ids.New[ids.StageKind]().UUID),

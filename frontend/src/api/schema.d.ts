@@ -40557,6 +40557,31 @@ export interface components {
             before: components["schemas"]["ApprovalPreviewValue"];
             after: components["schemas"]["ApprovalPreviewValue"];
         };
+        ApprovalPreviewDetail: {
+            /** @description Semantic field key translated by the client. */
+            field: string;
+            value: components["schemas"]["ApprovalPreviewValue"];
+        };
+        /** @description One complete import row effect, using the same checked values as the import writer. */
+        ApprovalPreviewImportRow: {
+            object: string;
+            source_key: string;
+            line: number;
+            /** @enum {string} */
+            outcome: "create" | "create_duplicate" | "update" | "unchanged" | "skip";
+            target?: components["schemas"]["ApprovalPreviewValue"];
+            changes: components["schemas"]["ApprovalPreviewChange"][];
+            details: components["schemas"]["ApprovalPreviewDetail"][];
+            effects: string[];
+        };
+        ApprovalPreviewFile: {
+            /** Format: uuid */
+            id: string;
+            filename: string;
+            content_type: string;
+            /** Format: int64 */
+            byte_size: number;
+        };
         /** @description Authorized context that must be considered separately from the proposed effect. */
         ApprovalPreviewConflict: {
             kind: string;
@@ -40575,7 +40600,13 @@ export interface components {
         };
         /** @description A current, authorized explanation of the exact staged effect. It never grants permission or supplies execution arguments. Before values are answered only when the current record still has the staged version; stale records require restaging. Pending proposals alone carry this review-time projection. An approval attempt with stale context returns version_skew. Incomplete, unavailable or conflicting context returns 422 with approval_preview_incomplete, approval_preview_unavailable or approval_preview_conflict respectively, without recording a decision. */
         ApprovalPreview: {
+            /** @description The complete bounded row plan. An incomplete plan cannot authorize an import. */
+            import_rows?: components["schemas"]["ApprovalPreviewImportRow"][];
             lifecycle_evidence?: components["schemas"]["LifecyclePreviewEvidence"];
+            /** @description Version 2 action operands, read with current permissions and kept separate from execution arguments. */
+            details?: components["schemas"]["ApprovalPreviewDetail"][];
+            /** @description The complete authorized set of files the action will send. Version 2 clients provide the normal file review controls. */
+            files?: components["schemas"]["ApprovalPreviewFile"][];
             /** @description Additional business effects released by this approval. Other proposals remain separate decisions. */
             effects?: string[];
             /** @description Current evidence resolved with the reader's source permissions. An empty array replaces historical evidence. */
@@ -72652,7 +72683,16 @@ export interface operations {
     archiveProduct: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
@@ -72671,6 +72711,8 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     updateProduct: {
@@ -73690,7 +73732,16 @@ export interface operations {
     archiveOfferTemplate: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
@@ -73711,6 +73762,8 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listDealOutcomeReviews: {
@@ -73937,7 +73990,16 @@ export interface operations {
     archiveOffer: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
@@ -73957,6 +74019,7 @@ export interface operations {
             };
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     updateOffer: {

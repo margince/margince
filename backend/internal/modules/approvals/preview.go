@@ -69,7 +69,7 @@ func PreviewRefusal(preview *crmcontracts.ApprovalPreview) error {
 	if preview.State == "stale" {
 		return apperrors.ErrVersionSkew
 	}
-	if preview.Version != 1 || preview.State != "ready" {
+	if (preview.Version != 1 && preview.Version != 2) || preview.State != "ready" {
 		return &PreviewContextError{State: preview.State}
 	}
 	if preview.Conflicts != nil {
@@ -108,9 +108,11 @@ func (s *Service) proposalPreview(ctx context.Context, subject row, proposal crm
 		if preview.State != "ready" {
 			preview.Changes = []crmcontracts.ApprovalPreviewChange{}
 			preview.Effects = nil
+			preview.Details = nil
+			preview.Files = nil
 		}
 	}()
-	if (subject.Kind == "advance_deal" || subject.Kind == "progress_deal") && !stagePreviewPinned(subject, proposal) {
+	if !previewCoTargetPinned(subject, proposal) {
 		preview.State = "incomplete"
 		return preview, nil
 	}
@@ -127,27 +129,40 @@ func (s *Service) proposalPreview(ctx context.Context, subject row, proposal crm
 	return preview, err
 }
 
-func stagePreviewPinned(subject row, proposal crmcontracts.Approval) bool {
-	if subject.CoTargetVersion == nil || subject.CoTargetType == nil || *subject.CoTargetType != "stage" || subject.CoTargetID == nil {
+func previewCoTargetPinned(subject row, proposal crmcontracts.Approval) bool {
+	if subject.Kind == "merge_records" && subject.TargetType != nil && (*subject.TargetType == "contact" || *subject.TargetType == "company") {
+		return previewMergePinsMatch(subject, proposal)
+	}
+	var entityType, field string
+	switch subject.Kind {
+	case "advance_deal", "progress_deal", "stage_progression":
+		entityType, field = "stage", "to_stage_id"
+	case "merge_tags":
+		entityType, field = "tag", "into_tag_id"
+	default:
+		return true
+	}
+	if subject.CoTargetVersion == nil || subject.CoTargetType == nil || *subject.CoTargetType != entityType || subject.CoTargetID == nil || proposal.ProposedChange == nil {
 		return false
 	}
 	raw, err := json.Marshal(proposal.ProposedChange)
 	if err != nil {
 		return false
 	}
-	type move struct {
-		ToStageID ids.UUID `json:"to_stage_id"`
-	}
-	var payload struct {
-		move
-		Body *move `json:"body"`
-	}
+	var payload map[string]json.RawMessage
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return false
 	}
-	destination := payload.ToStageID
-	if payload.Body != nil {
-		destination = payload.Body.ToStageID
+	if _, rest := payload["operation"]; rest {
+		body := payload["body"]
+		payload = nil
+		if err := json.Unmarshal(body, &payload); err != nil {
+			return false
+		}
+	}
+	var destination ids.UUID
+	if err := json.Unmarshal(payload[field], &destination); err != nil {
+		return false
 	}
 	return !destination.IsZero() && destination == *subject.CoTargetID
 }

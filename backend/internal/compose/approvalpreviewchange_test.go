@@ -7,10 +7,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net/http"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
@@ -30,8 +32,21 @@ func TestMalformedCommercialPayloadHasAnExplicitIncompletePreview(t *testing.T) 
 	}
 }
 
+func TestAnOwnerAssignmentWithoutAnOwnerHasNoDecidablePreview(t *testing.T) {
+	change := map[string]any{"note": "No owner was selected"}
+	preview, err := (approvalPreviewReader{}).read(context.Background(), crmcontracts.Approval{Status: "pending", Kind: "assign_owner", ProposedChange: &change})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if preview == nil || preview.State != "incomplete" || len(preview.Changes) != 0 {
+		t.Fatalf("missing owner is actionable: %+v", preview)
+	}
+}
+
 func TestCommercialPreviewNormalizesTheStagedEffect(t *testing.T) {
 	cases := []struct{ name, kind, payload, field, want string }{
+		{"tool title", "update_record", `{"id":"record","fields":{"title":"Head of sales"}}`, "title", `"Head of sales"`},
+		{"REST title", "update_record", `{"operation":"updateContact","path":"/v1/contacts/record","body":{"title":"Head of sales"}}`, "title", `"Head of sales"`},
 		{"tool owner", "update_record", `{"id":"record","fields":{"owner_id":"next"}}`, "owner_id", `"next"`},
 		{"REST owner", "update_record", `{"operation":"updateDeal","path":"/v1/deals/record","body":{"owner_id":"next"}}`, "owner_id", `"next"`},
 		{"automation owner", "assign_owner", `{"owner_id":"next"}`, "owner_id", `"next"`},
@@ -92,10 +107,13 @@ func TestCommercialPreviewPreservesScalarValues(t *testing.T) {
 }
 
 func TestInvalidTransitionIsIncompleteRatherThanAnInboxFailure(t *testing.T) {
-	for _, err := range []error{&deals.LostReasonRequiredError{}, &deals.StagePipelineMismatchError{}, &deals.MissingFxRateError{From: "EUR", To: "USD"}} {
+	for _, err := range []error{&httperr.DetailedError{Status: http.StatusConflict, Code: "offer_accepted"}, httperr.Validation("name", "required", "Name is required"), &deals.LostReasonRequiredError{}, &deals.StagePipelineMismatchError{}, &deals.MissingFxRateError{From: "EUR", To: "USD"}} {
 		if !previewUnavailable(err) {
 			t.Fatalf("validation became an inbox error: %v", err)
 		}
+	}
+	if previewUnavailable(&httperr.DetailedError{Status: http.StatusServiceUnavailable, Code: "storage_unavailable"}) {
+		t.Fatal("service failure hidden as missing review context")
 	}
 	if previewUnavailable(errors.New("database disconnected")) {
 		t.Fatal("infrastructure failure was hidden")

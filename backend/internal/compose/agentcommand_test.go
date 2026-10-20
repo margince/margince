@@ -321,3 +321,11 @@ func TestAFileThatMustWaitIsRefusedAlikeOnEitherDoor(t *testing.T) {
 		}
 	}
 }
+
+func (p seamRecord) ReadLeadForReversal(ctx context.Context, id ids.UUID) (datasource.Record, error) {
+	return p.Read(ctx, datasource.EntityRef{Type: datasource.EntityLead, ID: id})
+}
+
+func (p hiddenRecord) ReadLeadForReversal(ctx context.Context, id ids.UUID) (datasource.Record, error) {
+	return p.Read(ctx, datasource.EntityRef{Type: datasource.EntityLead, ID: id})
+}

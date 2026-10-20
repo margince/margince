@@ -102,6 +102,7 @@ type StageProgressionChange struct {
 
 // ProposedCriterion is one criterion as the card shows it.
 type ProposedCriterion struct {
+	Version     int64               `json:"version"`
 	CriterionID ids.ExitCriterionID `json:"criterion_id"`
 	Key         string              `json:"key"`
 	Label       string              `json:"label"`

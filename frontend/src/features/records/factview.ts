@@ -71,7 +71,7 @@ export function factFieldLabelKey(field: FactField): MessageKey {
 }
 
 /** FACT_CATEGORY_LABELS names every fact category in the reader's language. */
-const FACT_CATEGORY_LABELS: Record<FactCategory, MessageKey> = {
+export const FACT_CATEGORY_LABELS: Record<FactCategory, MessageKey> = {
   company: "company.factCategory.company",
   offering: "company.factCategory.offering",
   market: "company.factCategory.market",

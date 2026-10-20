@@ -55,11 +55,11 @@ func idArg[K ids.EntityKind](u *openapi_types.UUID) *ids.ID[K] {
 	return &v
 }
 
-func contactCreateInput(req crmcontracts.CreateContactRequest) (CreateContactInput, error) {
+func ContactCreationInput(req crmcontracts.CreateContactRequest) (CreateContactInput, error) {
 	return contactCreateInputAdmitting(req, false)
 }
 
-// contactCreateInputFromImporter is contactCreateInput for a declared importer
+// contactCreateInputFromImporter is ContactCreationInput for a declared importer
 // (auth.DeclaredImporter, asked by the handler): it may stamp the mirror:
 // namespace. provider.go keeps the closed door.
 func contactCreateInputFromImporter(req crmcontracts.CreateContactRequest) (CreateContactInput, error) {
@@ -219,7 +219,7 @@ func contactUpdateInput(req crmcontracts.UpdateContactRequest, ifVersion *int64)
 	return in
 }
 
-func companyCreateInput(req crmcontracts.CreateCompanyRequest) (CreateCompanyInput, error) {
+func CompanyCreationInput(req crmcontracts.CreateCompanyRequest) (CreateCompanyInput, error) {
 	return companyCreateInputAdmitting(req, false)
 }
 
@@ -316,27 +316,14 @@ func companyUpdateInput(req crmcontracts.UpdateCompanyRequest, ifVersion *int64)
 	return in
 }
 
-// leadCreateInput maps the create wire onto the store input, refusing a
-// client write into the importer's source-system namespace: the lead
-// store keys its idempotent replay on (source_system, source_id), so a
-// caller able to spell the reserved prefix could pre-plant a row under
-// an incumbent record id and have a later import hand it back as
-// already existing — suppressing the real record. The importer writes
-// that namespace from inside the process, never through this mapper.
-func leadCreateInput(req crmcontracts.CreateLeadRequest) (CreateLeadInput, error) {
+// Reserved source keys belong to declared imports. Ordinary callers cannot
+// claim them and divert a later import's idempotent replay.
+func LeadCreationInput(req crmcontracts.CreateLeadRequest) (CreateLeadInput, error) {
 	return leadCreateInputAdmitting(req, false)
 }
 
-// leadCreateInputFromImporter is leadCreateInput for a declared importer — a
-// HUMAN holding import_run:create, decided by auth.DeclaredImporter at the
-// handler and nowhere else.
-//
-// The lead store keys its idempotent replay on (source_system, source_id), so
-// an import that could not spell its own namespace would have no replay key of
-// its own and would re-create every lead a crashed run had already landed.
-//
-// provider.go keeps the client door: an agent carrying its human's grants must
-// not reach this one.
+// Only a declared human importer can retain source keys across retries.
+// Agents carrying that human's grants still use the ordinary mapper.
 func leadCreateInputFromImporter(req crmcontracts.CreateLeadRequest) (CreateLeadInput, error) {
 	return leadCreateInputAdmitting(req, true)
 }

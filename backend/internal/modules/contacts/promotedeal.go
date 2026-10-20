@@ -81,12 +81,7 @@ func (s *Store) openQualifiedDeal(ctx context.Context, tx pgx.Tx, leadID ids.Lea
 	if s.dealOpener == nil {
 		return nil, &DealOpenerNotWiredError{}
 	}
-	deal := *in
-	if strings.TrimSpace(deal.Name) == "" {
-		deal.Name = defaultQualifiedDealName(lead)
-	}
-	deal.OwnerID = idArg[ids.UserKind](lead.OwnerId)
-	deal.Source = "lead:" + leadID.String()
+	deal := qualifiedDealInput(leadID, lead, *in)
 	dealID, err := s.dealOpener.OpenDealForLead(ctx, tx, deal)
 	if err != nil {
 		return nil, fmt.Errorf("open deal for qualified lead: %w", err)
@@ -121,4 +116,37 @@ func defaultQualifiedDealName(lead crmcontracts.Lead) string {
 		return string(*lead.Email)
 	}
 	return "Qualified lead"
+}
+
+func qualifiedDealInput(leadID ids.LeadID, lead crmcontracts.Lead, in QualifyDealInput) QualifyDealInput {
+	deal := in
+	if strings.TrimSpace(deal.Name) == "" {
+		deal.Name = defaultQualifiedDealName(lead)
+	}
+	deal.OwnerID = idArg[ids.UserKind](lead.OwnerId)
+	deal.Source = "lead:" + leadID.String()
+	return deal
+}
+
+// LeadDealPreviewer shares the deal opener's defaults and admission checks.
+type LeadDealPreviewer interface {
+	PreviewDealForLead(context.Context, pgx.Tx, QualifyDealInput) (QualifyDealInput, error)
+}
+
+func (s *Store) previewQualifiedDeal(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead, in *QualifyDealInput) (*QualifyDealInput, error) {
+	if in == nil {
+		return nil, nil
+	}
+	if err := requireRelationshipCreate(ctx, anchorDeal); err != nil {
+		return nil, err
+	}
+	previewer, ok := s.dealOpener.(LeadDealPreviewer)
+	if !ok {
+		return nil, &DealOpenerNotWiredError{}
+	}
+	resolved, err := previewer.PreviewDealForLead(ctx, tx, qualifiedDealInput(ids.From[ids.LeadKind](ids.UUID(lead.Id)), lead, *in))
+	if err != nil {
+		return nil, err
+	}
+	return &resolved, nil
 }

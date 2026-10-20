@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"maps"
+	"net/http"
 	"sort"
 	"strconv"
 	"strings"
@@ -16,10 +17,10 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -54,22 +55,46 @@ type approvalPreviewReader struct {
 }
 
 func newApprovalPreviewReader(db *database.DB) approvalPreviewReader {
-	return approvalPreviewReader{db: db, now: time.Now, names: newAttentionNames(db), records: NewProviderFor(db), deals: deals.NewStore(db, DealsInstallation()), signals: signals.NewStore(db, nil), activities: activities.NewStore(db)}
+	return approvalPreviewReader{db: db, now: time.Now, names: newAttentionNames(db), records: NewProviderFor(db), deals: deals.NewStore(db, DealsInstallation()), signals: signals.NewStore(db, nil), activities: activities.NewStore(db).WithChannelReachability(channelReachability{}).WithDisclosures(newDisclosureAdapter(db))}
 }
 
 func (r approvalPreviewReader) read(ctx context.Context, approval crmcontracts.Approval) (*crmcontracts.ApprovalPreview, error) {
 	if approval.Status != crmcontracts.ApprovalStatusPending {
-		return nil, nil //nolint:nilnil // Terminal and uncovered kinds have no preview; their existing decision gates apply.
+		return nil, nil //nolint:nilnil // Terminal decisions retain their recorded context.
 	}
 	if approval.Kind == CommitmentTaskKind {
 		return r.commitmentPreview(ctx, approval)
 	}
-	changes, covered, err := commercialChanges(approval)
-	if !covered {
-		return nil, nil //nolint:nilnil // Terminal and uncovered kinds have no preview; their existing decision gates apply.
-	}
 	out := &crmcontracts.ApprovalPreview{Version: 1, State: previewUnavailableState, Changes: []crmcontracts.ApprovalPreviewChange{}, ReviewerReason: previewReviewer(ctx, approval)}
 	out.Evidence = &[]crmcontracts.ApprovalEvidence{}
+	if approval.Kind == heldScheduledSendKind || approval.Kind == "communication_review" {
+		return r.scheduledApprovalPreview(ctx, approval, out)
+	}
+	if approval.Kind == "coldstart" {
+		return r.coldStartPreview(ctx, approval, out)
+	}
+	if directCompanyRead(approval) {
+		return r.companyReadPreview(ctx, approval, out)
+	}
+	if approval.Kind == "merge_records" {
+		if approval.TargetEntityType != nil && *approval.TargetEntityType == captureCollisionTarget {
+			return r.capturedLeadPreview(ctx, approval, out)
+		}
+		return r.recordMergePreview(ctx, approval, out)
+	}
+	if approval.Kind == "merge_tags" {
+		return r.tagMergePreview(ctx, approval, out)
+	}
+	if approval.Kind == "commit_import" {
+		return r.importPreview(ctx, approval, out)
+	}
+	changes, covered, err := commercialChanges(approval)
+	if !covered {
+		if hasTypedProposalDisplay(approval.Kind) {
+			return nil, nil
+		} //nolint:nilnil // These typed proposals retain their existing display and native decision guards.
+		return unsupportedApprovalPreview(out), nil
+	}
 	if previewUnavailable(err) {
 		out.State = previewIncompleteState
 		return out, nil
@@ -77,8 +102,14 @@ func (r approvalPreviewReader) read(ctx context.Context, approval crmcontracts.A
 	if err != nil {
 		return nil, err
 	}
+	if approval.Kind == "create_record" {
+		return r.creationPreview(ctx, approval, out)
+	}
 	if approval.TargetEntityId == nil || approval.TargetEntityType == nil || approval.TargetVersion == nil {
 		return out, nil
+	}
+	if approval.Kind == "demote_lead" {
+		return r.demotionPreview(ctx, approval, out)
 	}
 	record, err := r.records.Read(ctx, datasource.EntityRef{Type: datasource.EntityType(*approval.TargetEntityType), ID: ids.UUID(*approval.TargetEntityId)})
 	if previewUnavailable(err) {
@@ -93,6 +124,37 @@ func (r approvalPreviewReader) read(ctx context.Context, approval crmcontracts.A
 	if record.Version != int64(*approval.TargetVersion) {
 		out.State = previewStaleState
 		return out, nil
+	}
+	return r.recordPreview(ctx, approval, record, changes, out)
+}
+
+func (r approvalPreviewReader) recordPreview(ctx context.Context, approval crmcontracts.Approval, record datasource.Record, changes map[string]json.RawMessage, out *crmcontracts.ApprovalPreview) (*crmcontracts.ApprovalPreview, error) {
+	if approval.Kind == "archive_record" {
+		return r.archivePreview(ctx, approval, record.Fields, out)
+	}
+	if approval.Kind == "relink_activity" || approval.Kind == "relink_activities" || approval.Kind == "relink_thread" {
+		return r.relinkPreview(ctx, approval, out)
+	}
+	if approval.Kind == "promote_lead" {
+		return r.promotionPreview(ctx, approval, out)
+	}
+	if approval.Kind == "send_message" {
+		return r.channelPreview(ctx, approval, out)
+	}
+	if approval.Kind == "invite_meeting" {
+		return r.invitationPreview(ctx, approval, out)
+	}
+	if approval.Kind == "book_meeting" {
+		return r.bookingPreview(ctx, approval, out)
+	}
+	if approval.Kind == "enrich" {
+		return r.enrichmentPreview(ctx, approval, out)
+	}
+	if approval.Kind == previewSendEmail || approval.Kind == previewSendCompanyEmail {
+		return r.mailPreview(ctx, approval, out)
+	}
+	if approval.Kind == "emit_flow_event" {
+		return r.confirmationPreview(ctx, approval, out)
 	}
 	return r.populateChanges(ctx, approval, record.Fields, changes, out)
 }
@@ -177,12 +239,18 @@ func (r approvalPreviewReader) changedValues(ctx context.Context, kind string, c
 }
 
 func previewUnavailable(err error) bool {
+	if detailed, ok := errors.AsType[*httperr.DetailedError](err); ok {
+		switch detailed.Status {
+		case http.StatusBadRequest, http.StatusForbidden, http.StatusNotFound, http.StatusConflict, http.StatusUnprocessableEntity:
+			return true
+		}
+	}
 	var fieldFault apperrors.FieldFault
 	var messageFault apperrors.MessageFault
 	if errors.As(err, &fieldFault) || errors.As(err, &messageFault) {
 		return true
 	}
-	return errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrInvalidArgument)
+	return errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrInvalidArgument) || errors.Is(err, apperrors.ErrSeatTierInsufficient)
 }
 
 func previewReviewer(ctx context.Context, approval crmcontracts.Approval) string {
@@ -210,11 +278,11 @@ func (r approvalPreviewReader) value(ctx context.Context, field string, raw json
 	if err := json.Unmarshal(raw, &text); err != nil {
 		return previewScalar(raw)
 	}
-	value.Kind, value.Text = previewValueText, approvals.SanitizeSummary(text)
+	value.Kind, value.Text = previewValueText, text
 	switch field {
 	case previewLifecycle:
 		value.Kind = previewLifecycle
-	case "closed_at", previewFXRateDate, acceptFieldExpectedClose:
+	case "valid_until", "closed_at", "started_at", "target_end_date", previewFXRateDate, acceptFieldExpectedClose:
 		if _, err := time.Parse(time.RFC3339, text); err != nil {
 			if _, err := time.Parse(time.DateOnly, text); err != nil {
 				return value, apperrors.ErrInvalidArgument
@@ -276,8 +344,19 @@ func previewCurrentFields(raw json.RawMessage, changes map[string]json.RawMessag
 }
 
 func (r approvalPreviewReader) stageChanges(ctx context.Context, approval crmcontracts.Approval, current, changes map[string]json.RawMessage, out *crmcontracts.ApprovalPreview) error {
-	if approval.Kind != previewAdvanceDeal && approval.Kind != previewProgressDeal {
+	if approval.Kind == "disqualify_lead" {
+		return r.disqualifyLeadChanges(ctx, approval, current, changes, out)
+	}
+	if approval.Kind == "advance_project_phase" {
+		return r.projectPhaseChanges(ctx, approval, current, changes)
+	}
+	if !stagePreviewKind(approval.Kind) {
 		return nil
+	}
+	if approval.Kind == deals.StageProgressionKind {
+		if err := validateProgressionPreview(approval, current); err != nil {
+			return err
+		}
 	}
 	raw, err := json.Marshal(changes)
 	if err != nil {
@@ -300,15 +379,19 @@ func (r approvalPreviewReader) stageChanges(ctx context.Context, approval crmcon
 		return err
 	}
 	out.Effects = &preview.Effects
+	return applyPreviewChanges(current, changes, preview.Before, preview.After, bulkParamNote)
+}
+
+func applyPreviewChanges(current, changes map[string]json.RawMessage, beforeJSON, afterJSON json.RawMessage, preserve string) error {
 	var before, after map[string]json.RawMessage
-	if err := json.Unmarshal(preview.Before, &before); err != nil {
+	if err := json.Unmarshal(beforeJSON, &before); err != nil {
 		return err
 	}
-	if err := json.Unmarshal(preview.After, &after); err != nil {
+	if err := json.Unmarshal(afterJSON, &after); err != nil {
 		return err
 	}
 	for field := range changes {
-		if field != bulkParamNote {
+		if field != preserve {
 			delete(changes, field)
 		}
 	}
@@ -323,7 +406,7 @@ func (r approvalPreviewReader) stageChanges(ctx context.Context, approval crmcon
 }
 
 func markExecutionValues(kind string, changes []crmcontracts.ApprovalPreviewChange) {
-	if kind != previewAdvanceDeal && kind != previewProgressDeal {
+	if !stagePreviewKind(kind) {
 		return
 	}
 	for i := range changes {

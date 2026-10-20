@@ -162,14 +162,9 @@ var decisionGrants = map[string][]grantRequirement{
 	// the confirm-first control point sits with someone who could not do the
 	// thing they are releasing.
 	"disqualify_lead": {{tableLead, principal.ActionDelete}},
-	// Demotion reverses a promotion: the lead returns to the open ladder and the
-	// contact the promotion created is archived. Both halves are gated where they
-	// are performed (contacts/demote.go), so deciding takes both — the lead's
-	// update and the contact's delete. The contact grant is the one that matters:
-	// releasing a demotion is releasing the archival of a contact somebody may
-	// have been working, and an approver who could not archive that contact is
-	// not the contact to authorise it.
-	"demote_lead": {{tableLead, principal.ActionUpdate}, {tableContact, principal.ActionDelete}},
+	// Reversal spends the writer's lead and contact update grants, including when
+	// it archives a contact created by the promotion.
+	"demote_lead": {{tableLead, principal.ActionUpdate}, {tableContact, principal.ActionUpdate}},
 	// A tag merge releases the source's NAME and no later act restores it, which
 	// is why it confirms where a record merge does not: mergeContact archives the
 	// source with `merged_into_id` and audit walks it back, and a tag keeps no
@@ -381,6 +376,9 @@ func decidable(ctx context.Context, tx pgx.Tx, p principal.Principal, a row) (bo
 	readable, err := proposalReadable(ctx, tx, p, a)
 	if err != nil || !readable {
 		return false, err
+	}
+	if a.Kind == "demote_lead" {
+		return demotionTargetDecidable(ctx, tx, a.TargetType, a.TargetID)
 	}
 	return targetDecidable(ctx, tx, a.TargetType, a.TargetID)
 }

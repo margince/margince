@@ -16,10 +16,8 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // CarryGrantsTx moves every grant on the retired record onto the survivor.
@@ -28,7 +26,7 @@ import (
 // in the evidence.
 func (s *Service) CarryGrantsTx(ctx context.Context, tx pgx.Tx, recordType string, from, to ids.UUID) error {
 	// The merge verb is an update of the record type, and so is a share.
-	if err := auth.Require(ctx, recordType, principal.ActionUpdate); err != nil {
+	if err := admitGrantCarry(ctx, tx, recordType, from, to); err != nil {
 		return err
 	}
 	retired, err := grantsOnRecord(ctx, tx, recordType, from)
@@ -56,7 +54,7 @@ func (s *Service) CarryGrantsTx(ctx context.Context, tx pgx.Tx, recordType strin
 // merges touching the same rows lock them in the same order.
 func grantsOnRecord(ctx context.Context, tx pgx.Tx, recordType string, recordID ids.UUID) ([]grantRow, error) {
 	rows, err := tx.Query(ctx, "SELECT "+grantColumns+` FROM record_grant
-		WHERE record_type = $1 AND record_id = $2 ORDER BY id FOR UPDATE`, recordType, recordID)
+		WHERE `+grantRecordScope+` ORDER BY id FOR UPDATE`, pgx.NamedArgs{"record_type": recordType, "record_id": recordID})
 	if err != nil {
 		return nil, fmt.Errorf("read the grants on the retired %s: %w", recordType, err)
 	}
@@ -68,10 +66,7 @@ func grantsOnRecord(ctx context.Context, tx pgx.Tx, recordType string, recordID 
 // takes. A share asserted on the survivor at the same moment then waits instead
 // of adding a second row under the unique key.
 func carryGrant(ctx context.Context, tx pgx.Tx, retired grantRow, to ids.UUID, now time.Time) error {
-	onSurvivor := CreateGrantInput{
-		RecordType: retired.RecordType, RecordID: to,
-		SubjectType: retired.SubjectType, SubjectID: retired.SubjectID,
-	}
+	onSurvivor := grantTarget(retired, to)
 	if err := storekit.LockWriteIdentity(ctx, tx, "record_grant", grantIdentity(onSurvivor)); err != nil {
 		return err
 	}

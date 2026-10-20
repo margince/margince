@@ -160,9 +160,12 @@ func (w *csvWriters) writeDealUpdate(ctx context.Context, id ids.UUID, plan deal
 	deal := ids.From[ids.DealKind](id)
 	return database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
 		if plan.patch.Move != nil {
+			plan.patch.Move.IfVersion = w.reviewedVersion(id)
 			if _, err := w.deals.ImportAdvanceDealTx(ctx, tx, deal, *plan.patch.Move, plan.closedAt, w.cols.deals); err != nil {
 				return err
 			}
+		} else {
+			plan.patch.Deal.IfVersion = w.reviewedVersion(id)
 		}
 		if plan.changed > 0 {
 			if _, err := w.deals.UpdateDealTx(ctx, tx, deal, plan.patch.Deal, w.cols.deals); err != nil {

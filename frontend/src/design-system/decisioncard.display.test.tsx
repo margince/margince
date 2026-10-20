@@ -142,3 +142,38 @@ describe("DecisionCard — what it leaves out", () => {
     expect(screen.queryByText(/· activity/)).toBeNull();
   });
 });
+
+it.each(["https://source.example.test/about", "javascript:alert(1)"])(
+  "only opens safe source links: %s",
+  (href) => {
+    render(
+      <LocaleProvider initial="de">
+        <DecisionCard
+          approval={commitment}
+          layout="deck"
+          now={NOW}
+          labels={LABELS}
+          display={[
+            { field: "source", label: "Quelle", value: "Source page", href },
+          ]}
+          onAccept={() => undefined}
+        />
+      </LocaleProvider>,
+    );
+    if (href.startsWith("https:")) {
+      expect(screen.getByRole("link", { name: "Source page" })).toHaveAttribute(
+        "href",
+        href,
+      );
+      expect(screen.getByRole("link", { name: "Source page" })).toHaveAttribute(
+        "rel",
+        "noopener noreferrer",
+      );
+    } else {
+      expect(
+        screen.queryByRole("link", { name: "Source page" }),
+      ).not.toBeInTheDocument();
+      expect(screen.getByText("Source page")).toBeInTheDocument();
+    }
+  },
+);

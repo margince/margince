@@ -132,6 +132,8 @@ func (n attentionNames) catalogRead(ctx context.Context, entityType string, want
 		return n.deals.StageLabels(ctx, want)
 	case entityProduct:
 		return n.deals.ProductLabels(ctx, want)
+	case "offer_template":
+		return n.deals.OfferTemplateLabels(ctx, want)
 	default:
 		// A type outside the vocabulary names nothing rather than guessing.
 		return map[ids.UUID]string{}, nil

@@ -148,7 +148,9 @@ func redeemIfPresented(w http.ResponseWriter, r *http.Request, next http.Handler
 	// forward as the request's own If-Match makes the store re-check it
 	// inside the transaction that actually mutates, where a concurrent write
 	// loses to the version compare instead of to timing.
-	if redemption.pinned && !refusesAPin(pol.Op) {
+	// Merge's If-Match names the source; its primary approval pin names the survivor.
+	// The native pair check reads both released pins from context instead.
+	if redemption.pinned && pol.Tool != "merge_records" && !refusesAPin(pol.Op) {
 		r.Header.Set(ifMatchHeader, strconv.FormatInt(redemption.pin, 10))
 	}
 	// WithContext shares the header map set just above, so the pin travels with

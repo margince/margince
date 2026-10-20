@@ -1,0 +1,177 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package contacts
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"strings"
+
+	"github.com/jackc/pgx/v5"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
+)
+
+type CompanyReadValue struct {
+	Field     string
+	Category  string
+	Before    string
+	After     string
+	Proposed  string
+	SourceURL string
+	Quote     string
+	Retained  bool
+}
+
+type CompanyReadPreview struct {
+	Company  crmcontracts.Company
+	Columns  []CompanyReadValue
+	Profiles []CompanyReadValue
+	Facts    []CompanyReadValue
+}
+
+func (s *Store) PreviewCompanyRead(ctx context.Context, in DeepReadProposal) (CompanyReadPreview, error) {
+	var out CompanyReadPreview
+	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
+		return out, err
+	}
+	if err := auth.Require(ctx, "company", principal.ActionUpdate); err != nil {
+		return out, err
+	}
+	fields, err := validatedDeepReadFields(in)
+	if err != nil {
+		return out, apperrors.ErrInvalidArgument
+	}
+	if len(fields)+len(in.Facts) > 500 {
+		return out, apperrors.ErrInvalidArgument
+	}
+	active, err := s.activeColumns(ctx, "company")
+	if err != nil {
+		return out, err
+	}
+	err = s.txSnapshot(ctx, func(tx pgx.Tx) error {
+		var readErr error
+		out, readErr = previewCompanyReadTx(ctx, tx, in, fields, active)
+		return readErr
+	})
+	if err != nil {
+		return CompanyReadPreview{}, err
+	}
+	return out, nil
+}
+
+func previewReadColumns(ctx context.Context, tx pgx.Tx, id ids.CompanyID, current crmcontracts.Company, fields []ColdStartFieldInput) ([]CompanyReadValue, error) {
+	raw, err := json.Marshal(current)
+	if err != nil {
+		return nil, err
+	}
+	var values map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &values); err != nil {
+		return nil, err
+	}
+	var out []CompanyReadValue
+	for _, field := range fields {
+		column, backed := columnBackedColdStartFields[field.Field]
+		if !backed {
+			continue
+		}
+		stored := column
+		if column == columnAddress {
+			stored = "address_line1"
+		}
+		if err := previewFieldsVisible(ctx, "company", stored); err != nil {
+			return nil, err
+		}
+		authority, value, err := unclaimedCompanyColumn(ctx, tx, id, column, field.Value)
+		if err != nil {
+			return nil, err
+		}
+		if value == "" {
+			continue
+		}
+		statement := companyColumnWrites[column].statementFor(authority)
+		_, predicate, found := strings.Cut(statement, " WHERE ")
+		if !found {
+			return nil, apperrors.ErrInvalidArgument
+		}
+		var applies bool
+		// The writer's predicate includes structured-address and current-value guards.
+		arguments := []any{id, value}
+		valueParameter := fmt.Sprintf("$%d", len(arguments))
+		err = tx.QueryRow(ctx, "SELECT EXISTS (SELECT 1 FROM company WHERE "+predicate+" AND "+valueParameter+"::text IS NOT NULL)", arguments...).Scan(&applies)
+		if err != nil {
+			return nil, err
+		}
+		var before string
+		if len(values[stored]) > 0 && string(values[stored]) != "null" {
+			if err := json.Unmarshal(values[stored], &before); err != nil {
+				return nil, err
+			}
+		}
+		after := before
+		if applies {
+			after = value
+		}
+		out = append(out, CompanyReadValue{Field: stored, Before: before, After: after, Proposed: value, Retained: !applies, Quote: field.EvidenceSnippet, SourceURL: field.SourceURL})
+	}
+	return out, nil
+}
+
+func appendReadSizeBand(ctx context.Context, out *CompanyReadPreview) error {
+	if out.Company.SizeBand != nil {
+		return nil
+	}
+	for _, fact := range out.Facts {
+		if fact.Category != factCategoryCompany || fact.Field != FactEmployeeRange || fact.Retained {
+			continue
+		}
+		band, ok := sizeBandFromEmployeeRange(fact.Proposed)
+		if !ok {
+			return nil
+		}
+		if err := previewFieldsVisible(ctx, "company", "size_band"); err != nil {
+			return err
+		}
+		out.Columns = append(out.Columns, CompanyReadValue{Field: "size_band", After: band, Proposed: band, Quote: fact.Quote, SourceURL: fact.SourceURL})
+		return nil
+	}
+	return nil
+}
+
+func previewCompanyReadTx(ctx context.Context, tx pgx.Tx, in DeepReadProposal, fields []ColdStartFieldInput, active []fieldcatalog.Column) (CompanyReadPreview, error) {
+	var out CompanyReadPreview
+	if err := previewFieldsVisible(ctx, "company", "display_name"); err != nil {
+		return out, err
+	}
+	if err := auth.EnsureWritableLive(ctx, tx, "company", in.CompanyID.UUID); err != nil {
+		return out, err
+	}
+	current, err := readCompany(ctx, tx, in.CompanyID, storekit.LiveOnly, active)
+	if err != nil {
+		return out, err
+	}
+	out.Company = current
+	out.Columns, err = previewReadColumns(ctx, tx, in.CompanyID, current, fields)
+	if err != nil {
+		return out, err
+	}
+	out.Profiles, err = previewReadProfiles(ctx, tx, in.CompanyID, fields)
+	if err != nil {
+		return out, err
+	}
+	out.Facts, err = previewReadFacts(ctx, tx, in)
+	if err != nil {
+		return out, err
+	}
+	if err := appendReadSizeBand(ctx, &out); err != nil {
+		return out, err
+	}
+	return out, nil
+}

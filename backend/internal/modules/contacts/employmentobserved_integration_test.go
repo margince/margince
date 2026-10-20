@@ -12,11 +12,13 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -213,6 +215,8 @@ func TestAContactMergeKeepsTheEarliestFirstObservation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ensure the merged contact: %v", err)
 	}
+	e.requireMergeObservation(t, ctx, "contact", merged.ContactID.UUID, kept.ContactID.UUID,
+		e.employmentEdgeOf(ctx, t, kept.ContactID, company), mailDay(2026, time.March, 2), mailDay(2025, time.January, 10))
 	if _, err := e.store.MergeContact(ctx, merged.ContactID, kept.ContactID, nil); err != nil {
 		t.Fatalf("merge: %v", err)
 	}
@@ -237,6 +241,8 @@ func TestACompanyMergeKeepsTheEarliestFirstObservation(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("recording the second employment: %v", err)
 	}
+	e.requireMergeObservation(t, ctx, "company", source.UUID, target.UUID,
+		e.employmentEdgeOf(ctx, t, res.ContactID, target), time.Time{}, mailDay(2025, time.January, 10))
 	if _, err := e.store.MergeCompany(ctx, source, target, nil); err != nil {
 		t.Fatalf("merge: %v", err)
 	}
@@ -257,4 +263,41 @@ func (e *dedupeEnv) employmentEdgeOf(ctx context.Context, t *testing.T, contact 
 		t.Fatalf("finding the employment edge: %v", err)
 	}
 	return id
+}
+
+func (e *dedupeEnv) requireMergeObservation(t *testing.T, ctx context.Context, kind string, source, target, edge ids.UUID, before, after time.Time) {
+	t.Helper()
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		changes, err := e.store.previewMergeObservations(ctx, tx, kind, source, target)
+		if err != nil {
+			return err
+		}
+		if len(changes) != 1 {
+			t.Fatalf("observation changes = %v; want exactly one", changes)
+		}
+		if changes[0].Relationship.Id.String() != edge.String() {
+			t.Fatalf("previewed relationship = %v; want %v", changes[0].Relationship.Id, edge)
+		}
+		if before.IsZero() {
+			if changes[0].Before != nil {
+				t.Fatalf("before = %v; want absent", changes[0].Before)
+			}
+		} else {
+			requireObservedAt(t, changes[0].Before, before)
+		}
+		requireObservedAt(t, &changes[0].After, after)
+		actor, ok := principal.Actor(ctx)
+		if !ok {
+			t.Fatal("missing fixture actor")
+		}
+		actor.Permissions.RowScope = principal.RowScopeOwn
+		actor.Permissions.FieldMasks = []principal.FieldMask{{Object: "relationship", Field: fieldFirstObservedAt, Condition: principal.MaskAlways}}
+		denied, err := e.store.previewMergeObservations(principal.WithActor(ctx, actor), tx, kind, source, target)
+		if !errors.Is(err, apperrors.ErrPermissionDenied) || len(denied) != 0 {
+			t.Fatalf("masked observation returned %v, %v", denied, err)
+		}
+		return nil
+	}); err != nil {
+		t.Fatalf("preview observation: %v", err)
+	}
 }

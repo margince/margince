@@ -298,16 +298,15 @@ func (b storeBindings) callsTheSendStore(sel *ast.SelectorExpr) bool {
 	return false
 }
 
-// validators are the entry points that apply the shared refusals. A caller
-// reaching any of them has asked the one validator; sendContextFrom is the HTTP
-// spelling, the two Apply… functions the typed one, and the two decoders wrap
-// sendContextFrom for the handlers.
+// These entry points reach the shared refusal checks. Request decoders use
+// sendContextFrom; typed callers use the Apply functions.
 var validators = map[string]bool{
-	"sendContextFrom":     true,
-	"ApplyContext":        true,
-	"ApplyChannelContext": true,
-	"replySendInput":      true,
-	"accountSendInput":    true,
+	"sendContextFrom":           true,
+	"ApplyContext":              true,
+	"ApplyChannelContext":       true,
+	"replySendInput":            true,
+	"DecodeCompanyEmailRequest": true,
+	"DecodeSendMessageRequest":  true,
 }
 
 // forwardsAnAlreadyValidatedInput are the callers that take a send input as a

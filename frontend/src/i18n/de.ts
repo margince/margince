@@ -5,6 +5,189 @@ import type { MessageKey } from "./en";
 // build without typechecking still fails loudly. Every value is translated from
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de = {
+  "approval.scheduled.rearm":
+    "Plant einen erneuten Versuch der angehaltenen Nachricht nach der angegebenen Wartezeit. Berechtigungen, Empfänger und Kommunikationsregeln werden vor dem Versand erneut geprüft.",
+  "approval.scheduled.direct":
+    "Dokumentiert Ihre Entscheidung, diese abgelehnte Nachricht in eigener Verantwortung zu senden, und versucht den Versand jetzt. Entscheidung und Erklärung werden festgehalten; die üblichen Versandprüfungen gelten weiterhin.",
+  "approval.scheduled.delay": "Wartezeit bis zum erneuten Versuch (Minuten)",
+  "approval.read.profileField": "Profilfeld",
+  "approval.read.factField": "Unternehmensfakt",
+  "approval.read.before": "Aktueller Wert",
+  "approval.read.after": "Wert nach Freigabe",
+  "approval.read.proposed": "Angabe auf der Website",
+  "approval.read.source": "Quellseite",
+  "approval.read.quote": "Quellzitat",
+  "approval.read.retained": "Menschliche Angabe bleibt erhalten",
+  "approval.read.effect":
+    "Übernimmt die angezeigten Unternehmensfelder und Belege. Menschlich bestätigte Belege bleiben unverändert; vorhandene Feldwerte bleiben wie angezeigt erhalten.",
+  "approval.merge.value.suppressed": "Ausgeblendet",
+  "approval.merge.value.corrected": "Korrigiert",
+  "approval.merge.value.confirmed": "Bestätigt",
+  "approval.merge.value.queued": "Eingereiht",
+  "approval.merge.value.submitting": "Wird übermittelt",
+  "approval.merge.value.in_progress": "In Bearbeitung",
+  "approval.merge.value.completed": "Abgeschlossen",
+  "approval.merge.value.no_match": "Kein Treffer",
+  "approval.merge.value.skipped": "Übersprungen",
+  "approval.merge.value.submission_unknown":
+    "Ergebnis der Übermittlung unbekannt",
+  "approval.merge.value.failed": "Fehlgeschlagen",
+  "approval.merge.value.cancelled": "Abgebrochen",
+  "approval.merge.value.budget_exhausted": "Budget ausgeschöpft",
+  "approval.merge.value.low_balance": "Guthaben reicht nicht aus",
+  "approval.merge.value.not_eligible": "Nicht berechtigt",
+  "approval.merge.value.duplicate_subject_candidate": "Doppelter Kandidat",
+  "approval.merge.value.rate_limited": "Anfragelimit des Anbieters erreicht",
+  "approval.merge.value.already_fresh": "Informationen sind bereits aktuell",
+  "approval.merge.value.no_identifiers": "Keine Angaben zur Identifizierung",
+  "approval.merge.value.category_in_flight":
+    "Diese Kategorie wird bereits abgerufen",
+  "approval.preview.mergeRecords":
+    "Übernimmt die angezeigten Datensätze und Werte in das Ziel und archiviert die Quelle. Vorhandene Zielwerte haben an den angezeigten Stellen Vorrang.",
+  "approval.preview.fillLead":
+    "Ergänzt nur die oben gezeigten leeren Lead-Felder. Vorhandene Werte und die E-Mail-Adresse bleiben erhalten; es wird kein zweiter Lead angelegt.",
+  "approval.preview.companyPrivateReadings":
+    "Hat eine Person Zusammenfassungen für beide Unternehmen, bleibt ihre Zusammenfassung des Ziels erhalten. Für die Quelle ausgeblendete Vorschläge können beim Ziel erneut erscheinen.",
+  "approval.preview.companyReceipts":
+    "Partnerprogramm- und Steuerprüfungsnachweise werden nur übernommen, wenn das Ziel keine hat. Andernfalls bleiben die Quellkopien beim archivierten Unternehmen.",
+  "approval.preview.companyLookups":
+    "Website-Abfragen wechseln zum Ziel; doppelte laufende Abfragen werden abgebrochen. Hintergrundprüfungen für das entfernte Unternehmen enden.",
+  "approval.merge.source": "Entfernter Datensatz",
+  "approval.merge.survivor": "Beibehaltener Datensatz",
+  "approval.merge.address": "Übernommene Adresse",
+  "approval.merge.address_kind": "Adressart",
+  "approval.merge.address_usage": "Verwendung der Adresse",
+  "approval.merge.address_primary_before": "Primäradresse der Quelle",
+  "approval.merge.address_primary_after": "Primäradresse des Ziels",
+  "approval.merge.assignment_collapsed": "Doppelte Zuständigkeit entfernt",
+  "approval.merge.assignment_moved": "Übernommene Zuständigkeit",
+  "approval.merge.assignment_role": "Rolle",
+  "approval.merge.channel_account": "Übernommenes Kanalkonto",
+  "approval.merge.channel_blocked": "Kanal gesperrt",
+  "approval.merge.channel_provider": "Kanalanbieter",
+  "approval.merge.channel_username": "Kanalname",
+  "approval.merge.claim": "Übernommene Gesprächsaussage",
+  "approval.merge.claim_quote": "Quellzitat",
+  "approval.merge.claim_source": "Gesprächsquelle",
+  "approval.merge.collapse_link": "Doppelte Verknüpfung entfernt",
+  "approval.merge.move_link": "Übernommene Verknüpfung",
+  "approval.merge.commitment": "Übernommene Zusage",
+  "approval.merge.company_contract": "Übernommener Vertrag",
+  "approval.merge.company_invoice": "Übernommene Rechnung",
+  "approval.merge.company_payment": "Übernommene Zahlung",
+  "approval.merge.company_triaged_domain": "Übernommene zugeordnete Domain",
+  "approval.merge.partner_moved":
+    "Partnerprogramm in verbleibendes Unternehmen übernehmen",
+  "approval.merge.partner_retained":
+    "Partnerprogramm am archivierten Unternehmen behalten",
+  "approval.merge.vat_check_moved":
+    "Umsatzsteuerbeleg in verbleibendes Unternehmen übernehmen",
+  "approval.merge.vat_check_retained":
+    "Umsatzsteuerbeleg am archivierten Unternehmen behalten",
+  "approval.read.vat_check":
+    "Prüfung der Umsatzsteuer-ID anfordern, sofern eingerichtet.",
+  "approval.merge.company_customer_link": "Übernommener Buchhaltungskunde",
+  "approval.merge.company_parent_after":
+    "Muttergesellschaft nach Zusammenführung",
+  "approval.merge.company_commission": "Übernommene Provision",
+  "approval.merge.company_offer": "Übernommenes Angebot",
+  "approval.merge.company_project": "Übernommenes Projekt",
+  "approval.merge.company_deal": "Übernommene Verkaufschance",
+  "approval.merge.company_company": "Übernommenes Tochterunternehmen",
+  "approval.merge.company_fact_category": "Faktenkategorie",
+  "approval.merge.company_fact_discarded": "Doppelter Fakt entfernt",
+  "approval.merge.company_fact_field": "Fakt",
+  "approval.merge.company_fact_kept": "Vorhandener Fakt bleibt",
+  "approval.merge.company_fact_moved": "Übernommener Fakt",
+  "approval.merge.company_profile_discarded": "Doppelter Profilwert entfernt",
+  "approval.merge.company_profile_field": "Profilfeld",
+  "approval.merge.company_profile_kept": "Vorhandener Profilwert bleibt",
+  "approval.merge.company_profile_moved": "Übernommener Profilwert",
+  "approval.merge.company_relationship_type":
+    "Übernommene Unternehmensbeziehung",
+  "approval.merge.confirmation": "Übernommene Bestätigung",
+  "approval.merge.consent_event": "Übernommener Einwilligungsnachweis",
+  "approval.merge.consent_event_at": "Nachweisdatum",
+  "approval.merge.consent_event_collapsed": "Doppelter Nachweis entfernt",
+  "approval.merge.consent_event_note": "Notiz zum Nachweis",
+  "approval.merge.consent_event_source": "Nachweisquelle",
+  "approval.merge.draft_bcc": "Verborgene Entwurfsempfänger",
+  "approval.merge.draft_body": "Entwurfstext",
+  "approval.merge.draft_cc": "Kopieempfänger des Entwurfs",
+  "approval.merge.draft_discarded": "Doppelter Entwurf entfernt",
+  "approval.merge.draft_kept": "Vorhandener Entwurf bleibt",
+  "approval.merge.draft_moved": "Übernommener Entwurf",
+  "approval.merge.draft_to": "Entwurfsempfänger",
+  "approval.merge.feedback_correction": "Korrektur",
+  "approval.merge.feedback_discarded": "Doppelte Rückmeldung entfernt",
+  "approval.merge.feedback_kept": "Vorhandene Rückmeldung bleibt",
+  "approval.merge.feedback_moved": "Übernommene Rückmeldung",
+  "approval.merge.feedback_value": "Geprüfter Wert",
+  "approval.merge.feedback_verdict": "Rückmeldungsentscheidung",
+  "approval.merge.file": "Übernommene Datei",
+  "approval.merge.file_archived": "Datei archiviert am",
+  "approval.merge.finance_archived": "Eintrag archiviert am",
+  "approval.merge.grant_active": "Zugriff bleibt aktiv",
+  "approval.merge.grant_after": "Zugriff nach Zusammenführung",
+  "approval.merge.grant_before": "Bisheriger Zugriff",
+  "approval.merge.grant_expiry_after": "Zugriffsende nach Zusammenführung",
+  "approval.merge.grant_expiry_before": "Bisheriges Zugriffsende",
+  "approval.merge.grant_reason": "Zugriffsgrund",
+  "approval.merge.grant_source": "Von der Quelle übernommener Zugriff",
+  "approval.merge.grant_subject": "Zugriff für",
+  "approval.merge.handoff": "Übernommene Übergabe",
+  "approval.merge.handoff_recipient": "Übergabeempfänger",
+  "approval.merge.handoff_sender": "Übergebende Person",
+  "approval.merge.introduction_after": "Vorstellung nach Zusammenführung",
+  "approval.merge.introduction_before": "Vorstellung vor Zusammenführung",
+  "approval.merge.introduction_cancellation": "Absagegrund",
+  "approval.merge.introduction_contact_after": "Vorgestellte Person danach",
+  "approval.merge.introduction_contact_before": "Vorgestellte Person zuvor",
+  "approval.merge.introduction_through_after": "Vermittelnde Person danach",
+  "approval.merge.introduction_through_before": "Vermittelnde Person zuvor",
+  "approval.merge.link_consumed": "Link verwendet am",
+  "approval.merge.link_note": "Verknüpfungsnotiz",
+  "approval.merge.link_opened": "Link geöffnet am",
+  "approval.merge.notice": "Übernommene Mitteilung",
+  "approval.merge.observation_after":
+    "Beziehung beobachtet nach Zusammenführung",
+  "approval.merge.observation_before": "Bisherige Beziehungsbeobachtung",
+  "approval.merge.optin": "Übernommene Einwilligungsbestätigung",
+  "approval.merge.override": "Übernommene Kommunikationsausnahme",
+  "approval.merge.override_authority": "Berechtigung für die Ausnahme",
+  "approval.merge.override_reason": "Ausnahmegrund",
+  "approval.merge.participant_activity": "Verknüpftes Gespräch",
+  "approval.merge.participant_address": "Teilnehmeradresse",
+  "approval.merge.participant_collapsed": "Doppelter Teilnehmer entfernt",
+  "approval.merge.participant_role": "Teilnehmerrolle",
+  "approval.merge.payment_at": "Zahlungsdatum",
+  "approval.merge.preference_link": "Übernommener Einstellungslink",
+  "approval.merge.preference_reason": "Grund der Stilllegung",
+  "approval.merge.preference_retired": "Einstellungslink stillgelegt",
+  "approval.merge.profile_discarded": "Doppelter Kontaktfakt entfernt",
+  "approval.merge.profile_field": "Kontaktfeld",
+  "approval.merge.profile_kept": "Vorhandener Kontaktfakt bleibt",
+  "approval.merge.profile_moved": "Übernommener Kontaktfakt",
+  "approval.merge.provider": "Anreicherungsanbieter",
+  "approval.merge.relationship_kind": "Übernommene Beziehung",
+  "approval.merge.relationship_primary": "Primäre Beziehung danach",
+  "approval.merge.relationship_retired": "Beziehung beendet",
+  "approval.merge.run_after": "Abfragestatus danach",
+  "approval.merge.run_before": "Bisheriger Abfragestatus",
+  "approval.merge.run_created": "Abfrage angefordert am",
+  "approval.merge.run_moved": "Abfrage übernommen",
+  "approval.merge.run_skip": "Grund der ausgelassenen Abfrage",
+  "approval.merge.signal": "Übernommenes Signal",
+  "approval.merge.social_handle": "Übernommenes soziales Profil",
+  "approval.merge.social_platform": "Soziale Plattform",
+  "approval.merge.social_survivor": "Vorhandenes soziales Profil bleibt",
+  "approval.merge.support_collapsed": "Doppelte Herkunftseinträge entfernt",
+  "approval.merge.support_fields": "Übernommene Herkunftseinträge",
+  "approval.merge.support_resolutions": "Übernommene Beschäftigungszuordnungen",
+  "approval.capture.target": "Vorhandener Lead",
+  "approval.capture.full_name": "Erfasster Name",
+  "approval.capture.company_name": "Erfasstes Unternehmen",
+  "approval.capture.title": "Erfasste Position",
   "approvalPreferences.title": "Persönlich stummgeschaltete Freigaben",
   "approvalPreferences.explain":
     "Stummgeschaltete Arten verschwinden nur aus deiner Worklist. Andere Mitglieder behalten ihre Vorschläge. Stummschalten und Wiederherstellen deaktivieren deine automatischen Änderungen dieser Art. Versand, Buchungen, Zusammenführungen und Vorschläge mit Agentenpass bleiben sichtbar.",
@@ -82,6 +265,105 @@ export const de = {
     "Ein vorheriger Schritt muss zuerst abgeschlossen werden.",
   "dataTasks.blocked.missing_prerequisite":
     "Erforderliche Aktualisierungen müssen zuerst abgeschlossen werden.",
+  "approval.preview.createContact":
+    "Erlaubt dem vorschlagenden Aufrufer, diesen Kontakt einmal mit den angezeigten Werten anzulegen. Aktuelle Berechtigungen und doppelte Identitäten werden erneut geprüft.",
+  "approval.preview.recordAcquisition":
+    "Erfasst die angezeigten Angaben zur Herkunft. Das erlaubt noch keinen Nachrichtenversand.",
+  "approval.preview.createPromotions":
+    "Übernimmt die genannten Leads in diesen Kontakt und archiviert sie. Ergänzt fehlende Kontaktfelder und Telefonnummern, führt den Verlauf zusammen und erhält Widerrufe und geltende Kommunikationsbeschränkungen.",
+  "approval.preview.acquisition": "Warum dieser Kontakt angelegt wird",
+  "approval.preview.acquiredAt": "Erfasst am",
+  "approval.preview.promotedLead": "Zu übernehmender Lead",
+  "approval.preview.sourceActivity": "Verlauf dieses Quell-Leads",
+  "approval.preview.sourceConsent": "Einwilligung dieses Quell-Leads",
+  "approval.preview.channelPosition": "Position in der Liste",
+  "approval.preview.emailCorrespondence":
+    "Adresse gilt als bisherige Korrespondenz",
+  "approval.preview.socialPlatform": "Soziales Netzwerk",
+  "approval.preview.socialHandle": "Profil oder Nutzername",
+  "approval.preview.originLead": "Ursprünglicher Lead",
+  "approval.preview.archiveRelationship":
+    "Diese Verknüpfung archivieren. Die verknüpften Datensätze bleiben gespeichert.",
+  "approval.preview.archivePromoteEmployer":
+    "Die gezeigte verbleibende Anstellung als primären Arbeitgeber des Kontakts festlegen.",
+  "approval.preview.archiveNoPrimary":
+    "Der Kontakt bleibt ohne primären Arbeitgeber. Es wird kein Arbeitgeber automatisch ausgewählt.",
+  "approval.preview.newPrimaryEmployer": "Neuer primärer Arbeitgeber",
+  "approval.preview.startPrecision": "Genauigkeit des Startdatums",
+  "approval.preview.endPrecision": "Genauigkeit des Enddatums",
+  "approval.preview.precisionDay": "Genauer Tag",
+  "approval.preview.precisionMonth": "Nur Monat",
+  "approval.preview.mergeTags":
+    "Das Quell-Tag auf den gezeigten Datensätzen durch das verbleibende Tag ersetzen. Wenn beide Tags vorhanden sind, nur die doppelte Quell-Zuordnung entfernen. Das Quell-Tag archivieren und seinen Namen zur erneuten Verwendung freigeben; er bleibt nicht als Alias erhalten.",
+  "approval.preview.mergeTagSource": "Zu entfernendes Tag",
+  "approval.preview.mergeTagTarget": "Verbleibendes Tag",
+  "approval.preview.mergeTagMove": "Datensatz, der das verbleibende Tag erhält",
+  "approval.preview.mergeTagCollapse": "Datensatz, der bereits beide Tags hat",
+  "approval.preview.archiveCompany":
+    "Dieses Unternehmen mit den aufgeführten Domains, Klassifizierungen, dem Partnerprogramm und den Beziehungen archivieren. Listenzugehörigkeiten und Tags entfernen. Kontakte, Deals und Gesprächsverlauf bleiben erhalten.",
+  "approval.preview.archiveDomain": "Zu archivierende Domain",
+  "approval.preview.archiveCompanyType":
+    "Zu entfernende Unternehmensklassifizierung",
+  "approval.preview.archivePartner": "Zu archivierendes Partnerprogramm",
+  "approval.preview.archiveContact":
+    "Diesen Kontakt und die aufgeführten E-Mail-Adressen, Telefonnummern, Kanalverknüpfungen und Beziehungen archivieren. Die aufgeführten Listenmitgliedschaften und Tags entfernen. Der Gesprächsverlauf bleibt erhalten.",
+  "approval.preview.archiveEmail": "Zu archivierende E-Mail-Adresse",
+  "approval.preview.archivePhone": "Zu archivierende Telefonnummer",
+  "approval.preview.archiveChannel": "Zu archivierender Nachrichtenkanal",
+  "approval.preview.archiveProject":
+    "Dieses Projekt archivieren und die aufgeführten Beteiligten-Verknüpfungen, Listenmitgliedschaften und Tags entfernen. Aktivitäten, Deals und Firmenverknüpfungen bleiben erhalten.",
+  "approval.preview.archiveDeal":
+    "Diesen Deal archivieren und die gezeigten Stakeholder-Verknüpfungen, Listenzugehörigkeiten und Tag-Zuordnungen entfernen. Kontakte, Listen und Tags bleiben gespeichert.",
+  "approval.preview.archiveStakeholder": "Zu archivierender Stakeholder-Link",
+  "approval.preview.archiveRole": "Rolle in dieser Verknüpfung",
+  "approval.preview.archiveList": "Zu entfernende Listenzugehörigkeit",
+  "approval.preview.archiveTag": "Zu entfernende Tag-Zuordnung",
+  "approval.preview.archiveActivity":
+    "Diese Aktivität archivieren und aus der aktiven Arbeit entfernen. Der Inhalt bleibt gespeichert; bereits gesendete Nachrichten werden nicht zurückgerufen.",
+  "approval.preview.archiveProduct":
+    "Dieses Produkt archivieren und aus dem aktiven Katalog entfernen. Gespeicherte Angebotspositionen bleiben unverändert.",
+  "approval.preview.archiveTemplate":
+    "Diese Vorlage archivieren und aus der Vorlagenauswahl entfernen, auch als Standardvorlage. Bestehende Angebote behalten ihren Vorlagenverweis.",
+  "approval.preview.archiveOffer":
+    "Dieses Angebot archivieren und aus der aktiven Angebotsliste ausblenden. Seine Positionen bleiben gespeichert.",
+  "approval.preview.importScopeUnavailable":
+    "Dieser Importvorschlag enthält keine vollständigen Änderungen je Zeile. Öffne Datenimport und prüfe die Quelle und den Testlauf, bevor du den Import startest.",
+  "approval.preview.confirmationOnly":
+    "Diese Bestätigung erfassen und den wartenden Automatisierungslauf abschließen. Es wird keine Datensatzänderung und kein Nachrichtenversand freigegeben.",
+  "approval.preview.confirmationQuestion": "Zu bestätigende Frage",
+  "approval.preview.confirmationReason": "Grund für die Bestätigung",
+  "approval.preview.createOffer":
+    "Einen Angebotsentwurf mit den gezeigten Bedingungen, Positionen und Summen erstellen. Es wird kein Angebot versendet.",
+  "approval.preview.assignOfferNumber":
+    "Die Angebotsnummer wird beim Erstellen des Entwurfs vergeben.",
+  "approval.preview.createTemplate":
+    "Eine Angebotsvorlage mit der angezeigten Kopf- und Fußzeile erstellen.",
+  "approval.preview.defaultTemplate":
+    "Diese Vorlage als Standard für die angezeigte Sprache festlegen.",
+  "approval.preview.createProduct":
+    "Das Katalogprodukt mit dem angezeigten Preis und den Abrechnungsbedingungen erstellen. Bestehende Angebotspositionen behalten ihre Preise.",
+  "approval.preview.billingMonths": "Abrechnungszeitraum (Monate)",
+  "approval.preview.createProject":
+    "Das Projekt erstellen, das angezeigte Unternehmen als Kunden verknüpfen und die Anfangsphase dokumentieren.",
+  "approval.preview.assignProjectKey":
+    "Bei der Erstellung einen Projektschlüssel vergeben.",
+  "approval.preview.createDeal":
+    "Den Deal in der angezeigten Pipeline und Phase mit dem ersten Eintrag im Phasenverlauf erstellen.",
+  "approval.preview.createCompany":
+    "Erlaubt dem vorschlagenden Aufrufer, dieses Unternehmen einmal mit den angezeigten Werten anzulegen. Aktuelle Berechtigungen und doppelte Identitäten werden erneut geprüft.",
+  "approval.preview.workspaceVisible":
+    "Der neue Datensatz ist mit passenden Leserechten sichtbar.",
+  "approval.preview.geocodeConditional":
+    "Wenn die Adress-Geokodierung aktiviert ist, wird eine Koordinatenabfrage für die angezeigte Adresse eingeplant.",
+  "approval.preview.primaryDomain": "Primäre Domain",
+  "approval.preview.createLead":
+    "Erlaubt dem vorschlagenden Aufrufer, diesen Lead einmal mit den angezeigten Werten anzulegen. Beim Anlegen werden Berechtigungen und doppelte Identitäten erneut geprüft.",
+  "approval.preview.reuseRecord":
+    "Der Quellschlüssel bezeichnet bereits diesen Datensatz. Der Aufruf gibt ihn zurück, ohne einen weiteren anzulegen.",
+  "approval.preview.queueDuplicate":
+    "Legt neben dem neuen Datensatz einen Dublettenvorschlag zur Prüfung an.",
+  "approval.preview.creationExisting": "Zurückgegebener vorhandener Datensatz",
+  "approval.preview.creationDuplicate": "Vorgeschlagene Dublette",
   "approval.preview.nameUnavailable": "Name nicht verfügbar",
   "approval.preview.structured": "Strukturierter Wert: {value}",
   "approval.preview.resolveConflict":
@@ -107,6 +389,157 @@ export const de = {
   "approval.preview.conflict": "Widersprüchlicher Kontext",
   "approval.preview.execution": "Wird beim Anwenden festgelegt",
   "approval.preview.effects": "Weitere Änderungen",
+  "approval.preview.authorizeMessage":
+    "Erlaubt dem vorschlagenden Aufrufer, diese Nachricht einmal zu senden. Die Freigabe sendet sie nicht sofort und fügt deine Signatur nicht hinzu. Beim Senden werden die aktuellen Berechtigungen und Einwilligungen erneut geprüft.",
+  "approval.preview.archiveLead":
+    "Archiviert diesen Lead und entfernt alle seine Tags. Der Datensatz bleibt unter den archivierten Datensätzen verfügbar.",
+  "approval.preview.authorizeWebsite":
+    "Erlaubt dem vorschlagenden Aufrufer, diese Website mit den konfigurierten externen Diensten zu lesen. Dabei können KI und nutzungsabhängige Gebühren anfallen.",
+  "approval.preview.readPage":
+    "Eine Seite lesen und einen Anreicherungsvorschlag vorbereiten",
+  "approval.preview.readSite": "Einen Crawl der Website einreihen",
+  "approval.preview.readTechnical":
+    "Eine öffentliche technische Abfrage der Firmendomäne einreihen",
+  "approval.preview.targetURL": "Zu lesende Website oder Domäne",
+  "approval.preview.readScope": "Leseumfang",
+  "approval.preview.recordMeetingConsent":
+    "Autorisiert das Erfassen des Termins und der angezeigten transaktionalen Einwilligung vor der Zeitreservierung. Eine bestehende Entscheidung bleibt erhalten. Die Einwilligung kann erfasst werden, auch wenn der Zeitraum nicht mehr frei ist. Es wird keine Kalendereinladung versendet.",
+  "approval.preview.preserveConsent":
+    "Die bestehende Einwilligungsentscheidung bleibt unverändert; es wird kein neuer Nachweis erfasst.",
+  "approval.preview.requestConfirmation":
+    "Autorisiert den Versuch, eine Marketingbestätigung an die angezeigte Adresse anzufordern. Die Zustellung hängt vom konfigurierten Maildienst und aktuellen Einwilligungsprüfungen ab. Der Kontakt wird dadurch nicht angemeldet. Der eingereichte Marketingtext wird nicht als Nachweis gespeichert; maßgeblich ist der Text auf der Bestätigungsseite.",
+  "approval.preview.confirmationUnavailable":
+    "Die aktuellen Kontakt- oder Einwilligungsdaten verhindern eine Marketingbestätigung. Die Buchung kann ohne Versand und ohne Marketingeinwilligung fortgesetzt werden.",
+  "approval.preview.consentContact": "Kontakt der Einwilligung",
+  "approval.preview.consentPurpose": "Transaktionaler Zweck",
+  "approval.preview.consentVersion": "Version der Einwilligungsrichtlinie",
+  "approval.preview.consentWording": "Eingereichter Einwilligungstext",
+  "approval.preview.consentResult": "Einwilligungsentscheidung nach Ausführung",
+  "approval.preview.marketingPurpose": "Marketingzweck",
+  "approval.preview.marketingVersion":
+    "Eingereichte Version der Marketingrichtlinie",
+  "approval.preview.marketingWording": "Eingereichter Marketingtext",
+  "approval.preview.confirmationRecipient": "Zieladresse der Bestätigung",
+  "approval.preview.consentGranted": "Erteilt",
+  "approval.preview.consentWithdrawn": "Widerrufen",
+  "approval.preview.authorizeInvitation":
+    "Autorisiert die vorschlagende organisierende Person, den Zeitraum zu reservieren und diese Kalendereinladung an die angezeigte Adresse zum Versand einzureihen. Der Einladung wird ein privater Link zum Verschieben oder Absagen hinzugefügt. Video- und Erinnerungseinstellungen stehen oben. Kalenderzugriff, Verfügbarkeit und Empfangsberechtigungen werden bei der Ausführung geprüft. Eine Bestätigung des Anbieters belegt weder die Annahme noch den Empfang durch den Gast.",
+  "approval.preview.authorizeChannelReply":
+    "Autorisiert den vorschlagenden Aufrufer, einmal in dieser Unterhaltung mit dem vollständigen Text und den aufgelisteten Dateien an das angezeigte Kanalkonto zu antworten. Die Freigabe versendet noch nichts. Kanalverfügbarkeit, Empfangsberechtigungen und Dateien werden bei der Ausführung erneut geprüft.",
+  "approval.preview.channelProvider": "Nachrichtendienst",
+  "approval.preview.contextAutomatic":
+    "Wird beim Versand aus Unterhaltung und Belegen ermittelt",
+  "approval.preview.claimedContext": "Angegebene Kommunikationskategorie",
+  "approval.preview.messagePurpose": "Angegebener Zweckschlüssel",
+  "approval.preview.operatorReason":
+    "Erklärung der absendenden Person (kein Beleg)",
+  "approval.preview.evidenceContract": "Angeführter Vertrag",
+  "approval.preview.evidenceInvoice": "Angeführte Rechnung",
+  "approval.preview.evidenceDeal": "Angeführter Deal",
+  "approval.preview.contextReply": "Antwort auf eine eingegangene Nachricht",
+  "approval.preview.contextSecurity": "Sicherheitsmitteilung",
+  "approval.preview.contextPrivacy": "Datenschutzmitteilung",
+  "approval.preview.contextRecord": "Bestätigung der Angaben",
+  "approval.preview.contextConsent": "Einwilligungsbestätigung",
+  "approval.preview.contextOptout": "Bestätigung der Abmeldung",
+  "approval.preview.unsubscribeFooter":
+    "Beim Versand wird ein empfängerbezogener Abmeldelink ergänzt, wenn ein entsprechender Präferenzdatensatz besteht. Der private Link wird erst bei der Ausführung erstellt, nicht bei der Prüfung.",
+  "approval.preview.disclosureText": "Beim Versand ergänzte Pflichtangabe",
+  "approval.preview.demoteArchive":
+    "Stellt den Lead als Engagiert wieder her und entfernt seine Qualifizierungsverknüpfungen. Archiviert den Kontakt, seine E-Mail-Adressen, Telefonnummern, Kanalidentitäten und Beziehungen; entfernt seine Tags und Listenzugehörigkeiten. Aktivitäten bleiben unverändert zugeordnet.",
+  "approval.preview.demotePreserve":
+    "Stellt den Lead als Engagiert wieder her und entfernt seine Qualifizierungsverknüpfungen. Behält den bestehenden Kontakt und seine Historie; entfernt die Rückverknüpfung zu diesem Lead. Aktivitäten bleiben unverändert zugeordnet.",
+  "approval.preview.relinkPreserve":
+    "Andere Verknüpfungen bleiben bestehen. Beteiligte ersetzter Kontaktverknüpfungen wechseln zum Zielkontakt; gleiche Einträge werden zusammengeführt.",
+  "approval.preview.relinkRetention":
+    "Die Ablage unter diesem Projekt begründet die Aufbewahrung als Geschäftskorrespondenz. Eine spätere Verschiebung hebt diesen Grund nicht auf.",
+  "approval.preview.relinkDestination": "Zieldatensatz",
+  "approval.preview.relinkActivity": "Aktivität mit neuer Verknüpfung",
+  "approval.preview.relinkUnchanged": "Bereits verknüpfte Aktivität",
+  "approval.preview.relinkRemoved": "Ersetzte Verknüpfung",
+  "approval.preview.relinkParticipantMove":
+    "Beteiligte Person wechselt von Kontakt",
+  "approval.preview.relinkParticipantMerge":
+    "Doppelter Eintrag entfernt von Kontakt",
+  "approval.preview.relinkRole": "Rolle der beteiligten Person",
+  "approval.preview.relinkAddress": "Adresse der beteiligten Person",
+  "approval.preview.relinkUser": "Beteiligtes Teammitglied",
+  "approval.preview.promotionMoveLinks":
+    "Verschiebt die aufgeführten Abmeldelinks und Kommunikationsgrundlagen zum Kontakt. Geltungsbereich, Ablauf und Widerruf bleiben unverändert.",
+  "approval.preview.withdrawalAddress": "Abmeldelink für",
+  "approval.preview.linkIssued": "Link erstellt",
+  "approval.preview.linkExpires": "Link läuft ab",
+  "approval.preview.recordRevoked": "Widerrufen",
+  "approval.preview.basisKind": "Erfasste Kommunikationsgrundlage",
+  "approval.preview.basisFrom": "Grundlage gültig ab",
+  "approval.preview.basisUntil": "Grundlage gültig bis",
+  "approval.preview.basisActivity": "Belegende Aktivität für diese Grundlage",
+  "approval.preview.basisContract": "Vertrag",
+  "approval.preview.basisRequest": "Vorvertragliche Anfrage",
+  "approval.preview.basisCorrespondence":
+    "Von der empfangenden Person begonnene Korrespondenz",
+  "approval.preview.basisInterests": "Berechtigte Interessen",
+  "approval.preview.basisObligation": "Rechtliche Verpflichtung",
+  "approval.preview.basisSecurity":
+    "Lebenswichtiges Interesse oder Sicherheitsinteresse",
+  "approval.preview.basisCustomer": "Bestandskundenausnahme",
+  "approval.preview.basisAgreement": "Zustimmung der empfangenden Person",
+  "approval.preview.promotionTrigger": "Anlass der Qualifizierung",
+  "approval.preview.promotionNote": "Beleg zur Qualifizierung",
+  "approval.preview.promotionEvidence": "Belegende Aktivität",
+  "approval.preview.promotionContactName": "Kontaktname",
+  "approval.preview.promotionContactSource": "Kontaktquelle",
+  "approval.preview.promotionContactTitle": "Zu ergänzende Position",
+  "approval.preview.promotionContactOwner": "Kontaktverantwortlicher",
+  "approval.preview.promotionContactEmail": "Zu ergänzende E-Mail",
+  "approval.preview.promotionContactPhone": "Zu ergänzende Telefonnummer",
+  "approval.preview.promotionExistingContact": "Zu ergänzender Kontakt",
+  "approval.preview.promotionSetOrigin": "Kontakt mit diesem Lead verknüpfen",
+  "approval.preview.promotionDuplicateCandidate":
+    "Mögliche Dublette zur Prüfung",
+  "approval.preview.promotionMoveActivity":
+    "Zum Kontakt zu verschiebende Aktivität",
+  "approval.preview.promotionDuplicateActivity":
+    "Aktivität bereits am Kontakt; Lead-Verknüpfung entfernen",
+  "approval.preview.promotionConsentBefore":
+    "Einwilligung vor der Qualifizierung",
+  "approval.preview.promotionRestriction": "Zu übernehmende Einschränkung",
+  "approval.preview.promotionRestrictionAuthority":
+    "Einschränkung erfasst durch",
+  "approval.preview.promotionRestrictionPurpose":
+    "Geltungsbereich der Einschränkung",
+  "approval.preview.promotionDealName": "Name des neuen Deals",
+  "approval.preview.promotionDealAmount": "Betrag des neuen Deals",
+  "approval.preview.promotionDealOwner": "Verantwortlicher des neuen Deals",
+  "approval.preview.promotionArchive":
+    "Qualifiziert und archiviert diesen Lead und verknüpft ihn mit dem Kontakt. Die ursprünglichen Einwilligungsbelege bleiben am Lead.",
+  "approval.preview.promotionCreate":
+    "Erstellt einen Kontakt mit den angezeigten Angaben.",
+  "approval.preview.promotionFill":
+    "Ergänzt die angezeigten fehlenden Angaben am bestehenden Kontakt. Vorhandener Name, Position und Hauptnummer bleiben erhalten.",
+  "approval.preview.promotionDeal":
+    "Eröffnet den angezeigten Deal und fügt den Kontakt als Beteiligten hinzu. Der Lead wird mit diesem Deal verknüpft.",
+  "approval.preview.promotionReview":
+    "Erstellt einen separaten Kontakt und stellt die mögliche Dublette zur Prüfung bereit.",
+  "approval.preview.promotionAllMarketing": "Gesamtes Marketing",
+  "approval.preview.promotionMachine": "Automatisches System",
+  "approval.preview.promotionUser": "Teammitglied",
+  "approval.preview.promotionAdmin": "Admin",
+  "approval.preview.promotionSubject": "Empfangende Person",
+  "approval.preview.demotionContact": "Betroffener Kontakt",
+  "approval.preview.unsignedSend":
+    "Versand ohne menschlichen Anzeigenamen oder persönliche Signatur. Die Freigabe macht die prüfende Person nicht zur absendenden Person.",
+  "approval.preview.senderSignature": "Signatur der absendenden Person",
+  "approval.preview.signaturePrivate":
+    "Die private Signatur der absendenden Person darf dieser prüfenden Person nicht angezeigt werden. Lass die absendende Person diese Nachricht prüfen.",
+  "approval.preview.recordMeeting":
+    "Erlaubt das Erfassen eines Termins bei den verknüpften Einträgen. Es wird keine Kalendereinladung oder E-Mail versendet. Angegebene Adressen der Teilnehmenden werden nicht am Termin gespeichert. Der Zeitraum muss beim Erfassen für die organisierende Person noch verfügbar sein.",
+  "approval.preview.meetingStart": "Beginn (mit UTC-Abweichung)",
+  "approval.preview.meetingEnd": "Ende (mit UTC-Abweichung)",
+  "approval.preview.meetingHost": "Organisiert von",
+  "approval.preview.intendedAttendee":
+    "Vorgesehene teilnehmende Person (wird nicht benachrichtigt)",
+  "approval.preview.htmlBody": "Formatierte Nachricht",
   "approval.preview.correspondence":
     "Verknüpfte Korrespondenz als Geschäftsbriefe einordnen.",
   "approval.preview.attachRecipients":
@@ -125,6 +558,29 @@ export const de = {
   "approval.preview.unavailable":
     "Der Freigabekontext ist nicht verfügbar. Lade die Seite neu oder fordere einen neuen Vorschlag an.",
   "approval.preview.change": "{before} → {after}",
+  "approval.import.row": "{kind}, Zeile {line} ({key})",
+  "approval.import.create": "Neuen Datensatz erstellen",
+  "approval.import.duplicate":
+    "Datensatz erstellen und Dublettenprüfung vormerken",
+  "approval.import.update": "Bestehenden Datensatz aktualisieren",
+  "approval.import.unchanged": "Bestehende Felder beibehalten",
+  "approval.import.skip": "Diese Zeile überspringen",
+  "approval.import.createTag": "Schlagwort erstellen",
+  "approval.import.applyTag": "Schlagwort hinzufügen",
+  "approval.import.contextTag": "Neuen Datensatz einordnen unter",
+  "approval.import.linkCompany": "Mit Unternehmen verknüpfen",
+  "approval.import.linkContact": "Mit Kontakt verknüpfen",
+  "approval.import.linkLead": "Mit Lead verknüpfen",
+  "approval.import.linkDeal": "Mit Verkaufschance verknüpfen",
+  "approval.import.companyRow": "Mit Unternehmen aus Importzeile verknüpfen",
+  "approval.import.contactRow": "Mit Kontakt aus Importzeile verknüpfen",
+  "approval.import.leadRow": "Mit Lead aus Importzeile verknüpfen",
+  "approval.import.dealRow": "Mit Verkaufschance aus Importzeile verknüpfen",
+  "approval.import.droppedLink": "Nicht auflösbare Verknüpfung auslassen",
+  "approval.import.createActivity":
+    "Aktivität ablegen, ohne Nachricht oder Kalendereinladung zu senden",
+  "approval.import.closeDeal":
+    "Verkaufschance anhand des importierten Verlaufs abschließen",
   "approval.preview.authorityUnknown":
     "Der Grund für deine Freigabeberechtigung ist nicht verfügbar.",
   "approval.preview.reviewer": "Freigabeberechtigung",
@@ -2722,6 +3178,12 @@ export const de = {
   "approval.kind.vcard_create": "Kontakt aus Visitenkarte erstellen",
   "approval.kind.lifecycle_change": "Lebenszyklusphase",
   "approval.kind.stage_progression": "Deal-Phase voranbringen",
+  "approval.preview.requiredCriterionMet": "Erforderliches Kriterium erfüllt",
+  "approval.preview.requiredCriterionUnmet":
+    "Erforderliches Kriterium nicht erfüllt",
+  "approval.preview.optionalCriterionMet": "Optionales Kriterium erfüllt",
+  "approval.preview.optionalCriterionUnmet":
+    "Optionales Kriterium nicht erfüllt",
   "approval.field.because": "Grund",
   "approval.field.from_stage": "Von",
   "approval.field.to_stage": "Nach",

@@ -217,7 +217,7 @@ func (t draftEmailTool) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 		// The same cap and de-duplication send_company_email applies, so a
 		// draft cannot succeed with a link set the advertised follow-on send
 		// would refuse.
-		links, err := uniqueRecordLinks(args.Links)
+		links, err := UniqueRecordLinks(args.Links)
 		if err != nil {
 			return nil, err
 		}

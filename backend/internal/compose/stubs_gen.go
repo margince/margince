@@ -2471,7 +2471,7 @@ func (stubs) CreateOfferTemplate(w nethttp.ResponseWriter, r *nethttp.Request, p
 	httperr.NotImplemented(w, r, "CreateOfferTemplate")
 }
 
-func (stubs) ArchiveOfferTemplate(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+func (stubs) ArchiveOfferTemplate(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ArchiveOfferTemplateParams) {
 	httperr.NotImplemented(w, r, "ArchiveOfferTemplate")
 }
 
@@ -2483,7 +2483,7 @@ func (stubs) UpdateOfferTemplate(w nethttp.ResponseWriter, r *nethttp.Request, i
 	httperr.NotImplemented(w, r, "UpdateOfferTemplate")
 }
 
-func (stubs) ArchiveOffer(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+func (stubs) ArchiveOffer(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ArchiveOfferParams) {
 	httperr.NotImplemented(w, r, "ArchiveOffer")
 }
 
@@ -2631,7 +2631,7 @@ func (stubs) CreateProduct(w nethttp.ResponseWriter, r *nethttp.Request, params 
 	httperr.NotImplemented(w, r, "CreateProduct")
 }
 
-func (stubs) ArchiveProduct(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+func (stubs) ArchiveProduct(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ArchiveProductParams) {
 	httperr.NotImplemented(w, r, "ArchiveProduct")
 }
 

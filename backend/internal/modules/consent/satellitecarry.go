@@ -86,21 +86,15 @@ func (s *Store) CarrySatellitesTx(ctx context.Context, tx pgx.Tx, from, to comms
 // No uniqueness binds either table by subject: several withdrawal links per
 // address is their shape, and both halves' lawful bases are kept.
 func carrySubjectArmRows(ctx context.Context, tx pgx.Tx, from, to commsauthz.StopSubject, carry satelliteCarry) error {
-	args := []any{
-		zeroAsNull(from.ContactID.UUID), zeroAsNull(from.LeadID.UUID),
-		zeroAsNull(to.ContactID.UUID), zeroAsNull(to.LeadID.UUID),
-	}
-	withdrawal, err := collectIDs(ctx, tx, `
-		UPDATE withdrawal_credential SET contact_id = $3, lead_id = $4
-		 WHERE ($1::uuid IS NOT NULL AND contact_id = $1) OR ($2::uuid IS NOT NULL AND lead_id = $2)
-		RETURNING id`, args...)
+	args := pgx.NamedArgs{"from_contact": zeroAsNull(from.ContactID.UUID), "from_lead": zeroAsNull(from.LeadID.UUID),
+		"to_contact": zeroAsNull(to.ContactID.UUID), "to_lead": zeroAsNull(to.LeadID.UUID)}
+	withdrawal, err := collectIDs(ctx, tx, `UPDATE withdrawal_credential SET contact_id = @to_contact, lead_id = @to_lead
+ WHERE `+carrySubjectPredicate+` RETURNING id`, args)
 	if err != nil {
 		return fmt.Errorf("consent: carrying the withdrawal links: %w", err)
 	}
-	bases, err := collectIDs(ctx, tx, `
-		UPDATE communication_basis SET contact_id = $3, lead_id = $4
-		 WHERE ($1::uuid IS NOT NULL AND contact_id = $1) OR ($2::uuid IS NOT NULL AND lead_id = $2)
-		RETURNING id`, args...)
+	bases, err := collectIDs(ctx, tx, `UPDATE communication_basis SET contact_id = @to_contact, lead_id = @to_lead
+ WHERE `+carrySubjectPredicate+` RETURNING id`, args)
 	if err != nil {
 		return fmt.Errorf("consent: carrying the recorded lawful bases: %w", err)
 	}
@@ -116,12 +110,12 @@ func carryContactOnlyRows(ctx context.Context, tx pgx.Tx, from, to ids.ContactID
 		return err
 	}
 	confirm, err := collectIDs(ctx, tx,
-		`UPDATE confirm_token SET contact_id = $2 WHERE contact_id = $1 RETURNING id`, from, to)
+		`UPDATE confirm_token SET contact_id = @target WHERE `+contactCarrySource+` RETURNING id`, pgx.NamedArgs{"source": from, "target": to})
 	if err != nil {
 		return fmt.Errorf("consent: carrying the confirm links: %w", err)
 	}
 	doi, err := collectIDs(ctx, tx,
-		`UPDATE consent_doi_token SET contact_id = $2 WHERE contact_id = $1 RETURNING id`, from, to)
+		`UPDATE consent_doi_token SET contact_id = @target WHERE `+contactCarrySource+` RETURNING id`, pgx.NamedArgs{"source": from, "target": to})
 	if err != nil {
 		return fmt.Errorf("consent: carrying the double-opt-in history: %w", err)
 	}
@@ -141,16 +135,9 @@ func carryContactOnlyRows(ctx context.Context, tx pgx.Tx, from, to ids.ContactID
 // withdrawal path refuses that one.
 func carryPreferenceTokens(ctx context.Context, tx pgx.Tx, from, to ids.ContactID, carry satelliteCarry) error {
 	marked, err := collectIDs(ctx, tx, `
-		UPDATE preference_token p
-		   SET contact_id = $2, revoked_at = now(), revoked_reason = $3
-		 WHERE p.contact_id = $1 AND p.revoked_at IS NULL
-		   AND (EXISTS (SELECT 1 FROM preference_token h
-		                 WHERE h.contact_id = $2 AND h.revoked_at IS NULL
-		                   AND h.contact_email_id IS NOT DISTINCT FROM p.contact_email_id)
-		     OR EXISTS (SELECT 1 FROM contact_email e
-		                 WHERE e.id = p.contact_email_id
-		                   AND (e.contact_id <> $2 OR e.archived_at IS NOT NULL)))
-		RETURNING id`, from, to, PreferenceRevokedMergedIntoSurvivor)
+ UPDATE preference_token p SET contact_id=@target, revoked_at=now(), revoked_reason=@reason
+ WHERE p.contact_id=@source AND `+preferenceCarryRetires+` RETURNING id`,
+		pgx.NamedArgs{"source": from, "target": to, "reason": PreferenceRevokedMergedIntoSurvivor, "moving_emails": []ids.UUID{}})
 	if err != nil {
 		return fmt.Errorf("consent: retiring the preference links the survivor already holds: %w", err)
 	}
@@ -169,13 +156,8 @@ func carryPreferenceTokens(ctx context.Context, tx pgx.Tx, from, to ids.ContactI
 // Hand-recorded events name no source and always travel.
 func carryQualifyingEvents(ctx context.Context, tx pgx.Tx, from, to ids.ContactID, carry satelliteCarry) error {
 	dropped, err := collectIDs(ctx, tx, `
-		DELETE FROM consent_qualifying_event a
-		 WHERE a.contact_id = $1 AND a.source_entity_id IS NOT NULL
-		   AND EXISTS (SELECT 1 FROM consent_qualifying_event b
-		                WHERE b.contact_id = $2
-		                  AND b.source_entity_type = a.source_entity_type
-		                  AND b.source_entity_id = a.source_entity_id)
-		RETURNING id`, from, to)
+ DELETE FROM consent_qualifying_event a WHERE a.contact_id=@source AND `+qualifyingCarryDuplicate+` RETURNING id`,
+		pgx.NamedArgs{"source": from, "target": to})
 	if err != nil {
 		return fmt.Errorf("consent: dropping qualifying events the survivor already records: %w", err)
 	}

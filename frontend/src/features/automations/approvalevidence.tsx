@@ -1,12 +1,61 @@
 import { useState } from "react";
 import type { DecisionApproval } from "../../design-system/decisioncard";
+import { EmailAttachments } from "../../design-system/emaildetail";
+import { EmailText } from "../../design-system/emailtext";
 import { SourceEvidence } from "../../design-system/sourceevidence";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
+import { SignatureHtml } from "../mail/signaturehtml";
 import { OpenActivityDrawer } from "../voice-knowledge/activitydrawer";
 
 export function ApprovalEvidence({
+  approval,
+}: Readonly<{ approval: DecisionApproval }>) {
+  return (
+    <>
+      <ApprovalMessage approval={approval} />
+      <ApprovalSources approval={approval} />
+    </>
+  );
+}
+
+function ApprovalMessage({
+  approval,
+}: Readonly<{ approval: DecisionApproval }>) {
+  const t = useT();
+  const preview = approval.preview;
+  if (preview?.version !== 2 || preview.state !== "ready") return null;
+  const body = preview.details?.find((detail) => detail.field === "body")?.value
+    .text;
+  const html = preview.details?.find((detail) => detail.field === "html_body")
+    ?.value.text;
+  const signature = preview.details?.find(
+    (detail) => detail.field === "signature_text",
+  )?.value.text;
+  const signatureHtml = preview.details?.find(
+    (detail) => detail.field === "signature_html",
+  )?.value.text;
+  return (
+    <>
+      {body && <EmailText body={body} />}
+      {html && (
+        <SignatureHtml html={html} title={t("approval.preview.htmlBody")} />
+      )}
+      {signatureHtml ? (
+        <SignatureHtml
+          html={signatureHtml}
+          title={t("approval.preview.senderSignature")}
+        />
+      ) : signature ? (
+        <EmailText body={signature} />
+      ) : null}
+      <EmailAttachments files={preview.files ?? []} />
+    </>
+  );
+}
+
+function ApprovalSources({
   approval,
 }: Readonly<{ approval: DecisionApproval }>) {
   const t = useT();

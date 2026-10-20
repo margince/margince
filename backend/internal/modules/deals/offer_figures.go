@@ -5,6 +5,7 @@ package deals
 
 import (
 	"fmt"
+	"math"
 	"math/big"
 	"strconv"
 	"strings"
@@ -108,8 +109,11 @@ func checkCurrency(code string) error {
 	return nil
 }
 
-// checkLinePosition refuses a position before the first.
+// Positions must fit the stored positive integer.
 func checkLinePosition(position *int) error {
+	if position != nil && *position > math.MaxInt32 {
+		return &FigureError{Field: "position", Rule: "exceeds the supported range"}
+	}
 	if position != nil && *position < 1 {
 		return &FigureError{Field: "position", Rule: "must be 1 or more"}
 	}

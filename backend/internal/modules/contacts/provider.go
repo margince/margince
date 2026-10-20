@@ -241,7 +241,7 @@ func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datas
 			return datasource.EntityRef{}, err
 		}
 		req.Source = in.Source
-		mapped, err := contactCreateInput(req)
+		mapped, err := ContactCreationInput(req)
 		if err != nil {
 			return datasource.EntityRef{}, err
 		}
@@ -253,7 +253,7 @@ func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datas
 			return datasource.EntityRef{}, err
 		}
 		req.Source = in.Source
-		mapped, err := companyCreateInput(req)
+		mapped, err := CompanyCreationInput(req)
 		if err != nil {
 			return datasource.EntityRef{}, err
 		}
@@ -265,7 +265,7 @@ func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datas
 			return datasource.EntityRef{}, err
 		}
 		req.Source = in.Source
-		mapped, err := leadCreateInput(req)
+		mapped, err := LeadCreationInput(req)
 		if err != nil {
 			return datasource.EntityRef{}, err
 		}
@@ -411,4 +411,9 @@ func (p *Provider) PromoteLead(
 		Trigger: trigger, EvidenceNote: evidenceNote, IfVersion: ifVersion,
 	})
 	return ref(datasource.EntityContact, contact.Id), merged, err
+}
+
+func (p *Provider) WithParticipantRosterReader(read ParticipantRosterReader) *Provider {
+	p.store = p.store.WithParticipantRosterReader(read)
+	return p
 }

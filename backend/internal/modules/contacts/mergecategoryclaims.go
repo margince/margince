@@ -45,16 +45,11 @@ func settleCategoryClaims(ctx context.Context, tx pgx.Tx, sourceID, targetID ids
 // were cancelled before this runs, so only that one direction is left.
 func skipQueuedRunsTheSourceIsBuying(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID) error {
 	rows, err := tx.Query(ctx, `
-		UPDATE provider_run q
-		   SET state = 'skipped', skip_reason = 'category_in_flight', completed_at = now(),
-		       input_fingerprint = 'merged:' || gen_random_uuid()::text
-		 WHERE q.contact_id = $2 AND q.state = 'queued'
-		   AND EXISTS (
-		     SELECT 1 FROM provider_run_category mine
-		       JOIN provider_run_category theirs
-		         ON theirs.provider = mine.provider AND theirs.category = mine.category
-		      WHERE mine.run_id = q.id AND theirs.contact_id = $1)
-		RETURNING q.id`, sourceID.UUID, targetID.UUID)
+ UPDATE provider_run q
+ SET state = 'skipped', skip_reason = 'category_in_flight', completed_at = now(),
+ input_fingerprint = 'merged:' || gen_random_uuid()::text
+ WHERE q.contact_id = @target AND q.state = 'queued' AND `+mergeProviderCategoryTwin+`
+ RETURNING q.id`, pgx.StrictNamedArgs{"source": sourceID.UUID, "target": targetID.UUID})
 	if err != nil {
 		return fmt.Errorf("skip the survivor's queued runs the merged-away record is buying: %w", err)
 	}

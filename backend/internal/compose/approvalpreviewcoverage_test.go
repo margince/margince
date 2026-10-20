@@ -53,11 +53,29 @@ func TestCommercialPreviewCoversTheRegisteredStageAndPatchTools(t *testing.T) {
 
 func TestCommercialPreviewAccountsForEveryGovernedKind(t *testing.T) {
 	covered := map[string]string{
-		"advance_deal":     `{"to_stage_id":"stage"}`,
-		"progress_deal":    `{"to_stage_id":"stage"}`,
-		"update_record":    `{"fields":{"owner_id":null}}`,
-		"assign_owner":     `{"owner_id":null}`,
-		"lifecycle_change": `{"proposed_lifecycle":"former_customer"}`,
+		"merge_tags":            `{}`,
+		"archive_record":        `{}`,
+		"emit_flow_event":       `{ "question":"Ready?" }`,
+		"create_record":         `{}`,
+		"relink_activity":       `{}`,
+		"relink_activities":     `{}`,
+		"relink_thread":         `{}`,
+		"promote_lead":          `{"trigger":"human_qualify"}`,
+		"demote_lead":           `{"reason":"Wrong prospect"}`,
+		"send_message":          `{}`,
+		"invite_meeting":        `{}`,
+		"book_meeting":          `{}`,
+		"enrich":                `{}`,
+		"disqualify_lead":       `{}`,
+		"send_email":            `{"to":["buyer@example.test"],"body":"Delivery Friday"}`,
+		"send_company_email":    `{"to":["buyer@example.test"],"body":"Delivery Friday"}`,
+		"advance_project_phase": `{"to_phase":"closed","reason":"Delivered"}`,
+		"stage_progression":     `{"to_stage_id":"stage"}`,
+		"advance_deal":          `{"to_stage_id":"stage"}`,
+		"progress_deal":         `{"to_stage_id":"stage"}`,
+		"update_record":         `{"fields":{"owner_id":null}}`,
+		"assign_owner":          `{"owner_id":null}`,
+		"lifecycle_change":      `{"proposed_lifecycle":"former_customer"}`,
 	}
 	seen := map[string]bool{}
 	for _, kind := range approvals.StageableKinds() {
@@ -72,7 +90,7 @@ func TestCommercialPreviewAccountsForEveryGovernedKind(t *testing.T) {
 		if err != nil || supported != expected {
 			t.Errorf("governed kind %s: covered=%v, want %v; %v", kind, supported, expected, err)
 		}
-		if expected && len(changes) == 0 {
+		if expected && kind != "merge_tags" && kind != "archive_record" && kind != "emit_flow_event" && kind != "create_record" && kind != "relink_activity" && kind != "relink_activities" && kind != "relink_thread" && kind != "promote_lead" && kind != "demote_lead" && kind != "send_message" && kind != "invite_meeting" && kind != "book_meeting" && kind != "enrich" && kind != previewSendEmail && kind != previewSendCompanyEmail && len(changes) == 0 {
 			t.Errorf("governed kind %s has no commercial effect", kind)
 		}
 		seen[kind] = true
@@ -82,15 +100,7 @@ func TestCommercialPreviewAccountsForEveryGovernedKind(t *testing.T) {
 			t.Errorf("preview kind %s is not governed", kind)
 		}
 	}
-	// These effects use different staging contracts, whose complete previews are separate work.
-	for _, kind := range []string{"stage_progression"} {
-		if !seen[kind] {
-			t.Errorf("the census lost the separate %s producer", kind)
-		}
-		if _, included := covered[kind]; included {
-			t.Errorf("%s needs its own full payload acceptance fixtures", kind)
-		}
-	}
+
 }
 
 func TestBulkOwnerChangesUseTheirOwnConversationConfirmation(t *testing.T) {

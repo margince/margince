@@ -103,7 +103,7 @@ func readAccountSendArgs(in json.RawMessage) (SendCompanyEmailArgs, []RecordLink
 	if err := requireAccountSendLinks(args.Links); err != nil {
 		return SendCompanyEmailArgs{}, nil, err
 	}
-	links, err := uniqueRecordLinks(args.Links)
+	links, err := UniqueRecordLinks(args.Links)
 	if err != nil {
 		return SendCompanyEmailArgs{}, nil, err
 	}

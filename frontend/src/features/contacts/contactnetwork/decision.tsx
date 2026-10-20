@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { INTRO_STATUS_LABELS as HANDOFF_VALUE } from "../../../format/introstatus";
+
 // The three readings a rep opens this tab for: who can open the door, why it
 // is worth doing now, and who owns the next move.
 //
@@ -208,18 +210,6 @@ const OWED: ReadonlySet<IntroRequest["status"]> = new Set([
 
 // Every status the contract admits reads as words. A state the server can send
 // must never reach a reader as a raw enum.
-const HANDOFF_VALUE: Record<IntroRequest["status"], MessageKey> = {
-  requested: "contact.intro.stateRequested",
-  accepted: "contact.intro.stateAccepted",
-  name_drop_approved: "contact.intro.stateNameDropApproved",
-  suggest_other: "contact.intro.stateSuggestOther",
-  declined: "contact.intro.stateDeclined",
-  introduced: "contact.intro.stateIntroduced",
-  name_dropped: "contact.intro.stateNameDropped",
-  replied: "contact.intro.stateReplied",
-  expired: "contact.intro.stateExpired",
-  cancelled: "contact.intro.stateCancelled",
-};
 
 // Total over the four kinds the contract admits, so a change the server can
 // derive cannot reach a reader as a raw enum.

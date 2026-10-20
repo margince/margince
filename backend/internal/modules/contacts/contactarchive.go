@@ -124,17 +124,19 @@ func archiveContactRows(ctx context.Context, tx pgx.Tx, id ids.ContactID, now ti
 		// resolving inbound messages onto a record that has been
 		// soft-deleted; archived, the next message starts a fresh one.
 		{"contact_channel_identity", `UPDATE contact_channel_identity SET archived_at = $2 WHERE contact_id = $1 AND archived_at IS NULL RETURNING id`},
-		{tableRelationship, `UPDATE relationship SET archived_at = $2 WHERE (contact_id = $1 OR counterparty_contact_id = $1) AND archived_at IS NULL RETURNING id`},
 	} {
 		if err := cascade.Retire(ctx, tx, retire.table, retire.statement, id, now); err != nil {
 			return err
 		}
 	}
+	if err := cascade.Retire(ctx, tx, tableRelationship, `UPDATE relationship SET archived_at = @archived WHERE `+contactArchiveRelationships+` RETURNING id`, pgx.StrictNamedArgs{"record": id, "archived": now}); err != nil {
+		return err
+	}
 	// Polymorphic membership/tag rows have no archived_at; the §1.10
 	// cleanup rule removes them with the entity.
 	if err := cascade.DropMemberships(ctx, tx,
 		`WITH gone AS (
-			DELETE FROM list_member WHERE entity_type = 'contact' AND entity_id = @record
+			DELETE FROM list_member WHERE `+contactArchiveMemberships+`
 			RETURNING list_id, entity_type, entity_id, added_by, created_at, note),
 		logged AS (
 			INSERT INTO list_member_event (list_id, entity_type, entity_id, action, reason, actor)
@@ -143,7 +145,7 @@ func archiveContactRows(ctx context.Context, tx pgx.Tx, id ids.ContactID, now ti
 		return err
 	}
 	if err := cascade.DropTags(ctx, tx,
-		`DELETE FROM taggable WHERE entity_type = 'contact' AND entity_id = $1 RETURNING tag_id, assigned_by, assigned_by_kind, assigned_at`, id.UUID); err != nil {
+		`DELETE FROM taggable WHERE `+contactArchiveMemberships+` RETURNING tag_id, assigned_by, assigned_by_kind, assigned_at`, pgx.StrictNamedArgs{"record": id.UUID}); err != nil {
 		return err
 	}
 

@@ -106,13 +106,12 @@ func stageCreateInput(req crmcontracts.CreateStageRequest) (CreateStageInput, er
 	return in, nil
 }
 
-func dealCreateInput(req crmcontracts.CreateDealRequest) (CreateDealInput, error) {
+func DealCreationInput(req crmcontracts.CreateDealRequest) (CreateDealInput, error) {
 	return dealCreateInputAdmitting(req, false)
 }
 
-// dealCreateInputFromImporter is dealCreateInput for a declared importer
-// (auth.DeclaredImporter, asked by the handler): it may stamp the mirror:
-// namespace. provider.go keeps the closed door.
+// Only declared human importers may stamp reserved source namespaces.
+// The provider uses the ordinary mapper even when acting for an importer.
 func dealCreateInputFromImporter(req crmcontracts.CreateDealRequest) (CreateDealInput, error) {
 	return dealCreateInputAdmitting(req, true)
 }
