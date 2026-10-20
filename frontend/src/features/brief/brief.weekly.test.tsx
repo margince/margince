@@ -810,7 +810,7 @@ describe("BriefScreen — the weekly report", () => {
     deals: [],
   };
 
-  const mount = (weeks: readonly string[]) => {
+  const openReport = (weeks: readonly string[]) => {
     stubApi({
       "GET /weekly-reviews/latest": () => jsonResponse(review),
       "GET /weekly-reviews": () => jsonResponse({ weeks }),
@@ -824,7 +824,7 @@ describe("BriefScreen — the weekly report", () => {
   };
 
   it("titles the report by the week it covers, and names its calendar week", async () => {
-    mount(["2026-06-29"]);
+    openReport(["2026-06-29"]);
 
     expect(
       await screen.findByRole("heading", {
@@ -840,7 +840,7 @@ describe("BriefScreen — the weekly report", () => {
   // A chapter with nothing to say is left out, and the numbers close up: a
   // report that reads 1, 3, 4 looks like it lost a page.
   it("numbers its chapters with no gap where one is left out", async () => {
-    mount(["2026-06-29"]);
+    openReport(["2026-06-29"]);
 
     await screen.findByText(en["brief.report.chapter.figures"], {
       selector: "h2",
@@ -860,7 +860,7 @@ describe("BriefScreen — the weekly report", () => {
   // The stepper reaches only weeks that have a report, and writes the week
   // into the address so the page can be sent on.
   it("steps to the week before, and not past the newest", async () => {
-    mount(["2026-06-29", "2026-06-22"]);
+    openReport(["2026-06-29", "2026-06-22"]);
     const user = userEvent.setup();
 
     const later = await screen.findByRole("button", {
@@ -876,7 +876,7 @@ describe("BriefScreen — the weekly report", () => {
   });
 
   it("says when the next report comes", async () => {
-    mount(["2026-06-29"]);
+    openReport(["2026-06-29"]);
 
     expect(
       await screen.findByText(
