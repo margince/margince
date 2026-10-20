@@ -73,6 +73,10 @@ var preservedResetTables = map[string]bool{
 	"lead_source": true, "lead_disqualify_reason": true,
 	// The SDR handoff reasons, on the same footing and seeded the same way.
 	"sdr_handoff_reason": true,
+	// The legal entities the installation trades as, and which one each user
+	// works for: installation configuration beside the users the reset keeps.
+	// The migration seeds the default entity, and nothing re-creates it.
+	"legal_entity": true, "legal_entity_member": true,
 	// The two administered record vocabularies added with the standard-field
 	// work: where a deal came from, and what somebody is responsible for on a
 	// record. Both are installation configuration exactly as the lead

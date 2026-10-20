@@ -158,8 +158,8 @@ func (h companyHandlers) writeCompany(w http.ResponseWriter, r *http.Request) {
 // the file part, decoded as an image and re-encoded as this server's own PNG.
 // It writes the refusal itself and reports whether the caller may continue.
 func decodeCompanyLogoUpload(w http.ResponseWriter, r *http.Request) (png []byte, filename string, ok bool) {
-	// upload:route /v1/company/logo, /v1/company/logo/icon — the ceiling this
-	// parse runs under is granted to both paths in compose.uploadCeilings, and
+	// upload:route /v1/company/logo, /v1/company/logo/icon, /v1/legal-entities/{id}/logo — the
+	// ceiling this parse runs under is granted to every path in compose.uploadCeilings, and
 	// TestEveryMultipartParseNamesItsRoute holds them together.
 	//nolint:gosec // G120 wants a bound here, and the bound is the route ceiling the chassis already applied: this argument is only the in-memory/spill threshold.
 	if err := r.ParseMultipartForm(companyLogoSpillBytes); err != nil {

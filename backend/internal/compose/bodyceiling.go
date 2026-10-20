@@ -54,6 +54,8 @@ func uploadCeilings(limits UploadLimits) map[string]int64 {
 		// is the same kind of upload of the same company's face, so a second
 		// number here would be a difference with no reason behind it.
 		"/v1/company/logo/icon": companyLogoUploadBytes, // uploadCompanyLogoIcon
+		// A legal entity's mark, through the same decode as the company's.
+		"/v1/legal-entities/{id}/logo": companyLogoUploadBytes, // uploadLegalEntityLogo
 	}
 }
 
