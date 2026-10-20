@@ -15,9 +15,10 @@ import { DataTasksHealthCard } from "./datataskshealth";
 import { runningDataTask } from "./datataskshealth.fixtures";
 
 type Progress = components["schemas"]["DataTaskProgress"];
+const operatorGrants: GrantSpec = { data_task: ["read", "update"] };
 function report(
   rows: Progress[],
-  grants: GrantSpec = { data_task: ["read", "update"] },
+  grants: GrantSpec = operatorGrants,
   status = 200,
 ) {
   return () => {

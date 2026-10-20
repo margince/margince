@@ -15286,6 +15286,24 @@ func (e ReportingBlockKind) Valid() bool {
 	}
 }
 
+// Defines values for ReportingCardWidth.
+const (
+	ReportingCardWidthFull ReportingCardWidth = "full"
+	ReportingCardWidthHalf ReportingCardWidth = "half"
+)
+
+// Valid indicates whether the value is a known member of the ReportingCardWidth enum.
+func (e ReportingCardWidth) Valid() bool {
+	switch e {
+	case ReportingCardWidthFull:
+		return true
+	case ReportingCardWidthHalf:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ReportingExecutionStatus.
 const (
 	ReportingExecutionStatusFailed    ReportingExecutionStatus = "failed"
@@ -46149,6 +46167,20 @@ type ReportingCaptureStatus struct {
 	NextCaptureAt time.Time  `json:"next_capture_at"`
 }
 
+// ReportingCard defines model for ReportingCard.
+type ReportingCard struct {
+	// Id A short id the client mints. Unique within the report, so one chart kind can be placed twice.
+	Id     string             `json:"id"`
+	Kind   ReportingBlockKind `json:"kind"`
+	Metric *ReportingMetricID `json:"metric,omitempty"`
+
+	// Width `half` shares a row with the next half card. A chart that needs the whole width draws full regardless.
+	Width ReportingCardWidth `json:"width"`
+}
+
+// ReportingCardWidth `half` shares a row with the next half card. A chart that needs the whole width draws full regardless.
+type ReportingCardWidth string
+
 // ReportingCatalog defines model for ReportingCatalog.
 type ReportingCatalog struct {
 	Metrics []ReportingMetricDefinition `json:"metrics"`
@@ -46512,11 +46544,27 @@ type ReportingScope struct {
 // ReportingScopeKind defines model for ReportingScope.Kind.
 type ReportingScopeKind string
 
+// ReportingSection defines model for ReportingSection.
+type ReportingSection struct {
+	Cards []ReportingCard `json:"cards"`
+
+	// Title The heading over this section. Absent or blank draws none.
+	Title *string `json:"title,omitempty"`
+}
+
 // ReportingSelection defines model for ReportingSelection.
 type ReportingSelection struct {
+	// Blocks The chart kinds the report draws, in order. When `layout` is present the service
+	// derives this list from it (each kind once, in the order the layout first names it)
+	// and ignores what was sent, so a client that reads only `blocks` keeps working.
 	Blocks      []ReportingBlockKind          `json:"blocks"`
 	CloseWindow ReportingSelectionCloseWindow `json:"close_window"`
 	Interval    *ReportingWindow              `json:"interval,omitempty"`
+
+	// Layout Sections of cards, in reading order. Absent means one untitled section of
+	// full-width cards in `blocks` order. A report holds at most 20 cards in total,
+	// counted across all its sections.
+	Layout      *[]ReportingSection           `json:"layout,omitempty"`
 	Metrics     []ReportingMetricID           `json:"metrics"`
 	Period      ReportingSelectionPeriod      `json:"period"`
 	PipelineId  *openapi_types.UUID           `json:"pipeline_id,omitempty"`

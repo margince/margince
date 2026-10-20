@@ -258,7 +258,7 @@ func (s *Sink) decideCounterparty(ctx context.Context, tx pgx.Tx, rec connector.
 	// class, whatever its domain — so this runs BEFORE the free-mail tier, which
 	// would otherwise set create=true and skip the check entirely, minting the
 	// contact a prior `noise` verdict refused every time that sender wrote again.
-	alreadyKnown, settled, priorReason, err := s.alreadyDecided(ctx, tx, rec, cp.Email)
+	alreadyKnown, settled, priorReason, err := s.alreadyDecided(ctx, tx, rec, cp.Email, activityID)
 	if err != nil {
 		return counterpartyDecision{}, err
 	}
@@ -327,7 +327,9 @@ func (s *Sink) decideCounterparty(ctx context.Context, tx pgx.Tx, rec connector.
 // answer settles the matter (in which case the caller stops: no record, no new
 // question, and no model call — the hide sweep folds this message in with
 // the rest of that sender's mail on its next pass).
-func (s *Sink) alreadyDecided(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, email string) (known, settled bool, reason string, err error) {
+func (s *Sink) alreadyDecided(
+	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, email string, activityID ids.UUID,
+) (known, settled bool, reason string, err error) {
 	prior, err := s.priorDispositionTx(ctx, tx, email)
 	if err != nil {
 		return false, false, "", err
@@ -341,6 +343,12 @@ func (s *Sink) alreadyDecided(ctx context.Context, tx pgx.Tx, rec connector.Norm
 		// contact is minted from a mailbox the verdict already judged has none.
 		return false, true, TraceReasonDecidedPrior, nil
 	case PendingStatusNoise:
+		// Google's meeting mail is asked again rather than filed under a noise
+		// answer, which judgeOne then replaces with one that keeps it visible.
+		spared, err := googleMeetingMailTx(ctx, tx, activityID, email)
+		if err != nil || spared {
+			return false, false, "", err
+		}
 		return false, true, TraceReasonNoisePrior, s.logBreadcrumbTx(ctx, tx, "capture_noise_sender", rec,
 			"a prior verdict already judged this sender noise")
 	case PendingStatusRejected, PendingStatusSuppressed:

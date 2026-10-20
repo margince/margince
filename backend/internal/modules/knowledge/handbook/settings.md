@@ -325,16 +325,18 @@ System health and Reset data sit in the **Governance** group, and Data import in
 
 ### Review automatic Home work
 
-In **Data updates**, open **Preview tasks** to inspect a page of automatic work. Each task shows
-its name, the proposed action and the reason. **Inspect task** opens its details. Use
-**Review next page** to continue through the remaining work.
+In **Data updates**, choose tasks, approval proposals or deal suggestions, then open
+**Preview items**. Each item shows its name, proposed action and reason. **Inspect** opens the
+evidence you can read. Only work you can currently inspect is included. Use **Review next page** to continue.
 
-**Archive reviewed reminders** starts the reviewed page. The button names how many reminders it
-will archive. Human-created, edited or pinned work stays available. Uncertain evidence leaves work
-for review. Archiving a reminder does not mark the obligation completed.
+**Apply reviewed changes** starts the reviewed page. The button names how many changes it will
+make. The preview counts reminders to archive, proposals to withdraw and deal suggestions to retire
+separately. None of these actions marks an obligation completed or approves a proposed deal change.
+Human-created, edited or pinned work stays available. Uncertain evidence leaves work for review.
+You need permission to make the proposed changes; permission to inspect alone does not allow them.
 
 Progress shows the records checked, changes made, and work preserved or skipped. A concurrent edit
-or loss of source access can leave a reviewed task unchanged. Preview again to inspect what remains.
+or loss of source access can leave a reviewed item unchanged. Preview again to inspect what remains.
 A changed rule or an old preview requires another review before starting.
 
 ## Data import
