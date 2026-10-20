@@ -348,8 +348,8 @@ function ClosedDeals({
               <span className="brief-report-keep">
                 <Badge tone={deal.outcome === "won" ? "success" : "warning"}>
                   {deal.outcome === "won"
-                    ? t("brief.report.won")
-                    : t("brief.report.lost")}
+                    ? t("brief.weekly.outcome.won")
+                    : t("brief.weekly.outcome.lost")}
                 </Badge>
               </span>
               <span
@@ -374,6 +374,7 @@ function ClosedDeals({
 
 /** The deals that changed stage without closing, and the stage each reached. */
 function MovedDeals({ deals }: Readonly<{ deals: readonly Deal[] }>) {
+  const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   return (
@@ -385,6 +386,7 @@ function MovedDeals({ deals }: Readonly<{ deals: readonly Deal[] }>) {
               <DealName deal={deal} />
               {deal.to_stage_label && (
                 <span className="brief-report-stage">
+                  {t("brief.weekly.outcome.moved")}
                   <ArrowRight aria-hidden="true" size={14} />
                   <Badge>{deal.to_stage_label}</Badge>
                 </span>

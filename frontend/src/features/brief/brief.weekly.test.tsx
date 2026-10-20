@@ -887,12 +887,12 @@ describe("BriefScreen — the weekly report", () => {
     const won = (await screen.findByText("Weber Rahmenvertrag")).closest(
       ".brief-report-deal",
     );
-    expect(won?.textContent).toContain(en["brief.report.won"]);
+    expect(won?.textContent).toContain(en["brief.weekly.outcome.won"]);
     expect(
       won?.querySelector(".brief-report-deal-amount")?.textContent,
     ).toMatch(/€72,000\.00/);
     const lost = screen.getByText("Aster Handel").closest(".brief-report-deal");
-    expect(lost?.textContent).toContain(en["brief.report.lost"]);
+    expect(lost?.textContent).toContain(en["brief.weekly.outcome.lost"]);
     expect(
       lost
         ?.querySelector(".brief-report-deal-amount")
