@@ -73,7 +73,7 @@ func senderIsPersonalTx(
 	seat := actorUserID(ctx)
 	address := normalizeEmail(rec.Counterparty.Email)
 	if seat == ids.Nil || address == "" || fields.Kind != "email" || fields.Direction != "inbound" ||
-		rec.Counterparty.SentByOwner() {
+		rec.Counterparty.SentByOwner() || recordIsGoogleMeetingMail(rec, fields) {
 		return false, nil
 	}
 	// Locked, through the reader the verdict engine uses: a `business` override

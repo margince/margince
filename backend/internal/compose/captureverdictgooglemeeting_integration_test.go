@@ -9,6 +9,7 @@ import (
 	"context"
 	"log/slog"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -33,10 +34,15 @@ func (o *owedEnv) notesMail(t *testing.T, authenticated bool) ids.UUID {
 // transactional, then the sweep that hides mail from noise senders.
 func (o *owedEnv) judgeAsNoise(t *testing.T) *scriptedVerdictBrain {
 	t.Helper()
+	return o.judgeAs(t, capture.KindTransactional)
+}
+
+func (o *owedEnv) judgeAs(t *testing.T, kind string) *scriptedVerdictBrain {
+	t.Helper()
 	pending := o.e.WsScalar(t, `
 		SELECT coalesce(max(id::text), '') FROM capture_pending_counterparty
 		 WHERE email = $1 AND status = 'pending'`, geminiNotes)
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{pending: capture.KindTransactional}}
+	brain := &scriptedVerdictBrain{verdicts: map[string]string{pending: kind}}
 	engine := NewCounterpartyVerdictEngine(o.e.Pool, brain, CaptureConfig{}, slog.Default())
 	ctx := principal.WithWorkspaceID(context.Background(), o.e.WS)
 	if err := engine.RunWorkspace(ctx, 0); err != nil {
@@ -106,5 +112,27 @@ func TestAForgedNotesMailIsJudgedAndItsNoiseSparesAuthenticatedNotes(t *testing.
 	o.settledAsRoleMailbox(t)
 	if o.visible(t, forged) {
 		t.Fatal("settling the authenticated sender released the forged mail")
+	}
+}
+
+// A personal verdict destroys mail once its window closes, so a forged notes
+// mail judged personal must not take the authenticated notes with it.
+func TestAForgedPersonalVerdictDestroysNoAuthenticatedNotes(t *testing.T) {
+	o := setupOwed(t)
+	forged := o.notesMail(t, false)
+	o.judgeAs(t, capture.KindPersonal)
+	authentic := o.notesMail(t, true)
+	pastWindow := 31 * 24 * time.Hour
+	agePersonalMail(t, o.e, forged, geminiNotes, pastWindow)
+	agePersonalMail(t, o.e, authentic, geminiNotes, pastWindow)
+
+	if n := sweepPersonal(t, o.e); n != 1 {
+		t.Fatalf("the personal sweep destroyed %d messages, want only the forged one", n)
+	}
+	if activityBody(t, o.e, authentic) == "" {
+		t.Fatal("a forged personal verdict destroyed Google's authenticated meeting notes")
+	}
+	if activityBody(t, o.e, forged) != "" {
+		t.Fatal("the forged notes mail survived its personal verdict's window")
 	}
 }

@@ -259,8 +259,9 @@ never say `real` without the contact it promised.
 model call. It counts only when the Gmail receiving server passed DMARC for `google.com`, which is the
 activity's `inbound_sender_authenticated` stamp. A forged From is judged like any other sender.
 
-A `noise` answer stored for one of these addresses hides none of its mail that passed that check. The
-next such message asks the question again. The list is in `capture/googlemeetingmail.go`.
+A `noise` or `personal` answer stored for one of these addresses hides or destroys none of its mail
+that passed that check. It keeps none of that mail's files out of storage either. The next such
+message asks the question again. The list is in `capture/googlemeetingmail.go`.
 
 **The AI call: `capture_counterparty_verdict`.** One sender per call, never a group. Only the text
 of that sender is in the prompt, so an attack message cannot answer for anyone else. SQL first limits

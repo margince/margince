@@ -18,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // googleMeetingSenders are the exact From addresses Google sends meeting mail
@@ -55,17 +56,24 @@ func googleMeetingMailTx(ctx context.Context, tx pgx.Tx, activityID ids.UUID, em
 	return authenticated, nil
 }
 
-// googleMeetingMailSpared keeps a model's noise verdict, stored ones included,
-// off authenticated Google meeting mail; a seat's keep_out (p.machine false)
-// still reaches it. The addresses are literals because the scope is shared by
-// queries with different placeholder numbering. TestGoogleMeetingSendersAreSQLSafe
-// holds them to characters a literal can carry.
-func googleMeetingMailSpared() string {
+// googleMeetingMailSpared keeps a model's verdict, stored ones included, off
+// authenticated Google meeting mail. Every scope that hides, redacts or
+// destroys mail on a sender verdict appends it. byModel is the SQL naming a
+// model's verdict, so a seat's own decision still reaches the mail.
+// The addresses are literals because the scopes have different placeholder
+// numbering. TestGoogleMeetingSendersAreSQLSafe holds them to safe characters.
+func googleMeetingMailSpared(byModel string) string {
 	quoted := make([]string, len(googleMeetingSenders))
 	for i, address := range googleMeetingSenders {
 		quoted[i] = "'" + address + "'"
 	}
 	return `
-	  AND NOT (p.machine AND a.inbound_sender_authenticated
+	  AND NOT (` + byModel + ` AND a.inbound_sender_authenticated
 	           AND a.counterparty_email IN (` + strings.Join(quoted, ", ") + `))`
+}
+
+// recordIsGoogleMeetingMail is IsGoogleMeetingMail for a message not yet
+// stored, from the same evidence its inbound_sender_authenticated stamp takes.
+func recordIsGoogleMeetingMail(rec connector.NormalizedRecord, fields ActivityFields) bool {
+	return IsGoogleMeetingMail(rec.Counterparty.Email, inboundSenderAuthenticated(rec, fields))
 }

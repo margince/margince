@@ -73,7 +73,7 @@ var noiseMailScope = `
 	  AND NOT EXISTS (
 	    SELECT 1 FROM contact_email pe JOIN contact pr ON pr.id = pe.contact_id
 	     WHERE pe.email = p.email AND pr.archived_at IS NULL
-	       AND pe.from_correspondence)` + googleMeetingMailSpared()
+	       AND pe.from_correspondence)` + googleMeetingMailSpared("p.machine")
 
 // noiseVerdictReach bounds how far past its own verdict a `noise` disposition
 // may reach forward in time.
