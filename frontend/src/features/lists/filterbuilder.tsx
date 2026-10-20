@@ -11,9 +11,10 @@
 // field, no operator, and no value type of its own — which is why a clause it
 // builds cannot be one the engine refuses as unknown.
 //
-// A group's join is the word between its conditions. A nested group also
-// shows it as a switch in its head, because one condition has no word between
-// rows. "Add a group" sits beside "Add condition" from the first condition on.
+// Each word between two conditions is its own switch; filterjoins.ts holds
+// how a mixed row is stored. A run of "and" in an "or" row is drawn as a box.
+// A nested group shows its join in its head too, because one condition has
+// no word between rows.
 
 import { Fragment } from "react";
 import { Button, SegmentedControl } from "../../design-system/atoms";
@@ -31,6 +32,7 @@ import {
   toggleJoin,
 } from "../../lib/segmentpredicate";
 import { ClauseRow, firstClause } from "./filterclause";
+import { flipConnector, groupDepth, isRun, rowStart } from "./filterjoins";
 import { ownGroup } from "./filterproposal";
 
 export type FilterBuilderProps = Readonly<{
@@ -62,6 +64,7 @@ export function FilterBuilder({
         onChange={onChange}
         tree={tree}
         arrived={arrived}
+        row={{ owner: tree.id, offset: 0 }}
       />
     </div>
   );
@@ -76,6 +79,13 @@ type NodeProps = Readonly<{
 }>;
 
 /**
+ * Where a group's words sit in a row: the group that owns the row, and how
+ * many of its conditions come first. An "and" run's words belong to the row
+ * of the "or" group around it.
+ */
+type RowPlace = Readonly<{ owner: string; offset: number }>;
+
+/**
  * One group: its conditions with the join between them, and the ways to grow
  * it. The root draws no box; a nested group is an inset box, because a join
  * word between two rows needs a visible scope to say which rows it joins.
@@ -87,7 +97,9 @@ function GroupNode({
   tree,
   onChange,
   arrived,
-}: NodeProps & Readonly<{ group: Group; arrived: string | null }>) {
+  row,
+}: NodeProps &
+  Readonly<{ group: Group; arrived: string | null; row: RowPlace }>) {
   const t = useT();
   const nested = depth > 1;
   const rows = (
@@ -96,7 +108,13 @@ function GroupNode({
         {group.children.map((child, index) => (
           <Fragment key={child.id}>
             {index > 0 && (
-              <Connector group={group} tree={tree} onChange={onChange} />
+              <Connector
+                join={group.join}
+                owner={row.owner}
+                index={row.offset + rowStart(group, index) - 1}
+                tree={tree}
+                onChange={onChange}
+              />
             )}
             {isGroup(child) ? (
               <GroupNode
@@ -106,6 +124,14 @@ function GroupNode({
                 tree={tree}
                 onChange={onChange}
                 arrived={arrived}
+                row={
+                  isRun(child, group)
+                    ? {
+                        owner: row.owner,
+                        offset: row.offset + rowStart(group, index),
+                      }
+                    : { owner: child.id, offset: 0 }
+                }
               />
             ) : (
               <ClauseRow
@@ -177,28 +203,39 @@ function GroupNode({
 }
 
 /**
- * The word between two conditions, which is also the switch: a group joins
- * its children one way, so every connector in it flips together.
+ * The word between two conditions, which is also the switch for that word
+ * alone. A flip that would nest past the engine's bound is not offered.
  */
 function Connector({
-  group,
+  join,
+  owner,
+  index,
   tree,
   onChange,
-}: Readonly<{ group: Group; tree: Node; onChange: (next: Node) => void }>) {
+}: Readonly<{
+  join: Group["join"];
+  owner: string;
+  index: number;
+  tree: Node;
+  onChange: (next: Node) => void;
+}>) {
   const t = useT();
-  const all = group.join === "and";
-  const word = t(all ? "filters.join.and" : "filters.join.or");
+  const and = join === "and";
+  const word = t(and ? "filters.join.and" : "filters.join.or");
+  const flipped = flipConnector(rootGroup(tree), owner, index);
   return (
     <div className="filter-connector">
       <Button
         variant="ghost"
         // The name opens with the word on the button, so a reader who says
         // "click or" reaches it (WCAG 2.5.3), and goes on to say what it does.
-        aria-label={t(
-          all ? "filters.connector.matchAll" : "filters.connector.matchAny",
-          { word },
-        )}
-        onClick={() => onChange(switchJoin(tree, group.id))}
+        aria-label={t(and ? "filters.connector.and" : "filters.connector.or", {
+          word,
+          other: t(and ? "filters.join.or" : "filters.join.and"),
+        })}
+        disabled={groupDepth(flipped.tree) > MAX_GROUP_DEPTH}
+        // The reader regrouped these rows, so their proposed rows are theirs.
+        onClick={() => onChange(ownGroup(flipped.tree, flipped.scope))}
       >
         {word}
       </Button>

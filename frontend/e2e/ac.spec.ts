@@ -2909,23 +2909,21 @@ test.describe("filters and views", () => {
     await page.getByRole("button", { name: "Bedingung hinzufügen" }).click();
     await expect(page.getByRole("combobox", { name: "Feld" })).toHaveCount(2);
 
-    // The join is the word between two conditions, and it is the switch: one
-    // group has one join, so pressing it flips the group.
+    // The join is the word between two conditions, and it is the switch for
+    // that word alone.
     const matchAll = page.getByRole("button", {
-      name: de["filters.connector.matchAll"].replace(
-        "{word}",
-        de["filters.join.and"],
-      ),
+      name: de["filters.connector.and"]
+        .replace("{word}", de["filters.join.and"])
+        .replace("{other}", de["filters.join.or"]),
       exact: true,
     });
     await expect(matchAll).toHaveCount(1);
     await matchAll.click();
     await expect(
       page.getByRole("button", {
-        name: de["filters.connector.matchAny"].replace(
-          "{word}",
-          de["filters.join.or"],
-        ),
+        name: de["filters.connector.or"]
+          .replace("{word}", de["filters.join.or"])
+          .replace("{other}", de["filters.join.and"]),
         exact: true,
       }),
     ).toHaveCount(1);

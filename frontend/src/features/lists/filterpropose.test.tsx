@@ -251,7 +251,7 @@ it("lands as one group on a root that matches any, and a group joined the other 
   await addOwn(user, "Bo");
   await user.click(
     screen.getByRole("button", {
-      name: "and: match all of these. Press to match any.",
+      name: "and: the conditions on both sides must match. Press for or.",
     }),
   );
 
@@ -268,7 +268,7 @@ it("lands as one group on a root that matches any, and a group joined the other 
 
   await user.click(
     within(group).getByRole("button", {
-      name: "and: match all of these. Press to match any.",
+      name: "and: the conditions on both sides must match. Press for or.",
     }),
   );
 

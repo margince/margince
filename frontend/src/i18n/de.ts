@@ -13296,10 +13296,9 @@ export const de = {
   "filters.start.buildBody":
     "Wähle ein Feld, wie es verglichen wird, und einen Wert. Füge nach und nach weitere Bedingungen hinzu.",
   "filters.describeChanges": "Änderungen in eigenen Worten beschreiben",
-  "filters.connector.matchAll":
-    "{word}: Alle davon müssen zutreffen. Drücke, damit eine reicht.",
-  "filters.connector.matchAny":
-    "{word}: Eine davon muss zutreffen. Drücke, damit alle zutreffen müssen.",
+  "filters.connector.and":
+    "{word}: Die Bedingungen auf beiden Seiten müssen zutreffen. Drücke für „{other}“.",
+  "filters.connector.or": "{word}: Eine Seite reicht. Drücke für „{other}“.",
   "filters.group.all": "Alle davon",
   "filters.group.any": "Mindestens eine davon",
   "filters.addGroupToGroup": "Untergruppe hinzufügen",

@@ -12953,10 +12953,10 @@ export const vi = {
   "filters.start.buildBody":
     "Chọn một trường, cách so sánh và một giá trị. Thêm điều kiện khác khi cần.",
   "filters.describeChanges": "Mô tả thay đổi bằng ngôn ngữ thông thường",
-  "filters.connector.matchAll":
-    "{word}: khớp tất cả các điều kiện này. Nhấn để chuyển sang khớp bất kỳ điều kiện nào.",
-  "filters.connector.matchAny":
-    "{word}: khớp bất kỳ điều kiện nào. Nhấn để chuyển sang khớp tất cả.",
+  "filters.connector.and":
+    "{word}: điều kiện ở cả hai bên đều phải khớp. Nhấn để đổi sang “{other}”.",
+  "filters.connector.or":
+    "{word}: chỉ cần một bên khớp. Nhấn để đổi sang “{other}”.",
   "filters.group.all": "Tất cả các điều kiện này",
   "filters.group.any": "Bất kỳ điều kiện nào",
   "filters.addGroupToGroup": "Thêm nhóm con",

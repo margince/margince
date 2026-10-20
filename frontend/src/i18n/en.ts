@@ -13291,11 +13291,11 @@ export const en = {
     "Pick a field, how to compare it, and a value. Add more conditions as you go.",
   "filters.describeChanges": "Describe changes in plain words",
   // Named by the word the button shows, then what pressing it does (WCAG
-  // 2.5.3): {word} is filters.join.and or filters.join.or.
-  "filters.connector.matchAll":
-    "{word}: match all of these. Press to match any.",
-  "filters.connector.matchAny":
-    "{word}: match any of these. Press to match all.",
+  // 2.5.3). {word} is that word, and {other} is the word a press puts there.
+  "filters.connector.and":
+    "{word}: the conditions on both sides must match. Press for {other}.",
+  "filters.connector.or":
+    "{word}: a match on either side is enough. Press for {other}.",
   "filters.group.all": "All of these",
   "filters.group.any": "Any of these",
   "filters.addGroupToGroup": "Add nested group",
