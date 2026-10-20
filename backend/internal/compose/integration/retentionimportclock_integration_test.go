@@ -5,16 +5,13 @@
 
 package integration
 
-// An import is never swept on the day it arrives, and an unconverted lead is
-// archived rather than anonymized by default.
+// An import is never swept on the day it arrives, and the default policies
+// destroy no record just because it is old.
 //
-// The defect: an importer states the source system's dates, so a lead first
-// seen in 2023 arrived with a 2023 created_at, and the first retention pass
-// after the import anonymized every lead older than a year — 1,200 of them on
-// a rehearsal install within ninety minutes. Retention now also asks how long a
-// record has been in THIS installation (entered_at, which nothing writes after
-// the insert — backend/gates/enteredatwriters_test.go; an activity's
-// created_at, which no import restates).
+// An importer states the source system's dates. Retention also asks how long a
+// record has been in this installation. For most records that is entered_at,
+// which nothing writes after the insert (backend/gates/enteredatwriters_test.go).
+// For an activity it is created_at, which no import restates.
 
 import (
 	"context"
@@ -180,5 +177,56 @@ func TestAnAnonymizePolicyReachesALeadTheArchiveAlreadyTook(t *testing.T) {
 	}
 	if name != "Anonymized Lead" {
 		t.Fatalf("an archived over-age lead kept its name %q under an anonymize policy", name)
+	}
+}
+
+// A fresh installation's defaults leave an old contact with no consent and no
+// deal as it is, and keep an old transcript's text. Neither scope is seeded.
+// The activity archive row reaches a transcript only at 1095 days.
+func TestTheDefaultPoliciesKeepAnOldContactAndAnOldTranscript(t *testing.T) {
+	e := Setup(t)
+	contact, transcript := ids.NewV7(), ids.NewV7()
+	ctx := context.Background()
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `DELETE FROM retention_policy`); err != nil {
+			return err
+		}
+		if err := consent.SeedDefaultRetentionTx(ctx, tx); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO contact (id, full_name, source, captured_by, created_at, entered_at)
+			VALUES ($1, 'Quiet Contact', 'manual', 'human:x', now() - interval '800 days', now() - interval '800 days')`,
+			contact); err != nil {
+			return err
+		}
+		_, err := tx.Exec(ctx, `
+			INSERT INTO activity (id, kind, subject, body, occurred_at, created_at, source, source_system, source_id, captured_by)
+			VALUES ($1, 'note', 'Transcript', 'what was said', now() - interval '400 days', now() - interval '400 days',
+			        'capture', 'transcript', 't-default', 'connector:t')`, transcript)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	runRetentionPass(t, e)
+
+	var contactName string
+	var contactArchived bool
+	var body *string
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if err := tx.QueryRow(ctx, `SELECT full_name, archived_at IS NOT NULL FROM contact WHERE id = $1`,
+			contact).Scan(&contactName, &contactArchived); err != nil {
+			return err
+		}
+		return tx.QueryRow(ctx, `SELECT body FROM activity WHERE id = $1`, transcript).Scan(&body)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if contactName != "Quiet Contact" || contactArchived {
+		t.Errorf("the default policies acted on an 800-day-old contact: name %q, archived %v", contactName, contactArchived)
+	}
+	if body == nil || *body != "what was said" {
+		t.Errorf("the default policies cleared a 400-day-old transcript's text: body %v", body)
 	}
 }

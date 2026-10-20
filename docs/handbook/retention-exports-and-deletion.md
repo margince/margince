@@ -103,22 +103,30 @@ A new company starts with these retention rules already in place. You can edit a
 | What it covers | Kept for | Then |
 |---|---|---|
 | Leads that never converted | 365 days | Archive |
-| All captured activity | 1095 days (3 years) | Archive |
-| Call transcripts | 365 days | Erase |
-| Contacts with no consent and no deal | 730 days (2 years) | Anonymize |
+| All captured activity, call transcripts included | 1095 days (3 years) | Archive |
 | Lost deals | 1825 days (5 years) | Archive |
 | AI call payloads | 365 days | Erase |
-| Stored message originals | 730 days (2 years) | Erase |
+| Stored message originals | 90 days | Erase |
 | Daily record of material deals at risk | 90 days | Erase |
 
-**Won deals** and **Saved report editions** can also have a rule, but start with none. Margince does not say when your company should stop keeping a won deal; that is your choice.
+Margince does not destroy a record just because it is old. Each starting rule archives, which keeps the record so you can restore it. Or it erases only a second copy, or data made from your records. Those are the stored message originals, the AI call payloads and the daily deal-risk record.
+
+**Won deals**, **Saved report editions**, **Call transcripts** and **Contacts with no consent and no deal** can also have a rule, but start with none. Margince does not say when your company should stop keeping a won deal; that is your choice. A rule that erases call transcripts or anonymizes contacts destroys data for good, so only an admin who wants one adds it. To destroy one contact's data, an admin fulfills an erasure request (see "How do I delete a contact permanently?").
 
 **Stored message originals** are the copies that capture keeps of every message it filed, apart from the timeline entry made from each one. On a large mailbox they take the most storage. An original is never destroyed while the law still says its mail must be kept. The timeline entry stays, so the same message cannot be captured again.
 
 If you delete every rule, the screen tells you what that means: "No retention policy yet. Nothing in this installation ages out." One fixed time limit still runs with no rule: traces of AI embedding calls end after 90 days (below).
 
 ### What each retention window counts from
-**Leads** and **contacts** count from when the record was created. **Captured activity** and **call transcripts** count from the date on the message itself, not from when it was filed. **Deals** count from when the deal was closed.
+Most records have two clocks, and a rule acts only once both are past its window. One clock is the date the record carries. The other is how long the record has been in Margince. So a record you import is not removed on the day it arrives because it was old somewhere else.
+
+| Record | Its own date | Time in Margince |
+|---|---|---|
+| Leads and contacts | When the record was created | When it entered Margince |
+| Captured activity and call transcripts | The date on the message itself | When it was filed |
+| Deals | When the deal was closed | When it entered Margince |
+
+**Stored message originals** have one clock: when capture imported the message. **AI call payloads** count from the call, and the **daily deal-risk record** from the day it describes.
 
 ### The three retention actions
 

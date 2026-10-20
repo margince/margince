@@ -549,9 +549,9 @@ func TestAPolicyWithNoExecutorCannotBeAuthoredAndCannotStopThePass(t *testing.T)
 	}
 }
 
-// TestRetentionAnonymizesAnUnattachedContactAndArchivesAnAgedNote covers the two
-// seeded policies the engine had no test for: contact/no_consent_no_deal
-// anonymize, and the bare activity/ archive at 1095 days.
+// TestRetentionAnonymizesAnUnattachedContactAndArchivesAnAgedNote covers two
+// policies: contact/no_consent_no_deal anonymize, which only an admin authors,
+// and the bare activity/ archive at 1095 days.
 //
 // Both destroy or retire real records, and contact/anonymize is the heavier of the
 // two — it deletes every satellite carrying the subject (emails, phones, socials,

@@ -267,9 +267,9 @@ func TestAnUnknownLinkTypeIsRefused(t *testing.T) {
 // told a record was anonymized has been told the subject's data is gone, and
 // this table is reached by neither a schema cascade nor any contact-keyed clause.
 //
-// Driven through the REAL retention engine and the seeded
-// contact/no_consent_no_deal policy rather than by calling the action directly,
-// so what is proven is the path an installation actually runs.
+// Driven through the real retention engine and an authored
+// contact/no_consent_no_deal policy, not by calling the action directly.
+// That proves the path an installation with that policy runs.
 func TestTheAnonymizeSweepRedactsACommitmentNamingTheSubject(t *testing.T) {
 	e := setupPlan(t)
 	integration.SeedRetentionPolicies(t, e.Env)

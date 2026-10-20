@@ -270,6 +270,16 @@ into consent's handlers.
   company or deal is held. A policy whose scope the engine does not understand is **skipped, with an
   error in the log**, never run in part.
 
+  The policies a new installation starts with come from `consent.SeedDefaultRetentionTx`. None of
+  them destroys a record because it is old. Each one archives, and an archived record can be brought
+  back. Or it erases a second copy, or data built from a record. Those are the raw provider original
+  (`raw_capture`, 90 days from import), AI call payloads and the deal-risk day rows.
+
+  `activity/transcript` and `contact/no_consent_no_deal` start with no row, and an admin can still
+  write one. So a transcript is archived under the `activity` row, and only an Article 17 request
+  destroys a contact's data. `backend/gates/retentionseedcoverage_test.go` records why each scope
+  with no row has none.
+
 ## The single-transaction cross-store exception
 
 `privacy` owns one table (`erasure_suppression`), yet erasure and retention **write tables they do
