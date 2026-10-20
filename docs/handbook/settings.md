@@ -301,6 +301,8 @@ System health and Reset data sit in the **Governance** group, and Data import in
   Nothing is written until you check the test run.
 - **Search index**: building the index again, behind search and behind what the
   AI finds.
+- **Data updates**: progress and controls for background corrections. A correction that needs
+  review stays idle until an authorized person starts it.
 - **Background jobs**: jobs that wait to run, and jobs that failed, by owner.
   Admin and Ops.
 - **AI provider status**: whether each AI provider is answering, as the app
@@ -320,6 +322,20 @@ System health and Reset data sit in the **Governance** group, and Data import in
   It deletes every record and setting, but keeps the company and its users, so
   everyone can still sign in. It appears only where whoever runs the
   installation has turned it on.
+
+### Review automatic Home work
+
+In **Data updates**, open **Preview tasks** to inspect a page of automatic work. Each task shows
+its name, the proposed action and the reason. **Inspect task** opens its details. Use
+**Review next page** to continue through the remaining work.
+
+**Archive reviewed reminders** starts the reviewed page. The button names how many reminders it
+will archive. Human-created, edited or pinned work stays available. Uncertain evidence leaves work
+for review. Archiving a reminder does not mark the obligation completed.
+
+Progress shows the records checked, changes made, and work preserved or skipped. A concurrent edit
+or loss of source access can leave a reviewed task unchanged. Preview again to inspect what remains.
+A changed rule or an old preview requires another review before starting.
 
 ## Data import
 

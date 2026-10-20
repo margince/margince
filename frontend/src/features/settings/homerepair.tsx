@@ -31,6 +31,7 @@ const reasonLabels: Record<string, MessageKey> = {
   historical_without_current_deadline: "homeRepair.reason.historical",
   before_mailbox_history_baseline: "homeRepair.reason.baseline",
   meeting_cancelled: "homeRepair.reason.cancelled",
+  request_past_waiting_horizon: "homeRepair.reason.requestAge",
   current_work: "homeRepair.reason.current",
 };
 

@@ -33,6 +33,8 @@ export const vi = {
   "homeRepair.reason.historical": "Nguồn cũ không có thời hạn hiện tại.",
   "homeRepair.reason.baseline": "Nguồn có trước mốc lịch sử hộp thư đã chọn.",
   "homeRepair.reason.cancelled": "Cuộc họp nguồn đã bị hủy.",
+  "homeRepair.reason.requestAge":
+    "Yêu cầu gốc đã quá thời hạn chờ; lưu trữ không đánh dấu yêu cầu là đã trả lời.",
   "homeRepair.reason.current":
     "Công việc này vẫn đáp ứng các quy tắc hiện tại.",
   "homeRepair.unnamed": "Không xem được chi tiết công việc",

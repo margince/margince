@@ -25,6 +25,8 @@ export const de = {
   "homeRepair.reason.baseline":
     "Die Quelle liegt vor dem gewählten Beginn des Postfachverlaufs.",
   "homeRepair.reason.cancelled": "Der zugrunde liegende Termin wurde abgesagt.",
+  "homeRepair.reason.requestAge":
+    "Die ursprüngliche Anfrage liegt außerhalb des Wartezeitraums. Archivieren markiert sie nicht als beantwortet.",
   "homeRepair.reason.current":
     "Die aktuellen Regeln lassen diese Aufgabe weiterhin zu.",
   "homeRepair.unnamed": "Aufgabendetails nicht verfügbar",

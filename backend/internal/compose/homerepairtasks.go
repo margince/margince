@@ -52,6 +52,21 @@ func homeRepairTaskDecisionTx(ctx context.Context, tx pgx.Tx, task activities.Ho
 		decision.Reason = "human_adoption_not_excluded"
 		return decision, nil
 	}
+	if task.SourceSystem == activities.EmailRequestTaskSource && task.SourceID != nil {
+		past, err := activities.RequestReminderPastHorizonTx(ctx, tx, task, asOf)
+		if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
+			decision.Reason = string(activities.CommitmentSourceUnavailable)
+			return decision, nil
+		}
+		if err != nil {
+			return decision, err
+		}
+		decision.Action, decision.Reason = repairLeaveCurrent, "current_work"
+		if past {
+			decision.Action, decision.Reason = repairArchiveReminder, "request_past_waiting_horizon"
+		}
+		return decision, nil
+	}
 	if task.SourceSystem != activities.CommitmentTaskSource || task.SourceID == nil {
 		decision.Reason = "source_rule_not_verified"
 		return decision, nil

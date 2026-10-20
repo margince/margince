@@ -84,7 +84,7 @@ func TestReviewedRepairArchivesOnlyProvenUntouchedAutomaticWork(t *testing.T) {
 				if !errors.Is(err, apperrors.ErrConflict) {
 					t.Fatalf("protected work error=%v, want conflict", err)
 				}
-				if e.WsCount(t, "SELECT count(*) FROM activity WHERE id=$1 AND archived_at IS NULL AND NOT is_done", id) != 1 {
+				if e.WsCount(t, "SELECT count(*) FROM activity WHERE id=@id AND archived_at IS NULL AND NOT is_done", pgx.NamedArgs{"id": id}) != 1 {
 					t.Fatal("repair changed protected work")
 				}
 				return
@@ -92,10 +92,10 @@ func TestReviewedRepairArchivesOnlyProvenUntouchedAutomaticWork(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if e.WsCount(t, "SELECT count(*) FROM activity WHERE id=$1 AND archived_at IS NOT NULL AND NOT is_done", id) != 1 {
+			if e.WsCount(t, "SELECT count(*) FROM activity WHERE id=@id AND archived_at IS NOT NULL AND NOT is_done", pgx.NamedArgs{"id": id}) != 1 {
 				t.Fatal("repair must archive without claiming completion")
 			}
-			if e.WsCount(t, "SELECT count(*) FROM audit_log WHERE entity_type='activity' AND entity_id=$1 AND action='archive' AND evidence->>'reason'='historical_automatic_work'", id) != 1 {
+			if e.WsCount(t, "SELECT count(*) FROM audit_log WHERE entity_type='activity' AND entity_id=@id AND action='archive' AND evidence->>'reason'='historical_automatic_work'", pgx.NamedArgs{"id": id}) != 1 {
 				t.Fatal("archive omitted its reviewed reason")
 			}
 		})

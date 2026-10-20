@@ -27,11 +27,12 @@ import (
 )
 
 func TestReviewedRepairArchivesHistoricalWorkWithoutRecreatingIt(t *testing.T) {
-	t.Run("untouched automatic work", func(t *testing.T) { runReviewedRepair(t, false) })
-	t.Run("human edit after review", func(t *testing.T) { runReviewedRepair(t, true) })
+	t.Run("untouched automatic work", func(t *testing.T) { runReviewedRepair(t, "unchanged") })
+	t.Run("human edit after review", func(t *testing.T) { runReviewedRepair(t, "edited") })
+	t.Run("source access changes after review", func(t *testing.T) { runReviewedRepair(t, "hidden") })
 }
 
-func runReviewedRepair(t *testing.T, editAfterReview bool) {
+func runReviewedRepair(t *testing.T, change string) {
 	e := integration.Setup(t)
 	now := time.Date(2026, 4, 1, 12, 0, 0, 0, time.UTC)
 	old := now.AddDate(0, 0, -90)
@@ -55,8 +56,8 @@ func runReviewedRepair(t *testing.T, editAfterReview bool) {
 	permissions := integration.AdminPerms
 	permissions.Objects = maps.Clone(permissions.Objects)
 	permissions.Objects["data_task"] = principal.ObjectGrant{Read: true, Update: true}
-	operator := e.As(e.AdminUser, nil, permissions)
-	e.GrantRole(t, e.AdminUser, "admin")
+	operator := e.As(e.Rep1, []ids.UUID{e.Team1}, permissions)
+	e.GrantRole(t, e.Rep1, "admin")
 	e.WsExec(t, `UPDATE role SET permissions=jsonb_set(permissions,'{objects,data_task}','{"read":true,"update":true,"create":false,"delete":false}'::jsonb) WHERE key='admin'`)
 	h := dataTaskHandlers{pool: e.Pool, clock: func() time.Time { return now }}
 	response := httptest.NewRecorder()
@@ -94,7 +95,7 @@ func runReviewedRepair(t *testing.T, editAfterReview bool) {
 		t.Fatalf("activation: %d %s", response.Code, response.Body.String())
 	}
 
-	if editAfterReview {
+	if change == "edited" {
 		var scope homeRepairScope
 		if err := json.Unmarshal(review.Scope, &scope); err != nil {
 			t.Fatal(err)
@@ -103,8 +104,13 @@ func runReviewedRepair(t *testing.T, editAfterReview bool) {
 			t.Fatal(err)
 		}
 	}
+	if change == "hidden" {
+		if _, err := e.Activities.SetAudience(e.Admin(), ids.From[ids.ActivityKind](sourceID), activities.SetAudienceInput{Audience: "selected", Members: []activities.AudienceMember{{SubjectType: "user", SubjectID: e.Rep2}}}); err != nil {
+			t.Fatal(err)
+		}
+	}
 	expectedChanges := int64(1)
-	if editAfterReview {
+	if change != "unchanged" {
 		expectedChanges = 0
 	}
 	if _, err := engine.Execute(system); err != nil {
@@ -123,7 +129,7 @@ func runReviewedRepair(t *testing.T, editAfterReview bool) {
 	if e.WsCount(t, "SELECT count(*) FROM audit_log WHERE entity_type='activity' AND action='archive' AND evidence->>'rule_version' IS NOT NULL AND before ? 'archived_at' AND after ? 'archived_at'") != int(expectedChanges) {
 		t.Fatal("repair omitted reasoned before/after evidence")
 	}
-	if editAfterReview && e.WsCount(t, "SELECT count(*) FROM system_log WHERE action='home_repair.skipped' AND detail->>'reason'='changed_since_review'") != 1 {
+	if change == "edited" && e.WsCount(t, "SELECT count(*) FROM system_log WHERE action='home_repair.skipped' AND detail->>'reason'='changed_since_review'") != 1 {
 		t.Fatal("concurrent edit was not reported")
 	}
 	commitment.AsOf = now

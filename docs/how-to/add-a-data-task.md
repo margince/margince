@@ -7,7 +7,7 @@ upgrade rules.
 1. Add the schema prerequisites as additive migrations. Do not make a migration depend on the
    correction's result.
 2. Add a stable `core/<unix-second>_<name>` task to `dataTaskCatalog` in
-   `backend/internal/compose/datatask_heldmail.go`. Declare its version, title, prerequisites and
+   `backend/internal/compose/datataskengine.go`. Declare its version, title, prerequisites and
    ordered steps. Existing task IDs stay registered.
 3. Give each step a starting batch limit, a minimum limit, a bounded estimate and its audit policy.
    An unaudited derived-column write must name the runtime writer that follows the same policy.
@@ -21,7 +21,8 @@ upgrade rules.
    real executor. Add the owning module's real-path regressions. Run the database integration lanes
    as well as `make check`.
 
-The executor supplies the system actor and durable run ID for audit attribution. Do not replace them.
+The executor supplies a system actor and durable run ID for audit attribution. Keep the run ID.
+A reviewed task rebuilds its operator from current authority before using ordinary domain writers.
 Keep raw causes and record content out of progress, job arguments, metrics and notices.
 
 ## Check failures
@@ -49,3 +50,18 @@ margince-migrate data-tasks run --wait --dsn "$DSN"
 CLI process. The database credentials confer operator authority; the HTTP controls require a human
 session and the `data_task` read or update grant. A wait stops with an error on a paused or failed
 step. Use System health to review the cause before resuming or retrying.
+
+## Require a reviewed scope
+
+Set `Manual`, `ReviewVersion` and `Review` on a task that needs a person's decision. The callback
+must recheck the supplied identities, versions, permissions and dispositions on its transaction.
+A digest identifies the plan; current domain checks decide whether the plan is still valid.
+
+Use `Engine.Activate` from a human-only handler with the observed ledger version. Keep the scope
+bounded and free of source content. The worker receives the scope and operator in `BatchIn`.
+Rebuild that person's current authority before each batch. A revoked object grant must stop work.
+A changed record can be skipped with a reason and run ID after any partial write has rolled back.
+
+Unreviewed tasks and reviews invalidated by a rule change do not hold up automatic corrections.
+The progress report names the need for review. A new activation preserves the previous run and
+starts a new cursor. A worker restart under the same rules retains the current cursor and scope.

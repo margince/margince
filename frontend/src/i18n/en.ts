@@ -24,6 +24,8 @@ export const en = {
   "homeRepair.reason.baseline":
     "The source predates the mailbox history baseline.",
   "homeRepair.reason.cancelled": "The source meeting was cancelled.",
+  "homeRepair.reason.requestAge":
+    "The original request is past the waiting horizon; archiving does not mark it answered.",
   "homeRepair.reason.current":
     "The current admission rules still allow this work.",
   "homeRepair.unnamed": "Task details unavailable",
