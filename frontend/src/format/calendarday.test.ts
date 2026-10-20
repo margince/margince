@@ -295,9 +295,8 @@ describe("isRealCalendarDay", () => {
   });
 });
 
-// ISO 8601 weeks, at the year's edges where a naive count goes wrong: the
-// last days of December can open the next year's week 1, and the first days
-// of January can still be the year before's week 53.
+// ISO 8601 weeks at the year's edges, where a naive count goes wrong. Late
+// December can open next year's week 1, and early January can be week 53.
 describe("isoWeekOf", () => {
   it("numbers a week by its Thursday, across the year's edges", () => {
     expect(isoWeekOf("2026-06-29")).toBe(27);

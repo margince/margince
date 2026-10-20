@@ -45,11 +45,11 @@ type WeeklyReviewDealOutcome = WeeklyReview["deals"][number]["outcome"];
 
 // The week just gone, on Brief, as a report read top to bottom.
 //
-// No nav entry: a retrospective of the week is a view of the same work Today
-// opens, so it lives here and past weeks open through the stepper.
+// No nav entry: the week is a view of the same work Today opens. Past weeks
+// open through the stepper.
 //
-// It renders what was WRITTEN when the week closed. Nothing here recomputes:
-// a retrospective that changed when you reopened it would not be one.
+// It renders what was written when the week closed, and recomputes nothing.
+// A retrospective that changed when you reopened it would not be one.
 
 export function WeeklySection({
   plan,

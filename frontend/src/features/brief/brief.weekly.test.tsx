@@ -420,9 +420,8 @@ describe("BriefScreen — the week's sentence", () => {
     ).toBeGreaterThan(0);
     const weekly = within(weeklySection());
     expect(weekly.getByText(en["co.assistant.aiTag"])).toBeTruthy();
-    // The mark is on the SENTENCE, not the report: the outlook, the scorecard
-    // and the frozen figures are a deterministic pass, and a mark over the lot
-    // would claim a model wrote the numbers.
+    // The mark is on the sentence, not the report. The figures are worked out
+    // without a model, and a mark over them would claim a model wrote them.
     const marked = weeklySection().querySelector(".brief-report-narrative");
     expect(marked?.contains(sentence)).toBe(true);
     expect(
@@ -587,7 +586,7 @@ describe("BriefScreen — the week against the one before", () => {
     ]);
   });
 
-  // ONE FACT, ONE SURFACE. Deals that moved without closing are a working, and
+  // One fact, one surface. Deals that moved without closing are a working, and
   // the list under the table reports them.
   it("reports the deals that moved in the workings and not in the headline", async () => {
     const strip = await mount(withPrior);

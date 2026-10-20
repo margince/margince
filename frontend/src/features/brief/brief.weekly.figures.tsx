@@ -25,7 +25,7 @@ type Counts = WeeklyReview["counts"];
 /**
  * One of the week's figures, read off the frozen counts.
  *
- * `count` is what the change against the week before is taken on; `shown` is
+ * `count` is what the change against the week before is taken on. `shown` is
  * how the figure reads, which for a share is "3 of 4" rather than the count.
  */
 type WeekFigure = Readonly<{
