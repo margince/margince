@@ -126,8 +126,9 @@ func (w *anchorWalk) scan(src string) (rest string, complete, resume bool) {
 
 // pastRawText returns the source from the end tag that closes a raw-text
 // element. With no end tag the element runs to the end of the body, and so
-// does the walk. Any "</style" counts as that end tag, even one the browser
-// would read as text, so the walk can only read more markup as links.
+// does the walk. The end tag is matched as the HTML tokenizer matches it: a
+// "</stylex" ends nothing, so a fake end cannot open markup the reader never
+// sees, such as a <script> that swallows the real link after it.
 func pastRawText(content, tag string) (rest string, complete, resume bool) {
 	for from := 0; ; {
 		at := strings.Index(content[from:], "</")
@@ -135,11 +136,27 @@ func pastRawText(content, tag string) (rest string, complete, resume bool) {
 			return "", true, false
 		}
 		at += from
-		if name := content[at+2:]; len(name) >= len(tag) && strings.EqualFold(name[:len(tag)], tag) {
+		if closesRawText(content[at+2:], tag) {
 			return content[at:], false, true
 		}
 		from = at + 2
 	}
+}
+
+// closesRawText reports whether name, the text after "</", starts with tag
+// followed by whitespace, "/", ">" or the end of input.
+func closesRawText(name, tag string) bool {
+	if len(name) < len(tag) || !strings.EqualFold(name[:len(tag)], tag) {
+		return false
+	}
+	if len(name) == len(tag) {
+		return true
+	}
+	switch name[len(tag)] {
+	case ' ', '\t', '\n', '\f', '\r', '/', '>':
+		return true
+	}
+	return false
 }
 
 // linkTarget is the host a web link really leads to, or "" for anything that

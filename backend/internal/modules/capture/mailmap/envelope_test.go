@@ -257,6 +257,17 @@ func TestAStylesheetWhoseEndTagStraddlesTheBufferLeavesTheWalkWhole(t *testing.T
 	}
 }
 
+// A "</stylex>" does not end a stylesheet, so the <script> after it is still
+// stylesheet text and cannot hide the link that follows the real end tag.
+func TestALookalikeEndTagDoesNotEndAStylesheet(t *testing.T) {
+	body := `<style>` + strings.Repeat("x", maxTokenLen+1000) + `</stylex><script></style>` +
+		`<a href="https://landing.example.org/">x</a></script>`
+
+	if hosts, cut := linkHosts("", body); !slices.Equal(hosts, []string{"landing.example.org"}) || cut {
+		t.Errorf("link hosts are %v (cut %v), want the link after the real end tag", hosts, cut)
+	}
+}
+
 // A mail client renders with scripting off, so a link inside <noscript> is
 // one the reader sees.
 func TestALinkInsideNoscriptIsRead(t *testing.T) {
