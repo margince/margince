@@ -27,6 +27,10 @@ func (d *CommitmentDispatcher) admission(ctx context.Context, tx pgx.Tx, c Commi
 		}
 		due = &at
 	}
+	return commitmentAdmissionForDue(ctx, tx, c, due)
+}
+
+func commitmentAdmissionForDue(ctx context.Context, tx pgx.Tx, c Commitment, due *time.Time) (activities.CommitmentAdmissionReason, error) {
 	sourceID := c.SourceActivityID
 	if c.AdmissionSourceID != nil {
 		if _, err := activities.CommitmentAdmissionEvidenceTx(ctx, tx, activities.CommitmentAdmissionInput{

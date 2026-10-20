@@ -414,7 +414,11 @@ func archiveActivityInTx(
 	if err := p.ApplyGuardedIn(ctx, tx, "activity", id.UUID, pin, activityArchivedFilter(held)); err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	auditID, err := storekit.Audit(ctx, tx, "archive", "activity", id.UUID, nil, nil)
+	var evidence map[string]any
+	if o.reason != "" {
+		evidence = map[string]any{"reason": o.reason}
+	}
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, "archive", "activity", id.UUID, nil, nil, evidence)
 	if err != nil {
 		return crmcontracts.Activity{}, err
 	}
