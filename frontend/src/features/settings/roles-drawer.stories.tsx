@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import type { ExtensionUnit } from "../../lib/extensions.queries";
+import type { Role } from "../../lib/roles.queries";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
-import type { ExtensionUnit } from "../automations/extensions.queries";
-import type { Role } from "./roles.queries";
 import { RoleDrawer } from "./roles-drawer";
 
 // One role open in its drawer. The head holds the name, the badges and the

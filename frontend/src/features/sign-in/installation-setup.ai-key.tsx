@@ -3,16 +3,16 @@
 
 import { useMutation } from "@tanstack/react-query";
 import { api } from "../../api/client";
+import { VertexLocationField } from "../../components/vertex-location";
 import { Field, TextInput } from "../../design-system/atoms";
 import { ServiceAccountKeyField } from "../../design-system/serviceaccountkeyfield";
 import { lockFor } from "../../format/settinglocks";
 import { type Translator, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { useRouting } from "../../lib/ai-routing-query";
 import { useCan } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
-import { useRouting } from "../ai/ai-routing-query";
-import { VertexLocationField } from "../ai/vertex-location";
-import type { SetupProvider } from "./setup-providers";
+import type { SetupProvider } from "../../lib/setup-providers";
 
 // The model step's credential and where it is bound: the key (pasted, or a
 // service-account file for Vertex), the location Vertex is bound at, and the

@@ -1,4 +1,4 @@
-import { REPORTING_FIXTURE_ZONE } from "./reporting.fixtures";
+import { REPORTING_FIXTURE_ZONE } from "../../testing/reporting.fixtures";
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import {

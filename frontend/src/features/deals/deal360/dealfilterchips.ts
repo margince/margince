@@ -1,9 +1,12 @@
+import {
+  DEAL_STATUS_LABEL,
+  DEAL_STATUS_VALUES,
+} from "../../../components/dealdials";
 import type { FilterSpec } from "../../../components/listquery";
 import {
   type AcquisitionSource,
   acquisitionFilterOptions,
-} from "../../settings/acquisitionsources.queries";
-import { DEAL_STATUS_LABEL, DEAL_STATUS_VALUES } from "../dealdials";
+} from "../../../lib/acquisitionsources.queries";
 import { MOTION_OPTIONS, PRIORITY_OPTIONS } from "./dealcommercialfields";
 
 // The surface's own narrowing chips, beside the stage and company ones

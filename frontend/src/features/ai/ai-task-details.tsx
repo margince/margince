@@ -2,12 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../api/schema";
+import { ProviderHealthNotice } from "../../components/ai-provider-health-notice";
 import { Badge } from "../../design-system/atoms";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { decisionSkipLabel } from "./ai-decision-labels";
 import { laneRung, TaskState } from "./ai-lane-state";
-import { ProviderHealthNotice } from "./ai-provider-health-notice";
 import { providerName } from "./ai-provider-names";
 import { TermChip } from "./ai-terms";
 import { CALL_TASK_PARAM, callsHrefFor } from "./aicalls";

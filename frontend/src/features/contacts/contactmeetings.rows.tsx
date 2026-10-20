@@ -4,6 +4,7 @@
 import { Clock, MapPin, Video } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
+import { InvitationBadge } from "../../components/booking-meeting-parts";
 import { Badge } from "../../design-system/atoms";
 import { AvatarStack } from "../../design-system/avatarstack";
 import { OffsiteLink } from "../../design-system/offsitelink";
@@ -13,11 +14,10 @@ import { calendarDaysUntil } from "../../format/daysuntil";
 import { formatNumber, formatTimeOfDay } from "../../format/format";
 import { formatTimeRange } from "../../format/meetingtime";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { PROVIDER_VIDEO_APP, VIDEO_APP_NAME } from "../../lib/booking-video";
+import { useMeetingInvitation } from "../../lib/meeting-invitation-query";
 import { useRecordZone } from "../../lib/recordzone";
 import { routeHash } from "../../lib/router";
-import { InvitationBadge } from "../booking/booking-meeting-parts";
-import { PROVIDER_VIDEO_APP, VIDEO_APP_NAME } from "../booking/booking-video";
-import { useMeetingInvitation } from "../booking/meeting-invitation-query";
 
 type Activity = components["schemas"]["Activity"];
 type Invitation = components["schemas"]["MeetingInvitation"];

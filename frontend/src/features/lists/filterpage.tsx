@@ -15,14 +15,6 @@ import { ConfirmModal } from "../../design-system/confirmmodal";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { useT } from "../../i18n";
 import { useFilterVocabulary } from "../../lib/filterdata";
-import { type Group, isComplete, newGroup } from "../../lib/segmentpredicate";
-import { useFilterDraft } from "./filterdraft";
-import { FilterEditor } from "./filtereditor";
-import { useFilterExport } from "./filterexport";
-import { FilterFoot } from "./filterfoot";
-import { FocusedHead } from "./filterhead";
-import { FilterOutcome } from "./filtermatches";
-import { usePlainWords } from "./filterpropose";
 import {
   NEW_FILTER_LABEL,
   OBJECT_TABS,
@@ -31,7 +23,15 @@ import {
   SWITCH_CLEARS_LABEL,
   TAB_LABEL,
   UNIT_LABEL,
-} from "./filtersaddress";
+} from "../../lib/filtersaddress";
+import { type Group, isComplete, newGroup } from "../../lib/segmentpredicate";
+import { useFilterDraft } from "./filterdraft";
+import { FilterEditor } from "./filtereditor";
+import { useFilterExport } from "./filterexport";
+import { FilterFoot } from "./filterfoot";
+import { FocusedHead } from "./filterhead";
+import { FilterOutcome } from "./filtermatches";
+import { usePlainWords } from "./filterpropose";
 import { SaveFilterModal, useLandOnSaved } from "./filtersave";
 import "./filters.css";
 

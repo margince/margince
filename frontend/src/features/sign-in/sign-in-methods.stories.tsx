@@ -7,8 +7,8 @@ import type { ReactNode } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { LocaleProvider } from "../../i18n";
 import { meFixture } from "../../testing/mefixture";
+import { SEEDED_ASSIGNABLE_ROLES } from "../../testing/roles.testkit";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
-import { SEEDED_ASSIGNABLE_ROLES } from "../settings/roles.testkit";
 import { SignInMethodsCard } from "./sign-in-methods";
 
 // Password is present in every state and flippable in none: there is no value

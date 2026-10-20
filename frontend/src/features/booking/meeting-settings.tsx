@@ -13,6 +13,7 @@ import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { throwProblem, unwrap } from "../../lib/problem";
+import { useSchedulingProfile } from "../../lib/scheduling-profile-query";
 import { useMe } from "../../lib/session";
 import { useConnectors } from "../capture/connectors";
 import { useBookingCalendar } from "./booking-calendar-state";
@@ -25,7 +26,6 @@ import {
   limitTextsOf,
   SetupChecklist,
 } from "./meeting-settings-sections";
-import { useSchedulingProfile } from "./scheduling-profile-query";
 import {
   narrowing,
   useWorkingHours,

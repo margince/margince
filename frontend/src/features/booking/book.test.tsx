@@ -7,13 +7,13 @@ import { afterEach, expect, it, vi } from "vitest";
 import { formatTimeOfDay } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
-import { BookingScreen, PUBLIC_BOOKING_CONSENT } from "./book";
 import {
   bookingConnection,
   bookingInvitation,
   bookingProfile,
   bookingSlots,
-} from "./book.testkit";
+} from "../../testing/book.testkit";
+import { BookingScreen, PUBLIC_BOOKING_CONSENT } from "./book";
 
 type Call = { method: string; path: string; body: unknown; key: string | null };
 function serve(fail = false) {

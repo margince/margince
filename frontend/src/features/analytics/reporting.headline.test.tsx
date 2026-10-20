@@ -3,12 +3,12 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { reportingStoryCatalog } from "../../testing/reporting.fixtures";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
-import { reportingStoryCatalog } from "./reporting.fixtures";
 import { ReportingOverview } from "./reporting.overview";
 import {
   reportingStoryEvaluation,

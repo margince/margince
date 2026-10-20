@@ -2,17 +2,20 @@ import type { ReactNode } from "react";
 import { useRef } from "react";
 import type { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { intentAbout } from "../../lib/compose.intent";
+import { COMPOSE_PARAM, THREAD_PARAM } from "../../lib/contactpage.address";
+import {
+  transportForActivity,
+  useTransports,
+} from "../../lib/contacttransports";
 import { navigate } from "../../lib/router";
 import { useUrlParams } from "../../lib/urlstate";
 import { useWriteTo, type WriteTo, WriteToProvider } from "../../lib/writeto";
 import { ComposeModal } from "../mail/compose";
-import { intentAbout } from "../mail/compose.intent";
 import { LogActivityAction } from "../records/logactivity";
 import { useMailboxConnected } from "../settings/writetohost";
 import { navigateKeepingReturn } from "../worklist/worklist.return";
 import type { Contact360, ContactMomentAction } from "./contactpage";
-import { COMPOSE_PARAM, THREAD_PARAM } from "./contactpage.address";
-import { transportForActivity, useTransports } from "./contacttransports";
 
 // The intent phrases a moment action can ask the composer to open with. The
 // server names the reason in its own vocabulary ("agenda", "follow_up"). The

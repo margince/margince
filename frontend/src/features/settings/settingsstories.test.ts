@@ -69,7 +69,7 @@ const ACROSS_PAGE_STORIES = new Set([
 ]);
 
 // Every story file Storybook loads: a settings card's story can sit beside a
-// component outside screens/, as mail-history's does.
+// component outside features/, as mail-history's does.
 const settingsStories = (await titledStories(storyCensus(frontendRoot).files))
   .map(({ path, title }) => ({ path: relative(srcDir, path), title }))
   .filter(

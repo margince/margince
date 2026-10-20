@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
+import { REPORTING_FIXTURE_ZONE } from "../../testing/reporting.fixtures";
 import {
   installFetchStub,
   jsonResponse,
@@ -15,7 +16,6 @@ import { ReportingDefinitions } from "./reporting.definitions";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import { ReportingExecutions } from "./reporting.executions";
 import { ReportingExportButton } from "./reporting.export";
-import { REPORTING_FIXTURE_ZONE } from "./reporting.fixtures";
 import { ReportingForecastGraphs } from "./reporting.forecast";
 import { ReportingLibrary } from "./reporting.library";
 import { ReportingReportDetail } from "./reporting.report";

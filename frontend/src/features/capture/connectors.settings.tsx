@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { useCaptureSettings } from "../../components/capture-settings";
 import { Checkbox, Modal } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
@@ -18,13 +19,12 @@ import { formatDateTime } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { problemMessageOf, unwrap } from "../../lib/problem";
-import { useCaptureSettings } from "./capture-settings";
 import {
   errorClassKey,
   missingCalendarWriteGrant,
   missingSendGrant,
-} from "./connector-status";
+} from "../../lib/connector-status";
+import { problemMessageOf, unwrap } from "../../lib/problem";
 import { ConnectorContextTagRow } from "./connectors.contexttag";
 import { HistoryBaselineRow } from "./connectors.historybaseline";
 

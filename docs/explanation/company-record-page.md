@@ -560,7 +560,7 @@ long run. See [composition-layer.md](composition-layer.md).
 | Contract | `backend/api/crm.yaml`: `/companies/{id}/{360,graph,brief,ask,view-ack,suggestions/dismiss,scan,logo}` |
 | The ruling on who owns which table | `backend/gates/tableownership_test.go` |
 | The screen | `frontend/src/features/companies/companies.tsx` (`CompanyScreen`) |
-| The scan on the page: `ensure` on open, poll, the pending row | `frontend/src/features/capture/accountscan.tsx`, `companytoday.tsx` |
+| The scan on the page: `ensure` on open, poll, the pending row | `frontend/src/features/companies/accountscan.tsx`, `companytoday.tsx` |
 | Data layer + cards in the right rail | `frontend/src/features/companies/company360.tsx`, `company360.css` |
 | The connections view to compare | `frontend/src/features/contacts/coverageexplorer.tsx` on the Contacts tab, with `companygraph.ts` as its read |
 | Header actions (new deal, tag, list) | `frontend/src/features/companies/companyactions.tsx` |

@@ -9,7 +9,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
-import { project360 } from "./projects.fixtures";
+import { project360 } from "../../testing/projects.fixtures";
 import { CommitmentsCard } from "./projectsections";
 
 // The one card that names what a project owes, and its rows opened nothing.

@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { meetingRow, readingsDay } from "../../testing/brief.fixtures";
 import {
   installFetchStub,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import type { WorklistItem } from "../worklist/worklist.queries";
-import { meetingRow, readingsDay } from "./brief.fixtures";
 import { SchedulePanel } from "./brief.schedule";
 
 // The two rail panels the morning is read alongside: what the day is booked

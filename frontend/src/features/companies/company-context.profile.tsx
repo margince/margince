@@ -20,13 +20,13 @@ import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { WriteRefused } from "../../design-system/querystates";
 import { useT } from "../../i18n";
-import { unwrap } from "../../lib/problem";
-import { navigate } from "../../lib/router";
-import { coldFieldLabel } from "../settings/coldfieldlabels";
+import { coldFieldLabel } from "../../lib/coldfieldlabels";
 import {
   companySaveMessage,
   storeCompany,
-} from "../sign-in/installationcompany";
+} from "../../lib/installationcompany";
+import { unwrap } from "../../lib/problem";
+import { navigate } from "../../lib/router";
 import type { CompanyInput } from "./company-context";
 import { PROFILE_GROUPS } from "./companycontextfacts";
 

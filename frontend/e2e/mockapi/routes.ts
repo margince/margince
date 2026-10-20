@@ -5,7 +5,7 @@ import {
   reportingStoryCatalog,
   reportingStoryEvaluation,
   reportingStoryFramework,
-} from "../../src/features/analytics/reporting.fixtures";
+} from "../../src/testing/reporting.fixtures";
 import * as ai from "./ai";
 import * as booking from "./booking";
 import * as capture from "./capture";

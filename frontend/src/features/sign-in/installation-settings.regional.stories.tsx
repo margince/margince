@@ -4,9 +4,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import type { components } from "../../api/schema";
+import { defaultAgentAllowances } from "../../testing/agentallowances.fixtures";
+import { defaultOperations } from "../../testing/operationsettings.fixtures";
 import { StoryProviders } from "../../testing/story-utils";
-import { defaultAgentAllowances } from "../automations/agentallowances.fixtures";
-import { defaultOperations } from "../settings/operationsettings.fixtures";
 import { RegionalSettingsFields } from "./installation-settings.regional";
 
 function RegionalFields({

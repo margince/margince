@@ -4,6 +4,7 @@
 import { Search } from "lucide-react";
 import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 import { useT } from "../../i18n";
+import { useCompanyContextShown } from "../../lib/companycontextreach";
 import { isImeCommit } from "../../lib/imecommit";
 import { navigate, routeHash } from "../../lib/router";
 import {
@@ -11,7 +12,6 @@ import {
   NO_URL_PARAMS,
   type UrlParams,
 } from "../../lib/urlstate";
-import { useCompanyContextShown } from "../companies/companycontextreach";
 import {
   CONFIGURATION_FILTER_PARAM,
   useConfiguration,

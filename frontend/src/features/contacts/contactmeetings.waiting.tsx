@@ -21,8 +21,8 @@ import { formatTimeRange } from "../../format/meetingtime";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { entityTimelineKeys } from "../../lib/activitykeys";
+import { proposalEmailBody } from "../../lib/booking-proposal-message";
 import { unwrap } from "../../lib/problem";
-import { proposalEmailBody } from "../booking/booking-proposal-message";
 import { ComposeModal } from "../mail/compose";
 
 type Proposal = components["schemas"]["MeetingProposal"];

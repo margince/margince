@@ -8,8 +8,8 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { api } from "../../api/client";
+import { invalidateProviderHealth } from "../../lib/ai-provider-health";
 import { throwProblem, unwrap } from "../../lib/problem";
-import { invalidateProviderHealth } from "./ai-provider-health";
 import type { CredentialKind } from "./ai-provider-key-entry";
 
 // Reading and changing the vendor credentials. No hook here returns a key: the

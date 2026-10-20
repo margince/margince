@@ -351,7 +351,7 @@ const testdata = join(
   "..",
   "..",
   "..",
-  "screens",
+  "testing",
   "testdata",
 );
 

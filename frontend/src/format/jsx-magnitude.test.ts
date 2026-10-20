@@ -517,9 +517,9 @@ function appOptions(): ts.CompilerOptions {
  * The program the checker comes from, built over the swept corpus rather than
  * over `tsconfig.app.json`'s own file list.
  *
- * That distinction IS the census. The project excludes `src/screens/ext/` and
- * every test, and its `include` never reaches `extensions/` — so borrowing its
- * file list would read a smaller tree and report the same word for it, PASS.
+ * That difference is the census. The project excludes every test, and its
+ * `include` never reaches `extensions/`. Borrowing its file list would read
+ * a smaller tree and report the same word for it, PASS.
  * Only the options are borrowed.
  */
 function programOver(files: string[]): ts.Program {
@@ -551,9 +551,8 @@ describe("a magnitude is drawn in the reader's own notation", () => {
 
   it("reads the tree it is meant to sweep, extension screens included", () => {
     // DERIVED from the directory listing. A floor does not hold this: the sweep
-    // reads several hundred files, so any `toBeGreaterThan` clears comfortably
-    // even after the walk stops descending into `screens/`, which is where most
-    // of the subject lives.
+    // reads several hundred files, so any `toBeGreaterThan` still clears when
+    // the walk skips `features/`. Most of the subject lives there.
     const swept = new Set(
       files
         .filter((path) => path.startsWith(srcRoot))

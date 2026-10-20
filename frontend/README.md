@@ -84,7 +84,7 @@ measures the real default.
   it on its own. `pnpm storybook` shows every control.
 - `src/design-system/`: tokens, building blocks and their stories. Read
   [its README](src/design-system/README.md) before you build a control. It never imports `app/`,
-  `components/` or `screens/`.
+  `components/` or `features/`.
 - `src/lib/`: shared code that draws nothing: the hash router, URL state, `theme.ts`, `capability.ts`,
   how a server problem reads, and the session. `theme.ts` resolves and applies `light` or `dark` before React
   mounts, so a screen before sign-in can be dark at all.
@@ -98,10 +98,10 @@ measures the real default.
   section at the foot of the rail is here too (`agentrail.tsx`): the one AI control in
   the frame of the app. See
   [docs/explanation/frontend-architecture.md](../docs/explanation/frontend-architecture.md).
-- `src/components/`: screen parts that many surfaces share, such as the create and edit dialogs
-  and the list query. It never imports `app/` or `screens/`.
-- `src/screens/`: one file per surface, or one folder when a surface is a state machine
-  (`onboarding-conversation/`). Routes that are not built yet render a pending state.
+- `src/components/`: screen parts that many features share, such as the create and edit dialogs
+  and the list query. It never imports `app/` or `features/`.
+- `src/features/<name>/`: one folder per feature, with its screens, tests and stories. A feature
+  never imports another feature or the shell. Routes that are not built yet render a pending state.
 - `src/i18n/`: `en.ts`, `de.ts` and `vi.ts`. Key parity is checked at compile time and at run time.
 - `src/format/`: the display edge. Money, date and duration formatting, IANA zones only, and the FX
   lineage display (it uses the IR `base_value` as it is, and never multiplies).

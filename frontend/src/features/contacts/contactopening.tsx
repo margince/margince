@@ -1,6 +1,6 @@
 import { Heading } from "../../design-system/heading";
 import { useT } from "../../i18n";
-import { useCachedRecordName } from "../records/recordidentity";
+import { useCachedRecordName } from "./recordidentity";
 
 /**
  * What a contact's page shows while its own read is still in flight.

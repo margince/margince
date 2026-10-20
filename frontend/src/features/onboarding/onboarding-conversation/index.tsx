@@ -7,12 +7,12 @@ import type { components } from "../../../api/schema";
 import { Button } from "../../../design-system/atoms";
 import { useLocale, useT } from "../../../i18n";
 import { useHoldsAdminRole } from "../../../lib/capability";
-import { throwProblem } from "../../../lib/problem";
-import { navigate, navigateReplacing, useRoute } from "../../../lib/router";
 import {
   type useCompany,
   useInstallationDescribed,
-} from "../../sign-in/installationcompany";
+} from "../../../lib/installationcompany";
+import { throwProblem } from "../../../lib/problem";
+import { navigate, navigateReplacing, useRoute } from "../../../lib/router";
 import { EMPTY_DRAFT, loadWizardState, pickBuiltVersion } from "../onboarding";
 import { BuildScene } from "../onboarding-build-scene";
 import { BasisAct } from "./basis-act";

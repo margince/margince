@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { viewerZone } from "../../format/timezone";
+import { bookingContact, bookingSlots } from "../../testing/book.testkit";
 import { StoryProviders } from "../../testing/story-utils";
-import { bookingContact, bookingSlots } from "./book.testkit";
 import { type BookingDraft, BookingReview } from "./booking-review";
 
 import "./book.css";

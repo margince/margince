@@ -112,7 +112,7 @@ Files: `contactpage.tsx`, `contact360.ts`, `contactrail.tsx`, `contacttoday.tsx`
 
 ## 5. Deal
 
-Files: `deals.tsx` (over the limit: the page moves to `screens/deal/`), `deal360/*`, `dealstatus.tsx`,
+Files: `deals.tsx` (over the limit: the page moves to `features/deals/`), `deal360/*`, `dealstatus.tsx`,
 `dealroom.tsx`, `dealfiles.tsx`.
 
 - **Head.** Verbs: **Write email (from `DealEmailAside`) · Log activity · more**, all outlined (Archive, Share,
@@ -144,7 +144,7 @@ Files: `deals.tsx` (over the limit: the page moves to `screens/deal/`), `deal360
 
 ## 6. Lead
 
-Files: `leads.tsx` (over the limit: the record moves to `screens/lead/`), `leads.stepper.tsx`,
+Files: `leads.tsx` (over the limit: the record moves to `features/leads/`), `leads.stepper.tsx`,
 `leadsignals.tsx`, `leadvocab.tsx`.
 
 - **Head.** Verbs: **Qualify (primary, `lead.promote` with `promoteIneligible` on the control) · Write email ·

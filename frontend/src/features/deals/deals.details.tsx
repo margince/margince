@@ -3,6 +3,7 @@ import type { CreateField } from "../../components/create";
 import { useEntityName } from "../../components/entityref";
 import { RecordFields, rawRecord } from "../../components/recordfields";
 import { useT } from "../../i18n";
+import { useAcquisitionSources } from "../../lib/acquisitionsources.queries";
 import { useCanWriteRecord } from "../../lib/capability";
 import { TagsPanel } from "../lists/tagspanel";
 import { RecordCustomFields } from "../records/recordcustomfields";
@@ -10,7 +11,6 @@ import { saveRecordEdit } from "../records/recordedit";
 import { RecordListsPanel } from "../records/recordlists";
 import { useOwnerPicker, useRecordOwners } from "../records/recordreferences";
 import { RecordTeam } from "../records/recordteam";
-import { useAcquisitionSources } from "../settings/acquisitionsources.queries";
 import { DealEmailAside } from "./dealemail";
 import {
   NEW_PROJECT_OWNER,

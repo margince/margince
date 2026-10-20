@@ -4,22 +4,22 @@
 import { formatDateTime } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { useProviderHealth } from "../../lib/ai-provider-health";
 import { useCan } from "../../lib/capability";
 import { routeHash } from "../../lib/router";
 import { useMe } from "../../lib/session";
-import { useProviderHealth } from "../ai/ai-provider-health";
-import { CaptureHealthCard, useCaptureHealth } from "../capture/capturehealth";
-import {
-  ExtensionIngestHealthCard,
-  useExtensionIngestHealth,
-} from "../capture/extingesthealth";
 import { ProviderHealthCard } from "../capture/providerhealth";
+import { CaptureHealthCard, useCaptureHealth } from "./capturehealth";
 import { DataTasksHealthCard } from "./datataskshealth";
 import {
   EmbedReindexCard,
   useEmbedReindexAvailable,
   useEmbedReindexStatus,
 } from "./embedreindex";
+import {
+  ExtensionIngestHealthCard,
+  useExtensionIngestHealth,
+} from "./extingesthealth";
 import { HealthStrip } from "./healthcard";
 import { JobHealthCard, useJobHealth } from "./jobhealth";
 import { BackgroundSchedulesCard, SendPacingCard } from "./operationsettings";

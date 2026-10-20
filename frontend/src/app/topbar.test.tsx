@@ -14,14 +14,14 @@ import {
 import { en } from "../i18n/en";
 import { parseHash, type Route } from "../lib/router";
 import { LIVE_ID, liveList } from "../testing/lists.fixtures";
-import type { NavSection } from "./nav";
 import {
   fixtureSection,
   ignoreSearch,
   newClient,
   render,
   renderWith,
-} from "./testing/shellharness";
+} from "../testing/shellharness";
+import type { NavSection } from "./nav";
 import { TopBar } from "./topbar";
 
 // The sticky strip above every railed page: what is true of the SESSION rather

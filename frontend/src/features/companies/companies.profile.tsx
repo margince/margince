@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import type { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { coldFieldLabel } from "../../lib/coldfieldlabels";
 import type { OpenReceipt } from "../records/record360";
 import { RelationshipsTab } from "../records/relationshiprows";
-import { coldFieldLabel } from "../settings/coldfieldlabels";
 import type { Company } from "./companies";
 import { HierarchyRollupPanel } from "./companies.hierarchy";
 import { DeepReadPanel } from "./companydeepread";

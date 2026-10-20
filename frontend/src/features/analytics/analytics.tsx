@@ -12,16 +12,15 @@ import { RecordTabs } from "../../design-system/recordtabs";
 import { formatDateTime } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { useCan } from "../../lib/capability";
-import { problemStatus, unwrap } from "../../lib/problem";
-import { useRoute } from "../../lib/router";
-import { stagesOfEveryPipeline } from "../deals/pipelinestages";
 import {
   openAnalyticsSection,
   SECTIONS,
   type Section,
   sectionFromAddress,
-} from "./analytics.address";
+} from "../../lib/analytics.address";
+import { useCan } from "../../lib/capability";
+import { problemStatus, unwrap } from "../../lib/problem";
+import { useRoute } from "../../lib/router";
 import type { Stage } from "./analytics.cells";
 import {
   type AnalyticsSelection,
@@ -36,6 +35,7 @@ import { sourceName } from "./analytics.forecast.review";
 import { MyOutcomesView } from "./analytics.outcomes";
 import { QuestionsView } from "./analytics.questions";
 import { AnalyticsScopePicker } from "./analytics.scope";
+import { stagesOfEveryPipeline } from "./pipelinestages";
 import { ReportingDefinitions } from "./reporting.definitions";
 import { ReportingLibrary } from "./reporting.library";
 import { ReportingOverview } from "./reporting.overview";

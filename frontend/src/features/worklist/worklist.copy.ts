@@ -7,13 +7,13 @@ import { formatNumber } from "../../format/format";
 import type { Locale, useT } from "../../i18n";
 import { isMessageKey, translatePlural } from "../../i18n";
 import { aiTaskLabel } from "../../lib/ai-task-label";
-import { ENTITY, recordRoute } from "../../lib/entity";
-import { routeHash } from "../../lib/router";
 import {
   BRIEF_PARAM,
   COMPOSE_PARAM,
   THREAD_PARAM,
-} from "../contacts/contactpage.address";
+} from "../../lib/contactpage.address";
+import { ENTITY, recordRoute } from "../../lib/entity";
+import { routeHash } from "../../lib/router";
 import { caseHref } from "../privacy/privacy.caselink";
 import { settingsHref } from "../settings/settingsrouting";
 import { connectionName, connectionTitleKey } from "./worklist.connection";

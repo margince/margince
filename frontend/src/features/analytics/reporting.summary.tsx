@@ -2,7 +2,7 @@ import { StatCard } from "../../design-system/atoms";
 import { StatStrip } from "../../design-system/statstrip";
 import { formatDateAbbrev, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT, type Words } from "../../i18n";
-import { openAnalyticsSection } from "./analytics.address";
+import { openAnalyticsSection } from "../../lib/analytics.address";
 import {
   metricLabel,
   type ReportingEvaluation,

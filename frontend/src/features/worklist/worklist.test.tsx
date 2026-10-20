@@ -12,7 +12,7 @@ import {
   row,
   stub,
   type WorklistItem,
-} from "./worklist.testkit";
+} from "../../testing/worklist.testkit";
 
 // The ranked queue, and the ways it can mislead the reader reading it.
 //

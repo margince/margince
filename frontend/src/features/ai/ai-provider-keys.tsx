@@ -9,10 +9,11 @@ import { serviceAccountProblem } from "../../design-system/serviceaccountkeyfiel
 import { type FieldLock, lockFor } from "../../format/settinglocks";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { useProviderHealth } from "../../lib/ai-provider-health";
+import { providerUsage, useRouting } from "../../lib/ai-routing-query";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { problemMessageOf } from "../../lib/problem";
 import { ProviderRecentCalls } from "./ai-call-figures";
-import { useProviderHealth } from "./ai-provider-health";
 import {
   credentialKindOf,
   KeyEntry,
@@ -37,7 +38,6 @@ import {
 } from "./ai-provider-settings";
 import { ProviderSheet } from "./ai-provider-sheet";
 import { ProviderTable } from "./ai-provider-table";
-import { providerUsage, useRouting } from "./ai-routing-query";
 import { ProvidersStatus } from "./ai-settings";
 import { PanelTitle } from "./ai-terms";
 import "./ai-settings.css";

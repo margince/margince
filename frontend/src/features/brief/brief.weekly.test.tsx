@@ -4,14 +4,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { formatDateAbbrev, formatDateTime } from "../../format/format";
 import { en } from "../../i18n/en";
 import { RecordZoneProvider } from "../../lib/recordzone";
-import { BriefScreen } from "./brief";
 import {
   beforeHistoryWeeklyNumbers,
   partlyRecordedWeeklyNumbers,
   sharedWeeklyNumbers,
   zeroWeekCounts,
-} from "./brief.fixtures";
-import { fleetDeal, jsonResponse, render, run, stubApi } from "./brief.testkit";
+} from "../../testing/brief.fixtures";
+import {
+  fleetDeal,
+  jsonResponse,
+  render,
+  run,
+  stubApi,
+} from "../../testing/brief.testkit";
+import { BriefScreen } from "./brief";
 
 // The week just gone, split from brief.test.tsx when that file crossed the
 // 1000-line ceiling frontend/AGENTS.md sets.

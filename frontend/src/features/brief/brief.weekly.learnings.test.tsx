@@ -2,8 +2,8 @@
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { en } from "../../i18n/en";
+import { render } from "../../testing/brief.testkit";
 import type { WeeklyReview } from "./brief.queries";
-import { render } from "./brief.testkit";
 import { LearningsPanel } from "./brief.weekly.learnings";
 
 // The distinction this panel exists to keep: a week NOBODY READ and a week that

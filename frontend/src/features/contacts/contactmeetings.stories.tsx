@@ -1,5 +1,6 @@
 import type { Decorator, Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
+import { bookingProfile, bookingProposals } from "../../testing/book.testkit";
 import {
   installFetchStub,
   jsonResponse,
@@ -7,7 +8,6 @@ import {
   type RouteMap,
   StoryProviders,
 } from "../../testing/story-utils";
-import { bookingProfile, bookingProposals } from "../booking/book.testkit";
 import { ContactMeetingsTab } from "./contactmeetings";
 import { useMeetingProposals, WaitingSection } from "./contactmeetings.waiting";
 

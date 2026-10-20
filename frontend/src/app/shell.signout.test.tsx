@@ -7,8 +7,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "../App";
 import { memoryStorage } from "../testing/appharness";
+import { ignoreSearch, newClient, renderWith } from "../testing/shellharness";
 import { Shell } from "./shell";
-import { ignoreSearch, newClient, renderWith } from "./testing/shellharness";
 
 afterEach(() => {
   cleanup();

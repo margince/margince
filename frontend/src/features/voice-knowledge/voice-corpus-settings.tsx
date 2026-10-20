@@ -6,10 +6,10 @@ import { formatNumber } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { problemMessageOf } from "../../lib/problem";
 import { useFileDrop } from "../../lib/use-file-drop";
+import { ACCEPTED_CORPUS_ATTR } from "../../lib/voice-corpus-file";
+import { VOICE_MIN_WORDS } from "../../lib/voice-intake-core";
 import type { IntakeNotice, SpeakerAsk } from "./use-voice-intake";
 import { useVoiceIntake } from "./use-voice-intake";
-import { ACCEPTED_CORPUS_ATTR } from "./voice-corpus-file";
-import { VOICE_MIN_WORDS } from "./voice-intake-core";
 
 // The Settings intake: hand over files, and answer who is speaking when one
 // turns out to be a conversation. It owns the intake hook so the build control

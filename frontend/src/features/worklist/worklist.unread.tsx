@@ -3,11 +3,11 @@
 
 import { Callout } from "../../design-system/callout";
 import { useLocale, useT } from "../../i18n";
-import { represented } from "../../lib/worklistunits";
 import { sourceUnavailableText } from "./worklist.copy";
 import { planCoverageGap, planCoverageText } from "./worklist.plancoverage";
 import type { Worklist, WorklistItem } from "./worklist.queries";
 import { sourceName } from "./worklist.sources";
+import { represented } from "./worklistunits";
 
 function dayBounded(day: Worklist, loaded: readonly WorklistItem[]): boolean {
   return (

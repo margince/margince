@@ -12,6 +12,14 @@ import {
   useTagChips,
 } from "../../components/listquery";
 import { useOwnerChips } from "../../components/ownerdials";
+import {
+  createdColumn,
+  lastActivityColumn,
+  mineEmptyNote,
+  ownerColumn,
+  standardViews,
+  tagsColumn,
+} from "../../components/recordlist";
 import { Avatar, Badge, Button } from "../../design-system/atoms";
 import type { ListChip } from "../../design-system/listsurface";
 import { CellStrip } from "../../design-system/listtable";
@@ -22,14 +30,6 @@ import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
 import { listQueryParams } from "../../lib/tagfilter";
 import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
-import {
-  createdColumn,
-  lastActivityColumn,
-  mineEmptyNote,
-  ownerColumn,
-  standardViews,
-  tagsColumn,
-} from "../records/recordlist";
 import type { Company } from "./companies";
 import {
   companyCreateFields,

@@ -11,10 +11,14 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { listFetchLimit } from "../../components/listquery";
 import { pickOption } from "../../design-system/select-testing";
+import {
+  company,
+  emptyPage,
+  jsonResponse,
+} from "../../testing/company.fixtures";
+import { stubFetch } from "../../testing/company.testkit";
 import { CompaniesScreen } from "./companies";
 import { render } from "./companies.testkit";
-import { company, emptyPage, jsonResponse } from "./company.fixtures";
-import { stubFetch } from "./company.testkit";
 
 // The companies list, wired as the contacts list is (contacts.test.tsx):
 // search, sort and pagination, the rich create modal, and the dedupe link.

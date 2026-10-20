@@ -3,10 +3,10 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
-import { RecordShell } from "../../app/testing/recordshell.testkit";
 import { formatMoney } from "../../format/format";
 import { translate } from "../../i18n";
 import { meFixture } from "../../testing/mefixture";
+import { RecordShell } from "../../testing/recordshell.testkit";
 import { DealScreen } from "./deals";
 import {
   type Deal,

@@ -4,16 +4,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { SectionSummary } from "../../components/companyrailshared";
 import { Badge, Disclosure } from "../../design-system/atoms";
 import { PanelBody } from "../../design-system/panel";
 import { reasonText, STATUS_TONE } from "../../design-system/pipelineladder";
-
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatDateTime } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
-import { SectionSummary } from "./companyrailshared";
 import "./companytriage.css";
 
 // GET /companies/{id}/capture-triage — why this company record exists.

@@ -8,6 +8,7 @@ import {
   useObjectCustomFields,
 } from "../../components/customfields.form";
 import { EntityRef } from "../../components/entityref";
+import { mostSpecificFirst, RecordLinks } from "../../components/recordlinks";
 import { writtenAsMarkdown } from "../../design-system/activitytimeline";
 import { Badge, Modal } from "../../design-system/atoms";
 import { CommitmentReview } from "../../design-system/commitmentreview";
@@ -25,9 +26,8 @@ import { activityFollowUpsKey, TASK_QUEUE_KEY } from "../../lib/activitykeys";
 import { useActivity } from "../../lib/activityread";
 import { useCanWrite } from "../../lib/capability";
 import { problemCodeOf } from "../../lib/problem";
-import { ActivityFollowUps } from "../../screens/activityfollowups";
 import { ActivityFiles } from "../records/activityfiles";
-import { mostSpecificFirst, RecordLinks } from "../records/recordlinks";
+import { ActivityFollowUps } from "../records/activityfollowups";
 import { TaskDetailDialog, useTaskUpdate } from "../worklist/taskactions";
 import { worklistKey } from "../worklist/worklist.queries";
 import "../../design-system/emaildetail.css";

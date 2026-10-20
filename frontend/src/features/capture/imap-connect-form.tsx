@@ -4,6 +4,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useId, useState } from "react";
 import { api } from "../../api/client";
+import { CaptureNotice } from "../../components/capture-notice";
 import { Button, Field, Modal, TextInput } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
@@ -11,7 +12,6 @@ import { formatNumber, identifierNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { problemCodeOf, problemMessageOf, unwrap } from "../../lib/problem";
-import { CaptureNotice } from "./capture-notice";
 import "../../design-system/querystates.css";
 import "./imap-connect-form.css";
 

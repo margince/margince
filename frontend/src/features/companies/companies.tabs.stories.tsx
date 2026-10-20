@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { taskWriteKeys } from "../../lib/activitykeys";
+import { company, company360 } from "../../testing/company.fixtures";
 import {
   installFetchStub,
   jsonResponse,
@@ -12,7 +13,6 @@ import {
 } from "../../testing/story-utils";
 import { useTaskUpdate } from "../worklist/taskactions";
 import { CompanyDealsAndTasksTabs } from "./companies.tabs";
-import { company, company360 } from "./company.fixtures";
 
 export default {
   title: "Records/Company 360/Task context",

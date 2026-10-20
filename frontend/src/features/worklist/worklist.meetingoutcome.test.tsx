@@ -33,8 +33,8 @@ import {
 } from "../../design-system/richtext-testing";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
+import { day, row, stub } from "../../testing/worklist.testkit";
 import { WorklistScreen } from "./worklist";
-import { day, row, stub } from "./worklist.testkit";
 
 const MEETING_ID = "01a05500-0000-7000-8000-0000000000b1";
 

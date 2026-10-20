@@ -2,9 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { project360 } from "../../testing/projects.fixtures";
 import { StoryProviders } from "../../testing/story-utils";
 import { RollupsStrip } from "./projectreadings";
-import { project360 } from "./projects.fixtures";
 
 // The band under a project's header: what its deals are worth, what is still
 // owed, and how much has been filed. A STRIP rather than four cards, because

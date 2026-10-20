@@ -14,8 +14,7 @@ import {
   objectLabel,
 } from "../../format/rbacobjects";
 import { useT } from "../../i18n";
-import type { ExtensionUnit } from "../automations/extensions.queries";
-import { GrantMatrix, type GrantMatrixRow, grantOf } from "./grantmatrix";
+import type { ExtensionUnit } from "../../lib/extensions.queries";
 import {
   type Role,
   type RowScope,
@@ -23,7 +22,8 @@ import {
   useMoveRole,
   useSetRoleGrant,
   useUpdateRole,
-} from "./roles.queries";
+} from "../../lib/roles.queries";
+import { GrantMatrix, type GrantMatrixRow, grantOf } from "./grantmatrix";
 import { AccessPreviewPanel } from "./users-access";
 
 // Every control writes as it is used, with the version the reader saw.

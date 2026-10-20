@@ -25,13 +25,13 @@ import { Button, Card } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { useT } from "../../i18n";
+import { labelOf } from "../../lib/preferences.logic";
 import { throwProblem } from "../../lib/problem";
 import {
   explainPublicError,
   LinkInvalidError,
   RateLimitedError,
 } from "../settings/preferences";
-import { labelOf } from "../settings/preferences.logic";
 
 type SubscriptionPage = components["schemas"]["SubscriptionConfirmationPage"];
 

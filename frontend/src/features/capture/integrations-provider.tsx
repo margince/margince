@@ -12,13 +12,13 @@ import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
+import { useProviderConnections } from "../../lib/provider-status";
 import { useMe } from "../../lib/session";
 // Disconnect and delete-data are separate decisions, so both sit behind the
 // overflow: beside the connect button, a misclick would destroy paid-for data.
 import { PricedCategoryRows } from "./integrations-provider-categories";
 import { CredentialRow } from "./integrations-provider-credential";
 import { LookupPostureRow } from "./integrations-provider-posture";
-import { useProviderConnections } from "./provider-status";
 
 export type ProviderConnection = components["schemas"]["ProviderConnection"];
 

@@ -1,7 +1,7 @@
 import { render } from "@testing-library/react";
 import type { components } from "../../../api/schema";
 import { LocaleProvider } from "../../../i18n";
-import { company360 } from "../../companies/company.fixtures";
+import { company360 } from "../../../testing/company.fixtures";
 import { RecordSpine } from "./spine";
 
 // The thread's one rule: it may only draw what the payload supports. Every

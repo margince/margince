@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	frontendPriceInput = "../frontend/src/format/priceinput.ts"
+	frontendPriceInput = "../frontend/src/features/settings/priceinput.ts"
 	crmContractPath    = "api/crm.yaml"
 )
 

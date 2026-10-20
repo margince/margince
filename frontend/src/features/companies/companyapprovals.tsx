@@ -8,9 +8,9 @@ import { Heading } from "../../design-system/heading";
 import { Stack } from "../../design-system/stack";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import { useTargetApprovals } from "../../lib/approvals.queries";
 import { approvalKindLabel } from "../automations/approvalkind";
 import { ApprovalRow, useDecisionSink } from "../automations/approvalrow";
-import { useTargetApprovals } from "../automations/approvals.queries";
 
 // What is waiting on a decision FOR THIS ACCOUNT, where the account is being
 // read. The count alone ("27 decisions waiting") told a reader that something

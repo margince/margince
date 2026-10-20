@@ -25,11 +25,11 @@ import { formatDateAbbrev, formatNumber } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
+import { sourceLabelFor } from "../../lib/leadsources";
 import { useMe } from "../../lib/session";
 import { leadStatusLabel } from "./leadpresentation";
 import { scoreReasonLabel } from "./leadreadings";
 import type { LeadWriter } from "./leads";
-import { sourceLabelFor } from "./leadsources";
 
 type Lead = components["schemas"]["Lead"];
 

@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
+import { readingsDay, taskRow } from "../../testing/brief.fixtures";
 import { briefDay } from "./brief.facts";
-import { readingsDay, taskRow } from "./brief.fixtures";
 
 it("retains a source failure discovered while loading another page", () => {
   const first = readingsDay({}, [taskRow("first", "Call Weber")]);

@@ -11,19 +11,19 @@ import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { stubClipboard } from "../../design-system/clipboard-testing";
 import {
-  installFetchStub,
-  jsonResponse,
-  StoryProviders,
-} from "../../testing/story-utils";
-import { mount, view } from "../contacts/contactpage.testkit";
-import {
   bookingConnection,
   bookingContact,
   bookingHours,
   bookingInvitation,
   bookingProfile,
   bookingSlots,
-} from "./book.testkit";
+} from "../../testing/book.testkit";
+import { mount, view } from "../../testing/contactpage.testkit";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../../testing/story-utils";
 import { BookingGuestScreen } from "./booking-guest";
 import { BookingInviteScreen } from "./booking-invite";
 import { BookingMeetingScreen } from "./booking-meeting";

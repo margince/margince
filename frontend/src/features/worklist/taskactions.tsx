@@ -8,6 +8,7 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
 import { EntityRef } from "../../components/entityref";
+import { mostSpecificFirst, RecordLinks } from "../../components/recordlinks";
 import {
   Badge,
   Button,
@@ -27,7 +28,6 @@ import { formatDate, formatDateTime } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { problemCodeOf, unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
-import { mostSpecificFirst, RecordLinks } from "../records/recordlinks";
 import "./taskactions.css";
 import { ErrorLine } from "../../design-system/errorline";
 import { useActivity } from "../../lib/activityread";
