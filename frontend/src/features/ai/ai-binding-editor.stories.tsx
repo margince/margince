@@ -6,6 +6,7 @@ import type { ComponentProps } from "react";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { en } from "../../i18n/en";
+import type { RoutingRead } from "../../lib/ai-routing-query";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -14,7 +15,6 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { BindingEditor } from "./ai-binding-editor";
-import type { RoutingRead } from "./ai-routing-query";
 
 type Routing = components["schemas"]["AiRouting"];
 

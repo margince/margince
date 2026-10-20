@@ -17,8 +17,11 @@ import { writeMessage } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
+import {
+  allowedPreview,
+  isPreviewDoor,
+} from "../../testing/sendpermission.testkit";
 import { ComposeModal } from "./compose";
-import { allowedPreview, isPreviewDoor } from "./sendpermission.testkit";
 
 // The composer's "why are you writing?" dial, named rather than reached for
 // by role alone: the To, Cc and Bcc lines are comboboxes of their own now

@@ -11,7 +11,7 @@ import {
 import {
   automaticDateReceipt,
   automaticStageReceipt,
-} from "../worklist/worklist.receiptreview.fixtures";
+} from "../../testing/worklist.receiptreview.fixtures";
 import { BriefChanges } from "./brief.changes";
 
 const meta: Meta<typeof BriefChanges> = {

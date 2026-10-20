@@ -12,7 +12,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { stubClipboard } from "../../design-system/clipboard-testing";
 import { LocaleProvider } from "../../i18n";
-import { busyUsage } from "../automations/agentallowances.fixtures";
+import { busyUsage } from "../../testing/agentallowances.fixtures";
 import { SettingsScreen, settingsAddress } from "./settings";
 
 // Minting a passport, in its own file rather than as more of `settings.test.tsx`

@@ -10,9 +10,9 @@ import { Switch } from "../../design-system/switch";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
+import { categoryName } from "../../lib/provider-categories";
 import type { ProviderConnection } from "./integrations-provider";
 import { BuyableRefused } from "./integrations-provider.notices";
-import { categoryName } from "./provider-categories";
 
 // What this installation is willing to buy, one switch per priced category.
 //

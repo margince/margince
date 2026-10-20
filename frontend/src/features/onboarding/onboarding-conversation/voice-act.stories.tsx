@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../../api/schema";
+import { VOICE_MIN_WORDS } from "../../../lib/voice-intake-core";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
 } from "../../../testing/story-utils";
-import { VOICE_MIN_WORDS } from "../../voice-knowledge/voice-intake-core";
 import { initialConversationState } from "./conversation-machine";
 import type {
   ConversationPhase,

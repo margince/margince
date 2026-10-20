@@ -18,8 +18,8 @@ import { IconAction } from "../../design-system/iconaction";
 import { KeyCode } from "../../design-system/keyedname";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { useT } from "../../i18n";
+import { useLegalReviewAvailable } from "../../lib/legalreviews.queries";
 import { problemMessageOf, unwrap } from "../../lib/problem";
-import { useLegalReviewAvailable } from "../privacy/legalreviews.queries";
 import {
   CRITERION_KIND_LABEL,
   CRITERION_KINDS,

@@ -3,8 +3,7 @@ import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
-import { BriefScreen } from "./brief";
-import { readingsDay, taskRow } from "./brief.fixtures";
+import { readingsDay, taskRow } from "../../testing/brief.fixtures";
 import {
   jsonResponse,
   pendingPage,
@@ -12,7 +11,8 @@ import {
   render,
   stubApi,
   writes,
-} from "./brief.testkit";
+} from "../../testing/brief.testkit";
+import { BriefScreen } from "./brief";
 
 afterEach(() => {
   cleanup();

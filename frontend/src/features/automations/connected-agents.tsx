@@ -20,9 +20,9 @@ import type { MessageKey } from "../../i18n/en";
 import { useRecordZone } from "../../lib/recordzone";
 import "./connected-agents.css";
 import "../settings/settings-agents.css";
+import { usePassportRevoke } from "../../components/passport-revoke";
+import { usePassports } from "../../lib/passports.queries";
 import { PassportUsageLine, usePassportUsageDetail } from "./agentusage";
-import { usePassportRevoke } from "./passport-revoke";
-import { usePassports } from "./passports.queries";
 
 // GET /passports lists a connected client's credential beside the minted
 // passports; `connection` tells them apart, never the `oauth:` label prefix.

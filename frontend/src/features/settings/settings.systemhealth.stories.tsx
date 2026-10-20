@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import type { GrantSpec } from "../../testing/mefixture";
+import { defaultOperations } from "../../testing/operationsettings.fixtures";
 import {
   installFetchStub,
   jsonResponse,
@@ -11,7 +12,6 @@ import {
   type RouteMap,
   StoryProviders,
 } from "../../testing/story-utils";
-import { defaultOperations } from "./operationsettings.fixtures";
 import { SystemHealthPage } from "./settings.systemhealth";
 
 // The whole page: a row of readings, and under it only the cards that have

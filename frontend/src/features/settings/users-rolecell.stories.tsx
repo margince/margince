@@ -4,8 +4,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { SEEDED_ASSIGNABLE_ROLES } from "../../testing/roles.testkit";
 import { StoryProviders } from "../../testing/story-utils";
-import { SEEDED_ASSIGNABLE_ROLES } from "./roles.testkit";
 import { MemberRole, type RoleRefusal } from "./users-rolecell";
 
 // The member row's role alone. Plain words at rest, a chooser only on press,

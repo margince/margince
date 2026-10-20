@@ -1,8 +1,8 @@
 import { type ReactNode, useEffect } from "react";
+import { CaptureSettingsCard } from "../../components/capture-settings";
 import { Callout } from "../../design-system/callout";
 import { useT } from "../../i18n";
 import { navigateReplacing, type Route } from "../../lib/router";
-import { ConnectionOutcomesCard } from "../../screens/connection-outcomes";
 import { AiBudgetCard } from "../ai/ai-admin";
 import { ModelPricesCard } from "../ai/ai-price-sync";
 import { AiProviderKeysCard } from "../ai/ai-provider-keys";
@@ -23,14 +23,10 @@ import { BriefDeliveryPanel } from "../brief/briefdelivery";
 import { BlockedDomainsCard } from "../capture/blocked-domains";
 import { CaptureActivityTab } from "../capture/capture-activity";
 import { OwnerIdentitiesCard } from "../capture/capture-owner-identities";
-import { CaptureSettingsCard } from "../capture/capture-settings";
+import { ConnectionOutcomesCard } from "../capture/connection-outcomes";
 import { ConnectorsCard } from "../capture/connectors";
 import { ConsumerMailDomainsCard } from "../capture/consumer-mail-domains";
 import { ProviderCard } from "../capture/integrations-provider";
-import {
-  MailSharingCard,
-  MailSharingPostureRow,
-} from "../capture/mail-sharing";
 import { OwnDomainsCard } from "../capture/own-domains";
 import { CompanyContextCard } from "../companies/company-context";
 import { OfferTemplatesAdmin } from "../deals/offertemplates";
@@ -57,6 +53,7 @@ import { FinanceSourceCard } from "./financesource";
 import { FollowUpSettingsCard } from "./followupsettings";
 import { InstallationConfigurationPage } from "./installation-configuration";
 import { LicenseCard } from "./license";
+import { MailSharingCard, MailSharingPostureRow } from "./mail-sharing";
 import { NotificationSettingsCard } from "./notification-settings";
 import { FxRatesCard } from "./rates";
 import { RolesSettings } from "./roles-settings";

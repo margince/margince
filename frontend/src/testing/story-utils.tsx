@@ -9,15 +9,15 @@ import {
 import { type ReactNode, useEffect } from "react";
 import { expect, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { RecordShell } from "../app/testing/recordshell.testkit";
 import { type Locale, LocaleProvider } from "../i18n";
 import { useMe } from "../lib/session";
 import { type GrantSpec, meFixture } from "./mefixture";
+import { RecordShell } from "./recordshell.testkit";
 import { recordUnroutedSessionProbe } from "./unrouted-session";
 
-// Shared Storybook rendering harness for the screens/* modules (fe-uat
-// render gate, frontend/scripts/fe-uat.mjs): every screen component reads
-// through the openapi-fetch `api` client (global fetch) and expects a
+// Shared Storybook rendering harness for the feature modules, used by the
+// fe-uat render gate (frontend/scripts/fe-uat.mjs). Every screen component
+// reads through the openapi-fetch `api` client (global fetch). It expects a
 // react-query + LocaleProvider context. Mirrors the *.test.tsx fetch-stub
 // convention exactly, so a story renders off the same fixture shapes the
 // unit tests already exercise — never a live network call.

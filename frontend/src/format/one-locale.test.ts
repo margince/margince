@@ -508,7 +508,7 @@ const pinnedLocales: { file: string; why: string }[] = [
     why: "zoneOffsetMs formats in en-US with hourCycle h23 to READ an instant's wall clock back as numbers and derive a zone offset from it. The output is parsed, never shown, so a locale that varied would change the arithmetic rather than the wording.",
   },
   {
-    file: "format/fiscalyear.test.ts",
+    file: "features/sign-in/fiscalyear.test.ts",
     why: "Constructs a formatter on a named western clock to show that a UTC-minted 1st-of-the-month instant reads as the PREVIOUS month there — the trap monthName fell into. The claim is about a zone rather than a locale, and it is unwritable without naming both.",
   },
   {
@@ -544,9 +544,8 @@ describe("one locale for every rendered value", () => {
     // represented, DERIVED from the directory listing rather than named here.
     //
     // A floor was the first spelling and it does not hold this: the sweep reads
-    // ~900 files, so `toBeGreaterThan(200)` clears comfortably even after a
-    // walk stops descending into `screens/` — which is where two thirds of the
-    // subject lives. The regression the arm exists to catch would pass it, and
+    // ~900 files, so `toBeGreaterThan(200)` still clears when the walk skips
+    // `features/`. Two thirds of the subject lives there. The regression the arm exists to catch would pass it, and
     // every assertion below would then vet a silently smaller tree.
     const swept = new Set(
       files

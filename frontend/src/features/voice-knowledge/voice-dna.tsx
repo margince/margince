@@ -17,8 +17,8 @@ import { identifierNumber } from "../../format/format";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
+import { useVoiceProfile } from "../../lib/voice-profile";
 import { VoiceCorpusIntake } from "./voice-corpus-settings";
-import { useVoiceProfile } from "./voice-profile";
 import { bandLabel, VoiceSamples } from "./voice-samples";
 import {
   ActiveVoiceInsights,

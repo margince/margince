@@ -20,7 +20,10 @@ import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { isOption } from "../../lib/options";
 import { unwrap } from "../../lib/problem";
-import { type Candidate, searchByEntity } from "./relationshipcandidates";
+import {
+  type Candidate,
+  searchByEntity,
+} from "../../lib/relationshipcandidates";
 import { KIND_LABELS } from "./relationshipkinds";
 import "./candidatepicker.css";
 import "../../design-system/querystates.css";

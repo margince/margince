@@ -25,7 +25,10 @@ import { throwProblem, unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { factsKey } from "./companyfactspanel";
 import "./companydeepread.css";
-import { type ConfiguredStopReason, stopIsConfigured } from "./sitereadkind";
+import {
+  type ConfiguredStopReason,
+  stopIsConfigured,
+} from "../../lib/sitereadkind";
 
 type SiteReadReport = components["schemas"]["SiteReadReport"];
 

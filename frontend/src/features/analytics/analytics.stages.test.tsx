@@ -3,9 +3,9 @@ import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
-import { stagesOfEveryPipeline } from "../deals/pipelinestages";
 import { AnalyticsScreen } from "./analytics";
 import { render, reportsStub } from "./analytics.testkit";
+import { stagesOfEveryPipeline } from "./pipelinestages";
 
 type Stage = components["schemas"]["Stage"];
 

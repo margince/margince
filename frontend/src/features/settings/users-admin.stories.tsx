@@ -4,12 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
+import { SEEDED_ASSIGNABLE_ROLES } from "../../testing/roles.testkit";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
-import { SEEDED_ASSIGNABLE_ROLES } from "./roles.testkit";
 import { UsersAdminCard } from "./users-admin";
 import type { User } from "./users-members";
 

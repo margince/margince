@@ -10,9 +10,10 @@ import { Heading } from "../../design-system/heading";
 import { IconAction } from "../../design-system/iconaction";
 import { viewerZone } from "../../format/timezone";
 import { useT } from "../../i18n";
+import { contactQuery } from "../../lib/contact.queries";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
-import { contactQuery } from "../contacts/contact.queries";
+import { useSchedulingProfile } from "../../lib/scheduling-profile-query";
 import { useBookingCalendar } from "./booking-calendar-state";
 import {
   BookingBlocked,
@@ -21,7 +22,6 @@ import {
   type BookingSlot,
 } from "./booking-picker";
 import { type BookingEdit, BookingReview } from "./booking-review";
-import { useSchedulingProfile } from "./scheduling-profile-query";
 import { useWorkingHours } from "./working-hours";
 
 type Contact = components["schemas"]["Contact"];

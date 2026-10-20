@@ -1,6 +1,6 @@
 import { Card } from "../../design-system/atoms";
 import { useT } from "../../i18n";
-import { labelOf, type PurposeView } from "./preferences.logic";
+import { labelOf, type PurposeView } from "../../lib/preferences.logic";
 
 /** One choice the server did not simply apply, and why. */
 export type ChoiceOutcome = Readonly<{

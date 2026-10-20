@@ -1,11 +1,11 @@
 import type { MessageKey } from "../../i18n/en";
+import type { ContactTab } from "../../lib/contacttab";
 import { ContactDealsTab } from "./contactdeals";
 import { ContactFilesTab } from "./contactfiles";
 import { ContactMeetingsTab } from "./contactmeetings";
 import { ContactNetworkTab } from "./contactnetwork";
 import type { Contact360, ContactMomentAction } from "./contactpage";
 import { ContactResearchTab } from "./contactresearch";
-import type { ContactTab } from "./contacttab";
 import { ContactTimelineTab } from "./contacttabs";
 
 // The tab words every record page shares. A private set for this page is how

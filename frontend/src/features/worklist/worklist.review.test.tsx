@@ -14,7 +14,13 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
-import { day, panelNamed, renderWorklist, row, stub } from "./worklist.testkit";
+import {
+  day,
+  panelNamed,
+  renderWorklist,
+  row,
+  stub,
+} from "../../testing/worklist.testkit";
 
 afterEach(() => {
   cleanup();

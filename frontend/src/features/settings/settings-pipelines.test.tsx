@@ -4,8 +4,12 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
+import {
+  jsonResponse,
+  PIPELINE_ADMIN,
+  render,
+} from "../../testing/settings.testkit";
 import { PipelinesCard } from "./settings.pipelines";
-import { jsonResponse, PIPELINE_ADMIN, render } from "./settings.testkit";
 
 // The pipelines page: the catalog above the pipeline it opens, and that
 // pipeline's ladder. Each affordance follows its OWN verb (create, update,

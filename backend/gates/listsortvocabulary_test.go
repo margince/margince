@@ -67,7 +67,7 @@ var listSurfaces = map[string]struct{ vocabulary, source string }{
 // sharedColumnSource holds the column helpers several screens draw from. A sort
 // one of them offers is offered by every screen that calls it, so it is read
 // per screen rather than once.
-const sharedColumnSource = "../frontend/src/features/records/recordlist.tsx"
+const sharedColumnSource = "../frontend/src/components/recordlist.tsx"
 
 var (
 	// tsSortLiteral reads one `sort: "field"` off a column.

@@ -139,7 +139,7 @@ describe("one card surface", () => {
       sheets.some((path) =>
         path.endsWith("features/onboarding/onboarding.css"),
       ),
-      "the walk did not reach src/screens/, where every card this gate was written for lived",
+      "the walk did not reach src/features/, where every card this gate was written for lives",
     ).toBe(true);
     expect(
       sheets.some(

@@ -10,12 +10,11 @@ package contacts
 // mail have I answered, who has gone quiet on me, and who has nobody tried.
 // Those are four different next moves.
 //
-// This rule used to live in the browser (frontend/src/screens/coverage.ts
-// reachOf), which meant it could only classify the contacts a page had already
-// been sent — and the company page is sent 25 of them, chosen by id. Ranking a
-// 105-contact account by a rule the server does not know is how the contact
-// worth writing to ends up on a page nobody renders. The rule moves here so the
-// ranking happens where the whole account is in hand.
+// The rule runs on the server, not in the browser. A page is sent only some of
+// an account's contacts. The company page gets 25, chosen by id. A rule in the
+// browser would rank a 105-contact account from that slice. The contact worth
+// writing to could then sit on a page nobody renders. Here the whole account
+// is in hand.
 
 import "sort"
 

@@ -10,7 +10,7 @@ import { formatAiRunCost } from "../../format/aicost";
 import { formatNumber } from "../../format/format";
 import { type Locale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { CORE_LABELS } from "./onboarding-core-label";
+import { CORE_LABELS } from "../../lib/onboarding-core-label";
 import type {
   AiRunSummary,
   CompanySiteRead,

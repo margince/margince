@@ -19,6 +19,12 @@ import {
   type VocabularyField,
 } from "../../lib/filterdata";
 import {
+  MATCH_LABEL,
+  type ObjectTab,
+  RESOURCE_OF,
+  UNIT_LABEL,
+} from "../../lib/filtersaddress";
+import {
   fieldsNamed,
   type Group,
   isComplete,
@@ -27,12 +33,6 @@ import {
 } from "../../lib/segmentpredicate";
 import { type VocabularyRead, vocabularyState } from "./filtereditor";
 import { FilterResults } from "./filterresults";
-import {
-  MATCH_LABEL,
-  type ObjectTab,
-  RESOURCE_OF,
-  UNIT_LABEL,
-} from "./filtersaddress";
 import "./filters.css";
 
 type Preview = ReturnType<typeof useFilterPreview>;

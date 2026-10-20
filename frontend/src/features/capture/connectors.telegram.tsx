@@ -19,6 +19,7 @@ import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
+import { statusLabel, statusTone } from "../../lib/connector-status";
 import {
   problemCode,
   problemMessageOf,
@@ -26,7 +27,6 @@ import {
   unwrap,
 } from "../../lib/problem";
 import { useMe } from "../../lib/session";
-import { statusLabel, statusTone } from "./connector-status";
 import { TelegramConnectForm } from "./telegram-connect-form";
 
 // The workspace's messaging bot, as its own file. It shares the connections

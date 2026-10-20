@@ -11,10 +11,10 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
-import { RecordShell } from "../../app/testing/recordshell.testkit";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
+import { RecordShell } from "../../testing/recordshell.testkit";
 import { LeadDealSection } from "./leadraillinks";
 import { LeadScreen } from "./leads";
 

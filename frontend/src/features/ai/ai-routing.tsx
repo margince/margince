@@ -11,27 +11,31 @@ import { formatDate, formatNumber } from "../../format/format";
 import { lockReasonOr } from "../../format/settinglocks";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
-import { useCan, useCanWrite } from "../../lib/capability";
-import { problemMessageOf, throwProblem } from "../../lib/problem";
-import { useMe } from "../../lib/session";
-import { SETUP_PROVIDERS } from "../sign-in/setup-providers";
-import { useAiStatus } from "./ai-admin";
-import { BindingEditor } from "./ai-binding-editor";
-import { TIER_ORDER, tierLabel, tierRank } from "./ai-decision-labels";
-import { useAiHealth } from "./ai-health";
 import {
   type ModelCatalogue,
   unkeyedProviders,
   useAiModelCatalogue,
   withBorrowedRows,
-} from "./ai-models";
-import { invalidateProviderHealth } from "./ai-provider-health";
+} from "../../lib/ai-models";
+import { invalidateProviderHealth } from "../../lib/ai-provider-health";
+import {
+  ROUTING_KEY,
+  type RoutingRead,
+  useRouting,
+} from "../../lib/ai-routing-query";
+import { useCan, useCanWrite } from "../../lib/capability";
+import { problemMessageOf, throwProblem } from "../../lib/problem";
+import { useMe } from "../../lib/session";
+import { SETUP_PROVIDERS } from "../../lib/setup-providers";
+import { useAiStatus } from "./ai-admin";
+import { BindingEditor } from "./ai-binding-editor";
+import { TIER_ORDER, tierLabel, tierRank } from "./ai-decision-labels";
+import { useAiHealth } from "./ai-health";
 import { useProviderKeys } from "./ai-provider-key-hooks";
 import { providerName } from "./ai-provider-names";
 import { reachableProviders } from "./ai-provider-reach";
 import { DECISION_PROVIDERS } from "./ai-routing-fields";
 import { type Lane, TiersTable } from "./ai-routing-lane";
-import { ROUTING_KEY, type RoutingRead, useRouting } from "./ai-routing-query";
 import { type SliceValue, sliceOf } from "./ai-routing-slice";
 import { useAnswersFromStandIn } from "./ai-settings";
 import { PanelTitle } from "./ai-terms";

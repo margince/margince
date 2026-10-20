@@ -3,14 +3,14 @@ import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
-import { BriefFeed } from "./brief.feed";
 import {
   meetingRow,
   readingsDay,
   taskRow,
   waitingEmailRow,
-} from "./brief.fixtures";
-import { render, stubApi } from "./brief.testkit";
+} from "../../testing/brief.fixtures";
+import { render, stubApi } from "../../testing/brief.testkit";
+import { BriefFeed } from "./brief.feed";
 
 afterEach(() => {
   cleanup();

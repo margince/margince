@@ -17,6 +17,7 @@ import {
   throwProblem,
 } from "../../lib/problem";
 import { navigate } from "../../lib/router";
+import { useSendPermission } from "../../lib/usesendpermission";
 import {
   asksWhy,
   type CommunicationContext,
@@ -29,7 +30,6 @@ import type { RelinkKind } from "./composerelink";
 import type { useSavedDraft } from "./composesaveddraft";
 import { SCHEDULED_SCREEN } from "./scheduledsends";
 import { sendReviewOf } from "./sendreview";
-import { useSendPermission } from "./usesendpermission";
 
 type Activity = components["schemas"]["Activity"];
 type Link = { entity_type: RelinkKind; entity_id: string };

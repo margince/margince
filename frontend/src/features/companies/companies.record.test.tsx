@@ -11,16 +11,16 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider, translate } from "../../i18n";
-import { CompanyScreen } from "./companies";
-import { openProfile, openRecordMenu, render } from "./companies.testkit";
 import {
   company,
   company360,
   companyBackstop,
   emptyPage,
   jsonResponse,
-} from "./company.fixtures";
-import { stubFetch } from "./company.testkit";
+} from "../../testing/company.fixtures";
+import { stubFetch } from "../../testing/company.testkit";
+import { CompanyScreen } from "./companies";
+import { openProfile, openRecordMenu, render } from "./companies.testkit";
 
 afterEach(() => {
   cleanup();

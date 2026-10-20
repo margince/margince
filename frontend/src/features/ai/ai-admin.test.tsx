@@ -15,9 +15,9 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { UnsavedGuard, useHasUnsavedChanges } from "../../components/unsaved";
 import { LocaleProvider } from "../../i18n";
+import { allowance, feature, status } from "../../testing/ai-admin.testkit";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { AiBudgetCard } from "./ai-admin";
-import { allowance, feature, status } from "./ai-admin.testkit";
 import { AiFeatureTable } from "./ai-feature-table";
 import { openTaskDetails } from "./ai-task-details-testing";
 

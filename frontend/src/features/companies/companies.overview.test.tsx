@@ -2,16 +2,16 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { AssistantPanel } from "../voice-knowledge/assistant";
-import { CompanyScreen } from "./companies";
-import { openProfile, render } from "./companies.testkit";
 import {
   company,
   company360,
   companyBackstop,
   jsonResponse,
-} from "./company.fixtures";
-import { stubFetch } from "./company.testkit";
+} from "../../testing/company.fixtures";
+import { stubFetch } from "../../testing/company.testkit";
+import { AssistantPanel } from "../voice-knowledge/assistant";
+import { CompanyScreen } from "./companies";
+import { openProfile, render } from "./companies.testkit";
 import { TodayOnThisAccount } from "./companytoday";
 
 afterEach(() => {

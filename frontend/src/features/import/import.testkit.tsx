@@ -1,11 +1,11 @@
 import { type RenderResult, screen } from "@testing-library/react";
 import type { UserEvent } from "@testing-library/user-event";
 import { vi } from "vitest";
+import { formatFixture } from "../../testing/import.fixtures";
 import { meFixture } from "../../testing/mefixture";
 import { renderWithQueryClient as render } from "../../testing/queryrender";
 import { jsonResponse } from "../../testing/story-utils";
 import { ImportCard } from "./import";
-import { formatFixture } from "./import.fixtures";
 
 // The import screens' test harness: one fetch stub that records what was sent,
 // the providers every screen needs, and the wire fixtures the files share.

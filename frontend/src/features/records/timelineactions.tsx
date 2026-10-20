@@ -19,6 +19,7 @@ import { ChoiceList } from "../../design-system/choicelist";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { useT } from "../../i18n";
 import { entityTimelineKeys } from "../../lib/activitykeys";
+import { useMessageAudience } from "../../lib/audienceservice";
 import { problemMessageOf } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import {
@@ -28,7 +29,6 @@ import {
   AudienceMembers,
   useAudienceCandidates,
 } from "../lists/audiencemembers";
-import { useMessageAudience } from "../lists/audienceservice";
 // Reply and Relink stay in compose.tsx for now: they are the composer's own
 // verbs, and moving them too would make a behaviour-preserving extraction into
 // a much larger diff. What moved here is the cluster and the two audience
@@ -38,8 +38,8 @@ import {
   type RelinkKind,
   RelinkModal,
 } from "../mail/compose";
-import { ProjectFilingAction } from "../projects/projectfiling";
 import { ActivityFilesAction } from "./activityfiles";
+import { ProjectFilingAction } from "./projectfiling";
 
 type Activity = components["schemas"]["Activity"];
 type ActivityAudience = components["schemas"]["ActivityAudience"];

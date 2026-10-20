@@ -8,14 +8,14 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
-import { WorklistScreen } from "./worklist";
 import {
   day,
   jsonResponse,
   renderWorklist,
   row,
   stub,
-} from "./worklist.testkit";
+} from "../../testing/worklist.testkit";
+import { WorklistScreen } from "./worklist";
 
 // A brief item is seller work, and it is answerable where it is ranked.
 //

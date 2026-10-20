@@ -15,7 +15,7 @@ import {
   allowedPreview,
   isPreviewDoor,
   previewedAddresses,
-} from "./sendpermission.testkit";
+} from "../../testing/sendpermission.testkit";
 
 // The composer's "why are you writing?" dial is found by name, not by role
 // alone. To, Cc and Bcc are comboboxes too, so a bare role query matches four

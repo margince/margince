@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { pickOption } from "../../design-system/select-testing";
+import { readingsDay } from "../../testing/brief.fixtures";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -11,7 +12,6 @@ import {
   type RouteMap,
   StoryProviders,
 } from "../../testing/story-utils";
-import { readingsDay } from "../brief/brief.fixtures";
 import { SettingsScreen, settingsAddress } from "./settings";
 import { PipelinesCard } from "./settings.pipelines";
 import type { SettingsPageId } from "./settingscatalog";

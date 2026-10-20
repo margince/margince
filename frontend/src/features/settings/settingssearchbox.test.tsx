@@ -7,9 +7,9 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { companyContextCapabilitiesQueryKey } from "../../lib/companycontextreach";
 import * as router from "../../lib/router";
 import { meFixture } from "../../testing/mefixture";
-import { companyContextCapabilitiesQueryKey } from "../companies/companycontextreach";
 import {
   configurationQueryKey,
   type SettingName,

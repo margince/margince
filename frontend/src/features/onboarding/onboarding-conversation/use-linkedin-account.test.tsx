@@ -7,7 +7,7 @@ import { createQueryClient } from "../../../app/queryclient";
 import {
   LINKEDIN_ACCOUNT_KEY,
   useSaveLinkedInAccount,
-} from "./use-linkedin-account";
+} from "../../../lib/use-linkedin-account";
 
 // The onboarding act and the settings row save the SAME account through this
 // one hook. Two things used to depend on which copy a caller happened to reach:

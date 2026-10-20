@@ -5,10 +5,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { formatTimeOfDay } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { en } from "../../i18n/en";
+import {
+  meetingRow,
+  readingsDay,
+  waitingRow,
+} from "../../testing/brief.fixtures";
+import { jsonResponse, render, stubApi } from "../../testing/brief.testkit";
 import type { Worklist } from "../worklist/worklist.queries";
 import { BriefScreen } from "./brief";
-import { meetingRow, readingsDay, waitingRow } from "./brief.fixtures";
-import { jsonResponse, render, stubApi } from "./brief.testkit";
 
 // The dials, on the rendered page.
 //

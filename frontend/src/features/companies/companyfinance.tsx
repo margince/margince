@@ -14,9 +14,9 @@ import type { MessageKey } from "../../i18n/en";
 import { problemCodeOf } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { BillingContactsPanel } from "../projects/billingcontacts";
-import { RecentInvoices } from "../projects/financeinvoices";
-import { OverdueLead } from "../projects/financeoverdue";
-import { useFinanceSummary } from "../projects/financesummary";
+import { RecentInvoices } from "./financeinvoices";
+import { OverdueLead } from "./financeoverdue";
+import { useFinanceSummary } from "./financesummary";
 // The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
 // are defined in company360.css. Imported HERE rather than left to the caller:
 // it works today only because the company record page pulls that stylesheet in

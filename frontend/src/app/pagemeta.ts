@@ -1,8 +1,8 @@
 import { useEntityName } from "../components/entityref";
-import { opensAFocusedFiltersPage } from "../features/lists/filtersaddress";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { EXTENSION_SCREEN, findExtension, unitTitle } from "../lib/extensions";
+import { opensAFocusedFiltersPage } from "../lib/filtersaddress";
 import type { Route, Screen } from "../lib/router";
 import {
   NAV,

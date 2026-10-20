@@ -1,6 +1,10 @@
 import { ChevronRight } from "lucide-react";
 import { useState } from "react";
 import type { components } from "../../api/schema";
+import {
+  interactionIcon,
+  useInteractionLabel,
+} from "../../components/interactionchrome";
 import { Avatar, Badge, Button } from "../../design-system/atoms";
 import { EmailEntry } from "../../design-system/emailentry";
 import { FilterPills } from "../../design-system/filterpills";
@@ -9,10 +13,6 @@ import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
 import { ChannelReplyAction } from "../mail/compose";
-import {
-  interactionIcon,
-  useInteractionLabel,
-} from "../records/interactionchrome";
 import { openContactTab } from "../worklist/worklist.return";
 
 // Conversation memory (concept §5.10, ADR-0097 D3).

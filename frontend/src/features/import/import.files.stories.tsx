@@ -4,13 +4,16 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import {
+  formatFixture,
+  recentRunsFixture,
+} from "../../testing/import.fixtures";
+import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import { ImportDropzone } from "./import.files";
-import { formatFixture, recentRunsFixture } from "./import.fixtures";
 import { ImportWizardPage } from "./import.wizard";
 import { ImportMappingTable } from "./importmapping";
 

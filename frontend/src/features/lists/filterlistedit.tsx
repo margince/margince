@@ -16,6 +16,14 @@ import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { useFilterVocabulary } from "../../lib/filterdata";
 import {
+  EDIT_LIST_SEGMENT,
+  type ObjectTab,
+  RESOURCE_OF,
+  TAB_LABEL,
+  tabOfListType,
+  UNIT_LABEL,
+} from "../../lib/filtersaddress";
+import {
   type List,
   useList,
   useListsAvailable,
@@ -38,14 +46,6 @@ import { FilterFoot } from "./filterfoot";
 import { FocusedHead, FocusedPending, FocusedState } from "./filterhead";
 import { FilterOutcome } from "./filtermatches";
 import { usePlainWords } from "./filterpropose";
-import {
-  EDIT_LIST_SEGMENT,
-  type ObjectTab,
-  RESOURCE_OF,
-  TAB_LABEL,
-  tabOfListType,
-  UNIT_LABEL,
-} from "./filtersaddress";
 import { SaveFilterModal, useLandOnSaved } from "./filtersave";
 import { ListRuleUses, ruleUsesOf } from "./listrules";
 import { useListAudienceLabel } from "./listsharing";

@@ -8,7 +8,7 @@ import {
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { MailSharingPostureRow } from "./mail-sharing";
+import { MailSharingPostureRow } from "../settings/mail-sharing";
 
 // The sharing rule as stated on a member's own Connections page. The answer is
 // a sentence under the row's name. A reader who may change it gets the link.

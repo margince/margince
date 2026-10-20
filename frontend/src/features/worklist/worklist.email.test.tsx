@@ -27,7 +27,7 @@ import {
   stub,
   type Worklist,
   type WorklistItem,
-} from "./worklist.testkit";
+} from "../../testing/worklist.testkit";
 
 afterEach(() => {
   vi.unstubAllGlobals();

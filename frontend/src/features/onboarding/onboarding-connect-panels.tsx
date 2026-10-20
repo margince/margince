@@ -2,6 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { ArrowRight, CircleCheck, Mail, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "../../api/client";
+import { CaptureNotice } from "../../components/capture-notice";
 import { Badge, Button, Disclosure } from "../../design-system/atoms";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -12,9 +13,8 @@ import {
   STORAGE_KEYS,
   writeStored,
 } from "../../lib/storage";
-import { CaptureNotice } from "../capture/capture-notice";
 import { useConnectors } from "../capture/connectors";
-import { ConnectPostureStep } from "../settings/connect-posture";
+import { ConnectPostureStep } from "./connect-posture";
 import { OnboardingBackread } from "./onboarding-backread";
 import { ConnectWarn } from "./onboarding-connect-panels.imap";
 

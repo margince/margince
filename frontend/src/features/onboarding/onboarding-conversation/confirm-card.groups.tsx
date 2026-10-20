@@ -9,7 +9,7 @@ import { Heading } from "../../../design-system/heading";
 import { type Evidence, EvidenceChip } from "../../../design-system/trust";
 import { formatNumber } from "../../../format/format";
 import { type Locale, useLocale, useT } from "../../../i18n";
-import { coldFieldLabel } from "../../settings/coldfieldlabels";
+import { coldFieldLabel } from "../../../lib/coldfieldlabels";
 import type { CompanyFieldName } from "../onboarding";
 import { normalizeUrl } from "../onboarding";
 import {

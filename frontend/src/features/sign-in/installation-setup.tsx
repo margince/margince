@@ -8,13 +8,13 @@ import {
 } from "../../design-system/onboarding-stage";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { throwProblem } from "../../lib/problem";
-import { CORE_LABELS } from "../onboarding/onboarding-core-label";
-import { Ignition, useIgnitionCore } from "../onboarding/onboarding-ignition";
 import {
   usePlatformDeclined,
   useRememberPlatformDeclined,
-} from "./installation-setup.decline";
+} from "../../lib/installation-setup.decline";
+import { CORE_LABELS } from "../../lib/onboarding-core-label";
+import { throwProblem } from "../../lib/problem";
+import { Ignition, useIgnitionCore } from "../onboarding/onboarding-ignition";
 // The stylesheet carries the `onboarding-` prefix rather than this file's name
 // on purpose: both onboarding CSS gates derive their corpus from that prefix,
 // so a first-run sheet named after its component would style the coldest screen

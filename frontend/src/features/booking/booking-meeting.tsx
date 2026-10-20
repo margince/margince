@@ -3,6 +3,12 @@ import { ChevronLeft } from "lucide-react";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import {
+  DeliveryCard,
+  InvitationBadge,
+  MeetingFacts,
+  openCalendarLabel,
+} from "../../components/booking-meeting-parts";
 import { ActionRow } from "../../design-system/actionrow";
 import { Button } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
@@ -16,21 +22,15 @@ import { formatDayFull, formatTimeRange } from "../../format/meetingtime";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { backStaysInApp } from "../../lib/historydepth";
+import {
+  meetingInvitationKey,
+  useMeetingInvitation,
+} from "../../lib/meeting-invitation-query";
 import { problemCodeOf, throwProblem } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { ContactMeetingBrief } from "../brief/meetingbrief/drawer";
 import { BookingFooter } from "./booking-common";
-import {
-  DeliveryCard,
-  InvitationBadge,
-  MeetingFacts,
-  openCalendarLabel,
-} from "./booking-meeting-parts";
 import { BookingReschedule } from "./booking-reschedule";
-import {
-  meetingInvitationKey,
-  useMeetingInvitation,
-} from "./meeting-invitation-query";
 import "./booking-meeting.css";
 
 type Invitation = components["schemas"]["MeetingInvitation"];

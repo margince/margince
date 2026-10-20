@@ -25,6 +25,7 @@ import { formatNumber } from "../../format/format";
 import { lockReasonOr, useRefusalId } from "../../format/settinglocks";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { useRouting } from "../../lib/ai-routing-query";
 import { aiTaskLabel } from "../../lib/ai-task-label";
 import { useCan } from "../../lib/capability";
 import { problemCodeOf, throwProblem, unwrap } from "../../lib/problem";
@@ -36,7 +37,6 @@ import {
   type Window,
 } from "./ai-call-figures";
 import { tierLabel } from "./ai-decision-labels";
-import { useRouting } from "./ai-routing-query";
 import { LatencyAgainstTimeout, TaskOutcome } from "./ai-task-outcome";
 import { ReadProblem, SaveProblem, TimeoutField } from "./ai-task-sheet-fields";
 import { CALL_TASK_PARAM, callsHrefFor } from "./aicalls";

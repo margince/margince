@@ -56,11 +56,10 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
                         ⌘K palette, agent dock, banners
  src/lib/               shared code that draws nothing: hash router, URL
                         state, theme, capability, problem decoding, session
- src/components/        screen parts many surfaces share: create, edit,
+ src/components/        screen parts many features share: create, edit,
                         list query, record fields
- src/screens/           one file per surface (a directory when the surface
-                        is a state machine)
- src/features/<name>/   one folder per feature, moved from screens/
+ src/features/<name>/   one folder per feature: its screens, tests, stories
+ src/testing/           test harnesses, fixtures and tree-wide guards
  src/i18n/  src/format/ the presentation edge: copy, money, dates, zones
  src/api/               the one seam + the generated contract types
 ```
@@ -80,8 +79,8 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   once, never nothing.
 
   `conformance.test.ts` is the drift gate over the whole
-  tree. No file in `design-system/` imports `app/`, `components/`, `screens/` or `features/`. A part
-  that needs a feature, such as the record page's mail drawer, lives in `screens/`.
+  tree. No file in `design-system/` imports `app/`, `components/` or `features/`. A part
+  that needs a feature, such as the record page's mail drawer, lives in that feature.
 - **`src/app/`**: the shell of the app and what holds on every screen.
   `shell.tsx` is the shell, the sidebar and the title of each page.
   `topbar.tsx` is the top bar of the session: the control that makes the
@@ -94,23 +93,17 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   the shell itself shows (`economybanner.tsx`, `embedreindexbanner.tsx`).
 - **`src/lib/`**: shared code that draws nothing. `router.tsx` (hash routing),
   `urlstate.ts`, `theme.ts` and `capability.ts` live here, with problem
-  decoding and the session. `lib/` never imports `app/`, `components/`, `screens/` or `features/`.
-- **`src/components/`**: the screen parts that many surfaces share. Examples are
+  decoding and the session. `lib/` never imports `app/`, `components/` or `features/`.
+- **`src/components/`**: the screen parts that many features share. Examples are
   the create and edit dialogs, the list query and the record fields.
-  A component never imports `app/`, `screens/` or `features/`. A part used by one surface
-  stays with that surface.
-- **`src/screens/`**: one file per surface. A surface gets a *folder* only
-  when it is a state machine and not a page. One has one:
-  `features/onboarding/onboarding-conversation/`. There the conversation machine, each
-  `*-act.tsx` and `*-scene.tsx` file, and the code that loads the conversation
-  again each need their own file. Everything else, even surfaces as
-  large as `companies.tsx` and `deals.tsx`, stays one file, with its
-  `*.test.tsx` and `*.stories.tsx` beside it. An address that no screen answers
-  shows a note that says so (`shell.unknownPage`), never an empty page.
-- **`src/features/<name>/`**: the new home of a surface, one folder for each
-  feature, with its tests and stories. Surfaces move here from `screens/` one
-  feature at a time, by the steps in
-  [move-a-frontend-feature.md](../how-to/move-a-frontend-feature.md).
+  A component never imports `app/` or `features/`.
+- **`src/features/<name>/`**: one folder per feature, with each screen's
+  `*.test.tsx` and `*.stories.tsx` beside it. A screen gets a folder of its own
+  only when it is a state machine and not a page, as
+  `features/onboarding/onboarding-conversation/` is. An address that no screen
+  answers shows a note that says so (`shell.unknownPage`), never an empty page.
+- **`src/custom/`**: the screens a fork adds. Margince ships it with only its
+  README, so a fork's screens never conflict with a new release.
 - **`src/i18n/`**: three catalogs (`en`, `de`, `vi`), with `en` the default.
   Two checks make every catalog hold the same keys. `MessageKey` is
   `keyof typeof en`, and the other catalogs are checked against it with
@@ -134,6 +127,25 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   fixed value such as `+02:00` is rejected at the edge with an error. No turning
   one kind of money into another, no counting on calendar dates, and no locale
   going back into what is stored.
+
+### Each feature stands alone
+
+Only the shell (`app/` and `App`) imports a feature. A feature imports no
+other feature and not the shell. When two features need the same code, it moves
+down: to `components/` if it draws, to `lib/` if it does not. Code that only one
+other feature uses moves into that feature, and a test helper that features
+share moves to `testing/`. A feature that shows another feature's whole screen
+gets it from `app/`, which passes it in.
+
+The other side holds too: a file in `components/`, `lib/` or `format/` that
+only one feature uses belongs in that feature. Without this rule, a move of one
+feature's code into a shared folder would get past the first.
+
+`frontend/scripts/feature-boundaries.test.ts` fails both. The imports that
+crossed a feature line when it landed are frozen in
+`frontend/scripts/feature-boundaries-waivers.txt`. That list only gets shorter,
+and a new line is never added. The steps for a move are in
+[move-frontend-code.md](../how-to/move-frontend-code.md).
 
 ## The shell
 
@@ -413,8 +425,9 @@ merge gate and needs Node and pnpm. Run `make check-fe` (or
 | Design gates (tests) | `frontend/src/design-system/{conformance,tokens}.test.ts` |
 | Design gates (shell script checks that fail closed) | `frontend/scripts/check-*.sh` |
 | Render UAT scoped to the change | `frontend/scripts/fe-uat.mjs` |
-| Screen parts many surfaces share | `frontend/src/components/` |
-| Screens | `frontend/src/screens/` (one file per surface; `onboarding-conversation/` is the one state-machine folder) |
+| Screen parts many features share | `frontend/src/components/` |
+| Features | `frontend/src/features/<name>/` (one folder per feature; `onboarding-conversation/` is the one state-machine folder) |
+| The feature boundary gate | `frontend/scripts/feature-boundaries.ts` |
 | Catalogs / the edge where values turn into text | `frontend/src/i18n/`, `frontend/src/format/` |
 
 ## Where to go next

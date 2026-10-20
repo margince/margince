@@ -134,7 +134,7 @@ export function BriefScreen() {
   );
 }
 
-export { deckItems } from "./brief.decisions.items";
+export { deckItems } from "../../lib/brief.decisions.items";
 
 function BriefBody({
   address,

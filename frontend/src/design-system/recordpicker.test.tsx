@@ -15,7 +15,7 @@ import { Field } from "./atoms";
 import { RecordPicker, type RecordPickerCandidate } from "./recordpicker";
 
 // RecordPicker is the debounced search→candidate-list→pick pattern that
-// MergeAction (features/import/merge.tsx) and AddRelationshipAction
+// MergeAction (components/merge.tsx) and AddRelationshipAction
 // (features/records/relationships.tsx) share. These specs pin what those two
 // call sites rely on. The search waits 250ms, and an empty term clears the list
 // instead of searching. A search error shows inline rather than being thrown,

@@ -15,13 +15,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { writeMessage } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
-import type { Transport } from "../contacts/contacttransports";
-import { ComposeModal } from "./compose";
+import type { Transport } from "../../lib/contacttransports";
 import {
   allowedPreview,
   isPreviewDoor,
   previewedAddresses,
-} from "./sendpermission.testkit";
+} from "../../testing/sendpermission.testkit";
+import { ComposeModal } from "./compose";
 
 // WHICH WAY a message leaves, asked inside the one composer.
 //

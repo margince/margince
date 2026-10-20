@@ -12,7 +12,7 @@ import {
   renderWorklist,
   row,
   stub,
-} from "./worklist.testkit";
+} from "../../testing/worklist.testkit";
 
 // The pin says what it does.
 //

@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
-import { ConnectionOutcomesCard } from "../../screens/connection-outcomes";
 import { meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
+import { ConnectionOutcomesCard } from "../capture/connection-outcomes";
 
 // Three cases read differently: accounts reached, nothing resolved yet (still
 // counting the unresolved), and a failed read, which is not an empty one.

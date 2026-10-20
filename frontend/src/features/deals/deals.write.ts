@@ -1,7 +1,7 @@
 import type { components } from "../../api/schema";
 import { toMajorUnits, toMinorUnits } from "../../format/minorunits";
+import { currencyBeside } from "../../lib/dealcurrency";
 import { commercialMotion, dealPriority } from "./deal360/dealcommercialfields";
-import { currencyBeside } from "./dealcurrency";
 import type { Deal } from "./deals";
 
 type UpdateDealRequest = components["schemas"]["UpdateDealRequest"];

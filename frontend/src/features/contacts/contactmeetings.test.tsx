@@ -18,19 +18,19 @@ import { formatDayMonth } from "../../format/format";
 import { formatTimeRange } from "../../format/meetingtime";
 import { viewerZone } from "../../format/timezone";
 import { LocaleProvider, translate } from "../../i18n";
+import { proposalEmailBody } from "../../lib/booking-proposal-message";
 import { RecordZoneProvider } from "../../lib/recordzone";
+import {
+  bookingProfile,
+  bookingProposals,
+  bookingSlots,
+} from "../../testing/book.testkit";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   type RouteMap,
 } from "../../testing/story-utils";
-import {
-  bookingProfile,
-  bookingProposals,
-  bookingSlots,
-} from "../booking/book.testkit";
-import { proposalEmailBody } from "../booking/booking-proposal-message";
 import { ContactMeetingsTab } from "./contactmeetings";
 
 type Proposal = components["schemas"]["MeetingProposal"];

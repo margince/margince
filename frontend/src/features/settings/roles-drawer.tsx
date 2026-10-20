@@ -8,8 +8,8 @@ import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { Heading } from "../../design-system/heading";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
-import type { ExtensionUnit } from "../automations/extensions.queries";
-import { type Role, roleLabel, roleRefusalOf } from "./roles.queries";
+import type { ExtensionUnit } from "../../lib/extensions.queries";
+import { type Role, roleLabel, roleRefusalOf } from "../../lib/roles.queries";
 import { RoleDetail, type RoleWrites, useRoleWrites } from "./roles-detail";
 
 /** A role's kind, and whether it is archived: the row and the drawer say both. */

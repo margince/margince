@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { COMPANY, project, project360 } from "../../testing/projects.fixtures";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
 import { ProjectIdentityFacts } from "./projectheaderfacts";
-import { COMPANY, project, project360 } from "./projects.fixtures";
 
 // The facts beside a project's name: which account the work is for, when it is
 // due and how far off that is, and whose project it is — the named cells that

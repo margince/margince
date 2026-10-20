@@ -13,14 +13,14 @@ import {
   type ModelLane,
   offeredModels,
   useAvailableModels,
-} from "./ai-models";
+} from "../../lib/ai-models";
 import { isOpenRouter } from "./ai-provider-links";
 import "./ai-settings.css";
 import {
   DEFAULT_VERTEX_LOCATION,
   VERTEX_PROVIDER,
   VertexLocationField,
-} from "./vertex-location";
+} from "../../components/vertex-location";
 import { useVertexModelProbe } from "./vertex-model-probe";
 
 type Routing = components["schemas"]["AiRouting"];

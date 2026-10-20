@@ -1,3 +1,4 @@
+import { forecastCategoryFilter } from "../../components/dealdials";
 import { StatCard } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
 import { Popover } from "../../design-system/popover";
@@ -9,8 +10,7 @@ import {
 } from "../../format/format";
 import { type Locale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { forecastCategoryFilter } from "../deals/dealdials";
-import { dealsFilteredBy } from "../deals/dealsaddress";
+import { dealsFilteredBy } from "../../lib/dealsaddress";
 import {
   BarFigure,
   CountLink,

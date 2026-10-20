@@ -3,9 +3,9 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useT } from "../../i18n";
+import type { PurposeView } from "../../lib/preferences.logic";
 import { StoryProviders } from "../../testing/story-utils";
 import { PreferenceRow } from "./preferencerow";
-import type { PurposeView } from "./preferences.logic";
 import "./preferences.css";
 
 // One purpose on the public preference centre, outside the page that queries
