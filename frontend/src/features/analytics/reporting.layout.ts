@@ -8,9 +8,9 @@ type BlockKind = Card["kind"];
 type MetricId = components["schemas"]["ReportingMetricID"];
 export type ReportingLayout = Section[];
 
-// Mirrors the reporting service's oneChartKinds and unplacedKind (layout.go):
-// two kinds the evaluation draws once for the whole report, and the metric
-// details table, which the page always draws below the charts.
+// Mirrors oneChartKinds and unplacedKind in the reporting service's layout.go.
+// The evaluation draws the first two once for the whole report. The page
+// always draws the metric details table below the charts.
 const ONE_CHART_KINDS: ReadonlySet<BlockKind> = new Set([
   "owner_attainment",
   "sdr_outcomes",

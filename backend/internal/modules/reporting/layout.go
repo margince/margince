@@ -32,8 +32,8 @@ func deriveLayoutBlocks(selection *crmcontracts.ReportingSelection) {
 	selection.Blocks = blocks
 }
 
-// Kinds the evaluation draws as one chart for the whole report: it merges the
-// two SDR series, and owner attainment shows bookings whenever bookings is
+// Kinds the evaluation draws as one chart for the whole report. It merges the
+// two SDR series. Owner attainment shows bookings whenever bookings is
 // selected. A card cannot ask for one metric's chart of these.
 var oneChartKinds = []crmcontracts.ReportingBlockKind{"owner_attainment", "sdr_outcomes"}
 
