@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
@@ -39,7 +40,7 @@ func TestSweepWorkspaceDataClearsDomainKeepsIdentity(t *testing.T) {
 
 	e.SeedContact(t, "Alice", nil)
 	e.SeedCompany(t, "Acme", nil)
-	engine, err := newDataTaskEngine(e.Pool, "test", time.Now)
+	engine, err := newDataTaskEngine(e.Pool, "test", func() time.Time { return clocktest.Now(t) })
 	if err != nil {
 		t.Fatal(err)
 	}

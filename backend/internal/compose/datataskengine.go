@@ -14,7 +14,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/datatask"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func newDataTaskEngine(pool *pgxpool.Pool, release string, now func() time.Time) (*datatask.Engine, error) {
@@ -23,7 +22,7 @@ func newDataTaskEngine(pool *pgxpool.Pool, release string, now func() time.Time)
 
 func dataTaskFailureNotice(pool *pgxpool.Pool) func(context.Context, pgx.Tx, datatask.Progress) error {
 	return func(ctx context.Context, tx pgx.Tx, p datatask.Progress) error {
-		ctx = principal.SystemActing(ctx, "system:datatask:"+p.TaskID)
+		ctx = datatask.Acting(ctx, p.TaskID)
 		recipients, err := identity.DataTaskOperatorsTx(ctx, tx)
 		if err != nil {
 			return err

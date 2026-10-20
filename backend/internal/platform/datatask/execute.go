@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -15,7 +16,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 const (
@@ -85,12 +85,12 @@ func (e *Engine) runBatch(ctx context.Context, tx pgx.Tx, picked selection) erro
 			return err
 		}
 		if estimate < 0 || estimate > estimateCap {
-			return fmt.Errorf("data task estimate exceeded its declared bound")
+			return errors.New("data task estimate exceeded its declared bound")
 		}
 		now := e.now()
 		p.Estimate, p.EstimateCapped, p.EstimatedAt = &estimate, capped, &now
 	}
-	ctx = storekit.WithBatch(principal.SystemActing(ctx, "system:datatask:"+picked.task.ID), p.RunID)
+	ctx = storekit.WithBatch(Acting(ctx, picked.task.ID), p.RunID)
 	out, err := picked.step.Batch(ctx, tx, BatchIn{Cursor: p.Cursor, Limit: p.BatchLimit, RunID: p.RunID})
 	if err != nil {
 		return err

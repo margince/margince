@@ -208,14 +208,14 @@ func TestVersionRestartAndMissingPrerequisite(t *testing.T) {
 		t.Fatal(err)
 	}
 	e.tasks[0].Version = 2
-	e.tasks[0].Requires = []string{"core/9999999999"}
+	e.tasks[0].Requires = []string{"core/0"}
 	if _, err := e.Execute(ctx); err != nil {
 		t.Fatal(err)
 	}
 	if got := progressFor(ctx, t, e); got.BlockedReason != "missing_prerequisite" || got.TaskVersion != 1 {
 		t.Fatalf("prerequisite=%+v", got)
 	}
-	e.tasks[0].Requires = nil
+	e.tasks[0].Requires = []string{"core/0001"}
 	if _, err := e.Execute(ctx); err != nil {
 		t.Fatal(err)
 	}

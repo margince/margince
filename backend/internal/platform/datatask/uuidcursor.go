@@ -5,8 +5,8 @@ package datatask
 
 import (
 	"encoding/json"
-	"fmt"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -17,7 +17,7 @@ func UUIDCursor(cursor json.RawMessage) (ids.UUID, error) {
 		return after, nil
 	}
 	if err := json.Unmarshal(cursor, &after); err != nil {
-		return ids.Nil, fmt.Errorf("data task cursor is not a record position: %w", err)
+		return ids.Nil, &storekit.MalformedCursorError{}
 	}
 	return after, nil
 }

@@ -17,6 +17,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// EstimateAction is shared by operator adapters and ledger audit actions.
+const EstimateAction = "estimate"
+
 // Control requires the version the operator read, so a stale click cannot replace progress.
 func (e *Engine) Control(ctx context.Context, taskID, stepName, action string, version int64) error {
 	if err := auth.RequireHuman(ctx); err != nil {
@@ -50,7 +53,7 @@ func (e *Engine) Control(ctx context.Context, taskID, stepName, action string, v
 		if p.Version != version || p.TaskVersion > task.Version {
 			return apperrors.ErrConflict
 		}
-		if action == paramEstimate {
+		if action == EstimateAction {
 			return e.refreshEstimate(ctx, tx, task, step, p)
 		}
 		return e.changeStatus(ctx, tx, p, action)
@@ -104,7 +107,7 @@ func (e *Engine) refreshEstimate(ctx context.Context, tx pgx.Tx, task Task, step
 		return err
 	}
 	if estimate < 0 || estimate > estimateCap {
-		return fmt.Errorf("data task estimate exceeded its declared bound")
+		return errors.New("data task estimate exceeded its declared bound")
 	}
 	tag, err := tx.Exec(ctx, `UPDATE data_task_run SET estimate = @estimate, estimate_capped = @capped,
  estimated_at = @now, updated_at = @now, version = version + 1
@@ -116,7 +119,7 @@ func (e *Engine) refreshEstimate(ctx context.Context, tx pgx.Tx, task Task, step
 	if tag.RowsAffected() != 1 {
 		return apperrors.ErrConflict
 	}
-	return logControl(ctx, tx, p, paramEstimate)
+	return logControl(ctx, tx, p, EstimateAction)
 }
 
 func logControl(ctx context.Context, tx pgx.Tx, p Progress, action string) error {

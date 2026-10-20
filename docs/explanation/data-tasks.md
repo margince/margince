@@ -1,4 +1,3 @@
-<!-- prose:plain -->
 # Background data corrections
 
 A release carries large corrections as data tasks. The worker applies them in bounded transactions

@@ -154,7 +154,8 @@ function jobLabel(
   job: string,
   t: Translator,
 ): string | undefined {
-  const name = job.replaceAll("-", "_");
+  const pass = family === "systemJob" ? job.split(":")[0] : job;
+  const name = pass?.replaceAll("-", "_");
   // Each family spelled whole, so the orphan-key sweep sees both prefixes.
   const key = family === "systemJob" ? `systemJob.${name}` : `agentJob.${name}`;
   return isMessageKey(key) ? t(key) : undefined;

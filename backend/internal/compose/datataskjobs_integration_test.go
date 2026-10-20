@@ -17,6 +17,7 @@ import (
 	"github.com/riverqueue/river/rivertest"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 )
 
@@ -164,9 +165,9 @@ func TestReconciliationQueuesCompletedCorrectionsAtANewerCodeVersion(t *testing.
 		t.Fatal(err)
 	}
 	e.WsExec(t, `UPDATE data_task_run SET status='done'`)
-	tasks := dataTaskCatalog(time.Now)
+	tasks := dataTaskCatalog(func() time.Time { return clocktest.Now(t) })
 	tasks[0].Version++
-	upgraded, err := datatask.New(e.Pool, tasks, "test", time.Now, dataTaskFailureNotice(e.Pool))
+	upgraded, err := datatask.New(e.Pool, tasks, "test", func() time.Time { return clocktest.Now(t) }, dataTaskFailureNotice(e.Pool))
 	if err != nil {
 		t.Fatal(err)
 	}

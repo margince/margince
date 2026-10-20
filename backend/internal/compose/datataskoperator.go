@@ -5,7 +5,7 @@ package compose
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -24,19 +24,19 @@ func DataTaskOperation(ctx context.Context, pool *pgxpool.Pool, action string) (
 		if err := enqueueDataTaskReconcile(ctx, pool); err != nil {
 			return nil, err
 		}
-	} else if action != dataTaskStatusAction && action != "estimate" {
-		return nil, fmt.Errorf("choose data-tasks status, estimate or run")
+	} else if action != dataTaskStatusAction && action != datatask.EstimateAction {
+		return nil, errors.New("choose data-tasks status, estimate or run")
 	}
 	progress, err := engine.List(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if action == "estimate" {
+	if action == datatask.EstimateAction {
 		for _, p := range progress {
 			if p.Version == 0 {
 				continue
 			}
-			if err := engine.Control(ctx, p.TaskID, p.Step, "estimate", p.Version); err != nil {
+			if err := engine.Control(ctx, p.TaskID, p.Step, datatask.EstimateAction, p.Version); err != nil {
 				return nil, err
 			}
 		}

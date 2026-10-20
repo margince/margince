@@ -134,10 +134,10 @@ To place a new module, add `internal/modules/<name>/` (flat) and give it a `doc.
 owned" list. Follow one spine shape. Wire any need for another module as a `compose` adapter, never as an
 import.
 
-## Background corrections
+## Background tasks
 
-`platform/datatask` owns `data_task_run`, the durable progress ledger for release corrections.
+`platform/datatask` owns `data_task_run`, the saved place of each data task between runs.
 It receives step functions from compose and never imports a module. Capture owns provider-date
-stamping, contacts owns acquisition provenance, and consent owns privacy-notice settlement. Their
-transaction functions share the executor's transaction. See
-[Background data corrections](../explanation/data-tasks.md).
+stamping, contacts owns source provenance, and consent owns privacy-notice changes. Their
+transaction functions share the same transaction. See
+[Background data tasks](../explanation/data-tasks.md).

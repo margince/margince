@@ -333,7 +333,7 @@ bootstrap_admin:
 
 # ---- data_tasks ----
 # data_tasks:
-#   # Delay between committed background correction batches.
+#   # Delay between saved batches of data tasks.
 #   # default: 1s
 #   pace: 1s
 
