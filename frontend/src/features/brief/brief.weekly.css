@@ -174,7 +174,7 @@
   margin: 0;
 }
 .brief-report-figure-value {
-  font: var(--fontDisplayMedium);
+  font: var(--fontHeadingLarge);
 }
 .brief-report-total {
   margin: 0;
