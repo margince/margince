@@ -20,6 +20,8 @@ func TestSQLSpanAt(t *testing.T) {
 		closed bool
 	}{
 		{name: "ordinary SQL is not a span", text: "a = 1", pos: 0, length: 0, closed: true},
+		{name: "an escape string keeps its escaped quote inside the span", text: `E'it\'s UPDATE contact'`, pos: 1, length: 22, closed: true},
+		{name: "an escape at the end cannot close a string", text: `E'bad\'`, pos: 1, length: 6, closed: false},
 		{name: "a quoted value", text: "x = 'a, b' , y", pos: 4, length: 6, closed: true},
 		{
 			// A doubled '' is how SQL escapes one, and it needs no case in the

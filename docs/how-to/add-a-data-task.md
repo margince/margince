@@ -33,6 +33,8 @@ Keep raw causes and record content out of progress, job arguments, metrics and n
 | No cursor progress | Advance over inspected rows even when none changed. |
 | Missing prerequisite | Declare the core migration that supplies the schema the writer reads. |
 | Changed ledger version | Refresh progress before controlling the step; do not retry a stale overwrite. |
+| Unbounded migration rewrite | Use a data task, or document a finite small-table exception. |
+| Removed task ID | Keep the released task in the worker catalog. |
 | Table ownership | Put the write in the owning module and inject it through compose. |
 
 ## Observe a correction
@@ -49,3 +51,28 @@ margince-migrate data-tasks run --wait --dsn "$DSN"
 CLI process. The database credentials confer operator authority; the HTTP controls require a human
 session and the `data_task` read or update grant. A wait stops with an error on a paused or failed
 step. Use System health to review the cause before resuming or retrying.
+
+## Keep startup bounded
+
+Core migrations after the rewrite gate's pinned baseline cannot update or delete existing rows,
+merge records, or copy rows with `INSERT … SELECT` without a reviewed exception. A table created in
+that migration has no exemption: filling it still scans the source. Anonymous `DO` blocks, procedure calls, top-level `SELECT` statements and `TRUNCATE` need an
+exception too: they can change records without a visible row writer. The gate strips procedural
+bodies because creating a function does not execute it.
+
+Use a data task for an unbounded correction. For a small, finite catalog such as built-in role
+permissions, add one line to `backend/migrationrewrites.txt`:
+
+```text
+1799999999_role_permissions.up.sql | role | exactly six built-in role documents
+```
+
+The first field is the complete migration filename. The second lists the written tables, separated
+by commas; use `*` for a procedural call, top-level query or bulk removal. The last field explains the finite bound.
+Unused exceptions and exceptions naming a different set of tables fail. This is a large-rewrite
+guard, not proof that a migration is schema-only.
+
+The task registry gate compares released task IDs on `origin/main` with the worker's current
+catalog. Keep IDs as static literals so the source census can read them. Removing a registration
+fails even if its constant remains in the code. Retirement requires a declared minimum upgrade-from
+release and is not supported yet.

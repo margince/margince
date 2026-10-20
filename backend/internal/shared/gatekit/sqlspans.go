@@ -66,7 +66,12 @@ func identStart(c byte) bool {
 func SQLSpanAt(text string, pos int) (length int, closed bool) {
 	switch {
 	case text[pos] == '\'':
+		escaped := pos > 0 && (text[pos-1] == 'E' || text[pos-1] == 'e')
 		for i := pos + 1; i < len(text); i++ {
+			if escaped && text[i] == '\\' {
+				i++
+				continue
+			}
 			if text[i] == '\'' {
 				return i - pos + 1, true
 			}
