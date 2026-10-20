@@ -254,6 +254,13 @@ commits on its own, so a failure keeps whatever was already decided. The decisio
 share a transaction, so a row can
 never say `real` without the contact it promised.
 
+**Google's meeting mail is never noise.** Mail from `calendar-notification@google.com`,
+`gemini-notes@google.com` and `meetings-noreply@google.com` is settled as a `role_mailbox` with no
+model call. It counts only when Gmail's receiving server passed DMARC for `google.com`, which is the
+activity's `inbound_sender_authenticated` stamp. A forged From is judged like any other sender. A
+`noise` answer stored for one of these addresses hides none of its authenticated mail, and the next
+such message asks the question again. The list is in `capture/googlemeetingmail.go`.
+
 **The AI call: `capture_counterparty_verdict`.** One sender per call, never a group. Only the text
 of that sender is in the prompt, so an attack message cannot answer for anyone else. SQL first limits
 the subject, body and sender name (300 / 1200 / 300 characters), and the prompt marks them off as

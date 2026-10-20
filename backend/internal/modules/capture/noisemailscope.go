@@ -48,7 +48,10 @@ import "time"
 // with the address: writing to someone is the T1 signal that they are a
 // counterparty, and it is the recovery path that makes an automatic hide safe to
 // live with — reply to a wrongly-hidden sender and the sweep lets go.
-const noiseMailScope = `
+//
+// A model's verdict never reaches Google's authenticated meeting mail
+// (googlemeetingmail.go).
+var noiseMailScope = `
 	  a.kind = 'email' AND a.captured_by LIKE 'connector:%'
 	  AND a.direction = 'inbound'
 	  AND NOT a.counterparty_outbound_attested
@@ -70,7 +73,7 @@ const noiseMailScope = `
 	  AND NOT EXISTS (
 	    SELECT 1 FROM contact_email pe JOIN contact pr ON pr.id = pe.contact_id
 	     WHERE pe.email = p.email AND pr.archived_at IS NULL
-	       AND pe.from_correspondence)`
+	       AND pe.from_correspondence)` + googleMeetingMailSpared()
 
 // noiseVerdictReach bounds how far past its own verdict a `noise` disposition
 // may reach forward in time.
@@ -97,7 +100,7 @@ const noiseVerdictReach = 14 * 24 * time.Hour
 
 // withinVerdictReach is the scope clause that bounds a disposition to the mail
 // it is actually evidence about. Composed per query rather than folded into
-// noiseMailScope because it carries a duration the const cannot interpolate.
+// noiseMailScope because it carries a duration.
 // A HUMAN decision is not bounded by it. The window exists because a model
 // verdict is evidence about the mail that was in front of it, and a forged From
 // could otherwise make one message authority over every later one. A standing
