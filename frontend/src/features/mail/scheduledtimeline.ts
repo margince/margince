@@ -44,8 +44,9 @@ export function relativeDay(
   const today = calendarDay(now, zone);
   if (day === today) return "today";
   const [year = 0, month = 1, date = 1] = today.split("-").map(Number);
-  const next = new Date(Date.UTC(year, month - 1, date + 1));
-  return day === next.toISOString().slice(0, 10) ? "tomorrow" : null;
+  // Noon, so no offset can carry the instant onto a neighbouring day.
+  const next = new Date(Date.UTC(year, month - 1, date + 1, 12));
+  return day === calendarDay(next, "UTC") ? "tomorrow" : null;
 }
 
 /**

@@ -10,7 +10,7 @@ import { SurfaceState } from "../../design-system/surfacestate";
 import { formatNumber } from "../../format/format";
 import { formatCountdown, useNow } from "../../format/now";
 import { viewerZone } from "../../format/timezone";
-import { useLocale, useT } from "../../i18n";
+import { useLocale, usePlural, useT } from "../../i18n";
 import { problemMessageOf } from "../../lib/problem";
 import "./scheduledsends.css";
 // The queue behind "send later", and the reason it has to exist: a rep who can
@@ -88,6 +88,7 @@ function QueueToolbar({
 
 export function ScheduledSendsScreen() {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   // A moment a rep chose is a personal one, so the page reads in the viewer's
   // own zone unless the send names another (see Moment).
@@ -161,7 +162,7 @@ export function ScheduledSendsScreen() {
               {view !== "today" && held.length > 0 && (
                 <section aria-label={t("sched.group.held")}>
                   <SectionHeader title={t("sched.group.held")} />
-                  <ol className="scheduledsends-list scheduledsends-heldband">
+                  <ol className="scheduledsends-list">
                     {held.map((send) => row(send, false))}
                   </ol>
                 </section>
@@ -190,7 +191,7 @@ export function ScheduledSendsScreen() {
               )}
               {view === "all" && closed.length > 0 && (
                 <Disclosure
-                  summary={t("sched.group.closedCount", {
+                  summary={plural("sched.group.closedCount", closed.length, {
                     count: formatNumber(closed.length, locale),
                   })}
                 >

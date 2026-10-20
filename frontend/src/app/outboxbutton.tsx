@@ -9,7 +9,7 @@ import {
   useScheduledSends,
 } from "../features/mail/scheduledqueue";
 import { formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import { navigate } from "../lib/router";
 import "./outboxbutton.css";
 
@@ -23,6 +23,7 @@ import "./outboxbutton.css";
 
 export function OutboxButton() {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const queue = useScheduledSends();
   // A chrome control must never take the shell down: an answer that is not a
@@ -41,7 +42,9 @@ export function OutboxButton() {
           held: formatNumber(held, locale),
         })
       : waiting > 0
-        ? t("outbox.nameWaiting", { count: formatNumber(waiting, locale) })
+        ? plural("outbox.nameWaiting", waiting, {
+            count: formatNumber(waiting, locale),
+          })
         : t("outbox.name");
 
   return (
