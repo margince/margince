@@ -1,14 +1,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useT } from "../../i18n";
-import { ReviewActionsProvider } from "../../testing/reviewactions";
+import { sheetLabels } from "../features/analytics/analytics.forecast.review";
+import { InputCheckAnswerSheet } from "../features/analytics/inputcheck.answer";
+import { useT } from "../i18n";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "../../testing/story-utils";
-import { sheetLabels } from "./analytics.forecast.review";
-import { InputCheckAnswerSheet } from "./inputcheck.answer";
+} from "../testing/story-utils";
+import { ReviewActionsProvider } from "./reviewactions";
 
 const meta = {
   title: "Records/Reports/Forecast/Buying evidence",

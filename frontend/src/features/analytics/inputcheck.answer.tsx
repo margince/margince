@@ -3,10 +3,6 @@ import { type ComponentProps, useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { EntityRef } from "../../components/entityref";
-import {
-  type ReviewActions,
-  useReviewActions,
-} from "../../components/reviewactions";
 import { Button, Modal } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import { QueryGate } from "../../design-system/querystates";
@@ -19,6 +15,7 @@ import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
+import { type ReviewActions, useReviewActions } from "../../lib/reviewactions";
 
 type InputCheck = components["schemas"]["InputCheck"];
 type Props = Omit<ComponentProps<typeof ResolveSheet>, "onSubmit"> & {
