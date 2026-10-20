@@ -49,6 +49,15 @@ export const de = {
   "homeRepair.reason.cancelled": "Der zugrunde liegende Termin wurde abgesagt.",
   "homeRepair.reason.requestAge":
     "Die ursprüngliche Anfrage liegt außerhalb des Wartezeitraums. Archivieren markiert sie nicht als beantwortet.",
+  "homeRepair.reason.contextUnread":
+    "Spätere Nachrichten wurden noch nicht gelesen.",
+  "homeRepair.reason.contextUnassessed":
+    "Spätere Nachrichten wurden noch nicht auf Änderungen dieser Zusage geprüft.",
+  "homeRepair.reason.timeUnknown": "Das Datum der Quelle ist unbekannt.",
+  "homeRepair.reason.timeContradicted":
+    "Die Datumsangaben der Quelle widersprechen sich.",
+  "homeRepair.reason.meetingPending":
+    "Der zugrunde liegende Termin hat noch nicht stattgefunden.",
   "homeRepair.reason.current":
     "Die aktuellen Regeln lassen diese Aufgabe weiterhin zu.",
   "homeRepair.unnamed": "Details nicht verfügbar",

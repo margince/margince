@@ -47,6 +47,11 @@ export const HOME_REPAIR_REASON_LABELS: Record<string, MessageKey> = {
   ending_is_not_account_wide: "homeRepair.reason.workstream",
   lifecycle_evidence_changed: "homeRepair.reason.evidenceChanged",
   duplicate_pending_proposal: "homeRepair.reason.duplicate",
+  later_context_not_read: "homeRepair.reason.contextUnread",
+  later_context_not_assessed: "homeRepair.reason.contextUnassessed",
+  source_time_unknown: "homeRepair.reason.timeUnknown",
+  source_time_contradicted: "homeRepair.reason.timeContradicted",
+  meeting_not_yet_held: "homeRepair.reason.meetingPending",
   current_work: "homeRepair.reason.current",
 };
 

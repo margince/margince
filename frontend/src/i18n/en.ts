@@ -48,6 +48,13 @@ export const en = {
   "homeRepair.reason.cancelled": "The source meeting was canceled.",
   "homeRepair.reason.requestAge":
     "The original request is past the waiting horizon; archiving does not mark it answered.",
+  "homeRepair.reason.contextUnread": "Later messages have not been read.",
+  "homeRepair.reason.contextUnassessed":
+    "Later messages have not been assessed for changes to this commitment.",
+  "homeRepair.reason.timeUnknown": "The source date is unknown.",
+  "homeRepair.reason.timeContradicted": "The source dates conflict.",
+  "homeRepair.reason.meetingPending":
+    "The source meeting has not taken place yet.",
   "homeRepair.reason.current":
     "The current admission rules still allow this work.",
   "homeRepair.unnamed": "Details unavailable",

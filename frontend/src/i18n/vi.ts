@@ -56,6 +56,12 @@ export const vi = {
   "homeRepair.reason.cancelled": "Cuộc họp nguồn đã bị hủy.",
   "homeRepair.reason.requestAge":
     "Yêu cầu gốc đã quá thời hạn chờ; lưu trữ không đánh dấu yêu cầu là đã trả lời.",
+  "homeRepair.reason.contextUnread": "Các tin nhắn sau đó chưa được đọc.",
+  "homeRepair.reason.contextUnassessed":
+    "Các tin nhắn sau đó chưa được đánh giá về thay đổi đối với cam kết này.",
+  "homeRepair.reason.timeUnknown": "Chưa xác định được ngày của nguồn.",
+  "homeRepair.reason.timeContradicted": "Các ngày của nguồn không khớp nhau.",
+  "homeRepair.reason.meetingPending": "Cuộc họp nguồn chưa diễn ra.",
   "homeRepair.reason.current":
     "Công việc này vẫn đáp ứng các quy tắc hiện tại.",
   "homeRepair.unnamed": "Không có chi tiết",
