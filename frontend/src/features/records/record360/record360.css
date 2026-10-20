@@ -328,3 +328,29 @@
     grid-column: 1 / -1;
   }
 }
+
+/* In the next-step strip a move reads as one line of work: the ask at the
+   small heading rung, what it rests on under it, and its verbs side by side at
+   the row's far end. */
+.record-next .co-move-ask,
+.record-next .co-todo-title {
+  font: var(--fontHeadingSmall);
+}
+.record-next .today-actions {
+  flex-direction: row;
+  align-items: center;
+  min-width: 0;
+}
+.record-next .today-verb > .btn,
+.record-next .today-verb > .btn-with-reason > .btn {
+  width: auto;
+}
+.record-next .co-move {
+  background: none;
+}
+.record-next .co-move-basis {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+}

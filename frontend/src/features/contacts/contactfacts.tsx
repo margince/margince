@@ -3,14 +3,11 @@
 
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
-import { rosterOwnerName } from "../../components/entityref";
 import { ContactLink } from "../../design-system/contactlink";
 import { OffsiteLink } from "../../design-system/offsitelink";
 import { Fact, RecordFacts } from "../../design-system/recordfacts";
 import { linkedinUrl } from "../../format/weburl";
 import { useT } from "../../i18n";
-import { useMemberName } from "../../lib/membernames";
-import { buyingRoleLabel } from "../companies/companycontacts/summary";
 
 type Contact = components["schemas"]["Contact"];
 
@@ -30,18 +27,19 @@ function ProfileLink({ href }: Readonly<{ href: string }>) {
   );
 }
 
-// The buying role is what the relationship edge records, never read off a
-// title. A contact with a title can still have none, and then the cell is gone.
+// What they do and where, then the ways to reach them. Owner and buying role
+// stand in the fields column and beside the name, so the line does not repeat
+// them.
 export function ContactFacts({
   contact,
-  buyingRole,
-}: Readonly<{ contact: Contact; buyingRole?: string | null }>): ReactNode {
+  role,
+}: Readonly<{ contact: Contact; role?: ReactNode }>): ReactNode {
   const t = useT();
-  const ownerName = useMemberName(contact.owner_id);
   const email = contact.emails?.[0]?.email;
   const phone = contact.phones?.[0]?.phone;
   return (
     <RecordFacts>
+      {role ? <Fact label={t("history.field.title")}>{role}</Fact> : null}
       {email && (
         <Fact label={t("history.field.email")}>
           <ContactLink
@@ -68,19 +66,6 @@ export function ContactFacts({
       {typeof contact.social?.linkedin === "string" && (
         <Fact label={t("contact.page.linkedin")}>
           <ProfileLink href={contact.social.linkedin} />
-        </Fact>
-      )}
-      <Fact label={t("contact.page.owner")} named>
-        {rosterOwnerName(
-          contact.owner_id,
-          ownerName,
-          t,
-          t("contact.page.ownerUnassigned"),
-        )}
-      </Fact>
-      {buyingRole && (
-        <Fact label={t("contact.page.buyingRole")} named>
-          {buyingRoleLabel(buyingRole, t)}
         </Fact>
       )}
     </RecordFacts>

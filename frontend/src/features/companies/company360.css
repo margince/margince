@@ -88,21 +88,10 @@
   gap: var(--space-4);
   align-items: start;
 }
-/* On the record sheet the pair are sections that bleed, so they stand the
-   sheet's gutter apart rather than a card's interval (composed.css). */
-.record-sheet .co-reading-pair {
-  column-gap: var(--sheetGutter);
-}
-/* Among an overview's sections the reading is a run of sections like the
-   rest: spaced by their own padding and rules, and the pair stacked, since a
-   section's title column leaves half a measure too little for its rows. */
-.record-sections.co-overview-stack,
-.record-sections .co-reading {
-  gap: 0;
-}
+/* Among an overview's cards the reading's own cards keep the grid's interval. */
+.record-sections .co-reading,
 .record-sections .co-reading-pair {
-  grid-template-columns: minmax(0, 1fr);
-  gap: 0;
+  gap: var(--space-4);
 }
 /* What this account is worth to us. The panel is one reading in five parts —
    the verdict, the dimensions under it, the two sides of the argument, the

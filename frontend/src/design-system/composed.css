@@ -668,19 +668,16 @@
   border-radius: var(--r-lg);
   padding: var(--space-6) var(--sheetInset) var(--space-8);
 }
-/* The fields column is a card of its own beside the sheet, on the same white
-   ground, wide enough for a label and a value that does not break. */
+/* The fields column stands beside the sheet on the page's own ground, wide
+   enough for a label and a value that does not break. */
 .page-zones.record-zones {
-  --asideOpenW: 320px;
+  --asideOpenW: 280px;
   --asideFoldW: var(--space-12);
   column-gap: var(--space-6);
 }
 /* On a narrower desktop the card keeps a label's measure, and the sheet and
    its tabs a smaller inset, so the tabs still fit on the sheet beside it. */
 @media (max-width: 1360px) {
-  .page-zones.record-zones {
-    --asideOpenW: 280px;
-  }
   .record-zones .record-sheet {
     --sheetInset: var(--space-6);
   }
@@ -697,21 +694,23 @@
   > .page-zones-main {
   margin-inline-end: calc(-1 * var(--space-6));
 }
-.record-zones > .record-aside,
 .record-zones > .page-zones-aside-fold {
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-lg);
 }
+/* Open, it is no card: groups of rows on the page's ground, each named by a
+   caption, a wide interval between one group and the next. */
 .record-zones > .record-aside {
   position: relative;
-  padding-block: var(--space-5) var(--space-3);
+  gap: var(--space-6);
+  padding-block-start: var(--space-2);
 }
-/* The pane's own switch sits on its first title's line, at the far end. */
+/* The pane's own switch sits on its first caption's line, at the far end. */
 .record-aside-head {
   position: absolute;
-  inset-block-start: var(--space-4);
-  inset-inline-end: var(--padPanel);
+  inset-block-start: 0;
+  inset-inline-end: 0;
   z-index: 1;
 }
 /* As wide as its switch, against the pane's rule that sizes every child to
@@ -719,19 +718,14 @@
 .record-zones > .record-aside > .record-aside-head {
   width: max-content;
 }
-/* Each group of fields is parted from the next by one rule across the card. */
-.record-aside .panel + .panel {
-  padding-block-start: var(--space-4);
-  border-block-start: 1px solid var(--borderSubtle);
-}
-/* The card is narrow, so its labels take a narrower rung than a form's, and
-   every group in it shares that rung so their values line up. */
+/* The column is narrow, so its labels take a narrower rung than a form's,
+   and every group in it shares that rung so their values line up. */
 .record-aside {
-  --asideLabelW: 88px;
+  --asideLabelW: 96px;
 }
 .record-aside .fieldgrid {
   grid-template-columns: var(--asideLabelW) minmax(0, 1fr);
-  row-gap: var(--space-2);
+  row-gap: var(--space-3);
 }
 /* Folded, the pane is a strip the height of the sheet: its name set on its
    side, and the arrow that brings it back. */
@@ -802,11 +796,6 @@
   padding-inline: 0;
   background: var(--bgElevated);
   color: var(--textSecondary);
-}
-/* Two sections side by side on the sheet stand a gutter apart wide enough for
-   both bleeds (panel.css, `.record-sheet .panel`) with air left between them. */
-.record-sheet {
-  --sheetGutter: calc(2 * var(--padPanel) + var(--space-4));
 }
 
 /* The head's facts strip: caption over value, cells laid along the row and
@@ -1203,10 +1192,9 @@
   gap: var(--space-6);
   min-width: 0;
 }
-/* An overview of sections (panel.css, `.record-sections`) is spaced by its
-   sections' own padding and the hairline between them, not by a gap. */
+/* An overview's cards stand the grid's own interval apart (panel.css). */
 .record-stack.record-sections {
-  gap: 0;
+  gap: var(--space-4);
 }
 
 /* The break between the record's bodies and its story, at the same step the

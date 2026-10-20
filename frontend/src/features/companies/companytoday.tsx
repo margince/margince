@@ -187,12 +187,14 @@ export function NeedsList({
   // Tasks tab of its own.
   onOpenTasks?: () => void;
 }>) {
+  const t = useT();
   if (reading.state !== "ready") {
     return <TodayPanel state={reading.state} onOpenTasks={onOpenTasks} />;
   }
   return (
     <TodayPanel
       onOpenTasks={onOpenTasks}
+      restTitle={t("today.alsoOnList")}
       footer={reading.footer}
       notice={reading.notice}
       complete={reading.complete}

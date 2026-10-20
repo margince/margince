@@ -599,7 +599,7 @@
      "Type comes from the tokens" has the pair of rules and why they are two. */
   /* Brand and marketing content. */
   --fontHeadingXXLarge:
-    var(--fontWeightBold) 2rem / 2.25rem var(--fontFamilyHeading);
+    var(--fontWeightBold) 2.25rem / 2.5rem var(--fontFamilyHeading);
   /* Brand and marketing, and the largest page title in the product. */
   --fontHeadingXLarge:
     var(--fontWeightBold) 1.75rem / 2rem var(--fontFamilyHeading);
@@ -618,10 +618,10 @@
   /* The verdict a record's 360 reached, set as the record's lead: the one
      word on the page larger than its name, because it is what the page is for. */
   --fontVerdict:
-    var(--fontWeightBold) 2.5rem / 2.75rem var(--fontFamilyHeading);
+    var(--fontWeightBold) 3.5rem / 3.75rem var(--fontFamilyHeading);
   /* The sentence under that verdict, in the display face at reading size. */
   --fontVerdictBecause:
-    var(--fontWeightRegular) 1.125rem / 1.625rem var(--fontFamilyHeading);
+    var(--fontWeightRegular) 1.25rem / 1.875rem var(--fontFamilyHeading);
   /* A panel's title. A record's sheet and fields column rebind it to the
      small rung (panel.css), because there a panel is a section of a document. */
   --fontPanelTitle: var(--fontHeadingMedium);

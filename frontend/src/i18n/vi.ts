@@ -4720,6 +4720,9 @@ export const vi = {
   "co.360.subject": "{name} · 360",
   "co.360.subjectUnnamed": "Công ty này · 360",
   "today.title": "Tiếp theo",
+  "today.alsoOnList": "Cũng trong danh sách của bạn",
+  "today.more_one": "+{count} việc",
+  "today.more_other": "+{count} việc",
   "co.spine.earlier_other": "{count} chuỗi trao đổi trước đó",
   "co.spine.earlier_one": "{count} chuỗi trao đổi trước đó",
   "today.failed":

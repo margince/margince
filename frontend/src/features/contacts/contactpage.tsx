@@ -46,7 +46,7 @@ import {
   runContactMomentAction,
   useComposer,
 } from "./contactpage.drawers";
-import { ContactMarks } from "./contactpage.marks";
+import { ContactMarks, ContactRoleBadge } from "./contactpage.marks";
 import { ContactTabPanel, TAB_LABEL_KEYS } from "./contactpage.tabs";
 
 export { runContactMomentAction } from "./contactpage.drawers";
@@ -234,16 +234,16 @@ export function ContactPageV2({
           // thing on the page, but beside the agent's ask it need not be the
           // size of a masthead.
           scale="compact"
-          // The role and the company on the name's own line, then the ways
-          // to reach them on one line, then the marks.
-          nameBadge={<ContactSubtitle view={view.data} />}
+          // The seat they hold on the deal beside the name, then what they
+          // do, where, and the ways to reach them on one line.
+          nameBadge={<ContactRoleBadge role={view.data.commercial?.role} />}
           subtitle={
             <ContactFacts
               contact={contact}
-              buyingRole={view.data.commercial?.role}
+              role={<ContactSubtitle view={view.data} />}
             />
           }
-          pulse={<ContactMarks view={view.data} tab={tab} />}
+          pulse={<ContactMarks view={view.data} />}
           actions={
             // refusedReasonId is the same sentence the band below states:
             // one write-gate for the whole header, not a narrower one per

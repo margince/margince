@@ -25,29 +25,28 @@ import {
   Skeleton,
 } from "../../../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../../../design-system/panel";
-import { useT } from "../../../i18n";
+import { formatNumber } from "../../../format/format";
+import { useLocale, usePlural, useT } from "../../../i18n";
 import "../../companies/company360.css";
 // The verb column: `.today-actions` and `.today-verb`, drawn here rather than
 // left to whichever page mounts a row that needs them.
 import "./record360.css";
 
 /**
- * TodayPanel is the panel: its head, the rows a caller hands in, and the one
- * honest sentence for a day with no rows.
+ * TodayPanel is the record's next step: a strip holding the first row a caller
+ * hands in, the count of the rest, and the one honest sentence for a day with
+ * no rows. The rest stand in a card of their own when the caller names one.
  *
  * `state` is the read the rows come from. Neither the pending read nor the
  * failed one draws rows — and neither may draw the quiet sentence, which is a
  * claim about the record ("nothing needs you") that a read still in flight
  * has no basis for.
- *
- * Indigo in every state, because the pane's answer is a machine's whichever
- * one it is giving: the moves are what the agent found, and "nothing needs
- * you" is its reading too.
  */
 export function TodayPanel({
   state = "ready",
   onOpenTasks,
   tasksLabel,
+  restTitle,
   footer,
   notice,
   complete = true,
@@ -58,6 +57,9 @@ export function TodayPanel({
   // own to open.
   onOpenTasks?: () => void;
   tasksLabel?: string;
+  // The strip draws only the first row. A record that lists the rest names
+  // the card they stand in; without one they are counted beside the first.
+  restTitle?: string;
   // The band under the rows: what the day counts down to, and what the day was
   // read from. It is a band and not a line in the head — a caller hands in a
   // commitment badge, a truncation count and the read's own provenance, and
@@ -74,67 +76,69 @@ export function TodayPanel({
   children?: ReactNode;
 }>) {
   const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
   // Counted rather than tested for truthiness: a caller hands in arrays, and
   // an empty array is truthy.
-  const rows = Children.toArray(children);
-  // Panel's own head, rather than one this pane stacks for itself: the title,
-  // and the way to the record's own list at the far end.
-  //
-  // The band carries no authorship mark. The pane is already indigo, which IS
-  // the claim, and the rows under it are of two kinds: what the agent found
-  // says so in its own byline, while a to-do is a commitment the record
-  // already carried. A mark over the head claims both, and the reader it
-  // reaches is the one deciding whether a machine wrote the promise somebody
-  // else made.
-  //
-  // Stated ONCE for all three states rather than per branch: a skeleton or an
-  // error under a different head is a reader unable to tell whether they are
-  // looking at the same pane.
+  const [lead, ...rest] = Children.toArray(children);
+  const openTasks = onOpenTasks ? (
+    <Button variant="link" onClick={onOpenTasks}>
+      {tasksLabel ?? t("co.suggest.viewTasks")}
+    </Button>
+  ) : undefined;
+  // The count of what the strip leaves out, as the way to it when there is one.
+  const more = plural("today.more", rest.length, {
+    count: formatNumber(rest.length, locale),
+  });
   return (
-    <Panel
-      tone="ai"
-      // `co-lead` is the company lead's two-column move: the claim on the
-      // left, the verbs opposite it. Without it a contact's verbs fell UNDER
-      // the claim, right-aligned, and the whole width beside them was empty.
-      className="co-lead"
-      title={t("today.title")}
-      // One control, handed in bare: `Button`'s link variant is the text
-      // affordance the head wants, and panel.css already holds everything
-      // after the title at its natural width, so there is nothing left for a
-      // strip around it to lay out.
-      titleAction={
-        onOpenTasks ? (
-          <Button variant="link" onClick={onOpenTasks}>
-            {tasksLabel ?? t("co.suggest.viewTasks")}
-          </Button>
-        ) : undefined
-      }
-      footer={footer}
-    >
-      {state === "loading" && (
-        <PanelBody>
-          <Skeleton width="100%" height={64} />
-        </PanelBody>
+    <>
+      {/* The next step as one strip across the sheet: its name, the first
+          row, and how much more waits behind it. Neutral, because a row the
+          agent found says so in its own byline and a to-do is the record's. */}
+      <Panel
+        className="co-lead record-next"
+        title={t("today.title")}
+        footer={footer}
+      >
+        {state === "loading" && (
+          <PanelBody>
+            <Skeleton width="100%" height={40} />
+          </PanelBody>
+        )}
+        {state === "failed" && (
+          <PanelBody>
+            <EmptyState>{t("today.failed")}</EmptyState>
+          </PanelBody>
+        )}
+        {state === "ready" && lead}
+        {/* Not "nothing to do": the brief read everything it can read and
+            found nothing that needs a contact today, which is a real answer
+            and different from the record being empty. */}
+        {state === "ready" && lead === undefined && complete && (
+          <PanelBody>
+            <EmptyState>{t("today.quiet")}</EmptyState>
+          </PanelBody>
+        )}
+        {state === "ready" && (rest.length > 0 || openTasks) && (
+          <span className="record-next-more">
+            {rest.length > 0 && onOpenTasks ? (
+              <Button variant="link" onClick={onOpenTasks}>
+                {more}
+              </Button>
+            ) : (
+              (rest.length > 0 && more) || openTasks
+            )}
+          </span>
+        )}
+        {/* Under whatever the read produced, and only once it has settled. */}
+        {state === "ready" && notice}
+      </Panel>
+      {state === "ready" && restTitle && rest.length > 0 && (
+        <Panel title={restTitle} titleAction={openTasks}>
+          {rest}
+        </Panel>
       )}
-      {state === "failed" && (
-        <PanelBody>
-          <EmptyState>{t("today.failed")}</EmptyState>
-        </PanelBody>
-      )}
-      {state === "ready" && rows}
-      {/* Not "nothing to do": the brief read everything it can read and found
-          nothing that needs a contact today. That is a real answer and it is
-          different from the record being empty. */}
-      {state === "ready" && rows.length === 0 && complete && (
-        <PanelBody>
-          <EmptyState>{t("today.quiet")}</EmptyState>
-        </PanelBody>
-      )}
-      {/* Under whatever the read produced, and only once it has settled: a
-          withheld-sources line over a skeleton describes a reading that does
-          not exist yet. */}
-      {state === "ready" && notice}
-    </Panel>
+    </>
   );
 }
 

@@ -4820,6 +4820,9 @@ export const de = {
   "co.360.subject": "{name} · 360",
   "co.360.subjectUnnamed": "Dieses Unternehmen · 360",
   "today.title": "Als Nächstes",
+  "today.alsoOnList": "Außerdem auf Ihrer Liste",
+  "today.more_one": "+{count} Aufgabe",
+  "today.more_other": "+{count} Aufgaben",
   "co.spine.earlier_other": "{count} frühere Threads",
   "co.spine.earlier_one": "{count} früherer Thread",
   "today.failed":
