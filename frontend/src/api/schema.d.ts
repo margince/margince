@@ -36472,7 +36472,34 @@ export interface components {
             /** @enum {string} */
             close_window: "fiscal_quarter" | "all_open";
             metrics: components["schemas"]["ReportingMetricID"][];
+            /**
+             * @description The chart kinds the report draws, in order. When `layout` is present the service
+             *     derives this list from it (each kind once, in the order the layout first names it)
+             *     and ignores what was sent, so a client that reads only `blocks` keeps working.
+             */
             blocks: components["schemas"]["ReportingBlockKind"][];
+            /**
+             * @description Sections of cards, in reading order. Absent means one untitled section of
+             *     full-width cards in `blocks` order.
+             */
+            layout?: components["schemas"]["ReportingSection"][];
+        };
+        ReportingSection: {
+            /** @description The heading over this section. Absent or blank draws none. */
+            title?: string;
+            cards: components["schemas"]["ReportingCard"][];
+        };
+        ReportingCard: {
+            /** @description A short id the client mints. Unique within the report, so one chart kind can be placed twice. */
+            id: string;
+            kind: components["schemas"]["ReportingBlockKind"];
+            /** @description The one metric this card draws. Absent draws the kind for every selected metric that has it. */
+            metric?: components["schemas"]["ReportingMetricID"];
+            /**
+             * @description `half` shares a row with the next half card. A chart that needs the whole width draws full regardless.
+             * @enum {string}
+             */
+            width: "full" | "half";
         };
         ReportingContext: {
             /** @description Base language used for generated explanations. Absent on legacy readings, which use English. */
