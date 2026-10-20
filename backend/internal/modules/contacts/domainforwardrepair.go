@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// ForwardedTriageBinding retains the source read needed to review an existing binding.
 type ForwardedTriageBinding struct {
 	Domain       string
 	CompanyID    ids.CompanyID
@@ -42,7 +43,7 @@ func (s *Store) ForwardedTriageBindings(ctx context.Context, afterDomain string,
 			return err
 		}
 		if scope == "" {
-			scope = "true"
+			scope = sqlAlwaysVisible
 		}
 		query := `SELECT d.domain, d.company_id, r.id, r.pages
    FROM company_domain_disposition d JOIN company c ON c.id = d.company_id

@@ -106,11 +106,14 @@ export function DomainQuestionAnswer({
   const { actions } = item;
   return (
     <>
-      <Button onClick={() => setReview(true)}>
-        {t("worklist.domainReview.title")}
-      </Button>
+      {actions.includes("reopen") && (
+        <Button onClick={() => setReview(true)}>
+          {t("worklist.domainReview.title")}
+        </Button>
+      )}
       {review && <DomainReview onClose={() => setReview(false)} />}
-      {actions.includes("keep") ? (
+      {actions.includes("keep") &&
+      item.domain_reason_code !== "forwarded_identity" ? (
         <Button
           pending={keep.isPending}
           disabled={busy}

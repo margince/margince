@@ -252,7 +252,7 @@ func reopenWithheldDispositionTx(
            AND (@force OR (pending_reason IS DISTINCT FROM 'forwarded_identity' AND pending_reason IS DISTINCT FROM 'reserved_domain' AND (owner_id IS NULL OR (@evidence::timestamptz IS NOT NULL AND (last_evidence_at IS NULL OR @evidence > last_evidence_at)))))
 		   AND (pending_reason = 'unevidenced' OR pending_reason = 'stale_evidence'
 		        OR next_attempt_at IS NULL OR owner_id IS NULL)`,
-		pgx.NamedArgs{"domain": domain, "owner": ownerID, "pending": DomainPending, "suppressed": DomainSuppressed, "force": force, "evidence": evidenceAt}); err != nil {
+		pgx.NamedArgs{auditKeyDomain: domain, "owner": ownerID, DomainPending: DomainPending, DomainSuppressed: DomainSuppressed, "force": force, domainEvidenceKey: evidenceAt}); err != nil {
 		return fmt.Errorf("contacts: reopening the withheld question for %s: %w", domain, err)
 	}
 	return recordEvidenceAgeTx(ctx, tx, domain, evidenceAt)
@@ -293,7 +293,7 @@ func admitClaimedDomainTx(ctx context.Context, tx pgx.Tx, domain string) error {
 		 WHERE domain = @domain AND admission = @suppressed`,
 		pgx.NamedArgs{
 			admissionDomainArg: base, "admitted": DomainAdmitted, admissionHumanArg: AdmissionSourceHuman,
-			"suppressed": DomainSuppressed, admissionReasonArg: claimedDomainReason, "reason_code": string(crmcontracts.BlockedDomainReasonCodeCompanyCreated),
+			DomainSuppressed: DomainSuppressed, admissionReasonArg: claimedDomainReason, "reason_code": string(crmcontracts.BlockedDomainReasonCodeCompanyCreated),
 		}); err != nil {
 		return fmt.Errorf("contacts: admitting the claimed domain %s: %w", base, err)
 	}

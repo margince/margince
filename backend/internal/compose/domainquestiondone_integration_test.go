@@ -72,17 +72,9 @@ func TestFreshCapturedEvidenceReturnsADeferredDomainQuestion(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
 	const domain = "fresh-question.test"
-	openTriageQuestion(t, e, domain, "hello@"+domain, "Sender")
-	if _, err := e.Contacts.ResolveUnreadableDomainTriage(ctx, contacts.ResolveDomainTriageInput{Domain: domain}); err != nil {
-		t.Fatal(err)
-	}
 	deferredAt := time.Date(2025, time.January, 1, 12, 0, 0, 0, time.UTC)
-	service := newAttentionService(e.Pool, approvals.NewService(e.DB()), func() time.Time { return deferredAt })
-	if err := service.MarkRowsDone(ctx, []attention.RowRef{{Source: "domain_question", RowID: domain}}); err != nil {
-		t.Fatal(err)
-	}
-	for _, delta := range []time.Duration{-time.Hour, time.Hour} {
-		evidenceAt := deferredAt.Add(delta)
+	capture := func(evidenceAt time.Time) {
+		t.Helper()
 		mail, _, err := e.Activities.LogActivity(ctx, activities.LogActivityInput{Kind: "email", Subject: new("Domain evidence"), Direction: new("inbound"), OccurredAt: &evidenceAt, Source: "manual"})
 		if err != nil {
 			t.Fatal(err)
@@ -93,6 +85,14 @@ func TestFreshCapturedEvidenceReturnsADeferredDomainQuestion(t *testing.T) {
 		if _, err := e.Contacts.ResolveUnreadableDomainTriage(ctx, contacts.ResolveDomainTriageInput{Domain: domain}); err != nil {
 			t.Fatal(err)
 		}
+	}
+	capture(deferredAt.Add(-2 * time.Hour))
+	service := newAttentionService(e.Pool, approvals.NewService(e.DB()), func() time.Time { return deferredAt })
+	if err := service.MarkRowsDone(ctx, []attention.RowRef{{Source: "domain_question", RowID: domain}}); err != nil {
+		t.Fatal(err)
+	}
+	for _, delta := range []time.Duration{-time.Hour, time.Hour} {
+		capture(deferredAt.Add(delta))
 		questions, err := e.Contacts.OpenDomainQuestionsForOwner(ctx)
 		if err != nil {
 			t.Fatal(err)

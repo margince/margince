@@ -46,7 +46,8 @@ import (
 //
 // decidable's own doc is why that cannot stand: it backs List, Get and Decide
 // alike so triage visibility and the decision gate can never drift apart. A
-// record page answering differently is that drift, wearing a fourth caller.
+// record page must preserve those authority checks. Its explicit target review
+// includes personally muted rows; ordinary inbox lists require include_muted.
 //
 // The scan is bounded at PendingScanCap rows so one record page cannot pay
 // for an unbounded backlog. A caller counting rather than listing must treat

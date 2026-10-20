@@ -41,9 +41,9 @@ func domainQuestionItem(q DomainQuestion) crmcontracts.AttentionItem {
 	reason := q.Reason
 	asked := q.AskedAt
 	reasonCode := q.ReasonCode
-	actions := []crmcontracts.AttentionItemActions{verbKeep, verbDiscard, "reopen"}
+	actions := []crmcontracts.AttentionItemActions{verbKeep, verbDiscard, crmcontracts.AttentionItemActionsReopen}
 	if q.ReasonCode == contacts.PendingForwardedIdentity {
-		actions = []crmcontracts.AttentionItemActions{verbDiscard, "reopen"}
+		actions = []crmcontracts.AttentionItemActions{verbDiscard, crmcontracts.AttentionItemActionsReopen}
 	}
 	return crmcontracts.AttentionItem{
 		Id:               q.Domain,

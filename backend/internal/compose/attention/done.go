@@ -235,5 +235,5 @@ func cameBack(row ranked, doneAt, asOf time.Time, zone *time.Location) bool {
 
 // A bounded maintenance group cannot dismiss unseen members; review defers each question.
 func domainMaintenanceBatch(row ranked) bool {
-	return row.item.Batch != nil && row.item.Batch.Key == "domain_questions"
+	return row.item.Batch != nil && row.item.Batch.Key == domainQuestionsBatchKey
 }

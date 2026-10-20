@@ -26,7 +26,7 @@ func recordDomainQuestionReader(ctx context.Context, tx pgx.Tx, domain string, r
 	var existed bool
 	if err := tx.QueryRow(ctx, `SELECT d.id, r.evidence_at, r.reader_id IS NOT NULL
  FROM company_domain_disposition d LEFT JOIN company_domain_question_reader r
- ON r.domain = d.domain AND r.reader_id = @reader WHERE d.domain = @domain`, pgx.NamedArgs{"domain": domain, "reader": reader}).Scan(&id, &previous, &existed); err != nil {
+ ON r.domain = d.domain AND r.reader_id = @reader WHERE d.domain = @domain`, pgx.NamedArgs{auditKeyDomain: domain, "reader": reader}).Scan(&id, &previous, &existed); err != nil {
 		return err
 	}
 	args := []any{domain, reader, evidenceAt}
@@ -43,9 +43,9 @@ func recordDomainQuestionReader(ctx context.Context, tx pgx.Tx, domain string, r
 	if tag.RowsAffected() == 0 {
 		return nil
 	}
-	after := map[string]any{"domain": domain, "reader_id": reader, "evidence_at": evidenceAt}
+	after := map[string]any{auditKeyDomain: domain, "reader_id": reader, "evidence_at": evidenceAt}
 	if existed {
-		before := map[string]any{"domain": domain, "reader_id": reader, "evidence_at": previous}
+		before := map[string]any{auditKeyDomain: domain, "reader_id": reader, "evidence_at": previous}
 		_, err = storekit.Audit(ctx, tx, "update", "company_domain_question_reader", id, before, after)
 	} else {
 		_, err = storekit.Audit(ctx, tx, "create", "company_domain_question_reader", id, nil, after)
@@ -53,6 +53,7 @@ func recordDomainQuestionReader(ctx context.Context, tx pgx.Tx, domain string, r
 	return err
 }
 
+// OwnsDomainQuestion checks membership independently of the bounded attention page.
 func (s *Store) OwnsDomainQuestion(ctx context.Context, domain string) (bool, error) {
 	if err := auth.Require(ctx, entityCompany, principal.ActionRead); err != nil {
 		return false, err

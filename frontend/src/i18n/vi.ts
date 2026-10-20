@@ -16,7 +16,7 @@ import type { MessageKey } from "./en";
 export const vi = {
   "approvalPreferences.title": "Ẩn phê duyệt cho riêng bạn",
   "approvalPreferences.explain":
-    "Loại bị ẩn chỉ rời hàng đợi của bạn. Người khác vẫn thấy đề xuất. Ẩn hoặc khôi phục một loại sẽ tắt thay đổi tự động của bạn cho loại đó. Gửi tin, đặt lịch, hợp nhất và đề xuất có hộ chiếu tác nhân vẫn hiển thị.",
+    "Loại bị ẩn chỉ rời hàng đợi của bạn. Thành viên khác vẫn thấy đề xuất. Ẩn hoặc khôi phục một loại sẽ tắt thay đổi tự động của bạn cho loại đó. Gửi tin, đặt lịch, hợp nhất và đề xuất có passport vẫn hiển thị.",
   "approvalPreferences.review": "Xem cả đề xuất đã ẩn",
   "approvalPreferences.reviewExplain":
     "Chế độ này gồm đề xuất đã ẩn và hết hạn. Gói trong hàng đợi thường có thể hiển thị ít mục hơn do tùy chọn cá nhân. Xem từng đề xuất trước khi quyết định.",
@@ -12351,6 +12351,10 @@ export const vi = {
   "webhooks.event.voice.draft_outcome_recorded.when":
     "Kết quả của bản nháp viết theo giọng văn của thành viên được ghi nhận.",
   "webhooks.eventGroup.approvals_audit": "Phê duyệt và nhật ký hoạt động",
+  "webhooks.event.approval.preference_changed.label":
+    "Đã đổi tùy chọn phê duyệt",
+  "webhooks.event.approval.preference_changed.when":
+    "Thành viên đổi việc hiển thị một loại phê duyệt trong Danh sách công việc.",
   "webhooks.event.approval.requested.label": "Đã yêu cầu phê duyệt",
   "webhooks.event.approval.requested.when":
     "Hành động của trợ lý AI được giữ lại để chờ quyết định.",

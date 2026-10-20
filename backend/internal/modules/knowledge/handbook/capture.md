@@ -332,6 +332,18 @@ a company."
 will not create a company for. Each shows what decided it: an AI model, a fixed
 rule, or a human. Letting a domain back in asks the company question again.
 
+**Domain review** (Worklist → Review): domains waiting for a company match
+appear together. Open **Domain review** to see each question, the
+answering website, and the age of the evidence. **Set aside** hides your question
+until newer evidence arrives; it stays in Domain review, where **Return to Review**
+puts it back in your queue. A colleague's question stays as it was.
+
+**Match company** links the domain to the company you choose. **Create company**
+adds one where the evidence allows it. If another domain answered the website
+read, you must choose an existing company yourself. **Retry site read** leaves
+the company question open and asks again. **Exclude domain** stops capture for your
+mailboxes. You can use **Set aside** without making these decisions.
+
 **Senders** (Settings → Connections): every address that came in through your mailbox, and
 what Margince decided about each. That is a contact, a role mailbox, an
 automated tool, a newsletter, an advisor, or personal. You can change any of

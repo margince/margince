@@ -3,9 +3,6 @@
 
 package attention
 
-// The domain_question lane: the reader's own undecided domains, each carrying
-// the two verbs that answer it.
-
 import (
 	"context"
 	"fmt"
@@ -73,13 +70,6 @@ func TestADomainQuestionNamesTheDomainAndWhyItStopped(t *testing.T) {
 	}
 }
 
-// TestADomainQuestionOffersAnswersAndRetry is the verb contract.
-//
-// Two verbs, and deliberately no `open`: the subject is a domain, which has no
-// page to open, so a third control would send the reader nowhere. Keeping the
-// list exact is what stops the row growing a verb the client cannot perform —
-// the defect the source/action census exists to catch, asserted here at the
-// lane rather than only across the whole queue.
 func TestADomainQuestionOffersAnswersAndRetry(t *testing.T) {
 	t.Parallel()
 	svc := domainQuestionLaneService(&stubDomainQuestions{rows: []DomainQuestion{{
@@ -131,21 +121,7 @@ func TestDomainMaintenanceFoldsWithoutEnteringFocus(t *testing.T) {
 			}), readInstant))
 		}
 		grouped := foldRoutineDecisionsBounded(rows, count == DomainQuestionLimit)
-		if count < batchFloor {
-			if len(grouped) != count {
-				t.Fatalf("small backlog changed size: %d", len(grouped))
-			}
-		} else {
-			if len(grouped) != 1 || grouped[0].item.Batch == nil || grouped[0].item.Batch.Key != "domain_questions" || grouped[0].item.Batch.Count != count {
-				t.Fatalf("%d questions did not form one maintenance group: %+v", count, grouped)
-			}
-			if count == DomainQuestionLimit && (grouped[0].item.Batch.AtLeast == nil || !*grouped[0].item.Batch.AtLeast) {
-				t.Fatal("bounded batch claimed a total")
-			}
-			if len(grouped[0].members) != count {
-				t.Fatal("batch lost the member identities")
-			}
-		}
+		assertDomainMaintenanceGroup(t, grouped, count)
 		for _, row := range append(rows, grouped...) {
 			if focusEligible(row, readInstant) {
 				t.Fatal("routine domain maintenance entered Focus")
@@ -171,5 +147,40 @@ func TestDomainMaintenanceGroupDefersThroughItsMembers(t *testing.T) {
 	member := ranked{item: crmcontracts.WorklistItem{Source: "domain_question"}}
 	if got := dispositionsFor(member, ids.UUID{}); len(got) != 1 {
 		t.Fatalf("individual question cannot be deferred: %v", got)
+	}
+}
+
+func TestDomainQuestionAttentionCountsNameTheirBound(t *testing.T) {
+	for _, count := range []int{0, 2, DomainQuestionLimit} {
+		rows := make([]DomainQuestion, count)
+		for i := range rows {
+			rows[i] = DomainQuestion{Domain: fmt.Sprintf("domain-%d.test", i), AskedAt: readInstant}
+		}
+		out, err := domainQuestionLaneService(&stubDomainQuestions{rows: rows}).Assemble(pageReader())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if out.Counts.DomainQuestions == nil || *out.Counts.DomainQuestions != count || out.DomainQuestionsMoreAvailable == nil || *out.DomainQuestionsMoreAvailable != (count == DomainQuestionLimit) {
+			t.Fatalf("count=%d totals=%+v bounded=%v", count, out.Counts, out.DomainQuestionsMoreAvailable)
+		}
+	}
+}
+
+func assertDomainMaintenanceGroup(t *testing.T, grouped []ranked, count int) {
+	t.Helper()
+	if count < batchFloor {
+		if len(grouped) != count {
+			t.Fatalf("small backlog changed size: %d", len(grouped))
+		}
+		return
+	}
+	if len(grouped) != 1 || grouped[0].item.Batch == nil || grouped[0].item.Batch.Key != domainQuestionsBatchKey || grouped[0].item.Batch.Count != count {
+		t.Fatalf("%d questions did not form one maintenance group: %+v", count, grouped)
+	}
+	if count == DomainQuestionLimit && (grouped[0].item.Batch.AtLeast == nil || !*grouped[0].item.Batch.AtLeast) {
+		t.Fatal("bounded batch claimed a total")
+	}
+	if len(grouped[0].members) != count {
+		t.Fatal("batch lost the member identities")
 	}
 }

@@ -20,6 +20,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+const (
+	domainEvidenceKey      = "evidence"
+	domainPendingReasonKey = "pending_reason"
+)
+
+// PendingForwardedIdentity prevents a redirected site from deciding company ownership.
 const PendingForwardedIdentity = "forwarded_identity"
 
 // DomainIdentityForwarded is shared by admission and review of earlier bindings.
@@ -36,6 +42,7 @@ func DomainIdentityForwarded(requestedDomain, effectiveURL string) bool {
 	return !valid || requested != answered
 }
 
+// DomainForwardEvidence preserves the source read for an explicit identity decision.
 type DomainForwardEvidence struct {
 	ReadID          ids.UUID `json:"read_id"`
 	RequestedDomain string   `json:"requested_domain"`
@@ -43,6 +50,7 @@ type DomainForwardEvidence struct {
 	RedirectChain   []string `json:"redirect_chain"`
 }
 
+// WithholdForwardedDomain holds identity changes until the reader resolves the redirect.
 func (s *Store) WithholdForwardedDomain(ctx context.Context, evidence DomainForwardEvidence) error {
 	if err := auth.Require(ctx, entityCompany, principal.ActionUpdate); err != nil {
 		return err
@@ -87,6 +95,6 @@ func withholdDomainTx(ctx context.Context, tx pgx.Tx, requestedDomain, pendingRe
 		return err
 	}
 	_, err = storekit.Audit(ctx, tx, "update", entityCompany, id,
-		map[string]any{"pending_reason": prior.PendingReason, "evidence": prior.Evidence}, map[string]any{auditKeyDomain: requestedDomain, "pending_reason": pendingReason, "evidence": evidence})
+		map[string]any{domainPendingReasonKey: prior.PendingReason, domainEvidenceKey: prior.Evidence}, map[string]any{auditKeyDomain: requestedDomain, domainPendingReasonKey: pendingReason, domainEvidenceKey: evidence})
 	return err
 }

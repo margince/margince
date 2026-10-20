@@ -87,12 +87,15 @@ export const SingleUndated: Story = {
   render: review(questions.filter((row) => row.reason_code === "unevidenced")),
   play: async () => {
     const body = within(document.body);
-    await userEvent.click(
-      await body.findByRole("button", { name: "Set aside" }),
+    await waitFor(() =>
+      expect(body.getByRole("button", { name: "Set aside" })).toBeVisible(),
     );
-    await expect(
-      body.findByRole("button", { name: "Return to Review" }),
-    ).resolves.toBeVisible();
+    await userEvent.click(body.getByRole("button", { name: "Set aside" }));
+    await waitFor(() =>
+      expect(
+        body.getByRole("button", { name: "Return to Review" }),
+      ).toBeVisible(),
+    );
     await expect(body.getByText("unreadable.example")).toBeVisible();
   },
 };

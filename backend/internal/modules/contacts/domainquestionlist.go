@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// DomainQuestionLimit bounds the attention projection; the review route remains paged.
 const DomainQuestionLimit = 100
 
 type DomainQuestion struct {
@@ -33,15 +34,16 @@ type DomainQuestion struct {
 }
 
 func (s *Store) OpenDomainQuestionsForOwner(ctx context.Context) ([]DomainQuestion, error) {
-	rows, _, err := s.domainQuestionsForOwner(ctx, "", DomainQuestionLimit, false)
+	rows, _, err := s.listReaderDomainQuestions(ctx, "", DomainQuestionLimit, false)
 	return rows, err
 }
 
+// DomainQuestionsForOwner includes deferred questions so readers can restore them.
 func (s *Store) DomainQuestionsForOwner(ctx context.Context, cursor string, limit int) ([]DomainQuestion, storekit.Page, error) {
-	return s.domainQuestionsForOwner(ctx, cursor, limit, true)
+	return s.listReaderDomainQuestions(ctx, cursor, limit, true)
 }
 
-func (s *Store) domainQuestionsForOwner(ctx context.Context, cursor string, limit int, includeDeferred bool) ([]DomainQuestion, storekit.Page, error) {
+func (s *Store) listReaderDomainQuestions(ctx context.Context, cursor string, limit int, includeDeferred bool) ([]DomainQuestion, storekit.Page, error) {
 	if err := auth.Require(ctx, entityCompany, principal.ActionRead); err != nil {
 		return nil, storekit.Page{}, err
 	}

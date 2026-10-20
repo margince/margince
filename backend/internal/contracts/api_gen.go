@@ -2313,6 +2313,7 @@ const (
 	AttentionItemActionsKeep        AttentionItemActions = "keep"
 	AttentionItemActionsMerge       AttentionItemActions = "merge"
 	AttentionItemActionsOpen        AttentionItemActions = "open"
+	AttentionItemActionsReopen      AttentionItemActions = "reopen"
 	AttentionItemActionsReply       AttentionItemActions = "reply"
 	AttentionItemActionsRetry       AttentionItemActions = "retry"
 	AttentionItemActionsSetAside    AttentionItemActions = "set_aside"
@@ -2340,6 +2341,8 @@ func (e AttentionItemActions) Valid() bool {
 	case AttentionItemActionsMerge:
 		return true
 	case AttentionItemActionsOpen:
+		return true
+	case AttentionItemActionsReopen:
 		return true
 	case AttentionItemActionsReply:
 		return true
@@ -19764,6 +19767,7 @@ const (
 	WorklistItemActionsKeep        WorklistItemActions = "keep"
 	WorklistItemActionsMerge       WorklistItemActions = "merge"
 	WorklistItemActionsOpen        WorklistItemActions = "open"
+	WorklistItemActionsReopen      WorklistItemActions = "reopen"
 	WorklistItemActionsReply       WorklistItemActions = "reply"
 	WorklistItemActionsRetry       WorklistItemActions = "retry"
 	WorklistItemActionsSetAside    WorklistItemActions = "set_aside"
@@ -19791,6 +19795,8 @@ func (e WorklistItemActions) Valid() bool {
 	case WorklistItemActionsMerge:
 		return true
 	case WorklistItemActionsOpen:
+		return true
+	case WorklistItemActionsReopen:
 		return true
 	case WorklistItemActionsReply:
 		return true
@@ -26612,28 +26618,23 @@ type Attention struct {
 	// failure marks.
 	DidNotRun *[]AttentionItem `json:"did_not_run,omitempty"`
 
-	// DomainQuestions Domains the capture triage could not judge, whose mail belongs to THIS
-	// reader — the machine read the site, found nothing that named a company,
-	// and left the question open rather than inventing a record.
+	// DomainQuestions Up to 100 undecided domains whose captured mail belongs to this reader.
+	// Each item names the domain, its typed reason, and the permitted answer
+	// or retry actions. Forwarded identity requires an explicit company match.
+	// Discard excludes capture for this reader's mailboxes only. Deferral hides
+	// the reader's question until newer evidence arrives; the paged
+	// `/capture/domain-questions` review still includes deferred questions.
 	//
-	// Each card names the domain as `title` and why the machine stopped as
-	// `detail`. The two verbs are the whole answer a human owes: `keep` makes
-	// the company from the domain's own label, and `discard` writes a capture
-	// exclusion for this reader's mailboxes alone. Neither needs anything
-	// typed, which is why this lane can settle from a queue row where a
-	// free-text answer could not.
-	//
-	// OWNED, and that is the point of the lane. Every open question carries
-	// the mailbox owner whose mail raised it (`company_domain_disposition.owner_id`,
-	// stamped when the question opens), so it reaches the reader whose mail it
-	// is about rather than a shared pile nobody answers for. One installation's
-	// two colleagues may answer the same domain differently, and the exclusion
-	// a `discard` writes binds only the colleague who pressed it.
-	//
-	// Withheld — named in `lanes_omitted` — for a caller with no human behind
-	// it. Absent — not empty — on an installation whose feed does not read
-	// domain questions.
+	// Responsibility is recorded separately for each reader whose mail raised
+	// the question. A colleague's personal exclusion or deferral does not
+	// remove another reader's question. Callers with no human are withheld
+	// through `lanes_omitted`; an unbound reader leaves the lane absent.
 	DomainQuestions *[]AttentionItem `json:"domain_questions,omitempty"`
+
+	// DomainQuestionsMoreAvailable The domain question scan reached its limit. When true, its count is a
+	// lower bound; the paged domain review may contain further questions.
+	// Absent when the lane could not be read.
+	DomainQuestionsMoreAvailable *bool `json:"domain_questions_more_available,omitempty"`
 
 	// DoneForYou What the system did on its own, most recent first. Receipts, not questions.
 	DoneForYou []AttentionItem `json:"done_for_you"`
@@ -26896,7 +26897,7 @@ type AttentionCounts struct {
 	// DidNotRun How many failed decisions this lane is CARRYING — the bounded page, as the other lanes report.
 	DidNotRun *int `json:"did_not_run,omitempty"`
 
-	// DomainQuestions How many open domain questions belong to this reader — the full count rather than a bounded page, because a reader with thirty must be told thirty and the lane offers no second page to find the rest by.
+	// DomainQuestions How many open domain questions the bounded reader returned. This is a lower bound when `domain_questions_more_available` is true. The paged domain review provides the remaining questions.
 	DomainQuestions *int `json:"domain_questions,omitempty"`
 
 	// Dsr How many unresolved data-subject requests this lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the soonest deadlines, which is the order the lane is in.
@@ -27000,10 +27001,11 @@ type AttentionItem struct {
 	// contact must choose; `complete` and `snooze` are a task's own verbs; `open` is
 	// the read-only fallback for a receipt.
 	//
-	// Domain questions offer `keep` and `discard` where allowed. Keeping creates a
+	// Domain questions offer `keep`, `discard`, and `reopen` where allowed. Keeping creates a
 	// company or matches the supplied `company_id`; forwarded identity requires an
 	// explicit match. Discarding stops the caller's own mailboxes capturing that
-	// domain. These verbs route to `/capture/domain-questions/{domain}/…`.
+	// domain. Reopening retries identification without settling identity. These verbs route
+	// to `/capture/domain-questions/{domain}/…`.
 	//
 	// `act`, `dismiss` and `set_aside` are the briefing queue's three, and they route
 	// to `/brief/items/{itemId}/…`. `acknowledge` is a notice's one verb and routes

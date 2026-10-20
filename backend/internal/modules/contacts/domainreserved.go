@@ -13,8 +13,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
+// PendingReservedDomain keeps reserved names recoverable without automatic enrichment.
 const PendingReservedDomain = "reserved_domain"
 
+// WithholdReservedDomain pauses automatic identification without discarding the question.
 func (s *Store) WithholdReservedDomain(ctx context.Context, domain string) error {
 	if err := auth.Require(ctx, entityCompany, principal.ActionUpdate); err != nil {
 		return err

@@ -44727,29 +44727,25 @@ export interface components {
              */
             capture_health?: components["schemas"]["AttentionItem"][];
             /**
-             * @description Domains the capture triage could not judge, whose mail belongs to THIS
-             *     reader — the machine read the site, found nothing that named a company,
-             *     and left the question open rather than inventing a record.
+             * @description Up to 100 undecided domains whose captured mail belongs to this reader.
+             *     Each item names the domain, its typed reason, and the permitted answer
+             *     or retry actions. Forwarded identity requires an explicit company match.
+             *     Discard excludes capture for this reader's mailboxes only. Deferral hides
+             *     the reader's question until newer evidence arrives; the paged
+             *     `/capture/domain-questions` review still includes deferred questions.
              *
-             *     Each card names the domain as `title` and why the machine stopped as
-             *     `detail`. The two verbs are the whole answer a human owes: `keep` makes
-             *     the company from the domain's own label, and `discard` writes a capture
-             *     exclusion for this reader's mailboxes alone. Neither needs anything
-             *     typed, which is why this lane can settle from a queue row where a
-             *     free-text answer could not.
-             *
-             *     OWNED, and that is the point of the lane. Every open question carries
-             *     the mailbox owner whose mail raised it (`company_domain_disposition.owner_id`,
-             *     stamped when the question opens), so it reaches the reader whose mail it
-             *     is about rather than a shared pile nobody answers for. One installation's
-             *     two colleagues may answer the same domain differently, and the exclusion
-             *     a `discard` writes binds only the colleague who pressed it.
-             *
-             *     Withheld — named in `lanes_omitted` — for a caller with no human behind
-             *     it. Absent — not empty — on an installation whose feed does not read
-             *     domain questions.
+             *     Responsibility is recorded separately for each reader whose mail raised
+             *     the question. A colleague's personal exclusion or deferral does not
+             *     remove another reader's question. Callers with no human are withheld
+             *     through `lanes_omitted`; an unbound reader leaves the lane absent.
              */
             domain_questions?: components["schemas"]["AttentionItem"][];
+            /**
+             * @description The domain question scan reached its limit. When true, its count is a
+             *     lower bound; the paged domain review may contain further questions.
+             *     Absent when the lane could not be read.
+             */
+            domain_questions_more_available?: boolean;
             /**
              * @description The reader's OWN AI work that went wrong: runs that failed in the recent
              *     window, and live runs past the lease their source declared (stalled).
@@ -44922,7 +44918,7 @@ export interface components {
             notice_cases?: number;
             /** @description How many capture connections need the reader's hand — one per connection, the full count rather than a bounded page. */
             capture_health?: number;
-            /** @description How many open domain questions belong to this reader — the full count rather than a bounded page, because a reader with thirty must be told thirty and the lane offers no second page to find the rest by. */
+            /** @description How many open domain questions the bounded reader returned. This is a lower bound when `domain_questions_more_available` is true. The paged domain review provides the remaining questions. */
             domain_questions?: number;
             /** @description How many troubled AI runs the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the newest failures. */
             ai_work_health?: number;
@@ -45159,10 +45155,11 @@ export interface components {
              *     contact must choose; `complete` and `snooze` are a task's own verbs; `open` is
              *     the read-only fallback for a receipt.
              *
-             *     Domain questions offer `keep` and `discard` where allowed. Keeping creates a
+             *     Domain questions offer `keep`, `discard`, and `reopen` where allowed. Keeping creates a
              *     company or matches the supplied `company_id`; forwarded identity requires an
              *     explicit match. Discarding stops the caller's own mailboxes capturing that
-             *     domain. These verbs route to `/capture/domain-questions/{domain}/…`.
+             *     domain. Reopening retries identification without settling identity. These verbs route
+             *     to `/capture/domain-questions/{domain}/…`.
              *
              *     `act`, `dismiss` and `set_aside` are the briefing queue's three, and they route
              *     to `/brief/items/{itemId}/…`. `acknowledge` is a notice's one verb and routes
@@ -45171,7 +45168,7 @@ export interface components {
              *     suggestion until later in the day. One word for both would make a client that
              *     handles `snooze` generically write the wrong endpoint.
              */
-            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "discard")[];
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "discard" | "reopen")[];
         };
         /**
          * @description The two records a duplicate item proposes to merge, with the detection-time
@@ -46636,7 +46633,7 @@ export interface components {
              */
             undo?: components["schemas"]["AppliedUndo"];
             /** @description What this item offers, routed to the endpoint that owns the verb. */
-            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "discard")[];
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "discard" | "reopen")[];
             /**
              * @description The heading this row sits under, as an OUTCOME rather than a priority number.
              *

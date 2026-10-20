@@ -52,6 +52,8 @@ const (
 // The members are kept in the fold's order, so the sample names the ones the
 // reader would have met first. Everything that is not routine passes through
 // untouched.
+const domainQuestionsBatchKey = "domain_questions"
+
 func foldRoutineDecisions(rows []ranked) []ranked {
 	return foldRoutineDecisionsBounded(rows, false)
 }
@@ -188,7 +190,7 @@ func batchKeyOf(row ranked) (crmcontracts.WorklistBatchKey, bool) {
 		return "duplicates", true
 	}
 	if row.item.Source == crmcontracts.WorklistItemSource(sourceDomainQuestion) {
-		return "domain_questions", true
+		return domainQuestionsBatchKey, true
 	}
 	if row.item.Kind == nil {
 		return "", false

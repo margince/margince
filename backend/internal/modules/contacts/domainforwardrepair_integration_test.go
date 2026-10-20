@@ -9,10 +9,11 @@ import (
 	"encoding/json"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"time"
 )
 
 func TestForwardedBindingReviewUsesStoredDossierEvidence(t *testing.T) {
@@ -59,7 +60,6 @@ func TestForwardedBindingReviewUsesStoredDossierEvidence(t *testing.T) {
 	if len(hidden) != 0 || cursor != "" {
 		t.Fatalf("private binding leaked through rows or cursor: rows=%+v cursor=%q", hidden, cursor)
 	}
-
 }
 
 func TestForwardedIdentityRequiresExplicitMatchAndKeepsProvenance(t *testing.T) {
@@ -74,7 +74,7 @@ func TestForwardedIdentityRequiresExplicitMatchAndKeepsProvenance(t *testing.T) 
 		t.Fatal(err)
 	}
 	input := ResolveDomainTriageInput{Domain: domain, Status: DomainCompany, Source: DomainSourceHuman}
-	if _, err := e.store.ResolveDomainTriage(ctx, input); !errors.Is(err, apperrors.ErrInvalidArgument) {
+	if _, err := e.store.ResolveDomainTriage(ctx, input); !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("unmatched keep = %v", err)
 	}
 	input.CompanyID = target.CompanyID

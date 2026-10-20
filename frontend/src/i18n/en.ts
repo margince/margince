@@ -12641,6 +12641,10 @@ export const en = {
   "webhooks.event.voice.draft_outcome_recorded.when":
     "The outcome of a draft written in the member’s voice is recorded.",
   "webhooks.eventGroup.approvals_audit": "Approvals and audit",
+  "webhooks.event.approval.preference_changed.label":
+    "Approval preference changed",
+  "webhooks.event.approval.preference_changed.when":
+    "A reader changes whether an approval type appears in their Worklist.",
   "webhooks.event.approval.requested.label": "Approval requested",
   "webhooks.event.approval.requested.when":
     "An agent action is held for a member to decide.",

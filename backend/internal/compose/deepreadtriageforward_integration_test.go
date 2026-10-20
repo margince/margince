@@ -77,7 +77,7 @@ func TestTriageForwardedAliasesRemainSeparateOpenQuestions(t *testing.T) {
 
 func TestTriageSameDomainRedirectStillClassifiesTheRequestedIdentity(t *testing.T) {
 	e := integration.Setup(t)
-	args := openTriageQuestion(t, e, triageTestDomain, "person@"+triageTestDomain, "Personal Owner")
+	args := openTriageQuestion(t, e, triageTestDomain, "contact@"+triageTestDomain, "Personal Owner")
 	site := &fakeSite{pages: map[string]fakeSitePage{seedURL: {text: readable("Personal Owner private homepage."), finalURL: "https://www." + triageTestDomain + "/"}}}
 	extract := &triageBrainFake{verdict: `{}`}
 	triage := &triageBrainFake{verdict: `{"kind":"personal","confidence":0.99}`}

@@ -242,6 +242,9 @@ func (s *Service) operationalLanes(
 			name: "domain_questions", bound: s.domainQuestions != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {
 				questions, err := s.domainQuestions.OpenDomainQuestions(ctx)
+				if err == nil {
+					out.DomainQuestionsMoreAvailable = new(len(questions) >= DomainQuestionLimit)
+				}
 				return renderEach(questions, domainQuestionItem), err
 			},
 			into: &out.DomainQuestions, count: &out.Counts.DomainQuestions,
