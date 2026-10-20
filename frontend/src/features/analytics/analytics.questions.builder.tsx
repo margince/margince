@@ -10,7 +10,7 @@ import { Panel, PanelBody, PanelGroupHead } from "../../design-system/panel";
 import { MultiSelect, Select } from "../../design-system/select";
 import { forReader } from "../../format/collate";
 import { ordinalNumber } from "../../format/format";
-import { type Locale, useLocale, useT } from "../../i18n";
+import { useLocale, usePlural, useT, type Words } from "../../i18n";
 import type { VocabularyField } from "../../lib/filterdata";
 import { ValueControl } from "../lists/filtervalue";
 import {
@@ -67,12 +67,11 @@ function startingValue(entity: AnalyticsEntity, field: string) {
 // Each picked custom field's coverage, one line apiece; nothing when the
 // grouping names none.
 function coverageHint(
-  t: Translate,
-  locale: Locale,
+  words: Words,
   entity: AnalyticsEntity | undefined,
   groupBy: readonly string[],
 ) {
-  const lines = coverageLines(t, locale, entity, groupBy);
+  const lines = coverageLines(words, entity, groupBy);
   return lines.length > 0 ? lines.join(" ") : undefined;
 }
 
@@ -114,6 +113,7 @@ export function QuestionBuilder({
   saving: boolean;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const entity = entities.find((candidate) => candidate.name === draft.entity);
   const problem = draftProblem(draft, baseCurrency);
@@ -147,7 +147,7 @@ export function QuestionBuilder({
           </Field>
           <Field
             label={t("analytics.q.groupBy")}
-            hint={coverageHint(t, locale, entity, draft.groupBy)}
+            hint={coverageHint({ t, plural, locale }, entity, draft.groupBy)}
           >
             {(control) => (
               <MultiSelect

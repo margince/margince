@@ -11,7 +11,7 @@
 
 import type { components } from "../../api/schema";
 import { formatNumber } from "../../format/format";
-import { isMessageKey, type Locale, type useT } from "../../i18n";
+import { isMessageKey, type useT, type Words } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { problemDetails } from "../../lib/problembody";
 import type { FilterOp } from "../../lib/segmentpredicate";
@@ -175,8 +175,7 @@ function customFieldLabel(t: Translate, field: CustomField): string {
  * grouping by a sparse field then does not read as complete.
  */
 export function coverageLines(
-  t: Translate,
-  locale: Locale,
+  { t, plural, locale }: Words,
   entity: AnalyticsEntity | undefined,
   groupBy: readonly string[],
 ): string[] {
@@ -184,10 +183,10 @@ export function coverageLines(
     const field = entity ? customFieldOf(entity, name) : undefined;
     return field
       ? [
-          t("analytics.q.fieldCoverage", {
+          plural("analytics.q.fieldCoverage", field.records, {
             label: customFieldLabel(t, field),
-            count: formatNumber(field.with_value, locale),
-            total: formatNumber(field.records, locale),
+            held: formatNumber(field.with_value, locale),
+            count: formatNumber(field.records, locale),
           }),
         ]
       : [];

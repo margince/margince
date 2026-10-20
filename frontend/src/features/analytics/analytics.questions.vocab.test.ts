@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
-import { translate } from "../../i18n";
+import { translate, translatePlural } from "../../i18n";
 import { CUSTOM_DEALS, ENTITIES, QUERY } from "./analytics.questions.testkit";
 import {
   analyticsFieldLabel,
@@ -64,11 +64,16 @@ describe("the installation's own fields", () => {
 
   it("says how many deals hold a value in each custom field grouped by", () => {
     expect(
-      coverageLines(t, "en", CUSTOM_DEALS, [
-        "status",
-        "cf_territory",
-        "company_cf_tier",
-      ]),
+      coverageLines(
+        {
+          t,
+          plural: (base, count, params) =>
+            translatePlural("en", base, count, params),
+          locale: "en",
+        },
+        CUSTOM_DEALS,
+        ["status", "cf_territory", "company_cf_tier"],
+      ),
     ).toEqual([
       "Territory has a value on 7 of 10 deals you can read.",
       "Tier (company) has a value on 3 of 10 deals you can read.",
