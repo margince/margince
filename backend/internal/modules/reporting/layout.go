@@ -182,9 +182,9 @@ func validateQuestionCard(card crmcontracts.ReportingCard) error {
 	case question.ScopeKind != nil || question.ScopeId != nil || question.Save != nil:
 		return refuse("selection.layout", "invalid", "a question card takes the report's scope and is never saved on its own")
 	case question.Filters != nil && len(*question.Filters) > 0:
-		// Every reader of the report receives the card's question, so a filter
-		// value (a company's id, a contact's name) would reach a reader who may
-		// not open that record. The report's scope narrows the card instead.
+		// Every reader of the report receives the card's question. A filter value
+		// (a company's id, a contact's name) would reach a reader who may not
+		// open that record. The report's scope narrows the card instead.
 		return refuse("selection.layout", "invalid", "a question card takes no filters; the report's scope narrows it")
 	case question.Limit != nil && (*question.Limit < 1 || *question.Limit > maxQuestionRows):
 		return refuse("selection.layout", "out_of_range", "show between one and a thousand rows on a question card")
