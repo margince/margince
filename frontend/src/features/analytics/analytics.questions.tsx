@@ -19,7 +19,6 @@ import {
   openAnalyticsSection,
   openSavedQuestion,
 } from "../../lib/analytics.address";
-import { ANALYTICS_SCHEMA_KEY } from "../../lib/analyticskeys";
 import { unwrap } from "../../lib/problem";
 import { routeHash, useRoute } from "../../lib/router";
 import {
@@ -50,6 +49,7 @@ import {
   opLabel,
   takesValue,
 } from "./analytics.questions.vocab";
+import { useAnalyticsSchema } from "./analytics.schema";
 
 // The population a query names, as one comparable string: the page's picker
 // and a question already asked agree only when these do.
@@ -59,15 +59,6 @@ function queryScopeKey(query: Pick<AnalyticsQuery, "scope_kind" | "scope_id">) {
 
 async function askQuestion(query: AnalyticsQuery) {
   return unwrap(await api.POST("/analytics/query", { body: query }));
-}
-
-function useAnalyticsSchema() {
-  return useQuery({
-    queryKey: ANALYTICS_SCHEMA_KEY,
-    queryFn: async () => {
-      return unwrap(await api.GET("/analytics/schema", {}));
-    },
-  });
 }
 
 /**

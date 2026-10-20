@@ -3,10 +3,12 @@ import type { components } from "../../api/schema";
 import {
   blocksOf,
   cardChoices,
+  cardQuestion,
   laidOut,
   layoutEdits,
   layoutOf,
   type ReportingLayout,
+  runIdOf,
 } from "./reporting.layout";
 
 type Chart = components["schemas"]["ReportingChart"];
@@ -63,16 +65,16 @@ describe("a report's layout", () => {
     expect(sections).toEqual([
       {
         title: "Pipeline",
-        charts: [
-          chart("stage_distribution", "open_pipeline"),
-          chart("bookings_trend", "bookings_won"),
+        items: [
+          { chart: chart("stage_distribution", "open_pipeline"), full: false },
+          { chart: chart("bookings_trend", "bookings_won"), full: false },
         ],
-        full: [false, false],
       },
       {
         title: undefined,
-        charts: [chart("owner_attainment", "bookings_won")],
-        full: [true],
+        items: [
+          { chart: chart("owner_attainment", "bookings_won"), full: true },
+        ],
       },
     ]);
   });
@@ -125,6 +127,43 @@ describe("a report's layout", () => {
       blocks: ["metric_reading", "stage_age"],
     } as components["schemas"]["ReportingSelection"]);
     expect(layout[0]?.cards.map((card) => card.kind)).toEqual(["stage_age"]);
+  });
+
+  it("places a question card in its section and adds no block for it", () => {
+    const question = {
+      id: "q",
+      kind: "question" as const,
+      width: "half" as const,
+      question: {
+        entity: "deals-by-stage",
+        measures: [{ fn: "count" as const }],
+      },
+    };
+    const layout: ReportingLayout = [
+      { cards: [{ id: "a", kind: "stage_age", width: "half" }, question] },
+    ];
+    expect(blocksOf(layout)).toEqual(["stage_age"]);
+    expect(laidOut(layout, [])).toEqual([
+      { title: undefined, items: [{ question, full: false }] },
+    ]);
+  });
+
+  it("copies a saved question for a card without its own scope or save", () => {
+    expect(
+      cardQuestion({
+        entity: "deals-by-stage",
+        measures: [{ fn: "count" }],
+        scope_kind: "team",
+        scope_id: "t-1",
+        save: true,
+      }),
+    ).toEqual({ entity: "deals-by-stage", measures: [{ fn: "count" }] });
+    expect(
+      runIdOf(
+        "https://crm.example/app#/analytics/questions/0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b",
+      ),
+    ).toBe("0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b");
+    expect(runIdOf("not a link")).toBeUndefined();
   });
 
   it("moves a removed section's cards to the section before it", () => {

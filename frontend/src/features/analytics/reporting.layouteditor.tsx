@@ -1,15 +1,23 @@
+import { useMutation } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, X } from "lucide-react";
 import { type ReactNode, useState } from "react";
+import { api } from "../../api/client";
 import { Button, Field, TextInput } from "../../design-system/atoms";
+import { ErrorLine } from "../../design-system/errorline";
 import { IconAction } from "../../design-system/iconaction";
 import { Select } from "../../design-system/select";
 import { ordinalNumber } from "../../format/format";
 import { type Translator, useT } from "../../i18n";
+import { unwrap } from "../../lib/problem";
+import { entityLabel } from "./analytics.questions.vocab";
 import {
   type CardChoice,
+  cardQuestion,
   layoutEdits as edit,
+  MAX_CARDS,
   MAX_SECTIONS,
   type ReportingLayout,
+  runIdOf,
 } from "./reporting.layout";
 import { blockLabel, metricLabel } from "./reporting.model";
 
@@ -17,9 +25,16 @@ type Card = ReportingLayout[number]["cards"][number];
 
 /** A card or a choice by its chart's name, and its metric's when it has one. */
 export function cardLabel(
-  card: Pick<Card, "kind" | "metric"> | CardChoice,
+  card: Pick<Card, "kind" | "metric" | "question"> | CardChoice,
   t: Translator,
 ): string {
+  if (card.kind === "question")
+    return t("reporting.questionCard", {
+      population: entityLabel(
+        t,
+        ("question" in card && card.question?.entity) || "",
+      ),
+    });
   const chart = blockLabel(card.kind, t);
   return card.metric ? `${chart} · ${metricLabel(card.metric, t)}` : chart;
 }
@@ -94,6 +109,7 @@ export function LayoutEditor({
         onChange={onChange}
         preview={preview}
       />
+      <AddQuestion layout={layout} onChange={onChange} />
       <div>
         <Button
           variant="ghost"
@@ -239,6 +255,62 @@ function AddCard({
         </Button>
       </div>
       {preview && previewing && choice && preview(choice)}
+    </div>
+  );
+}
+
+/**
+ * Adds a saved custom question from its link. The card keeps a copy of the
+ * question, so the link's later edits do not move a published report.
+ */
+function AddQuestion({
+  layout,
+  onChange,
+}: Readonly<{
+  layout: ReportingLayout;
+  onChange: (next: ReportingLayout) => void;
+}>) {
+  const t = useT();
+  const [link, setLink] = useState("");
+  const runId = runIdOf(link);
+  const read = useMutation({
+    mutationFn: async (id: string) =>
+      unwrap(
+        await api.GET("/analytics/runs/{run_id}", {
+          params: { path: { run_id: id } },
+        }),
+      ),
+    onSuccess: (run) => {
+      onChange(edit.addQuestion(layout, cardQuestion(run.query)));
+      setLink("");
+    },
+  });
+  if (layout.flatMap((section) => section.cards).length >= MAX_CARDS)
+    return null;
+  return (
+    <div className="form-stack">
+      <Field
+        label={t("reporting.questionLink")}
+        hint={link && !runId ? t("reporting.questionLinkInvalid") : undefined}
+      >
+        {(field) => (
+          <TextInput
+            {...field}
+            value={link}
+            onChange={(event) => setLink(event.target.value)}
+          />
+        )}
+      </Field>
+      <ErrorLine error={read.error} />
+      <div>
+        <Button
+          disabled={!runId}
+          pending={read.isPending}
+          onClick={() => runId && read.mutate(runId)}
+        >
+          {t("reporting.addQuestion")}
+        </Button>
+      </div>
     </div>
   );
 }

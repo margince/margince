@@ -291,6 +291,14 @@ export const vi = {
   "reporting.cardSection": "Phần của {chart}",
   "reporting.removeCard": "Xóa {chart}",
   "reporting.addChart": "Thêm biểu đồ",
+  "reporting.questionCard": "Câu hỏi: {population}",
+  "reporting.questionLoading": "Đang hỏi…",
+  "reporting.questionNotKept":
+    "Không lưu trong báo cáo đã gửi. Mở báo cáo trực tiếp để xem câu trả lời cho câu hỏi này.",
+  "reporting.questionLink": "Liên kết tới báo cáo tùy chỉnh đã lưu",
+  "reporting.questionLinkInvalid":
+    "Dán liên kết mà Sao chép liên kết đưa ra trên báo cáo tùy chỉnh đã lưu.",
+  "reporting.addQuestion": "Thêm câu hỏi",
   "reporting.previewChart": "Xem trước",
   "reporting.previewLoading": "Đang tải bản xem trước…",
   "reporting.previewEmpty":
