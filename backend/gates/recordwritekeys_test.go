@@ -96,3 +96,39 @@ func TestEveryCustomFieldRequestBodyRefusesAMisspeltKey(t *testing.T) {
 		})
 	}
 }
+
+// A body that admits extra keys is a body this gate must list. The listing
+// above reads schema names; this reads the operations, so a catch-all schema
+// that a route takes as its body under a name not ending in Request is found
+// too.
+func TestEveryRequestBodyThatAdmitsExtraKeysIsListedHere(t *testing.T) {
+	doc := loadContractDocument(t)
+	paths, ok := doc["paths"].(map[string]any)
+	if !ok {
+		t.Fatal("the contract has no paths")
+	}
+	seen := 0
+	for path, itemAny := range paths {
+		item, _ := itemAny.(map[string]any)
+		for method, opAny := range item {
+			op, _ := opAny.(map[string]any)
+			body, _ := op["requestBody"].(map[string]any)
+			content, _ := body["content"].(map[string]any)
+			media, _ := content["application/json"].(map[string]any)
+			schema, _ := media["schema"].(map[string]any)
+			ref, _ := schema["$ref"].(string)
+			resolved, found := resolveSchemaRef(doc, ref)
+			if !found || resolved["additionalProperties"] != true {
+				continue
+			}
+			seen++
+			name := ref[strings.LastIndex(ref, "/")+1:]
+			if _, listed := extensionRequestTypes[name]; !listed {
+				t.Errorf("%s %s takes %s, which admits extra keys and is not in extensionRequestTypes", strings.ToUpper(method), path, name)
+			}
+		}
+	}
+	if seen == 0 {
+		t.Fatal("no operation takes a body that admits extra keys; the walk no longer sees the contract")
+	}
+}
