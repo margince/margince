@@ -51,8 +51,8 @@ export function LeadStepper({
 }: Readonly<{
   lead: Lead;
   pending: boolean;
-  // The page's one sentence saying why no step may be taken — a terminal lead,
-  // somebody else's. Every step points at it rather than printing its own.
+  // The page's one sentence saying why no step may be taken, for a terminal
+  // lead or somebody else's. Every step points at it rather than printing its own.
   refusedReasonId?: string;
   onStep: (status: LadderOpenStep) => void;
   onQualify: () => void;
