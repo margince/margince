@@ -80,9 +80,9 @@ func declaredNumBounds(inputSchema json.RawMessage) []numBound {
 }
 
 // requireDeclaredArgs holds a call to every claim its own tools/list entry makes
-// about its arguments: the required ones are there, the ids name something, and
-// the numbers sit inside the advertised range. Invoke calls THIS rather than the
-// three checks in turn, so a claim read off the schema later cannot be wired
+// about its arguments: the required ones are there, the ids name something, each
+// value has its declared type, and the numbers sit inside the advertised range.
+// Invoke calls THIS rather than the checks in turn, so a claim read off the schema later cannot be wired
 // into one of Invoke's two placements and forgotten in the other.
 //
 // Presence and the ids answer TOGETHER. Each collects faithfully on its own, but
@@ -92,10 +92,13 @@ func declaredNumBounds(inputSchema json.RawMessage) []numBound {
 // again. That is the call-per-field waste all three of these files say the
 // collection exists to end, reappearing at the seam between them.
 //
-// The bounds stay separate: an argument that is missing has no range to be wrong
-// about, so there is nothing to say about it in the same breath.
+// Types and bounds stay separate: an argument that is missing has no type or
+// range to be wrong about, so there is nothing to say about it in the same breath.
 func (r *Registry) requireDeclaredArgs(name string, args json.RawMessage) error {
 	if err := joinArgRefusals(r.requireDeclaredPresence(name, args), r.requireDeclaredIDs(name, args)); err != nil {
+		return err
+	}
+	if err := r.requireDeclaredTypes(name, args); err != nil {
 		return err
 	}
 	return joinArgRefusals(r.requireDeclaredBounds(name, args), r.requireDeclaredEnums(name, args))
