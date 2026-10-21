@@ -2678,6 +2678,16 @@ export const en = {
   "consent.proofEmpty":
     "No consent decision recorded for this purpose. An empty log means no consent event was recorded, not that one is missing.",
   "consent.sourceUnknown": "source not recorded",
+  "consent.sourceManual": "entered by hand",
+  "consent.sourceApi": "recorded through the API",
+  "consent.sourceConfirmDetails":
+    "confirmed by the contact on the details link",
+  "consent.sourceConsentLink": "confirmed by the contact on the consent link",
+  "consent.sourcePreferenceCenter":
+    "set by the contact on the preference page",
+  "consent.sourcePublicBooking": "given on the booking page",
+  "consent.sourceMerge": "carried over in a merge",
+  "consent.sourcePromotion": "carried over from a lead",
   "consent.actorHuman": "Human",
   "consent.actorAgent": "Agent",
   "consent.actorSystem": "System",

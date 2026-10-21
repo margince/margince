@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { EntityRef } from "../../components/entityref";
 import {
   Badge,
   Button,
@@ -18,6 +19,7 @@ import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCanWriteRecord } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
+import { isUuid } from "../../lib/uuid";
 import { humanizeToken } from "../settings/audit";
 import "./consent.css";
 import { stable } from "../../format/collate";
@@ -73,15 +75,34 @@ const ACTOR_LABEL: Record<
   connector: "consent.actorConnector",
 };
 
+// How each door the server writes a proof row through words it. `source` is
+// free text on the wire, so a value not named here is shown as written.
+const SOURCE_LABEL: Readonly<Record<string, MessageKey>> = {
+  manual: "consent.sourceManual",
+  api: "consent.sourceApi",
+  confirm_details: "consent.sourceConfirmDetails",
+  consent_link: "consent.sourceConsentLink",
+  preference_center: "consent.sourcePreferenceCenter",
+  public_booking: "consent.sourcePublicBooking",
+  merge: "consent.sourceMerge",
+  promotion: "consent.sourcePromotion",
+};
+
+function sourceText(
+  source: string | null | undefined,
+  t: ReturnType<typeof useT>,
+): string {
+  if (source == null) {
+    return t("consent.sourceUnknown");
+  }
+  const label = SOURCE_LABEL[source];
+  return label ? t(label) : source;
+}
+
 // The actor line on the Art. 7 proof log: names WHO the server says captured
-// this decision, verbatim. This is deliberately NOT ProvenanceTag — that
-// component exists for a compose/staging context ("did *you* type this, or
-// an agent") and its human branch renders "typed by you" unconditionally,
-// which would misattribute every human-captured grant to the viewer instead
-// of the actual actor (frequently a different teammate, or the subject
-// themself via a public form). A proof log's actor is evidence, not a claim
-// about who is looking at it — it always shows actor_type + actor_id
-// straight from the wire, never resolved against the current session.
+// this decision. Not ProvenanceTag, whose human branch says "typed by you" and
+// would credit every colleague's grant to the viewer. A seat id is named
+// through the member roster; any other principal is shown by its own name.
 function ConsentEventActor({ event }: Readonly<{ event: ConsentEvent }>) {
   const t = useT();
   // An event the wire never attributed is unrecorded, never a positive claim
@@ -96,7 +117,11 @@ function ConsentEventActor({ event }: Readonly<{ event: ConsentEvent }>) {
       {event.actor_id && (
         <>
           {" "}
-          <span>{event.actor_id}</span>
+          {isUuid(event.actor_id) ? (
+            <EntityRef kind="user" id={event.actor_id} />
+          ) : (
+            <span>{humanizeToken(event.actor_id)}</span>
+          )}
         </>
       )}
     </span>
@@ -131,7 +156,7 @@ function ConsentProofLog({ events }: Readonly<{ events: ConsentEvent[] }>) {
                 >
                   {humanizeToken(event.new_state)}
                 </Badge>{" "}
-                {event.source ?? t("consent.sourceUnknown")}
+                {sourceText(event.source, t)}
               </span>
               <span className="tl-meta">
                 <ConsentEventActor event={event} />
@@ -212,6 +237,7 @@ function ConsentRow({
           body: {
             purpose_id: entry.purpose_id,
             new_state: newState,
+            source: "manual",
             // Only a grant needs it: a withdrawal demonstrates nothing, and the
             // server stores no wording for one.
             ...(newState === "granted"

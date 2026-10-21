@@ -68,6 +68,8 @@ const PURPOSES = {
   page: { next_cursor: null, has_more: false },
 };
 
+const COLLEAGUE_ID = "5f0c2a64-3b1e-4c7a-9d2f-8e6b1a0c4d37";
+
 const CONSENT = {
   state: [
     {
@@ -90,7 +92,7 @@ const CONSENT = {
       // count two and this test would pass over the bug it exists to catch.
       lawful_basis: "Art. 6(1)(f)",
       actor_type: "human",
-      actor_id: "u1",
+      actor_id: COLLEAGUE_ID,
       occurred_at: "2026-05-01T10:00:00Z",
     },
   ],
@@ -133,6 +135,10 @@ function stubRoutes(
       // permission axis has its own tests below.
       if (key === "GET /me") return jsonResponse(SEAT_MAY_WRITE);
       if (key === "GET /consent-purposes") return jsonResponse(PURPOSES);
+      if (key === "GET /users/names")
+        return jsonResponse({
+          data: [{ id: COLLEAGUE_ID, display_name: "Mira Chen" }],
+        });
       if (key === "GET /contacts/contact-1/consent")
         return jsonResponse(CONSENT);
       return jsonResponse({});
@@ -213,18 +219,71 @@ describe("ConsentSection", () => {
     expect(within(row).queryByText(/Basis:/)).toBeNull();
   });
 
-  // C3: the log's actor line must name the ACTUAL actor, never resolve to a
-  // claim about the viewer — this fixture's event was captured by u1, a
-  // human who is not necessarily whoever is looking at this proof.
-  it("names the actual human actor rather than claiming the viewer typed it", async () => {
+  // The log's actor line names the colleague who captured the decision, by
+  // name, and never claims the viewer typed it.
+  it("names the colleague who recorded the decision", async () => {
     stubRoutes();
     render(<ConsentSection contactId="contact-1" contact={writableContact} />);
     const row = await findConsentRow("Deal messages");
     await userEvent.click(
       within(row).getByRole("button", { name: /proof log/i }),
     );
-    expect(await screen.findByText("u1")).toBeInTheDocument();
+    expect(await screen.findByText("Mira Chen")).toBeInTheDocument();
+    expect(screen.queryByText(COLLEAGUE_ID)).not.toBeInTheDocument();
     expect(screen.queryByText(/typed by you/i)).not.toBeInTheDocument();
+  });
+
+  // Each door a proof row comes through is worded, and a principal that is
+  // not a seat is shown by its own name rather than looked up as one.
+  it("says how each decision was recorded and by which principal", async () => {
+    stubRoutes({
+      "GET /contacts/contact-1/consent": () =>
+        jsonResponse({
+          ...CONSENT,
+          events: [
+            {
+              id: "e-manual",
+              purpose_id: "p1",
+              new_state: "granted",
+              source: "manual",
+              actor_type: "human",
+              actor_id: COLLEAGUE_ID,
+              occurred_at: "2026-05-01T10:00:00Z",
+            },
+            {
+              id: "e-promotion",
+              purpose_id: "p1",
+              new_state: "withdrawn",
+              source: "promotion",
+              actor_type: "connector",
+              actor_id: "gmail",
+              occurred_at: "2026-05-02T10:00:00Z",
+            },
+            {
+              id: "e-link",
+              purpose_id: "p1",
+              new_state: "granted",
+              source: "consent_link",
+              actor_type: "system",
+              actor_id: "public_confirm",
+              occurred_at: "2026-05-03T10:00:00Z",
+            },
+          ],
+        }),
+    });
+    render(<ConsentSection contactId="contact-1" contact={writableContact} />);
+    const row = await findConsentRow("Deal messages");
+    await userEvent.click(
+      within(row).getByRole("button", { name: /proof log/i }),
+    );
+    expect(await screen.findByText(/entered by hand/)).toBeInTheDocument();
+    expect(screen.getByText(/carried over from a lead/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/confirmed by the contact on the consent link/),
+    ).toBeInTheDocument();
+    expect(await screen.findByText("Mira Chen")).toBeInTheDocument();
+    expect(screen.getByText("gmail")).toBeInTheDocument();
+    expect(screen.getByText("public confirm")).toBeInTheDocument();
   });
 
   // The second leg of the same defect: an event that omits actor_type
@@ -364,6 +423,7 @@ describe("ConsentSection", () => {
     expect(posts.at(-1)?.body).toEqual({
       purpose_id: "p1",
       new_state: "withdrawn",
+      source: "manual",
     });
   });
 
@@ -419,6 +479,7 @@ describe("ConsentSection", () => {
     expect(posts.at(-1)?.body).toEqual({
       purpose_id: "p1",
       new_state: "granted",
+      source: "manual",
       wording: expect.stringContaining("outside the product"),
     });
   });

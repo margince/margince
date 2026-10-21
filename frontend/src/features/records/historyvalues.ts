@@ -1,5 +1,6 @@
 import { formatDateTime, formatMoneyOrAbsent } from "../../format/format";
 import { type Locale, translate } from "../../i18n";
+import { isUuid } from "../../lib/uuid";
 
 // A history value read the way the rest of the record page reads it.
 //
@@ -38,11 +39,6 @@ export function isMinorUnitField(field: string): boolean {
 // kind of trailing run a looser path pattern could also claim.
 const ISO_TIMESTAMP =
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})$/;
-
-// RFC 4122, any version/variant — a BARE id, with no scheme in front of it
-// (a value like "human:<uuid>" is a principal grammar, not a bare id, and this
-// function has no business reading it).
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // A path or URI: at least one "/" separating two non-blank segments. Checked
 // after the timestamp rule (its offset can carry digits and colons but never
@@ -116,7 +112,7 @@ export function historyValue(
       ? translate(ctx.locale, "history.emptyList")
       : items.map((item) => String(item)).join(", ");
   }
-  if (UUID.test(value)) {
+  if (isUuid(value)) {
     // Left EXACTLY as stored when the resolver cannot name it — a shortened
     // uuid is a value the reader can no longer check against the record.
     return ctx.nameOf?.(value) ?? value;

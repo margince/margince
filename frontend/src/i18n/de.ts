@@ -2691,6 +2691,15 @@ export const de = {
   "consent.proofEmpty":
     "Für diesen Zweck ist keine Entscheidung zur Einwilligung erfasst. Ein leeres Protokoll bedeutet, dass nichts zur Einwilligung erfasst wurde, nicht, dass ein Eintrag fehlt.",
   "consent.sourceUnknown": "Quelle nicht erfasst",
+  "consent.sourceManual": "von Hand erfasst",
+  "consent.sourceApi": "über die API erfasst",
+  "consent.sourceConfirmDetails": "vom Kontakt über den Datenlink bestätigt",
+  "consent.sourceConsentLink":
+    "vom Kontakt über den Einwilligungslink bestätigt",
+  "consent.sourcePreferenceCenter": "vom Kontakt auf der Einstellungsseite gesetzt",
+  "consent.sourcePublicBooking": "auf der Buchungsseite erteilt",
+  "consent.sourceMerge": "bei einer Zusammenführung übernommen",
+  "consent.sourcePromotion": "von einem Lead übernommen",
   "consent.actorHuman": "Mensch",
   "consent.actorAgent": "Agent",
   "consent.actorSystem": "System",
