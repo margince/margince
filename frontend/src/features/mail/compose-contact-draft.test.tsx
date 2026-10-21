@@ -289,8 +289,8 @@ describe("drafting to a contact", () => {
     });
   });
 
-  // The deterministic floor writes from the record and never reads the body,
-  // so its answer must not take the place of the words the rep wrote.
+  // The deterministic floor writes from the record and never reads the body.
+  // Its answer must not take the place of the words the rep wrote.
   it("keeps the body the reader wrote when no model answered", async () => {
     stubRoutes({
       "POST /contacts/c-1/draft-email": () =>
