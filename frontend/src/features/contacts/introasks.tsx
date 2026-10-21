@@ -11,6 +11,7 @@
 import { useState } from "react";
 import { Badge, Button } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
+import { INTRO_STATUS_LABELS as STATUS_LABEL } from "../../format/introstatus";
 import { useT } from "../../i18n";
 import { useViewerId } from "../../lib/session";
 import { IntroDecisionDrawer } from "./introdecision";
@@ -202,18 +203,3 @@ function outcomeFor(
 // Every status the contract admits has words here, so a state the server can
 // send cannot reach a reader as a raw enum. A name-drop and an introduction
 // read differently on purpose: they are different events.
-const STATUS_LABEL: Record<
-  IntroRequest["status"],
-  Parameters<ReturnType<typeof useT>>[0]
-> = {
-  requested: "contact.intro.stateRequested",
-  accepted: "contact.intro.stateAccepted",
-  name_drop_approved: "contact.intro.stateNameDropApproved",
-  suggest_other: "contact.intro.stateSuggestOther",
-  declined: "contact.intro.stateDeclined",
-  introduced: "contact.intro.stateIntroduced",
-  name_dropped: "contact.intro.stateNameDropped",
-  replied: "contact.intro.stateReplied",
-  expired: "contact.intro.stateExpired",
-  cancelled: "contact.intro.stateCancelled",
-};

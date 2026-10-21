@@ -663,9 +663,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
   });
 
   it("a promoted lead can be demoted from its own page, with a recorded reason", async () => {
-    // The reversal ADR-0008 §4 promises, from the one page that is a fact about
-    // the promotion. The reason is required — the button stays disabled until
-    // one is typed — and the request carries it verbatim.
+    const user = userEvent.setup();
     const promoted = {
       ...lead,
       status: "promoted",
@@ -692,20 +690,23 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
       return jsonResponse(promoted);
     });
     render(<LeadScreen id="l-1" />);
-    await userEvent.click(
+    await user.click(
       await screen.findByRole("button", { name: "Reverse qualification" }),
     );
     const confirm = () =>
       screen.getByRole("button", { name: "Reverse" }) as HTMLButtonElement;
     expect(confirm().disabled).toBe(true);
-    await userEvent.type(
+    await user.type(
       screen.getByLabelText("Reason (recorded in the audit trail) *"),
-      "Promoted the wrong prospect",
+      "Initial reason",
     );
-    // Re-queried rather than held: a refused Button draws its reason beside
-    // itself, so the element the reader presses once the refusal lifts is not
-    // the node that was there while it stood.
-    await userEvent.click(confirm());
+    const reason = screen.getByLabelText(
+      "Reason (recorded in the audit trail) *",
+    );
+    await user.clear(reason);
+    expect(confirm().disabled).toBe(true);
+    await user.type(reason, "  Promoted the wrong prospect  ");
+    await user.click(confirm());
     await waitFor(() => expect(demoteBody).not.toBeNull());
     expect(demoteBody).toEqual({ reason: "Promoted the wrong prospect" });
   });

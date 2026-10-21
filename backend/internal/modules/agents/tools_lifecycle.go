@@ -337,7 +337,7 @@ func (t demoteLead) Handle(ctx context.Context, in json.RawMessage) (json.RawMes
 	// Re-asked HERE as well as in Guards, because an approved retry re-enters
 	// through this door without passing staging: a reason the staging refused
 	// must not become one the execution accepts.
-	if err := requireDemotionReason(args.Reason); err != nil {
+	if err := RequireDemotionReason(args.Reason); err != nil {
 		return nil, err
 	}
 	// nil, because this tool takes no if_version of its own: the pin it applies

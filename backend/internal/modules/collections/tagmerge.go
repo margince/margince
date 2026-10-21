@@ -24,6 +24,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+const tagMergeSourceArg = "source"
+
+const tagMergeTargetArg = "target"
+
+const tagMergeOverlap = `EXISTS (SELECT 1 FROM taggable t
+ WHERE t.tag_id = @target AND t.entity_type = s.entity_type AND t.entity_id = s.entity_id)`
+
 // MergeResult is what a merge did, in the two numbers that differ.
 type MergeResult struct {
 	Moved     int
@@ -49,12 +56,7 @@ type MergeResult struct {
 // word being folded into free to be renamed between a caller's decision and
 // this act. Zero means unpinned, which is what a caller sending no version
 // gets and what every door that has not been taught to send one passes.
-// It carries no per-record row gate, unlike applyTagTx/RemoveTag: it rewrites
-// every taggable row across the workspace as one vocabulary operation. No
-// SEEDED role pairs tag.update with a bounded row scope — every role holding
-// it today is unbounded — but the pairing is an object grant an admin could
-// still set (identity.Service.SetRoleObjectGrant), which this gate does not
-// itself refuse.
+// Vocabulary authority is unbounded because this act reaches every assignment.
 func (s *Store) MergeTags(ctx context.Context, source, target ids.TagID, expectedTargetVersion int64) (MergeResult, error) {
 	if err := requireVocabularyAuthority(ctx, principal.ActionUpdate); err != nil {
 		return MergeResult{}, err
@@ -84,6 +86,11 @@ func (s *Store) MergeTags(ctx context.Context, source, target ids.TagID, expecte
 				return err
 			}
 		}
+		for _, id := range []ids.TagID{source, target} {
+			if err := storekit.EnsureReleasedVersion(ctx, tx, "tag", id.UUID); err != nil {
+				return err
+			}
+		}
 		if err := requireLiveTag(ctx, tx, target, intoTagIDField); err != nil {
 			return err
 		}
@@ -97,21 +104,11 @@ func (s *Store) MergeTags(ctx context.Context, source, target ids.TagID, expecte
 		// Count the overlap BEFORE moving anything: once the update runs, a
 		// record that carried both is indistinguishable from one that carried
 		// only the source.
-		if err := tx.QueryRow(ctx, `
-			SELECT count(*) FROM taggable s
-			 WHERE s.tag_id = $1
-			   AND EXISTS (SELECT 1 FROM taggable t
-			                WHERE t.tag_id = $2 AND t.entity_type = s.entity_type
-			                  AND t.entity_id = s.entity_id)`,
-			source, target).Scan(&out.Collapsed); err != nil {
+		args := pgx.StrictNamedArgs{tagMergeSourceArg: source, tagMergeTargetArg: target}
+		if err := tx.QueryRow(ctx, `SELECT count(*) FROM taggable s WHERE s.tag_id = @source AND `+tagMergeOverlap, args).Scan(&out.Collapsed); err != nil {
 			return err
 		}
-		moved, err := tx.Exec(ctx, `
-			UPDATE taggable SET tag_id = $2
-			 WHERE tag_id = $1
-			   AND NOT EXISTS (SELECT 1 FROM taggable t
-			                    WHERE t.tag_id = $2 AND t.entity_type = taggable.entity_type
-			                      AND t.entity_id = taggable.entity_id)`, source, target)
+		moved, err := tx.Exec(ctx, `UPDATE taggable s SET tag_id = @target WHERE s.tag_id = @source AND NOT `+tagMergeOverlap, args)
 		if err != nil {
 			return err
 		}

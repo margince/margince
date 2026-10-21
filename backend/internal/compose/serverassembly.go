@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/companydossier"
 	"github.com/margince/margince/backend/internal/compose/companyscan"
 	"github.com/margince/margince/backend/internal/compose/magic"
+	"github.com/margince/margince/backend/internal/compose/profileverdicts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -39,8 +40,10 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/integrations"
 	"github.com/margince/margince/backend/internal/modules/introductions"
+	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/modules/reporting"
+	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -75,6 +78,14 @@ func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 		WithStopCarrier(consent.NewStore(InstallationDB(pool))).
 		WithSatelliteCarriers(consent.NewStore(InstallationDB(pool)),
 			introductions.NewStore(InstallationDB(pool), time.Now)).
+		WithParticipantRosterReader(activities.EnsureParticipantRosterVisibleTx).
+		WithProviderRunReader(integrations.ReadRunForContactTx).
+		WithMergeSignalReader(signals.PreviewSignalCarryTx).
+		WithMergeCommitmentReader(weeklyPlanStore(pool).PreviewCommitmentCarryTx).
+		WithMergeNoticeReader(notices.PreviewNoticeCarryTx).
+		WithMergeContentReader(activities.NewStore(InstallationDB(pool))).
+		WithProfileVerdictReader(profileverdicts.MergeReader(InstallationDB(pool))).
+		WithFeedbackCarryReader(ai.NewFeedbackStore(InstallationDB(pool))).
 		WithGrantCarrier(identity.NewServiceFor(InstallationDB(pool))).
 		WithInstallationRenamer(installationRenamer(pool))
 }

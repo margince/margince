@@ -62,3 +62,12 @@ export function uatVerdict({
     (allowMissing || missing.length === 0);
   return { pass, emptyCensus };
 }
+
+export function changesSince(git, base) {
+  return [
+    ...new Set([
+      ...git(`diff --name-only --diff-filter=d ${base}`).split("\n"),
+      ...git("ls-files --others --exclude-standard").split("\n"),
+    ]),
+  ].filter(Boolean);
+}

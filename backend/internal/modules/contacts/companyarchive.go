@@ -37,11 +37,11 @@ import (
 // the store every single time — leaving it out would spend a human's approval
 // on the one target that can never succeed.
 func (s *Store) RefuseArchiveCompany(ctx context.Context, id ids.CompanyID) error {
-	if err := auth.Require(ctx, "company", principal.ActionDelete); err != nil {
+	if err := auth.Require(ctx, companyEntity, principal.ActionDelete); err != nil {
 		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureWritable(ctx, tx, "company", id.UUID); err != nil {
+		if err := auth.EnsureWritable(ctx, tx, companyEntity, id.UUID); err != nil {
 			return err
 		}
 		return refuseIfAnchor(ctx, tx, id, "id",
@@ -59,16 +59,16 @@ func (s *Store) ArchiveCompany(
 	ctx context.Context, id ids.CompanyID, ifVersion *int64, opts ...WriteOption,
 ) (crmcontracts.Company, error) {
 	options := collectWriteOptions(opts)
-	if err := auth.Require(ctx, "company", principal.ActionDelete); err != nil {
+	if err := auth.Require(ctx, companyEntity, principal.ActionDelete); err != nil {
 		return crmcontracts.Company{}, err
 	}
-	active, err := s.activeColumns(ctx, "company")
+	active, err := s.activeColumns(ctx, companyEntity)
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
 	var out crmcontracts.Company
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureWritable(ctx, tx, "company", id.UUID); err != nil {
+		if err := auth.EnsureWritable(ctx, tx, companyEntity, id.UUID); err != nil {
 			return err
 		}
 		// The precondition, under the row lock the write takes: a caller that
@@ -77,7 +77,7 @@ func (s *Store) ArchiveCompany(
 		// stays with THIS verb rather than moving into archiveCompanyTx:
 		// it is a condition the caller attached to their request, and the
 		// rejection next door attaches none.
-		if err := refuseIfHumanTouched(ctx, tx, "company", id.UUID, options); err != nil {
+		if err := refuseIfHumanTouched(ctx, tx, companyEntity, id.UUID, options); err != nil {
 			return err
 		}
 		if options.keepWhileReferenced {
@@ -97,10 +97,10 @@ func (s *Store) ArchiveCompany(
 // ArchiveCompany asks and answers nothing: the caller already knows which row
 // it archived.
 func (s *Store) ArchiveCompanyTx(ctx context.Context, tx pgx.Tx, id ids.CompanyID, ifVersion *int64) error {
-	if err := auth.Require(ctx, "company", principal.ActionDelete); err != nil {
+	if err := auth.Require(ctx, companyEntity, principal.ActionDelete); err != nil {
 		return err
 	}
-	if err := auth.EnsureWritable(ctx, tx, "company", id.UUID); err != nil {
+	if err := auth.EnsureWritable(ctx, tx, companyEntity, id.UUID); err != nil {
 		return err
 	}
 	_, err := archiveCompanyTx(ctx, tx, id, ifVersion, nil)
@@ -121,12 +121,7 @@ func (s *Store) ArchiveCompanyTx(ctx context.Context, tx pgx.Tx, id ids.CompanyI
 func archiveCompanyTx(
 	ctx context.Context, tx pgx.Tx, id ids.CompanyID, ifVersion *int64, active []fieldcatalog.Column,
 ) (crmcontracts.Company, error) {
-	if err := refuseIfAnchor(ctx, tx, id, "id", "it cannot be archived. Archive a different company, or edit this one on the company page"); err != nil {
-		return crmcontracts.Company{}, err
-	}
-	// The cascade below takes this company off every project it is on. A
-	// project that would be left with none is refused rather than stranded.
-	if err := refuseIfSoleCompanyOnALiveProject(ctx, tx, id); err != nil {
+	if err := companyArchiveAllowed(ctx, tx, id); err != nil {
 		return crmcontracts.Company{}, err
 	}
 	if _, err := readCompany(ctx, tx, id, storekit.LiveOnly, active); err != nil {
@@ -138,14 +133,14 @@ func archiveCompanyTx(
 	// released against version 4 lands on version 4 or answers skew.
 	p := storekit.NewPatch()
 	p.Set("archived_at", nil, now)
-	if err := p.ApplyGuarded(ctx, tx, "company", id.UUID, ifVersion); err != nil {
+	if err := p.ApplyGuarded(ctx, tx, companyEntity, id.UUID, ifVersion); err != nil {
 		return crmcontracts.Company{}, fmt.Errorf("archive the account: %w", err)
 	}
 	cascade, err := retireCompanyCascade(ctx, tx, id, now)
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
-	auditID, err := storekit.AuditWithEvidence(ctx, tx, "archive", "company", id.UUID, nil, nil, cascade.Evidence())
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, "archive", companyEntity, id.UUID, nil, nil, cascade.Evidence())
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
@@ -177,15 +172,19 @@ func retireCompanyCascade(ctx context.Context, tx pgx.Tx, id ids.CompanyID, now 
 		// longer a partner by relationship type while partner.go's own
 		// live-row reads still answer for it.
 		{tablePartner, `UPDATE partner SET archived_at = $2 WHERE company_id = $1 AND archived_at IS NULL RETURNING id`},
-		{tableRelationship, `UPDATE relationship SET archived_at = $2 WHERE (company_id = $1 OR counterparty_company_id = $1) AND archived_at IS NULL RETURNING id`},
 	} {
 		if err := cascade.Retire(ctx, tx, retire.table, retire.statement, id, now); err != nil {
 			return storekit.ArchiveCascade{}, fmt.Errorf("retire what hangs off the account: %w", err)
 		}
 	}
+	if err := cascade.Retire(ctx, tx, tableRelationship,
+		`UPDATE relationship SET archived_at = @archived WHERE `+companyArchiveRelationships+` RETURNING id`,
+		pgx.StrictNamedArgs{archiveRecordKey: id, archiveStateKey: now}); err != nil {
+		return storekit.ArchiveCascade{}, fmt.Errorf("retire company relationships: %w", err)
+	}
 	if err := cascade.DropMemberships(ctx, tx,
 		`WITH gone AS (
-			DELETE FROM list_member WHERE entity_type = 'company' AND entity_id = @record
+			DELETE FROM list_member WHERE `+companyArchiveMemberships+`
 			RETURNING list_id, entity_type, entity_id, added_by, created_at, note),
 		logged AS (
 			INSERT INTO list_member_event (list_id, entity_type, entity_id, action, reason, actor)
@@ -194,7 +193,7 @@ func retireCompanyCascade(ctx context.Context, tx pgx.Tx, id ids.CompanyID, now 
 		return storekit.ArchiveCascade{}, fmt.Errorf("drop the account's list memberships: %w", err)
 	}
 	if err := cascade.DropTags(ctx, tx,
-		`DELETE FROM taggable WHERE entity_type = 'company' AND entity_id = $1 RETURNING tag_id, assigned_by, assigned_by_kind, assigned_at`, id.UUID); err != nil {
+		`DELETE FROM taggable WHERE `+companyArchiveMemberships+` RETURNING tag_id, assigned_by, assigned_by_kind, assigned_at`, pgx.StrictNamedArgs{archiveRecordKey: id.UUID}); err != nil {
 		return storekit.ArchiveCascade{}, fmt.Errorf("drop the account's tags: %w", err)
 	}
 	return cascade, nil
@@ -205,7 +204,7 @@ var companyColumns = `id, display_name, legal_name, description, industry, size_
 	address_line1, address_line2, address_city, address_region, address_postal_code, address_country,
 	lifecycle, parent_company_id, merged_into_id, logo_object_key, linkedin_url, source, captured_by,
 	source_system, source_author_id, source_author_name,
-	` + sourceAuthorSeatNameSQL("company") + `,
+	` + sourceAuthorSeatNameSQL(companyEntity) + `,
 	version, created_at, updated_at, archived_at, is_anchor, last_activity_at, legal_hold`
 
 // readCompany resolves one company row; active names the

@@ -120,7 +120,6 @@ backend/internal/modules/collections/vocab_test.go migration 0228
 backend/internal/modules/comms/store_test.go core 0136
 backend/internal/modules/consent/preference.go core 0217
 backend/internal/modules/contacts/company_computed.go core 0217
-backend/internal/modules/contacts/company_fact_read.go migration 0099
 backend/internal/modules/contacts/companyarchive.go migration 0083
 backend/internal/modules/contacts/companylinkedin_test.go migration 0191
 backend/internal/modules/contacts/emailsignature.go core 0235

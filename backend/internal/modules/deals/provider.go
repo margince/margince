@@ -124,7 +124,7 @@ func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datas
 			return datasource.EntityRef{}, err
 		}
 		req.Source = in.Source
-		mapped, err := dealCreateInput(req)
+		mapped, err := DealCreationInput(req)
 		if err != nil {
 			return datasource.EntityRef{}, err
 		}
@@ -201,9 +201,9 @@ func (p *Provider) ArchiveAt(ctx context.Context, in datasource.ArchiveInput) (d
 		v, err := p.store.ArchiveDeal(ctx, ids.From[ids.DealKind](in.Ref.ID), in.IfVersion)
 		return ref(datasource.EntityDeal, v.Id), err
 	case datasource.EntityProduct, datasource.EntityOfferTemplate:
-		return p.archiveCatalog(ctx, in.Ref)
+		return p.archiveCatalog(ctx, in)
 	case datasource.EntityOffer:
-		return p.archiveOffer(ctx, in.Ref)
+		return p.archiveOffer(ctx, in)
 	default:
 		return datasource.EntityRef{}, &datasource.UnsupportedEntityError{Type: string(in.Ref.Type)}
 	}

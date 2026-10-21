@@ -3,7 +3,10 @@ import { RecordFields, rawRecord } from "../../components/recordfields";
 import { ContactLink } from "../../design-system/contactlink";
 import { FieldRow } from "../../design-system/fieldgrid";
 import { useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
+import {
+  EMAIL_TYPE_LABEL,
+  PHONE_TYPE_LABEL,
+} from "../../format/contactchannels";
 import { useCanWriteRecord } from "../../lib/capability";
 import { ADDRESS_FIELDS, addressFrom } from "../companies/companyform";
 import { TagsPanel } from "../lists/tagspanel";
@@ -16,26 +19,6 @@ import { contactEditFields, mapContactUpdate } from "./contactformfields";
 
 type Contact = components["schemas"]["Contact"];
 type Profile = components["schemas"]["ContactProviderProfile"];
-type EmailType = NonNullable<
-  NonNullable<Contact["emails"]>[number]["email_type"]
->;
-type PhoneType = NonNullable<
-  NonNullable<Contact["phones"]>[number]["phone_type"]
->;
-
-// The kind of each handle, in the words the edit form's own Type option
-// uses, so the card and the form never name one kind two ways.
-const EMAIL_TYPE_LABEL: Readonly<Record<EmailType, MessageKey>> = {
-  work: "field.emailWork",
-  personal: "field.emailPersonal",
-  other: "field.emailOther",
-};
-const PHONE_TYPE_LABEL: Readonly<Record<PhoneType, MessageKey>> = {
-  work: "field.phoneWork",
-  mobile: "field.phoneMobile",
-  home: "field.phoneHome",
-  other: "field.phoneOther",
-};
 export function ContactDetails({
   contact,
   profiles,

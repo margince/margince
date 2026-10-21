@@ -1,4 +1,5 @@
 import type { components } from "../../api/schema";
+import { isRecord } from "../../lib/problembody";
 import type { Approval } from "../../lib/approvals.queries";
 import { RELINK_KINDS, type RelinkKind } from "../mail/compose";
 
@@ -20,6 +21,7 @@ import { RELINK_KINDS, type RelinkKind } from "../mail/compose";
 
 type CommunicationContext = components["schemas"]["CommunicationContext"];
 type Link = components["schemas"]["ActivityLinkInput"];
+type Evidence = components["schemas"]["CommunicationEvidence"];
 
 /** What the preview hook is asked, for one staged send. */
 export type StagedSend = Readonly<{
@@ -28,6 +30,8 @@ export type StagedSend = Readonly<{
   links?: readonly Link[];
   context?: CommunicationContext;
   marketingPurpose?: string;
+  consentPurpose?: string;
+  evidence?: Evidence;
 }>;
 
 function stringOf(value: unknown): string | undefined {
@@ -113,13 +117,13 @@ function contextOf(value: unknown): CommunicationContext | undefined {
  * mail anybody can preview.
  */
 export function stagedSendOf(approval: Approval): StagedSend | undefined {
-  const change = approval.proposed_change ?? {};
-  const recipients = [...addressesOf(change.to), ...addressesOf(change.cc)];
-  if (recipients.length === 0) {
-    return undefined;
+  let change = approval.proposed_change ?? {};
+  if (Object.hasOwn(change, "operation")) {
+    if (!isRecord(change.body)) return undefined;
+    change = change.body;
   }
-  const context = contextOf(change.communication_context);
-  const marketingPurpose = stringOf(change.marketing_purpose);
+  const question = sendQuestion(change);
+  if (question === undefined) return undefined;
   switch (approval.kind) {
     // The automation's reply, waiting for a human to read and release. It names
     // the thread it answers in its own payload.
@@ -128,7 +132,7 @@ export function stagedSendOf(approval: Approval): StagedSend | undefined {
       if (anchorActivityId === undefined) {
         return undefined;
       }
-      return { recipients, anchorActivityId, context, marketingPurpose };
+      return { ...question, anchorActivityId };
     }
     // An agent's reply. The anchor is the approval's own target: the row the
     // effect hangs off, which for a reply is the activity being answered.
@@ -140,7 +144,7 @@ export function stagedSendOf(approval: Approval): StagedSend | undefined {
       if (anchorActivityId === undefined) {
         return undefined;
       }
-      return { recipients, anchorActivityId, context, marketingPurpose };
+      return { ...question, anchorActivityId };
     }
     // An agent's account-started mail: no anchor, so the records it would be
     // filed under are the question's other half.
@@ -149,9 +153,62 @@ export function stagedSendOf(approval: Approval): StagedSend | undefined {
       if (links === undefined || links.length === 0) {
         return undefined;
       }
-      return { recipients, links, context, marketingPurpose };
+      return { ...question, links };
     }
     default:
       return undefined;
   }
+}
+
+function sendQuestion(
+  change: Readonly<Record<string, unknown>>,
+): StagedSend | undefined {
+  const recipients = [
+    ...addressesOf(change.to),
+    ...addressesOf(change.cc),
+    ...addressesOf(change.bcc),
+  ];
+  if (recipients.length === 0) {
+    return undefined;
+  }
+  const context = contextOf(change.communication_context);
+  const marketingPurpose = stringOf(change.marketing_purpose);
+  const consentPurpose = stringOf(change.consent_purpose);
+  const evidence = evidenceOf(change.evidence);
+  if (change.evidence != null && evidence === undefined) return undefined;
+  return {
+    recipients,
+    context,
+    marketingPurpose,
+    ...(consentPurpose ? { consentPurpose } : {}),
+    ...(evidence ? { evidence } : {}),
+  };
+}
+
+function evidenceOf(value: unknown): Evidence | undefined {
+  if (!isRecord(value)) return undefined;
+  const fields: Record<keyof Evidence, true> = {
+    activity_id: true,
+    deal_id: true,
+    invoice_id: true,
+    contract_id: true,
+    consent_event_id: true,
+    basis_id: true,
+  };
+  if (
+    Object.entries(value).some(
+      ([key, entry]) =>
+        !Object.hasOwn(fields, key) ||
+        (entry !== null && typeof entry !== "string"),
+    )
+  )
+    return undefined;
+  return {
+    activity_id: stringOf(value.activity_id),
+    deal_id: stringOf(value.deal_id),
+    invoice_id: stringOf(value.invoice_id),
+    contract_id: stringOf(value.contract_id),
+    consent_event_id: stringOf(value.consent_event_id),
+    basis_id: stringOf(value.basis_id),
+  };
 }

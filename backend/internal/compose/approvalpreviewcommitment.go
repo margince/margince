@@ -33,7 +33,7 @@ func (r approvalPreviewReader) commitmentPreview(ctx context.Context, approval c
 	if !commitmentPreviewIdentityMatches(approval, proposal) {
 		return out, nil
 	}
-	sourceType := crmcontracts.ApprovalEvidenceSourceType(recordTypeActivity)
+	sourceType := crmcontracts.ApprovalEvidenceSourceType(string(recordTypeActivity))
 	citation, err := r.currentCitation(ctx, crmcontracts.ApprovalEvidence{SourceType: &sourceType, SourceId: new(openapi_types.UUID(proposal.SourceActivityID)), EvidenceSnippet: proposal.Quote})
 	if state := evidenceFailureState(err); state != "" {
 		out.State = state

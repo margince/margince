@@ -24,7 +24,7 @@ import {
   type Candidate,
   searchByEntity,
 } from "../../lib/relationshipcandidates";
-import { KIND_LABELS } from "./relationshipkinds";
+import { KIND_LABELS } from "../../lib/relationshipkinds";
 import "./candidatepicker.css";
 import "../../design-system/querystates.css";
 import "./relationships.css";

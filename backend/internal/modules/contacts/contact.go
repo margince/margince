@@ -159,11 +159,7 @@ func (s *Store) createContactInTx(ctx context.Context, tx pgx.Tx, in CreateConta
 	}
 	in.OwnerID = owner
 
-	if err := ensureContactEmailsUnclaimed(ctx, tx, in.Emails); err != nil {
-		return crmcontracts.Contact{}, err
-	}
-
-	match, err := manualDedupeContact(ctx, tx, in)
+	match, err := admitAndDedupeContactCreate(ctx, tx, in)
 	if err != nil {
 		return crmcontracts.Contact{}, err
 	}

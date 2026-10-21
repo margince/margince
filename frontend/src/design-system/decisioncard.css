@@ -163,6 +163,7 @@
    value is still a business fact someone is being asked to agree to, and the
    code face would dress it as machine output. */
 .dcard-fact {
+  white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 

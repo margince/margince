@@ -158,3 +158,15 @@ export const ASourceWithheld: Story = {
       sources_unavailable: [{ source: "approval", reason: "withheld" }],
     }),
 };
+
+export const WithheldCoverage: Story = {
+  render: () => panel({ ...QUIET, not_shown_count_withheld: true }),
+};
+
+export const UnknownReceiptKind: Story = {
+  render: () =>
+    panel({
+      ...QUIET,
+      not_shown: [{ reason: "unknown_entity_type", count: 2 }],
+    }),
+};

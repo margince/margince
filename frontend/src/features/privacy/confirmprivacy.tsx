@@ -8,8 +8,11 @@ import { formatDate } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import {
+  type AcquisitionKind,
+  isAcquisitionKind,
+} from "../../lib/acquisitionkinds";
 import { labelOf } from "../../lib/preferences.logic";
-import { type AcquisitionKind, isAcquisitionKind } from "./acquisitionkinds";
 
 type PrivacyInformationPage = components["schemas"]["PrivacyInformationPage"];
 

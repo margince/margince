@@ -44,9 +44,16 @@ func TestDemoteReversesAPromotionThatCreatedTheContact(t *testing.T) {
 		t.Fatalf("promote: err=%v merged=%t, want a created contact", err, merged)
 	}
 
+	preview, err := e.store.PreviewLeadDemotion(e.ctx, lead)
+	if err != nil {
+		t.Fatal(err)
+	}
 	out, err := e.store.DemoteLead(e.ctx, lead, "promoted the wrong prospect")
 	if err != nil {
 		t.Fatalf("demote: %v", err)
+	}
+	if preview.Unwind != out.Unwind || out.ContactId == nil || preview.ContactID.UUID != ids.UUID(*out.ContactId) {
+		t.Fatalf("preview %+v differs from demotion %+v", preview, out)
 	}
 	if out.Unwind != crmcontracts.DemoteLeadResponseUnwindDemoteUnwindReversed {
 		t.Errorf("unwind = %q, want reversed: the promotion created this contact", out.Unwind)
@@ -88,9 +95,16 @@ func TestDemoteOfAMergeTouchesOnlyTheLineage(t *testing.T) {
 		t.Fatal("promotion did not record the lineage on the incumbent; the test cannot see it removed")
 	}
 
+	preview, err := e.store.PreviewLeadDemotion(e.ctx, lead)
+	if err != nil {
+		t.Fatal(err)
+	}
 	out, err := e.store.DemoteLead(e.ctx, lead, "not the same contact after all")
 	if err != nil {
 		t.Fatalf("demote: %v", err)
+	}
+	if preview.Unwind != out.Unwind || out.ContactId == nil || preview.ContactID.UUID != ids.UUID(*out.ContactId) {
+		t.Fatalf("preview %+v differs from demotion %+v", preview, out)
 	}
 	if out.Unwind != crmcontracts.DemoteLeadResponseUnwindDemoteUnwindMergeLineageOnly {
 		t.Errorf("unwind = %q, want merge_lineage_only", out.Unwind)
@@ -128,9 +142,16 @@ func TestDemoteNeverArchivesAMergeSurvivor(t *testing.T) {
 		t.Fatalf("merge: %v", err)
 	}
 
+	preview, err := e.store.PreviewLeadDemotion(e.ctx, lead)
+	if err != nil {
+		t.Fatal(err)
+	}
 	out, err := e.store.DemoteLead(e.ctx, lead, "wrong prospect")
 	if err != nil {
 		t.Fatalf("demote: %v", err)
+	}
+	if preview.Unwind != out.Unwind || out.ContactId == nil || preview.ContactID.UUID != ids.UUID(*out.ContactId) {
+		t.Fatalf("preview %+v differs from demotion %+v", preview, out)
 	}
 	if out.Unwind != crmcontracts.DemoteLeadResponseUnwindDemoteUnwindMergeLineageOnly {
 		t.Errorf("unwind = %q, want merge_lineage_only: the contact is a merge survivor", out.Unwind)
@@ -167,6 +188,9 @@ func TestDemoteRefusesWhenTheContactIsOnALiveDeal(t *testing.T) {
 	}
 
 	var hasDeal *ContactHasDealError
+	if _, err := e.store.PreviewLeadDemotion(e.ctx, lead); !errors.As(err, &hasDeal) {
+		t.Fatalf("preview err = %v, want ContactHasDealError", err)
+	}
 	if _, err := e.store.DemoteLead(e.ctx, lead, "oops"); !errors.As(err, &hasDeal) {
 		t.Fatalf("demote err = %v, want ContactHasDealError (422 contact_has_deal)", err)
 	}
@@ -431,6 +455,9 @@ func TestDemoteRefusesAVersionThePinNoLongerNames(t *testing.T) {
 	at := *promoted.Version
 
 	stale := at - 1
+	if _, err := e.store.PreviewLeadDemotion(e.ctx, lead, OnlyAtVersion(&stale)); !errors.Is(err, apperrors.ErrVersionSkew) {
+		t.Fatalf("stale preview err = %v", err)
+	}
 	if _, err := e.store.DemoteLead(e.ctx, lead, "stale", OnlyAtVersion(&stale)); !errors.Is(err, apperrors.ErrVersionSkew) {
 		t.Fatalf("a stale pin err = %v, want ErrVersionSkew — the reversal ran on a row the approval "+
 			"does not describe", err)

@@ -217,7 +217,9 @@ export function DecisionCard({
       <div className="dcard-evidence">
         <DecisionEvidence
           evidence={decisionEvidence(approval)}
-          collapsed={layout === "row"}
+          collapsed={
+            layout === "row" && approval.preview?.evidence === undefined
+          }
         />
       </div>
       {detail}

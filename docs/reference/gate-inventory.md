@@ -36,7 +36,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `authzcategories_test.go` | H2 | The outbound category vocabulary is spelled twice (once in Go, once as a CHECK constraint on communication\_decision), and the two must agree. |
 | `backfillwindow_test.go` | H3 | The capture backfill window set is the same in the contract's four enums, the Go validator and the capture\_backfill CHECK, derived from the tree rather than remembered here. |
 | `benchrecordswitch_test.go` | H2 | Both bench harnesses ask the same variable whether to publish a record, and both answer only to the same value. |
-| `bookinginvite_test.go` | H2 | What booking a meeting claims to do and what it does, held against each other. |
+| `bookinginvite_test.go` | H2 | Address use is a conservative signal of invitation delivery. |
 | `briefcachemirror_test.go` | H2 | The brief cache's upsert is spelled in two places and they must stay one statement. |
 | `captureledgerstatuses_test.go` | H2 | The disposition ledger's status vocabulary is defined by the column's own constraint, and nowhere else. |
 | `cla_test.go` | H2 | An acceptance of the CLA covers the text it was shown, under the version that text carries. |
@@ -600,6 +600,7 @@ The eight shapes, what each is for, and how each one silently passes:
 
 | Gate | Hardness | What it holds |
 |---|---|---|
+| `bookingdisplay_test.go` | H2 | A projection may append display values, but cannot pass addresses to another call or retain them in another assignment for a later send. |
 | `extensionsqlscopecases_test.go` | H2 | The SQL-scope gate's own test, driven with synthetic unit sources rather than the tree, because the real units are supposed to pass. |
 | `historyfieldlabelsfalsify_test.go` | H3 | The label census, falsified. |
 | `jobfleetwideshapes_test.go` | H2 | The FleetWide gate's own falsification: every dispatch shape the tree uses is proven accepted, and the shapes it exists to reject (a dispatcher doing a tenant's work, and a fan-out built around the chokepoints) are proven rejected. |
@@ -609,6 +610,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `rbacbaselineerafixture_test.go` | H3 | The pre-state the RBAC composition gate replays over must not be hand-editable. |
 | `retainedcolumncases_test.go` | H1 | The retention sweep's two SQL claims, driven with synthetic statements rather than the tree, for the reason extensionsqlscopecases\_test.go gives for its own cases. |
 | `rowscopeplanted_test.go` | H2 | The defect this census is for, planted and run. |
+| `tableownershipexpressions_test.go` | H2 | Complete concatenations keep one statement identity. |
 | `triggerwrittencolumncases_test.go` | H2 | The trigger-written-column reader driven with synthetic statements, for the reason retainedcolumncases\_test.go gives for its own: the tree is supposed to pass, so a reader proven only by "nothing in the tree trips it" is one that keeps passing after it stops working. |
 | `txseamreach_test.go` | H2 | Following a call one hop further than the name it is spelled with. |
 | `updateguardcases_test.go` | H2 | What the concurrency-guard census judges a function on, driven with synthetic source rather than the tree, for the reason retainedcolumncases\_test.go gives for its own cases. |

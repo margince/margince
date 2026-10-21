@@ -3,6 +3,7 @@ import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { CommunicationStatus } from "../design-system/communicationstatus";
+import { sendPermissionReasonKey } from "../format/sendpermissionreason";
 import { useT } from "../i18n";
 
 // What the engine decided about this message, said where the rep is writing it.
@@ -162,7 +163,7 @@ export function SendPermission({
         icon={ShieldAlert}
         title={t("sendPermission.refused")}
       >
-        {t(reasonKey(recipient))}
+        {t(sendPermissionReasonKey(recipient?.reason_code))}
       </Callout>
     );
   }
@@ -192,37 +193,6 @@ export function SendPermission({
       )}
     </Callout>
   );
-}
-
-/**
- * The sentence for one refusal, chosen by the engine's reason code.
- *
- * A code this build does not recognise falls back to a sentence that is true of
- * every refusal and promises nothing specific. The alternative — rendering the
- * raw code — shows a rep `no_compatible_evidence` and asks them to interpret an
- * internal vocabulary.
- */
-function reasonKey(recipient: Recipient | undefined) {
-  switch (recipient?.reason_code) {
-    case "marketing_objection":
-      return "sendPermission.reason.objected" as const;
-    case "consent_withdrawn":
-      return "sendPermission.reason.withdrawn" as const;
-    case "processing_restricted":
-      return "sendPermission.reason.restricted" as const;
-    case "subject_request":
-      return "sendPermission.reason.askedUsToStop" as const;
-    case "hard_bounce":
-      return "sendPermission.reason.bounced" as const;
-    case "frequency_cap_reached":
-      return "sendPermission.reason.tooMany" as const;
-    case "recipient_resolves_to_no_single_subject":
-      return "sendPermission.reason.ambiguous" as const;
-    case "unconfirmed_double_opt_in":
-      return "sendPermission.reason.unconfirmed" as const;
-    default:
-      return "sendPermission.reason.other" as const;
-  }
 }
 
 /**

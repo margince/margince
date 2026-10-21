@@ -15,30 +15,15 @@ import { searchCompanyTargets } from "../companies/companyform";
 // sees it, and how the answers become the two request bodies.
 
 export type Project = components["schemas"]["Project"];
-export type ProjectPhase = Project["phase"];
+export type { ProjectPhase } from "../../format/projectphase";
+export {
+  isProjectPhase,
+  PHASE_LABEL,
+  PROJECT_PHASES,
+} from "../../format/projectphase";
+
 type CreateProjectRequest = components["schemas"]["CreateProjectRequest"];
 type UpdateProjectRequest = components["schemas"]["UpdateProjectRequest"];
-
-// The four phases in the order a project walks them. Movement goes both ways
-// — a closed project can be reopened into delivery — so this is the ORDER of
-// the stepper, not a one-way ladder.
-export const PROJECT_PHASES = [
-  "initiative",
-  "pursuing",
-  "delivering",
-  "closed",
-] as const satisfies readonly ProjectPhase[];
-
-export const PHASE_LABEL: Record<ProjectPhase, MessageKey> = {
-  initiative: "project.phase.initiative",
-  pursuing: "project.phase.pursuing",
-  delivering: "project.phase.delivering",
-  closed: "project.phase.closed",
-};
-
-export function isProjectPhase(value: string): value is ProjectPhase {
-  return (PROJECT_PHASES as readonly string[]).includes(value);
-}
 
 /**
  * The fields both dialogs share. The company is the one difference: a project

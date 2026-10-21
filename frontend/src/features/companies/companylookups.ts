@@ -1,3 +1,13 @@
+import {
+  RELATIONSHIP_TYPE_LABELS,
+  type RelationshipType,
+} from "../../format/companyrelationships";
+
+export {
+  RELATIONSHIP_TYPE_LABELS,
+  type RelationshipType,
+} from "../../format/companyrelationships";
+
 import type { components } from "../../api/schema";
 import { formatDateAbbrev, formatNumber } from "../../format/format";
 import { type PluralBase, useLocale, usePlural, useT } from "../../i18n";
@@ -42,26 +52,6 @@ export const LIFECYCLE_OPTIONS = [
   "former_customer",
   "disqualified",
 ] as const;
-
-// What the account is TO US, multi-valued (ADR-0079/A124). Typed against the
-// schema union, so a value added upstream fails the build here rather than
-// reaching a reader as a raw enum.
-export type RelationshipType = NonNullable<
-  Company["relationship_types"]
->[number];
-
-// Beside LIFECYCLE_LABELS because the header draws both vocabularies on one
-// line and they OVERLAP: `customer` is a member of each. Two modules cannot
-// notice that; one can, which is what relationshipBadges below does.
-export const RELATIONSHIP_TYPE_LABELS: Record<RelationshipType, MessageKey> = {
-  customer: "company.relType.customer",
-  partner: "company.relType.partner",
-  supplier: "company.relType.supplier",
-  investor: "company.relType.investor",
-  portfolio_company: "company.relType.portfolio_company",
-  competitor: "company.relType.competitor",
-  other: "company.relType.other",
-};
 
 /**
  * The relationship types worth drawing beside the account's lifecycle: every

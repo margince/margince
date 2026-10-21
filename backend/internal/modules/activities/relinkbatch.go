@@ -390,9 +390,8 @@ func liveThreadMembers(ctx context.Context, tx pgx.Tx, threadKey string) ([]ids.
 // rolls the whole set back, because a caller who named twelve rows and had
 // seven of them move has no way to tell which seven.
 func (s *Store) RelinkActivities(ctx context.Context, activityIDs []ids.UUID, in RelinkActivityInput) (RelinkBatchResult, error) {
-	if len(activityIDs) == 0 || len(activityIDs) > maxBulkRelink {
-		return RelinkBatchResult{}, httperr.Validation("activity_ids", "out_of_range",
-			fmt.Sprintf("activity_ids names between 1 and %d activities; this request names %d", maxBulkRelink, len(activityIDs)))
+	if err := validateRelinkCount(len(activityIDs)); err != nil {
+		return RelinkBatchResult{}, err
 	}
 	if err := refuseBatchPin(in); err != nil {
 		return RelinkBatchResult{}, err
@@ -426,4 +425,12 @@ func (s *Store) RelinkActivities(ctx context.Context, activityIDs []ids.UUID, in
 		return nil
 	})
 	return out, err
+}
+
+func validateRelinkCount(count int) error {
+	if count == 0 || count > maxBulkRelink {
+		return httperr.Validation("activity_ids", "out_of_range",
+			fmt.Sprintf("activity_ids names between 1 and %d activities; this request names %d", maxBulkRelink, count))
+	}
+	return nil
 }

@@ -61,23 +61,11 @@ func relinkAdmittedRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Rel
 // succeeds. The 23505 path below still stands for the caller who asks to
 // associate rather than move.
 func deleteVisibleLinksOfType(ctx context.Context, tx pgx.Tx, id ids.ActivityID, entityType, column string) ([]ids.UUID, error) {
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	idPos, typePos := arg(id), arg(entityType)
-	scope, err := auth.ScopeClauseFor(ctx, entityType, "t", arg)
+	predicate, args, err := visibleRelinkPredicate(ctx, id, entityType, column)
 	if err != nil {
 		return nil, err
 	}
-	visible := "true"
-	if scope != "" {
-		visible = scope
-	}
-	rows, err := tx.Query(ctx, storekit.SQLf(`
-		DELETE FROM activity_link
-		WHERE activity_id = $%d AND entity_type = $%d
-		  AND EXISTS (SELECT 1 FROM %s t WHERE t.id = activity_link.%s AND %s)
-		RETURNING contact_id`,
-		idPos, typePos, entityType, column, visible), args...)
+	rows, err := tx.Query(ctx, "DELETE FROM activity_link WHERE "+predicate+" RETURNING contact_id", args...)
 	if err != nil {
 		return nil, err
 	}
@@ -99,94 +87,18 @@ func deleteVisibleLinksOfType(ctx context.Context, tx pgx.Tx, id ids.ActivityID,
 	return slices.DeleteFunc(displaced, func(contactID ids.UUID) bool { return contactID == ids.Nil }), nil
 }
 
-// repointDisplacedParticipants moves the displaced contacts' participant rows
-// onto the relink target. A relink to a CONTACT is a human saying "this
-// conversation was actually with someone else", so the participant row naming
-// the old contact is now wrong (ACT-DDL-3). Repointing it keeps the
-// participants and the links telling one story.
-//
-// The DISPLACED contact carries the row scope too. The relink already gated the
-// new target; without this the old one is rewritten sight unseen, so a caller
-// could repoint a participant naming a contact they cannot read — including an
-// owner-private captured one. The link delete scopes for the same reason; this
-// is its participant twin.
-//
-// KNOWN GAP, stated rather than papered over: the graph consumer derives its
-// affected (user, contact) pairs from the participant rows, and by the time it
-// runs they name the NEW contact — so the OLD edge is not recomputed and keeps
-// counting an interaction that no longer points at it. The nightly rebuild
-// clears it, which bounds the staleness to the same 24h the window counts
-// already carry, but it is a bound and not a fix.
-//
-// The fix is the additive `relinked_from` reference ADR-0078 specifies on the
-// activity.updated relink payload: the consumer needs the displaced id, and
-// this module cannot recompute the edge itself because search is a sibling.
-// That is a public-event contract change and belongs in its own slice.
+// Displaced participants merge by role, user, address and channel account so replacing several
+// linked contacts cannot create duplicate participant rows.
 func repointDisplacedParticipants(ctx context.Context, tx pgx.Tx, id ids.ActivityID, target ids.UUID, displaced []ids.UUID) error {
-	var pargs []any
-	parg := func(v any) int { pargs = append(pargs, v); return len(pargs) }
-	idPos, targetPos, displacedPos := parg(id), parg(target), parg(displaced)
-	visible, err := auth.ScopeClauseFor(ctx, linkEntityContact, "op", parg)
+	query, args, targetPos, err := participantRelinkQuery(ctx, id, target, displaced)
 	if err != nil {
 		return err
 	}
-	if visible == "" {
-		// An unbounded caller narrows nothing.
-		visible = "true"
-	}
-	// One merge, not a conditional rewrite. The repoint used to UPDATE each
-	// displaced row to the target and skip when the target was already a
-	// participant, which was wrong in both directions:
-	//
-	//   - the skip left the displaced row naming the OLD contact, so the
-	//     activity's links said one thing and its participants another —
-	//     exactly what the repoint exists to prevent — and that row kept
-	//     feeding a relationship-strength signal for somebody the human had
-	//     just said the conversation was not with;
-	//   - with several displaced participants and no target row, every one of
-	//     them qualified and each was rewritten to the target, colliding on
-	//     uq_activity_participant.
-	//
-	// The uniqueness is per (activity, role, user, contact, address), not per
-	// contact, so both the skip test and the collision are decided by the whole
-	// tuple. Within each such group exactly one displaced row is promoted to
-	// the target — and only when the target holds no row of that shape
-	// already — and the rest are deleted. Either way the target is named once
-	// and no displaced row survives.
-	const nilUUID = `'00000000-0000-0000-0000-000000000000'::uuid`
-	if _, err := tx.Exec(ctx, storekit.SQLf(`
-		WITH scoped AS (
-			SELECT ap.id, ap.role, ap.user_id, ap.address,
-			       row_number() OVER (
-			           PARTITION BY ap.role, coalesce(ap.user_id, `+nilUUID+`), coalesce(ap.address, '')
-			           ORDER BY ap.id) AS rank
-			  FROM activity_participant ap
-			 WHERE ap.activity_id = $%d
-			   -- Exactly the contacts the link delete removed, and no
-			   -- others. A participant can name somebody who was never
-			   -- linked at all, and inferring the displaced set from "no
-			   -- longer linked" would rewrite them too.
-			   AND ap.contact_id = ANY($%d::uuid[])
-			   AND ap.contact_id <> $%d
-			   AND EXISTS (SELECT 1 FROM contact op WHERE op.id = ap.contact_id AND (`+visible+`))
-		), promoted AS (
-			UPDATE activity_participant ap SET contact_id = $%d
-			  FROM scoped s
-			 WHERE ap.id = s.id AND s.rank = 1
-			   AND NOT EXISTS (
-			       SELECT 1 FROM activity_participant other
-			        WHERE other.activity_id = ap.activity_id
-			          AND other.role = s.role
-			          AND other.contact_id = $%d
-			          AND coalesce(other.user_id, `+nilUUID+`) = coalesce(s.user_id, `+nilUUID+`)
-			          AND coalesce(other.address, '') = coalesce(s.address, ''))
-			RETURNING ap.id
-		)
-		DELETE FROM activity_participant
-		 WHERE id IN (SELECT id FROM scoped)
-		   AND id NOT IN (SELECT id FROM promoted)`,
-		idPos, displacedPos, targetPos, targetPos, targetPos), pargs...); err != nil {
-		return err
-	}
-	return nil
+	_, err = tx.Exec(ctx, storekit.SQLf(`WITH planned AS (%s), promoted AS (
+  UPDATE activity_participant ap SET contact_id = $%d
+  FROM planned p WHERE ap.id = p.id AND p.move
+  RETURNING ap.id
+ ) DELETE FROM activity_participant
+ WHERE id IN (SELECT id FROM planned WHERE NOT move)`, query, targetPos), args...)
+	return err
 }

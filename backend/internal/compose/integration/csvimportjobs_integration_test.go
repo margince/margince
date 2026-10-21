@@ -207,9 +207,24 @@ func TestASnoozedSliceIsClaimedWithTheSameAttempt(t *testing.T) {
 	if _, claimed := runLease(t, e, run.ID); claimed != nil {
 		t.Fatalf("a snoozed slice left the run claimed by attempt %d, want it queued for the next slice", *claimed)
 	}
-	second := importjobtest.WorkQueued(t, e, compose.ImportCommitArgs{}.Kind())
-	if len(second) != 1 || second[0].Job.ID != first[0].Job.ID || second[0].EventKind != river.EventKindJobCompleted {
-		t.Fatalf("the second slice was %+v, want job %d again, completed", second, first[0].Job.ID)
+	checkpoint := readRun(t, e, run.ID).Checkpoint
+	for checkpoint < 501 {
+		next := importjobtest.WorkQueued(t, e, compose.ImportCommitArgs{}.Kind())
+		if len(next) != 1 || next[0].Job.ID != first[0].Job.ID {
+			t.Fatalf("the next slice was %+v, want job %d again", next, first[0].Job.ID)
+		}
+		if next[0].EventKind != river.EventKindJobCompleted && next[0].EventKind != river.EventKindJobSnoozed {
+			t.Fatalf("the next slice ended %s, want completion or another bounded slice", next[0].EventKind)
+		}
+		polled := readRun(t, e, run.ID)
+		if polled.Checkpoint <= checkpoint || polled.Checkpoint > 501 {
+			t.Fatalf("slice checkpoint moved from %d to %d, want progress within 501 rows", checkpoint, polled.Checkpoint)
+		}
+		checkpoint = polled.Checkpoint
+		sliceAttempt, claimed := runLease(t, e, run.ID)
+		if sliceAttempt != attempt || (next[0].EventKind == river.EventKindJobSnoozed && claimed != nil) {
+			t.Fatalf("slice attempt %d claimed by %v, want unchanged attempt %d and released snoozes", sliceAttempt, claimed, attempt)
+		}
 	}
 	finalAttempt, claimed := runLease(t, e, run.ID)
 	if finalAttempt != attempt || claimed == nil || *claimed != attempt {

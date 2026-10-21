@@ -19,6 +19,7 @@ import (
 // summaryCopy is one language's set. Every field is required, and the census
 // (summarycopy_test.go) refuses a partial set.
 type summaryCopy struct {
+	confirmation string
 	// stagedAction names a generic staged action. %s, %s, %s are the action
 	// kind, the target's record type and its id, in that order; all three are
 	// identifiers and pass through untranslated.
@@ -31,14 +32,17 @@ type summaryCopy struct {
 // textlang.Shipped and ask this map directly.
 var summaryByLang = map[textlang.Lang]summaryCopy{
 	textlang.English: {
+		confirmation: "Confirmation requested: %s",
 		stagedAction: "automation wants to %s on %s %s",
 		heldDraft:    "an automation drafted a reply to %s — read it before it goes",
 	},
 	textlang.German: {
+		confirmation: "Bestätigung erbeten: %s",
 		stagedAction: "Eine Automatisierung möchte %s für %s %s ausführen",
 		heldDraft:    "Eine Automatisierung hat eine Antwort an %s entworfen. Lies sie, bevor sie versendet wird.",
 	},
 	textlang.Vietnamese: {
+		confirmation: "Yêu cầu xác nhận: %s",
 		stagedAction: "Một tự động hóa muốn thực hiện %s trên %s %s",
 		heldDraft:    "Một tự động hóa đã soạn thư trả lời gửi %s, hãy đọc trước khi thư được gửi đi.",
 	},

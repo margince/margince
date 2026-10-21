@@ -15,7 +15,6 @@ import (
 	"context"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
-
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 

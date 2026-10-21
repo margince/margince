@@ -346,7 +346,7 @@ func (s *Store) queueOne(ctx context.Context, tx pgx.Tx, desc provider.Descripto
 		return provider.Run{}, err
 	}
 	if existing {
-		return s.readRun(ctx, tx, runID)
+		return readRun(ctx, tx, runID)
 	}
 
 	// 6. The per-category claim, before any credit is held: an overlapping
@@ -377,7 +377,7 @@ func (s *Store) queueOne(ctx context.Context, tx pgx.Tx, desc provider.Descripto
 	if _, err := storekit.Audit(ctx, tx, "create", "provider_run", uuidOf(&runID), nil, fields); err != nil {
 		return provider.Run{}, err
 	}
-	return s.readRun(ctx, tx, runID)
+	return readRun(ctx, tx, runID)
 }
 
 // runsSubmittedToday counts what actually reached the provider today. A run

@@ -2,6 +2,59 @@ import { describe, expect, it } from "vitest";
 import type { Approval } from "../../lib/approvals.queries";
 import { stagedSendOf } from "./approvalsend";
 
+it.each([false, true])(
+  "includes blind copies and the full authority evidence for a wrapped=%s send",
+  (wrapped) => {
+    const evidence = {
+      activity_id: "activity-1",
+      deal_id: "deal-1",
+      invoice_id: "invoice-1",
+      contract_id: "contract-1",
+      consent_event_id: "consent-1",
+      basis_id: "basis-1",
+    };
+    const body = {
+      to: ["buyer@example.test"],
+      cc: ["finance@example.test"],
+      bcc: ["archive@example.test"],
+      consent_purpose: "product_updates",
+      evidence,
+      links: [{ entity_type: "company", entity_id: "company-1" }],
+    };
+    const staged = stagedSendOf(
+      approval({
+        kind: "send_company_email",
+        proposed_change: wrapped
+          ? { operation: "SendCompanyEmail", body }
+          : body,
+      }),
+    );
+    expect(staged?.recipients).toEqual([
+      "buyer@example.test",
+      "finance@example.test",
+      "archive@example.test",
+    ]);
+    expect(staged?.consentPurpose).toBe("product_updates");
+    expect(staged?.evidence).toEqual(evidence);
+    expect(staged?.links).toEqual(body.links);
+  },
+);
+
+it.each([{ activity_id: 42 }, { unknown_id: "new-evidence" }, ["activity-1"]])(
+  "does not ask a weaker permission question when evidence is malformed",
+  (evidence) => {
+    expect(
+      stagedSendOf(
+        approval({
+          target_entity_type: "activity",
+          target_entity_id: "activity-1",
+          proposed_change: { to: ["buyer@example.test"], evidence },
+        }),
+      ),
+    ).toBeUndefined();
+  },
+);
+
 // What the approval card asks the engine about, read off the proposal.
 //
 // Each staged send kind spells its payload its own way, and the card must ask

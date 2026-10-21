@@ -98,6 +98,199 @@ export const vi = {
   "homeRepair.apply_other": "Áp dụng {count} thay đổi đã xem xét",
   "homeRepair.started":
     "Lượt xử lý đã xem xét đang chờ chạy. Tiến độ hiển thị ở trên.",
+  "approval.scheduled.rearm":
+    "Lên lịch thử gửi lại tin nhắn đang giữ sau khoảng chờ hiển thị. Quyền, người nhận và quy tắc liên lạc hiện tại được kiểm tra lại trước khi gửi.",
+  "approval.scheduled.direct":
+    "Ghi lại quyết định gửi tin nhắn bị từ chối này theo thẩm quyền của bạn và thử gửi ngay. Quyết định và giải thích được lưu; các kiểm tra gửi thông thường vẫn áp dụng.",
+  "approval.scheduled.delay": "Thời gian chờ thử lại (phút)",
+  "approval.read.profileField": "Trường hồ sơ",
+  "approval.read.factField": "Thông tin công ty",
+  "approval.read.before": "Giá trị hiện tại",
+  "approval.read.after": "Giá trị sau phê duyệt",
+  "approval.read.proposed": "Thông tin đọc từ trang web",
+  "approval.read.source": "Trang nguồn",
+  "approval.read.quote": "Trích dẫn nguồn",
+  "approval.read.retained": "Giữ giá trị do người dùng nhập",
+  "approval.read.effect":
+    "Áp dụng các trường và bằng chứng công ty được hiển thị. Giữ nguyên bằng chứng do người dùng xác nhận và các giá trị hiện có như đã hiển thị.",
+  "approval.merge.value.suppressed": "Đã ẩn",
+  "approval.merge.value.corrected": "Đã sửa",
+  "approval.merge.value.confirmed": "Đã xác nhận",
+  "approval.merge.value.queued": "Đang chờ",
+  "approval.merge.value.submitting": "Đang gửi",
+  "approval.merge.value.in_progress": "Đang xử lý",
+  "approval.merge.value.completed": "Đã hoàn tất",
+  "approval.merge.value.no_match": "Không tìm thấy",
+  "approval.merge.value.skipped": "Đã bỏ qua",
+  "approval.merge.value.submission_unknown": "Chưa rõ kết quả gửi",
+  "approval.merge.value.failed": "Không thành công",
+  "approval.merge.value.cancelled": "Đã hủy",
+  "approval.merge.value.budget_exhausted": "Đã hết ngân sách",
+  "approval.merge.value.low_balance": "Số dư không đủ",
+  "approval.merge.value.not_eligible": "Không đủ điều kiện",
+  "approval.merge.value.duplicate_subject_candidate": "Ứng viên trùng lặp",
+  "approval.merge.value.rate_limited":
+    "Đã đạt giới hạn yêu cầu của nhà cung cấp",
+  "approval.merge.value.already_fresh": "Thông tin đã được cập nhật",
+  "approval.merge.value.no_identifiers": "Không có thông tin nhận dạng",
+  "approval.merge.value.category_in_flight": "Đang truy xuất danh mục này",
+  "approval.preview.mergeRecords":
+    "Chuyển các hồ sơ và giá trị được hiển thị sang hồ sơ giữ lại rồi lưu trữ hồ sơ nguồn. Giá trị hiện có của hồ sơ giữ lại được ưu tiên ở những mục được chỉ rõ.",
+  "approval.preview.fillLead":
+    "Chỉ điền các trường trống của khách hàng tiềm năng được hiển thị ở trên. Giá trị hiện có và địa chỉ email được giữ nguyên; không tạo hồ sơ thứ hai.",
+  "approval.preview.companyPrivateReadings":
+    "Nếu một người có bản tóm tắt cho cả hai công ty, bản của công ty giữ lại được giữ nguyên. Đề xuất đã bỏ qua trên công ty bị loại bỏ có thể xuất hiện lại trên công ty giữ lại.",
+  "approval.preview.companyReceipts":
+    "Hồ sơ chương trình đối tác và xác minh thuế chỉ được chuyển khi công ty giữ lại chưa có. Nếu đã có, bản nguồn vẫn thuộc công ty được lưu trữ.",
+  "approval.preview.companyLookups":
+    "Các lượt tra cứu trang web được chuyển sang công ty giữ lại; lượt đang chạy trùng lặp bị hủy. Việc kiểm tra nền cho công ty bị loại bỏ dừng lại.",
+  "approval.merge.source": "Hồ sơ bị loại bỏ",
+  "approval.merge.survivor": "Hồ sơ được giữ lại",
+  "approval.merge.address": "Địa chỉ được chuyển",
+  "approval.merge.address_kind": "Loại địa chỉ",
+  "approval.merge.address_usage": "Mục đích địa chỉ",
+  "approval.merge.address_primary_before": "Địa chỉ chính trước khi chuyển",
+  "approval.merge.address_primary_after": "Địa chỉ chính sau khi chuyển",
+  "approval.merge.assignment_collapsed": "Trách nhiệm trùng lặp bị loại bỏ",
+  "approval.merge.assignment_moved": "Trách nhiệm được chuyển",
+  "approval.merge.assignment_role": "Vai trò",
+  "approval.merge.channel_account": "Tài khoản kênh được chuyển",
+  "approval.merge.channel_blocked": "Kênh bị chặn",
+  "approval.merge.channel_provider": "Nhà cung cấp kênh",
+  "approval.merge.channel_username": "Tên trên kênh",
+  "approval.merge.claim": "Nội dung trao đổi được chuyển",
+  "approval.merge.claim_quote": "Trích dẫn nguồn",
+  "approval.merge.claim_source": "Nguồn trao đổi",
+  "approval.merge.collapse_link": "Liên kết trùng lặp bị loại bỏ",
+  "approval.merge.move_link": "Liên kết được chuyển",
+  "approval.merge.commitment": "Cam kết được chuyển",
+  "approval.merge.company_contract": "Hợp đồng được chuyển",
+  "approval.merge.company_invoice": "Hóa đơn được chuyển",
+  "approval.merge.company_payment": "Khoản thanh toán được chuyển",
+  "approval.read.vat_check":
+    "Yêu cầu kiểm tra mã số VAT nếu dịch vụ xác minh được cấu hình.",
+  "approval.merge.company_customer_link": "Khách hàng kế toán được chuyển",
+  "approval.merge.company_parent_after": "Công ty mẹ sau khi hợp nhất",
+  "approval.merge.company_triaged_domain": "Tên miền đã xác định được chuyển",
+  "approval.merge.partner_moved":
+    "Chuyển chương trình đối tác sang công ty được giữ lại",
+  "approval.merge.partner_retained":
+    "Giữ chương trình đối tác tại công ty được lưu trữ",
+  "approval.merge.vat_check_moved":
+    "Chuyển biên nhận VAT sang công ty được giữ lại",
+  "approval.merge.vat_check_retained":
+    "Giữ biên nhận VAT tại công ty được lưu trữ",
+  "approval.merge.company_commission": "Hoa hồng được chuyển",
+  "approval.merge.company_offer": "Báo giá được chuyển",
+  "approval.merge.company_project": "Dự án được chuyển",
+  "approval.merge.company_deal": "Cơ hội kinh doanh được chuyển",
+  "approval.merge.company_company": "Công ty con được chuyển",
+  "approval.merge.company_fact_category": "Nhóm dữ kiện",
+  "approval.merge.company_fact_discarded": "Dữ kiện trùng lặp bị loại bỏ",
+  "approval.merge.company_fact_field": "Dữ kiện",
+  "approval.merge.company_fact_kept": "Dữ kiện hiện có được giữ lại",
+  "approval.merge.company_fact_moved": "Dữ kiện được chuyển",
+  "approval.merge.company_profile_discarded":
+    "Giá trị hồ sơ trùng lặp bị loại bỏ",
+  "approval.merge.company_profile_field": "Trường hồ sơ",
+  "approval.merge.company_profile_kept": "Giá trị hồ sơ hiện có được giữ lại",
+  "approval.merge.company_profile_moved": "Giá trị hồ sơ được chuyển",
+  "approval.merge.company_relationship_type":
+    "Loại quan hệ công ty được chuyển",
+  "approval.merge.confirmation": "Xác nhận được chuyển",
+  "approval.merge.consent_event": "Bằng chứng đồng ý được chuyển",
+  "approval.merge.consent_event_at": "Ngày của bằng chứng",
+  "approval.merge.consent_event_collapsed": "Bằng chứng trùng lặp bị loại bỏ",
+  "approval.merge.consent_event_note": "Ghi chú bằng chứng",
+  "approval.merge.consent_event_source": "Nguồn bằng chứng",
+  "approval.merge.draft_bcc": "Người nhận ẩn của bản nháp",
+  "approval.merge.draft_body": "Nội dung bản nháp",
+  "approval.merge.draft_cc": "Người nhận bản sao của bản nháp",
+  "approval.merge.draft_discarded": "Bản nháp trùng lặp bị loại bỏ",
+  "approval.merge.draft_kept": "Bản nháp hiện có được giữ lại",
+  "approval.merge.draft_moved": "Bản nháp được chuyển",
+  "approval.merge.draft_to": "Người nhận bản nháp",
+  "approval.merge.feedback_correction": "Nội dung sửa",
+  "approval.merge.feedback_discarded": "Phản hồi trùng lặp bị loại bỏ",
+  "approval.merge.feedback_kept": "Phản hồi hiện có được giữ lại",
+  "approval.merge.feedback_moved": "Phản hồi được chuyển",
+  "approval.merge.feedback_value": "Giá trị đã xem xét",
+  "approval.merge.feedback_verdict": "Quyết định phản hồi",
+  "approval.merge.file": "Tệp được chuyển",
+  "approval.merge.file_archived": "Ngày lưu trữ tệp",
+  "approval.merge.finance_archived": "Ngày lưu trữ khoản mục",
+  "approval.merge.grant_active": "Quyền truy cập vẫn có hiệu lực",
+  "approval.merge.grant_after": "Quyền truy cập sau khi gộp",
+  "approval.merge.grant_before": "Quyền truy cập hiện có",
+  "approval.merge.grant_expiry_after": "Hạn truy cập sau khi gộp",
+  "approval.merge.grant_expiry_before": "Hạn truy cập hiện có",
+  "approval.merge.grant_reason": "Lý do cấp quyền",
+  "approval.merge.grant_source": "Quyền truy cập được chuyển từ hồ sơ nguồn",
+  "approval.merge.grant_subject": "Người được cấp quyền",
+  "approval.merge.handoff": "Bàn giao được chuyển",
+  "approval.merge.handoff_recipient": "Người nhận bàn giao",
+  "approval.merge.handoff_sender": "Người bàn giao",
+  "approval.merge.introduction_after": "Trạng thái giới thiệu sau khi gộp",
+  "approval.merge.introduction_before": "Trạng thái giới thiệu trước khi gộp",
+  "approval.merge.introduction_cancellation": "Lý do hủy giới thiệu",
+  "approval.merge.introduction_contact_after":
+    "Liên hệ được giới thiệu sau khi gộp",
+  "approval.merge.introduction_contact_before":
+    "Liên hệ được giới thiệu trước khi gộp",
+  "approval.merge.introduction_through_after": "Liên hệ giới thiệu sau khi gộp",
+  "approval.merge.introduction_through_before":
+    "Liên hệ giới thiệu trước khi gộp",
+  "approval.merge.link_consumed": "Ngày sử dụng liên kết",
+  "approval.merge.link_note": "Ghi chú liên kết",
+  "approval.merge.link_opened": "Ngày mở liên kết",
+  "approval.merge.notice": "Thông báo được chuyển",
+  "approval.merge.observation_after": "Mốc ghi nhận quan hệ sau khi gộp",
+  "approval.merge.observation_before": "Mốc ghi nhận quan hệ trước đó",
+  "approval.merge.optin": "Xác nhận đồng ý được chuyển",
+  "approval.merge.override": "Ngoại lệ liên lạc được chuyển",
+  "approval.merge.override_authority": "Thẩm quyền cho ngoại lệ",
+  "approval.merge.override_reason": "Lý do ngoại lệ",
+  "approval.merge.participant_activity": "Cuộc trao đổi được liên kết",
+  "approval.merge.participant_address": "Địa chỉ người tham gia",
+  "approval.merge.participant_collapsed": "Người tham gia trùng lặp bị loại bỏ",
+  "approval.merge.participant_role": "Vai trò người tham gia",
+  "approval.merge.payment_at": "Ngày thanh toán",
+  "approval.merge.preference_link": "Liên kết tùy chọn được chuyển",
+  "approval.merge.preference_reason": "Lý do ngừng sử dụng",
+  "approval.merge.preference_retired": "Liên kết tùy chọn ngừng sử dụng",
+  "approval.merge.profile_discarded": "Dữ kiện liên hệ trùng lặp bị loại bỏ",
+  "approval.merge.profile_field": "Trường liên hệ",
+  "approval.merge.profile_kept": "Dữ kiện liên hệ hiện có được giữ lại",
+  "approval.merge.profile_moved": "Dữ kiện liên hệ được chuyển",
+  "approval.merge.provider": "Nhà cung cấp bổ sung dữ liệu",
+  "approval.merge.relationship_kind": "Quan hệ được chuyển",
+  "approval.merge.relationship_primary": "Quan hệ chính sau khi gộp",
+  "approval.merge.relationship_retired": "Quan hệ ngừng sử dụng",
+  "approval.merge.run_after": "Trạng thái tra cứu sau khi gộp",
+  "approval.merge.run_before": "Trạng thái tra cứu trước đó",
+  "approval.merge.run_created": "Ngày yêu cầu tra cứu",
+  "approval.merge.run_moved": "Lượt tra cứu được chuyển",
+  "approval.merge.run_skip": "Lý do bỏ qua tra cứu",
+  "approval.merge.signal": "Tín hiệu được chuyển",
+  "approval.merge.social_handle": "Hồ sơ mạng xã hội được chuyển",
+  "approval.merge.social_platform": "Nền tảng mạng xã hội",
+  "approval.merge.social_survivor": "Hồ sơ mạng xã hội hiện có được giữ lại",
+  "approval.merge.support_collapsed": "Nguồn gốc dữ liệu trùng lặp bị loại bỏ",
+  "approval.merge.support_fields": "Nguồn gốc dữ liệu được chuyển",
+  "approval.merge.support_resolutions": "Kết quả xác minh việc làm được chuyển",
+  "approval.capture.target": "Khách hàng tiềm năng hiện có",
+  "approval.capture.full_name": "Tên đã ghi nhận",
+  "approval.capture.company_name": "Công ty đã ghi nhận",
+  "approval.capture.title": "Chức vụ đã ghi nhận",
+  "approvalPreferences.title": "Ẩn phê duyệt cho riêng bạn",
+  "approvalPreferences.explain":
+    "Loại bị ẩn chỉ rời hàng đợi của bạn. Thành viên khác vẫn thấy đề xuất. Ẩn hoặc khôi phục một loại sẽ tắt thay đổi tự động của bạn cho loại đó. Gửi tin, đặt lịch, hợp nhất và đề xuất có passport vẫn hiển thị.",
+  "approvalPreferences.review": "Xem cả đề xuất đã ẩn",
+  "approvalPreferences.reviewExplain":
+    "Chế độ này gồm đề xuất đã ẩn và hết hạn. Gói trong hàng đợi thường có thể hiển thị ít mục hơn do tùy chọn cá nhân. Xem từng đề xuất trước khi quyết định.",
+  "approvalPreferences.close": "Đóng xem xét",
+  "approvalPreferences.next": "Trang tiếp",
+  "approvalPreferences.first": "Trang đầu",
 
   "dealSuggestion.linkedUnlinked":
     "Đã liên kết bằng chứng. Một số bằng chứng giữ nguyên vì không có quyền di chuyển.",
@@ -164,15 +357,102 @@ export const vi = {
   "dataTasks.blocked.earlier_step": "Cần hoàn tất bước trước đó.",
   "dataTasks.blocked.missing_prerequisite":
     "Cần hoàn tất các bản cập nhật bắt buộc trước.",
-  "approvalPreferences.title": "Ẩn phê duyệt cho riêng bạn",
-  "approvalPreferences.explain":
-    "Loại bị ẩn chỉ rời hàng đợi của bạn. Thành viên khác vẫn thấy đề xuất. Ẩn hoặc khôi phục một loại sẽ tắt thay đổi tự động của bạn cho loại đó. Gửi tin, đặt lịch, hợp nhất và đề xuất có passport vẫn hiển thị.",
-  "approvalPreferences.review": "Xem cả đề xuất đã ẩn",
-  "approvalPreferences.reviewExplain":
-    "Chế độ này gồm đề xuất đã ẩn và hết hạn. Gói trong hàng đợi thường có thể hiển thị ít mục hơn do tùy chọn cá nhân. Xem từng đề xuất trước khi quyết định.",
-  "approvalPreferences.close": "Đóng xem xét",
-  "approvalPreferences.next": "Trang tiếp",
-  "approvalPreferences.first": "Trang đầu",
+
+  "approval.preview.createContact":
+    "Cho phép bên đề xuất tạo bản ghi liên hệ này một lần với các giá trị hiển thị. Quyền hiện tại và danh tính trùng được kiểm tra lại.",
+  "approval.preview.recordAcquisition":
+    "Ghi lại thông tin nguồn thu thập hiển thị. Việc này không cấp quyền gửi tin nhắn.",
+  "approval.preview.createPromotions":
+    "Chuyển các lead được nêu vào bản ghi liên hệ này rồi lưu trữ chúng. Bổ sung trường và số điện thoại còn thiếu, hợp nhất lịch sử, giữ các lần rút đồng ý và hạn chế liên lạc áp dụng.",
+  "approval.preview.acquisition": "Lý do tạo bản ghi liên hệ này",
+  "approval.preview.acquiredAt": "Ngày thu thập",
+  "approval.preview.promotedLead": "Lead sẽ chuyển đổi",
+  "approval.preview.sourceActivity": "Lịch sử gắn với lead nguồn này",
+  "approval.preview.sourceConsent": "Đồng ý của lead nguồn này",
+  "approval.preview.channelPosition": "Vị trí trong danh sách",
+  "approval.preview.emailCorrespondence": "Địa chỉ được coi là đã có trao đổi",
+  "approval.preview.socialPlatform": "Mạng xã hội",
+  "approval.preview.socialHandle": "Hồ sơ hoặc tên tài khoản",
+  "approval.preview.originLead": "Lead gốc",
+  "approval.preview.archiveRelationship":
+    "Lưu trữ liên kết quan hệ này. Các bản ghi được liên kết vẫn được lưu.",
+  "approval.preview.archivePromoteEmployer":
+    "Đặt công ty của quan hệ công tác còn lại được hiển thị làm nhà tuyển dụng chính của liên hệ.",
+  "approval.preview.archiveNoPrimary":
+    "Để liên hệ không có nhà tuyển dụng chính. Không tự động chọn nhà tuyển dụng.",
+  "approval.preview.newPrimaryEmployer": "Nhà tuyển dụng chính mới",
+  "approval.preview.startPrecision": "Độ chính xác ngày bắt đầu",
+  "approval.preview.endPrecision": "Độ chính xác ngày kết thúc",
+  "approval.preview.precisionDay": "Ngày chính xác",
+  "approval.preview.precisionMonth": "Chỉ tháng",
+  "approval.preview.mergeTags":
+    "Thay nhãn nguồn trên các bản ghi được hiển thị bằng nhãn giữ lại. Nếu đã có cả hai nhãn, chỉ xóa gán nhãn nguồn trùng lặp. Lưu trữ nhãn nguồn và cho phép dùng lại tên; tên không được giữ làm bí danh.",
+  "approval.preview.mergeTagSource": "Nhãn sẽ xóa",
+  "approval.preview.mergeTagTarget": "Nhãn giữ lại",
+  "approval.preview.mergeTagMove": "Bản ghi sẽ nhận nhãn giữ lại",
+  "approval.preview.mergeTagCollapse": "Bản ghi đã có cả hai nhãn",
+  "approval.preview.archiveCompany":
+    "Lưu trữ công ty này cùng các tên miền, phân loại, chương trình đối tác và mối quan hệ được liệt kê. Xóa tư cách thành viên danh sách và thẻ. Giữ lại liên hệ, cơ hội bán hàng và lịch sử hội thoại.",
+  "approval.preview.archiveDomain": "Tên miền sẽ lưu trữ",
+  "approval.preview.archiveCompanyType": "Phân loại công ty sẽ gỡ bỏ",
+  "approval.preview.archivePartner": "Chương trình đối tác sẽ lưu trữ",
+  "approval.preview.archiveContact":
+    "Lưu trữ liên hệ này cùng các địa chỉ email, số điện thoại, liên kết kênh và mối quan hệ được liệt kê. Xóa tư cách thành viên danh sách và thẻ được liệt kê. Lịch sử hội thoại được giữ nguyên.",
+  "approval.preview.archiveEmail": "Địa chỉ email sẽ lưu trữ",
+  "approval.preview.archivePhone": "Số điện thoại sẽ lưu trữ",
+  "approval.preview.archiveChannel": "Liên kết kênh nhắn tin sẽ lưu trữ",
+  "approval.preview.archiveProject":
+    "Lưu trữ dự án này và xóa các liên kết bên liên quan, tư cách thành viên danh sách và thẻ được liệt kê. Hoạt động, giao dịch và liên kết công ty được giữ nguyên.",
+  "approval.preview.archiveDeal":
+    "Lưu trữ deal này và xóa các liên kết bên liên quan, tư cách thành viên danh sách và gán nhãn được hiển thị. Liên hệ, danh sách và nhãn vẫn được lưu.",
+  "approval.preview.archiveStakeholder": "Liên kết bên liên quan sẽ lưu trữ",
+  "approval.preview.archiveRole": "Vai trò trong liên kết này",
+  "approval.preview.archiveList": "Tư cách thành viên danh sách sẽ xóa",
+  "approval.preview.archiveTag": "Gán nhãn sẽ xóa",
+  "approval.preview.archiveActivity":
+    "Lưu trữ hoạt động này và loại khỏi công việc đang hoạt động. Nội dung vẫn được lưu; tin nhắn đã gửi không bị thu hồi.",
+  "approval.preview.archiveProduct":
+    "Lưu trữ sản phẩm này và loại khỏi danh mục đang hoạt động. Các bản chụp hạng mục báo giá hiện có không thay đổi.",
+  "approval.preview.archiveTemplate":
+    "Lưu trữ mẫu này và loại khỏi danh sách chọn mẫu, kể cả vai trò mẫu mặc định. Các báo giá hiện có giữ tham chiếu tới mẫu.",
+  "approval.preview.archiveOffer":
+    "Lưu trữ báo giá này và ẩn khỏi danh sách báo giá đang hoạt động. Các hạng mục vẫn được lưu.",
+  "approval.preview.importScopeUnavailable":
+    "Đề xuất nhập này không có đầy đủ thay đổi theo từng dòng. Mở Nhập dữ liệu để xem nguồn và lần chạy thử trước khi bắt đầu nhập.",
+  "approval.preview.confirmationOnly":
+    "Ghi nhận xác nhận này và hoàn tất lượt tự động hóa đang chờ. Không cho phép cập nhật bản ghi hoặc gửi tin nhắn.",
+  "approval.preview.confirmationQuestion": "Câu hỏi cần xác nhận",
+  "approval.preview.confirmationReason": "Lý do cần xác nhận",
+  "approval.preview.createOffer":
+    "Tạo bản nháp báo giá với các điều khoản, hạng mục và tổng tiền được hiển thị. Chưa gửi báo giá.",
+  "approval.preview.assignOfferNumber": "Cấp số báo giá khi tạo bản nháp.",
+  "approval.preview.createTemplate":
+    "Tạo mẫu báo giá với nội dung đầu trang và chân trang được hiển thị.",
+  "approval.preview.defaultTemplate":
+    "Đặt mẫu này làm mặc định cho ngôn ngữ được hiển thị.",
+  "approval.preview.createProduct":
+    "Tạo sản phẩm trong danh mục với giá và điều khoản thanh toán được hiển thị. Các dòng báo giá hiện có giữ nguyên giá.",
+  "approval.preview.billingMonths": "Kỳ thanh toán (tháng)",
+  "approval.preview.createProject":
+    "Tạo dự án, liên kết công ty được hiển thị làm khách hàng và ghi lại giai đoạn ban đầu.",
+  "approval.preview.assignProjectKey": "Cấp mã dự án khi tạo dự án.",
+  "approval.preview.createDeal":
+    "Tạo cơ hội trong quy trình và giai đoạn được hiển thị, kèm lịch sử giai đoạn ban đầu.",
+  "approval.preview.createCompany":
+    "Cho phép bên đề xuất tạo công ty này một lần với các giá trị hiển thị. Quyền hiện tại và danh tính trùng được kiểm tra lại.",
+  "approval.preview.workspaceVisible":
+    "Bản ghi mới hiển thị trong tổ chức theo quyền truy cập bản ghi.",
+  "approval.preview.geocodeConditional":
+    "Nếu tính năng mã hóa địa lý được bật, hệ thống sẽ xếp hàng tra cứu tọa độ cho địa chỉ hiển thị.",
+  "approval.preview.primaryDomain": "Tên miền chính",
+  "approval.preview.createLead":
+    "Cho phép bên đề xuất tạo lead này một lần với các giá trị hiển thị. Khi tạo, quyền và danh tính trùng được kiểm tra lại.",
+  "approval.preview.reuseRecord":
+    "Khóa nguồn đã xác định bản ghi này. Lệnh trả về bản ghi đó mà không tạo thêm bản ghi.",
+  "approval.preview.queueDuplicate":
+    "Tạo đề xuất trùng lặp để kiểm tra cùng với bản ghi mới.",
+  "approval.preview.creationExisting": "Bản ghi hiện có được trả về",
+  "approval.preview.creationDuplicate": "Đề xuất trùng lặp",
   "approval.preview.nameUnavailable": "Không có tên",
   "approval.preview.structured": "Giá trị có cấu trúc: {value}",
   "approval.preview.resolveConflict":
@@ -198,6 +478,149 @@ export const vi = {
   "approval.preview.conflict": "Thông tin mâu thuẫn",
   "approval.preview.execution": "Được xác định khi áp dụng",
   "approval.preview.effects": "Thay đổi kèm theo",
+  "approval.preview.authorizeMessage":
+    "Cho phép bên đề xuất gửi tin nhắn này một lần. Phê duyệt không gửi ngay và không thêm chữ ký của bạn. Khi gửi, hệ thống vẫn kiểm tra quyền truy cập và sự đồng ý hiện tại.",
+  "approval.preview.archiveLead":
+    "Lưu trữ lead này và xóa tất cả thẻ của lead. Bạn vẫn có thể xem bản ghi trong danh sách đã lưu trữ.",
+  "approval.preview.authorizeWebsite":
+    "Cho phép bên đề xuất đọc trang web này bằng các dịch vụ bên ngoài đã cấu hình. Việc đọc có thể sử dụng AI và phát sinh phí sử dụng.",
+  "approval.preview.readPage":
+    "Đọc một trang và chuẩn bị đề xuất bổ sung thông tin",
+  "approval.preview.readSite":
+    "Đưa việc thu thập các trang của trang web vào hàng đợi",
+  "approval.preview.readTechnical":
+    "Đưa việc tra cứu kỹ thuật công khai của tên miền công ty vào hàng đợi",
+  "approval.preview.targetURL": "Trang web hoặc tên miền cần đọc",
+  "approval.preview.readScope": "Phạm vi đọc",
+  "approval.preview.recordMeetingConsent":
+    "Cho phép ghi cuộc hẹn và sự đồng ý giao dịch hiển thị trước khi giữ khung giờ. Quyết định đồng ý hiện có được giữ nguyên. Sự đồng ý có thể được ghi ngay cả khi khung giờ không còn trống. Không gửi lời mời lịch.",
+  "approval.preview.preserveConsent":
+    "Giữ nguyên quyết định đồng ý hiện có; không ghi bằng chứng đồng ý mới.",
+  "approval.preview.requestConfirmation":
+    "Cho phép thử gửi yêu cầu xác nhận tiếp thị tới địa chỉ hiển thị. Việc gửi phụ thuộc vào dịch vụ thư đã cấu hình và kiểm tra sự đồng ý hiện tại. Hành động này không đăng ký liên hệ. Nội dung tiếp thị đã gửi không được lưu làm bằng chứng; xác nhận sử dụng nội dung trên trang xác nhận.",
+  "approval.preview.confirmationUnavailable":
+    "Thông tin liên hệ hoặc sự đồng ý hiện tại ngăn yêu cầu xác nhận tiếp thị. Vẫn có thể đặt lịch mà không gửi yêu cầu hoặc cấp sự đồng ý tiếp thị.",
+  "approval.preview.consentContact": "Liên hệ đồng ý",
+  "approval.preview.consentPurpose": "Mục đích giao dịch",
+  "approval.preview.consentVersion": "Phiên bản chính sách đồng ý",
+  "approval.preview.consentWording": "Nội dung đồng ý đã gửi",
+  "approval.preview.consentResult": "Quyết định đồng ý sau khi thực hiện",
+  "approval.preview.marketingPurpose": "Mục đích tiếp thị",
+  "approval.preview.marketingVersion": "Phiên bản chính sách tiếp thị đã gửi",
+  "approval.preview.marketingWording": "Nội dung tiếp thị đã gửi",
+  "approval.preview.confirmationRecipient": "Địa chỉ nhận xác nhận",
+  "approval.preview.consentGranted": "Đã đồng ý",
+  "approval.preview.consentWithdrawn": "Đã rút lại",
+  "approval.preview.authorizeInvitation":
+    "Cho phép người chủ trì đề xuất giữ khung giờ và xếp lời mời lịch này vào hàng đợi gửi tới địa chỉ hiển thị. Một liên kết riêng để đổi lịch hoặc hủy được thêm vào lời mời. Cài đặt video và nhắc nhở được hiển thị ở trên. Quyền truy cập lịch, thời gian trống và quyền gửi tới người nhận được kiểm tra khi thực hiện. Xác nhận từ nhà cung cấp không chứng minh khách đã chấp nhận hoặc nhận được lời mời.",
+  "approval.preview.authorizeChannelReply":
+    "Cho phép người đề xuất trả lời một lần trong cuộc hội thoại này tới tài khoản kênh hiển thị, với toàn bộ nội dung và các tệp đã liệt kê. Phê duyệt không gửi ngay. Vẫn phải kiểm tra khả năng gửi của kênh, quyền gửi tới người nhận và các tệp tại thời điểm thực hiện.",
+  "approval.preview.channelProvider": "Nhà cung cấp nhắn tin",
+  "approval.preview.contextAutomatic":
+    "Được xác định từ cuộc hội thoại và bằng chứng khi gửi",
+  "approval.preview.claimedContext": "Loại giao tiếp được khai báo",
+  "approval.preview.messagePurpose": "Mã mục đích đã khai báo",
+  "approval.preview.operatorReason":
+    "Giải thích của người gửi (không phải bằng chứng)",
+  "approval.preview.evidenceContract": "Hợp đồng được viện dẫn",
+  "approval.preview.evidenceInvoice": "Hóa đơn được viện dẫn",
+  "approval.preview.evidenceDeal": "Cơ hội được viện dẫn",
+  "approval.preview.contextReply": "Trả lời tin nhắn đến",
+  "approval.preview.contextSecurity": "Thông báo bảo mật",
+  "approval.preview.contextPrivacy": "Thông báo quyền riêng tư",
+  "approval.preview.contextRecord": "Xác nhận thông tin",
+  "approval.preview.contextConsent": "Xác nhận đồng ý",
+  "approval.preview.contextOptout": "Xác nhận hủy đăng ký",
+  "approval.preview.unsubscribeFooter":
+    "Khi gửi, hệ thống thêm liên kết hủy đăng ký riêng nếu người nhận có bản ghi tùy chọn phù hợp. Liên kết riêng được tạo khi thực hiện, không phải khi xem xét.",
+  "approval.preview.disclosureText": "Thông tin công bố được thêm khi gửi",
+  "approval.preview.demoteArchive":
+    "Khôi phục khách hàng tiềm năng về trạng thái Đã tương tác và xóa các liên kết xác định đủ điều kiện. Lưu trữ liên hệ, địa chỉ email, số điện thoại, danh tính kênh và các mối quan hệ; xóa thẻ và tư cách thành viên danh sách. Hoạt động giữ nguyên liên kết.",
+  "approval.preview.demotePreserve":
+    "Khôi phục khách hàng tiềm năng về trạng thái Đã tương tác và xóa các liên kết xác định đủ điều kiện. Giữ liên hệ hiện có và lịch sử; xóa liên kết ngược đến khách hàng tiềm năng này. Hoạt động giữ nguyên liên kết.",
+  "approval.preview.relinkPreserve":
+    "Các liên kết khác được giữ nguyên. Người tham gia thuộc liên kết liên hệ bị thay thế được chuyển sang liên hệ đích; các mục trùng khớp được gộp.",
+  "approval.preview.relinkRetention":
+    "Gắn hoạt động với dự án này tạo căn cứ lưu giữ thư từ thương mại. Chuyển hoạt động sau đó không xóa căn cứ này.",
+  "approval.preview.relinkDestination": "Bản ghi đích",
+  "approval.preview.relinkActivity": "Hoạt động được thêm liên kết",
+  "approval.preview.relinkUnchanged": "Hoạt động đã có liên kết",
+  "approval.preview.relinkRemoved": "Liên kết bị thay thế",
+  "approval.preview.relinkParticipantMove": "Người tham gia chuyển từ liên hệ",
+  "approval.preview.relinkParticipantMerge":
+    "Mục người tham gia trùng bị xóa khỏi liên hệ",
+  "approval.preview.relinkRole": "Vai trò người tham gia",
+  "approval.preview.relinkAddress": "Địa chỉ người tham gia",
+  "approval.preview.relinkUser": "Đồng nghiệp tham gia",
+  "approval.preview.promotionMoveLinks":
+    "Chuyển các liên kết hủy đăng ký và căn cứ liên lạc đã liệt kê sang liên hệ. Giữ nguyên phạm vi, thời hạn và trạng thái thu hồi.",
+  "approval.preview.withdrawalAddress": "Liên kết hủy đăng ký cho",
+  "approval.preview.linkIssued": "Ngày tạo liên kết",
+  "approval.preview.linkExpires": "Ngày hết hạn liên kết",
+  "approval.preview.recordRevoked": "Đã thu hồi",
+  "approval.preview.basisKind": "Căn cứ liên lạc đã ghi nhận",
+  "approval.preview.basisFrom": "Căn cứ có hiệu lực từ",
+  "approval.preview.basisUntil": "Căn cứ có hiệu lực đến",
+  "approval.preview.basisActivity": "Hoạt động làm bằng chứng cho căn cứ",
+  "approval.preview.basisContract": "Hợp đồng",
+  "approval.preview.basisRequest": "Yêu cầu trước hợp đồng",
+  "approval.preview.basisCorrespondence": "Trao đổi do người nhận bắt đầu",
+  "approval.preview.basisInterests": "Lợi ích hợp pháp",
+  "approval.preview.basisObligation": "Nghĩa vụ pháp lý",
+  "approval.preview.basisSecurity": "Lợi ích thiết yếu hoặc an ninh",
+  "approval.preview.basisCustomer": "Ngoại lệ dành cho khách hàng hiện có",
+  "approval.preview.basisAgreement": "Sự đồng ý của người nhận",
+  "approval.preview.promotionTrigger": "Lý do xác định đủ điều kiện",
+  "approval.preview.promotionNote": "Bằng chứng đủ điều kiện",
+  "approval.preview.promotionEvidence": "Hoạt động làm bằng chứng",
+  "approval.preview.promotionContactName": "Tên liên hệ",
+  "approval.preview.promotionContactSource": "Nguồn liên hệ",
+  "approval.preview.promotionContactTitle": "Chức danh sẽ thêm",
+  "approval.preview.promotionContactOwner": "Người phụ trách liên hệ",
+  "approval.preview.promotionContactEmail": "Email liên hệ sẽ thêm",
+  "approval.preview.promotionContactPhone": "Số điện thoại sẽ thêm",
+  "approval.preview.promotionExistingContact": "Liên hệ hiện có sẽ cập nhật",
+  "approval.preview.promotionSetOrigin": "Liên kết liên hệ với lead này",
+  "approval.preview.promotionDuplicateCandidate":
+    "Liên hệ có thể trùng cần xem xét",
+  "approval.preview.promotionMoveActivity": "Hoạt động sẽ chuyển sang liên hệ",
+  "approval.preview.promotionDuplicateActivity":
+    "Hoạt động đã có ở liên hệ; bỏ liên kết lead",
+  "approval.preview.promotionConsentBefore": "Sự đồng ý trước khi chuyển đổi",
+  "approval.preview.promotionRestriction": "Hạn chế sẽ chuyển sang",
+  "approval.preview.promotionRestrictionAuthority": "Hạn chế được ghi nhận bởi",
+  "approval.preview.promotionRestrictionPurpose": "Phạm vi hạn chế",
+  "approval.preview.promotionDealName": "Tên cơ hội mới",
+  "approval.preview.promotionDealAmount": "Giá trị cơ hội mới",
+  "approval.preview.promotionDealOwner": "Người phụ trách cơ hội mới",
+  "approval.preview.promotionArchive":
+    "Xác định lead đủ điều kiện, lưu trữ lead và liên kết với liên hệ. Giữ bằng chứng đồng ý ban đầu ở lead.",
+  "approval.preview.promotionCreate": "Tạo liên hệ với thông tin đã hiển thị.",
+  "approval.preview.promotionFill":
+    "Bổ sung thông tin còn thiếu đã hiển thị vào liên hệ hiện có. Giữ tên, chức danh và số điện thoại chính hiện có.",
+  "approval.preview.promotionDeal":
+    "Mở cơ hội đã hiển thị và thêm liên hệ làm bên liên quan. Lead được liên kết với cơ hội này.",
+  "approval.preview.promotionReview":
+    "Tạo một liên hệ riêng và đưa cặp có thể trùng vào danh sách xem xét.",
+  "approval.preview.promotionAllMarketing": "Tất cả hoạt động tiếp thị",
+  "approval.preview.promotionMachine": "Hệ thống tự động",
+  "approval.preview.promotionUser": "Thành viên nhóm",
+  "approval.preview.promotionAdmin": "Quản trị viên",
+  "approval.preview.promotionSubject": "Người nhận",
+  "approval.preview.demotionContact": "Liên hệ bị ảnh hưởng",
+  "approval.preview.unsignedSend":
+    "Gửi không kèm tên hiển thị của cá nhân hoặc chữ ký cá nhân. Việc phê duyệt không biến người xem xét thành tác giả.",
+  "approval.preview.senderSignature": "Chữ ký người gửi",
+  "approval.preview.signaturePrivate":
+    "Không thể hiển thị chữ ký riêng của người gửi cho người xem xét này. Hãy yêu cầu người gửi xem xét tin nhắn.",
+  "approval.preview.recordMeeting":
+    "Cho phép ghi lại cuộc họp trên các bản ghi được liên kết. Không gửi lời mời lịch hoặc email. Địa chỉ người tham dự được cung cấp không được lưu trong cuộc họp. Khung giờ của người chủ trì phải còn trống khi ghi lại.",
+  "approval.preview.meetingStart": "Bắt đầu (kèm độ lệch UTC)",
+  "approval.preview.meetingEnd": "Kết thúc (kèm độ lệch UTC)",
+  "approval.preview.meetingHost": "Người chủ trì",
+  "approval.preview.intendedAttendee":
+    "Người dự kiến tham dự (không được thông báo)",
+  "approval.preview.htmlBody": "Nội dung có định dạng",
   "approval.preview.correspondence":
     "Phân loại thư từ liên quan là hồ sơ kinh doanh.",
   "approval.preview.attachRecipients":
@@ -216,6 +639,27 @@ export const vi = {
   "approval.preview.unavailable":
     "Ngữ cảnh phê duyệt không có sẵn. Tải lại hoặc yêu cầu đề xuất mới.",
   "approval.preview.change": "Từ {before} thành {after}",
+  "approval.import.row": "{kind}, dòng {line} ({key})",
+  "approval.import.create": "Tạo bản ghi mới",
+  "approval.import.duplicate": "Tạo bản ghi và yêu cầu xem xét trùng lặp",
+  "approval.import.update": "Cập nhật bản ghi hiện có",
+  "approval.import.unchanged": "Giữ nguyên các trường hiện có",
+  "approval.import.skip": "Bỏ qua dòng này",
+  "approval.import.createTag": "Tạo thẻ",
+  "approval.import.applyTag": "Thêm thẻ",
+  "approval.import.contextTag": "Gắn bản ghi mới vào",
+  "approval.import.linkCompany": "Liên kết với công ty",
+  "approval.import.linkContact": "Liên kết với liên hệ",
+  "approval.import.linkLead": "Liên kết với khách hàng tiềm năng",
+  "approval.import.linkDeal": "Liên kết với cơ hội",
+  "approval.import.companyRow": "Liên kết với công ty từ dòng nhập",
+  "approval.import.contactRow": "Liên kết với liên hệ từ dòng nhập",
+  "approval.import.leadRow": "Liên kết với khách hàng tiềm năng từ dòng nhập",
+  "approval.import.dealRow": "Liên kết với cơ hội từ dòng nhập",
+  "approval.import.droppedLink": "Bỏ liên kết không xác định được",
+  "approval.import.createActivity":
+    "Lưu hoạt động mà không gửi tin nhắn hoặc lời mời lịch",
+  "approval.import.closeDeal": "Đóng cơ hội theo lịch sử đã nhập",
   "approval.preview.authorityUnknown":
     "Không có thông tin về lý do bạn có thể duyệt thay đổi này.",
   "approval.preview.reviewer": "Quyền phê duyệt",
@@ -2769,6 +3213,11 @@ export const vi = {
   "approval.kind.vcard_create": "Tạo liên hệ từ danh thiếp",
   "approval.kind.lifecycle_change": "Giai đoạn vòng đời",
   "approval.kind.stage_progression": "Chuyển giai đoạn deal",
+  "approval.preview.requiredCriterionMet": "Đã đáp ứng tiêu chí bắt buộc",
+  "approval.preview.requiredCriterionUnmet": "Chưa đáp ứng tiêu chí bắt buộc",
+  "approval.preview.optionalCriterionMet": "Đã đáp ứng tiêu chí không bắt buộc",
+  "approval.preview.optionalCriterionUnmet":
+    "Chưa đáp ứng tiêu chí không bắt buộc",
   "approval.field.because": "Lý do",
   "approval.field.from_stage": "Từ",
   "approval.field.to_stage": "Đến",

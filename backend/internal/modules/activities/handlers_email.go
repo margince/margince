@@ -308,7 +308,7 @@ func (h Handlers) SendCompanyEmail(w http.ResponseWriter, r *http.Request, _ crm
 		writeStoreErr(w, r, err)
 		return
 	}
-	in, err := accountSendInput(req)
+	in, err := DecodeCompanyEmailRequest(req)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return

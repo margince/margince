@@ -100,13 +100,18 @@ const (
 // the probe is actually deciding, because that is always the answer: the probe
 // is not this mutation's own row gate.
 var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
-	"internal/modules/deals:suggestionVisibleClause":    "reads the company and cited evidence before deciding a suggestion; the company itself is unchanged, and existing-deal linking separately requires update authority on its locked target",
-	"internal/modules/collections:recordArm":            "the reader row scope over the record a tag suggestion names, which decides whether the caller may SEE the suggestion; it changes no record. Accepting or dismissing then asks auth.EnsureWritableLive on that record in the same transaction (openTagSuggestionForDecision) before anything is written",
-	"internal/modules/activities:hiddenProjects":        "decides which of the projects a filing names the caller may SEE, so a project out of their sight is shown unnamed and the undo refuses rather than leave a link it cannot remove. It changes no project; the undo's own row gate is the activity's writable probe taken under the lock",
-	"internal/modules/collections:recordScope":          "the reader row scope over member records, which counts and pages the Shortlist members THIS READER may see, for the list a list change answers with; it changes no member record. A membership change never changes the record it adds or removes either — it needs list authority over the list, and a read probe of the member (EnsureLinkTarget) so a list cannot name a record its curator cannot see",
-	"internal/modules/contacts:recordEmploymentOutcome": "reads the previous COMPANY reference for an audit before-image; it never changes that company. The mutation updates the contact-owned resolution ledger and relationship provenance, after ApplyEmploymentImport holds the writable live CONTACT. A read-only company grant is sufficient to retain its identity in this evidence trail",
-	"internal/modules/deals:visibleDealCount":           "counts the live deals the caller may SEE on a stage, in the stage or pipeline a stage or pipeline write answers with; it changes no deal. Those writes change stage and pipeline rows, under a pipeline grant or as the system workspace seed, and never a deal row, so a write probe would only undercount deals the caller may open. Acquisition sources reach it only through their list read",
-	"internal/modules/deals:readAppliedChangeReviews":   "reads receipt state for the brief and for acceptance; it never mutates a deal. AcceptAppliedChange has already locked and passed EnsureWritable on the deal before using this read to reject stale or superseded changes. The public batch reader must remain available to colleagues with read-only access and reports write authority separately through WriteAuthorityClauseFor",
+	"internal/modules/deals:suggestionVisibleClause":           "reads the company and cited evidence before deciding a suggestion; the company itself is unchanged, and existing-deal linking separately requires update authority on its locked target",
+	"internal/modules/collections:recordArm":                   "the reader row scope over the record a tag suggestion names, which decides whether the caller may SEE the suggestion; it changes no record. Accepting or dismissing then asks auth.EnsureWritableLive on that record in the same transaction (openTagSuggestionForDecision) before anything is written",
+	"internal/modules/activities:hiddenProjects":               "decides which of the projects a filing names the caller may SEE, so a project out of their sight is shown unnamed and the undo refuses rather than leave a link it cannot remove. It changes no project; the undo's own row gate is the activity's writable probe taken under the lock",
+	"internal/modules/collections:recordScope":                 "the reader row scope over member records, which counts and pages the Shortlist members THIS READER may see, for the list a list change answers with; it changes no member record. A membership change never changes the record it adds or removes either — it needs list authority over the list, and a read probe of the member (EnsureLinkTarget) so a list cannot name a record its curator cannot see",
+	"internal/modules/contacts:recordEmploymentOutcome":        "reads the previous COMPANY reference for an audit before-image; it never changes that company. The mutation updates the contact-owned resolution ledger and relationship provenance, after ApplyEmploymentImport holds the writable live CONTACT. A read-only company grant is sufficient to retain its identity in this evidence trail",
+	"internal/modules/deals:visibleDealCount":                  "counts the live deals the caller may SEE on a stage, in the stage or pipeline a stage or pipeline write answers with; it changes no deal. Those writes change stage and pipeline rows, under a pipeline grant or as the system workspace seed, and never a deal row, so a write probe would only undercount deals the caller may open. Acquisition sources reach it only through their list read",
+	"internal/modules/deals:readAppliedChangeReviews":          "reads receipt state for the brief and for acceptance; it never mutates a deal. AcceptAppliedChange has already locked and passed EnsureWritable on the deal before using this read to reject stale or superseded changes. The public batch reader must remain available to colleagues with read-only access and reports write authority separately through WriteAuthorityClauseFor",
+	"internal/modules/consent:authorizeCarryEvidence":          "Reads activity or deal evidence named by a consent carry preview; it changes neither evidence record. Preview admission separately requires write authority on both retiring and surviving subjects. A readable deal is sufficient to explain the transferred consent evidence, and the native carry changes only consent-owned records.",
+	"internal/modules/contacts:contactCreationReviewTarget":    "Names an existing contact only as a duplicate-review candidate; creation does not change that contact. The new record requires contact:create, and any held-lead promotion separately checks writable authority in previewContactPromotions.",
+	"internal/modules/contacts:PreviewCompanyCreationForActor": "Names an existing company only as a fuzzy duplicate-review candidate; neither preview nor creation changes that company. The new record requires company:create.",
+	"internal/modules/contacts:previewContactHeldLeads":        "Names readable matching leads, including those the caller cannot promote. previewContactPromotions separately requires EnsureWritable before promising any promotion; the native promotion retains its own writable row guard.",
+	"internal/modules/contacts:previewPromotionReview":         "The visible probe names only a fuzzy duplicate-review contact, which promotion does not modify. An exact-match contact that promotion would modify passes promotionCandidateVisible in the calling preview, and the lead passes promotableLead.",
 
 	"internal/modules/deals:currentClosingOccurrence": "the probe that decides whether the deal's " +
 		"CLOSING MAY BE NAMED, never whether the caller may change the deal. It is read-only about " +
@@ -174,8 +179,8 @@ var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
 	// writes the row that HANGS OFF the record — a link, a participant, an
 	// imported connection — and probes the record only to decide which ones may
 	// be touched or named.
-	"internal/modules/activities:deleteVisibleLinksOfType":     "clears an activity's links to records the caller can see, so a relink cannot silently drop an edge to a record they cannot; what it deletes is the LINK row, and its own comment already states the one bit that escapes",
-	"internal/modules/activities:repointDisplacedParticipants": "moves activity_participant rows from the displaced contacts to the relink target; the row written is the participant edge, never the contact",
+	"internal/modules/activities:visibleRelinkPredicate": "clears an activity's links to records the caller can see, so a relink cannot silently drop an edge to a record they cannot; what it deletes is the LINK row, and its own comment already states the one bit that escapes",
+	"internal/modules/activities:participantRelinkQuery": "moves activity_participant rows from the displaced contacts to the relink target; the row written is the participant edge, never the contact",
 	// The one waiver here that is a LIMIT OF THE EXTRACTOR rather than a claim
 	// about what the probe decides, and it is spelled that way on purpose.
 	//
@@ -271,10 +276,11 @@ type probeSite struct {
 // body holds, the object/action pairs it admits on, whether it reaches a write,
 // and the names it mentions (the resolution edges).
 type writeAuthorityFn struct {
-	probes   []probeSite
-	requires map[string]bool
-	mutates  bool
-	calls    map[string]bool
+	probes      []probeSite
+	requires    map[string]bool
+	mutates     bool
+	previewOnly bool
+	calls       map[string]bool
 	// writes names the shareable tables this function's own body CHANGES, and
 	// dynamicWrite records a mutation whose target this pass could not read.
 	// mutates answers "does a write happen here at all"; these answer "to
@@ -298,6 +304,7 @@ func TestEveryMutationOfAShareableRecordProbesForWriteAuthority(t *testing.T) {
 
 	tables := shareableTables(t)
 	pkgs := writeAuthorityIndex(t, tables)
+	classifyReadOnlyPreviewAdmissions(t, pkgs)
 
 	// DISTINCT sites, deduplicated by where they are. The walk reaches one probe
 	// once per ancestor that can call it, and the package-level bucket is merged
@@ -867,6 +874,9 @@ func reachableWriteAuthority(fns map[string]*writeAuthorityFn, name string, seen
 		for key := range below.byFrame {
 			out.byFrame[key] = true
 		}
+	}
+	if info.previewOnly {
+		clear(out.requires)
 	}
 	return out
 }

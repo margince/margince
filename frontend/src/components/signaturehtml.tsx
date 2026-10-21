@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useMe } from "../../lib/session";
+import { useMe } from "../lib/session";
 import "./signaturehtml.css";
 
 // What {logo} points at in the markup: the image the message carries inside

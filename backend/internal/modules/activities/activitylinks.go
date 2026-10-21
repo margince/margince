@@ -143,7 +143,7 @@ func insertActivityLinks(ctx context.Context, tx pgx.Tx, activityID ids.Activity
 		// cannot see must get the answer their row scope gives — the same
 		// not-found every other unreachable target gets — rather than a
 		// modelling refusal that tells them the id was real enough to judge.
-		if err := refuseACompanyMeeting(kind, link); err != nil {
+		if err := CheckActivityLinkKind(kind, link); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx,
@@ -226,7 +226,7 @@ func lastActivityTargets(links []ActivityLinkInput) storekit.LastActivityTargets
 	return targets
 }
 
-// refuseACompanyMeeting answers the company link on a meeting or a call the way
+// CheckActivityLinkKind answers the company link on a meeting or a call the way
 // a caller can act on.
 //
 // The estate refuses it either way — a trigger, because activity_link is
@@ -242,7 +242,7 @@ func lastActivityTargets(links []ActivityLinkInput) storekit.LastActivityTargets
 // hand, and a read of `activity` here would be a reader of the restricted table
 // that excludes no held row. The relink path takes the trigger's answer
 // instead — it holds no kind and would need that read to name one.
-func refuseACompanyMeeting(kind string, link ActivityLinkInput) error {
+func CheckActivityLinkKind(kind string, link ActivityLinkInput) error {
 	if !personalActivityKinds[kind] || link.EntityType != linkEntityCompany {
 		return nil
 	}

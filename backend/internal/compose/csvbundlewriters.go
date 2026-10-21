@@ -21,7 +21,8 @@ import (
 // bundleWriters hands each row to the writer of its own type. A single CSV is
 // a bundle of one part, so every run reaches the engine through this.
 type bundleWriters struct {
-	parts map[string]*csvWriters
+	reviewPlan *migration.ReviewPlan
+	parts      map[string]*csvWriters
 	// links is the one resolver every part writer shares, so a row of one
 	// file finds a row of another.
 	links *linkResolver
@@ -166,12 +167,8 @@ func (c *cellCollector) add(object string, row migration.Row) {
 func ownerAndTagCells(ctx context.Context, src migration.Source, firstNamedBy map[string]string) ([]string, []string, error) {
 	c := &cellCollector{seenEmail: map[string]bool{}, firstNamedBy: firstNamedBy}
 	for _, object := range src.Objects() {
-		part, err := partSourceOf(src, object)
-		if err != nil {
-			return nil, nil, err
-		}
 		for offset := 0; ; offset += importPredictPage {
-			rows, err := part.Rows(ctx, object, offset, importPredictPage)
+			rows, err := src.Rows(ctx, object, offset, importPredictPage)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -227,6 +224,9 @@ func (b *bundleWriters) Ensure(ctx context.Context, object string, row migration
 func (b *bundleWriters) Associate(ctx context.Context, a migration.Assoc) (migration.AssocResult, error) {
 	w, err := b.part(a.FromType)
 	if err != nil {
+		return migration.AssocResult{}, err
+	}
+	if err := w.validateReviewedLinks(ctx, a.FromID); err != nil {
 		return migration.AssocResult{}, err
 	}
 	return w.Associate(ctx, a)

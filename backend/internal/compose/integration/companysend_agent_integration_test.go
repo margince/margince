@@ -39,6 +39,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -286,6 +287,23 @@ func TestAFlooredAccountSendStagesAndOnlyLeavesOnceApproved(t *testing.T) {
 	// endpoint would have accepted.
 	if !a.inboxShows(t, approvalID) {
 		t.Fatal("the staged send is not in the approvals inbox; nobody could ever release it")
+	}
+	var proposal crmcontracts.Approval
+	if status := a.Call(t, "GET", "/v1/approvals/"+approvalID, nil, nil, &proposal); status != http.StatusOK {
+		t.Fatalf("read staged send → %d", status)
+	}
+	if proposal.Preview == nil || proposal.Preview.Version != 2 || proposal.Preview.State != "ready" {
+		t.Fatalf("account-started send preview = %+v, want ready typed context", proposal.Preview)
+	}
+	if proposal.Preview.Details == nil {
+		t.Fatal("the send preview omitted its message")
+	}
+	shown := map[string]string{}
+	for _, detail := range *proposal.Preview.Details {
+		shown[detail.Field] = detail.Value.Text
+	}
+	if shown["subject"] != "Hello from an agent" || shown["body"] != "Good morning." {
+		t.Fatalf("send preview omitted the exact staged subject or body: %v", shown)
 	}
 	if status := a.Call(t, "POST", "/v1/approvals/"+approvalID+"/approve",
 		AnyMap{}, nil, nil); status != http.StatusOK {

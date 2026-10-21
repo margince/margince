@@ -25,19 +25,39 @@ type leadDealOpener struct{ deals *deals.Store }
 // named stage's own pipeline, or the default pipeline's first open stage —
 // and opens the deal.
 func (o leadDealOpener) OpenDealForLead(ctx context.Context, tx pgx.Tx, in contacts.QualifyDealInput) (ids.UUID, error) {
-	pipelineID, stageID, err := deals.BirthStageTx(ctx, tx, in.PipelineID, in.StageID)
+	create, err := qualifiedDealCreate(ctx, tx, in)
 	if err != nil {
 		return ids.Nil, err
 	}
-	deal, err := o.deals.CreateDealTx(ctx, tx, deals.CreateDealInput{
-		Name: in.Name, AmountMinor: in.AmountMinor, Currency: in.Currency,
-		PipelineID: pipelineID, StageID: stageID, Source: in.Source,
-		// The deal inherits the LEAD's owner exactly — an unassigned lead
-		// qualifies into an unassigned deal, not the promoting actor's.
-		OwnerID: in.OwnerID, OwnerExact: true,
-	}, deals.CustomColumns{})
+	deal, err := o.deals.CreateDealTx(ctx, tx, create, deals.CustomColumns{})
 	if err != nil {
 		return ids.Nil, err
 	}
 	return ids.UUID(deal.Id), nil
+}
+
+func qualifiedDealCreate(ctx context.Context, tx pgx.Tx, in contacts.QualifyDealInput) (deals.CreateDealInput, error) {
+	pipelineID, stageID, err := deals.BirthStageTx(ctx, tx, in.PipelineID, in.StageID)
+	if err != nil {
+		return deals.CreateDealInput{}, err
+	}
+	return deals.CreateDealInput{
+		Name: in.Name, AmountMinor: in.AmountMinor, Currency: in.Currency,
+		PipelineID: pipelineID, StageID: stageID, Source: in.Source, OwnerID: in.OwnerID, OwnerExact: true,
+	}, nil
+}
+
+func (o leadDealOpener) PreviewDealForLead(ctx context.Context, tx pgx.Tx, in contacts.QualifyDealInput) (contacts.QualifyDealInput, error) {
+	create, err := qualifiedDealCreate(ctx, tx, in)
+	if err != nil {
+		return contacts.QualifyDealInput{}, err
+	}
+	ready, err := o.deals.PreviewCreateDealTx(ctx, tx, create)
+	if err != nil {
+		return contacts.QualifyDealInput{}, err
+	}
+	return contacts.QualifyDealInput{
+		Name: ready.Name, AmountMinor: ready.AmountMinor, Currency: ready.Currency,
+		PipelineID: new(ready.PipelineID.UUID), StageID: new(ready.StageID.UUID), OwnerID: ready.OwnerID, Source: ready.Source,
+	}, nil
 }

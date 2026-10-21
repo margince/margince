@@ -38,6 +38,7 @@ import {
   viewportFor,
 } from "./lib/uat-page.mjs";
 import {
+  changesSince,
   needsStory,
   scopeFor,
   storiesInScope,
@@ -118,7 +119,7 @@ function git(args) {
   return r.stdout.toString().trim();
 }
 
-// 1. Changed files on this branch vs origin/main.
+// Include the working tree because this gate also runs before a commit.
 let base = null;
 if (scope === "diff") {
   try {
@@ -136,12 +137,7 @@ const head = git("rev-parse HEAD");
 // and then fails as "a changed story the build did not register", which is the
 // gate reporting its own bookkeeping as a defect. The sibling spacing gate
 // filters the same way.
-const changed =
-  base === null
-    ? []
-    : git(`diff --name-only --diff-filter=d ${base}..HEAD`)
-        .split("\n")
-        .filter(Boolean);
+const changed = base === null ? [] : changesSince(git, base);
 
 // 2. Story-coverage map: for every source file, the story files that import it.
 //    A component is covered by ANY story that renders it — coverage is not tied

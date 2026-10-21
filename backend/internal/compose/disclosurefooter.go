@@ -18,6 +18,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
@@ -49,4 +51,8 @@ func (a disclosureAdapter) DisclosuresFor(
 		out = append(out, activities.DisclosureLine{Kind: line.Kind, Text: line.Text})
 	}
 	return out, nil
+}
+
+func newDisclosureAdapter(db *database.DB) disclosureAdapter {
+	return disclosureAdapter{store: consent.NewStore(db).WithInstallationCountry(consent.InstallationCountryFunc(identity.CountryOf))}
 }

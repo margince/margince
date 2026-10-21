@@ -13,6 +13,7 @@ import type {
   PayloadField,
 } from "./decisioncard.payload";
 import { type Fact, FactList } from "./factlist";
+import { safeHref } from "./richtext-html";
 import { EvidenceChip, FieldDiff } from "./trust";
 
 // What a DecisionCard DRAWS of the proposal it carries: the drafted message,
@@ -101,7 +102,19 @@ export function DecisionContent({
   const facts: readonly Fact[] = rest.map((field) => ({
     key: field.key,
     term: field.label,
-    value: <span className="dcard-fact">{field.value}</span>,
+    value:
+      field.href && safeHref(field.href) ? (
+        <a
+          className="dcard-fact"
+          href={safeHref(field.href)}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {field.value}
+        </a>
+      ) : (
+        <span className="dcard-fact">{field.value}</span>
+      ),
   }));
   return (
     <>
@@ -127,10 +140,7 @@ export function DecisionContent({
   );
 }
 
-// The receipts, always on the card and never behind a popover: this is the one
-// surface where a contact has to be able to check a claim BEFORE agreeing to it.
-// Collapsed in the row layout, where a queue of verbatim snippets would bury
-// the verbs; open in the deck, where there is one card and room to read it.
+// Authorized preview quotations stay visible before a decision; legacy row evidence can collapse.
 export function DecisionEvidence({
   evidence,
   collapsed,

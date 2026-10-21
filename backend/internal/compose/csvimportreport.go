@@ -26,6 +26,15 @@ func refinePrediction(ctx context.Context, source *migration.CSVSource, writers 
 	if err != nil {
 		return migration.Report{}, err
 	}
+	if report.ReviewPlan == nil {
+		report.ReviewPlan = &migration.ReviewPlan{Version: 1, Complete: true}
+	}
+	if !p.review.Complete {
+		report.ReviewPlan.Complete, report.ReviewPlan.Rows = false, nil
+	}
+	for _, row := range p.review.Rows {
+		report.ReviewPlan.Add(row)
+	}
 	for i := range report.Objects {
 		if report.Objects[i].Object != object {
 			continue
@@ -116,6 +125,7 @@ func (w *csvWriters) predictLink(ctx context.Context, edge migration.Assoc) (mig
 // row, page by page, the same way the engine will walk it. A row predicted to
 // land is marked pending, so a later file's link to it resolves.
 func predictPages(ctx context.Context, source *migration.CSVSource, writers *csvWriters, object string) (p prediction, err error) {
+	p.review = migration.ReviewPlan{Version: 1, Complete: true}
 	for offset := 0; ; offset += importPredictPage {
 		rows, err := source.Rows(ctx, object, offset, importPredictPage)
 		if err != nil {
@@ -129,18 +139,19 @@ func predictPages(ctx context.Context, source *migration.CSVSource, writers *csv
 			if err != nil {
 				return prediction{}, err
 			}
+			if p.review.Complete {
+				review, err := writers.reviewRow(ctx, row, outcome)
+				if err != nil {
+					return prediction{}, err
+				}
+				p.review.Add(review)
+			}
 			if !p.tally(object, row, outcome, problem) {
 				writers.links.markRefused(object, row.ExternalID)
 				continue
 			}
 			p.countClosedDeal(writers.dealStages, object, row, outcome)
-			writers.links.markPending(object, row.ExternalID)
-			writers.links.markNaturalPending(object, textFields(row.Fields)[naturalKeyField(object)])
-			if object == migration.ObjectCompany {
-				fields := textFields(row.Fields)
-				creates := outcome == predictCreate || outcome == predictCollides
-				writers.links.markNamesPending(creates, fields[fieldDisplayName], fields[fieldLegalName])
-			}
+			writers.markPredictedRow(row, outcome)
 		}
 		if len(rows) < importPredictPage {
 			return p, nil
@@ -217,6 +228,7 @@ func collisionWordingFor(object string) (disclosure, skip migration.Reason) {
 // prediction is what one walk of the source concluded: the three outcomes a
 // commit can have, plus the rows it will refuse outright.
 type prediction struct {
+	review    migration.ReviewPlan
 	created   int
 	updated   int
 	unchanged int

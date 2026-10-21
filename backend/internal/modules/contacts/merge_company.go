@@ -87,21 +87,7 @@ func (s *Store) mergeCompanyTx(
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
-	// AFTER the pair lock, so the answer cannot change under the merge, and
-	// before anything is relinked. Either endpoint: merging the anchor away
-	// retires it, and merging a customer INTO it folds their contacts, deals
-	// and history onto the installation's own company with no way to tell
-	// them apart afterwards.
-	// Neither direction is open when one side is the anchor, so neither
-	// message may point at the other direction as the way out: archiving the
-	// duplicate is the only move that actually works.
-	if err := refuseIfAnchor(ctx, tx, sourceID, "id", "it cannot be merged into another company. Archive the duplicate instead, and edit this one on the company page"); err != nil {
-		return crmcontracts.Company{}, err
-	}
-	if err := refuseIfAnchor(ctx, tx, targetID, "target_id", "nothing can be merged into it. Archive the duplicate instead, and edit this one on the company page"); err != nil {
-		return crmcontracts.Company{}, err
-	}
-	if err := refuseWhenBothCarryProjects(ctx, tx, sourceID, targetID); err != nil {
+	if err := companyMergeAllowed(ctx, tx, sourceID, targetID); err != nil {
 		return crmcontracts.Company{}, err
 	}
 	targetIsPartner, err := relinkCompanyAssociations(ctx, tx, sourceID, targetID)
@@ -151,12 +137,9 @@ func (s *Store) mergeCompanyTx(
 // edges, activity/list/tag rows, and the deal/hierarchy/partner references
 // — and reports whether the survivor ends up holding a partner row.
 func relinkCompanyAssociations(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.CompanyID) (bool, error) {
-	if _, err := relinkDemotingPrimary(ctx, tx, `
-		UPDATE company_domain a SET company_id = $2,
-		  is_primary = a.is_primary AND NOT EXISTS (
-		    SELECT 1 FROM company_domain b
-		    WHERE b.company_id = $2 AND b.is_primary AND b.archived_at IS NULL)
-		WHERE a.company_id = $1 AND a.archived_at IS NULL`, sourceID.UUID, targetID.UUID); err != nil {
+	if _, err := relinkDemotingPrimary(ctx, tx,
+		`UPDATE company_domain a SET company_id = @target, is_primary = `+mergeDomainPrimary+` WHERE `+mergeCompanyDomainSource,
+		sourceID.UUID, targetID.UUID); err != nil {
 		return false, fmt.Errorf("relink domains: %w", err)
 	}
 	if err := relinkCompanyEdges(ctx, tx, sourceID, targetID); err != nil {
@@ -184,26 +167,7 @@ func relinkCompanyAssociations(ctx context.Context, tx pgx.Tx, sourceID, targetI
 // extension row with nothing saying it is a partner, which is exactly the
 // half-state the enforced invariant exists to make impossible.
 func fillCompanySurvivorship(ctx context.Context, tx pgx.Tx, src, tgt crmcontracts.Company, targetIsPartner bool, tgtLock storekit.RowLock) (map[string]any, error) {
-	p := storekit.NewPatch()
-	fillString(p, fieldLegalName, tgt.LegalName, src.LegalName)
-	fillString(p, "description", tgt.Description, src.Description)
-	fillString(p, "industry", tgt.Industry, src.Industry)
-	// The source is already archived, which frees its unique slot on the address.
-	fillString(p, "linkedin_url", tgt.LinkedinUrl, src.LinkedinUrl)
-	// The postal address moves as ONE block, on the same rule as the contact
-	// merge (buildSurvivorshipPatch): a survivor with no address at all takes
-	// the retired record's whole address, and a survivor that has one keeps
-	// every line of it. Filling line by line would build an address that
-	// neither company ever had — this city with that postcode — which is worse
-	// than the blank it replaced, because it looks deliberate.
-	if tgt.Address == nil && src.Address != nil {
-		p.Set("address_line1", nil, src.Address.Line1)
-		p.Set("address_line2", nil, src.Address.Line2)
-		p.Set("address_city", nil, src.Address.City)
-		p.Set("address_region", nil, src.Address.Region)
-		p.Set("address_postal_code", nil, src.Address.PostalCode)
-		p.Set("address_country", nil, src.Address.Country)
-	}
+	p := buildCompanySurvivorshipPatch(tgt, src)
 	if targetIsPartner {
 		if _, err := ensureCompanyRelationshipType(ctx, tx, ids.CompanyID{UUID: ids.UUID(tgt.Id)},
 			relationshipTypePartner, "system", "system:merge"); err != nil {

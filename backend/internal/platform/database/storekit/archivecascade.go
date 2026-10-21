@@ -115,8 +115,8 @@ func (c *ArchiveCascade) DropMemberships(ctx context.Context, tx pgx.Tx, stateme
 
 // DropTags runs a DELETE on taggable that answers tag_id, assigned_by,
 // assigned_by_kind and assigned_at, and keeps what it deleted.
-func (c *ArchiveCascade) DropTags(ctx context.Context, tx pgx.Tx, statement string, id ids.UUID) error {
-	rows, err := tx.Query(ctx, statement, id)
+func (c *ArchiveCascade) DropTags(ctx context.Context, tx pgx.Tx, statement string, args ...any) error {
+	rows, err := tx.Query(ctx, statement, args...)
 	if err != nil {
 		return fmt.Errorf("drop tags: %w", err)
 	}

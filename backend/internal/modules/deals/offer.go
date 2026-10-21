@@ -17,7 +17,6 @@ package deals
 import (
 	"context"
 	"fmt"
-	"net/http"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -25,7 +24,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -95,18 +93,12 @@ func (s *Store) CreateOffer(ctx context.Context, dealID ids.DealID, in CreateOff
 // all inside the caller's transaction.
 func createOfferTx(ctx context.Context, tx pgx.Tx, dealID ids.DealID, in CreateOfferInput, by string) (crmcontracts.Offer, error) {
 	wsID := storekit.MustWorkspace(ctx)
-	// The deal anchors the offer's visibility: it must exist, be live
-	// and sit inside the caller's row scope (miss = 404).
-	if err := auth.EnsureLinkTarget(ctx, tx, dealTable, dealID.UUID); err != nil {
-		return crmcontracts.Offer{}, err
-	}
-	buyerCompany, err := resolveBuyerCompany(ctx, tx, dealID, in.BuyerCompanyID)
+	var err error
+	in, err = admitOfferCreation(ctx, tx, dealID, in)
 	if err != nil {
 		return crmcontracts.Offer{}, err
 	}
-	if err := resolveOfferTemplateRef(ctx, tx, in.TemplateID); err != nil {
-		return crmcontracts.Offer{}, err
-	}
+
 	number, err := nextOfferNumber(ctx, tx, wsID)
 	if err != nil {
 		return crmcontracts.Offer{}, err
@@ -117,7 +109,7 @@ func createOfferTx(ctx context.Context, tx pgx.Tx, dealID ids.DealID, in CreateO
 		`INSERT INTO offer (id, deal_id, offer_number, revision, status, currency,
 		                    buyer_company_id, valid_until, intro_text, terms_text, template_id, source, captured_by)
 		 VALUES ($1, $2, $3, 1, 'draft', $4, $5, $6, $7, $8, $9, $10, $11)`,
-		id, dealID, number, in.Currency, buyerCompany, in.ValidUntil, in.IntroText, in.TermsText,
+		id, dealID, number, in.Currency, in.BuyerCompanyID, in.ValidUntil, in.IntroText, in.TermsText,
 		in.TemplateID, in.Source, by); err != nil {
 		return crmcontracts.Offer{}, fmt.Errorf("insert offer: %w", err)
 	}
@@ -462,37 +454,4 @@ func offerHeaderPatch(ctx context.Context, tx pgx.Tx, current crmcontracts.Offer
 		p.Set("template_id", current.TemplateId, *in.TemplateID)
 	}
 	return p, retired, nil
-}
-
-func (s *Store) ArchiveOffer(ctx context.Context, id ids.OfferID) (crmcontracts.Offer, error) {
-	if err := auth.Require(ctx, "offer", principal.ActionDelete); err != nil {
-		return crmcontracts.Offer{}, err
-	}
-	var out crmcontracts.Offer
-	err := s.Tx(ctx, func(tx pgx.Tx) error {
-		current, _, err := visibleOfferLocked(ctx, tx, id, storekit.LiveOnly)
-		if err != nil {
-			return err
-		}
-		// An accepted offer is the source of its deal's price, so retiring it
-		// would leave the deal priced from a document nobody can open.
-		if current.Status == crmcontracts.OfferStatusAccepted {
-			return &httperr.DetailedError{
-				Status: http.StatusConflict, Code: "offer_accepted",
-				Detail: "an accepted offer prices its deal and cannot be archived; the deal's price has to change first",
-			}
-		}
-		if _, err := tx.Exec(ctx,
-			`UPDATE offer SET archived_at = now() WHERE id = $1 AND archived_at IS NULL`, id); err != nil {
-			return fmt.Errorf("archive offer: %w", err)
-		}
-		if _, err := storekit.Audit(ctx, tx, "archive", "offer", id.UUID, nil, nil); err != nil {
-			return fmt.Errorf("audit offer archive: %w", err)
-		}
-		if out, err = readOfferWithLines(ctx, tx, id, storekit.IncludeArchived); err != nil {
-			return fmt.Errorf("read archived offer: %w", err)
-		}
-		return nil
-	})
-	return out, err
 }

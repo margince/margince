@@ -17,6 +17,25 @@ Open the source evidence before answering a lifecycle proposal. A linked proposa
 separate decision. If the record changed or the full change cannot be shown, you cannot approve it.
 Request a new proposal with current context, or reject the old one.
 
+## Reading an import proposal
+
+An import proposal shows each source row, its planned result, and the values to create or change.
+Links name an existing record or the source row that will create it. Review skipped rows and new tags too.
+Approval starts the queued import. It checks again the reviewed source and existing record versions before writing.
+
+The queue requires a complete plan of at most 500 rows. Older test runs, larger files, or rows that update
+the same record twice need a new plan. Open **Settings → Data import**, split larger files or resolve
+rows that change the same record, and run another test. You can reject the queued proposal without starting the import.
+
+## Reading a confirmation request
+
+An automation can ask you to confirm a question. The card shows the question and the effect of your answer.
+It also shows the reason if the request has one. A confirmation records your answer and finishes the waiting
+automation run. It does not authorize a record change or send a message.
+
+If an old request has no clear question, ask for a new request or reject it. An event name
+or a list of fields does not tell you what you are confirming.
+
 ## Answering approvals
 
 ### How do I approve an action in Margince?

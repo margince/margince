@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { INTRO_STATUS_LABELS } from "../../../format/introstatus";
+
 // Where the introduction has got to, and who owes the next move.
 //
 // Four steps, drawn as an ordered list because that is what it is: a reader
@@ -239,15 +241,4 @@ const STATE_WORD: Record<StepState, Parameters<ReturnType<typeof useT>>[0]> = {
 const ANSWER_WORD: Record<
   IntroRequest["status"],
   Parameters<ReturnType<typeof useT>>[0]
-> = {
-  requested: "contact.intro.stepAwaitingAnswer",
-  accepted: "contact.intro.stateAccepted",
-  name_drop_approved: "contact.intro.stateNameDropApproved",
-  suggest_other: "contact.intro.stateSuggestOther",
-  declined: "contact.intro.stateDeclined",
-  introduced: "contact.intro.stateIntroduced",
-  name_dropped: "contact.intro.stateNameDropped",
-  replied: "contact.intro.stateReplied",
-  expired: "contact.intro.stateExpired",
-  cancelled: "contact.intro.stateCancelled",
-};
+> = { ...INTRO_STATUS_LABELS, requested: "contact.intro.stepAwaitingAnswer" };

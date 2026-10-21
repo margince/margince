@@ -25,7 +25,7 @@ import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import "../../design-system/querystates.css";
 import { EntityRef } from "../../components/entityref";
-import { KIND_LABELS } from "./relationshipkinds";
+import { KIND_LABELS } from "../../lib/relationshipkinds";
 import "./relationshiprows.css";
 import {
   AddRelationshipAction,

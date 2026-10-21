@@ -288,31 +288,9 @@ func scanInbox(ctx context.Context, tx pgx.Tx, p principal.Principal, in ListInp
 	return capPage(out, in.Limit, nil)
 }
 
-// listForTarget answers the inbox scoped to ONE record.
-//
-// Every row shares that target, so the target-visibility half of decidable is
-// asked ONCE for the record rather than once per row — the inbox's per-row
-// probe exists only because its rows point at different records. The two halves
-// that vary by row stay in the loop: the per-kind grant check, and the self-only
-// narrowing (withheldFromOtherSeats), which is per-row because it compares the
-// caller against the seat THAT ROW was staged for and not against the target.
-//
-// A target the caller could not read — its type ungranted, or its row outside
-// their scope — answers an EMPTY list, never a refusal: nothing staged against a
-// record they cannot see is decidable, and saying so is the same
-// existence-hiding answer the record's own read gives.
-//
-// The scan is bounded at PendingScanCap, so a full scan is also a reason to
-// report has_more: past the cap this read cannot tell a client it has seen
-// everything, and claiming otherwise is the lie the flag exists to prevent.
+// A shared target can carry both live-record work and a reversal of an archived
+// promotion, so the proposal kind participates in each visibility check.
 func listForTarget(ctx context.Context, tx pgx.Tx, p principal.Principal, in ListInput, start *keysetStart) ([]row, storekit.Page, error) {
-	visible, err := targetVisible(ctx, tx, in.TargetType, in.TargetID)
-	if err != nil {
-		return nil, storekit.Page{}, err
-	}
-	if !visible {
-		return []row{}, storekit.Page{}, nil
-	}
 	q, args := approvalPageQuery(in, start)
 	batch, err := collect(ctx, tx, q, args)
 	if err != nil {
@@ -326,7 +304,7 @@ func listForTarget(ctx context.Context, tx pgx.Tx, p principal.Principal, in Lis
 		if !requestedInScope(a, p.UserID, in) {
 			return false, nil
 		}
-		return proposalReadable(ctx, tx, p, a)
+		return decidable(ctx, tx, p, a)
 	}
 	out, _, err := appendDecidable(batch, nil, in.Limit+1, granted)
 	if err != nil {

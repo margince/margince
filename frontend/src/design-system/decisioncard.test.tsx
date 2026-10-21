@@ -792,3 +792,31 @@ it("replaces historical evidence with the current authorized evidence", () => {
   );
   expect(screen.getByText(/Current authorized excerpt/)).toBeInTheDocument();
 });
+
+it("shows authorized preview quotes before a row decision without expansion", () => {
+  render(
+    card({
+      layout: "row",
+      approval: approval({
+        evidence: [{ evidence_snippet: "Historical private excerpt" }],
+        preview: {
+          version: 1,
+          state: "stale",
+          changes: [],
+          reviewer_reason: "record_authority",
+          evidence: [
+            {
+              evidence_snippet: "Current authorized source quotation",
+              source_type: "activity",
+              source_lines: [2, 3],
+            },
+          ],
+        },
+      }),
+    }),
+  );
+  expect(screen.getByText(/Current authorized source quotation/)).toBeVisible();
+  expect(
+    screen.queryByText(/Historical private excerpt/),
+  ).not.toBeInTheDocument();
+});

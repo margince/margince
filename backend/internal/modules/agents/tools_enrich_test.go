@@ -114,7 +114,7 @@ func TestEnrichHandlePassesTheAdmittedArgumentsThrough(t *testing.T) {
 func TestReadEnrichArgsDefaultsTheDepthAndRefusesAnUnservedOne(t *testing.T) {
 	id := ids.NewV7().String()
 
-	args, err := readEnrichArgs(json.RawMessage(`{"company_id":"` + id + `"}`))
+	args, err := DecodeEnrichCommand(json.RawMessage(`{"company_id":"` + id + `"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -123,7 +123,7 @@ func TestReadEnrichArgsDefaultsTheDepthAndRefusesAnUnservedOne(t *testing.T) {
 			args.Depth, EnrichDepthPage)
 	}
 
-	if _, err := readEnrichArgs(json.RawMessage(`{"company_id":"` + id + `","depth":"crawl"}`)); err == nil {
+	if _, err := DecodeEnrichCommand(json.RawMessage(`{"company_id":"` + id + `","depth":"crawl"}`)); err == nil {
 		t.Fatal("depth \"crawl\" was accepted; the tool serves two depths")
 	}
 }
@@ -137,7 +137,7 @@ func TestReadEnrichArgsRefusesATargetThatIsNotAnAbsoluteHTTPURL(t *testing.T) {
 		"javascript:alert(1)", // not a fetch at all
 	} {
 		t.Run(target, func(t *testing.T) {
-			_, err := readEnrichArgs(json.RawMessage(`{"company_id":"` + id + `","url":"` + target + `"}`))
+			_, err := DecodeEnrichCommand(json.RawMessage(`{"company_id":"` + id + `","url":"` + target + `"}`))
 			if err == nil {
 				t.Fatalf("%q was accepted as a fetch target", target)
 			}
@@ -147,7 +147,7 @@ func TestReadEnrichArgsRefusesATargetThatIsNotAnAbsoluteHTTPURL(t *testing.T) {
 		})
 	}
 
-	if _, err := readEnrichArgs(json.RawMessage(`{"company_id":"` + id + `","url":"https://example.com/about"}`)); err != nil {
+	if _, err := DecodeEnrichCommand(json.RawMessage(`{"company_id":"` + id + `","url":"https://example.com/about"}`)); err != nil {
 		t.Fatalf("an absolute https URL must be accepted: %v", err)
 	}
 }

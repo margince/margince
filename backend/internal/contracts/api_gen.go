@@ -1723,6 +1723,33 @@ func (e ApprovalEvidenceSourceType) Valid() bool {
 	}
 }
 
+// Defines values for ApprovalPreviewImportRowOutcome.
+const (
+	ApprovalPreviewImportRowOutcomeCreate          ApprovalPreviewImportRowOutcome = "create"
+	ApprovalPreviewImportRowOutcomeCreateDuplicate ApprovalPreviewImportRowOutcome = "create_duplicate"
+	ApprovalPreviewImportRowOutcomeSkip            ApprovalPreviewImportRowOutcome = "skip"
+	ApprovalPreviewImportRowOutcomeUnchanged       ApprovalPreviewImportRowOutcome = "unchanged"
+	ApprovalPreviewImportRowOutcomeUpdate          ApprovalPreviewImportRowOutcome = "update"
+)
+
+// Valid indicates whether the value is a known member of the ApprovalPreviewImportRowOutcome enum.
+func (e ApprovalPreviewImportRowOutcome) Valid() bool {
+	switch e {
+	case ApprovalPreviewImportRowOutcomeCreate:
+		return true
+	case ApprovalPreviewImportRowOutcomeCreateDuplicate:
+		return true
+	case ApprovalPreviewImportRowOutcomeSkip:
+		return true
+	case ApprovalPreviewImportRowOutcomeUnchanged:
+		return true
+	case ApprovalPreviewImportRowOutcomeUpdate:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AssignLeadOutcomeKind.
 const (
 	AssignLeadOutcomeKindAssigned  AssignLeadOutcomeKind = "assigned"
@@ -26525,11 +26552,20 @@ type ApprovalPreview struct {
 	Conflicts      *[]ApprovalPreviewConflict `json:"conflicts,omitempty"`
 	CurrentVersion *int                       `json:"current_version,omitempty"`
 
+	// Details Version 2 action operands, read with current permissions and kept separate from execution arguments.
+	Details *[]ApprovalPreviewDetail `json:"details,omitempty"`
+
 	// Effects Additional business effects released by this approval. Other proposals remain separate decisions.
 	Effects *[]string `json:"effects,omitempty"`
 
 	// Evidence Current evidence resolved with the reader's source permissions. An empty array replaces historical evidence.
 	Evidence *[]ApprovalEvidence `json:"evidence,omitempty"`
+
+	// Files The complete authorized set of files the action will send. Version 2 clients provide the normal file review controls.
+	Files *[]ApprovalPreviewFile `json:"files,omitempty"`
+
+	// ImportRows The complete bounded row plan. An incomplete plan cannot authorize an import.
+	ImportRows *[]ApprovalPreviewImportRow `json:"import_rows,omitempty"`
 
 	// LifecycleEvidence Current readable source and scope supporting a company lifecycle review.
 	LifecycleEvidence *LifecyclePreviewEvidence `json:"lifecycle_evidence,omitempty"`
@@ -26560,6 +26596,36 @@ type ApprovalPreviewConflict struct {
 	// Summary A sanitized explanation containing only facts this reader may see.
 	Summary string `json:"summary"`
 }
+
+// ApprovalPreviewDetail defines model for ApprovalPreviewDetail.
+type ApprovalPreviewDetail struct {
+	// Field Semantic field key translated by the client.
+	Field string               `json:"field"`
+	Value ApprovalPreviewValue `json:"value"`
+}
+
+// ApprovalPreviewFile defines model for ApprovalPreviewFile.
+type ApprovalPreviewFile struct {
+	ByteSize    int64              `json:"byte_size"`
+	ContentType string             `json:"content_type"`
+	Filename    string             `json:"filename"`
+	Id          openapi_types.UUID `json:"id"`
+}
+
+// ApprovalPreviewImportRow One complete import row effect, using the same checked values as the import writer.
+type ApprovalPreviewImportRow struct {
+	Changes   []ApprovalPreviewChange         `json:"changes"`
+	Details   []ApprovalPreviewDetail         `json:"details"`
+	Effects   []string                        `json:"effects"`
+	Line      int                             `json:"line"`
+	Object    string                          `json:"object"`
+	Outcome   ApprovalPreviewImportRowOutcome `json:"outcome"`
+	SourceKey string                          `json:"source_key"`
+	Target    *ApprovalPreviewValue           `json:"target,omitempty"`
+}
+
+// ApprovalPreviewImportRowOutcome defines model for ApprovalPreviewImportRow.Outcome.
+type ApprovalPreviewImportRowOutcome string
 
 // ApprovalPreviewValue defines model for ApprovalPreviewValue.
 type ApprovalPreviewValue struct {
@@ -58367,6 +58433,16 @@ type CreateOfferTemplateParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// ArchiveOfferTemplateParams defines parameters for ArchiveOfferTemplate.
+type ArchiveOfferTemplateParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
 // UpdateOfferTemplateParams defines parameters for UpdateOfferTemplate.
 type UpdateOfferTemplateParams struct {
 	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
@@ -58396,6 +58472,16 @@ type UpdateOfferTemplateParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// ArchiveOfferParams defines parameters for ArchiveOffer.
+type ArchiveOfferParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
 // UpdateOfferParams defines parameters for UpdateOffer.
@@ -58768,6 +58854,16 @@ type CreateProductParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// ArchiveProductParams defines parameters for ArchiveProduct.
+type ArchiveProductParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
 // UpdateProductParams defines parameters for UpdateProduct.
@@ -74854,7 +74950,7 @@ type ServerInterface interface {
 	CreateOfferTemplate(w http.ResponseWriter, r *http.Request, params CreateOfferTemplateParams)
 	// Archive (soft-delete) an offer template.
 	// (DELETE /offer-templates/{id})
-	ArchiveOfferTemplate(w http.ResponseWriter, r *http.Request, id Id)
+	ArchiveOfferTemplate(w http.ResponseWriter, r *http.Request, id Id, params ArchiveOfferTemplateParams)
 	// Get an offer template by id.
 	// (GET /offer-templates/{id})
 	GetOfferTemplate(w http.ResponseWriter, r *http.Request, id Id)
@@ -74863,7 +74959,7 @@ type ServerInterface interface {
 	UpdateOfferTemplate(w http.ResponseWriter, r *http.Request, id Id, params UpdateOfferTemplateParams)
 	// Archive (soft-delete) an offer.
 	// (DELETE /offers/{id})
-	ArchiveOffer(w http.ResponseWriter, r *http.Request, id Id)
+	ArchiveOffer(w http.ResponseWriter, r *http.Request, id Id, params ArchiveOfferParams)
 	// Get an offer with its line items and computed totals.
 	// (GET /offers/{id})
 	GetOffer(w http.ResponseWriter, r *http.Request, id Id)
@@ -74974,7 +75070,7 @@ type ServerInterface interface {
 	CreateProduct(w http.ResponseWriter, r *http.Request, params CreateProductParams)
 	// Archive (soft-delete) a product. Lines referencing it survive with their snapshot.
 	// (DELETE /products/{id})
-	ArchiveProduct(w http.ResponseWriter, r *http.Request, id Id)
+	ArchiveProduct(w http.ResponseWriter, r *http.Request, id Id, params ArchiveProductParams)
 	// Get a product by id.
 	// (GET /products/{id})
 	GetProduct(w http.ResponseWriter, r *http.Request, id Id)
@@ -79330,7 +79426,7 @@ func (_ Unimplemented) CreateOfferTemplate(w http.ResponseWriter, r *http.Reques
 
 // Archive (soft-delete) an offer template.
 // (DELETE /offer-templates/{id})
-func (_ Unimplemented) ArchiveOfferTemplate(w http.ResponseWriter, r *http.Request, id Id) {
+func (_ Unimplemented) ArchiveOfferTemplate(w http.ResponseWriter, r *http.Request, id Id, params ArchiveOfferTemplateParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -79348,7 +79444,7 @@ func (_ Unimplemented) UpdateOfferTemplate(w http.ResponseWriter, r *http.Reques
 
 // Archive (soft-delete) an offer.
 // (DELETE /offers/{id})
-func (_ Unimplemented) ArchiveOffer(w http.ResponseWriter, r *http.Request, id Id) {
+func (_ Unimplemented) ArchiveOffer(w http.ResponseWriter, r *http.Request, id Id, params ArchiveOfferParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -79570,7 +79666,7 @@ func (_ Unimplemented) CreateProduct(w http.ResponseWriter, r *http.Request, par
 
 // Archive (soft-delete) a product. Lines referencing it survive with their snapshot.
 // (DELETE /products/{id})
-func (_ Unimplemented) ArchiveProduct(w http.ResponseWriter, r *http.Request, id Id) {
+func (_ Unimplemented) ArchiveProduct(w http.ResponseWriter, r *http.Request, id Id, params ArchiveProductParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -106399,8 +106495,32 @@ func (siw *ServerInterfaceWrapper) ArchiveOfferTemplate(w http.ResponseWriter, r
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ArchiveOfferTemplateParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ArchiveOfferTemplate(w, r, id)
+		siw.Handler.ArchiveOfferTemplate(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -106544,8 +106664,32 @@ func (siw *ServerInterfaceWrapper) ArchiveOffer(w http.ResponseWriter, r *http.R
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ArchiveOfferParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ArchiveOffer(w, r, id)
+		siw.Handler.ArchiveOffer(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -108178,8 +108322,32 @@ func (siw *ServerInterfaceWrapper) ArchiveProduct(w http.ResponseWriter, r *http
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ArchiveProductParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ArchiveProduct(w, r, id)
+		siw.Handler.ArchiveProduct(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {

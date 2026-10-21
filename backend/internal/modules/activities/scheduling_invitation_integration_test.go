@@ -77,16 +77,35 @@ func TestInvitationDeliveryKeepsOneActivityAndOneProviderIdentity(t *testing.T) 
 	if _, err := e.owner.Exec(ctx, `INSERT INTO contact(id,full_name,source,captured_by)VALUES(`+args.add(contact)+`,'Guest','manual','human:test')`, args...); err != nil {
 		t.Fatal(err)
 	}
-	in := crmcontracts.MeetingInvitationRequest{ContactId: crmcontracts.Id(contact), AttendeeEmail: "guest@example.test", Subject: "Project meeting", Start: clock.Add(3 * time.Hour), End: clock.Add(3*time.Hour + 30*time.Minute)}
+	in := crmcontracts.MeetingInvitationRequest{ContactId: crmcontracts.Id(contact), AttendeeEmail: "guest@example.test", Subject: "Project meeting", Description: "Discuss project delivery.", Start: clock.Add(3 * time.Hour), End: clock.Add(3*time.Hour + 30*time.Minute)}
+	preview, err := store.PreviewInvitation(ctx, ids.From[ids.UserKind](e.rep), in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var staged int
+	if err := e.owner.QueryRow(ctx, `SELECT count(*) FROM meeting_invitation`).Scan(&staged); err != nil {
+		t.Fatal(err)
+	}
+	if staged != 0 || len(calendar.requests) != 0 {
+		t.Fatal("preview reserved or delivered an invitation")
+	}
 	invited, err := store.CreateInvitation(ctx, in)
 	if err != nil {
 		t.Fatal(err)
 	}
+	assertInvitationRefusesActivityArchive(t, e, store, ids.UUID(invited.Id))
 	if invited.Status != "pending" || invited.ManagementToken == nil {
 		t.Fatalf("unexpected pending result: %+v", invited)
 	}
 	if err := store.DeliverInvitations(ctx); err != nil {
 		t.Fatal(err)
+	}
+	if len(calendar.requests) != 1 {
+		t.Fatalf("delivery requests: %d", len(calendar.requests))
+	}
+	actual := calendar.requests[0]
+	if preview.Subject != actual.Subject || actual.Description != preview.Description+"\n\nReschedule or cancel: https://crm.example.com/#/book/manage-"+*invited.ManagementToken || preview.Location != actual.Location || preview.VideoCall != actual.VideoCall || preview.EmailReminder != actual.EmailReminder || preview.CalendarID != actual.CalendarID || !preview.Start.Equal(actual.Start) || !preview.End.Equal(actual.End) || len(preview.Attendees) != 1 || preview.Attendees[0] != actual.Attendees[0] {
+		t.Fatalf("preview differs from delivered invitation: %+v / %+v", preview, actual)
 	}
 	pending, err := store.Invitation(ctx, ids.UUID(invited.Id))
 	if err != nil || pending.Status != "pending" {
@@ -247,4 +266,22 @@ func (c *invitationCalendar) Inspect(context.Context, ids.UserID, string, string
 	}
 	last := c.requests[len(c.requests)-1]
 	return connector.CalendarState{Start: last.Start, End: last.End}, nil
+}
+
+func assertInvitationRefusesActivityArchive(t *testing.T, e *sendEnv, store *Store, invitationID ids.UUID) {
+	t.Helper()
+	ctx := e.asArchiver()
+	id := ids.From[ids.ActivityKind](invitationID)
+	for _, decide := range []func() error{
+		func() error { return store.RefuseArchiveActivity(ctx, id) },
+		func() error { _, err := store.ArchiveActivity(ctx, id, nil); return err },
+	} {
+		var refusal *SchedulingArgumentError
+		if err := decide(); !errors.As(err, &refusal) || refusal.Code != "calendar_managed" {
+			t.Fatalf("active invitation archive refusal: %v", err)
+		}
+	}
+	if _, err := store.GetActivity(ctx, id, storekit.LiveOnly); err != nil {
+		t.Fatalf("refused archive changed the meeting: %v", err)
+	}
 }

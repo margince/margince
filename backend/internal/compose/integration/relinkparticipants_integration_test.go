@@ -52,6 +52,23 @@ func TestRelinkRemovesTheDisplacedParticipantWhenTheTargetIsAlreadyOne(t *testin
 	// the one that has to delete instead.
 	e.WsExec(t, `INSERT INTO activity_participant (activity_id, role, contact_id) VALUES ($1, 'cc', $2)`, act, him)
 
+	preview, err := e.Activities.PreviewRelink(admin, []ids.UUID{act}, activities.RelinkActivityInput{EntityType: "contact", EntityID: him, ReplaceExistingOfType: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(preview) != 1 || len(preview[0].Participants) != 1 {
+		t.Fatalf("participant scope: %+v", preview)
+	}
+	moves := 0
+	for _, participant := range preview[0].Participants {
+		if participant.Move {
+			moves++
+		}
+	}
+	if moves != 1 {
+		t.Fatalf("participant moves = %d, want 1", moves)
+	}
+
 	if _, err := e.Activities.RelinkActivity(admin, ids.From[ids.ActivityKind](act), activities.RelinkActivityInput{
 		EntityType: "contact", EntityID: him, ReplaceExistingOfType: true,
 	}); err != nil {
@@ -83,6 +100,23 @@ func TestRelinkMergesSeveralDisplacedParticipantsWithoutColliding(t *testing.T) 
 		e.WsExec(t, `INSERT INTO activity_participant (activity_id, role, contact_id) VALUES ($1, 'to', $2)`, act, p)
 	}
 
+	preview, err := e.Activities.PreviewRelink(admin, []ids.UUID{act}, activities.RelinkActivityInput{EntityType: "contact", EntityID: him, ReplaceExistingOfType: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(preview) != 1 || len(preview[0].Participants) != 2 {
+		t.Fatalf("participant scope: %+v", preview)
+	}
+	moves := 0
+	for _, participant := range preview[0].Participants {
+		if participant.Move {
+			moves++
+		}
+	}
+	if moves != 1 {
+		t.Fatalf("participant moves = %d, want 1", moves)
+	}
+
 	if _, err := e.Activities.RelinkActivity(admin, ids.From[ids.ActivityKind](act), activities.RelinkActivityInput{
 		EntityType: "contact", EntityID: him, ReplaceExistingOfType: true,
 	}); err != nil {
@@ -112,6 +146,23 @@ func TestRelinkDeletesTheDisplacedParticipantWhenTheTargetHoldsItsShape(t *testi
 	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`, act, her)
 	e.WsExec(t, `INSERT INTO activity_participant (activity_id, role, contact_id) VALUES ($1, 'to', $2)`, act, her)
 	e.WsExec(t, `INSERT INTO activity_participant (activity_id, role, contact_id) VALUES ($1, 'to', $2)`, act, him)
+
+	preview, err := e.Activities.PreviewRelink(admin, []ids.UUID{act}, activities.RelinkActivityInput{EntityType: "contact", EntityID: him, ReplaceExistingOfType: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(preview) != 1 || len(preview[0].Participants) != 1 {
+		t.Fatalf("participant scope: %+v", preview)
+	}
+	moves := 0
+	for _, participant := range preview[0].Participants {
+		if participant.Move {
+			moves++
+		}
+	}
+	if moves != 0 {
+		t.Fatalf("participant moves = %d, want 0", moves)
+	}
 
 	if _, err := e.Activities.RelinkActivity(admin, ids.From[ids.ActivityKind](act), activities.RelinkActivityInput{
 		EntityType: "contact", EntityID: him, ReplaceExistingOfType: true,

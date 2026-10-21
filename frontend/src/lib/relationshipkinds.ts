@@ -1,5 +1,5 @@
-import type { components } from "../../api/schema";
-import type { MessageKey } from "../../i18n/en";
+import type { components } from "../api/schema";
+import type { MessageKey } from "../i18n/en";
 
 type RelationshipKind = components["schemas"]["Relationship"]["kind"];
 

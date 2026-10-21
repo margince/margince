@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -158,41 +157,8 @@ func createLeadInTx(ctx context.Context, tx pgx.Tx, in CreateLeadInput, by strin
 	if replay != nil {
 		return *replay, false, nil
 	}
-	// The LinkedIn claim is locked before either probe reads, so two
-	// creates racing on the same contact answer with the same key rather
-	// than whichever one they happened to lose.
-	if err := lockLeadLinkedInIdentity(ctx, tx, in.LinkedInURL); err != nil {
+	if err := admitLeadCreate(ctx, tx, in); err != nil {
 		return crmcontracts.Lead{}, false, err
-	}
-	if err := ensureLeadEmailUnclaimed(ctx, tx, in.Email); err != nil {
-		return crmcontracts.Lead{}, false, err
-	}
-	if err := ensureLeadLinkedInUnclaimed(ctx, tx, in.LinkedInURL); err != nil {
-		return crmcontracts.Lead{}, false, err
-	}
-	if err := ensureContactNotWorked(ctx, tx, in.FromContactID, nil); err != nil {
-		return crmcontracts.Lead{}, false, err
-	}
-	if err := ensureContactStillLive(ctx, tx, in.FromContactID); err != nil {
-		return crmcontracts.Lead{}, false, err
-	}
-
-	if in.ProjectID != nil {
-		if err := auth.EnsureReferenceTarget(ctx, tx, "project_id", "project", in.ProjectID.UUID); err != nil {
-			return crmcontracts.Lead{}, false, err
-		}
-	}
-	// A named owner on a create is an assignment, and it is checked here
-	// rather than in readyLeadCreate because the question needs a
-	// transaction. Both entry points reach this body — CreateLead and
-	// CreateLeadTx, the latter being what CSV and mirror imports call — so
-	// this is the one place that sees every created lead. Omitting the owner
-	// stays the unassigned queue's own case and asks nothing. An invited
-	// colleague may be named, as on every other record's create.
-	if in.OwnerID != nil {
-		if err := auth.EnsureNewRecordOwner(ctx, tx, in.OwnerID.UUID); err != nil {
-			return crmcontracts.Lead{}, false, err
-		}
 	}
 	id, err := insertLeadRow(ctx, tx, in, active, by)
 	if err != nil {
@@ -219,14 +185,11 @@ func insertLeadRow(ctx context.Context, tx pgx.Tx, in CreateLeadInput, active []
 	if err := ensureHumanSourceAllowed(ctx, tx, in.Source); err != nil {
 		return ids.LeadID{}, err
 	}
-	intents, err := loadSourceIntents(ctx, tx)
+	fit, err := initialLeadScore(ctx, tx, in)
 	if err != nil {
 		return ids.LeadID{}, err
 	}
 	id := ids.New[ids.LeadKind]()
-	// The initial score is the §3 fit component — a fresh lead has no
-	// behavioral history yet; signal recompute moves it later.
-	fit := ScoreLeadDetail(deref(in.Title), intents.Of(in.Source), nil, time.Now().UTC())
 	if err := storekit.RefuseUnknownSeat(ctx, tx, in.Author); err != nil {
 		return ids.LeadID{}, err
 	}
@@ -474,4 +437,34 @@ func deref(s *string) string {
 		return ""
 	}
 	return *s
+}
+
+func admitLeadCreate(ctx context.Context, tx pgx.Tx, in CreateLeadInput) error {
+	if err := lockLeadLinkedInIdentity(ctx, tx, in.LinkedInURL); err != nil {
+		return err
+	}
+	if err := ensureLeadEmailUnclaimed(ctx, tx, in.Email); err != nil {
+		return err
+	}
+	if err := ensureLeadLinkedInUnclaimed(ctx, tx, in.LinkedInURL); err != nil {
+		return err
+	}
+	if err := ensureContactNotWorked(ctx, tx, in.FromContactID, nil); err != nil {
+		return err
+	}
+	if err := ensureContactStillLive(ctx, tx, in.FromContactID); err != nil {
+		return err
+	}
+
+	if in.ProjectID != nil {
+		if err := auth.EnsureReferenceTarget(ctx, tx, "project_id", "project", in.ProjectID.UUID); err != nil {
+			return err
+		}
+	}
+	if in.OwnerID != nil {
+		if err := auth.EnsureNewRecordOwner(ctx, tx, in.OwnerID.UUID); err != nil {
+			return err
+		}
+	}
+	return nil
 }

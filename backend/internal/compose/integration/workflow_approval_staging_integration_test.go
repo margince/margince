@@ -57,7 +57,6 @@ func (a testApprovalsAdapter) Stage(ctx context.Context, in automation.StageRequ
 // real database.
 type confirmationRequiredStagingProbe struct {
 	approvals automation.Approvals
-	toStage   ids.UUID
 }
 
 func (confirmationRequiredStagingProbe) Spec() workflow.Spec {
@@ -73,7 +72,7 @@ func (confirmationRequiredStagingProbe) Match(context.Context, workflow.Event) (
 }
 
 func (p confirmationRequiredStagingProbe) Plan(_ context.Context, ev workflow.Event) (workflow.Effect, error) {
-	args, err := json.Marshal(map[string]any{"to_stage_id": p.toStage})
+	args, err := json.Marshal(map[string]any{"question": "Has the proposed stage change been reviewed?"})
 	if err != nil {
 		return workflow.Effect{}, err
 	}
@@ -102,14 +101,13 @@ func (confirmationRequiredStagingProbe) IdempotencyKey(ev workflow.Event) string
 func TestConfirmationRequiredActionStagesARealApprovalAndRejectionBlocksTheRun(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
-	pipeline, open, won := DealFixture(t, e)
+	pipeline, open, _ := DealFixture(t, e)
 	dealID := e.SeedDeal(t, "Confirmation-Required Probe Deal", pipeline, open, nil)
 
 	svc := approvals.NewService(e.DB())
 	engine := compose.NewWorkflowEngine(e.DB())
 	engine.RegisterSystemWorkflow(confirmationRequiredStagingProbe{
 		approvals: testApprovalsAdapter{svc: svc},
-		toStage:   won.UUID,
 	})
 
 	ctx := context.Background()

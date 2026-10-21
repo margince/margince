@@ -121,15 +121,13 @@ func versionedTables(t *testing.T) map[string]bool {
 // an entry without one is a finding, and one matching no function is
 // stale and fails.
 var unguardedByIDUpdates = gatekit.Waive(map[string]string{
+	"internal/modules/contacts:DisqualifyLead":             "readDisqualifiableLead locks this live lead with storekit.LockRow and checks its optional version pin before the update, in the same leadWrite transaction; the preview shares that reader",
 	"internal/modules/privacy:EraseUntoldLeadTx":           "terminal absolute write: empties the accepted proposal of a website lead whose notice failed, regardless of concurrent state, as the Art. 17 eraser empties a decided approval",
 	"internal/modules/activities:updateActivityInTx":       "held FOR UPDATE via lockActivityForWrite, one hop past what this witness's AST walk follows — see the shared rationale above",
 	"internal/modules/collections:ArchiveSavedView":        "absolute idempotent archive transition; the RETURNING + archived_at IS NULL predicate makes a lost race read as already archived",
 	"internal/modules/collections:ArchiveTag":              "absolute idempotent archive transition; the RETURNING + archived_at IS NULL predicate makes a lost race read as already archived",
 	"internal/modules/contacts:absorbCompanyReferences":    "runs under the merge pair lock (storekit.LockPair on both company rows) taken by MergeCompany",
 	"internal/modules/contacts:bindSiteReadLogo":           "the bind is conditioned on logo_object_key IS NULL AND archived_at IS NULL, and ErrNoRows means the record already wears a mark or was archived, which releases the parked object instead",
-	"internal/modules/deals:ArchiveOffer":                  "runs under the offer row lock taken by visibleOfferLocked, and the write itself is an absolute archive transition",
-	"internal/modules/deals:ArchiveOfferTemplate":          "absolute idempotent archive transition; concurrent archives converge, the visibility pre-read only feeds the response",
-	"internal/modules/deals:ArchiveProduct":                "absolute idempotent archive transition; concurrent archives converge, the visibility pre-read only feeds the response",
 	"internal/modules/deals:markLadderChanged":             "runs only under its callers' lock on the same pipeline row — lockLadder (FOR NO KEY UPDATE), one hop past what this witness's AST walk follows — and the write is the version bump itself, which no version could guard",
 	"internal/modules/deals:movePipeline":                  "runs only inside ReorderPipelines, under lockCatalog's FOR UPDATE on every live pipeline, taken in id order before any move",
 	"internal/modules/deals:recomputeOfferTotals":          "every caller holds the offer row lock via visibleOfferLocked, except createOfferTx where the offer row was inserted in the same transaction",

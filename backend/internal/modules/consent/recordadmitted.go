@@ -13,7 +13,6 @@ package consent
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -56,11 +55,8 @@ func (s *Store) recordAdmittedTx(
 	//
 	// A missing row locks nothing and need not: the INSERT ... ON CONFLICT
 	// below blocks on the conflicting insert instead, and updates.
-	var current string
-	err = tx.QueryRow(ctx,
-		`SELECT state FROM contact_consent WHERE `+sub.column+` = $1 AND purpose_id = $2 FOR UPDATE`,
-		sub.id, in.PurposeID).Scan(&current)
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+	current, err := currentConsentState(ctx, tx, sub, in.PurposeID)
+	if err != nil {
 		return State{}, err
 	}
 	// AN UNCONFIRMED GRANT IS NOT THE SAME STATE, however the column reads.

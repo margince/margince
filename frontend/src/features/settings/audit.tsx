@@ -1,3 +1,7 @@
+import { humanizeToken } from "../../format/humanizetoken";
+
+export { humanizeToken } from "../../format/humanizetoken";
+
 import {
   Bot,
   CircleUser,
@@ -37,13 +41,6 @@ type ActorFields = Pick<
   // record history does, and both surfaces render through this one component.
   agent_client?: string | null;
 };
-
-// A snake_case enum value from the wire (an action / entity_type) is data, not
-// UI copy — de-underscore it into a readable phrase so the reader sees "custom
-// field", not "custom_field". The value itself is not a localizable string.
-export function humanizeToken(token: string): string {
-  return token.replace(/_/g, " ");
-}
 
 // One label per contract action, for the dial and the rows. An action the
 // contract adds fails to compile here until it has one.

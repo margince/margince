@@ -124,20 +124,16 @@ func (e *deepReadEngine) start(w http.ResponseWriter, r *http.Request, id openap
 // either transport renders the same 422 from the same decision.
 func (e *deepReadEngine) startSiteRead(ctx context.Context, id ids.UUID, override string) (crmcontracts.SiteReadStarted, error) {
 	companyID := ids.From[ids.CompanyKind](id)
-	seedURL := override
-	if seedURL == "" {
-		resolved, err := e.contacts.EnrichTargetURL(ctx, companyID)
-		if errors.Is(err, contacts.ErrNoEnrichTarget) {
-			return crmcontracts.SiteReadStarted{}, &httperr.DetailedError{
-				Status: http.StatusUnprocessableEntity,
-				Code:   companyUnreadable,
-				Detail: "This company has no website on file. Add a URL to read from.",
-			}
+	seedURL, err := e.contacts.ResolveEnrichTargetURL(ctx, companyID, override)
+	if errors.Is(err, contacts.ErrNoEnrichTarget) {
+		return crmcontracts.SiteReadStarted{}, &httperr.DetailedError{
+			Status: http.StatusUnprocessableEntity,
+			Code:   companyUnreadable,
+			Detail: "This company has no website on file. Add a URL to read from.",
 		}
-		if err != nil {
-			return crmcontracts.SiteReadStarted{}, err
-		}
-		seedURL = resolved
+	}
+	if err != nil {
+		return crmcontracts.SiteReadStarted{}, err
 	}
 
 	read, joined, err := e.contacts.StartSiteReadQueued(ctx, companyID, seedURL, requestedBy(ctx),

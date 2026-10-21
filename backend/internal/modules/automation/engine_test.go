@@ -46,7 +46,7 @@ func TestApplyActionsStagesAConfirmationRequiredActionInsteadOfDeadEnding(t *tes
 	action := workflow.Action{
 		Kind:   workflow.ActionEmitFlowEvent,
 		Target: target,
-		Args:   json.RawMessage(`{"template":"follow_up"}`),
+		Args:   json.RawMessage(`{"question":"Has the account review been completed?"}`),
 	}
 
 	// provider is nil and never dereferenced: a 🟡 action stages instead
@@ -93,7 +93,7 @@ func TestApplyActionsRequestApprovalActionAlsoStages(t *testing.T) {
 	action := workflow.Action{
 		Kind:   workflow.ActionEmitFlowEvent,
 		Target: datasource.EntityRef{Type: datasource.EntityDeal, ID: ids.NewV7()},
-		Args:   json.RawMessage(`{}`),
+		Args:   json.RawMessage(`{"question":"Has the account review been completed?"}`),
 	}
 
 	_, err := ApplyActions(context.Background(), Executors{Approvals: fake}, workflow.Effect{Actions: []workflow.Action{action}})
@@ -116,7 +116,7 @@ func TestApplyActionsNeverSwallowsAStageFailure(t *testing.T) {
 	action := workflow.Action{
 		Kind:   workflow.ActionEmitFlowEvent,
 		Target: datasource.EntityRef{Type: datasource.EntityDeal, ID: ids.NewV7()},
-		Args:   json.RawMessage(`{"to_stage_id":"11111111-1111-7111-8111-111111111111"}`),
+		Args:   json.RawMessage(`{"question":"Has the account review been completed?"}`),
 	}
 
 	_, err := ApplyActions(context.Background(), Executors{Approvals: fake}, workflow.Effect{Actions: []workflow.Action{action}})
@@ -144,7 +144,7 @@ func TestAKindNoAutomationCanPlanRefusesInsteadOfStaging(t *testing.T) {
 			action := workflow.Action{
 				Kind:   kind,
 				Target: datasource.EntityRef{Type: datasource.EntityDeal, ID: ids.NewV7()},
-				Args:   json.RawMessage(`{}`),
+				Args:   json.RawMessage(`{"question":"Has the account review been completed?"}`),
 			}
 
 			_, err := ApplyActions(context.Background(), Executors{Approvals: fake},

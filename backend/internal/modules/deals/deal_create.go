@@ -282,11 +282,15 @@ const (
 // moment: each reads the transaction and none of them writes, so a gate that
 // slipped past the insert would be refusing a row that already exists.
 func (s *Store) clearedForBirth(ctx context.Context, tx pgx.Tx, in CreateDealInput, pastCloseAllowed bool) (CreateDealInput, error) {
+	return s.clearedForBirthWithOwner(ctx, tx, in, pastCloseAllowed, storekit.OwnerOrActor(ctx))
+}
+
+func (s *Store) clearedForBirthWithOwner(ctx context.Context, tx pgx.Tx, in CreateDealInput, pastCloseAllowed bool, fallback *ids.UserID) (CreateDealInput, error) {
 	// A decided owner arrives already settled: the qualify seam carries the
 	// LEAD's owner over rather than assigning one, and the suggestion seam
 	// asks auth.EnsureAssignee itself before it decides.
 	if !in.OwnerExact {
-		owner, err := storekit.NewRecordOwner(ctx, tx, in.OwnerID)
+		owner, err := storekit.NewRecordOwnerWithDefault(ctx, tx, in.OwnerID, fallback)
 		if err != nil {
 			return in, err
 		}

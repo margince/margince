@@ -488,3 +488,10 @@ export const WorkingMorning: Story = {
     );
   },
 };
+
+export const DigestUnavailable: Story = {
+  render: brief({
+    approvals: [...singles],
+    extra: { "GET /digest": () => jsonResponse(NOT_FOUND, 501) },
+  }),
+};

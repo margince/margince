@@ -216,7 +216,7 @@ func (t bookMeetingTool) Handle(ctx context.Context, in json.RawMessage) (json.R
 	if err := requireOwnCalendarOrAdmin(ctx, args.HostUserID); err != nil {
 		return nil, err
 	}
-	links, err := uniqueRecordLinks(args.Links)
+	links, err := UniqueRecordLinks(args.Links)
 	if err != nil {
 		return nil, err
 	}
