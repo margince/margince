@@ -79,9 +79,8 @@ type CreateContactInput struct {
 	SourceSystem *string
 	// Author is who wrote it in the system it came from; zero when unknown.
 	Author storekit.SourceAuthorInput
-	// CustomFields carries the request body's extra top-level keys
-	// (additionalProperties); only active cf_* catalog columns land,
-	// drop-on-mismatch (customfields.go).
+	// CustomFields carries the request body's cf_* keys. A key no active catalog
+	// column takes is refused (storekit.CheckCustomValues).
 	CustomFields map[string]any
 }
 

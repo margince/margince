@@ -14,6 +14,7 @@ package datasource
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
 	"reflect"
@@ -37,6 +38,19 @@ type CustomFieldBody struct {
 	custom map[string]any
 	twin   reflect.Value
 	target reflect.Value
+}
+
+// HasCustomFieldMap reports whether into points at a struct with its own
+// AdditionalProperties map, the shape a body takes when it carries cf_ values.
+//
+//craft:ignore naked-any mirror of StrictDecode's seam target
+func HasCustomFieldMap(into any) bool {
+	t := reflect.TypeOf(into)
+	if t == nil || t.Kind() != reflect.Pointer || t.Elem().Kind() != reflect.Struct {
+		return false
+	}
+	_, ok := coreFields(t.Elem())
+	return ok
 }
 
 // SplitCustomFields lifts the cf_ keys out of raw, and readies a twin of into
@@ -98,6 +112,16 @@ func ClaimKeys(raw json.RawMessage, claim func(key string) error) error {
 	return nil
 }
 
+// RejectUnknownKeys refuses a core key the contract does not declare. It names
+// every such key and says a custom field is sent as a cf_ key.
+func (b *CustomFieldBody) RejectUnknownKeys() error {
+	err := RejectNonCanonicalKeys(b.rest, b.Target())
+	if refusal, ok := errors.AsType[*UnknownFieldError](err); ok {
+		refusal.Hint = "a custom field is sent as " + CustomFieldPrefix + "<slug>"
+	}
+	return err
+}
+
 // Rest is the body without its cf_ keys.
 func (b *CustomFieldBody) Rest() json.RawMessage { return b.rest }
 
@@ -125,6 +149,9 @@ func StrictCustomFieldDecode(raw json.RawMessage, into any) error {
 	body, err := SplitCustomFields(raw, into)
 	if err != nil {
 		return err
+	}
+	if err := body.RejectUnknownKeys(); err != nil {
+		return &FieldDecodeError{Cause: err}
 	}
 	if err := StrictDecode(body.Rest(), body.Target()); err != nil {
 		return err

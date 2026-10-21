@@ -27,7 +27,7 @@ func TestDecodeClaimingAnswersAClaimedKeyInItsOwnWords(t *testing.T) {
 	}{
 		"a claimed key":        {`{"currency":"EUR","total_minor":5}`, http.StatusUnprocessableEntity, "totals_derived"},
 		"a misspelt key":       {`{"currenc":"EUR"}`, http.StatusUnprocessableEntity, "unknown_field"},
-		"a clean body":         {`{"currency":"EUR","cf_tier":"gold"}`, http.StatusOK, ""},
+		"a clean body":         {`{"currency":"EUR","intro_text":"Hello"}`, http.StatusOK, ""},
 		"an empty body":        {``, http.StatusUnprocessableEntity, ""},
 		"a body not an object": {`[1]`, http.StatusUnprocessableEntity, ""},
 	} {

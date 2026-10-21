@@ -62,9 +62,8 @@ type UpdateCompanyInput struct {
 	// clears them, except that 'partner' cannot be dropped while the partner
 	// extension row lives.
 	RelationshipTypes *[]string
-	// CustomFields carries the request body's extra top-level keys
-	// (additionalProperties); only active cf_* catalog columns land,
-	// drop-on-mismatch (customfields.go).
+	// CustomFields carries the request body's cf_* keys. A key no active catalog
+	// column takes is refused (storekit.CheckCustomValues).
 	CustomFields map[string]any
 }
 
@@ -113,6 +112,10 @@ func (s *Store) updateCompanyInTx(
 	in.Clear = storekit.CoreFieldClears(in.Clear, active, in.CustomFields)
 	p, err := buildCompanyPatch(ctx, tx, current, in)
 	if err != nil {
+		return crmcontracts.Company{}, err
+	}
+	// A stale version answers 409 before a refused custom field answers 422.
+	if err := storekit.EnsureIfMatch(ctx, tx, "company", id.UUID, in.IfVersion); err != nil {
 		return crmcontracts.Company{}, err
 	}
 	if err := storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties); err != nil {

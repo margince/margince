@@ -197,6 +197,10 @@ func (s *Store) UpdateContract(ctx context.Context, id ids.ContractID, in crmcon
 		// The cf_* values travel in the request's extension bag, so they are
 		// patched from it rather than from a named field. Without this a PATCH
 		// carrying custom fields succeeds and changes nothing.
+		// A stale version answers 409 before a refused custom field answers 422.
+		if err := storekit.EnsureIfMatch(ctx, tx, contractTable, id.UUID, ifVersion); err != nil {
+			return err
+		}
 		if err := storekit.SetCustomFieldPatch(patch, active, in.AdditionalProperties, existing.AdditionalProperties); err != nil {
 			return err
 		}

@@ -73,20 +73,16 @@ func (s *Store) withCustomColumns(ctx context.Context, in *LogActivityInput) err
 	return storekit.CheckCustomValues(in.customColumns, in.CustomFields)
 }
 
-// checkCustomPatch reads the catalog for a patch that names a custom field and
-// checks its keys and values, before the transaction opens.
-func (s *Store) checkCustomPatch(ctx context.Context, in *UpdateActivityInput) error {
+// readPatchColumns reads the catalog for a patch that names a custom field,
+// before its transaction opens. The values are checked inside it, after the
+// row-scope arm, so an activity the caller cannot see answers 404, not 422.
+func (s *Store) readPatchColumns(ctx context.Context, in *UpdateActivityInput) error {
 	if len(in.CustomFields) == 0 {
 		return nil
 	}
-	if err := refuseNonCustomKeys(in.CustomFields); err != nil {
-		return err
-	}
 	var err error
-	if in.customColumns, err = s.customColumns(ctx); err != nil {
-		return err
-	}
-	return storekit.CheckCustomValues(in.customColumns, in.CustomFields)
+	in.customColumns, err = s.customColumns(ctx)
+	return err
 }
 
 // refuseNonCustomKeys holds a write wire closed apart from cf_ keys. The

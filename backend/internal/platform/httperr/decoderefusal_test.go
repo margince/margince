@@ -75,7 +75,7 @@ var (
 	// The activity create body takes cf_ keys, so it decodes the way its doors do.
 	intoCreateActivity = func(w http.ResponseWriter, r *http.Request) bool {
 		var req crmcontracts.CreateActivityRequest
-		return DecodeCustomFields(w, r, &req)
+		return Decode(w, r, &req)
 	}
 	// A hand-written transport shape (activities' relink body) carries ids.UUID,
 	// whose refusal is one WE wrote.

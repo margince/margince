@@ -359,6 +359,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `readersetaside_test.go` | H1 | Every read that hides a message a reader set aside goes through one predicate, activities.readerSetAsideSQL. |
 | `recencyorigins_test.go` | H2 | Every reading of "when was this record last touched" excludes the origins the system wrote itself. |
 | `recordsourcespelling_test.go` | H2 | A record's `source` names where the row came from, and whoever uses this product is one origin with one spelling. |
+| `recordwritekeys_test.go` | H3 | A record write names the fields the record has, or a cf\_ key. |
 | `registrarparity_test.go` | H2 | A registry that claims to be complete must be. |
 | `relayentrypoints_test.go` | H2 | _(no doc comment)_ |
 | `remediationnotbuyeractivity_test.go` | H2 | Remediation work must never read as buyer engagement. |

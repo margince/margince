@@ -141,9 +141,9 @@ func TestACustomValueNoColumnTakesIsRefusedByName(t *testing.T) {
 			_, _, _, createErr := InsertFragments(active, tc.values, []any{"id"})
 			updateErr := SetCustomFieldPatch(NewPatch(), active, tc.values, nil)
 			for _, err := range []error{createErr, updateErr} {
-				var refusal *CustomFieldError
-				if !errors.As(err, &refusal) || refusal.Field != tc.key || refusal.Code != tc.code {
-					t.Fatalf("got %v, want a CustomFieldError %s on %s", err, tc.code, tc.key)
+				refused, ok := errors.AsType[CustomFieldErrors](err)
+				if !ok || len(refused) != 1 || refused[0].Field != tc.key || refused[0].Code != tc.code {
+					t.Fatalf("got %v, want a refusal %s on %s", err, tc.code, tc.key)
 				}
 			}
 		})

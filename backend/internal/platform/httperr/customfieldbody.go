@@ -4,41 +4,26 @@
 package httperr
 
 import (
-	"errors"
-	"io"
+	"encoding/json"
 	"net/http"
 
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-// DecodeCustomFields is Decode for a body whose contract takes custom-field
-// values as extra top-level cf_ keys. Every other key is held to the closed
-// struct's rules, so a misspelt field is refused by name, as Decode refuses it.
+// decodeCustomFieldBody decodes a body that takes custom-field values as extra
+// top-level cf_ keys. The cf_ keys are lifted out. The rest is held to the closed
+// struct's rules, nested keys included, so a misspelt field is refused by name.
 //
 //craft:ignore naked-any the JSON deserialization seam: the decode target is whichever contract request struct the handler owns
-func DecodeCustomFields(w http.ResponseWriter, r *http.Request, into any) bool {
-	err := decodeCustomFieldsRefusal(w, r, into)
-	if err == nil {
-		return true
-	}
-	if errors.Is(err, io.EOF) {
-		err = bodyDecodeRefusal(r, nil, into, err)
-	}
-	Write(w, r, err)
-	return false
-}
-
-//craft:ignore naked-any the JSON deserialization seam: the decode target is whichever contract request struct the handler owns
-func decodeCustomFieldsRefusal(w http.ResponseWriter, r *http.Request, into any) error {
-	raw, err := readBody(w, r)
-	if err != nil {
-		return err
-	}
+func decodeCustomFieldBody(r *http.Request, raw json.RawMessage, into any) error {
 	body, err := datasource.SplitCustomFields(raw, into)
 	if err != nil {
 		return err
 	}
-	if err := decodeRaw(r, body.Rest(), body.Target(), nil, false); err != nil {
+	if err := body.RejectUnknownKeys(); err != nil {
+		return Validation("body", "unknown_field", err.Error())
+	}
+	if err := decodeRaw(r, body.Rest(), body.Target(), nil, true); err != nil {
 		return err
 	}
 	body.Adopt()

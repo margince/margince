@@ -135,6 +135,9 @@ func readBody(w http.ResponseWriter, r *http.Request) (json.RawMessage, error) {
 //
 //craft:ignore naked-any the JSON deserialization seam: the decode target is whichever contract request struct the handler owns
 func decodeRaw(r *http.Request, raw json.RawMessage, into any, owned func(string) bool, closed bool) error {
+	if datasource.HasCustomFieldMap(into) {
+		return decodeCustomFieldBody(r, raw, into)
+	}
 	// A field key that only case-folds onto a contract field (or is
 	// unknown) is refused rather than matched by encoding/json's
 	// case-insensitive fallback — the same gate the provider seam applies,
@@ -299,7 +302,7 @@ func DropSuccessHeaders(header http.Header) {
 func CustomFieldFilters(r *http.Request) map[string]string {
 	var filters map[string]string
 	for key, values := range r.URL.Query() {
-		if !strings.HasPrefix(key, "cf_") || len(values) == 0 {
+		if !datasource.IsCustomFieldKey(key) || len(values) == 0 {
 			continue
 		}
 		if filters == nil {

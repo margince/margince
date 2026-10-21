@@ -88,6 +88,7 @@ var seamScope = gatekit.Scope{
 // assertion it replaces.
 var seamOutsideRoots = gatekit.Waive(map[string]string{
 	"internal/platform/httperr/httperr.go":               "httperr IS the one classifier both surfaces run: it names datasource's own FieldDecodeError and UnsupportedEntityError so each gets a single wire verdict. It declares no domain error and maps none of its own to a 422 — obligating the classifier would invert the rule this gate enforces",
+	"internal/platform/httperr/claimedkeys.go":           "the decode helper for a body whose handler claims some keys in its own words; the claim carries the verdict and this file declares no error of its own",
 	"internal/platform/httperr/customfieldbody.go":       "the decode helper for a body that takes cf_ keys, calling datasource.SplitCustomFields so a misspelt key is refused as a closed body refuses it; it declares no error of its own to carry a verdict",
 	"internal/platform/httperr/wire.go":                  "the same classifier's decode helper, calling datasource.RejectNonCanonicalKeys so every surface refuses an unknown key identically; a platform package owns no domain, so it has no error type of its own to carry a verdict",
 	"internal/platform/httperr/decoderefusal.go":         "the classifier's decode-refusal half, naming datasource.UnknownFieldError and FieldDecodeError to render one refusal shape for both surfaces; it maps no error IT declares to a 422",

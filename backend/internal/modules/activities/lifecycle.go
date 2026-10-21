@@ -63,7 +63,7 @@ func (s *Store) UpdateActivity(ctx context.Context, id ids.ActivityID, in Update
 	}
 	at := s.now()
 	in.recordedAt = &at
-	if err := s.checkCustomPatch(ctx, &in); err != nil {
+	if err := s.readPatchColumns(ctx, &in); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	var out crmcontracts.Activity
@@ -94,6 +94,9 @@ func updateActivityInTx(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, in UpdateActivityInput,
 ) (crmcontracts.Activity, error) {
 	current, held, err := admitActivityPatch(ctx, tx, id, &in)
+	if err == nil {
+		err = storekit.CheckCustomValues(in.customColumns, in.CustomFields)
+	}
 	if err == nil {
 		err = withCustomValuesOf(ctx, tx, in.customColumns, &current)
 	}

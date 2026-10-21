@@ -77,9 +77,8 @@ type CreateDealInput struct {
 	CommercialMotion  *string
 	Priority          *string
 	AcquisitionSource *string
-	// CustomFields carries the request body's extra top-level keys
-	// (additionalProperties); only active cf_* catalog columns land,
-	// drop-on-mismatch (storekit customcolumns).
+	// CustomFields carries the request body's cf_* keys. A key no active catalog
+	// column takes is refused (storekit.CheckCustomValues).
 	CustomFields map[string]any
 }
 

@@ -46,24 +46,25 @@ func TestStrictDecodeRefusesCaseVariantFieldKeys(t *testing.T) {
 	}
 }
 
-// A target with an AdditionalProperties catch-all admits custom fields, which
-// travel as cf_ keys. Any other key outside the contract is a misspelling and is
-// refused by name. The catch-all is a `json:"-"` map; a plain ignored
-// `json:"-"` field is not one.
-func TestStrictDecodeAdmitsOnlyCustomKeysBeyondACatchAllsFields(t *testing.T) {
+// A target with an AdditionalProperties catch-all is left to the split decode,
+// which lifts its cf_ keys and holds the rest to the closed rules. A plain
+// ignored `json:"-"` field is no catch-all, so such a target is checked here.
+func TestRejectNonCanonicalKeysLeavesACatchAllTargetToTheSplitDecode(t *testing.T) {
 	type withMapCatchAll struct {
 		FullName             *string        `json:"full_name,omitempty"`
 		AdditionalProperties map[string]any `json:"-"`
 	}
 	var lax withMapCatchAll
-	if err := RejectNonCanonicalKeys(json.RawMessage(`{"full_name":"Ada","cf_tier":"gold"}`), &lax); err != nil {
-		t.Fatalf("a contract field and a cf_ key must be admitted: %v", err)
+	if err := RejectNonCanonicalKeys(json.RawMessage(`{"ful_name":"x"}`), &lax); err != nil {
+		t.Fatalf("a catch-all target is the split decode's: %v", err)
 	}
-	for _, body := range []string{`{"ful_name":"x"}`, `{"FULL_NAME":"x"}`, `{"cf_":1}`, `{"tier":1}`} {
-		err := RejectNonCanonicalKeys(json.RawMessage(body), &lax)
-		if _, ok := errors.AsType[*UnknownFieldError](err); !ok {
-			t.Fatalf("%s: want an UnknownFieldError, got %v", body, err)
-		}
+	err := StrictDecode(json.RawMessage(`{"full_name":"Ada","cf_tier":"gold"}`), &lax)
+	if err != nil || lax.AdditionalProperties["cf_tier"] != "gold" {
+		t.Fatalf("StrictDecode did not route the target through the split decode: %v %+v", err, lax)
+	}
+	err = StrictDecode(json.RawMessage(`{"ful_name":"x"}`), &lax)
+	if _, ok := errors.AsType[*FieldDecodeError](err); !ok {
+		t.Fatalf("a misspelt key was answered %v, want a FieldDecodeError", err)
 	}
 
 	type withIgnoredField struct {
@@ -73,23 +74,7 @@ func TestStrictDecodeAdmitsOnlyCustomKeysBeyondACatchAllsFields(t *testing.T) {
 	var strict withIgnoredField
 	_ = strict.internal
 	if err := RejectNonCanonicalKeys(json.RawMessage(`{"cf_tier":"x"}`), &strict); err == nil {
-		t.Fatal("a plain json:\"-\" ignored field must not admit cf_ keys: it is no catch-all")
-	}
-}
-
-// The catch-all is the last field of a generated struct, and an embedded
-// struct may declare more contract keys after it. Both stay contract keys.
-func TestRejectNonCanonicalKeysKeepsFieldsDeclaredAfterACatchAll(t *testing.T) {
-	type base struct {
-		AdditionalProperties map[string]any `json:"-"`
-	}
-	type child struct {
-		base
-		FullName *string `json:"full_name,omitempty"`
-	}
-	var c child
-	if err := RejectNonCanonicalKeys(json.RawMessage(`{"full_name":"Ada","cf_tier":1}`), &c); err != nil {
-		t.Fatalf("a field declared after an embedded catch-all is a contract key: %v", err)
+		t.Fatal("a plain json:\"-\" ignored field is no catch-all, so a cf_ key is unknown there")
 	}
 }
 

@@ -22,11 +22,9 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
-
-// customFieldPrefix starts every custom field's column name.
-const customFieldPrefix = "cf_"
 
 // importCatalog is one object's active custom fields, keyed by column name,
 // and their labels. It needs no create grant, so profile, stage and format can
@@ -195,7 +193,7 @@ func suggestImportMapping(p migration.Profile, targets []string, cat importCatal
 func customFieldsFrom(fields map[string]string, typed map[string]any) map[string]any {
 	var out map[string]any
 	for target, value := range typed {
-		if _, given := fields[target]; !given || !strings.HasPrefix(target, customFieldPrefix) {
+		if _, given := fields[target]; !given || !datasource.IsCustomFieldKey(target) {
 			continue
 		}
 		if out == nil {

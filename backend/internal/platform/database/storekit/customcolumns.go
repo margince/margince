@@ -23,6 +23,7 @@ package storekit
 
 import (
 	"encoding/json"
+	"maps"
 	"math"
 	"strconv"
 	"strings"
@@ -81,12 +82,12 @@ func SelectSuffix(active []fieldcatalog.Column) string {
 // `captured_by` and every CreateProject carrying a custom-field value
 // failed on a bind-count mismatch. There is no number to get wrong now.
 func InsertFragments(active []fieldcatalog.Column, rawExtra map[string]any, base []any) (cols, placeholders string, args []any, err error) {
-	if err := CheckCustomValues(active, rawExtra); err != nil {
+	values, err := CreateFieldValues(active, rawExtra)
+	if err != nil {
 		return "", "", nil, err
 	}
 	var names, holders []string
 	custom := make([]any, 0, len(active))
-	values := CreateFieldValues(active, rawExtra)
 	for _, c := range active {
 		sv, present := values[c.Name]
 		if !present {
@@ -114,22 +115,15 @@ func InsertFragments(active []fieldcatalog.Column, rawExtra map[string]any, base
 // catalog-derived identifier, because a cf_ name is data, while the audit diff
 // keeps the bare wire name.
 func SetCustomFieldPatch(p *Patch, active []fieldcatalog.Column, updates, current map[string]any) error {
-	if err := CheckCustomValues(active, updates); err != nil {
+	bound, err := CustomBindValues(active, updates)
+	if err != nil {
 		return err
 	}
 	for _, c := range active {
-		v, present := updates[c.Name]
-		if !present {
+		sv, present := bound[c.Name]
+		if !present || (sv == nil && current[c.Name] == nil) {
 			continue
 		}
-		if v == nil {
-			if current[c.Name] == nil {
-				continue
-			}
-			p.setQuoted(c.Name, current[c.Name], nil)
-			continue
-		}
-		sv, _ := SQLValue(c, v)
 		p.setQuoted(c.Name, current[c.Name], sv)
 	}
 	return nil
@@ -177,11 +171,10 @@ func ExtractValues(active []fieldcatalog.Column, dests []any) map[string]any {
 // lib/pq, which hands a numeric column back as []byte/string when
 // scanned into interface{}. This repo's pgx/v5 driver instead decodes a
 // numeric column into a pgtype.Numeric struct (confirmed empirically
-// against a real Postgres 16 — see task-1-report.md) — a bare []byte/
-// string switch on that value would silently drop-on-mismatch every
-// number-typed field, never surfacing an error. pgtype.Numeric's
-// MarshalJSON renders the exact decimal text Postgres stored (no
-// float64 rounding), which is exactly the json.Number wire shape this
+// against a real Postgres 16, see task-1-report.md). A bare []byte/
+// string switch on that value would silently lose every number-typed
+// field. pgtype.Numeric's MarshalJSON renders the decimal text Postgres
+// stored, with no float64 rounding, which is the json.Number wire shape this
 // package round-trips numbers through.
 //
 //craft:ignore naked-any raw is whatever Go type the pgx driver decoded a scanned column into (int64, bool, string, time.Time, pgtype.Numeric, …) — the type switch IS the conversion contract, so there is no narrower signature to give it
@@ -240,8 +233,8 @@ func extractNumber(raw any) (any, bool) {
 }
 
 // SQLValue converts one JSON-decoded wire value into a database bind
-// value for column c's type, or ok=false when v's shape does not match
-// (the drop-on-mismatch rule the package doc describes).
+// value for column c's type, or ok=false when v's shape does not match.
+// CheckCustomValues turns that into the refusal a write answers.
 //
 //craft:ignore naked-any v is one raw value out of a request body's additionalProperties map[string]any (JSON Schema additionalProperties: true carries no per-key type) — the type switch on c.Type IS the conversion contract
 func SQLValue(c fieldcatalog.Column, v any) (any, bool) {
@@ -251,13 +244,10 @@ func SQLValue(c fieldcatalog.Column, v any) (any, bool) {
 		if !ok {
 			return nil, false
 		}
-		// A currency column is int64 minor units: a fractional amount
-		// (int64(f) would silently truncate it) or a magnitude int64
-		// cannot hold (int64(f) is undefined behavior for an
-		// out-of-range float in Go) must drop rather than store garbage
-		// money — same drop-on-mismatch contract as every other type
-		// here, just enforced with a range/integrality check instead of
-		// a type assertion.
+		// A currency column is int64 minor units. A fractional amount would be
+		// truncated by int64(f), and a magnitude int64 cannot hold is undefined
+		// behavior there. Both are refused by a range and integrality check
+		// rather than stored as garbage money.
 		if f != math.Trunc(f) || f < math.MinInt64 || f > math.MaxInt64 {
 			return nil, false
 		}
@@ -351,19 +341,16 @@ func stringSet(raw any) ([]string, bool) {
 	return out, true
 }
 
-// CreateFieldValues is the exact active, type-compatible subset inserted by a
-// record create. Preview readers use it to avoid promising discarded values.
-func CreateFieldValues(active []fieldcatalog.Column, rawExtra map[string]any) map[string]any {
-	values := make(map[string]any)
-	for _, column := range active {
-		value, present := rawExtra[column.Name]
-		if !present {
-			continue
-		}
-		converted, ok := SQLValue(column, value)
-		if ok {
-			values[column.Name] = converted
-		}
+// CreateFieldValues is the bind value of each custom key a record create
+// inserts. A key the create cannot store is refused, so a preview never promises
+// a value the commit would refuse.
+//
+//craft:ignore naked-any bind values are whatever Go type each column's SQL type takes
+func CreateFieldValues(active []fieldcatalog.Column, rawExtra map[string]any) (map[string]any, error) {
+	bound, err := CustomBindValues(active, rawExtra)
+	if err != nil {
+		return nil, err
 	}
-	return values
+	maps.DeleteFunc(bound, func(_ string, value any) bool { return value == nil })
+	return bound, nil
 }

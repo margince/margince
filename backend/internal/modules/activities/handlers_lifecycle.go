@@ -18,7 +18,7 @@ func (h Handlers) UpdateActivity(w http.ResponseWriter, r *http.Request, id crmc
 		return
 	}
 	var req crmcontracts.UpdateActivityRequest
-	if !httperr.DecodeCustomFields(w, r, &req) {
+	if !httperr.Decode(w, r, &req) {
 		return
 	}
 	in := activityUpdateInput(req, ifVersion)

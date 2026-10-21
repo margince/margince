@@ -303,8 +303,8 @@ func claimCallerChosenKey(key string) error {
 		"a project's key is assigned by the server from its name and cannot be set or changed")
 }
 
-// refuseCallerChosenKey is claimCallerChosenKey for a request already decoded,
-// whose extension bag a door without the claiming decode may still fill.
+// refuseCallerChosenKey is claimCallerChosenKey for the approval preview, which
+// maps a staged body that was decoded without the claim.
 func refuseCallerChosenKey(extra map[string]any) error {
 	if _, sent := extra[projectKeyField]; !sent {
 		return nil

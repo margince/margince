@@ -60,9 +60,8 @@ type UpdateDealInput struct {
 	ForecastCategory  *string
 	WaitUntil         *time.Time
 	IfVersion         *int64
-	// CustomFields carries the request body's extra top-level keys
-	// (additionalProperties); only active cf_* catalog columns land,
-	// drop-on-mismatch (storekit customcolumns).
+	// CustomFields carries the request body's cf_* keys. A key no active catalog
+	// column takes is refused (storekit.CheckCustomValues).
 	CustomFields map[string]any
 }
 
@@ -132,6 +131,10 @@ func (s *Store) updateDealInTx(ctx context.Context, tx pgx.Tx,
 	in.Clear = storekit.CoreFieldClears(in.Clear, active, in.CustomFields)
 	p, err := s.dealUpdatePatch(ctx, tx, current, in)
 	if err != nil {
+		return crmcontracts.Deal{}, err
+	}
+	// A stale version answers 409 before a refused custom field answers 422.
+	if err := storekit.EnsureIfMatch(ctx, tx, dealTable, id.UUID, in.IfVersion); err != nil {
 		return crmcontracts.Deal{}, err
 	}
 	if err := storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties); err != nil {

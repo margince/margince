@@ -5,13 +5,11 @@
 
 package customfields
 
-// The HTTP half of the custom-field VALUES coverage (the store-level
-// semantics live in customfields_values_integration_test.go, in the parent package
-// integration): proves
-// the wire flatten over the real compose stack — cf_ keys travel
-// TOP-LEVEL in request and response bodies through the generated types'
-// additionalProperties — and that a picklist CHECK violation answers
-// the typed 422, never a 500.
+// The HTTP half of the custom-field values coverage. The store-level semantics
+// live in customfields_values_integration_test.go, in the parent package. This
+// half proves the wire flatten over the real compose stack: cf_ keys travel
+// top-level in request and response bodies. It also proves that a picklist value
+// outside the options answers the typed 422, never a 500.
 
 import (
 	"bytes"
@@ -221,13 +219,10 @@ func assertSixTypesWireRoundTrip(t *testing.T, e *apptest.AppEnv) {
 	}
 }
 
-func assertPicklistCheckViolation422(t *testing.T, e *apptest.AppEnv, col string) {
+func assertPicklistOutsideOptions422(t *testing.T, e *apptest.AppEnv, col string) {
 	t.Helper()
-	// The RAW body, decoded into the typed shape afterwards. Decoding straight
-	// into customFieldProblem discards every field that struct does not name,
-	// so a constraint leaked into one of THOSE would be gone before the search
-	// below could look for it — a disclosure guard reading a filtered copy of
-	// the thing it is guarding.
+	// The RAW body, decoded into the typed shape afterwards, so a leak into a
+	// field the typed shape does not name is still found.
 	var raw json.RawMessage
 	status := e.Call(t, "POST", "/v1/contacts", integration.AnyMap{
 		"full_name": "Bad Option", "source": "manual", col: "bogus",
@@ -236,23 +231,13 @@ func assertPicklistCheckViolation422(t *testing.T, e *apptest.AppEnv, col string
 	if err := json.Unmarshal(raw, &problem); err != nil {
 		t.Fatalf("decoding the refusal %s: %v", raw, err)
 	}
-	if status != http.StatusUnprocessableEntity || problem.Code != "value_not_allowed" {
-		t.Fatalf("create with invalid picklist option = %d %+v, want 422 value_not_allowed", status, problem)
+	if status != http.StatusUnprocessableEntity || !refusalNames(problem, col, "invalid_value") {
+		t.Fatalf("create with invalid picklist option = %d %+v, want 422 invalid_value on %s", status, problem, col)
 	}
-	// The generated CHECK is named after the column, so the constraint name is
-	// the one piece of schema this refusal must not carry.
-	//
-	// Checked against the whole RAW body, not against Detail. The leak this guards
-	// was in the `field` slot of details.errors — a guard reading only Detail
-	// passes unchanged with the deleted translation restored, which makes it a
-	// test of nothing. The empty-errors assertion is the same claim from the
-	// other side: httperr's net names no field at this depth, so any entry here
-	// means somebody translated the CHECK again.
-	if len(problem.Details.Errors) != 0 {
-		t.Errorf("the refusal named a field: %+v", problem.Details.Errors)
-	}
-	if bytes.Contains(raw, []byte(col+"_check")) {
-		t.Errorf("the refusal disclosed the generated constraint somewhere in its body: %s", raw)
+	// The refusal names the key and neither the generated constraint nor the
+	// options, which are catalogue content for a caller who may read it.
+	if bytes.Contains(raw, []byte(col+"_check")) || bytes.Contains(raw, []byte("silver")) {
+		t.Errorf("the refusal disclosed schema or options somewhere in its body: %s", raw)
 	}
 }
 
@@ -297,8 +282,8 @@ func TestCustomFieldValuesHTTP(t *testing.T) {
 	t.Run("lead create/get/update/list carry the key top-level", func(t *testing.T) {
 		assertLeadWireRoundTrip(t, e, persona.ColumnName)
 	})
-	t.Run("picklist CHECK violation answers 422", func(t *testing.T) {
-		assertPicklistCheckViolation422(t, e, tier.ColumnName)
+	t.Run("a picklist value outside the options answers 422", func(t *testing.T) {
+		assertPicklistOutsideOptions422(t, e, tier.ColumnName)
 	})
 	t.Run("all six types round-trip their wire shape", func(t *testing.T) {
 		assertSixTypesWireRoundTrip(t, e)

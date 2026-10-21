@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -51,7 +52,7 @@ func checkRow(object string, fields map[string]string, cat importCatalog) (map[s
 	}
 	for _, target := range slices.Sorted(maps.Keys(fields)) {
 		raw := fields[target]
-		if !strings.HasPrefix(target, customFieldPrefix) || strings.TrimSpace(raw) == "" {
+		if !datasource.IsCustomFieldKey(target) || strings.TrimSpace(raw) == "" {
 			continue
 		}
 		col, active := cat.byName[target]

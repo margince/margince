@@ -5,22 +5,20 @@
 
 package integration
 
-// Custom-field VALUES riding contact/company records (CF-T05, arc
-// 2a-ii T2): the fieldcatalog seam wired into the contacts store makes a
-// workspace's active cf_* columns participate in create/update writes
-// and get/list reads like core fields. Store-level suites prove the
-// value semantics (six-type round trip, drop-on-mismatch, unknown-key
-// drop, retired-field hiding, workspace isolation, the audit diff); the
-// HTTP suite — customfields_values_http_integration_test.go, which moved to
-// integration/customfields — proves the wire flatten — cf_ keys ride the payload
-// TOP-LEVEL through the generated types' additionalProperties — plus
-// the picklist CHECK → 422 mapping over the real compose wiring.
+// Custom-field values riding contact and company records. The fieldcatalog seam
+// is wired into the contacts store. A workspace's active cf_* columns take part
+// in create and update writes and in get and list reads, like core fields.
+// These store-level suites prove the value semantics. They cover the six-type
+// round trip, the refusal of a wrong shape or an unknown key, retired-field
+// hiding, workspace isolation and the audit diff. The HTTP suite in
+// integration/customfields proves the wire flatten and the typed 422.
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
 	"math"
+	"slices"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -242,8 +240,8 @@ func TestCustomFieldValues_AllSixTypesRoundTrip(t *testing.T) {
 // the code that says why.
 func assertRefusedCF(t *testing.T, err error, key, code string) {
 	t.Helper()
-	refusal, ok := errors.AsType[*storekit.CustomFieldError](err)
-	if !ok || refusal.Field != key || refusal.Code != code {
+	refused, ok := errors.AsType[storekit.CustomFieldErrors](err)
+	if !ok || !slices.ContainsFunc(refused, func(r storekit.CustomFieldError) bool { return r.Field == key && r.Code == code }) {
 		t.Fatalf("got %v, want a %s refusal on %s", err, code, key)
 	}
 }
@@ -343,11 +341,9 @@ func TestCustomFieldValues_NumberAcceptsJSONNumberAndDecimalString(t *testing.T)
 	assertRefusedCF(t, err, col, storekit.CustomFieldInvalid)
 }
 
-// TestCustomFieldValues_NumberNaNDropped: a number-typed value that
-// stores as Postgres NUMERIC 'NaN' round-trips through pgtype.Numeric
-// with Valid=true but NaN=true — extractNumber's documented "NaN has no
-// JSON-number wire shape" rule drops it from the read, the same
-// drop-on-mismatch posture every other unrepresentable value gets.
+// TestCustomFieldValues_NumberNaNDropped: a number stored as Postgres NUMERIC
+// 'NaN' reads back through pgtype.Numeric with Valid and NaN both true.
+// extractNumber leaves it out of the read, because NaN has no JSON-number shape.
 func TestCustomFieldValues_NumberNaNDropped(t *testing.T) {
 	f := setupCFV(t)
 	col := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Score", Type: customfields.TypeNumber, Source: "manual"})

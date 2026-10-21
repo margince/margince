@@ -68,6 +68,9 @@ var catalogOptionsReaders = map[string]string{
 	// Checks an imported picklist cell against the options, and names them in a
 	// problem only for a caller with `custom_field:read` (importCatalog.optionsReadable).
 	"internal/compose": "the data import",
+	// Answers whether a written value is one of the options and refuses it when
+	// not. It never returns the options, so the refusal discloses none.
+	"internal/platform/database/storekit": "the write-side membership check",
 }
 
 func TestOnlyTheDeclaredPackagesReadACustomFieldsOptions(t *testing.T) {

@@ -273,7 +273,7 @@ func customFieldNotes(shapes map[datasource.EntityType]reflect.Type) []string {
 	// A write refuses any key it cannot store, so a success means all were stored.
 	notes := []string{"Extra keys must be named cf_<slug> and are read as custom-field values; any other " +
 		"key is REFUSED by name, and so is a cf_ key whose custom field is not ACTIVE in this workspace " +
-		"or whose value its type cannot hold, so a success means every key you sent was stored."}
+		"or whose value its type or options cannot hold, so a success means every key you sent was stored."}
 	// …but not for every record type. A type takes custom fields only if its
 	// contract shape carries the additionalProperties bag a cf_ value travels in.
 	// Promising carriage elsewhere sends an agent to write a key the decoder refuses.

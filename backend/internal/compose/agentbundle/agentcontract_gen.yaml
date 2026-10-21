@@ -19435,7 +19435,7 @@ components:
         default_tax_rate: {type: [number, 'null'], format: double, minimum: 0, description: Percent; defaults to 0.}
         active: {type: [boolean, 'null'], description: Defaults to true.}
         source: {type: string}
-      additionalProperties: true
+      additionalProperties: false
     UpdateProductRequest:
       type: object
       description: Any subset; omit a field to leave it unchanged. A price change never re-prices existing offer lines (they hold snapshots).
@@ -19450,7 +19450,7 @@ components:
         currency: {type: string, pattern: '^[A-Z]{3}$'}
         default_tax_rate: {type: number, format: double, minimum: 0}
         active: {type: boolean}
-      additionalProperties: true
+      additionalProperties: false
     DealRoomState:
       type: string
       description: |-
@@ -19885,7 +19885,7 @@ components:
           type: [array, 'null']
           items: {$ref: '#/components/schemas/OfferLineItemInput'}
         source: {type: string}
-      additionalProperties: true
+      additionalProperties: false
     UpdateOfferRequest:
       type: object
       description: Header-field patch; allowed only while status=draft (422 offer_not_draft otherwise). Totals are derived and not settable (422).
@@ -19905,7 +19905,7 @@ components:
         template_id: {type: [string, 'null'], format: uuid}
         intro_text: {type: [string, 'null']}
         terms_text: {type: [string, 'null']}
-      additionalProperties: true
+      additionalProperties: false
     MorningBrief:
       type: object
       description: |-
