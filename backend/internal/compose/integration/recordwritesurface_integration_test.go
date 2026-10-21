@@ -5,9 +5,9 @@
 
 package integration
 
-// The record writes the first test of this kind leaves out, over HTTP: the
-// contract, product, offer and activity routes, the contract renewal, a key
-// misspelt inside a nested row, and the order the refusals come in.
+// The record writes the first test of this kind leaves out, over HTTP. They are
+// the contract, product, offer and activity routes and the contract renewal. A
+// key misspelt inside a nested row is held too, and so is the order of refusals.
 
 import (
 	"net/http"
