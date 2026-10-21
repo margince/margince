@@ -354,6 +354,7 @@ export function DealsScreen({
         dealsQuery={dealsQuery}
         pipelinesQuery={pipelinesQuery}
         effectivePipeline={effectivePipeline}
+        dealFilters={dealFilters}
         loadedDeals={loadedDeals}
         stageTotalsQuery={stageTotalsQuery}
         totalsWithheld={totalsWithheld}

@@ -35,6 +35,7 @@ import { DealSuggestionAnswerDialog } from "./dealsuggestion.answer";
 import {
   type AcceptDealSuggestionBody,
   type DealSuggestion,
+  type SuggestionFilter,
   useAcceptDealSuggestion,
   useDealSuggestions,
 } from "./dealsuggestions.queries";
@@ -418,12 +419,15 @@ export function CompanySuggestions({
  * Drawn BESIDE a column's cards through its extras, never among them: the
  * column's count and totals come from its deals alone, and a suggestion is not
  * one. Nothing is read until a pipeline is chosen.
+ *
+ * The board's owner dials narrow the suggestions as they narrow its deals.
  */
 export function useSuggestionGhosts(
   pipelineId: string | undefined,
+  owner: Omit<SuggestionFilter, "company_id" | "pipeline_id">,
 ): (column: { stage: string }) => ReactNode {
   const query = useDealSuggestions(
-    { pipeline_id: pipelineId },
+    { pipeline_id: pipelineId, ...owner },
     Boolean(pipelineId),
   );
   const byStage = new Map<string, DealSuggestion[]>();

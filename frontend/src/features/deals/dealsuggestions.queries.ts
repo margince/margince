@@ -15,8 +15,17 @@ export type DismissDealSuggestionBody =
 export type DealSuggestionAcceptance =
   components["schemas"]["DealSuggestionAcceptance"];
 
-/** Which suggestions a surface asks for: one company's, or one pipeline's. */
-export type SuggestionFilter = { company_id?: string; pipeline_id?: string };
+/**
+ * Which suggestions a surface asks for: one company's, or one pipeline's,
+ * narrowed by the board's owner dials.
+ */
+export type SuggestionFilter = {
+  company_id?: string;
+  pipeline_id?: string;
+  owner_id?: string;
+  owner_team_id?: string;
+  unassigned?: boolean;
+};
 
 export const dealSuggestionsKey = ["deal-suggestions"] as const;
 

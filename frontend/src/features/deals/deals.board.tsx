@@ -28,7 +28,12 @@ import { useCompanyMarks } from "./dealcompanymarks";
 import { DealPipelineBoard } from "./dealpipelineboard";
 import type { Company, Deal, Pipeline, Stage } from "./deals";
 import { buildColumns } from "./deals.columns";
-import type { useDeals, useStageTotals } from "./deals.queries";
+import {
+  type DealFilters,
+  ownerDialParams,
+  type useDeals,
+  type useStageTotals,
+} from "./deals.queries";
 import { useSuggestionGhosts } from "./dealsuggestion";
 
 /**
@@ -122,6 +127,7 @@ export function DealBoardBody({
   dealsQuery,
   pipelinesQuery,
   effectivePipeline,
+  dealFilters,
   loadedDeals,
   stageTotalsQuery,
   companies,
@@ -134,6 +140,7 @@ export function DealBoardBody({
   dealsQuery: ReturnType<typeof useDeals>;
   pipelinesQuery: ReturnType<typeof usePipelines>;
   effectivePipeline?: Pipeline;
+  dealFilters: DealFilters;
   loadedDeals: Deal[];
   stageTotalsQuery: ReturnType<typeof useStageTotals>;
   // Why no stage total is coming, or undefined when one is. Decided by
@@ -167,7 +174,10 @@ export function DealBoardBody({
     companies,
     companiesSettled,
   );
-  const suggestionGhosts = useSuggestionGhosts(effectivePipeline?.id);
+  const suggestionGhosts = useSuggestionGhosts(
+    effectivePipeline?.id,
+    ownerDialParams(dealFilters.filters),
+  );
   return (
     <QueryGate query={pipelinesQuery} pendingLabel={t("nav.deals")}>
       {() =>

@@ -482,6 +482,31 @@ describe("a suggestion on the pipeline board", () => {
     expect(shown).toEqual(without.figures);
     expect(shown[0]).toContain("1");
   });
+
+  it("asks only for the reader's suggestions under Mine", async () => {
+    window.location.hash = "#/deals?owner_id=u-me";
+    const fetched = stubBackend({ suggestions: [] });
+    vi.stubGlobal("fetch", fetched);
+    draw(<DealsScreen />);
+    const asked = () =>
+      fetched.mock.calls
+        .map(
+          (call) =>
+            new URL(
+              String(call[0] instanceof Request ? call[0].url : call[0]),
+              "http://localhost",
+            ),
+        )
+        .filter((url) => url.pathname.endsWith("/deal-suggestions"));
+    try {
+      await waitFor(() => expect(asked().length).toBeGreaterThan(0));
+      for (const url of asked()) {
+        expect(url.searchParams.get("owner_id")).toBe("u-me");
+      }
+    } finally {
+      window.location.hash = "";
+    }
+  });
 });
 
 describe("the accept dialog's pickers and the refusals", () => {

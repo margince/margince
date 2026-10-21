@@ -60,6 +60,16 @@ export const DEAL_SCREEN_DIALS: readonly string[] = [
   VIEW_PARAM,
 ];
 
+// The board's owner dials as the server reads them. The deals and the
+// suggestions drawn beside them both take these, so Mine narrows both alike.
+export function ownerDialParams(filters: Record<string, string>) {
+  return {
+    owner_id: filters.owner_id || undefined,
+    owner_team_id: filters.owner_team_id || undefined,
+    unassigned: filters.unassigned === "true" ? true : undefined,
+  };
+}
+
 // dealsQueryParams builds the board's /deals query: the full dial set
 // (pipeline/stage/owner/company filters + sort).
 export function dealsQueryParams(f: DealFilters) {
@@ -71,9 +81,7 @@ export function dealsQueryParams(f: DealFilters) {
     q: f.q || undefined,
     sort: f.sort || undefined,
     stage_id: filters.stage_id || undefined,
-    owner_id: filters.owner_id || undefined,
-    owner_team_id: filters.owner_team_id || undefined,
-    unassigned: filters.unassigned === "true" ? true : undefined,
+    ...ownerDialParams(filters),
     company_id: filters.company_id || undefined,
     status: dealStatusFilter(filters.status),
     partner_company_id: filters.partner_company_id || undefined,

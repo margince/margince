@@ -590,3 +590,36 @@ func TestAClaimantWaitsForTheWithdrawalThatTrustsIt(t *testing.T) {
 		t.Fatalf("the dismissal, once the withdrawal let go: %v", err)
 	}
 }
+
+// The deal board's owner dials narrow its suggestions too: under Mine a reader
+// sees the suggestions for companies they own, not a colleague's.
+func TestTheOwnerDialsNarrowTheSuggestionsToTheCompanyOwner(t *testing.T) {
+	e := setupScout(t)
+	mine := e.SeedCompany(t, "Northwind Traders", &e.Rep1)
+	theirs := e.SeedCompany(t, "Contoso Logistics", &e.Rep3)
+	for _, company := range []ids.UUID{mine, theirs} {
+		buyer := e.employee(t, "Dana Buyer", company)
+		meeting := e.meeting(e.Admin(), t, "Scoping workshop", &buyer, e.daysAgo(3))
+		if raised, err := e.record(e.system(), t, e.meetingDraft(t, company, meeting)); err != nil || !raised {
+			t.Fatalf("the suggestion for %v = %v, %v; want it raised", company, raised, err)
+		}
+	}
+	rep1, team1 := ids.From[ids.UserKind](e.Rep1), ids.From[ids.TeamKind](e.Team1)
+	for name, query := range map[string]deals.SuggestionQuery{
+		"owner_id":      {OwnerID: &rep1},
+		"owner_team_id": {OwnerTeamID: &team1},
+	} {
+		got, _, err := e.Deals.ListSuggestions(e.signalReader(), query)
+		if err != nil {
+			t.Fatalf("listing by %s: %v", name, err)
+		}
+		if len(got) != 1 || got[0].CompanyID != mine {
+			t.Errorf("listing by %s = %v, want only the suggestion for %v", name, got, mine)
+		}
+	}
+	unowned := true
+	_, _, err := e.Deals.ListSuggestions(e.signalReader(), deals.SuggestionQuery{OwnerID: &rep1, Unassigned: &unowned})
+	if _, ok := errors.AsType[*storekit.PredicateError](err); !ok {
+		t.Errorf("an owner and the unassigned queue at once = %v, want the conflicting filters refused", err)
+	}
+}

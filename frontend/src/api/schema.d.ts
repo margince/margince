@@ -53712,6 +53712,15 @@ export interface operations {
                 company_id?: string;
                 pipeline_id?: string;
                 stage_id?: string;
+                /** @description Suggestions for companies this user owns. A suggestion's owner is its company's owner. */
+                owner_id?: string;
+                /** @description Suggestions for companies owned by any member of this team. Narrows the caller's row scope, never widens it. */
+                owner_team_id?: string;
+                /**
+                 * @description `true` returns only suggestions for companies with no owner. Mutually exclusive with
+                 *     `owner_id` and `owner_team_id`; combining them is `422`.
+                 */
+                unassigned?: boolean;
                 /** @description Opaque keyset cursor. */
                 cursor?: string;
                 limit?: number;
