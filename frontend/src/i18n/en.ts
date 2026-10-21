@@ -165,36 +165,6 @@ export const en = {
   "dataTasks.blocked.earlier_step": "An earlier step must finish first.",
   "dataTasks.blocked.missing_prerequisite":
     "Required updates must finish first.",
-  "approvalPreferences.title": "Personal approval mutes",
-  "approvalPreferences.explain":
-    "Muted kinds leave your queue only. Other readers keep their proposals. Muting or restoring a kind turns off your automatic changes for that kind. Sends, bookings, merges and proposals from agent passports stay visible.",
-  "approvalPreferences.review": "Review including muted",
-  "approvalPreferences.reviewExplain":
-    "This review includes muted proposals and expired items. Bundles in your ordinary queue can show fewer members because of your personal mutes; review each proposal before deciding.",
-  "approvalPreferences.close": "Close review",
-  "approvalPreferences.next": "Next page",
-  "approvalPreferences.first": "First page",
-  "dealSuggestion.linkedUnlinked":
-    "Evidence linked. Some evidence remains in place because permissions do not allow it to be moved.",
-  "dealSuggestion.searchExisting": "Search deals",
-  "dealSuggestion.existingDeal": "Existing deal",
-  "dealSuggestion.moreDeals": "Load more deals",
-  "dealSuggestion.noMatchingDeals": "No matching deals at this company.",
-  "dealSuggestion.changed":
-    "This suggestion is no longer available. Refresh the findings to see its current state.",
-  "dealSuggestion.linkExisting": "Link to existing deal",
-  "dealSuggestion.linked": "Evidence linked to the deal.",
-  "dealSuggestion.dismissTitle": "Dismiss deal suggestion",
-  "dealSuggestion.linkEffect":
-    "Attach the cited evidence to a deal at {company}; no new deal is created.",
-  "dealSuggestion.dismissEffect":
-    "Close this suggestion for {company} and record the reason.",
-  "dealSuggestion.dismissReason": "Reason",
-  "dealSuggestion.dismissReason.not_a_deal": "No buying interest",
-  "dealSuggestion.dismissReason.already_tracked": "Already tracked",
-  "dealSuggestion.dismissReason.wrong_company": "Wrong company",
-  "dealSuggestion.dismissReason.historical": "Historical activity",
-  "dealSuggestion.dismissReason.other": "Other reason",
   "approval.preview.nameUnavailable": "Name unavailable",
   "approval.preview.structured": "Structured value: {value}",
   "approval.preview.resolveConflict":

@@ -173,37 +173,6 @@ export const de = {
     "Ein vorheriger Schritt muss zuerst abgeschlossen werden.",
   "dataTasks.blocked.missing_prerequisite":
     "Erforderliche Aktualisierungen müssen zuerst abgeschlossen werden.",
-  "approvalPreferences.title": "Persönlich stummgeschaltete Freigaben",
-  "approvalPreferences.explain":
-    "Stummgeschaltete Arten verschwinden nur aus deiner Worklist. Andere Mitglieder behalten ihre Vorschläge. Stummschalten und Wiederherstellen deaktivieren deine automatischen Änderungen dieser Art. Versand, Buchungen, Zusammenführungen und Vorschläge mit Agentenpass bleiben sichtbar.",
-  "approvalPreferences.review": "Auch stumme Vorschläge prüfen",
-  "approvalPreferences.reviewExplain":
-    "Diese Ansicht enthält stumme und abgelaufene Vorschläge. Pakete in deiner normalen Worklist können durch persönliche Einstellungen weniger Einträge zeigen. Prüfe jeden Vorschlag vor der Entscheidung.",
-  "approvalPreferences.close": "Prüfung schließen",
-  "approvalPreferences.next": "Nächste Seite",
-  "approvalPreferences.first": "Erste Seite",
-  "dealSuggestion.linkedUnlinked":
-    "Belege verknüpft. Einige Belege bleiben unverändert, da die Berechtigung zum Verschieben fehlt.",
-  "dealSuggestion.searchExisting": "Deals suchen",
-  "dealSuggestion.existingDeal": "Bestehender Deal",
-  "dealSuggestion.moreDeals": "Weitere Deals laden",
-  "dealSuggestion.noMatchingDeals":
-    "Keine passenden Deals bei diesem Unternehmen.",
-  "dealSuggestion.changed":
-    "Dieser Vorschlag ist nicht mehr verfügbar. Lade die Prüfpunkte neu, um den aktuellen Stand zu sehen.",
-  "dealSuggestion.linkExisting": "Mit bestehendem Deal verknüpfen",
-  "dealSuggestion.linked": "Belege mit dem Deal verknüpft.",
-  "dealSuggestion.dismissTitle": "Deal-Vorschlag verwerfen",
-  "dealSuggestion.linkEffect":
-    "Die genannten Belege mit einem Deal bei {company} verknüpfen; es entsteht kein neuer Deal.",
-  "dealSuggestion.dismissEffect":
-    "Diesen Vorschlag für {company} schließen und den Grund speichern.",
-  "dealSuggestion.dismissReason": "Grund",
-  "dealSuggestion.dismissReason.not_a_deal": "Kein Kaufinteresse",
-  "dealSuggestion.dismissReason.already_tracked": "Bereits erfasst",
-  "dealSuggestion.dismissReason.wrong_company": "Falsches Unternehmen",
-  "dealSuggestion.dismissReason.historical": "Frühere Aktivität",
-  "dealSuggestion.dismissReason.other": "Anderer Grund",
   "approval.preview.nameUnavailable": "Name nicht verfügbar",
   "approval.preview.structured": "Strukturierter Wert: {value}",
   "approval.preview.resolveConflict":
