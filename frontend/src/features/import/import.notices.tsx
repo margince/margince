@@ -119,7 +119,14 @@ function busyRunOf(error: unknown): string | null {
 export function ImportRefusal({
   title,
   error,
-}: Readonly<{ title: string; error: unknown }>) {
+  keepsDraft = false,
+}: Readonly<{
+  title: string;
+  error: unknown;
+  /** The refused call was a stage, which leaves the upload as a draft. Undo,
+   * cancel and approve leave none, so the draft sentence is theirs to omit. */
+  keepsDraft?: boolean;
+}>) {
   const t = useT();
   const tooLong = problemFieldErrorsOf(error).some(
     (field) => field.code === "too_many_rows",
@@ -139,6 +146,7 @@ export function ImportRefusal({
       }
     >
       {tooLong ? t("import.upload.tooManyRows") : problemMessageOf(error, t)}
+      {busyRun && keepsDraft ? <p>{t("import.sourceBusyDraft")}</p> : null}
     </Callout>
   );
 }

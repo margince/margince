@@ -275,7 +275,11 @@ export function MapStep({
         </Button>
       </div>
       {refused ? (
-        <ImportRefusal title={t("import.map.stageFailed")} error={refused} />
+        <ImportRefusal
+          title={t("import.map.stageFailed")}
+          error={refused}
+          keepsDraft
+        />
       ) : stopped ? (
         <Callout
           tone="danger"

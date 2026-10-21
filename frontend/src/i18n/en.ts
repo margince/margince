@@ -7233,7 +7233,9 @@ export const en = {
   "import.draft.continue": "Continue",
   "import.draft.cancel": "Cancel",
   "import.sourceBusy":
-    "Another import of this source name is still writing. Your file waits as a draft in Recent imports. Wait for the other import to finish, then continue the draft.",
+    "Another import of this source name is still writing. Wait for it to finish, then try again.",
+  "import.sourceBusyDraft":
+    "Your file waits as a draft in Recent imports. Continue it once the other import has finished.",
   "import.sourceBusyOpen": "Open that import",
   "import.upload.tooManyRowsTitle": "File is too long for one test run",
   "import.upload.tooManyRows":
