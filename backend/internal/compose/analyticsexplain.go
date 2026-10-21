@@ -19,8 +19,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
-	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -63,7 +61,7 @@ func ExplainAnalyticsCell(
 			Suggest: "explain a cell of an answer this seat can ask for",
 		}
 	}
-	if err := auth.Require(ctx, string(spec.entity), principal.ActionRead); err != nil {
+	if err := requireAnalyticsRead(ctx, spec.entity); err != nil {
 		return AnalyticsExplanation{}, err
 	}
 

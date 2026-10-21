@@ -17,10 +17,8 @@ import (
 	"github.com/margince/margince/backend/internal/compose/attention"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/reporting"
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // maxQuestionSources bounds the records one kept answer rests on. Retention,
@@ -231,7 +229,7 @@ func analyticsSources(ctx context.Context, tx pgx.Tx, query analyticsquery.Query
 	if !ok {
 		return "", nil, apperrors.ErrNotFound
 	}
-	if err := auth.Require(ctx, string(spec.entity), principal.ActionRead); err != nil {
+	if err := requireAnalyticsRead(ctx, spec.entity); err != nil {
 		return "", nil, err
 	}
 	var narrowed string

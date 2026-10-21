@@ -31,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // AnalyticsSchemaFor derives what this caller may ask about from the prebuilt
@@ -60,7 +61,7 @@ func analyticsSchemaFrom(ctx context.Context, specs map[string]reportSpec) analy
 		// gate, and a derivation that skipped it would name populations —
 		// here, in the vocabulary document, and in the unknown-name refusal —
 		// to a seat that may not read a row of them.
-		if auth.Require(ctx, string(spec.entity), principal.ActionRead) != nil {
+		if requireAnalyticsRead(ctx, spec.entity) != nil {
 			continue
 		}
 		granted := grantedSpec(ctx, spec)
@@ -207,4 +208,8 @@ func DescribeAnalyticsSchema(schema analyticsquery.Schema) string {
 		describeCustomFields(&out, entity)
 	}
 	return out.String()
+}
+
+func requireAnalyticsRead(ctx context.Context, entity datasource.EntityType) error {
+	return auth.Require(ctx, string(entity), principal.ActionRead)
 }
