@@ -183,8 +183,17 @@ export function ConfirmAdvanceModal({
     // Captured BEFORE the await: `dismiss()` clears what was typed, and the
     // review starts from the words this reader actually wrote for THIS close.
     const tasksToComplete = closeTasks.chosen;
+    // The server takes a stated reason at its word without looking for paper,
+    // so an agreement filed while this dialog sat open would still be recorded
+    // as a win without one. Asked again at the press, the gap is the press and
+    // not the time the dialog was open. A refusal needs no re-read: it IS the
+    // server's current answer.
+    const withoutPaper =
+      needsWonReason &&
+      (refusedDealId === asked.dealId ||
+        (await evidence.refetch()).data?.has_signed_contract !== true);
     const why = closeReason({
-      wonAsked: needsWonReason,
+      wonAsked: withoutPaper,
       lost: lostReason,
       won: wonReason,
       detail: wonDetail,
@@ -195,7 +204,7 @@ export function ConfirmAdvanceModal({
       version: asked.version,
       toStage: asked.toStage,
       lostReason: lostReason.trim() || undefined,
-      ...wonAnswer(needsWonReason, wonReason, wonDetail),
+      ...wonAnswer(withoutPaper, wonReason, wonDetail),
     }).catch((error: unknown) => error);
     setSubmitting(false);
     // Only the missing-evidence refusal stays open: the reader can answer it

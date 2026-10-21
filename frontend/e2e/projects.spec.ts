@@ -161,16 +161,8 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
     .getByRole("button", { name: "Won" })
     .click();
   await expect(page.getByText("In die Phase Won verschieben?")).toBeVisible();
-  // The first confirm is refused: no contract is on the deal, so the server
-  // answers win_evidence_required and the dialog stays open asking how it was
-  // won. Only the answered second confirm is the win.
-  const refused = page.waitForResponse(
-    (response) =>
-      response.url().endsWith("/v1/deals/d-fleet/advance") &&
-      response.request().method() === "POST",
-  );
-  await page.getByRole("button", { name: "Bestätigen" }).click();
-  expect((await refused).status()).toBe(422);
+  // No contract is on the deal, so the dialog asks how it was won as soon as
+  // it opens, and the one press of Confirm that follows is the win.
   await choose(
     page,
     dialog.getByRole("combobox", { name: "Wie wurde der Deal gewonnen?" }),

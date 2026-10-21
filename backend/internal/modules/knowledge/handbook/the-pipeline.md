@@ -27,8 +27,8 @@ This offers open stages only, and skips deals already on that stage. You cannot 
 To mark a deal as won in Margince, move it to a stage whose **Stage type** is **Won**. In the pipeline you start with, that is the stage called Won. There is no separate Won button.
 1. Open the deal and click the Won stage on its **Stage** ladder. Or drag the card to the Won column on **Board**.
 2. The dialog says "This closes the deal as won. Nothing changes until you confirm." Press **Confirm**.
-3. With a signed contract attached, the deal closes. Without one, the dialog comes back asking **How was it won?**.
-4. Pick an answer and press **Confirm** again. **Other** also needs **Details**.
+3. With a signed contract attached, the deal closes. Without one, the dialog asks **How was it won?** as soon as it opens, and **Confirm** waits for your answer.
+4. Pick an answer and press **Confirm**. **Other** also needs **Details**.
 
 Also called: close won, close a deal as won, win an opportunity.
 
@@ -162,9 +162,8 @@ It must also have a file attached that is not archived, filed under Contract or
 Legal, in the Current or Final state. A contract record with no file on it, or
 only archived files, is not enough.
 
-**Or** there is not. You will not see the question until you press Confirm.
-When you press Confirm without a signed contract, the dialog comes back with a
-question:
+**Or** there is not. The dialog checks the deal when it opens, and with no
+signed contract it shows a question and holds **Confirm** until you answer it:
 
 > **How was it won?** No signed contract is attached. Record how the deal was
 > won; the answer is kept on the deal and counted in reports.

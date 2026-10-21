@@ -294,6 +294,24 @@ it("asks how a win happened before Confirm when the deal has no signed contract"
   );
 });
 
+it("drops the answer when a contract was filed while the dialog sat open", async () => {
+  const user = userEvent.setup();
+  const onConfirm = vi.fn(async () => undefined);
+  openOn(WON, onConfirm, false);
+
+  const how = await screen.findByRole("combobox", { name: "How was it won?" });
+  await pickOption(user, how, "Verbally, in person or by phone");
+  stubReads(true);
+  await user.click(screen.getByRole("button", { name: "Confirm" }));
+
+  await waitFor(() => expect(onConfirm).toHaveBeenCalledTimes(1));
+  expect(onConfirm).toHaveBeenCalledWith(
+    expect.not.objectContaining({
+      wonWithoutContractReason: expect.anything(),
+    }),
+  );
+});
+
 it("keeps a win with a signed contract to one click with nothing asked", async () => {
   const user = userEvent.setup();
   const onConfirm = vi.fn(async () => undefined);

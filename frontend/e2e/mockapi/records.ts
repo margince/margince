@@ -374,6 +374,10 @@ export const advanceDeal: Handler = (
   return json({ ...target, ...dealPatches[target.id] });
 };
 
+// No contract is seeded on any deal, so a win always has to say why.
+export const getDealWinEvidence: Handler = ({ json }) =>
+  json({ has_signed_contract: false });
+
 export const getDeal: Handler = ({ path, json }, { dealPatches }) => {
   const base = deals.find((deal) => path.endsWith(deal.id)) ?? deals[0];
   return json({ ...base, ...dealPatches[base.id] });
