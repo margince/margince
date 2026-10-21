@@ -5,7 +5,7 @@ import { useCallback, useRef, useState } from "react";
 import type { components } from "../../api/schema";
 import type { ProjectScope } from "../../design-system/projectpicker";
 import { paragraphsFrom } from "../../design-system/richtext";
-import type { CommunicationContext } from "./compose-context";
+import type { CommunicationContext } from "../../lib/compose-context";
 import type {
   DraftProvenance,
   DraftUnavailable,

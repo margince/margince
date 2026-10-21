@@ -1,16 +1,17 @@
+import { SendMark } from "../../components/sendpermission";
 import { Button, Field } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { RichText } from "../../design-system/richtext";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
-import { useRichTextLabels } from "../../lib/richtextlabels";
-import type { CarriageViolation } from "./carriage";
-import type { Activity } from "./compose";
 import {
   asksWhy,
   type CommunicationContext,
   contextOptions,
-} from "./compose-context";
+} from "../../lib/compose-context";
+import { useRichTextLabels } from "../../lib/richtextlabels";
+import type { CarriageViolation } from "./carriage";
+import type { Activity } from "./compose";
 import type { ComposeThread } from "./composeanchor";
 import {
   AttachAction,
@@ -28,7 +29,6 @@ import { SignOffPreview } from "./composesignoff";
 import type { useTargetFiles } from "./composetarget";
 import { ConversationChoices, ThreadPane } from "./composethread";
 import type { VoiceDraft } from "./composevoicedraft";
-import { SendMark } from "./sendpermission";
 
 // sharedUnsubscribeAhead predicts the sharedUnsubscribe refusal (refusalOf).
 // A marketing send's unsubscribe link is one addressee's consent record, so a

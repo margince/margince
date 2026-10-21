@@ -118,7 +118,7 @@ func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datas
 		return datasource.EntityRef{}, err
 	}
 	req.Source = in.Source
-	mapped, err := projectCreateInput(req)
+	mapped, err := ProjectCreationInput(req)
 	if err != nil {
 		return datasource.EntityRef{}, err
 	}

@@ -47,10 +47,10 @@ func (c clientSuppliedTotals) refuse() error {
 	return nil
 }
 
-// offerCreateInput maps a create body. It decodes twice. The generated shape's
+// OfferCreationInput maps a create body. It decodes twice. The generated shape's
 // UnmarshalJSON owns the extension map. A probe then reads the nested lines,
 // whose decode target has none and would drop a smuggled total.
-func offerCreateInput(raw []byte) (CreateOfferInput, error) {
+func OfferCreationInput(raw []byte) (CreateOfferInput, error) {
 	var req crmcontracts.CreateOfferRequest
 	if err := json.Unmarshal(raw, &req); err != nil {
 		return CreateOfferInput{}, httperr.Validation("body", "malformed_json", err.Error())

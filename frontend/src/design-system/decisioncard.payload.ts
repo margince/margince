@@ -52,6 +52,7 @@ export type DecisionDisplay = Readonly<{
   /** The value, already formatted — a date on the reader's calendar, an enum
    *  in words. Null where the payload does not carry the field. */
   value: string | null;
+  href?: string;
   /** Null refuses inferred differences from the executable payload. */
   comparison?: Pick<DecisionDiff, "from" | "to"> | null;
   /** Leads the body as a sentence rather than sitting in the fact list. */
@@ -110,6 +111,7 @@ export type PayloadField = Readonly<{
   /** What the row is called: a declared caption, or the wire key itself. */
   label: string;
   value: string;
+  href?: string;
 }>;
 
 // A payload value as one line of text. `proposed_change` is an open map in the
@@ -194,7 +196,14 @@ export function restFields(
     return display.flatMap((entry) =>
       entry.lead || entry.comparison || entry.value === null
         ? []
-        : [{ key: entry.field, label: entry.label, value: entry.value }],
+        : [
+            {
+              key: entry.field,
+              label: entry.label,
+              value: entry.value,
+              href: entry.href,
+            },
+          ],
     );
   }
   const consumed = new Set<string>();

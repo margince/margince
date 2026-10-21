@@ -4,13 +4,16 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
 import {
+  agentClientList,
+  BOTH_METHODS_ON,
+} from "../../testing/agent-clients.fixtures";
+import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import { AgentClientMethodsCard } from "./agent-client-methods";
-import { agentClientList, BOTH_METHODS_ON } from "./agent-clients.fixtures";
 
 // The two ways a tool gets a client without an admin, and the one that is
 // always open. The deployment file can hold either way off.

@@ -1,9 +1,12 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
+import {
+  dealStatusFilter,
+  forecastCategoryFilter,
+} from "../../components/dealdials";
 import type { MessageKey } from "../../i18n/en";
 import { throwProblem, unwrap } from "../../lib/problem";
 import { parseTagIDs, parseTagMode, tagQueryParams } from "../../lib/tagfilter";
-import { dealStatusFilter, forecastCategoryFilter } from "./dealdials";
 
 /**
  * The pipeline a record belongs to, falling back to the default.

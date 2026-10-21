@@ -59,13 +59,13 @@ var profileVocabularyScreens = []struct {
 	omits map[string]string
 }{
 	{
-		file:   "../frontend/src/features/settings/coldfieldlabels.ts",
+		file:   "../frontend/src/lib/coldfieldlabels.ts",
 		opens:  "const COLD_FIELD_LABELS: Record<string, MessageKey> = {",
 		closes: "};",
 		why:    "the field renders as its own column name with the underscores spaced out",
 	},
 	{
-		file:   "../frontend/src/features/companies/companies.profile.tsx",
+		file:   "../frontend/src/format/companyprofilelabels.ts",
 		opens:  "const PROFILE_FIELD_LABELS: Record<string, MessageKey> = {",
 		closes: "};",
 		why:    "the company record draws the field as its own column name",

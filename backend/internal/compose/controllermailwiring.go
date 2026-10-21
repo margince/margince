@@ -19,6 +19,7 @@ import (
 	"errors"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/identity"

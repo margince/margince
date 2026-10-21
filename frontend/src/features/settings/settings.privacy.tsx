@@ -14,12 +14,12 @@ import {
   useCorrections,
 } from "../privacy/privacy.corrections";
 import { ConsentPurposesCard } from "../privacy/privacy.purposes";
+import { RetentionCard } from "../privacy/retention";
 import {
   PinRecordAction,
   RestrictedRecordsCard,
   useRestrictedRecords,
-} from "../privacy/restrictedrecords";
-import { RetentionCard } from "../privacy/retention";
+} from "./restrictedrecords";
 
 /** The governance page's panels in working order: defaults, the requests
  * that override them, then the duties nobody asked for. */

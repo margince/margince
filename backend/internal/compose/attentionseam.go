@@ -46,32 +46,23 @@ import (
 type attentionApprovals struct{ svc *approvals.Service }
 
 func (a attentionApprovals) ListWire(ctx context.Context, in attention.ApprovalQuery) ([]crmcontracts.Approval, error) {
-	status := in.Status
-	rows, _, err := a.svc.ListWire(ctx, approvals.ListInput{Status: &status, Limit: in.Limit, RequestedForReader: in.RequestedForReader, RequestedForOwners: in.RequestedForOwners, OnlyUnassigned: in.OnlyUnassigned})
+	rows, _, err := a.svc.ListWire(ctx, approvalListInput(in))
 	return rows, err
 }
 
-// CountPending is how many staged proposals this caller could decide.
-//
-// Counted by reading a page rather than with a COUNT, because decidability is a
-// per-row probe and no SQL count can apply it. approvals.PendingScanCap bounds
-// that read and its own comment states the contract this inherits: a full
-// result means "this many or more". The lane it feeds is bounded far below the
-// cap, so the number stops being exact only once it is already large enough to
-// mean the same thing to a reader.
+func approvalListInput(in attention.ApprovalQuery) approvals.ListInput {
+	return approvals.ListInput{Status: &in.Status, Limit: in.Limit, RequestedForReader: in.RequestedForReader, RequestedForOwners: in.RequestedForOwners, OnlyUnassigned: in.OnlyUnassigned}
+}
+
+// Counts use the same decidability probe and bounded scan as the inbox.
 func (a attentionApprovals) CountPending(ctx context.Context, in attention.ApprovalQuery) (int, error) {
-	status := stagedAndUndecided
-	rows, _, err := a.svc.ListWire(ctx, approvals.ListInput{
-		Status:             &status,
-		Limit:              approvals.PendingScanCap,
-		RequestedForReader: in.RequestedForReader,
-		RequestedForOwners: in.RequestedForOwners,
-		OnlyUnassigned:     in.OnlyUnassigned,
-	})
-	if err != nil {
-		return 0, err
-	}
-	return len(rows), nil
+	in.Status, in.Limit = stagedAndUndecided, approvals.PendingScanCap
+	rows, _, err := a.svc.ListWire(ctx, approvalListInput(in))
+	return len(rows), err
+}
+
+func (a attentionApprovals) PendingInScope(ctx context.Context, in attention.ApprovalQuery, named []ids.ApprovalID) (map[ids.ApprovalID]bool, error) {
+	return a.svc.PendingInScope(ctx, approvalListInput(in), named)
 }
 
 // subjectOfActivity is the line a task shows. An activity always carries one
@@ -184,7 +175,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 	return attention.NewService(
 		attentionApprovals{svc: svc},
 		attentionDuplicates{store: contacts.NewStore(db)},
-		attentionTasks{store: activities.NewStore(db)},
+		attentionTasks{store: activities.NewStore(db), claims: contacts.NewStore(db)},
 		attentionReceipts{svc: svc, deals: deals.NewStore(db, DealsInstallation())},
 		attentionBriefing{
 			engine: briefs.NewBriefEngine(pool, contacts.NewStore(db)),
@@ -265,7 +256,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		// it was written and nothing could set it, so the one control that says
 		// "I know, and I want this first anyway" did not exist.
 		WithPins(attentionPins{pool: pool, store: activities.NewStore(db)}).
-		WithDone(attentionPins{pool: pool, store: activities.NewStore(db)}).
+		WithDone(attentionPins{pool: pool, store: activities.NewStore(db).WithClock(now)}).
 		// One reader's walk, held still while they page it. Without it the
 		// cursor is an offset into a ranking rebuilt on every read, so the
 		// count above the queue climbs as work arrives behind somebody who is
@@ -380,9 +371,11 @@ func (a attentionDomainQuestions) OpenDomainQuestions(ctx context.Context) ([]at
 	out := make([]attention.DomainQuestion, 0, len(rows))
 	for _, row := range rows {
 		out = append(out, attention.DomainQuestion{
-			Domain:  row.Domain,
-			Reason:  row.Reason,
-			AskedAt: row.AskedAt,
+			Domain:     row.Domain,
+			Reason:     row.Reason,
+			ReasonCode: row.ReasonCode,
+			AskedAt:    row.AskedAt,
+			EvidenceAt: row.EvidenceAt,
 		})
 	}
 	return out, nil
@@ -445,4 +438,8 @@ func (a attentionSnapshots) Degradable(
 
 func (a attentionSnapshots) Detached(ctx context.Context) context.Context {
 	return database.Detached(ctx)
+}
+
+func (a attentionDomainQuestions) OwnsDomainQuestion(ctx context.Context, domain string) (bool, error) {
+	return a.store.OwnsDomainQuestion(ctx, domain)
 }

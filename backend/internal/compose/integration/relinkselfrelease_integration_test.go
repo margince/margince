@@ -196,9 +196,7 @@ func TestACredentialReleasesTheProjectRelinkItStagedAndOnlyAMemberUndoesTheFilin
 	}
 }
 
-// A mail on another team's private contact is outside the lender's row scope:
-// even a released approval moves nothing, and the whole set rolls back.
-func TestAReleasedRelinkNamingAnActivityOutsideTheLendersScopeMovesNothing(t *testing.T) {
+func TestARelinkOutsideTheLendersScopeCannotBeReleased(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
 	f := seedThreadFixture(t, e, owner)
@@ -214,14 +212,10 @@ func TestAReleasedRelinkNamingAnActivityOutsideTheLendersScopeMovesNothing(t *te
 	if !errors.As(err, &staged) {
 		t.Fatalf("relink_activities → %v, want a staged approval", err)
 	}
-	if _, err := registry.Invoke(agent, "decide_approval", json.RawMessage(
-		`{"staged_action_id":"`+staged.ApprovalID.String()+`","decision":"approve"}`)); err != nil {
-		t.Fatalf("releasing: %v", err)
-	}
-	_, err = registry.Invoke(agent, "relink_activities", json.RawMessage(
-		args[:len(args)-1]+`,"approval_id":"`+staged.ApprovalID.String()+`"}`))
-	if !errors.Is(err, apperrors.ErrNotFound) {
-		t.Fatalf("the released retry over a row outside the lender's scope → %v, want ErrNotFound", err)
+	_, err = registry.Invoke(agent, "decide_approval", json.RawMessage(
+		`{"staged_action_id":"`+staged.ApprovalID.String()+`","decision":"approve"}`))
+	if _, incomplete := errors.AsType[*approvals.PreviewContextError](err); !incomplete {
+		t.Fatalf("releasing a hidden activity: %v, want non-decidable preview", err)
 	}
 	for _, id := range []ids.UUID{f.mine[0], f.theirs} {
 		if companyLinks(t, e, id, company) != 0 {
@@ -247,7 +241,7 @@ func TestAThreadApprovalStagedBeforeThreadMovesStoppedStagingNeverRuns(t *testin
 	if err != nil {
 		t.Fatalf("hashing the call: %v", err)
 	}
-	svc := approvals.NewService(e.DB())
+	svc := compose.NewApprovalsService(e.DB())
 	id, _, err := svc.StageAgentCall(agent, approvals.StageInput{
 		Kind: "relink_thread", ProposedChange: canonical, DiffHash: hash,
 		TargetType: "company", TargetID: company, Summary: "Re-associate a conversation",
@@ -256,9 +250,10 @@ func TestAThreadApprovalStagedBeforeThreadMovesStoppedStagingNeverRuns(t *testin
 		t.Fatalf("planting the pending approval: %v", err)
 	}
 
+	var incomplete *approvals.PreviewContextError
 	if _, err := registry.Invoke(agent, "decide_approval", json.RawMessage(
-		`{"staged_action_id":"`+id.String()+`","decision":"approve"}`)); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Fatalf("the credential releasing a thread approval → %v, want ErrPermissionDenied", err)
+		`{"staged_action_id":"`+id.String()+`","decision":"approve"}`)); !errors.As(err, &incomplete) {
+		t.Fatalf("the credential releasing a thread approval: %v, want non-decidable preview", err)
 	}
 
 	contact := e.As(e.Rep3, []ids.UUID{e.Team2}, principal.Permissions{
@@ -269,14 +264,13 @@ func TestAThreadApprovalStagedBeforeThreadMovesStoppedStagingNeverRuns(t *testin
 		},
 		RowScope: principal.RowScopeAll,
 	})
-	if _, err := svc.Decide(contact, id, true, nil); err != nil {
-		t.Fatalf("the contact releasing it: %v", err)
+	if _, err := svc.Decide(contact, id, true, nil); !errors.As(err, &incomplete) {
+		t.Fatalf("a human releasing the retired operation: %v, want non-decidable preview", err)
 	}
 	_, err = registry.Invoke(agent, "relink_thread", json.RawMessage(
 		args[:len(args)-1]+`,"approval_id":"`+id.String()+`"}`))
-	var bad *agents.BadArgsError
-	if !errors.As(err, &bad) || !strings.Contains(bad.Error(), "thread key cannot be confirmed") {
-		t.Fatalf("the released thread retry → %v, want the thread-key refusal", err)
+	if !errors.Is(err, apperrors.ErrRequiresApproval) {
+		t.Fatalf("the undecidable thread retry: %v, want approval refusal", err)
 	}
 	for _, m := range f.mine {
 		if companyLinks(t, e, m, company) != 0 {

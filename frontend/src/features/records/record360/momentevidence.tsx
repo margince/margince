@@ -12,8 +12,8 @@
 
 import type { ReactNode } from "react";
 import type { components } from "../../../api/schema";
+import { interactionIcon } from "../../../components/interactionchrome";
 import { Button } from "../../../design-system/atoms";
-import { interactionIcon } from "../interactionchrome";
 import "./record360.css";
 
 type ContactMomentEvidence = components["schemas"]["ContactMomentEvidence"];

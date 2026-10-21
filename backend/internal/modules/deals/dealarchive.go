@@ -25,6 +25,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+const (
+	dealArchiveRelationships = "deal_id = @record AND archived_at IS NULL"
+	dealArchiveMemberships   = "entity_type = 'deal' AND entity_id = @record"
+)
+
 // RefuseArchiveDeal answers every authority refusal ArchiveDeal would answer
 // with, and writes nothing — the stage-time half of the archive, so a staged
 // approval is never spent on a call the store was always going to refuse. No
@@ -101,13 +106,13 @@ func archiveDealInTx(ctx context.Context, tx pgx.Tx, id ids.DealID, ifVersion *i
 	// row, which is what an un-archive reads to put it back.
 	var cascade storekit.ArchiveCascade
 	if err := cascade.Retire(ctx, tx, "relationship",
-		`UPDATE relationship SET archived_at = $2 WHERE deal_id = $1 AND archived_at IS NULL RETURNING id`,
-		id, now); err != nil {
+		`UPDATE relationship SET archived_at = @archived WHERE `+dealArchiveRelationships+` RETURNING id`,
+		pgx.StrictNamedArgs{"record": id, "archived": now}); err != nil {
 		return fmt.Errorf("archive the deal's relationships: %w", err)
 	}
 	if err := cascade.DropMemberships(ctx, tx,
 		`WITH gone AS (
-			DELETE FROM list_member WHERE entity_type = 'deal' AND entity_id = @record
+			DELETE FROM list_member WHERE `+dealArchiveMemberships+`
 			RETURNING list_id, entity_type, entity_id, added_by, created_at, note),
 		logged AS (
 			INSERT INTO list_member_event (list_id, entity_type, entity_id, action, reason, actor)
@@ -116,7 +121,7 @@ func archiveDealInTx(ctx context.Context, tx pgx.Tx, id ids.DealID, ifVersion *i
 		return fmt.Errorf("detach list memberships: %w", err)
 	}
 	if err := cascade.DropTags(ctx, tx,
-		`DELETE FROM taggable WHERE entity_type = 'deal' AND entity_id = $1 RETURNING tag_id, assigned_by, assigned_by_kind, assigned_at`, id.UUID); err != nil {
+		`DELETE FROM taggable WHERE `+dealArchiveMemberships+` RETURNING tag_id, assigned_by, assigned_by_kind, assigned_at`, pgx.StrictNamedArgs{"record": id.UUID}); err != nil {
 		return fmt.Errorf("detach tags: %w", err)
 	}
 

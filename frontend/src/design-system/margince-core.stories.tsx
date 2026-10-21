@@ -191,7 +191,7 @@ export const Ladder: Story = {
  * present must not carry it.
  *
  * It is also what a Core sitting next to copy needs. The agent rail
- * (agentrail.tsx) and the voice scene (voice-scenes.tsx) both run
+ * (agentrail.tsx) and the voice build scene (voice-scenes.build.tsx) both run
  * `feed={false}` for exactly that reason.
  */
 export const WithoutFeed: Story = {

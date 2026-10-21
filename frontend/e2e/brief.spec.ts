@@ -4,26 +4,10 @@ import type { MessageKey } from "../src/i18n/en";
 import { signIn } from "./waits";
 
 /**
- * The Brief, the page a rep and a lead open first.
- *
- * Behavioural tests (vitest) already prove the data flow: which rows render,
- * what a checkbox does not send, which absence draws which plate. What none of
- * them can see is that the readings strip came out as two stacked rows. Nor
- * can they see a focus panel that lost its full width, or a panel that spilled
- * sideways under a long German label. That is what this suite is for.
- *
- * Two describes, and the split is the same one company-record.spec.ts makes:
- *
- *   - page shape, which regions exist and in what order;
- *   - what a reader can reach, nothing pans, at three widths and in both
- *     themes.
- *
- * Never pixel-equality and never the drawn English strings. The app renders
- * German, so a copy change must not fail a layout suite. Assertions are
- * structural, or floors ("at least this prominent").
- *
- * It runs against a live stack because the states that have to look right are
- * data states. Without BASE_URL the suite skips itself loudly.
+ * The Brief's layout. Unit tests prove the data flow; only a browser sees a
+ * region stack, lose its width or spill sideways under a long German label.
+ * Assertions are structural or floors, never pixels or drawn strings.
+ * It needs a live stack, and without BASE_URL it skips by name.
  */
 
 const BASE_URL = process.env.BASE_URL;
@@ -35,33 +19,23 @@ test.skip(
 
 const SHOTS = process.env.E2E_BRIEF_SHOT_DIR ?? "/tmp/e2e-brief";
 
-// The readings row, by the test id BriefReadingsStrip hands its StatStrip. Not
-// by class: the plate is the shared primitive's, so a class selector would
-// match every other StatStrip in the app.
 /**
- * A string the app actually renders, read from the catalog the component reads.
- *
- * The app renders German. Writing the words here would put a second copy of
- * them in the tree. The two cases below name copy because a heading nobody can
- * read is a defect no box measurement can see.
+ * A German string, read from the catalog the app renders from. A copy of the
+ * words here would fail this suite whenever a translator improves them.
  */
 function copy(key: MessageKey): string {
   return de[key];
 }
 
+// By test id, not class: the plate class belongs to every StatStrip.
 const STRIP = '[data-testid="brief-readings"]';
 const FOCUS = "#brief-today";
 const GLANCE = '[data-testid="brief-glance"]';
 
 /**
- * Open the Brief and wait for the page to have actually settled.
- *
- * Brief fans out to five independent reads, so an arrived route is still a
- * column of skeletons. The glance paints first, so anchoring only there
- * measures a page whose work column is empty.
- *
- * So: the glance, then the work column having real content, then the entry
- * animations finished. A box read mid-fade is not where the element rests.
+ * Open the Brief and wait until it rests. The glance paints before the work
+ * column has content, and a box read mid-fade is not where it rests. So it
+ * waits for the glance, then the work, then the entry animations.
  */
 async function openBrief(page: Page) {
   await page.goto("/#/home", { waitUntil: "networkidle" });
@@ -70,13 +44,6 @@ async function openBrief(page: Page) {
   await settled(page);
 }
 
-/**
- * Wait out the entry animations.
- *
- * The shell's core mark is excluded by name. Its only motion is an opacity
- * transition that cannot move a box, and it is almost always in flight.
- * Excluding by name keeps the check for a panel still sliding in.
- */
 /** Open the Brief on its weekly view, settled the same way the morning is. */
 async function openWeekly(page: Page) {
   await page.goto("/#/home?view=weekly", { waitUntil: "networkidle" });
@@ -85,6 +52,10 @@ async function openWeekly(page: Page) {
   await settled(page);
 }
 
+/**
+ * Wait out the entry animations. The core mark's opacity loop never ends and
+ * cannot move a box, so it is left out by name.
+ */
 async function settled(page: Page) {
   await page.waitForFunction(
     (ambient) =>
@@ -113,26 +84,15 @@ async function topOf(locator: Locator): Promise<number> {
   return box.y;
 }
 
-/**
- * The shell rendered at all.
- *
- * A page that threw scores zero overflow and zero violations, a dead page
- * passing every check below. This is what stops that reading as a pass.
- */
+/** The shell rendered: a page that threw would pass every overflow check. */
 async function expectShellRendered(page: Page) {
   await expect(page.locator("nav.rail")).toBeVisible();
 }
 
 /**
- * How far the page scrolls sideways, and which scroller does it.
- *
- * Not `document.body.scrollWidth`: the shell pins `.main` to `overflow: hidden`
- * and gives `.scroll` an `overflow-y: auto` that computes `overflow-x` to
- * `auto` with it. Wide content scrolls inside `.scroll` and the body never
- * grows, so a body read could not fail.
- *
- * A component with its own horizontal scroll region is not measured.
- * `.table-scroll` around a wide table is sanctioned; panning the page is not.
+ * How far the page scrolls sideways, and which scroller does it. The body
+ * never grows, because wide content scrolls inside the shell's `.scroll`.
+ * A component's own scroll region, such as `.table-scroll`, is allowed.
  */
 async function pageOverflow(page: Page): Promise<string[]> {
   return page.evaluate(() => {
@@ -158,8 +118,7 @@ test.describe("the Brief — page shape", () => {
     await signIn(page);
   });
 
-  // One h1. The greeting is the page's heading; marking up the sentence
-  // under it as a second h1 leaves the page with no outline.
+  // The greeting is the page's heading. A page with two h1s has no outline.
   test("carries exactly one h1", async ({ page }) => {
     await openBrief(page);
     await expectShellRendered(page);
@@ -167,18 +126,25 @@ test.describe("the Brief — page shape", () => {
     await expect(page.locator("main h1")).toHaveCount(1);
   });
 
-  test("puts focus before readings and follow-through", async ({ page }) => {
+  // The brief and the work in one column, the readings beside it in the rail.
+  test("puts the work under the brief and the readings in the rail", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
     await openBrief(page);
     await expectShellRendered(page);
 
-    const glance = await topOf(page.locator(GLANCE));
-    const focus = await topOf(page.locator(FOCUS));
-    const strip = await topOf(page.locator(STRIP));
-    expect(glance).toBeLessThan(focus);
-    expect(focus).toBeLessThan(strip);
-    expect(strip).toBeLessThan(
-      await topOf(page.locator(".brief-followthrough")),
+    expect(await topOf(page.locator(GLANCE))).toBeLessThan(
+      await topOf(page.locator(FOCUS)),
     );
+    await expect(page.locator(`.brief-rail ${STRIP}`)).toHaveCount(1);
+    await expect(page.locator(`.brief-main ${FOCUS}`)).toHaveCount(1);
+    const main = await page.locator(".brief-main").boundingBox();
+    const rail = await page.locator(".brief-rail").boundingBox();
+    if (!main || !rail) {
+      throw new Error("the desktop Brief columns have no measurable boxes");
+    }
+    expect(rail.x).toBeGreaterThanOrEqual(main.x + main.width);
   });
 
   test("orders the greeting above the date above the sentence", async ({
@@ -206,9 +172,8 @@ test.describe("the Brief — page shape", () => {
     expect(clipped).toBe(false);
   });
 
-  // The strip is five slots on every morning, including a quiet one. A row that
-  // shrank would read as fewer questions asked, so the two slots the product
-  // cannot answer yet stay in the row.
+  // Five slots on every morning, a quiet one too. A slot with nothing to show
+  // says so, so a short row never reads as fewer questions asked.
   test("the readings strip is five slots wide", async ({ page }) => {
     await openBrief(page);
     await expectShellRendered(page);
@@ -216,8 +181,6 @@ test.describe("the Brief — page shape", () => {
     await expect(page.locator(`${STRIP} > *`)).toHaveCount(5);
   });
 
-  // The week lives behind the Weekly dial, not at the foot of the morning.
-  //
   // Frozen past above, live future below: a rep decides what next week holds by
   // reading what this one did.
   test("puts the week's plan under the week's review", async ({ page }) => {
@@ -229,12 +192,8 @@ test.describe("the Brief — page shape", () => {
     );
   });
 
-  // The weekly uses the full width, because it has no rail.
-  //
-  // Every rail panel answers a question about today, so none belongs beside a
-  // week that closed. A grid track does not collapse when its item is missing.
-  // Keeping the aside shape would draw the weekly at seventy per cent width
-  // beside an empty column. Measured, because the defect is a width a reader sees.
+  // The weekly has no rail, since every rail panel is about today. A grid track
+  // stays when its item is gone, so the width is measured, not the class.
   test("gives the weekly the whole width", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await openWeekly(page);
@@ -250,8 +209,7 @@ test.describe("the Brief — page shape", () => {
     expect(review.width).toBeGreaterThan(header.width * 0.9);
   });
 
-  // And the morning shows the morning's work, the weekly is a dial away, not
-  // a section further down the same page.
+  // The weekly is a dial away, not a section further down the morning.
   test("keeps the week off the morning", async ({ page }) => {
     await openBrief(page);
     await expectShellRendered(page);
@@ -262,26 +220,26 @@ test.describe("the Brief — page shape", () => {
 
   // The page a German reader arrives at is in German, and says what it is.
   //
-  // Every other assertion here is geometry. A page rendering raw message keys
-  // would satisfy all of it. One catalog read separates a rendered page from a
-  // rendered skeleton.
+  // Every other assertion here is geometry, and a page of raw message keys
+  // would pass it. Five boxes in a row are five boxes whether they read
+  // "Zuerst" or "brief.first.title". One catalog read is what separates a
+  // rendered page from a rendered skeleton.
   test("labels focus and view controls in German", async ({ page }) => {
     await openBrief(page);
     await expectShellRendered(page);
 
     await expect(
-      page.getByRole("heading", { name: copy("brief.feed.title") }),
+      page.getByRole("heading", { name: copy("brief.first.title") }),
     ).toBeVisible();
     await expect(
       page.getByRole("group", { name: copy("brief.view.label") }),
     ).toBeVisible();
   });
 
-  // The dial pressed, not the address typed.
+  // The dial PRESSED, not the address typed.
   //
-  // openWeekly() navigates straight to ?view=weekly, which proves the address
-  // resolves and nothing about the control. A dial wired to the wrong writer
-  // leaves every other test green.
+  // openWeekly() types the address, which proves nothing about the control. A
+  // dial wired to the wrong writer would leave every other test here green.
   test("switches to the week when the dial is pressed", async ({ page }) => {
     await openBrief(page);
     await expectShellRendered(page);
@@ -327,17 +285,14 @@ test.describe("the Brief — nothing pans", () => {
     });
   }
 
-  test("keeps follow-through below focus and readings at 390", async ({
-    page,
-  }) => {
+  // One column on a phone: the rail's readings follow the work.
+  test("keeps the readings below the work at 390", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await openBrief(page);
     await expectShellRendered(page);
 
-    const strip = await topOf(page.locator(STRIP));
-    expect(await topOf(page.locator(FOCUS))).toBeLessThan(strip);
-    expect(strip).toBeLessThan(
-      await topOf(page.locator(".brief-followthrough")),
+    expect(await topOf(page.locator(FOCUS))).toBeLessThan(
+      await topOf(page.locator(STRIP)),
     );
   });
 
@@ -352,7 +307,7 @@ test.describe("the Brief — nothing pans", () => {
       await expectShellRendered(page);
 
       expect(await topOf(page.locator(GLANCE))).toBeLessThan(
-        await topOf(page.locator(STRIP)),
+        await topOf(page.locator(FOCUS)),
       );
       expect(await pageOverflow(page)).toEqual([]);
     });

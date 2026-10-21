@@ -54,7 +54,7 @@ bound for its ladder's rungs, and may retain the prompt for debugging.
 | `propose_roles` | `cheap_cloud` → `premium` | no | no | no | none | shipped |
 | `rate_extract` | `premium` → `cheap_cloud` | no | no | no | none | shipped |
 | `request_settlement` | `local_small` → `cheap_cloud` | no | yes | no | none | shipped |
-| `signal_extract` | `premium` | no | yes | no | none | shipped |
+| `signal_extract` | `frontier` | no | yes | no | none | shipped |
 | `site_extract` | `premium` | no | no | no | none | shipped |
 | `site_fact_extract` | `cheap_cloud` → `premium` | no | no | no | none | shipped |
 | `site_triage` | `cheap_cloud` → `premium` | no | no | no | the bound decision model | shipped |
@@ -62,7 +62,7 @@ bound for its ladder's rungs, and may retain the prompt for debugging.
 | `summarize` | `cheap_cloud` → `premium` | no | no | no | none | shipped |
 | `tag_suggest` | `local_small` → `cheap_cloud` | no | yes | no | none | shipped |
 | `transcript` | `cheap_cloud` → `premium` | no | no | no | none | planned |
-| `transcript_propose` | `cheap_cloud` → `premium` | no | no | no | none | shipped |
+| `transcript_propose` | `premium` | no | no | no | none | shipped |
 | `voice_build` | `cheap_cloud` → `premium` | no | no | no | none | shipped |
 | `weekly_learnings` | `cheap_cloud` → `premium` | no | no | no | none | shipped |
 | `weekly_review` | `cheap_cloud` → `premium` | no | no | no | none | shipped |

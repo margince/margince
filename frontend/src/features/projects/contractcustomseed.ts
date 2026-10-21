@@ -5,9 +5,6 @@
 // opens, change while it stays open, and be read against a different record than
 // the one the form opened on. Three arrivals, and what a reader has already
 // typed has to survive all of them.
-//
-// Its own module because contractform.tsx is at its length ceiling and this is
-// the part of it with no JSX in it at all.
 
 import { useEffect, useRef } from "react";
 import type { CreateField } from "../../components/create";

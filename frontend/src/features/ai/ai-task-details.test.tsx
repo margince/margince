@@ -9,7 +9,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
 import { armHoverIntent } from "../../design-system/hoverintent-testing";
 import { LocaleProvider } from "../../i18n";
-import { feature } from "./ai-admin.testkit";
+import { feature } from "../../testing/ai-admin.testkit";
 import { AiFeatureTable } from "./ai-feature-table";
 import { taskDot } from "./ai-task-details";
 import { openTaskDetails } from "./ai-task-details-testing";

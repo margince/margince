@@ -5,26 +5,25 @@
 
 package integration
 
-// An import is never swept on the day it arrives, and an unconverted lead is
-// archived rather than anonymized by default.
+// An import is never swept on the day it arrives, and the default policies
+// destroy no record just because it is old.
 //
-// The defect: an importer states the source system's dates, so a lead first
-// seen in 2023 arrived with a 2023 created_at, and the first retention pass
-// after the import anonymized every lead older than a year — 1,200 of them on
-// a rehearsal install within ninety minutes. Retention now also asks how long a
-// record has been in THIS installation (entered_at, which nothing writes after
-// the insert — backend/gates/enteredatwriters_test.go; an activity's
-// created_at, which no import restates).
+// An importer states the source system's dates. Retention also asks how long a
+// record has been in this installation. For most records that is entered_at,
+// which nothing writes after the insert (backend/gates/enteredatwriters_test.go).
+// For an activity it is created_at, which no import restates.
 
 import (
 	"context"
 	"log/slog"
+	"net/http"
 	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -180,5 +179,67 @@ func TestAnAnonymizePolicyReachesALeadTheArchiveAlreadyTook(t *testing.T) {
 	}
 	if name != "Anonymized Lead" {
 		t.Fatalf("an archived over-age lead kept its name %q under an anonymize policy", name)
+	}
+}
+
+// A fresh installation's defaults leave an old contact with no consent and no
+// deal as it is, and keep an old transcript's text. Neither scope is seeded.
+// The activity archive row reaches a transcript only at 1095 days. Bootstrap,
+// the contact and the transcript all go through the real writers.
+func TestTheDefaultPoliciesKeepAnOldContactAndAnOldTranscript(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	ctx := context.Background()
+
+	var contact, transcript struct {
+		ID string `json:"id"`
+	}
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
+		"source": "manual", "full_name": "Quiet Contact",
+	}, nil, &contact); status != http.StatusCreated {
+		t.Fatalf("creating the contact → %d", status)
+	}
+	if status := e.Call(t, "POST", "/v1/activities", AnyMap{
+		"kind": "meeting", "subject": "Rollout call", "body": transcriptText,
+		"source_system": "transcript", "source": "manual",
+	}, nil, &transcript); status != http.StatusCreated {
+		t.Fatalf("logging the transcript → %d", status)
+	}
+	// Both clocks back past the window each removed rule had: the record's own
+	// date and its time in this installation.
+	if _, err := e.Owner.Exec(ctx, `UPDATE contact SET created_at = now() - interval '800 days',
+		entered_at = now() - interval '800 days' WHERE id = $1`, contact.ID); err != nil {
+		t.Fatalf("backdating the contact: %v", err)
+	}
+	if _, err := e.Owner.Exec(ctx, `UPDATE activity SET occurred_at = now() - interval '400 days',
+		created_at = now() - interval '400 days' WHERE id = $1`, transcript.ID); err != nil {
+		t.Fatalf("backdating the transcript: %v", err)
+	}
+	var stored *string
+	if err := e.Owner.QueryRow(ctx, `SELECT body FROM activity WHERE id = $1`, transcript.ID).Scan(&stored); err != nil {
+		t.Fatal(err)
+	}
+
+	ws := apptest.InstallationWorkspaceUUID(ctx, t, e.Pool)
+	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(os.Stderr, nil)))
+	if err := svc.EvaluateInstallation(RetentionPassCtx(ws)); err != nil {
+		t.Fatal(err)
+	}
+
+	var contactName string
+	var contactArchived bool
+	if err := e.Owner.QueryRow(ctx, `SELECT full_name, archived_at IS NOT NULL FROM contact WHERE id = $1`,
+		contact.ID).Scan(&contactName, &contactArchived); err != nil {
+		t.Fatal(err)
+	}
+	var body *string
+	if err := e.Owner.QueryRow(ctx, `SELECT body FROM activity WHERE id = $1`, transcript.ID).Scan(&body); err != nil {
+		t.Fatal(err)
+	}
+	if contactName != "Quiet Contact" || contactArchived {
+		t.Errorf("the default policies acted on an 800-day-old contact: name %q, archived %v", contactName, contactArchived)
+	}
+	if stored == nil || body == nil || *body != *stored {
+		t.Errorf("the default policies cleared a 400-day-old transcript's text: stored %v, after the pass %v", stored, body)
 	}
 }

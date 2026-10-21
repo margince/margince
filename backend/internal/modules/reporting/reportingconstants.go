@@ -4,14 +4,15 @@
 package reporting
 
 const (
-	reportingThisMonth     = "this_month"
-	reportingWorkspace     = "workspace"
-	reportingFiscalQuarter = "fiscal_quarter"
-	reportingWeekly        = "weekly"
-	reportingStageAge      = "stage_age"
-	reportingSales         = "sales"
-	reportingOwner         = "owner"
-	reportingPending       = "pending"
-	reportingSuspended     = "suspended"
-	reportingTeam          = "team"
+	reportingThisMonth       = "this_month"
+	reportingWorkspace       = "workspace"
+	reportingFiscalQuarter   = "fiscal_quarter"
+	reportingWeekly          = "weekly"
+	reportingStageAge        = "stage_age"
+	reportingOwnerAttainment = "owner_attainment"
+	reportingSales           = "sales"
+	reportingOwner           = "owner"
+	reportingPending         = "pending"
+	reportingSuspended       = "suspended"
+	reportingTeam            = "team"
 )

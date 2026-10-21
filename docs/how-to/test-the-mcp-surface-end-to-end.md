@@ -275,7 +275,8 @@ one contract of that title is a harness stop.
 A note that copies a file's text never shows in the answer. So
 `must_not_call_with` reads each call itself. Each entry is `tool~regex`,
 and it fails the run when that regex matches the arguments of a call to that
-tool, as one JSON text.
+tool, as one JSON text. `must_call_matching` is the other direction: in the same
+`tool~regex` form, it fails the run when no call to that tool matches.
 
 ## 6. Find the cause of a failure from the transcript
 
@@ -343,6 +344,7 @@ verdicts you want to publish, then generate the page again:
 cd backend && go test ./internal/compose/ -run TestTheMCPToolCoverageIsPublished -update-mcp-tool-coverage
 ```
 
+The weekly scheduled run opens a pull request with its own verdicts, which say `search: lexical`.
 `make check` fails while the page and the committed verdicts do not agree. Delete a
 verdict you do not want to publish, such as a degraded run, or a run to try something.
 Do not leave it next to the others without a commit.

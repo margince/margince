@@ -4,21 +4,22 @@
 import { formatDateTime } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { useProviderHealth } from "../../lib/ai-provider-health";
 import { useCan } from "../../lib/capability";
 import { routeHash } from "../../lib/router";
 import { useMe } from "../../lib/session";
-import { useProviderHealth } from "../ai/ai-provider-health";
-import { CaptureHealthCard, useCaptureHealth } from "../capture/capturehealth";
-import {
-  ExtensionIngestHealthCard,
-  useExtensionIngestHealth,
-} from "../capture/extingesthealth";
 import { ProviderHealthCard } from "../capture/providerhealth";
+import { CaptureHealthCard, useCaptureHealth } from "./capturehealth";
+import { DataTasksHealthCard } from "./datataskshealth";
 import {
   EmbedReindexCard,
   useEmbedReindexAvailable,
   useEmbedReindexStatus,
 } from "./embedreindex";
+import {
+  ExtensionIngestHealthCard,
+  useExtensionIngestHealth,
+} from "./extingesthealth";
 import { HealthStrip } from "./healthcard";
 import { JobHealthCard, useJobHealth } from "./jobhealth";
 import { BackgroundSchedulesCard, SendPacingCard } from "./operationsettings";
@@ -122,8 +123,8 @@ function useStamp(stamps: readonly (string | undefined)[]): string | undefined {
 }
 
 /**
- * The system health page. Extracted from settings.tsx, which is frozen at its
- * length, for the reason the privacy lanes were.
+ * The system health page, in a `settings.<page>.tsx` companion as the privacy
+ * lanes are, so settings.tsx stays the dispatch.
  */
 export function SystemHealthPage() {
   const t = useT();
@@ -159,6 +160,7 @@ export function SystemHealthPage() {
       {readings.providers.panel && <ProviderHealthCard />}
       <CaptureHealthCard />
       <RecoveryHealthCard />
+      <DataTasksHealthCard />
       {/* The values the background work runs on, under the readings of what
           it is doing. */}
       <BackgroundSchedulesCard />

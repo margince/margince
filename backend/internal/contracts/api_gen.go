@@ -1723,6 +1723,33 @@ func (e ApprovalEvidenceSourceType) Valid() bool {
 	}
 }
 
+// Defines values for ApprovalPreviewImportRowOutcome.
+const (
+	ApprovalPreviewImportRowOutcomeCreate          ApprovalPreviewImportRowOutcome = "create"
+	ApprovalPreviewImportRowOutcomeCreateDuplicate ApprovalPreviewImportRowOutcome = "create_duplicate"
+	ApprovalPreviewImportRowOutcomeSkip            ApprovalPreviewImportRowOutcome = "skip"
+	ApprovalPreviewImportRowOutcomeUnchanged       ApprovalPreviewImportRowOutcome = "unchanged"
+	ApprovalPreviewImportRowOutcomeUpdate          ApprovalPreviewImportRowOutcome = "update"
+)
+
+// Valid indicates whether the value is a known member of the ApprovalPreviewImportRowOutcome enum.
+func (e ApprovalPreviewImportRowOutcome) Valid() bool {
+	switch e {
+	case ApprovalPreviewImportRowOutcomeCreate:
+		return true
+	case ApprovalPreviewImportRowOutcomeCreateDuplicate:
+		return true
+	case ApprovalPreviewImportRowOutcomeSkip:
+		return true
+	case ApprovalPreviewImportRowOutcomeUnchanged:
+		return true
+	case ApprovalPreviewImportRowOutcomeUpdate:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AssignLeadOutcomeKind.
 const (
 	AssignLeadOutcomeKindAssigned  AssignLeadOutcomeKind = "assigned"
@@ -2313,6 +2340,7 @@ const (
 	AttentionItemActionsKeep        AttentionItemActions = "keep"
 	AttentionItemActionsMerge       AttentionItemActions = "merge"
 	AttentionItemActionsOpen        AttentionItemActions = "open"
+	AttentionItemActionsReopen      AttentionItemActions = "reopen"
 	AttentionItemActionsReply       AttentionItemActions = "reply"
 	AttentionItemActionsRetry       AttentionItemActions = "retry"
 	AttentionItemActionsSetAside    AttentionItemActions = "set_aside"
@@ -2340,6 +2368,8 @@ func (e AttentionItemActions) Valid() bool {
 	case AttentionItemActionsMerge:
 		return true
 	case AttentionItemActionsOpen:
+		return true
+	case AttentionItemActionsReopen:
 		return true
 	case AttentionItemActionsReply:
 		return true
@@ -3309,14 +3339,16 @@ func (e BlockedDomainAdmission) Valid() bool {
 
 // Defines values for BlockedDomainReasonCode.
 const (
-	BlockedDomainReasonCodeBulkSender     BlockedDomainReasonCode = "bulk_sender"
-	BlockedDomainReasonCodeCompanyCreated BlockedDomainReasonCode = "company_created"
-	BlockedDomainReasonCodeKeptAsCompany  BlockedDomainReasonCode = "kept_as_company"
-	BlockedDomainReasonCodeNearDuplicate  BlockedDomainReasonCode = "near_duplicate"
-	BlockedDomainReasonCodeStaleEvidence  BlockedDomainReasonCode = "stale_evidence"
-	BlockedDomainReasonCodeStated         BlockedDomainReasonCode = "stated"
-	BlockedDomainReasonCodeUnevidenced    BlockedDomainReasonCode = "unevidenced"
-	BlockedDomainReasonCodeUnknown        BlockedDomainReasonCode = "unknown"
+	BlockedDomainReasonCodeBulkSender        BlockedDomainReasonCode = "bulk_sender"
+	BlockedDomainReasonCodeCompanyCreated    BlockedDomainReasonCode = "company_created"
+	BlockedDomainReasonCodeForwardedIdentity BlockedDomainReasonCode = "forwarded_identity"
+	BlockedDomainReasonCodeKeptAsCompany     BlockedDomainReasonCode = "kept_as_company"
+	BlockedDomainReasonCodeNearDuplicate     BlockedDomainReasonCode = "near_duplicate"
+	BlockedDomainReasonCodeReservedDomain    BlockedDomainReasonCode = "reserved_domain"
+	BlockedDomainReasonCodeStaleEvidence     BlockedDomainReasonCode = "stale_evidence"
+	BlockedDomainReasonCodeStated            BlockedDomainReasonCode = "stated"
+	BlockedDomainReasonCodeUnevidenced       BlockedDomainReasonCode = "unevidenced"
+	BlockedDomainReasonCodeUnknown           BlockedDomainReasonCode = "unknown"
 )
 
 // Valid indicates whether the value is a known member of the BlockedDomainReasonCode enum.
@@ -3326,9 +3358,13 @@ func (e BlockedDomainReasonCode) Valid() bool {
 		return true
 	case BlockedDomainReasonCodeCompanyCreated:
 		return true
+	case BlockedDomainReasonCodeForwardedIdentity:
+		return true
 	case BlockedDomainReasonCodeKeptAsCompany:
 		return true
 	case BlockedDomainReasonCodeNearDuplicate:
+		return true
+	case BlockedDomainReasonCodeReservedDomain:
 		return true
 	case BlockedDomainReasonCodeStaleEvidence:
 		return true
@@ -3366,22 +3402,28 @@ func (e BlockedDomainSenderKind) Valid() bool {
 
 // Defines values for BlockedDomainSource.
 const (
-	BlockedDomainSourceHeuristic     BlockedDomainSource = "heuristic"
-	BlockedDomainSourceHuman         BlockedDomainSource = "human"
-	BlockedDomainSourceNearDuplicate BlockedDomainSource = "near_duplicate"
-	BlockedDomainSourceStaleEvidence BlockedDomainSource = "stale_evidence"
-	BlockedDomainSourceUnevidenced   BlockedDomainSource = "unevidenced"
-	BlockedDomainSourceVerdict       BlockedDomainSource = "verdict"
+	BlockedDomainSourceForwardedIdentity BlockedDomainSource = "forwarded_identity"
+	BlockedDomainSourceHeuristic         BlockedDomainSource = "heuristic"
+	BlockedDomainSourceHuman             BlockedDomainSource = "human"
+	BlockedDomainSourceNearDuplicate     BlockedDomainSource = "near_duplicate"
+	BlockedDomainSourceReservedDomain    BlockedDomainSource = "reserved_domain"
+	BlockedDomainSourceStaleEvidence     BlockedDomainSource = "stale_evidence"
+	BlockedDomainSourceUnevidenced       BlockedDomainSource = "unevidenced"
+	BlockedDomainSourceVerdict           BlockedDomainSource = "verdict"
 )
 
 // Valid indicates whether the value is a known member of the BlockedDomainSource enum.
 func (e BlockedDomainSource) Valid() bool {
 	switch e {
+	case BlockedDomainSourceForwardedIdentity:
+		return true
 	case BlockedDomainSourceHeuristic:
 		return true
 	case BlockedDomainSourceHuman:
 		return true
 	case BlockedDomainSourceNearDuplicate:
+		return true
+	case BlockedDomainSourceReservedDomain:
 		return true
 	case BlockedDomainSourceStaleEvidence:
 		return true
@@ -8692,6 +8734,108 @@ func (e DataSubjectRequestSubjectKind) Valid() bool {
 	}
 }
 
+// Defines values for DataTaskControlAction.
+const (
+	DataTaskControlActionEstimate DataTaskControlAction = "estimate"
+	DataTaskControlActionPause    DataTaskControlAction = "pause"
+	DataTaskControlActionResume   DataTaskControlAction = "resume"
+	DataTaskControlActionRetry    DataTaskControlAction = "retry"
+)
+
+// Valid indicates whether the value is a known member of the DataTaskControlAction enum.
+func (e DataTaskControlAction) Valid() bool {
+	switch e {
+	case DataTaskControlActionEstimate:
+		return true
+	case DataTaskControlActionPause:
+		return true
+	case DataTaskControlActionResume:
+		return true
+	case DataTaskControlActionRetry:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DataTaskProgressBlockedReason.
+const (
+	DataTaskProgressBlockedReasonEarlierStep          DataTaskProgressBlockedReason = "earlier_step"
+	DataTaskProgressBlockedReasonFailed               DataTaskProgressBlockedReason = "failed"
+	DataTaskProgressBlockedReasonMissingPrerequisite  DataTaskProgressBlockedReason = "missing_prerequisite"
+	DataTaskProgressBlockedReasonNewerReleaseRequired DataTaskProgressBlockedReason = "newer_release_required"
+	DataTaskProgressBlockedReasonPaused               DataTaskProgressBlockedReason = "paused"
+	DataTaskProgressBlockedReasonRetryWait            DataTaskProgressBlockedReason = "retry_wait"
+	DataTaskProgressBlockedReasonReviewRequired       DataTaskProgressBlockedReason = "review_required"
+	DataTaskProgressBlockedReasonWaitingForWorker     DataTaskProgressBlockedReason = "waiting_for_worker"
+)
+
+// Valid indicates whether the value is a known member of the DataTaskProgressBlockedReason enum.
+func (e DataTaskProgressBlockedReason) Valid() bool {
+	switch e {
+	case DataTaskProgressBlockedReasonEarlierStep:
+		return true
+	case DataTaskProgressBlockedReasonFailed:
+		return true
+	case DataTaskProgressBlockedReasonMissingPrerequisite:
+		return true
+	case DataTaskProgressBlockedReasonNewerReleaseRequired:
+		return true
+	case DataTaskProgressBlockedReasonPaused:
+		return true
+	case DataTaskProgressBlockedReasonRetryWait:
+		return true
+	case DataTaskProgressBlockedReasonReviewRequired:
+		return true
+	case DataTaskProgressBlockedReasonWaitingForWorker:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DataTaskProgressReviewKind.
+const (
+	DataTaskProgressReviewKindHomeAttention DataTaskProgressReviewKind = "home_attention"
+)
+
+// Valid indicates whether the value is a known member of the DataTaskProgressReviewKind enum.
+func (e DataTaskProgressReviewKind) Valid() bool {
+	switch e {
+	case DataTaskProgressReviewKindHomeAttention:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DataTaskProgressStatus.
+const (
+	DataTaskProgressStatusDone    DataTaskProgressStatus = "done"
+	DataTaskProgressStatusFailed  DataTaskProgressStatus = "failed"
+	DataTaskProgressStatusPaused  DataTaskProgressStatus = "paused"
+	DataTaskProgressStatusPending DataTaskProgressStatus = "pending"
+	DataTaskProgressStatusRunning DataTaskProgressStatus = "running"
+)
+
+// Valid indicates whether the value is a known member of the DataTaskProgressStatus enum.
+func (e DataTaskProgressStatus) Valid() bool {
+	switch e {
+	case DataTaskProgressStatusDone:
+		return true
+	case DataTaskProgressStatusFailed:
+		return true
+	case DataTaskProgressStatusPaused:
+		return true
+	case DataTaskProgressStatusPending:
+		return true
+	case DataTaskProgressStatusRunning:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DealCommercialMotion.
 const (
 	DealCommercialMotionCrossSell        DealCommercialMotion = "cross_sell"
@@ -9193,6 +9337,33 @@ func (e DirectCommunicationSendRequestReasonCode) Valid() bool {
 	case DirectCommunicationSendRequestReasonCodeLegalObligation:
 		return true
 	case DirectCommunicationSendRequestReasonCodeOther:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DismissDealSuggestionRequestReason.
+const (
+	DismissDealSuggestionRequestReasonAlreadyTracked DismissDealSuggestionRequestReason = "already_tracked"
+	DismissDealSuggestionRequestReasonHistorical     DismissDealSuggestionRequestReason = "historical"
+	DismissDealSuggestionRequestReasonNotADeal       DismissDealSuggestionRequestReason = "not_a_deal"
+	DismissDealSuggestionRequestReasonOther          DismissDealSuggestionRequestReason = "other"
+	DismissDealSuggestionRequestReasonWrongCompany   DismissDealSuggestionRequestReason = "wrong_company"
+)
+
+// Valid indicates whether the value is a known member of the DismissDealSuggestionRequestReason enum.
+func (e DismissDealSuggestionRequestReason) Valid() bool {
+	switch e {
+	case DismissDealSuggestionRequestReasonAlreadyTracked:
+		return true
+	case DismissDealSuggestionRequestReasonHistorical:
+		return true
+	case DismissDealSuggestionRequestReasonNotADeal:
+		return true
+	case DismissDealSuggestionRequestReasonOther:
+		return true
+	case DismissDealSuggestionRequestReasonWrongCompany:
 		return true
 	default:
 		return false
@@ -10678,6 +10849,96 @@ func (e HistoryEdgeOtherEntityType) Valid() bool {
 	}
 }
 
+// Defines values for HomeRepairTaskAction.
+const (
+	HomeRepairTaskActionArchiveAutomaticReminder HomeRepairTaskAction = "archive_automatic_reminder"
+	HomeRepairTaskActionHumanReview              HomeRepairTaskAction = "human_review"
+	HomeRepairTaskActionLeaveCurrent             HomeRepairTaskAction = "leave_current"
+	HomeRepairTaskActionReclassifyMessage        HomeRepairTaskAction = "reclassify_message"
+	HomeRepairTaskActionSupersedeSuggestion      HomeRepairTaskAction = "supersede_suggestion"
+	HomeRepairTaskActionWithdrawProposal         HomeRepairTaskAction = "withdraw_proposal"
+)
+
+// Valid indicates whether the value is a known member of the HomeRepairTaskAction enum.
+func (e HomeRepairTaskAction) Valid() bool {
+	switch e {
+	case HomeRepairTaskActionArchiveAutomaticReminder:
+		return true
+	case HomeRepairTaskActionHumanReview:
+		return true
+	case HomeRepairTaskActionLeaveCurrent:
+		return true
+	case HomeRepairTaskActionReclassifyMessage:
+		return true
+	case HomeRepairTaskActionSupersedeSuggestion:
+		return true
+	case HomeRepairTaskActionWithdrawProposal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for HomeRepairTaskAfterVerdict.
+const (
+	HomeRepairTaskAfterVerdictAsksUs    HomeRepairTaskAfterVerdict = "asks_us"
+	HomeRepairTaskAfterVerdictInformsUs HomeRepairTaskAfterVerdict = "informs_us"
+)
+
+// Valid indicates whether the value is a known member of the HomeRepairTaskAfterVerdict enum.
+func (e HomeRepairTaskAfterVerdict) Valid() bool {
+	switch e {
+	case HomeRepairTaskAfterVerdictAsksUs:
+		return true
+	case HomeRepairTaskAfterVerdictInformsUs:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for HomeRepairTaskBeforeVerdict.
+const (
+	HomeRepairTaskBeforeVerdictAsksUs    HomeRepairTaskBeforeVerdict = "asks_us"
+	HomeRepairTaskBeforeVerdictInformsUs HomeRepairTaskBeforeVerdict = "informs_us"
+)
+
+// Valid indicates whether the value is a known member of the HomeRepairTaskBeforeVerdict enum.
+func (e HomeRepairTaskBeforeVerdict) Valid() bool {
+	switch e {
+	case HomeRepairTaskBeforeVerdictAsksUs:
+		return true
+	case HomeRepairTaskBeforeVerdictInformsUs:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for HomeRepairTaskSource.
+const (
+	HomeRepairTaskSourceApproval   HomeRepairTaskSource = "approval"
+	HomeRepairTaskSourceSuggestion HomeRepairTaskSource = "suggestion"
+	HomeRepairTaskSourceTask       HomeRepairTaskSource = "task"
+	HomeRepairTaskSourceVerdict    HomeRepairTaskSource = "verdict"
+)
+
+// Valid indicates whether the value is a known member of the HomeRepairTaskSource enum.
+func (e HomeRepairTaskSource) Valid() bool {
+	switch e {
+	case HomeRepairTaskSourceApproval:
+		return true
+	case HomeRepairTaskSourceSuggestion:
+		return true
+	case HomeRepairTaskSourceTask:
+		return true
+	case HomeRepairTaskSourceVerdict:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ImportDraftStep.
 const (
 	ImportDraftStepFiles ImportDraftStep = "files"
@@ -10849,6 +11110,7 @@ const (
 	ImportReasonCodeActivityTypeUnknown          ImportReasonCode = "activity_type_unknown"
 	ImportReasonCodeActivityTypeUnnamed          ImportReasonCode = "activity_type_unnamed"
 	ImportReasonCodeActivityUnlinked             ImportReasonCode = "activity_unlinked"
+	ImportReasonCodeAmountNegative               ImportReasonCode = "amount_negative"
 	ImportReasonCodeAuthorTooLong                ImportReasonCode = "author_too_long"
 	ImportReasonCodeCannotCreate                 ImportReasonCode = "cannot_create"
 	ImportReasonCodeCannotCreateTags             ImportReasonCode = "cannot_create_tags"
@@ -10972,6 +11234,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeActivityTypeUnnamed:
 		return true
 	case ImportReasonCodeActivityUnlinked:
+		return true
+	case ImportReasonCodeAmountNegative:
 		return true
 	case ImportReasonCodeAuthorTooLong:
 		return true
@@ -12142,6 +12406,27 @@ func (e LicenseEntitlementState) Valid() bool {
 	case LicenseEntitlementStateRejected:
 		return true
 	case LicenseEntitlementStateValid:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LifecyclePreviewEvidenceScope.
+const (
+	LifecyclePreviewEvidenceScopeCompany    LifecyclePreviewEvidenceScope = "company"
+	LifecyclePreviewEvidenceScopeUnknown    LifecyclePreviewEvidenceScope = "unknown"
+	LifecyclePreviewEvidenceScopeWorkstream LifecyclePreviewEvidenceScope = "workstream"
+)
+
+// Valid indicates whether the value is a known member of the LifecyclePreviewEvidenceScope enum.
+func (e LifecyclePreviewEvidenceScope) Valid() bool {
+	switch e {
+	case LifecyclePreviewEvidenceScopeCompany:
+		return true
+	case LifecyclePreviewEvidenceScopeUnknown:
+		return true
+	case LifecyclePreviewEvidenceScopeWorkstream:
 		return true
 	default:
 		return false
@@ -15073,6 +15358,111 @@ func (e ReportingBlockKind) Valid() bool {
 	}
 }
 
+// Defines values for ReportingCardWidth.
+const (
+	ReportingCardWidthFull ReportingCardWidth = "full"
+	ReportingCardWidthHalf ReportingCardWidth = "half"
+)
+
+// Valid indicates whether the value is a known member of the ReportingCardWidth enum.
+func (e ReportingCardWidth) Valid() bool {
+	switch e {
+	case ReportingCardWidthFull:
+		return true
+	case ReportingCardWidthHalf:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportingCardKind.
+const (
+	ReportingCardKindBookingsTrend     ReportingCardKind = "bookings_trend"
+	ReportingCardKindForecastSupport   ReportingCardKind = "forecast_support"
+	ReportingCardKindMetricReading     ReportingCardKind = "metric_reading"
+	ReportingCardKindOwnerAttainment   ReportingCardKind = "owner_attainment"
+	ReportingCardKindPipelineMovement  ReportingCardKind = "pipeline_movement"
+	ReportingCardKindQuestion          ReportingCardKind = "question"
+	ReportingCardKindSdrOutcomes       ReportingCardKind = "sdr_outcomes"
+	ReportingCardKindStageAge          ReportingCardKind = "stage_age"
+	ReportingCardKindStageDistribution ReportingCardKind = "stage_distribution"
+	ReportingCardKindTargetProgress    ReportingCardKind = "target_progress"
+)
+
+// Valid indicates whether the value is a known member of the ReportingCardKind enum.
+func (e ReportingCardKind) Valid() bool {
+	switch e {
+	case ReportingCardKindBookingsTrend:
+		return true
+	case ReportingCardKindForecastSupport:
+		return true
+	case ReportingCardKindMetricReading:
+		return true
+	case ReportingCardKindOwnerAttainment:
+		return true
+	case ReportingCardKindPipelineMovement:
+		return true
+	case ReportingCardKindQuestion:
+		return true
+	case ReportingCardKindSdrOutcomes:
+		return true
+	case ReportingCardKindStageAge:
+		return true
+	case ReportingCardKindStageDistribution:
+		return true
+	case ReportingCardKindTargetProgress:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportingEditionQuestionReason.
+const (
+	ReportingEditionQuestionReasonCountsOtherRecords    ReportingEditionQuestionReason = "counts_other_records"
+	ReportingEditionQuestionReasonRetentionUnconfigured ReportingEditionQuestionReason = "retention_unconfigured"
+	ReportingEditionQuestionReasonTooManyRecords        ReportingEditionQuestionReason = "too_many_records"
+	ReportingEditionQuestionReasonUnanswered            ReportingEditionQuestionReason = "unanswered"
+)
+
+// Valid indicates whether the value is a known member of the ReportingEditionQuestionReason enum.
+func (e ReportingEditionQuestionReason) Valid() bool {
+	switch e {
+	case ReportingEditionQuestionReasonCountsOtherRecords:
+		return true
+	case ReportingEditionQuestionReasonRetentionUnconfigured:
+		return true
+	case ReportingEditionQuestionReasonTooManyRecords:
+		return true
+	case ReportingEditionQuestionReasonUnanswered:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportingEditionQuestionStatus.
+const (
+	ReportingEditionQuestionStatusKept     ReportingEditionQuestionStatus = "kept"
+	ReportingEditionQuestionStatusNotKept  ReportingEditionQuestionStatus = "not_kept"
+	ReportingEditionQuestionStatusWithheld ReportingEditionQuestionStatus = "withheld"
+)
+
+// Valid indicates whether the value is a known member of the ReportingEditionQuestionStatus enum.
+func (e ReportingEditionQuestionStatus) Valid() bool {
+	switch e {
+	case ReportingEditionQuestionStatusKept:
+		return true
+	case ReportingEditionQuestionStatusNotKept:
+		return true
+	case ReportingEditionQuestionStatusWithheld:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ReportingExecutionStatus.
 const (
 	ReportingExecutionStatusFailed    ReportingExecutionStatus = "failed"
@@ -16591,6 +16981,54 @@ func (e SignalStatus) Valid() bool {
 	case SignalStatusOpen:
 		return true
 	case SignalStatusResolved:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SignalEvidenceCommercialRole.
+const (
+	SignalEvidenceCommercialRoleBuyer    SignalEvidenceCommercialRole = "buyer"
+	SignalEvidenceCommercialRolePartner  SignalEvidenceCommercialRole = "partner"
+	SignalEvidenceCommercialRoleProvider SignalEvidenceCommercialRole = "provider"
+	SignalEvidenceCommercialRoleSupplier SignalEvidenceCommercialRole = "supplier"
+	SignalEvidenceCommercialRoleUnknown  SignalEvidenceCommercialRole = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the SignalEvidenceCommercialRole enum.
+func (e SignalEvidenceCommercialRole) Valid() bool {
+	switch e {
+	case SignalEvidenceCommercialRoleBuyer:
+		return true
+	case SignalEvidenceCommercialRolePartner:
+		return true
+	case SignalEvidenceCommercialRoleProvider:
+		return true
+	case SignalEvidenceCommercialRoleSupplier:
+		return true
+	case SignalEvidenceCommercialRoleUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SignalEvidenceLifecycleScope.
+const (
+	SignalEvidenceLifecycleScopeCompany    SignalEvidenceLifecycleScope = "company"
+	SignalEvidenceLifecycleScopeUnknown    SignalEvidenceLifecycleScope = "unknown"
+	SignalEvidenceLifecycleScopeWorkstream SignalEvidenceLifecycleScope = "workstream"
+)
+
+// Valid indicates whether the value is a known member of the SignalEvidenceLifecycleScope enum.
+func (e SignalEvidenceLifecycleScope) Valid() bool {
+	switch e {
+	case SignalEvidenceLifecycleScopeCompany:
+		return true
+	case SignalEvidenceLifecycleScopeUnknown:
+		return true
+	case SignalEvidenceLifecycleScopeWorkstream:
 		return true
 	default:
 		return false
@@ -19597,6 +20035,7 @@ func (e WorklistBandBand) Valid() bool {
 // Defines values for WorklistBatchKey.
 const (
 	WorklistBatchKeyCompanyMatch     WorklistBatchKey = "company_match"
+	WorklistBatchKeyDomainQuestions  WorklistBatchKey = "domain_questions"
 	WorklistBatchKeyDuplicates       WorklistBatchKey = "duplicates"
 	WorklistBatchKeyHeldDraft        WorklistBatchKey = "held_draft"
 	WorklistBatchKeyLikelyAutomated  WorklistBatchKey = "likely_automated"
@@ -19608,6 +20047,8 @@ const (
 func (e WorklistBatchKey) Valid() bool {
 	switch e {
 	case WorklistBatchKeyCompanyMatch:
+		return true
+	case WorklistBatchKeyDomainQuestions:
 		return true
 	case WorklistBatchKeyDuplicates:
 		return true
@@ -19749,6 +20190,7 @@ const (
 	WorklistItemActionsKeep        WorklistItemActions = "keep"
 	WorklistItemActionsMerge       WorklistItemActions = "merge"
 	WorklistItemActionsOpen        WorklistItemActions = "open"
+	WorklistItemActionsReopen      WorklistItemActions = "reopen"
 	WorklistItemActionsReply       WorklistItemActions = "reply"
 	WorklistItemActionsRetry       WorklistItemActions = "retry"
 	WorklistItemActionsSetAside    WorklistItemActions = "set_aside"
@@ -19776,6 +20218,8 @@ func (e WorklistItemActions) Valid() bool {
 	case WorklistItemActionsMerge:
 		return true
 	case WorklistItemActionsOpen:
+		return true
+	case WorklistItemActionsReopen:
 		return true
 	case WorklistItemActionsReply:
 		return true
@@ -20206,6 +20650,27 @@ func (e WorklistOwnerKind) Valid() bool {
 	}
 }
 
+// Defines values for WorklistPromiseRecipientStatus.
+const (
+	WorklistPromiseRecipientStatusDismissed WorklistPromiseRecipientStatus = "dismissed"
+	WorklistPromiseRecipientStatusDone      WorklistPromiseRecipientStatus = "done"
+	WorklistPromiseRecipientStatusOpen      WorklistPromiseRecipientStatus = "open"
+)
+
+// Valid indicates whether the value is a known member of the WorklistPromiseRecipientStatus enum.
+func (e WorklistPromiseRecipientStatus) Valid() bool {
+	switch e {
+	case WorklistPromiseRecipientStatusDismissed:
+		return true
+	case WorklistPromiseRecipientStatusDone:
+		return true
+	case WorklistPromiseRecipientStatusOpen:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WorklistReachSource.
 const (
 	WorklistReachSourceAiWorkHealth        WorklistReachSource = "ai_work_health"
@@ -20304,6 +20769,7 @@ func (e WorklistReachSource) Valid() bool {
 
 // Defines values for WorklistReasonKind.
 const (
+	WorklistReasonKindAccountTermination WorklistReasonKind = "account_termination"
 	WorklistReasonKindAddressedElsewhere WorklistReasonKind = "addressed_elsewhere"
 	WorklistReasonKindApprovedAndFailed  WorklistReasonKind = "approved_and_failed"
 	WorklistReasonKindAsksNothing        WorklistReasonKind = "asks_nothing"
@@ -20351,6 +20817,8 @@ const (
 // Valid indicates whether the value is a known member of the WorklistReasonKind enum.
 func (e WorklistReasonKind) Valid() bool {
 	switch e {
+	case WorklistReasonKindAccountTermination:
+		return true
 	case WorklistReasonKindAddressedElsewhere:
 		return true
 	case WorklistReasonKindApprovedAndFailed:
@@ -20809,6 +21277,30 @@ func (e RelinkActivityJSONBodyEntityType) Valid() bool {
 	case RelinkActivityJSONBodyEntityTypeLead:
 		return true
 	case RelinkActivityJSONBodyEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PreviewHomeRepairJSONBodySource.
+const (
+	PreviewHomeRepairJSONBodySourceApproval   PreviewHomeRepairJSONBodySource = "approval"
+	PreviewHomeRepairJSONBodySourceSuggestion PreviewHomeRepairJSONBodySource = "suggestion"
+	PreviewHomeRepairJSONBodySourceTask       PreviewHomeRepairJSONBodySource = "task"
+	PreviewHomeRepairJSONBodySourceVerdict    PreviewHomeRepairJSONBodySource = "verdict"
+)
+
+// Valid indicates whether the value is a known member of the PreviewHomeRepairJSONBodySource enum.
+func (e PreviewHomeRepairJSONBodySource) Valid() bool {
+	switch e {
+	case PreviewHomeRepairJSONBodySourceApproval:
+		return true
+	case PreviewHomeRepairJSONBodySourceSuggestion:
+		return true
+	case PreviewHomeRepairJSONBodySourceTask:
+		return true
+	case PreviewHomeRepairJSONBodySourceVerdict:
 		return true
 	default:
 		return false
@@ -23368,6 +23860,9 @@ type AcceptDealSuggestionRequest struct {
 	// CloseDate A date the caller chose. Without one the deal carries the suggestion's date, marked provisional.
 	CloseDate *openapi_types.Date `json:"close_date,omitempty"`
 	Currency  *string             `json:"currency,omitempty"`
+
+	// ExistingDealId Link this evidence to a live deal at the same company instead of creating one. Requires permission to update that deal; cannot be combined with corrections.
+	ExistingDealId *openapi_types.UUID `json:"existing_deal_id,omitempty"`
 
 	// Name Without one the deal is named after the company.
 	Name *string `json:"name,omitempty"`
@@ -26082,6 +26577,18 @@ type ApprovalListResponse struct {
 	Page PageInfo   `json:"page"`
 }
 
+// ApprovalPreference defines model for ApprovalPreference.
+type ApprovalPreference struct {
+	// Kind A kind the server permits this reader to mute.
+	Kind  string `json:"kind"`
+	Muted bool   `json:"muted"`
+}
+
+// ApprovalPreferences defines model for ApprovalPreferences.
+type ApprovalPreferences struct {
+	Data []ApprovalPreference `json:"data"`
+}
+
 // ApprovalPreview A current, authorized explanation of the exact staged effect. It never grants permission or supplies execution arguments. Before values are answered only when the current record still has the staged version; stale records require restaging. Pending proposals alone carry this review-time projection. An approval attempt with stale context returns version_skew. Incomplete, unavailable or conflicting context returns 422 with approval_preview_incomplete, approval_preview_unavailable or approval_preview_conflict respectively, without recording a decision.
 type ApprovalPreview struct {
 	Changes []ApprovalPreviewChange `json:"changes"`
@@ -26090,11 +26597,23 @@ type ApprovalPreview struct {
 	Conflicts      *[]ApprovalPreviewConflict `json:"conflicts,omitempty"`
 	CurrentVersion *int                       `json:"current_version,omitempty"`
 
+	// Details Version 2 action operands, read with current permissions and kept separate from execution arguments.
+	Details *[]ApprovalPreviewDetail `json:"details,omitempty"`
+
 	// Effects Additional business effects released by this approval. Other proposals remain separate decisions.
 	Effects *[]string `json:"effects,omitempty"`
 
 	// Evidence Current evidence resolved with the reader's source permissions. An empty array replaces historical evidence.
 	Evidence *[]ApprovalEvidence `json:"evidence,omitempty"`
+
+	// Files The complete authorized set of files the action will send. Version 2 clients provide the normal file review controls.
+	Files *[]ApprovalPreviewFile `json:"files,omitempty"`
+
+	// ImportRows The complete bounded row plan. An incomplete plan cannot authorize an import.
+	ImportRows *[]ApprovalPreviewImportRow `json:"import_rows,omitempty"`
+
+	// LifecycleEvidence Current readable source and scope supporting a company lifecycle review.
+	LifecycleEvidence *LifecyclePreviewEvidence `json:"lifecycle_evidence,omitempty"`
 
 	// ReviewerReason Why this reader can answer the proposal, separate from its business reason.
 	ReviewerReason string `json:"reviewer_reason"`
@@ -26122,6 +26641,36 @@ type ApprovalPreviewConflict struct {
 	// Summary A sanitized explanation containing only facts this reader may see.
 	Summary string `json:"summary"`
 }
+
+// ApprovalPreviewDetail defines model for ApprovalPreviewDetail.
+type ApprovalPreviewDetail struct {
+	// Field Semantic field key translated by the client.
+	Field string               `json:"field"`
+	Value ApprovalPreviewValue `json:"value"`
+}
+
+// ApprovalPreviewFile defines model for ApprovalPreviewFile.
+type ApprovalPreviewFile struct {
+	ByteSize    int64              `json:"byte_size"`
+	ContentType string             `json:"content_type"`
+	Filename    string             `json:"filename"`
+	Id          openapi_types.UUID `json:"id"`
+}
+
+// ApprovalPreviewImportRow One complete import row effect, using the same checked values as the import writer.
+type ApprovalPreviewImportRow struct {
+	Changes   []ApprovalPreviewChange         `json:"changes"`
+	Details   []ApprovalPreviewDetail         `json:"details"`
+	Effects   []string                        `json:"effects"`
+	Line      int                             `json:"line"`
+	Object    string                          `json:"object"`
+	Outcome   ApprovalPreviewImportRowOutcome `json:"outcome"`
+	SourceKey string                          `json:"source_key"`
+	Target    *ApprovalPreviewValue           `json:"target,omitempty"`
+}
+
+// ApprovalPreviewImportRowOutcome defines model for ApprovalPreviewImportRow.Outcome.
+type ApprovalPreviewImportRowOutcome string
 
 // ApprovalPreviewValue defines model for ApprovalPreviewValue.
 type ApprovalPreviewValue struct {
@@ -26564,28 +27113,23 @@ type Attention struct {
 	// failure marks.
 	DidNotRun *[]AttentionItem `json:"did_not_run,omitempty"`
 
-	// DomainQuestions Domains the capture triage could not judge, whose mail belongs to THIS
-	// reader — the machine read the site, found nothing that named a company,
-	// and left the question open rather than inventing a record.
+	// DomainQuestions Up to 100 undecided domains whose captured mail belongs to this reader.
+	// Each item names the domain, its typed reason, and the permitted answer
+	// or retry actions. Forwarded identity requires an explicit company match.
+	// Discard excludes capture for this reader's mailboxes only. Deferral hides
+	// the reader's question until newer evidence arrives; the paged
+	// `/capture/domain-questions` review still includes deferred questions.
 	//
-	// Each card names the domain as `title` and why the machine stopped as
-	// `detail`. The two verbs are the whole answer a human owes: `keep` makes
-	// the company from the domain's own label, and `discard` writes a capture
-	// exclusion for this reader's mailboxes alone. Neither needs anything
-	// typed, which is why this lane can settle from a queue row where a
-	// free-text answer could not.
-	//
-	// OWNED, and that is the point of the lane. Every open question carries
-	// the mailbox owner whose mail raised it (`company_domain_disposition.owner_id`,
-	// stamped when the question opens), so it reaches the reader whose mail it
-	// is about rather than a shared pile nobody answers for. One installation's
-	// two colleagues may answer the same domain differently, and the exclusion
-	// a `discard` writes binds only the colleague who pressed it.
-	//
-	// Withheld — named in `lanes_omitted` — for a caller with no human behind
-	// it. Absent — not empty — on an installation whose feed does not read
-	// domain questions.
+	// Responsibility is recorded separately for each reader whose mail raised
+	// the question. A colleague's personal exclusion or deferral does not
+	// remove another reader's question. Callers with no human are withheld
+	// through `lanes_omitted`; an unbound reader leaves the lane absent.
 	DomainQuestions *[]AttentionItem `json:"domain_questions,omitempty"`
+
+	// DomainQuestionsMoreAvailable The domain question scan reached its limit. When true, its count is a
+	// lower bound; the paged domain review may contain further questions.
+	// Absent when the lane could not be read.
+	DomainQuestionsMoreAvailable *bool `json:"domain_questions_more_available,omitempty"`
 
 	// DoneForYou What the system did on its own, most recent first. Receipts, not questions.
 	DoneForYou []AttentionItem `json:"done_for_you"`
@@ -26704,6 +27248,12 @@ type Attention struct {
 	// behind it. Absent — not empty — on an installation whose feed does
 	// not read notices.
 	Notices *[]AttentionItem `json:"notices,omitempty"`
+
+	// NoticesMoreAvailable The unread notice scan reached its limit before equivalent decision
+	// announcements were folded. When true, an empty notices array does
+	// not prove that no other notices remain. Absent when notices could
+	// not be read. Counts describe the returned items, not the unread total.
+	NoticesMoreAvailable *bool `json:"notices_more_available,omitempty"`
 
 	// Planned Work already agreed: overdue first, then due today.
 	Planned []AttentionItem `json:"planned"`
@@ -26842,7 +27392,7 @@ type AttentionCounts struct {
 	// DidNotRun How many failed decisions this lane is CARRYING — the bounded page, as the other lanes report.
 	DidNotRun *int `json:"did_not_run,omitempty"`
 
-	// DomainQuestions How many open domain questions belong to this reader — the full count rather than a bounded page, because a reader with thirty must be told thirty and the lane offers no second page to find the rest by.
+	// DomainQuestions How many open domain questions the bounded reader returned. This is a lower bound when `domain_questions_more_available` is true. The paged domain review provides the remaining questions.
 	DomainQuestions *int `json:"domain_questions,omitempty"`
 
 	// Dsr How many unresolved data-subject requests this lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the soonest deadlines, which is the order the lane is in.
@@ -26946,12 +27496,11 @@ type AttentionItem struct {
 	// contact must choose; `complete` and `snooze` are a task's own verbs; `open` is
 	// the read-only fallback for a receipt.
 	//
-	// `keep` and `discard` are an undecided domain's pair, and they always travel
-	// together: keeping it creates the company the triage withheld, discarding it stops
-	// the caller's OWN mailboxes capturing that domain. Neither carries a body, because
-	// a domain question has no field to fill in — which is what lets it be answered from
-	// a queue row. They route to `/capture/domain-questions/{domain}/…`, keyed on the
-	// domain because an open question is named by the domain rather than by a record id.
+	// Domain questions offer `keep`, `discard`, and `reopen` where allowed. Keeping creates a
+	// company or matches the supplied `company_id`; forwarded identity requires an
+	// explicit match. Discarding stops the caller's own mailboxes capturing that
+	// domain. Reopening retries identification without settling identity. These verbs route
+	// to `/capture/domain-questions/{domain}/…`.
 	//
 	// `act`, `dismiss` and `set_aside` are the briefing queue's three, and they route
 	// to `/brief/items/{itemId}/…`. `acknowledge` is a notice's one verb and routes
@@ -27034,6 +27583,9 @@ type AttentionItem struct {
 	// the sentence in the reader's own language.
 	Detail *string `json:"detail,omitempty"`
 
+	// DomainReasonCode The domain question's reason code, rendered in the reader's language.
+	DomainReasonCode *string `json:"domain_reason_code,omitempty"`
+
 	// DueAt When this is due (tasks), or when it lapses (approvals).
 	DueAt *time.Time `json:"due_at,omitempty"`
 
@@ -27079,6 +27631,9 @@ type AttentionItem struct {
 	// BOTH sides — the queue's own both-sides-visible rule decides that, and an
 	// item the reader may not fully see is not offered as a decision at all.
 	Pair *AttentionPair `json:"pair,omitempty"`
+
+	// PromiseRecipients Visible recipient claims represented by this task; each keeps its own settlement state. Absent when unavailable.
+	PromiseRecipients *[]WorklistPromiseRecipient `json:"promise_recipients,omitempty"`
 
 	// QuietDays How many days a deal or a relationship has been idle, where the producing lane
 	// measures one. Sent by `deal_at_risk` and `relationship_decay`.
@@ -27280,6 +27835,9 @@ type AttentionRelationshipFactsStrength string
 // a reader doing a substring match to get them back — which made the supporting line
 // undrawable on this source and would have shown a rep an internal token.
 type AttentionStagedFacts struct {
+	// AccountTermination A current account termination intervention with a ready lifecycle approval preview and a named decision owner.
+	AccountTermination *bool `json:"account_termination,omitempty"`
+
 	// KnownCompany The address's domain already names a company in this workspace.
 	KnownCompany *bool `json:"known_company,omitempty"`
 
@@ -34447,7 +35005,9 @@ type CreateDataSubjectRequestKind string
 type CreateDealRequest struct {
 	// AcquisitionSource An active key from `/acquisition-sources`. A retired key is refused for a NEW assignment (422 `acquisition_source_retired`) but a deal already holding one keeps it through unrelated edits. Null clears it.
 	AcquisitionSource *string `json:"acquisition_source,omitempty"`
-	AmountMinor       *int64  `json:"amount_minor,omitempty"`
+
+	// AmountMinor The deal's one-off price in minor units of `currency`. Below zero is refused with 422 `amount_negative`.
+	AmountMinor *int64 `json:"amount_minor,omitempty"`
 
 	// CommercialMotion Why this deal exists commercially: `new_business` (first purchase by this customer), `renewal` (continuing an agreement, when that is the primary purpose), `upsell` (more capacity or a higher tier of something they already have), `cross_sell` (a different offering to an existing customer), `expansion` (growth spanning offerings, or outside the more specific choices), `existing_business` (the relationship is known, the motion is not). A combined renewal-and-growth deal takes its PRIMARY purpose — one value is a reporting classification, not revenue split across motions. Null means unknown, which is different from `existing_business`: unknown has not been asked, `existing_business` has been asked and answered "not more precisely than this".
 	CommercialMotion *CreateDealRequestCommercialMotion `json:"commercial_motion,omitempty"`
@@ -35304,6 +35864,57 @@ type DataSubjectRequestStatus string
 // external identifier, an erased subject, or one the caller may not read.
 type DataSubjectRequestSubjectKind string
 
+// DataTaskControl defines model for DataTaskControl.
+type DataTaskControl struct {
+	Action  DataTaskControlAction `json:"action"`
+	Step    string                `json:"step"`
+	TaskId  string                `json:"task_id"`
+	Version int64                 `json:"version"`
+}
+
+// DataTaskControlAction defines model for DataTaskControl.Action.
+type DataTaskControlAction string
+
+// DataTaskProgress defines model for DataTaskProgress.
+type DataTaskProgress struct {
+	BatchLimit          int                            `json:"batch_limit"`
+	Batches             int64                          `json:"batches"`
+	BlockedBy           *string                        `json:"blocked_by,omitempty"`
+	BlockedReason       *DataTaskProgressBlockedReason `json:"blocked_reason,omitempty"`
+	Changed             int64                          `json:"changed"`
+	ConsecutiveFailures int                            `json:"consecutive_failures"`
+	ErrorRemedy         *string                        `json:"error_remedy,omitempty"`
+	ErrorSentence       *string                        `json:"error_sentence,omitempty"`
+
+	// Estimate Bounded count of rows to inspect; absent means unknown, not zero.
+	Estimate             *int64                      `json:"estimate,omitempty"`
+	EstimateCapped       bool                        `json:"estimate_capped"`
+	EstimatedAt          *time.Time                  `json:"estimated_at,omitempty"`
+	FirstRelease         *string                     `json:"first_release,omitempty"`
+	LastErrorClass       *string                     `json:"last_error_class,omitempty"`
+	LastProgressAt       *time.Time                  `json:"last_progress_at,omitempty"`
+	MissingPrerequisites []string                    `json:"missing_prerequisites"`
+	NextAttemptAt        *time.Time                  `json:"next_attempt_at,omitempty"`
+	ReviewKind           *DataTaskProgressReviewKind `json:"review_kind,omitempty"`
+	RunId                *openapi_types.UUID         `json:"run_id,omitempty"`
+	Scanned              int64                       `json:"scanned"`
+	Status               DataTaskProgressStatus      `json:"status"`
+	Step                 string                      `json:"step"`
+	TaskId               string                      `json:"task_id"`
+	TaskVersion          int                         `json:"task_version"`
+	Title                string                      `json:"title"`
+	Version              int64                       `json:"version"`
+}
+
+// DataTaskProgressBlockedReason defines model for DataTaskProgress.BlockedReason.
+type DataTaskProgressBlockedReason string
+
+// DataTaskProgressReviewKind defines model for DataTaskProgress.ReviewKind.
+type DataTaskProgressReviewKind string
+
+// DataTaskProgressStatus defines model for DataTaskProgress.Status.
+type DataTaskProgressStatus string
+
 // DeactivateUserRequest defines model for DeactivateUserRequest.
 type DeactivateUserRequest struct {
 	// Reason Optional operator note that rides the user.deactivated event.
@@ -36122,8 +36733,11 @@ type DealSuggestion struct {
 	Kind DealSuggestionKind `json:"kind"`
 
 	// NameHint Which evidence leads, as a code the client words in the reader's language. The proposed deal name is the company's name and this hint; nothing in a suggestion is text copied out of a message.
-	NameHint   DealSuggestionNameHint `json:"name_hint"`
-	PipelineId openapi_types.UUID     `json:"pipeline_id"`
+	NameHint DealSuggestionNameHint `json:"name_hint"`
+
+	// OwnerId The current company owner responsible for reviewing this suggestion.
+	OwnerId    *openapi_types.UUID `json:"owner_id,omitempty"`
+	PipelineId openapi_types.UUID  `json:"pipeline_id"`
 
 	// StageId The stage the deal would open in: the default pipeline's first open stage.
 	StageId openapi_types.UUID  `json:"stage_id"`
@@ -36338,6 +36952,15 @@ type DismissDealMoveRequest struct {
 	Fingerprint string `json:"fingerprint"`
 }
 
+// DismissDealSuggestionRequest defines model for DismissDealSuggestionRequest.
+type DismissDealSuggestionRequest struct {
+	// Reason The reason kept with the audited decision. Omitted means not_a_deal.
+	Reason *DismissDealSuggestionRequestReason `json:"reason,omitempty"`
+}
+
+// DismissDealSuggestionRequestReason The reason kept with the audited decision. Omitted means not_a_deal.
+type DismissDealSuggestionRequestReason string
+
 // DismissRelationshipNudgeRequest defines model for DismissRelationshipNudgeRequest.
 type DismissRelationshipNudgeRequest struct {
 	// Days How long the contact stays off the lane, counted from now. A COUNT rather than
@@ -36358,6 +36981,23 @@ type DisqualifyLeadRequest struct {
 
 	// ReasonId An ACTIVE lead_disqualify_reason; 422 otherwise.
 	ReasonId *openapi_types.UUID `json:"reason_id,omitempty"`
+}
+
+// DomainQuestion defines model for DomainQuestion.
+type DomainQuestion struct {
+	AskedAt       time.Time  `json:"asked_at"`
+	Deferred      bool       `json:"deferred"`
+	Domain        string     `json:"domain"`
+	EffectiveUrl  *string    `json:"effective_url,omitempty"`
+	EvidenceAt    *time.Time `json:"evidence_at,omitempty"`
+	ReasonCode    string     `json:"reason_code"`
+	RedirectChain *[]string  `json:"redirect_chain,omitempty"`
+}
+
+// DomainQuestionPage defines model for DomainQuestionPage.
+type DomainQuestionPage struct {
+	Data []DomainQuestion `json:"data"`
+	Page PageInfo         `json:"page"`
 }
 
 // EmailAccess Who reads this message, and what this caller may do about that. `can_change` and
@@ -38150,6 +38790,53 @@ type HistoryEdge struct {
 // HistoryEdgeOtherEntityType defines model for HistoryEdge.OtherEntityType.
 type HistoryEdgeOtherEntityType string
 
+// HomeRepairCounts defines model for HomeRepairCounts.
+type HomeRepairCounts struct {
+	Archive    int `json:"archive"`
+	Keep       int `json:"keep"`
+	Reclassify int `json:"reclassify"`
+	Review     int `json:"review"`
+	Supersede  int `json:"supersede"`
+	Withdraw   int `json:"withdraw"`
+}
+
+// HomeRepairReview defines model for HomeRepairReview.
+type HomeRepairReview struct {
+	AsOf   time.Time        `json:"as_of"`
+	Counts HomeRepairCounts `json:"counts"`
+	Digest string           `json:"digest"`
+	Limit  int              `json:"limit"`
+
+	// PreviewToken Reader-bound classification review token; expires after fifteen minutes and is consumed on activation.
+	PreviewToken *string          `json:"preview_token,omitempty"`
+	RuleVersion  string           `json:"rule_version"`
+	Tasks        []HomeRepairTask `json:"tasks"`
+}
+
+// HomeRepairTask defines model for HomeRepairTask.
+type HomeRepairTask struct {
+	Action        HomeRepairTaskAction         `json:"action"`
+	AfterVerdict  *HomeRepairTaskAfterVerdict  `json:"after_verdict,omitempty"`
+	BeforeVerdict *HomeRepairTaskBeforeVerdict `json:"before_verdict,omitempty"`
+	Id            openapi_types.UUID           `json:"id"`
+	Reason        string                       `json:"reason"`
+	Snapshot      *string                      `json:"snapshot,omitempty"`
+	Source        *HomeRepairTaskSource        `json:"source,omitempty"`
+	Version       int64                        `json:"version"`
+}
+
+// HomeRepairTaskAction defines model for HomeRepairTask.Action.
+type HomeRepairTaskAction string
+
+// HomeRepairTaskAfterVerdict defines model for HomeRepairTask.AfterVerdict.
+type HomeRepairTaskAfterVerdict string
+
+// HomeRepairTaskBeforeVerdict defines model for HomeRepairTask.BeforeVerdict.
+type HomeRepairTaskBeforeVerdict string
+
+// HomeRepairTaskSource defines model for HomeRepairTask.Source.
+type HomeRepairTaskSource string
+
 // ImportColumn One column of the uploaded file, described well enough to map it without opening the file elsewhere.
 type ImportColumn struct {
 	// FillRate Non-empty values ÷ rows profiled. A column at 0.02 is usually a mapping mistake waiting to happen, and the number is the only way to see that before committing.
@@ -39151,7 +39838,7 @@ type InputCheck struct {
 	Status   InputCheckStatus        `json:"status"`
 
 	// Subject The record this finding is about, named and addressed — the same shape the Worklist carries, so a client routes it through the one registry rather than mapping `subject_kind` onto a screen a second time.
-	// `subject_kind` and `subject_id` stay: they are the durable fields, and a client that has them and not this still draws today's label. Null when the read that found this exception could not name the record — which today means it is not a deal, since only a deal's findings are returned at all.
+	// `subject_kind` and `subject_id` stay: they are the durable fields, and a client that has them and not this still draws today's label. Null when the read could not name the record. A signal finding opens its verified company while retaining the signal as its durable review subject.
 	Subject     *AttentionSubject     `json:"subject,omitempty"`
 	SubjectId   openapi_types.UUID    `json:"subject_id"`
 	SubjectKind InputCheckSubjectKind `json:"subject_kind"`
@@ -40698,6 +41385,16 @@ type LicenseHolder struct {
 	Subject string `json:"subject"`
 }
 
+// LifecyclePreviewEvidence Current readable source and scope supporting a company lifecycle review.
+type LifecyclePreviewEvidence struct {
+	OccurredAt time.Time                     `json:"occurred_at"`
+	Scope      LifecyclePreviewEvidenceScope `json:"scope"`
+	Workstream *string                       `json:"workstream,omitempty"`
+}
+
+// LifecyclePreviewEvidenceScope defines model for LifecyclePreviewEvidence.Scope.
+type LifecyclePreviewEvidenceScope string
+
 // LinkFinanceSourceCustomerRequest defines model for LinkFinanceSourceCustomerRequest.
 type LinkFinanceSourceCustomerRequest struct {
 	CompanyId openapi_types.UUID `json:"company_id"`
@@ -41274,6 +41971,9 @@ type MagicReceipt struct {
 	// cannot place, and is reported only to a seat holding `ai_diagnostics` read. Its
 	// absence for any other seat is not a zero.
 	NotShown []MagicNotShown `json:"not_shown"`
+
+	// NotShownCountWithheld True when the reader cannot inspect workspace-wide unsupported record counts. Those counts are withheld; absence of described actions does not establish a complete receipt.
+	NotShownCountWithheld *bool `json:"not_shown_count_withheld,omitempty"`
 
 	// Since The start of the window reported, resolved by the server. A client shows it, because "nothing happened" over an hour and over a day are different claims.
 	Since time.Time `json:"since"`
@@ -45691,9 +46391,54 @@ type ReportingCaptureStatus struct {
 	NextCaptureAt time.Time  `json:"next_capture_at"`
 }
 
+// ReportingCard defines model for ReportingCard.
+type ReportingCard struct {
+	// Id A short id the client mints. Unique within the report, so one chart kind can be placed twice.
+	Id string `json:"id"`
+
+	// Kind A chart kind, or `question`, a custom analytics question the card asks for each reader.
+	Kind   ReportingCardKind  `json:"kind"`
+	Metric *ReportingMetricID `json:"metric,omitempty"`
+
+	// Question A custom analytics question a card asks. Present exactly when the card's `kind` is
+	// `question`. The page asks it through `/analytics/query` for each reader, under their
+	// own grants and over the report's scope. Every reader of the report receives it, so it
+	// carries no filters (a filter value can name a record a reader may not open), no scope
+	// and no save. A sent edition keeps the answer its sender was given, as
+	// `ReportingEditionQuestion` describes.
+	Question *ReportingCardQuestion `json:"question,omitempty"`
+
+	// Width `half` shares a row with the next half card. A chart that needs the whole width draws full regardless.
+	Width ReportingCardWidth `json:"width"`
+}
+
+// ReportingCardWidth `half` shares a row with the next half card. A chart that needs the whole width draws full regardless.
+type ReportingCardWidth string
+
+// ReportingCardKind A chart kind, or `question`, a custom analytics question the card asks for each reader.
+type ReportingCardKind string
+
+// ReportingCardQuestion A custom analytics question a card asks. Present exactly when the card's `kind` is
+// `question`. The page asks it through `/analytics/query` for each reader, under their
+// own grants and over the report's scope. Every reader of the report receives it, so it
+// carries no filters (a filter value can name a record a reader may not open), no scope
+// and no save. A sent edition keeps the answer its sender was given, as
+// `ReportingEditionQuestion` describes.
+type ReportingCardQuestion struct {
+	// Entity The population, by name.
+	Entity  string    `json:"entity"`
+	GroupBy *[]string `json:"group_by,omitempty"`
+
+	// Limit The rows the card shows; 100 when absent.
+	Limit    *int               `json:"limit,omitempty"`
+	Measures []AnalyticsMeasure `json:"measures"`
+}
+
 // ReportingCatalog defines model for ReportingCatalog.
 type ReportingCatalog struct {
-	Metrics []ReportingMetricDefinition `json:"metrics"`
+	// EditionRetentionDays How many days a sent edition keeps its readings and question answers before retention erases them. Present for schedule authors while the policy is on.
+	EditionRetentionDays *int                        `json:"edition_retention_days,omitempty"`
+	Metrics              []ReportingMetricDefinition `json:"metrics"`
 
 	// ScheduleReady Whether saved snapshots have the retention policy required for automatic publication. Present for schedule authors.
 	ScheduleReady *bool `json:"schedule_ready,omitempty"`
@@ -45776,14 +46521,17 @@ type ReportingEdition struct {
 	Evaluation ReportingEvaluation `json:"evaluation"`
 
 	// Expired Retention removed the readings; dated metadata remains.
-	Expired        *bool              `json:"expired,omitempty"`
-	Id             openapi_types.UUID `json:"id"`
-	IntendedDueAt  time.Time          `json:"intended_due_at"`
-	Name           string             `json:"name"`
-	Redacted       bool               `json:"redacted"`
-	ReportId       openapi_types.UUID `json:"report_id"`
-	ReportRevision int64              `json:"report_revision"`
-	Withheld       bool               `json:"withheld"`
+	Expired       *bool              `json:"expired,omitempty"`
+	Id            openapi_types.UUID `json:"id"`
+	IntendedDueAt time.Time          `json:"intended_due_at"`
+	Name          string             `json:"name"`
+
+	// Questions The answer each question card of the edition's layout kept, by card id. Present when one edition is read; absent in a list and once retention or erasure removed the answers.
+	Questions      *[]ReportingEditionQuestion `json:"questions,omitempty"`
+	Redacted       bool                        `json:"redacted"`
+	ReportId       openapi_types.UUID          `json:"report_id"`
+	ReportRevision int64                       `json:"report_revision"`
+	Withheld       bool                        `json:"withheld"`
 }
 
 // ReportingEditionList defines model for ReportingEditionList.
@@ -45791,6 +46539,26 @@ type ReportingEditionList struct {
 	Data       []ReportingEdition `json:"data"`
 	NextCursor *string            `json:"next_cursor,omitempty"`
 }
+
+// ReportingEditionQuestion What a sent edition kept for one question card. The answer is the one the sender was
+// given when the edition was captured. Each row stays only while the reader may read every
+// record behind it; any other row arrives withheld, as the analytics floor withholds one.
+type ReportingEditionQuestion struct {
+	Answer *AnalyticsAnswer `json:"answer,omitempty"`
+	CardId string           `json:"card_id"`
+
+	// Reason Why no answer was kept. `retention_unconfigured`: sent editions had no retention policy. `too_many_records`: the answer rested on more records than an edition keeps. `unanswered`: the sender could not ask the question when the edition was captured. `counts_other_records`: the question measures or groups through records of other kinds than its population, which an edition does not keep.
+	Reason *ReportingEditionQuestionReason `json:"reason,omitempty"`
+
+	// Status `kept`: the answer follows. `withheld`: this reader may not ask the question now, so nothing of the answer is shown. `not_kept`: the edition kept no answer, and `reason` says why.
+	Status ReportingEditionQuestionStatus `json:"status"`
+}
+
+// ReportingEditionQuestionReason Why no answer was kept. `retention_unconfigured`: sent editions had no retention policy. `too_many_records`: the answer rested on more records than an edition keeps. `unanswered`: the sender could not ask the question when the edition was captured. `counts_other_records`: the question measures or groups through records of other kinds than its population, which an edition does not keep.
+type ReportingEditionQuestionReason string
+
+// ReportingEditionQuestionStatus `kept`: the answer follows. `withheld`: this reader may not ask the question now, so nothing of the answer is shown. `not_kept`: the edition kept no answer, and `reason` says why.
+type ReportingEditionQuestionStatus string
 
 // ReportingEvaluation defines model for ReportingEvaluation.
 type ReportingEvaluation struct {
@@ -45948,6 +46716,9 @@ type ReportingReport struct {
 	CanManage *bool     `json:"can_manage,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 
+	// Description What the report is for, in the author's words. Absent when none was given.
+	Description *string `json:"description,omitempty"`
+
 	// DraftRevision The unpublished draft revision, shown only to an editor of the report. Absent when there
 	// is no draft. Evaluate it with `revision` to preview it.
 	DraftRevision       *int64             `json:"draft_revision,omitempty"`
@@ -45976,8 +46747,11 @@ type ReportingReportDraftInput struct {
 type ReportingReportInput struct {
 	Audience       ReportingReportInputAudience `json:"audience"`
 	AudienceTeamId *openapi_types.UUID          `json:"audience_team_id,omitempty"`
-	Name           string                       `json:"name"`
-	Selection      ReportingSelection           `json:"selection"`
+
+	// Description What the report is for, in the author's words. Blank text clears it. Left out of an update, the stored one is kept.
+	Description *string            `json:"description,omitempty"`
+	Name        string             `json:"name"`
+	Selection   ReportingSelection `json:"selection"`
 }
 
 // ReportingReportInputAudience defines model for ReportingReportInput.Audience.
@@ -46048,11 +46822,27 @@ type ReportingScope struct {
 // ReportingScopeKind defines model for ReportingScope.Kind.
 type ReportingScopeKind string
 
+// ReportingSection defines model for ReportingSection.
+type ReportingSection struct {
+	Cards []ReportingCard `json:"cards"`
+
+	// Title The heading over this section. Absent or blank draws none.
+	Title *string `json:"title,omitempty"`
+}
+
 // ReportingSelection defines model for ReportingSelection.
 type ReportingSelection struct {
+	// Blocks The chart kinds the report draws, in order. When `layout` is present the service
+	// derives this list from it (each kind once, in the order the layout first names it)
+	// and ignores what was sent, so a client that reads only `blocks` keeps working.
 	Blocks      []ReportingBlockKind          `json:"blocks"`
 	CloseWindow ReportingSelectionCloseWindow `json:"close_window"`
 	Interval    *ReportingWindow              `json:"interval,omitempty"`
+
+	// Layout Sections of cards, in reading order. Absent means one untitled section of
+	// full-width cards in `blocks` order. A report holds at most 20 cards in total,
+	// counted across all its sections.
+	Layout      *[]ReportingSection           `json:"layout,omitempty"`
 	Metrics     []ReportingMetricID           `json:"metrics"`
 	Period      ReportingSelectionPeriod      `json:"period"`
 	PipelineId  *openapi_types.UUID           `json:"pipeline_id,omitempty"`
@@ -46159,6 +46949,9 @@ type RescheduleSendRequest struct {
 
 // ResolveInputCheck defines model for ResolveInputCheck.
 type ResolveInputCheck struct {
+	// DealId For fixed_record on an unlinked signal, file its source evidence on this deal at the same company and settle the signal in the same transaction.
+	DealId *openapi_types.UUID `json:"deal_id,omitempty"`
+
 	// EvidenceRef What was looked at, for an answer that rests on something.
 	EvidenceRef *string `json:"evidence_ref,omitempty"`
 
@@ -47846,10 +48639,30 @@ type SignalStatus string
 
 // SignalEvidence defines model for SignalEvidence.
 type SignalEvidence struct {
-	Snippet    string                    `json:"snippet"`
-	SourceId   *string                   `json:"source_id,omitempty"`
-	SourceType *SignalEvidenceSourceType `json:"source_type,omitempty"`
+	// BuyerContactId The buyer identified among the cited source’s verified participants.
+	BuyerContactId *openapi_types.UUID `json:"buyer_contact_id,omitempty"`
+
+	// CommercialRole The commercial role supported by the cited source, independent of recipient order.
+	CommercialRole *SignalEvidenceCommercialRole `json:"commercial_role,omitempty"`
+
+	// LifecycleScope Whether the cited words end the whole account relationship or only one engagement. Missing means unknown.
+	LifecycleScope *SignalEvidenceLifecycleScope `json:"lifecycle_scope,omitempty"`
+	Snippet        string                        `json:"snippet"`
+	SourceId       *string                       `json:"source_id,omitempty"`
+
+	// SourceQuote A source span whose words are reconstructed only after source content authorization. Offsets count UTF-8 bytes after collapsing whitespace; the digest covers the entire normalized source message.
+	SourceQuote *SourceQuoteProof         `json:"source_quote,omitempty"`
+	SourceType  *SignalEvidenceSourceType `json:"source_type,omitempty"`
+
+	// Workstream The engagement named in the cited words, when present. Never inferred from the company name.
+	Workstream *string `json:"workstream,omitempty"`
 }
+
+// SignalEvidenceCommercialRole The commercial role supported by the cited source, independent of recipient order.
+type SignalEvidenceCommercialRole string
+
+// SignalEvidenceLifecycleScope Whether the cited words end the whole account relationship or only one engagement. Missing means unknown.
+type SignalEvidenceLifecycleScope string
 
 // SignalEvidenceSourceType defines model for SignalEvidence.SourceType.
 type SignalEvidenceSourceType string
@@ -48098,6 +48911,13 @@ type SourceAuthor struct {
 	// Via Which system the record came from (`hubspot`), so a surface can say where the attribution comes from rather than presenting it as something typed here. Null when the origin was not recorded.
 	// An import writes its rows inside a reserved `mirror:` namespace, which is machinery for the replay key and is never what a reader should see. The prefix is stripped here: a row stored as `mirror:hubspot` reads `hubspot`.
 	Via *string `json:"via,omitempty"`
+}
+
+// SourceQuoteProof A source span whose words are reconstructed only after source content authorization. Offsets count UTF-8 bytes after collapsing whitespace; the digest covers the entire normalized source message.
+type SourceQuoteProof struct {
+	End    int    `json:"end"`
+	Sha256 string `json:"sha256"`
+	Start  int    `json:"start"`
 }
 
 // Stage A pipeline stage. Mirrors the `stage` table.
@@ -49552,7 +50372,9 @@ type UpdateDataSubjectRequestStatus string
 type UpdateDealRequest struct {
 	// AcquisitionSource An active key from `/acquisition-sources`. A retired key is refused for a NEW assignment (422 `acquisition_source_retired`) but a deal already holding one keeps it through unrelated edits. Null clears it.
 	AcquisitionSource *string `json:"acquisition_source,omitempty"`
-	AmountMinor       *int64  `json:"amount_minor,omitempty"`
+
+	// AmountMinor The deal's one-off price in minor units of `currency`. Below zero is refused with 422 `amount_negative`.
+	AmountMinor *int64 `json:"amount_minor,omitempty"`
 
 	// CommercialMotion Why this deal exists commercially: `new_business` (first purchase by this customer), `renewal` (continuing an agreement, when that is the primary purpose), `upsell` (more capacity or a higher tier of something they already have), `cross_sell` (a different offering to an existing customer), `expansion` (growth spanning offerings, or outside the more specific choices), `existing_business` (the relationship is known, the motion is not). A combined renewal-and-growth deal takes its PRIMARY purpose — one value is a reporting classification, not revenue split across motions. Null means unknown, which is different from `existing_business`: unknown has not been asked, `existing_business` has been asked and answered "not more precisely than this".
 	CommercialMotion *UpdateDealRequestCommercialMotion `json:"commercial_motion,omitempty"`
@@ -52361,6 +53183,9 @@ type WorklistItem struct {
 	// where it has none, a reason in `because` says why.
 	Dispositions *[]WorklistItemDispositions `json:"dispositions,omitempty"`
 
+	// DomainReasonCode The domain question's reason code, rendered in the reader's language.
+	DomainReasonCode *string `json:"domain_reason_code,omitempty"`
+
 	// DueAt When this is due, or when the meeting starts.
 	DueAt *time.Time `json:"due_at,omitempty"`
 
@@ -52466,6 +53291,9 @@ type WorklistItem struct {
 	// Absent when the row offers no single obvious step, which is a real state
 	// rather than a gap: a dedupe pair genuinely asks the reader to choose.
 	PrimaryAction *WorklistItemPrimaryAction `json:"primary_action,omitempty"`
+
+	// PromiseRecipients Visible recipient claims represented by this task; each keeps its own settlement state. Absent when unavailable.
+	PromiseRecipients *[]WorklistPromiseRecipient `json:"promise_recipients,omitempty"`
 
 	// Recipients Everyone a `meeting_follow_up` row's follow-up goes to: the contacts the meeting
 	// is filed under, then the attendees its calendar entry resolved to a contact this
@@ -52787,6 +53615,17 @@ type WorklistPlanCoverageMember struct {
 	// UserId Whose plan this entry is about.
 	UserId openapi_types.UUID `json:"user_id"`
 }
+
+// WorklistPromiseRecipient A visible recipient's own claim on a shared deliverable. Other recipients may be outside the reader's scope.
+type WorklistPromiseRecipient struct {
+	ClaimId     openapi_types.UUID             `json:"claim_id"`
+	ContactId   openapi_types.UUID             `json:"contact_id"`
+	DisplayName string                         `json:"display_name"`
+	Status      WorklistPromiseRecipientStatus `json:"status"`
+}
+
+// WorklistPromiseRecipientStatus defines model for WorklistPromiseRecipient.Status.
+type WorklistPromiseRecipientStatus string
 
 // WorklistReach What one source contributed, in numbers that say what they counted.
 //
@@ -53685,6 +54524,22 @@ type SendMessageParams struct {
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 }
 
+// ActivateHomeRepairJSONBody defines parameters for ActivateHomeRepair.
+type ActivateHomeRepairJSONBody struct {
+	Review  HomeRepairReview `json:"review"`
+	Version int64            `json:"version"`
+}
+
+// PreviewHomeRepairJSONBody defines parameters for PreviewHomeRepair.
+type PreviewHomeRepairJSONBody struct {
+	After  *openapi_types.UUID              `json:"after,omitempty"`
+	Limit  int                              `json:"limit"`
+	Source *PreviewHomeRepairJSONBodySource `json:"source,omitempty"`
+}
+
+// PreviewHomeRepairJSONBodySource defines parameters for PreviewHomeRepair.
+type PreviewHomeRepairJSONBodySource string
+
 // ResetDataJSONBody defines parameters for ResetData.
 type ResetDataJSONBody struct {
 	// Confirmation Must equal the company name exactly.
@@ -53955,6 +54810,12 @@ type ListReportingExecutionsParams struct {
 	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
+// PreviewReportingReportAsRoleParams defines parameters for PreviewReportingReportAsRole.
+type PreviewReportingReportAsRoleParams struct {
+	Role     string `form:"role" json:"role"`
+	Revision *int64 `form:"revision,omitempty" json:"revision,omitempty"`
+}
+
 // RestoreReportingReportRevisionParams defines parameters for RestoreReportingReportRevision.
 type RestoreReportingReportRevisionParams struct {
 	IfMatch string `json:"If-Match"`
@@ -53995,8 +54856,11 @@ type ListApprovalsParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page.
-	Limit  *Limit                     `form:"limit,omitempty" json:"limit,omitempty"`
-	Status *ListApprovalsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// IncludeMuted Include the caller's muted pending proposals for explicit review; all existing visibility checks still apply. A filtered bundle can contain fewer members than its complete review.
+	IncludeMuted *bool                      `form:"include_muted,omitempty" json:"include_muted,omitempty"`
+	Status       *ListApprovalsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
 
 	// Kind Filter by proposal kind (e.g. coldstart, send_email, advance_deal, overnight).
 	Kind *string `form:"kind,omitempty" json:"kind,omitempty"`
@@ -54386,6 +55250,28 @@ type ListWorkspaceCaptureActivityParams struct {
 type ListConsumerMailBaselineParams struct {
 	// Q Case-insensitive substring filter. Absent or empty lists from the top.
 	Q *string `form:"q,omitempty" json:"q,omitempty"`
+}
+
+// ListDomainQuestionsParams defines parameters for ListDomainQuestions.
+type ListDomainQuestionsParams struct {
+	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+	// effective `sort` of the originating request (field + direction) plus the last row's keyset
+	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// together with a `sort` that differs from the one the cursor was minted under returns
+	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+	// remaining pages see, so re-issue the query without the cursor when changing filters.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Limit Max items in the page.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// KeepDomainQuestionJSONBody defines parameters for KeepDomainQuestion.
+type KeepDomainQuestionJSONBody struct {
+	// CompanyId Match to this visible, writable company instead of creating one.
+	CompanyId *openapi_types.UUID `json:"company_id,omitempty"`
 }
 
 // PurgeCaptureExclusionParams defines parameters for PurgeCaptureExclusion.
@@ -57619,6 +58505,16 @@ type CreateOfferTemplateParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// ArchiveOfferTemplateParams defines parameters for ArchiveOfferTemplate.
+type ArchiveOfferTemplateParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
 // UpdateOfferTemplateParams defines parameters for UpdateOfferTemplate.
 type UpdateOfferTemplateParams struct {
 	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
@@ -57648,6 +58544,16 @@ type UpdateOfferTemplateParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// ArchiveOfferParams defines parameters for ArchiveOffer.
+type ArchiveOfferParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
 // UpdateOfferParams defines parameters for UpdateOffer.
@@ -58020,6 +58926,16 @@ type CreateProductParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// ArchiveProductParams defines parameters for ArchiveProduct.
+type ArchiveProductParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
 // UpdateProductParams defines parameters for UpdateProduct.
@@ -60085,6 +61001,15 @@ type SendMessageJSONRequestBody = SendMessageRequest
 // UpdateActivityReviewTemplateJSONRequestBody defines body for UpdateActivityReviewTemplate for application/json ContentType.
 type UpdateActivityReviewTemplateJSONRequestBody = UpdateActivityReviewTemplateRequest
 
+// ControlDataTaskJSONRequestBody defines body for ControlDataTask for application/json ContentType.
+type ControlDataTaskJSONRequestBody = DataTaskControl
+
+// ActivateHomeRepairJSONRequestBody defines body for ActivateHomeRepair for application/json ContentType.
+type ActivateHomeRepairJSONRequestBody ActivateHomeRepairJSONBody
+
+// PreviewHomeRepairJSONRequestBody defines body for PreviewHomeRepair for application/json ContentType.
+type PreviewHomeRepairJSONRequestBody PreviewHomeRepairJSONBody
+
 // ResetDataJSONRequestBody defines body for ResetData for application/json ContentType.
 type ResetDataJSONRequestBody ResetDataJSONBody
 
@@ -60240,6 +61165,9 @@ type AddConsumerMailDomainJSONRequestBody = AddConsumerMailDomainRequest
 
 // CreateCaptureCounterpartyHoldJSONRequestBody defines body for CreateCaptureCounterpartyHold for application/json ContentType.
 type CreateCaptureCounterpartyHoldJSONRequestBody = CreateCaptureCounterpartyHoldRequest
+
+// KeepDomainQuestionJSONRequestBody defines body for KeepDomainQuestion for application/json ContentType.
+type KeepDomainQuestionJSONRequestBody KeepDomainQuestionJSONBody
 
 // CreateWorkspaceEmailDomainJSONRequestBody defines body for CreateWorkspaceEmailDomain for application/json ContentType.
 type CreateWorkspaceEmailDomainJSONRequestBody = CreateWorkspaceEmailDomainRequest
@@ -60496,6 +61424,9 @@ type ReplyDealRoomThreadJSONRequestBody = PostDealRoomCommentRequest
 // AcceptDealSuggestionJSONRequestBody defines body for AcceptDealSuggestion for application/json ContentType.
 type AcceptDealSuggestionJSONRequestBody = AcceptDealSuggestionRequest
 
+// DismissDealSuggestionJSONRequestBody defines body for DismissDealSuggestion for application/json ContentType.
+type DismissDealSuggestionJSONRequestBody = DismissDealSuggestionRequest
+
 // CreateDealJSONRequestBody defines body for CreateDeal for application/json ContentType.
 type CreateDealJSONRequestBody = CreateDealRequest
 
@@ -60693,6 +61624,9 @@ type SaveMailDraftJSONRequestBody = MailDraftInput
 
 // SetMyAgentGrantJSONRequestBody defines body for SetMyAgentGrant for application/json ContentType.
 type SetMyAgentGrantJSONRequestBody = SetMyAgentGrantRequest
+
+// UpdateApprovalPreferenceJSONRequestBody defines body for UpdateApprovalPreference for application/json ContentType.
+type UpdateApprovalPreferenceJSONRequestBody = ApprovalPreference
 
 // SaveMyBriefDeliveryJSONRequestBody defines body for SaveMyBriefDelivery for application/json ContentType.
 type SaveMyBriefDeliveryJSONRequestBody = BriefDelivery
@@ -72337,9 +73271,21 @@ type ServerInterface interface {
 	// What capture's judgement queues are holding, and in whose mailbox.
 	// (GET /admin/capture-health)
 	GetCaptureHealth(w http.ResponseWriter, r *http.Request)
+	// Read background correction progress.
+	// (GET /admin/data-tasks)
+	ListDataTasks(w http.ResponseWriter, r *http.Request)
+	// Pause, resume, retry or estimate a background correction.
+	// (POST /admin/data-tasks/control)
+	ControlDataTask(w http.ResponseWriter, r *http.Request)
 	// Which composed units are handing the core records it cannot express.
 	// (GET /admin/extension-ingest-health)
 	GetExtensionIngestHealth(w http.ResponseWriter, r *http.Request)
+	// Activate exactly the reviewed automatic Home work.
+	// (POST /admin/home-repair/activate)
+	ActivateHomeRepair(w http.ResponseWriter, r *http.Request)
+	// Review a bounded page of automatic Home work.
+	// (POST /admin/home-repair/preview)
+	PreviewHomeRepair(w http.ResponseWriter, r *http.Request)
 	// What the background system is holding, and whose work failed.
 	// (GET /admin/job-health)
 	GetJobHealth(w http.ResponseWriter, r *http.Request)
@@ -72556,6 +73502,9 @@ type ServerInterface interface {
 	// List reporting executions
 	// (GET /analytics/reports/{id}/executions)
 	ListReportingExecutions(w http.ResponseWriter, r *http.Request, id Id, params ListReportingExecutionsParams)
+	// Evaluate a saved report as a seat holding one role would read it. Human-only.
+	// (GET /analytics/reports/{id}/reader-preview)
+	PreviewReportingReportAsRole(w http.ResponseWriter, r *http.Request, id Id, params PreviewReportingReportAsRoleParams)
 	// List reporting report revisions
 	// (GET /analytics/reports/{id}/revisions)
 	ListReportingReportRevisions(w http.ResponseWriter, r *http.Request, id Id)
@@ -72805,6 +73754,9 @@ type ServerInterface interface {
 	// Lift a counterparty hold.
 	// (DELETE /capture/counterparty-holds/{id})
 	DeleteCaptureCounterpartyHold(w http.ResponseWriter, r *http.Request, id Id)
+	// Review the calling reader’s undecided domains.
+	// (GET /capture/domain-questions)
+	ListDomainQuestions(w http.ResponseWriter, r *http.Request, params ListDomainQuestionsParams)
 	// Answer an open domain question by excluding the domain from your own capture.
 	// (POST /capture/domain-questions/{domain}/discard)
 	DiscardDomainQuestion(w http.ResponseWriter, r *http.Request, domain string)
@@ -73441,7 +74393,10 @@ type ServerInterface interface {
 	// Open Deal Scout suggestions the caller may see, newest first.
 	// (GET /deal-suggestions)
 	ListDealSuggestions(w http.ResponseWriter, r *http.Request, params ListDealSuggestionsParams)
-	// Open the suggested deal, with the caller's corrections.
+	// Read one suggestion and its currently visible evidence.
+	// (GET /deal-suggestions/{id})
+	GetDealSuggestion(w http.ResponseWriter, r *http.Request, id Id)
+	// Open the suggested deal or link the evidence to an existing deal.
 	// (POST /deal-suggestions/{id}/accept)
 	AcceptDealSuggestion(w http.ResponseWriter, r *http.Request, id Id, params AcceptDealSuggestionParams)
 	// Record that the suggestion is not a deal, for the whole workspace.
@@ -73972,6 +74927,12 @@ type ServerInterface interface {
 	// What the AI is doing for THIS contact, right now and lately.
 	// (GET /me/ai-activity)
 	GetMyAiActivity(w http.ResponseWriter, r *http.Request, params GetMyAiActivityParams)
+	// Read the caller's personal approval queue preferences.
+	// (GET /me/approval-preferences)
+	ListApprovalPreferences(w http.ResponseWriter, r *http.Request)
+	// Mute or restore one kind in the caller's own queue.
+	// (PATCH /me/approval-preferences)
+	UpdateApprovalPreference(w http.ResponseWriter, r *http.Request)
 	// What the product may send you about your day and your week.
 	// (GET /me/brief-delivery)
 	GetMyBriefDelivery(w http.ResponseWriter, r *http.Request)
@@ -74061,7 +75022,7 @@ type ServerInterface interface {
 	CreateOfferTemplate(w http.ResponseWriter, r *http.Request, params CreateOfferTemplateParams)
 	// Archive (soft-delete) an offer template.
 	// (DELETE /offer-templates/{id})
-	ArchiveOfferTemplate(w http.ResponseWriter, r *http.Request, id Id)
+	ArchiveOfferTemplate(w http.ResponseWriter, r *http.Request, id Id, params ArchiveOfferTemplateParams)
 	// Get an offer template by id.
 	// (GET /offer-templates/{id})
 	GetOfferTemplate(w http.ResponseWriter, r *http.Request, id Id)
@@ -74070,7 +75031,7 @@ type ServerInterface interface {
 	UpdateOfferTemplate(w http.ResponseWriter, r *http.Request, id Id, params UpdateOfferTemplateParams)
 	// Archive (soft-delete) an offer.
 	// (DELETE /offers/{id})
-	ArchiveOffer(w http.ResponseWriter, r *http.Request, id Id)
+	ArchiveOffer(w http.ResponseWriter, r *http.Request, id Id, params ArchiveOfferParams)
 	// Get an offer with its line items and computed totals.
 	// (GET /offers/{id})
 	GetOffer(w http.ResponseWriter, r *http.Request, id Id)
@@ -74181,7 +75142,7 @@ type ServerInterface interface {
 	CreateProduct(w http.ResponseWriter, r *http.Request, params CreateProductParams)
 	// Archive (soft-delete) a product. Lines referencing it survive with their snapshot.
 	// (DELETE /products/{id})
-	ArchiveProduct(w http.ResponseWriter, r *http.Request, id Id)
+	ArchiveProduct(w http.ResponseWriter, r *http.Request, id Id, params ArchiveProductParams)
 	// Get a product by id.
 	// (GET /products/{id})
 	GetProduct(w http.ResponseWriter, r *http.Request, id Id)
@@ -75037,9 +75998,33 @@ func (_ Unimplemented) GetCaptureHealth(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Read background correction progress.
+// (GET /admin/data-tasks)
+func (_ Unimplemented) ListDataTasks(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Pause, resume, retry or estimate a background correction.
+// (POST /admin/data-tasks/control)
+func (_ Unimplemented) ControlDataTask(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Which composed units are handing the core records it cannot express.
 // (GET /admin/extension-ingest-health)
 func (_ Unimplemented) GetExtensionIngestHealth(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Activate exactly the reviewed automatic Home work.
+// (POST /admin/home-repair/activate)
+func (_ Unimplemented) ActivateHomeRepair(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Review a bounded page of automatic Home work.
+// (POST /admin/home-repair/preview)
+func (_ Unimplemented) PreviewHomeRepair(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -75472,6 +76457,12 @@ func (_ Unimplemented) EvaluateReportingReport(w http.ResponseWriter, r *http.Re
 // List reporting executions
 // (GET /analytics/reports/{id}/executions)
 func (_ Unimplemented) ListReportingExecutions(w http.ResponseWriter, r *http.Request, id Id, params ListReportingExecutionsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Evaluate a saved report as a seat holding one role would read it. Human-only.
+// (GET /analytics/reports/{id}/reader-preview)
+func (_ Unimplemented) PreviewReportingReportAsRole(w http.ResponseWriter, r *http.Request, id Id, params PreviewReportingReportAsRoleParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -75970,6 +76961,12 @@ func (_ Unimplemented) ShareCaptureCounterpartyHoldHistory(w http.ResponseWriter
 // Lift a counterparty hold.
 // (DELETE /capture/counterparty-holds/{id})
 func (_ Unimplemented) DeleteCaptureCounterpartyHold(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Review the calling reader’s undecided domains.
+// (GET /capture/domain-questions)
+func (_ Unimplemented) ListDomainQuestions(w http.ResponseWriter, r *http.Request, params ListDomainQuestionsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -77245,7 +78242,13 @@ func (_ Unimplemented) ListDealSuggestions(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Open the suggested deal, with the caller's corrections.
+// Read one suggestion and its currently visible evidence.
+// (GET /deal-suggestions/{id})
+func (_ Unimplemented) GetDealSuggestion(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Open the suggested deal or link the evidence to an existing deal.
 // (POST /deal-suggestions/{id}/accept)
 func (_ Unimplemented) AcceptDealSuggestion(w http.ResponseWriter, r *http.Request, id Id, params AcceptDealSuggestionParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -78307,6 +79310,18 @@ func (_ Unimplemented) GetMyAiActivity(w http.ResponseWriter, r *http.Request, p
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Read the caller's personal approval queue preferences.
+// (GET /me/approval-preferences)
+func (_ Unimplemented) ListApprovalPreferences(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Mute or restore one kind in the caller's own queue.
+// (PATCH /me/approval-preferences)
+func (_ Unimplemented) UpdateApprovalPreference(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // What the product may send you about your day and your week.
 // (GET /me/brief-delivery)
 func (_ Unimplemented) GetMyBriefDelivery(w http.ResponseWriter, r *http.Request) {
@@ -78483,7 +79498,7 @@ func (_ Unimplemented) CreateOfferTemplate(w http.ResponseWriter, r *http.Reques
 
 // Archive (soft-delete) an offer template.
 // (DELETE /offer-templates/{id})
-func (_ Unimplemented) ArchiveOfferTemplate(w http.ResponseWriter, r *http.Request, id Id) {
+func (_ Unimplemented) ArchiveOfferTemplate(w http.ResponseWriter, r *http.Request, id Id, params ArchiveOfferTemplateParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -78501,7 +79516,7 @@ func (_ Unimplemented) UpdateOfferTemplate(w http.ResponseWriter, r *http.Reques
 
 // Archive (soft-delete) an offer.
 // (DELETE /offers/{id})
-func (_ Unimplemented) ArchiveOffer(w http.ResponseWriter, r *http.Request, id Id) {
+func (_ Unimplemented) ArchiveOffer(w http.ResponseWriter, r *http.Request, id Id, params ArchiveOfferParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -78723,7 +79738,7 @@ func (_ Unimplemented) CreateProduct(w http.ResponseWriter, r *http.Request, par
 
 // Archive (soft-delete) a product. Lines referencing it survive with their snapshot.
 // (DELETE /products/{id})
-func (_ Unimplemented) ArchiveProduct(w http.ResponseWriter, r *http.Request, id Id) {
+func (_ Unimplemented) ArchiveProduct(w http.ResponseWriter, r *http.Request, id Id, params ArchiveProductParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -81635,6 +82650,46 @@ func (siw *ServerInterfaceWrapper) GetCaptureHealth(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// ListDataTasks operation middleware
+func (siw *ServerInterfaceWrapper) ListDataTasks(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListDataTasks(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ControlDataTask operation middleware
+func (siw *ServerInterfaceWrapper) ControlDataTask(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ControlDataTask(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetExtensionIngestHealth operation middleware
 func (siw *ServerInterfaceWrapper) GetExtensionIngestHealth(w http.ResponseWriter, r *http.Request) {
 
@@ -81646,6 +82701,46 @@ func (siw *ServerInterfaceWrapper) GetExtensionIngestHealth(w http.ResponseWrite
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetExtensionIngestHealth(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ActivateHomeRepair operation middleware
+func (siw *ServerInterfaceWrapper) ActivateHomeRepair(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ActivateHomeRepair(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewHomeRepair operation middleware
+func (siw *ServerInterfaceWrapper) PreviewHomeRepair(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewHomeRepair(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -84756,6 +85851,67 @@ func (siw *ServerInterfaceWrapper) ListReportingExecutions(w http.ResponseWriter
 	handler.ServeHTTP(w, r)
 }
 
+// PreviewReportingReportAsRole operation middleware
+func (siw *ServerInterfaceWrapper) PreviewReportingReportAsRole(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params PreviewReportingReportAsRoleParams
+
+	// ------------- Required query parameter "role" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "role", r.URL.Query(), &params.Role, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "role"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "role", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "revision" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "revision", r.URL.Query(), &params.Revision, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "revision"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "revision", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewReportingReportAsRole(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListReportingReportRevisions operation middleware
 func (siw *ServerInterfaceWrapper) ListReportingReportRevisions(w http.ResponseWriter, r *http.Request) {
 
@@ -85424,6 +86580,19 @@ func (siw *ServerInterfaceWrapper) ListApprovals(w http.ResponseWriter, r *http.
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "include_muted" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "include_muted", r.URL.Query(), &params.IncludeMuted, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "include_muted"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "include_muted", Err: err})
 		}
 		return
 	}
@@ -87793,6 +88962,58 @@ func (siw *ServerInterfaceWrapper) DeleteCaptureCounterpartyHold(w http.Response
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DeleteCaptureCounterpartyHold(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListDomainQuestions operation middleware
+func (siw *ServerInterfaceWrapper) ListDomainQuestions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListDomainQuestionsParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListDomainQuestions(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -97165,6 +98386,38 @@ func (siw *ServerInterfaceWrapper) ListDealSuggestions(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r)
 }
 
+// GetDealSuggestion operation middleware
+func (siw *ServerInterfaceWrapper) GetDealSuggestion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetDealSuggestion(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // AcceptDealSuggestion operation middleware
 func (siw *ServerInterfaceWrapper) AcceptDealSuggestion(w http.ResponseWriter, r *http.Request) {
 
@@ -104389,6 +105642,46 @@ func (siw *ServerInterfaceWrapper) GetMyAiActivity(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// ListApprovalPreferences operation middleware
+func (siw *ServerInterfaceWrapper) ListApprovalPreferences(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListApprovalPreferences(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateApprovalPreference operation middleware
+func (siw *ServerInterfaceWrapper) UpdateApprovalPreference(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateApprovalPreference(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetMyBriefDelivery operation middleware
 func (siw *ServerInterfaceWrapper) GetMyBriefDelivery(w http.ResponseWriter, r *http.Request) {
 
@@ -105274,8 +106567,32 @@ func (siw *ServerInterfaceWrapper) ArchiveOfferTemplate(w http.ResponseWriter, r
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ArchiveOfferTemplateParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ArchiveOfferTemplate(w, r, id)
+		siw.Handler.ArchiveOfferTemplate(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -105419,8 +106736,32 @@ func (siw *ServerInterfaceWrapper) ArchiveOffer(w http.ResponseWriter, r *http.R
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ArchiveOfferParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ArchiveOffer(w, r, id)
+		siw.Handler.ArchiveOffer(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -107053,8 +108394,32 @@ func (siw *ServerInterfaceWrapper) ArchiveProduct(w http.ResponseWriter, r *http
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ArchiveProductParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ArchiveProduct(w, r, id)
+		siw.Handler.ArchiveProduct(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -116770,7 +118135,19 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/admin/capture-health", wrapper.GetCaptureHealth)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/data-tasks", wrapper.ListDataTasks)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admin/data-tasks/control", wrapper.ControlDataTask)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/admin/extension-ingest-health", wrapper.GetExtensionIngestHealth)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admin/home-repair/activate", wrapper.ActivateHomeRepair)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admin/home-repair/preview", wrapper.PreviewHomeRepair)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/admin/job-health", wrapper.GetJobHealth)
@@ -116987,6 +118364,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/reports/{id}/executions", wrapper.ListReportingExecutions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/reports/{id}/reader-preview", wrapper.PreviewReportingReportAsRole)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/reports/{id}/revisions", wrapper.ListReportingReportRevisions)
@@ -117236,6 +118616,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/capture/counterparty-holds/{id}", wrapper.DeleteCaptureCounterpartyHold)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/capture/domain-questions", wrapper.ListDomainQuestions)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/capture/domain-questions/{domain}/discard", wrapper.DiscardDomainQuestion)
@@ -117874,6 +119257,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/deal-suggestions", wrapper.ListDealSuggestions)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/deal-suggestions/{id}", wrapper.GetDealSuggestion)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/deal-suggestions/{id}/accept", wrapper.AcceptDealSuggestion)
 	})
 	r.Group(func(r chi.Router) {
@@ -118403,6 +119789,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me/ai-activity", wrapper.GetMyAiActivity)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/me/approval-preferences", wrapper.ListApprovalPreferences)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/me/approval-preferences", wrapper.UpdateApprovalPreference)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me/brief-delivery", wrapper.GetMyBriefDelivery)

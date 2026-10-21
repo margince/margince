@@ -11,7 +11,7 @@ import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { Switch } from "../../design-system/switch";
 import { lockReasonOr } from "../../format/settinglocks";
 import { useT } from "../../i18n";
-import { useLeadSettings, useUpdateLeadSettings } from "./leadsources";
+import { useLeadSettings, useUpdateLeadSettings } from "../../lib/leadsources";
 import { useVocabGrants } from "./leadvocab.rows";
 
 // Every role reads these cards and only the custom_field write verbs change

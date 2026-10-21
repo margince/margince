@@ -7,7 +7,7 @@ import type { components } from "../../api/schema";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { namedSiteReadKind, stopIsConfigured } from "../companies/sitereadkind";
+import { namedSiteReadKind, stopIsConfigured } from "../../lib/sitereadkind";
 import { skipReasonText } from "./onboarding";
 import "./onboarding-live-panel.css";
 

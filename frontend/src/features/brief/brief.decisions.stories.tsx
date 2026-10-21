@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { bundle, proposal, singles } from "../../testing/brief.fixtures";
 import { commercialApproval } from "../../testing/commercial-approval";
 import {
   installFetchStub,
@@ -13,7 +14,6 @@ import {
 } from "../../testing/story-utils";
 import { deckItems } from "./brief";
 import { DecisionsSection } from "./brief.decisions";
-import { bundle, proposal, singles } from "./brief.fixtures";
 
 // WAITING ON YOU — the zone, and what the redesign gave it.
 //

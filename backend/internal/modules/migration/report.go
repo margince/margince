@@ -116,7 +116,8 @@ type ObjectReport struct {
 // the association tally. The disposition table is the honest-disclosure
 // surface — nothing is dropped without a line here.
 type Report struct {
-	Objects []ObjectReport `json:"objects"`
+	ReviewPlan *ReviewPlan    `json:"review_plan,omitempty"`
+	Objects    []ObjectReport `json:"objects"`
 	// Associations counts edges APPLIED, not edges read; AssociationsSkipped
 	// carries the rest with their reasons.
 	Associations        int            `json:"associations"`
@@ -219,6 +220,7 @@ func (r Report) mergedWith(next Report) Report {
 		associations, associationsSkipped = r.Associations, r.AssociationsSkipped
 	}
 	return Report{
+		ReviewPlan:          r.ReviewPlan,
 		Associations:        associations,
 		AssociationsSkipped: append([]SkippedAssoc(nil), associationsSkipped...),
 		Imported:            r.Imported + next.Imported,
@@ -233,6 +235,7 @@ func (r Report) mergedWith(next Report) Report {
 // commit's own edges replace. The caller counts the walks.
 func (r Report) withLeg(leg Report, startsWalk bool) Report {
 	out := Report{
+		ReviewPlan:          r.ReviewPlan,
 		Associations:        r.Associations + leg.Associations,
 		AssociationsSkipped: append(append([]SkippedAssoc(nil), r.AssociationsSkipped...), leg.AssociationsSkipped...),
 		Imported:            r.Imported + leg.Imported,

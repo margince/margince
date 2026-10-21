@@ -5,10 +5,11 @@ import {
   reportingStoryCatalog,
   reportingStoryEvaluation,
   reportingStoryFramework,
-} from "../../src/features/analytics/reporting.fixtures";
+} from "../../src/testing/reporting.fixtures";
 import * as ai from "./ai";
 import * as booking from "./booking";
 import * as capture from "./capture";
+import * as dataTasks from "./datatasks";
 import {
   agentUsageByUser,
   aiCalls,
@@ -342,6 +343,12 @@ export const routes: readonly MockRoute[] = [
   { path: "/ai/call-stats/flow", handle: ai.callStatsFlow },
   { method: "GET", path: "/ai/task-overrides", handle: reply({}) },
   { path: "/ai/routing/schema", handle: reply({}) },
+  { method: "GET", path: "/admin/data-tasks", handle: dataTasks.list },
+  {
+    method: "POST",
+    path: "/admin/data-tasks/control",
+    handle: dataTasks.control,
+  },
   { path: "/admin/job-health", handle: reply(jobHealth) },
   { path: "/admin/capture-health", handle: reply(captureHealth) },
   { path: "/admin/recovery-health", handle: reply(recoveryHealth) },

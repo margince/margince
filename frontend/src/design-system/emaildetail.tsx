@@ -72,10 +72,10 @@ export function EmailDetail({
    * Who reads this message, and the control to change it — drawn under the
    * subject, before the message.
    *
-   * Passed in rather than mounted here because the editor performs WRITES: it
-   * reaches the audience service and the roster reads, which live in `screens/`
-   * where the app's queries do. A design-system component importing those would
-   * turn the catalog into a layer that talks to the API.
+   * Passed in rather than mounted here because the editor performs writes. It
+   * reaches the audience service and the roster reads, which live with the
+   * app's queries in `lib/` and the features. A design-system component
+   * importing those would turn the catalog into a layer that talks to the API.
    *
    * Optional, so a story or a preview can draw the message without wiring the
    * writes — and absent means no region, never an empty one.
@@ -266,7 +266,7 @@ function EmailBody({
         <FiledUnder presentation={presentation} render={renderRecords} />
       </EmailEnvelope>
       <EmailText body={presentation.body ?? ""} />
-      <Attachments files={presentation.attachments} />
+      <EmailAttachments files={presentation.attachments} />
       {related?.()}
     </div>
   );
@@ -285,7 +285,9 @@ function EmailBody({
  * contract before the click. The href is the attachment endpoint that has
  * always served these bytes; nothing new is fetched here.
  */
-function Attachments({ files }: Readonly<{ files: EmailAttachmentSummary[] }>) {
+export function EmailAttachments({
+  files,
+}: Readonly<{ files: readonly EmailAttachmentSummary[] }>) {
   const { locale } = useLocale();
   const t = useT();
   if (files.length === 0) {

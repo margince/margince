@@ -124,5 +124,11 @@ func fromAuthenticated(rec connector.NormalizedRecord, from string) bool {
 		domain != "" && strings.EqualFold(auth.DMARCPassDomain, domain)
 }
 
+// inboundSenderAuthenticated is the activity's inbound_sender_authenticated
+// stamp: an inbound message whose From the receiving server authenticated.
+func inboundSenderAuthenticated(rec connector.NormalizedRecord, fields ActivityFields) bool {
+	return fields.Direction == connector.DirectionInbound && fromAuthenticated(rec, rec.Counterparty.Email)
+}
+
 // gmailAuthServer is the authserv-id Gmail names in its Authentication-Results.
 const gmailAuthServer = "mx.google.com"

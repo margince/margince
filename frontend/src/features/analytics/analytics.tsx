@@ -12,16 +12,20 @@ import { RecordTabs } from "../../design-system/recordtabs";
 import { formatDateTime } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { useCan } from "../../lib/capability";
-import { problemStatus, unwrap } from "../../lib/problem";
-import { useRoute } from "../../lib/router";
-import { stagesOfEveryPipeline } from "../deals/pipelinestages";
 import {
   openAnalyticsSection,
   SECTIONS,
   type Section,
   sectionFromAddress,
-} from "./analytics.address";
+} from "../../lib/analytics.address";
+import { useCan } from "../../lib/capability";
+import { problemStatus, unwrap } from "../../lib/problem";
+import {
+  type ReviewActions,
+  ReviewActionsContext,
+  useReviewActions,
+} from "../../lib/reviewactions";
+import { useRoute } from "../../lib/router";
 import type { Stage } from "./analytics.cells";
 import {
   type AnalyticsSelection,
@@ -36,6 +40,7 @@ import { sourceName } from "./analytics.forecast.review";
 import { MyOutcomesView } from "./analytics.outcomes";
 import { QuestionsView } from "./analytics.questions";
 import { AnalyticsScopePicker } from "./analytics.scope";
+import { stagesOfEveryPipeline } from "./pipelinestages";
 import { ReportingDefinitions } from "./reporting.definitions";
 import { ReportingLibrary } from "./reporting.library";
 import { ReportingOverview } from "./reporting.overview";
@@ -144,7 +149,10 @@ function DataCoverageView({
   );
 }
 
-export function AnalyticsScreen() {
+export function AnalyticsScreen({
+  reviewActions,
+}: Readonly<{ reviewActions?: ReviewActions }> = {}) {
+  const inheritedReviewActions = useReviewActions();
   const t = useT();
   const { locale } = useLocale();
   // Which SECTION is open is an ADDRESS, so a reader can link to one and Back
@@ -258,18 +266,20 @@ export function AnalyticsScreen() {
       />
       <div className="analytics-body">
         {DEAL_SECTIONS.includes(section) && <FirstRunNotice />}
-        <SectionBody
-          section={section}
-          locale={locale}
-          context={context.data}
-          contextQuery={context}
-          selection={selection}
-          onSelectScope={selectScope}
-          scopeControl={scopeControl}
-          stages={stagesOfEveryPipeline(pipelinesQuery.data ?? [], (name) =>
-            t("analytics.retiredPipeline", { name }),
-          )}
-        />
+        <ReviewActionsContext value={reviewActions ?? inheritedReviewActions}>
+          <SectionBody
+            section={section}
+            locale={locale}
+            context={context.data}
+            contextQuery={context}
+            selection={selection}
+            onSelectScope={selectScope}
+            scopeControl={scopeControl}
+            stages={stagesOfEveryPipeline(pipelinesQuery.data ?? [], (name) =>
+              t("analytics.retiredPipeline", { name }),
+            )}
+          />
+        </ReviewActionsContext>
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import { useEntityName } from "../../components/entityref";
 import { RecordFields } from "../../components/recordfields";
 import { useT } from "../../i18n";
+import { sourcePickOptions, useLeadSources } from "../../lib/leadsources";
 import { RecordCustomFields } from "../records/recordcustomfields";
 import { saveRecordEdit } from "../records/recordedit";
 import {
@@ -10,7 +11,6 @@ import {
 import { leadStatusLabel } from "./leadpresentation";
 import type { Lead, LeadWriter } from "./leads";
 import { leadEditFields, mapLeadUpdate } from "./leads.form";
-import { sourcePickOptions, useLeadSources } from "./leadsources";
 
 /**
  * The lead's own words, editable where they stand.

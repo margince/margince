@@ -7,8 +7,8 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { meFixture } from "../../testing/mefixture";
+import { jsonResponse, render } from "../../testing/settings.testkit";
 import { RecoveryHealthCard } from "./recoveryhealth";
-import { jsonResponse, render } from "./settings.testkit";
 
 function stubRoutes(overrides: Record<string, () => Response> = {}) {
   const sent: string[] = [];

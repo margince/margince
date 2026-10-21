@@ -69,20 +69,24 @@ func (s *Store) CreateContract(ctx context.Context, in CreateContractInput) (crm
 		if err != nil {
 			return err
 		}
-		out, err = createContractTx(ctx, tx, in, by, today, active)
+		out, err = createContractTx(ctx, tx, in, by, today, active, true)
 		return err
 	})
 	return out, err
 }
 
-func createContractTx(ctx context.Context, tx pgx.Tx, in CreateContractInput, by string, asOf time.Time, active []fieldcatalog.Column) (crmcontracts.Contract, error) {
+func createContractTx(ctx context.Context, tx pgx.Tx, in CreateContractInput, by string, asOf time.Time, active []fieldcatalog.Column, fromRequest bool) (crmcontracts.Contract, error) {
 	// Naming the counterparty is a read of it, and naming a deal is a read of
 	// that deal — both are client-supplied references to row-scoped records, so
 	// a caller may not hang an agreement off something it cannot see.
-	if err := auth.EnsureLinkTarget(ctx, tx, companyTable, in.CompanyID.UUID); err != nil {
-		return crmcontracts.Contract{}, err
+	companyProbe := auth.EnsureLinkTarget(ctx, tx, companyTable, in.CompanyID.UUID)
+	if fromRequest {
+		companyProbe = auth.NameMissingReference("company_id", companyProbe)
 	}
-	if err := ensureLinksVisible(ctx, tx, dealRef(in.DealID), projectRef(in.ProjectID)); err != nil {
+	if companyProbe != nil {
+		return crmcontracts.Contract{}, companyProbe
+	}
+	if err := ensureLinksVisible(ctx, tx, fromRequest, dealRef(in.DealID), projectRef(in.ProjectID)); err != nil {
 		return crmcontracts.Contract{}, err
 	}
 	if err := ensureLinksShareCompany(ctx, tx, in.CompanyID.UUID,
@@ -166,7 +170,7 @@ func (s *Store) UpdateContract(ctx context.Context, id ids.ContractID, in crmcon
 		// cannot see — and because the company arm of the visibility
 		// predicate enforces capture privacy while the deal arm does not,
 		// moving the anchor would strip that boundary from the row for good.
-		if err := ensureLinksVisible(ctx, tx, uuidRef(dealTable, in.DealId), uuidRef(projectTable, in.ProjectId)); err != nil {
+		if err := ensureLinksVisible(ctx, tx, true, uuidRef(dealTable, in.DealId), uuidRef(projectTable, in.ProjectId)); err != nil {
 			return err
 		}
 		anchor, err := anchorOf(existing)
@@ -449,13 +453,13 @@ func setContractFields(patch *storekit.Patch, existing crmcontracts.Contract, in
 // where most of the contract's fields are.
 func setContractTermFields(patch *storekit.Patch, existing crmcontracts.Contract, in crmcontracts.UpdateContractRequest) {
 	if in.StartsOn != nil {
-		patch.Set(startsOnColumn, existing.StartsOn, in.StartsOn.Time)
+		patch.SetDate(startsOnColumn, storekit.PlainDate(existing.StartsOn), storekit.PlainDate(in.StartsOn))
 	}
 	if in.EndsOn != nil {
-		patch.Set(endsOnColumn, existing.EndsOn, in.EndsOn.Time)
+		patch.SetDate(endsOnColumn, storekit.PlainDate(existing.EndsOn), storekit.PlainDate(in.EndsOn))
 	}
 	if in.RenewalOn != nil {
-		patch.Set("renewal_on", existing.RenewalOn, in.RenewalOn.Time)
+		patch.SetDate("renewal_on", storekit.PlainDate(existing.RenewalOn), storekit.PlainDate(in.RenewalOn))
 	}
 	if in.AutoRenew != nil {
 		patch.Set("auto_renew", existing.AutoRenew, *in.AutoRenew)
@@ -467,6 +471,6 @@ func setContractTermFields(patch *storekit.Patch, existing crmcontracts.Contract
 		patch.Set("payment_term_days", existing.PaymentTermDays, *in.PaymentTermDays)
 	}
 	if in.SignedOn != nil {
-		patch.Set("signed_on", existing.SignedOn, in.SignedOn.Time)
+		patch.SetDate("signed_on", storekit.PlainDate(existing.SignedOn), storekit.PlainDate(in.SignedOn))
 	}
 }

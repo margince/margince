@@ -241,6 +241,7 @@ var catalog = map[string]struct {
 	// How a seat wants their notices to reach them is a fact about the seat, so
 	// it rides the stream those notices ride, and only they are its subject.
 	"notification.preference_changed": {identityStreamEntity, 1},
+	"approval.preference_changed":     {identityStreamEntity, 1},
 
 	// A weekly plan belongs to one rep, so its changes ride the same identity
 	// stream a notice does. help_requested is its own type rather than another

@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen } from "storybook/test";
+import { REPORTING_FIXTURE_ZONE } from "../../testing/reporting.fixtures";
 import { installFetchStub, StoryProviders } from "../../testing/story-utils";
-import { REPORTING_FIXTURE_ZONE } from "./reporting.fixtures";
 import {
   reportingStoryRoutes,
   reportingStoryScope,

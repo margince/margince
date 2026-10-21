@@ -71,7 +71,7 @@ export function approvalAcceptable(
   return (
     approval.assignee_inactive !== true &&
     (!approval.preview ||
-      (approval.preview.version === 1 &&
+      ((approval.preview.version === 1 || approval.preview.version === 2) &&
         approval.preview.state === "ready" &&
         !approval.preview.conflicts?.some(
           (conflict) => conflict.blocks_approval,

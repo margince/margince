@@ -205,14 +205,14 @@ type suggestionInputs struct {
 	// relationship is over. Filled from the shared signal read, so the
 	// contradiction rule and the health section count one query between them.
 	contractEnded bool
-	// contractEndedSaid and contractEndedAt are that signal's own sentence and
-	// the instant it was read — the words the contradiction is checked
-	// against, carried on the citation rather than paraphrased in the reason.
-	contractEndedSaid string
-	contractEndedAt   time.Time
-	open              pipeline
-	contractStrip     contractStrip
-	scheduled         bool
+	// Current source evidence supports the conflict; legacy signals retain
+	// a summary without claiming a source date or link.
+	contractEndedSaid   string
+	contractEndedAt     time.Time
+	contractEndedSource ids.UUID
+	open                pipeline
+	contractStrip       contractStrip
+	scheduled           bool
 }
 
 // advisable reports whether this caller can be advised at all. Neither input
@@ -272,6 +272,7 @@ func gatherSuggestionInputs(
 	in.contractEnded = facts.ContractEnded
 	in.contractEndedSaid = facts.ContractEndedSaid
 	in.contractEndedAt = facts.ContractEndedAt
+	in.contractEndedSource = facts.ContractEndedSource
 	in.lifecycle = heading.lifecycle
 	in.companyName = heading.name
 	return in, nil

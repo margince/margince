@@ -7,10 +7,9 @@ import { Badge, Button, Disclosure } from "../../design-system/atoms";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
-import {
-  type ResolveAnswer,
-  ResolveSheet,
-  type ResolveSheetLabels,
+import type {
+  ResolveAnswer,
+  ResolveSheetLabels,
 } from "../../design-system/resolvesheet";
 import { formatDate, formatMoneyOrAbsent } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
@@ -19,10 +18,11 @@ import { throwProblem, unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { type AnalyticsScope, scopeQuery } from "./analytics.context";
 import { FirstCheck, Recheck } from "./analytics.forecast.firstcheck";
+import { InputCheckAnswerSheet } from "./inputcheck.answer";
 
 type InputCheck = components["schemas"]["InputCheck"];
 type Assurance = components["schemas"]["ForecastAssurance"];
-type Resolution = { id: string; answer: ResolveAnswer };
+type Resolution = { id: string; answer: ResolveAnswer; dealId?: string };
 
 // What should be checked before the call.
 //
@@ -272,16 +272,17 @@ function CheckTable({
           />
         </div>
       </PanelBody>
-      <ResolveSheet
+      <InputCheckAnswerSheet
+        check={checks.find((check) => check.id === sheet?.id)}
         key={sheet?.id}
         open={open}
         pending={resolve.isPending}
         error={resolve.error}
         labels={sheetLabels(t)}
         returnFocusTo={focusAfterClose}
-        onSubmit={(given) => {
+        onSubmit={(given, dealId) => {
           if (sheet !== null) {
-            resolve.mutate({ id: sheet.id, answer: given });
+            resolve.mutate({ id: sheet.id, answer: given, dealId });
           }
         }}
         onClose={close}
@@ -355,12 +356,13 @@ function checkColumns(
 function useResolveCheck(onResolved: (id: string) => void) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, answer }: Resolution) => {
+    mutationFn: async ({ id, answer, dealId }: Resolution) => {
       unwrap(
         await api.POST("/forecast/assurance/exceptions/{id}/resolve", {
           params: { path: { id } },
           body: {
             outcome: answer.outcome,
+            deal_id: answer.outcome === "fixed_record" ? dealId : undefined,
             reason: answer.reason,
             remind_at: answer.remindAt,
             expires_at: answer.expiresAt,
@@ -419,6 +421,7 @@ export function checkLabel(
   type: string,
 ): Parameters<ReturnType<typeof useT>>[0] {
   const known: Record<string, string> = {
+    unlinked_signal: "review.unlinkedSignal",
     close_past: "review.closePast",
     close_unconfirmed: "review.closeUnconfirmed",
     close_pushed: "review.closePushed",
@@ -434,7 +437,7 @@ export function checkLabel(
   >[0];
 }
 
-function sheetLabels(t: ReturnType<typeof useT>): ResolveSheetLabels {
+export function sheetLabels(t: ReturnType<typeof useT>): ResolveSheetLabels {
   return {
     title: t("review.sheetTitle"),
     outcomeLegend: t("review.outcomeLegend"),

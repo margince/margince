@@ -116,8 +116,8 @@ func TestAStagedPatchIsRefusedWhenItsTargetMovedBeforeTheApproval(t *testing.T) 
 			edited.Version)
 	}
 
-	if status := e.Call(t, "POST", "/v1/approvals/"+approvalID+"/approve", AnyMap{}, nil, nil); status != http.StatusOK {
-		t.Fatalf("human approve → %d", status)
+	if status := e.Call(t, "POST", "/v1/approvals/"+approvalID+"/approve", AnyMap{}, nil, &problem); status != http.StatusConflict || problem.Code != "version_skew" {
+		t.Fatalf("approving changed context → %d %q, want 409 version_skew", status, problem.Code)
 	}
 	withToken := map[string]string{"X-Approval-Token": approvalID}
 	maps.Copy(withToken, bearer)
@@ -125,10 +125,9 @@ func TestAStagedPatchIsRefusedWhenItsTargetMovedBeforeTheApproval(t *testing.T) 
 		Code   string `json:"code"`
 		Detail string `json:"detail"`
 	}{}
-	if status := e.Call(t, "PATCH", path, staged, withToken, &problem); status != http.StatusConflict ||
-		problem.Code != "version_skew" {
-		t.Fatalf("release over a moved row → %d %q, want 409 version_skew — the approval authorized the row "+
-			"the human saw, not whatever it became", status, problem.Code)
+	if status := e.Call(t, "PATCH", path, staged, withToken, &problem); status != http.StatusForbidden ||
+		problem.Code != "approval_required" {
+		t.Fatalf("release after a refused decision → %d %q, want 403 approval_required", status, problem.Code)
 	}
 	var fullName string
 	if err := e.Owner.QueryRow(t.Context(),

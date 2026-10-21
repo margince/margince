@@ -51,11 +51,12 @@ type Subject struct {
 // protected sentence outlives the protection on its source, which is how
 // narrowing after birth stops being privacy.
 type Finding struct {
-	Type      string
-	SubjectID string
-	Claim     map[string]any
-	Observed  map[string]any
-	Severity  string
+	SubjectKind string
+	Type        string
+	SubjectID   string
+	Claim       map[string]any
+	Observed    map[string]any
+	Severity    string
 	// How much money the finding puts in question. Nil where it cannot be said
 	// — different from zero, which would claim nothing is at stake.
 	AffectedMinor *int64

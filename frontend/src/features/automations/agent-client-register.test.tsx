@@ -8,12 +8,12 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { AgentClientsCard } from "./agent-clients";
 import {
   AGENT_CLIENT_SCOPES,
   agentClientList,
   GEMINI_CLIENT,
-} from "./agent-clients.fixtures";
+} from "../../testing/agent-clients.fixtures";
+import { AgentClientsCard } from "./agent-clients";
 import {
   json,
   MCP_URL,

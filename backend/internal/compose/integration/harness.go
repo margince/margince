@@ -15,7 +15,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/compose/installseam"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/contracts"
@@ -149,14 +148,7 @@ func Setup(t *testing.T) *Env {
 	// last and sees a package that has genuinely stopped.
 	testdb.AssertPoolsQuiesced(t)
 	e.Pool = pool
-	// A no-op rename: the installation-name edge is compose's, which this package
-	// cannot import, and compose's installationname suites prove it.
-	e.Contacts = contacts.NewStore(harnessDB(pool, e.WS)).
-		WithInstallationRenamer(func(context.Context, pgx.Tx, string) error { return nil })
-	e.Deals = deals.NewStore(harnessDB(pool, e.WS), installseam.Deals())
-	e.Projects = ProjectsStore(harnessDB(pool, e.WS))
-	e.Contracts = ContractsStore(harnessDB(pool, e.WS), e.Deals)
-	e.Activities = activities.NewStore(harnessDB(pool, e.WS))
+	e.bindStores(harnessDB(pool, e.WS))
 	return e
 }
 

@@ -200,9 +200,9 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	// record through the SoR provider; this folds a vocabulary word, which no
 	// provider serves, so it resolves against the tag seam instead.
 	"mergeTags":              mergeTagsCommand,
-	"scrapeCompany":          scrapeCompanyCommand,
-	"deepReadCompany":        deepReadCompanyCommand,
-	"technicalEnrichCompany": technicalEnrichCompanyCommand,
+	opScrapeCompany:          enrichCompanyCommand,
+	opDeepReadCompany:        enrichCompanyCommand,
+	opTechnicalEnrichCompany: enrichCompanyCommand,
 	"annotateMorningBrief":   annotateBriefCommand,
 	"logActivity":            logActivityCommand,
 	"createTask":             createTaskCommand,

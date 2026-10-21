@@ -8,8 +8,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
+import { day, renderWorklist, row, stub } from "../../testing/worklist.testkit";
 import { WorklistScreen } from "./worklist";
-import { day, renderWorklist, row, stub } from "./worklist.testkit";
 
 // A failed rule says where to go and look at it.
 //

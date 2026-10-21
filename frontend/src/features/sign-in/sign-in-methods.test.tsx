@@ -12,9 +12,9 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
-import { MAX_GROUP_GRANTS } from "../../screens/group-role-grants";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
-import { SEEDED_ASSIGNABLE_ROLES } from "../settings/roles.testkit";
+import { SEEDED_ASSIGNABLE_ROLES } from "../../testing/roles.testkit";
+import { MAX_GROUP_GRANTS } from "./group-role-grants";
 import { SignInMethodsCard } from "./sign-in-methods";
 
 // Which ways contacts may sign in. The list is the DEPLOYMENT's — an admin

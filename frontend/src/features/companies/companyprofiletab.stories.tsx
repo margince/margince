@@ -10,6 +10,7 @@ import {
   type RouteMap,
   StoryProviders,
 } from "../../testing/story-utils";
+import { CompanyProfileTab } from "./companies.profile";
 import { CompanyProfileForm } from "./companyprofiletab";
 
 type Company = components["schemas"]["Company"];
@@ -97,4 +98,44 @@ export const ReadOnlyBecauseArchivedDark: Story = {
   globals: { theme: "dark" },
   render: () =>
     frame({ ...company, archived_at: "2026-07-15T00:00:00Z" }, WRITER),
+};
+
+export const CompleteProfileContext: Story = {
+  render() {
+    installFetchStub({
+      "GET /me": meRoute(WRITER),
+      [`GET /companies/${COMPANY}/profile-fields`]: () =>
+        jsonResponse({ data: [] }),
+      [`GET /companies/${COMPANY}/facts`]: () => jsonResponse({ data: [] }),
+      [`GET /companies/${COMPANY}/technical-enrich/latest`]: () =>
+        jsonResponse({ lanes: [] }),
+      "GET /relationships": () =>
+        jsonResponse({
+          data: [],
+          page: { has_more: false, next_cursor: null },
+        }),
+      [`GET /companies/${COMPANY}/hierarchy-rollup`]: () =>
+        jsonResponse({
+          root_id: COMPANY,
+          scope: "tree",
+          weighted_pipeline: { amount_minor: 0, currency: "EUR" },
+          closed_won: { amount_minor: 0, currency: "EUR" },
+          activity_count_30d: 0,
+          aggregated_account_count: 1,
+          restricted_excluded: [],
+          computed_at: "2026-07-13T09:00:00Z",
+        }),
+    });
+    return (
+      <StoryProviders>
+        <CompanyProfileTab
+          active
+          company={company}
+          offerOnOverview
+          onOpenHistory={() => undefined}
+          onOpenReceipt={() => undefined}
+        />
+      </StoryProviders>
+    );
+  },
 };

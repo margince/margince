@@ -19,6 +19,7 @@ import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { dealRecordKeys, dealWinKeys } from "../../lib/activitykeys";
 import { useMemberNames } from "../../lib/membernames";
+import type { usePipelines } from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { routeHash } from "../../lib/router";
@@ -29,7 +30,6 @@ import type { Company, Deal, Pipeline, Stage } from "./deals";
 import { buildColumns } from "./deals.columns";
 import type { useDeals, useStageTotals } from "./deals.queries";
 import { useSuggestionGhosts } from "./dealsuggestion";
-import type { usePipelines } from "./pipelines.queries";
 
 /**
  * What a terminal advance says about how the deal closed, on top of the stage

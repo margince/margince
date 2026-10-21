@@ -6,6 +6,8 @@ package compose
 import (
 	"errors"
 	"fmt"
+	"slices"
+	"strings"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -76,4 +78,33 @@ func certPromiserKeys(references ...map[string]string) map[string]string {
 		}
 	}
 	return keys
+}
+
+func validateExpectedRecipients(expected []string, references map[string]string) error {
+	seen := map[string]bool{}
+	for _, key := range expected {
+		if !strings.HasPrefix(references[key], "contact:") || seen[key] {
+			return fmt.Errorf("expected recipient %q must name a distinct verified contact", key)
+		}
+		seen[key] = true
+	}
+	return nil
+}
+
+func expectedRecipientsMatch(expected, refs []string, keys map[string]string) bool {
+	if expected == nil {
+		return true
+	}
+	actual := make([]string, 0, len(refs))
+	for _, ref := range refs {
+		key, found := keys[ref]
+		if !found {
+			return false
+		}
+		actual = append(actual, key)
+	}
+	wanted := slices.Clone(expected)
+	slices.Sort(wanted)
+	slices.Sort(actual)
+	return slices.Equal(wanted, actual)
 }

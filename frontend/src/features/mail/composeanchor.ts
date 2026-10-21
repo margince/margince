@@ -7,7 +7,6 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { useRoster } from "../../components/entityref";
 import { formatDateTime } from "../../format/format";
-import { replySubject } from "../../format/replysubject";
 import { viewerZone } from "../../format/timezone";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
@@ -17,6 +16,7 @@ import { stripEveryKeyTag, withSubjectTag } from "../projects/projectrecord";
 import { keptTag } from "./composedraftcall";
 import type { RelinkKind } from "./composerelink";
 import { useRecentConversations, useThreadMessages } from "./composethread";
+import { replySubject } from "./replysubject";
 
 type Activity = components["schemas"]["Activity"];
 type ThreadProject = ReturnType<typeof useThreadProject>;

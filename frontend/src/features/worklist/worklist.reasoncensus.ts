@@ -36,6 +36,7 @@ export const KNOWN_REASONS = {
   promised: true,
   approved_and_failed: true,
   blocks_customer_work: true,
+  account_termination: true,
   routine: true,
   repeated_failure: true,
   legal_deadline: true,

@@ -78,6 +78,7 @@ var noticeClasses = []string{
 // where the two meet. A kind missing from it is refused by ClassFor rather than
 // delivered under whatever the fallback happened to be.
 var classByKind = map[string]string{
+	"data_task_failed":        classSystem,
 	"automation":              classAutomation,
 	"lead_sla":                classLeadSLA,
 	"capture_backlog_stalled": classCapture,

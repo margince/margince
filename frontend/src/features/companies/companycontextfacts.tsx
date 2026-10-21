@@ -22,7 +22,7 @@ import { confidenceLevel } from "../../design-system/trust";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { coldFieldLabel } from "../settings/coldfieldlabels";
+import { coldFieldLabel } from "../../lib/coldfieldlabels";
 import { SavedNotice } from "./company-context.notices";
 import "./companycontextfacts.css";
 

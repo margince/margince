@@ -37,6 +37,7 @@ export type ResolvedDisplayField = Readonly<{
   field: string;
   label: string;
   value: string | null;
+  href?: string;
   comparison?: Pick<DecisionDiff, "from" | "to"> | null;
   lead?: true;
 }>;

@@ -55,11 +55,12 @@ func idArg[K ids.EntityKind](u *openapi_types.UUID) *ids.ID[K] {
 	return &v
 }
 
-func contactCreateInput(req crmcontracts.CreateContactRequest) (CreateContactInput, error) {
+// ContactCreationInput keeps request conversion shared by creation and its approval preview.
+func ContactCreationInput(req crmcontracts.CreateContactRequest) (CreateContactInput, error) {
 	return contactCreateInputAdmitting(req, false)
 }
 
-// contactCreateInputFromImporter is contactCreateInput for a declared importer
+// contactCreateInputFromImporter is ContactCreationInput for a declared importer
 // (auth.DeclaredImporter, asked by the handler): it may stamp the mirror:
 // namespace. provider.go keeps the closed door.
 func contactCreateInputFromImporter(req crmcontracts.CreateContactRequest) (CreateContactInput, error) {
@@ -67,12 +68,12 @@ func contactCreateInputFromImporter(req crmcontracts.CreateContactRequest) (Crea
 }
 
 func contactCreateInputAdmitting(req crmcontracts.CreateContactRequest, importer bool) (CreateContactInput, error) {
-	fullName, err := httperr.RequireNonBlank("full_name", req.FullName)
+	fullName, err := httperr.RequireNonBlank(contactNameColumn, req.FullName)
 	if err != nil {
 		return CreateContactInput{}, err
 	}
 	req.FullName = fullName
-	source, err := httperr.RequireNonBlank("source", req.Source)
+	source, err := httperr.RequireNonBlank(fieldSource, req.Source)
 	if err != nil {
 		return CreateContactInput{}, err
 	}
@@ -219,7 +220,8 @@ func contactUpdateInput(req crmcontracts.UpdateContactRequest, ifVersion *int64)
 	return in
 }
 
-func companyCreateInput(req crmcontracts.CreateCompanyRequest) (CreateCompanyInput, error) {
+// CompanyCreationInput keeps request conversion shared by creation and its approval preview.
+func CompanyCreationInput(req crmcontracts.CreateCompanyRequest) (CreateCompanyInput, error) {
 	return companyCreateInputAdmitting(req, false)
 }
 
@@ -234,7 +236,7 @@ func companyCreateInputAdmitting(req crmcontracts.CreateCompanyRequest, importer
 		return CreateCompanyInput{}, err
 	}
 	req.DisplayName = displayName
-	source, err := httperr.RequireNonBlank("source", req.Source)
+	source, err := httperr.RequireNonBlank(fieldSource, req.Source)
 	if err != nil {
 		return CreateCompanyInput{}, err
 	}
@@ -316,27 +318,13 @@ func companyUpdateInput(req crmcontracts.UpdateCompanyRequest, ifVersion *int64)
 	return in
 }
 
-// leadCreateInput maps the create wire onto the store input, refusing a
-// client write into the importer's source-system namespace: the lead
-// store keys its idempotent replay on (source_system, source_id), so a
-// caller able to spell the reserved prefix could pre-plant a row under
-// an incumbent record id and have a later import hand it back as
-// already existing — suppressing the real record. The importer writes
-// that namespace from inside the process, never through this mapper.
-func leadCreateInput(req crmcontracts.CreateLeadRequest) (CreateLeadInput, error) {
+// LeadCreationInput refuses reserved source keys so ordinary callers cannot divert an import replay.
+func LeadCreationInput(req crmcontracts.CreateLeadRequest) (CreateLeadInput, error) {
 	return leadCreateInputAdmitting(req, false)
 }
 
-// leadCreateInputFromImporter is leadCreateInput for a declared importer — a
-// HUMAN holding import_run:create, decided by auth.DeclaredImporter at the
-// handler and nowhere else.
-//
-// The lead store keys its idempotent replay on (source_system, source_id), so
-// an import that could not spell its own namespace would have no replay key of
-// its own and would re-create every lead a crashed run had already landed.
-//
-// provider.go keeps the client door: an agent carrying its human's grants must
-// not reach this one.
+// Only a declared human importer can retain source keys across retries.
+// Agents carrying that human's grants still use the ordinary mapper.
 func leadCreateInputFromImporter(req crmcontracts.CreateLeadRequest) (CreateLeadInput, error) {
 	return leadCreateInputAdmitting(req, true)
 }
@@ -356,13 +344,13 @@ func leadCreateInputAdmitting(req crmcontracts.CreateLeadRequest, importer bool)
 			}
 		}
 	}
-	source, err := httperr.RequireNonBlank("source", req.Source)
+	source, err := httperr.RequireNonBlank(fieldSource, req.Source)
 	if err != nil {
 		return CreateLeadInput{}, err
 	}
 	req.Source = source
 	// `source` is nobody's to forge, the importer included.
-	if err := provenance.Refuse("source", req.Source); err != nil {
+	if err := provenance.Refuse(auditKeySource, req.Source); err != nil {
 		return CreateLeadInput{}, err
 	}
 	author, err := storekit.AdmitSourceAuthor(req.SourceAuthorId, req.SourceAuthorName, req.SourceSystem, importer)
@@ -382,7 +370,7 @@ func leadCreateInputAdmitting(req crmcontracts.CreateLeadRequest, importer bool)
 	}
 	// A lead's name is optional, but one that is sent is a name and not spaces.
 	if req.FullName != nil {
-		name, err := httperr.RequireNonBlank("full_name", *req.FullName)
+		name, err := httperr.RequireNonBlank(contactNameColumn, *req.FullName)
 		if err != nil {
 			return CreateLeadInput{}, err
 		}

@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -99,6 +100,10 @@ func (a approvalsAdapter) StageVolumeRelease(ctx context.Context, in agents.Volu
 
 func (a approvalsAdapter) Redeem(ctx context.Context, approvalID ids.ApprovalID, tool, diffHash string) (int64, bool, error) {
 	return a.svc.Redeem(ctx, approvalID, tool, diffHash)
+}
+
+func (a approvalsAdapter) RedeemRecords(ctx context.Context, approvalID ids.ApprovalID, tool, diffHash string) (auth.ReleasedRecordPins, error) {
+	return a.svc.RedeemRecords(ctx, approvalID, tool, diffHash)
 }
 
 // State answers a polling MCP task whether a human has decided yet. The

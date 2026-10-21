@@ -220,7 +220,7 @@ func anonymizeContactRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, eraser 
 }
 
 func purgeAnonymizedContactJudgments(ctx context.Context, tx pgx.Tx, id ids.UUID, subjectEmails []string) error {
-	if err := redactSubjectReporting(ctx, tx, ids.From[ids.ContactKind](id)); err != nil {
+	if err := redactSubjectReporting(ctx, tx, ids.From[ids.ContactKind](id), subjectEmails); err != nil {
 		return err
 	}
 	if err := redactIntroductionRequests(ctx, tx, ids.From[ids.ContactKind](id)); err != nil {

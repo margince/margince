@@ -8,6 +8,7 @@ import type { DecisionApproval } from "../../design-system/decisioncard";
 import { formatDateTime } from "../../format/format";
 import { LocaleProvider, translate } from "../../i18n";
 import { RecordZoneProvider } from "../../lib/recordzone";
+import { messageApproval } from "../../testing/message-approval";
 import { ApprovalEvidence } from "./approvalevidence";
 
 const SOURCE = "22222222-2222-4222-8222-222222222222";
@@ -76,6 +77,37 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
+
+it("shows the complete proposed message and opens its actual attachment", () => {
+  const fetcher = show(messageApproval());
+  expect(screen.getByText(/Please confirm acceptance by Friday/)).toBeVisible();
+  expect(
+    screen.getByRole("link", { name: /Delivery agreement.pdf/ }),
+  ).toHaveAttribute(
+    "href",
+    "/v1/attachments/22222222-2222-4222-8222-222222222222",
+  );
+  expect(fetcher).not.toHaveBeenCalled();
+});
+
+it.each(["unavailable", "stale", "incomplete"])(
+  "withholds the message and files when context is %s",
+  (state) => {
+    const approval = messageApproval();
+    if (!approval.preview) throw new Error("message fixture needs a preview");
+    const fetcher = show({
+      ...approval,
+      preview: { ...approval.preview, state },
+    });
+    expect(
+      screen.queryByText(/Please confirm acceptance by Friday/),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: /Delivery agreement.pdf/ }),
+    ).not.toBeInTheDocument();
+    expect(fetcher).not.toHaveBeenCalled();
+  },
+);
 
 it("names and dates the source before opening the existing activity reader", async () => {
   show();
@@ -188,4 +220,20 @@ it("opens a lifecycle proposal's authorized original meeting once", async () => 
   expect(buttons).toHaveLength(1);
   await userEvent.setup().click(buttons[0]);
   expect(await screen.findByRole("dialog")).toHaveTextContent("Recorded words");
+});
+
+it("shows the authorized sender signature under the message", () => {
+  const approval = messageApproval();
+  if (!approval.preview) throw new Error("fixture needs preview");
+  approval.preview.details = [
+    ...(approval.preview.details ?? []),
+    {
+      field: "signature_text",
+      value: { kind: "text", text: "Dana Seller — Account Director" },
+    },
+  ];
+  show(approval);
+  expect(
+    screen.getByText("Dana Seller — Account Director"),
+  ).toBeInTheDocument();
 });

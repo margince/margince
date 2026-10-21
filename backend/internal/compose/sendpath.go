@@ -307,12 +307,7 @@ func sendStore(pool *pgxpool.Pool, send SendPath) *activities.Store {
 		WithUnsubscribe(preferenceLinkAdapter{store: consent.NewStore(InstallationDB(pool))}).
 		// The disclosures a jurisdiction demands, put into the body that owes
 		// them. See compose/disclosurefooter.go.
-		WithDisclosures(disclosureAdapter{store: consent.NewStore(InstallationDB(pool)).
-			// WITH THE COUNTRY READER, which decides which pack applies. A bare
-			// store answers no country, so applicableRules finds no pack and
-			// every message silently owes nothing — the failure this seam
-			// exists to end, arriving through the wiring instead.
-			WithInstallationCountry(consent.InstallationCountryFunc(identity.CountryOf))}).
+		WithDisclosures(newDisclosureAdapter(InstallationDB(pool))).
 		WithPublicBaseURL(send.PublicBaseURL).WithSchedulingCalendar(send.Calendar).WithMeetingVault(send.MeetingVault).
 		WithSchedulingBrand(contacts.NewStore(InstallationDB(pool))).
 		WithRuntimeEnvironment(send.Environment).

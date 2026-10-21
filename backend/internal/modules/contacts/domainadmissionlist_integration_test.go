@@ -63,16 +63,7 @@ func TestTheDomainListCarriesTheQuestionsNobodyOwns(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.withholdUnreadable(ctx, t, "hello@pwc.example", "pwc.example")
-	// The owner departs. ON DELETE SET NULL is what clears the column in
-	// production; the column is set directly here because deleting an app_user
-	// row is identity's act and not this package's to perform.
-	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx,
-			`UPDATE company_domain_disposition SET owner_id = NULL WHERE domain = $1`, "pwc.example")
-		return err
-	}); err != nil {
-		t.Fatalf("clearing the owner: %v", err)
-	}
+	e.releaseQuestion(ctx, t, "pwc.example")
 
 	entries, total, err := e.store.ListDomainAdmissions(ctx, 50)
 	if err != nil {

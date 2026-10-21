@@ -132,7 +132,11 @@ const domainPendingReason = `
 	  WHEN '` + PendingStaleEvidence + `'
 	    THEN 'The newest mail from this domain is too old to trust today''s site as evidence about it.'
 	  WHEN '` + PendingNearDuplicate + `'
-	    THEN 'More than one company already carries the name this domain resolved to, so which one it belongs to is for a colleague to decide.'
+	    THEN 'An existing company carries this name. Confirm whether this domain belongs to it.'
+	  WHEN '` + PendingForwardedIdentity + `'
+	    THEN 'This domain forwards to a different site. Confirm its identity before linking a company.'
+	  WHEN '` + PendingReservedDomain + `'
+	    THEN 'Reserved domain: automatic company identification is paused.'
 	  ELSE '' END`
 
 // domainStandingWhere selects the rows this list is the right surface for: every
@@ -170,10 +174,10 @@ const domainPendingReason = `
 // Note this admits an undecided row that also carries an admission: re-withholding
 // an admitted domain leaves both columns set, and such a row belongs on a list of
 // decisions whoever owns it.
-var domainStandingWhere = `d.admission IS NOT NULL
+var domainStandingWhere = `d.admission IS NOT NULL OR d.pending_reason = '` + PendingReservedDomain + `'
 	OR (d.pending_reason IS NOT NULL AND NOT EXISTS (
-	      SELECT 1 FROM app_user u
-	       WHERE u.id = d.owner_id
+	      SELECT 1 FROM company_domain_question_reader r JOIN app_user u ON u.id = r.reader_id
+	       WHERE r.domain = d.domain
 	         AND ` + workforce.LiveMemberSQL("u") + `))`
 
 // ListDomainAdmissions returns every domain that carries a decision, plus the

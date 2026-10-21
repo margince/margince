@@ -45,11 +45,12 @@ const (
 
 // CommitmentAdmissionInput names the source and the context actually read.
 type CommitmentAdmissionInput struct {
+	Preview      bool
 	SourceID     ids.ActivityID
 	ReadMessages []ids.UUID
 }
 
-// CommitmentAdmissionEvidence carries source facts read under its row lock.
+// CommitmentAdmissionEvidence carries source facts; decision reads hold the source row lock.
 type CommitmentAdmissionEvidence struct {
 	RawCaptureID       *ids.UUID
 	CapturedMail       bool
@@ -94,7 +95,7 @@ func AdmitAutomaticCommitment(evidence CommitmentAdmissionEvidence, asOf time.Ti
 	return CommitmentCurrent
 }
 
-// CommitmentAdmissionEvidenceTx rechecks source availability at the write boundary.
+// CommitmentAdmissionEvidenceTx locks source facts for decisions, but keeps previews read-only.
 // A nil read set leaves later context unassessed; repair must not treat it as evidence of fulfillment.
 func CommitmentAdmissionEvidenceTx(ctx context.Context, tx pgx.Tx, in CommitmentAdmissionInput) (CommitmentAdmissionEvidence, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
@@ -113,7 +114,10 @@ func CommitmentAdmissionEvidenceTx(ctx context.Context, tx pgx.Tx, in Commitment
     AND later.archived_at IS NULL AND `+AutomaticMailContent+`
     AND (later.occurred_at, later.id) > (a.occurred_at, a.id)
     AND NOT coalesce(later.id = ANY($%[1]d::uuid[]), false))
- FROM activity a WHERE a.id = $%[2]d FOR UPDATE OF a`, arg(in.ReadMessages), arg(in.SourceID))
+ FROM activity a WHERE a.id = $%[2]d`, arg(in.ReadMessages), arg(in.SourceID))
+	if !in.Preview {
+		query += " FOR UPDATE OF a"
+	}
 	var evidence CommitmentAdmissionEvidence
 	if err := tx.QueryRow(ctx, query, args...).Scan(&evidence.OccurredAt, &evidence.RawCaptureID, &evidence.CapturedMail, &evidence.Meeting, &evidence.CancelledMeeting, &evidence.SourceOccurredAt, &evidence.ProviderReceivedAt, &evidence.UnreadLater); err != nil {
 		return CommitmentAdmissionEvidence{}, fmt.Errorf("activities: reading commitment admission evidence: %w", err)

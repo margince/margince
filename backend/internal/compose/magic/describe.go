@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/deals"
 )
 
 // The job names used more than once below.
@@ -90,6 +91,12 @@ func describe(e entry) (description, bool) {
 	if len(fields) == 0 {
 		return description{}, false
 	}
+	if reason := forecastCorrectionReason(evidence); reason != nil {
+		return description{
+			summary: crmcontracts.MagicSentence{Key: "magic.action.forecast_changed"},
+			reason:  reason,
+		}, true
+	}
 	values := map[string]string{"fields": strings.Join(fields, ", ")}
 	return description{
 		summary: crmcontracts.MagicSentence{Key: "magic.action.fields_changed", Values: &values},
@@ -112,6 +119,21 @@ func changedFields(before, after map[string]any) []string {
 	}
 	sort.Strings(out)
 	return out
+}
+
+func forecastCorrectionReason(evidence map[string]any) *crmcontracts.MagicSentence {
+	correction, ok := evidence[deals.CloseDateCorrectionKind].(string)
+	if !ok {
+		return nil
+	}
+	switch deals.CloseDateAction(correction) {
+	case deals.CloseDateActionDowngradeAndReview:
+		return &crmcontracts.MagicSentence{Key: "magic.why.forecast_review"}
+	case deals.CloseDateActionAutoApply, deals.CloseDateActionProvisionalConfirm:
+		return &crmcontracts.MagicSentence{Key: "magic.why.forecast_date"}
+	default:
+		return nil
+	}
 }
 
 // reasonFromEvidence turns the source an enrichment recorded into a why.

@@ -47,6 +47,8 @@ DECLARE
     'channel_provider',
     'communication_instruction',
     'currency_minor_digits',
+    'data_task_run',
+    'data_task_run_history',
     'deal_acquisition_source',
     'embed_store_binding',
     'consent_text_version',

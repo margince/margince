@@ -9,10 +9,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { rowMenuName } from "../../testing/worklist.testkit";
 import { swipeActions } from "./worklist.dispositions";
 import type { WorklistDisposition, WorklistItem } from "./worklist.queries";
 import { RowActs } from "./worklist.rowverbs";
-import { rowMenuName } from "./worklist.testkit";
 import { knownDispositions } from "./worklist.verbbutton";
 
 // Done and Not mine on a waiting row: what each says it does, before and after

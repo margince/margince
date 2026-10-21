@@ -146,6 +146,23 @@ func (s *Store) IssuePrivacyNotice(ctx context.Context, contactID ids.ContactID)
 	return s.issueLink(ctx, contactID, LinkPrivacyNotice, ids.PurposeID{}, "")
 }
 
+// PreviewConsentLink uses the mint's recipient and purpose guards without creating a token.
+func (s *Store) PreviewConsentLink(ctx context.Context, contactID ids.ContactID, purposeID ids.PurposeID) (string, error) {
+	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
+		return "", err
+	}
+	if err := httperr.RequireBodyID(purposeIDField, purposeID.UUID); err != nil {
+		return "", err
+	}
+	var address string
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		address, err = admitLinkTx(ctx, tx, linkRequest{contactID: contactID, purposeID: purposeID})
+		return err
+	})
+	return address, err
+}
+
 // IssueConsentLink mints the link a double-opt-in purpose is confirmed by.
 //
 // It is the SAME mechanism as the record-confirmation link beside it, and that

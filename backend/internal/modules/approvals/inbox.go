@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -130,6 +131,8 @@ const statusPending = "pending"
 // every type of that id, so the transport refuses a half-reference and one
 // never reaches here.
 type ListInput struct {
+	IncludeMuted bool
+	mutedFor     *ids.UUID
 	// RequestedForReader narrows personal attention before pagination.
 	RequestedForReader bool
 	RequestedForOwners []ids.UUID
@@ -200,6 +203,9 @@ func (s *Service) List(ctx context.Context, in ListInput) ([]row, storekit.Page,
 		return nil, storekit.Page{}, err
 	}
 	p, _ := principal.Actor(ctx)
+	if !in.IncludeMuted && !p.UserID.IsZero() {
+		in.mutedFor = &p.UserID
+	}
 	if in.FailedForDecider {
 		if p.UserID.IsZero() {
 			return nil, storekit.Page{}, apperrors.ErrPermissionDenied
@@ -282,31 +288,9 @@ func scanInbox(ctx context.Context, tx pgx.Tx, p principal.Principal, in ListInp
 	return capPage(out, in.Limit, nil)
 }
 
-// listForTarget answers the inbox scoped to ONE record.
-//
-// Every row shares that target, so the target-visibility half of decidable is
-// asked ONCE for the record rather than once per row — the inbox's per-row
-// probe exists only because its rows point at different records. The two halves
-// that vary by row stay in the loop: the per-kind grant check, and the self-only
-// narrowing (withheldFromOtherSeats), which is per-row because it compares the
-// caller against the seat THAT ROW was staged for and not against the target.
-//
-// A target the caller could not read — its type ungranted, or its row outside
-// their scope — answers an EMPTY list, never a refusal: nothing staged against a
-// record they cannot see is decidable, and saying so is the same
-// existence-hiding answer the record's own read gives.
-//
-// The scan is bounded at PendingScanCap, so a full scan is also a reason to
-// report has_more: past the cap this read cannot tell a client it has seen
-// everything, and claiming otherwise is the lie the flag exists to prevent.
+// A shared target can carry both live-record work and a reversal of an archived
+// promotion, so the proposal kind participates in each visibility check.
 func listForTarget(ctx context.Context, tx pgx.Tx, p principal.Principal, in ListInput, start *keysetStart) ([]row, storekit.Page, error) {
-	visible, err := targetVisible(ctx, tx, in.TargetType, in.TargetID)
-	if err != nil {
-		return nil, storekit.Page{}, err
-	}
-	if !visible {
-		return []row{}, storekit.Page{}, nil
-	}
 	q, args := approvalPageQuery(in, start)
 	batch, err := collect(ctx, tx, q, args)
 	if err != nil {
@@ -320,7 +304,7 @@ func listForTarget(ctx context.Context, tx pgx.Tx, p principal.Principal, in Lis
 		if !requestedInScope(a, p.UserID, in) {
 			return false, nil
 		}
-		return proposalReadable(ctx, tx, p, a)
+		return decidable(ctx, tx, p, a)
 	}
 	out, _, err := appendDecidable(batch, nil, in.Limit+1, granted)
 	if err != nil {
@@ -336,6 +320,9 @@ func listForTarget(ctx context.Context, tx pgx.Tx, p principal.Principal, in Lis
 // and the record page together instead of drifting between copies.
 func approvalWhere(in ListInput, from *keysetStart, arg func(any) int) string {
 	var terms []string
+	if in.mutedFor != nil {
+		terms = append(terms, fmt.Sprintf("(status <> 'pending' OR passport_id IS NOT NULL OR NOT (kind = ANY($%d)) OR NOT EXISTS (SELECT 1 FROM approval_preference pref WHERE pref.user_id = $%d AND pref.kind = approval.kind AND pref.muted))", arg(muteableKinds()), arg(*in.mutedFor)))
+	}
 	if in.Status != nil {
 		terms = append(terms, fmt.Sprintf("status = $%d", arg(*in.Status)))
 	}

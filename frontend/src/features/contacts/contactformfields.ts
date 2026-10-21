@@ -1,11 +1,15 @@
+import {
+  EMAIL_TYPE_LABEL,
+  PHONE_TYPE_LABEL,
+} from "../../format/contactchannels";
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../api/schema";
 import type { CreateField, FormRows } from "../../components/create";
-import { normalizeProfileUrl } from "../../format/profileurl";
 import type { useT } from "../../i18n";
 import { addressPatch } from "../companies/companyform";
+import { normalizeProfileUrl } from "./profileurl";
 
 // Creation and Details share the field definitions and collection mappers.
 // The update mapper sends only fields submitted by the active editor.
@@ -163,11 +167,10 @@ export function contactCreateFields(t: ReturnType<typeof useT>): CreateField[] {
           key: "email_type",
           label: "field.emailType",
           type: "select",
-          options: [
-            { value: "work", label: t("field.emailWork") },
-            { value: "personal", label: t("field.emailPersonal") },
-            { value: "other", label: t("field.emailOther") },
-          ],
+          options: Object.entries(EMAIL_TYPE_LABEL).map(([value, label]) => ({
+            value,
+            label: t(label),
+          })),
         },
       ],
       primaryKey: "is_primary",
@@ -186,12 +189,10 @@ export function contactCreateFields(t: ReturnType<typeof useT>): CreateField[] {
           key: "phone_type",
           label: "field.phoneType",
           type: "select",
-          options: [
-            { value: "work", label: t("field.phoneWork") },
-            { value: "mobile", label: t("field.phoneMobile") },
-            { value: "home", label: t("field.phoneHome") },
-            { value: "other", label: t("field.phoneOther") },
-          ],
+          options: Object.entries(PHONE_TYPE_LABEL).map(([value, label]) => ({
+            value,
+            label: t(label),
+          })),
         },
       ],
       primaryKey: "is_primary",

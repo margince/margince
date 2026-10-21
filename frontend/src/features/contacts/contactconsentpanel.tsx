@@ -1,14 +1,14 @@
 import { Mail, Phone } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
 import type { components } from "../../api/schema";
+import { interactionIcon } from "../../components/interactionchrome";
 import { Button, Modal, Skeleton } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { type Translator, useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
-import { useProviderLabel } from "../capture/channelproviders";
+import { useProviderLabel } from "../../lib/channelproviders";
 import { ConfirmDetailsAction, ConsentSection } from "../privacy/consent";
-import { interactionIcon } from "../records/interactionchrome";
 import { consentWord } from "./contactreadings";
 
 type Contact360 = components["schemas"]["Contact360"];

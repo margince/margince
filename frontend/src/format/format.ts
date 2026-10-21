@@ -17,6 +17,7 @@ export {
   formatDateTime,
   formatDayLong,
   formatDayMonth,
+  formatDayRange,
   formatTimeOfDay,
   fullDayName,
   hourInZone,

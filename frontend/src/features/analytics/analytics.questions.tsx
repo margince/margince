@@ -15,10 +15,12 @@ import { Stack } from "../../design-system/stack";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatMoneyOrAbsent } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
-import { ANALYTICS_SCHEMA_KEY } from "../../lib/analyticskeys";
+import {
+  openAnalyticsSection,
+  openSavedQuestion,
+} from "../../lib/analytics.address";
 import { unwrap } from "../../lib/problem";
 import { routeHash, useRoute } from "../../lib/router";
-import { openAnalyticsSection, openSavedQuestion } from "./analytics.address";
 import {
   type AnalyticsContext,
   type AnalyticsScope,
@@ -47,6 +49,7 @@ import {
   opLabel,
   takesValue,
 } from "./analytics.questions.vocab";
+import { useAnalyticsSchema } from "./analytics.schema";
 
 // The population a query names, as one comparable string: the page's picker
 // and a question already asked agree only when these do.
@@ -56,15 +59,6 @@ function queryScopeKey(query: Pick<AnalyticsQuery, "scope_kind" | "scope_id">) {
 
 async function askQuestion(query: AnalyticsQuery) {
   return unwrap(await api.POST("/analytics/query", { body: query }));
-}
-
-function useAnalyticsSchema() {
-  return useQuery({
-    queryKey: ANALYTICS_SCHEMA_KEY,
-    queryFn: async () => {
-      return unwrap(await api.GET("/analytics/schema", {}));
-    },
-  });
 }
 
 /**

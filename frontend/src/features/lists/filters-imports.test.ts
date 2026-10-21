@@ -49,7 +49,7 @@ const targets = new Set(
 const ELSEWHERE = new Set(["features/analytics/reporting.filters.tsx"]);
 
 const lightModules = ["filtersaddress.ts", "savedviews.queries.ts"].map(
-  (name) => join(here, name),
+  (name) => join(srcRoot, "lib", name),
 );
 
 /** The import path from `entry` to a filter UI module, or null. */

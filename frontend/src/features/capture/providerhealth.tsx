@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { ProviderHealthNotice } from "../../components/ai-provider-health-notice";
 import { EmptyState } from "../../design-system/atoms";
 import { PanelBody, PanelRow } from "../../design-system/panel";
 import { useT } from "../../i18n";
+import { useProviderHealth } from "../../lib/ai-provider-health";
 import { useCan } from "../../lib/capability";
-import { useProviderHealth } from "../ai/ai-provider-health";
-import { ProviderHealthNotice } from "../ai/ai-provider-health-notice";
 import { providerName } from "../ai/ai-provider-names";
 import { HealthCard } from "../settings/healthcard";
 import "../ai/ai-settings.css";

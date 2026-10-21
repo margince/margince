@@ -7,9 +7,6 @@ import { Heading } from "../../design-system/heading";
 import { SaveBar } from "../../design-system/savebar";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
-import { PublicPage } from "../privacy/publicpage";
-import { PreferenceRow } from "./preferencerow";
 import {
   type Draft,
   dirtyKeys,
@@ -19,7 +16,10 @@ import {
   rowIsOn,
   subjectMayGrant,
   toChoices,
-} from "./preferences.logic";
+} from "../../lib/preferences.logic";
+import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
+import { PublicPage } from "../privacy/publicpage";
+import { PreferenceRow } from "./preferencerow";
 import { type ChoiceOutcome, PendingConfirmations } from "./preferencespending";
 import "./preferences.css";
 

@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { within } from "storybook/test";
+import { feature, status } from "../../testing/ai-admin.testkit";
 import { meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
-import { feature, status } from "./ai-admin.testkit";
 import { AiTasksCard } from "./ai-tasks";
 
 const decisionFirst = {

@@ -149,6 +149,24 @@ export function formatDateAbbrev(
   }).format(displayDay(utcIso, zone));
 }
 
+/**
+ * A run of calendar days as one span, "29 June – 5 July". Intl's own range
+ * form, so each locale joins and shortens the two ends its own way.
+ */
+export function formatDayRange(
+  from: string,
+  to: string,
+  locale: Locale,
+  zone: string,
+): string {
+  assertIanaZone(zone);
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+    timeZone: zone,
+    day: "numeric",
+    month: "long",
+  }).formatRange(displayDay(from, zone), displayDay(to, zone));
+}
+
 /** A day and month for dates whose surrounding period already supplies the year. */
 export function formatDayMonth(
   utcIso: string,

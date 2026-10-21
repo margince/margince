@@ -2,6 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import {
+  agentClientList,
+  GEMINI_CLIENT,
+  PUBLISHED_CLIENT,
+  SELF_REGISTERED_CLIENT,
+} from "../../testing/agent-clients.fixtures";
 import type { GrantSpec } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -10,12 +16,6 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { AgentClientsCard } from "./agent-clients";
-import {
-  agentClientList,
-  GEMINI_CLIENT,
-  PUBLISHED_CLIENT,
-  SELF_REGISTERED_CLIENT,
-} from "./agent-clients.fixtures";
 import type { AgentClient } from "./agent-clients.queries";
 
 // Every client an AI tool signs in through, one of each way it came to exist.

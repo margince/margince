@@ -4,8 +4,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { formatMoney } from "../../format/format";
 import { en } from "../../i18n/en";
+import { SECTIONS, sectionFromAddress } from "../../lib/analytics.address";
 import { AnalyticsScreen, analyticsTabs } from "./analytics";
-import { SECTIONS, sectionFromAddress } from "./analytics.address";
 import {
   openPipeline,
   ownLensContext,

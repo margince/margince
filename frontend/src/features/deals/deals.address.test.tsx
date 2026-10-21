@@ -11,8 +11,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { ADDRESSABLE_DEAL_DIALS, type DealDial } from "../../lib/dealsaddress";
 import { DealsScreen, dealsQueryParams } from "./deals";
-import { ADDRESSABLE_DEAL_DIALS, type DealDial } from "./dealsaddress";
 
 // A list opened from an address shows the view the address names.
 //
@@ -156,6 +156,7 @@ const SAMPLE: Record<DealDial, string> = {
   stage_id: "s1",
   company_id: "c-nw",
   status: "lost",
+  forecast_category: "commit",
 };
 
 describe("a deals link", () => {

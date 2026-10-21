@@ -4,15 +4,15 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { watchStartedAiRun } from "../../app/ai-activity";
 import { ActionRow } from "../../design-system/actionrow";
-import { Button, TextInput } from "../../design-system/atoms";
-import { EvidenceMark } from "../../design-system/evidencemark";
+import { Button } from "../../design-system/atoms";
 import type { ConfidenceLevel } from "../../design-system/trust";
 import { StagingCard } from "../../design-system/trust";
-import { formatMoney, formatNumber } from "../../format/format";
+import { formatNumber } from "../../format/format";
 import { minorUnitDigits, toMajorUnits } from "../../format/minorunits";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { throwProblem, unwrap } from "../../lib/problem";
+import { GroundedField, OmittedList } from "./documentextraction.fields";
 
 // What a document says, staged for a human to accept onto the deal.
 //
@@ -35,19 +35,22 @@ import { throwProblem, unwrap } from "../../lib/problem";
 // reading it is showing, so what lands on the deal is the value on this screen.
 
 type Extraction = components["schemas"]["AttachmentExtraction"];
-type ExtractedField = components["schemas"]["ExtractedField"];
-type OmittedField = components["schemas"]["OmittedExtractionField"];
+
+export type ExtractedField = components["schemas"]["ExtractedField"];
+
+export type OmittedField = components["schemas"]["OmittedExtractionField"];
 
 // The reason a field was not offered, in words. The two are genuinely different
 // answers: one sends a rep to the document, the other tells them not to bother.
-const OMITTED_REASONS: Record<OmittedField["reason"], MessageKey> = {
+export const OMITTED_REASONS: Record<OmittedField["reason"], MessageKey> = {
   not_stated_in_file: "extraction.omitted.notStated",
   not_confidently_stated: "extraction.omitted.notConfident",
 };
 
 // The two field names this panel treats specially: money is rendered as money,
 // and the currency it is rendered IN comes from the same reading.
-const AMOUNT_FIELD = "amount_minor";
+export const AMOUNT_FIELD = "amount_minor";
+
 const CURRENCY_FIELD = "currency";
 
 // groundedCurrency is the currency THIS reading grounded, or "" when it
@@ -58,7 +61,7 @@ function groundedCurrency(extraction: Extraction): string {
   return extraction.fields.find((f) => f.field === CURRENCY_FIELD)?.value ?? "";
 }
 
-const FIELD_LABELS: Record<string, MessageKey> = {
+export const FIELD_LABELS: Record<string, MessageKey> = {
   name: "extraction.field.name",
   amount_minor: "extraction.field.amount",
   currency: "extraction.field.currency",
@@ -75,10 +78,11 @@ const POLL_MS = 2000;
 // for one band, and the mapping lives here rather than either being renamed:
 // the contract word is what a document reading means, the design word is what
 // every confidence affordance in the product already renders.
-const CONFIDENCE: Record<ExtractedField["confidence"], ConfidenceLevel> = {
-  high: "high",
-  medium: "med",
-};
+export const CONFIDENCE: Record<ExtractedField["confidence"], ConfidenceLevel> =
+  {
+    high: "high",
+    medium: "med",
+  };
 
 // Money is stored in MINOR units and must never be shown in them.
 //
@@ -411,98 +415,5 @@ function ExtractionBody({
       )}
       {acceptFailed && <p>{t("extraction.acceptFailed")}</p>}
     </StagingCard>
-  );
-}
-
-// One grounded field: its value carrying the mark that opens onto the quote it
-// was read from, and a way to type over it.
-//
-// The evidence is on the VALUE rather than beside it, which is the design
-// language's one provenance affordance — three chips under a number read as
-// clutter and the number gets lost among them.
-function GroundedField({
-  field,
-  currency,
-  draft,
-  onEdit,
-  canEdit,
-}: Readonly<{
-  field: ExtractedField;
-  currency: string;
-  draft: string | undefined;
-  onEdit: (value: string) => void;
-  canEdit: boolean;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const label = FIELD_LABELS[field.field];
-  const money = field.field === AMOUNT_FIELD && currency !== "";
-  const shown = money
-    ? formatMoney(Number(field.value), currency, locale)
-    : field.value;
-  return (
-    <li>
-      <span>{label ? t(label) : field.field}</span>
-      {draft === undefined ? (
-        <EvidenceMark
-          value={shown}
-          source={{
-            // The agent's job name without the `agent:` prefix, which the tag
-            // reads through the catalogue. This value never went through
-            // provenanceOf, so it carries no prefix to strip.
-            provenance: { kind: "agent", job: "document-extractor" },
-            confidence: CONFIDENCE[field.confidence],
-            snippet: field.source_quote,
-            at: null,
-          }}
-        />
-      ) : (
-        <TextInput
-          aria-label={t("extraction.editValue", {
-            field: label ? t(label) : field.field,
-          })}
-          value={draft}
-          onChange={(event) => onEdit(event.target.value)}
-        />
-      )}
-      <span className="t-caption">{field.page_or_section}</span>
-      {canEdit && draft === undefined && (
-        <Button
-          variant="ghost"
-          onClick={() =>
-            onEdit(money ? majorUnits(field.value, currency) : field.value)
-          }
-        >
-          {t("extraction.edit")}
-        </Button>
-      )}
-    </li>
-  );
-}
-
-// What the document does not say, said out loud.
-//
-// An omission is an ANSWER, not an absence — "this order form states no close
-// date" is something a rep acts on — so it is rendered rather than left off the
-// panel for the reader to notice on their own.
-function OmittedList({
-  omitted,
-}: Readonly<{ omitted: readonly OmittedField[] }>) {
-  const t = useT();
-  if (omitted.length === 0) {
-    return null;
-  }
-  return (
-    <ul>
-      {omitted.map((field) => {
-        const label = FIELD_LABELS[field.field];
-        return (
-          <li key={field.field}>
-            {label ? t(label) : field.field} —{" "}
-            {t(OMITTED_REASONS[field.reason])}
-          </li>
-        );
-      })}
-    </ul>
   );
 }

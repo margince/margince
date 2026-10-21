@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { usePassportRevoke } from "../../components/passport-revoke";
 import {
   Badge,
   Button,
@@ -29,6 +30,7 @@ import { formatDate, formatNumber } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { usePassports } from "../../lib/passports.queries";
 import { throwProblem } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { resetToSignedOut } from "../../lib/session";
@@ -36,8 +38,6 @@ import {
   PassportUsageLine,
   usePassportUsageDetail,
 } from "../automations/agentusage";
-import { usePassportRevoke } from "../automations/passport-revoke";
-import { usePassports } from "../automations/passports.queries";
 import { MintedPassport, PassportUses } from "./settings.passportuse";
 import "./settings.css";
 import "./settings-agents.css";

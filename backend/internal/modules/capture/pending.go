@@ -166,6 +166,10 @@ type PendingCounterparty struct {
 	// started. An address that never has is an intention rather than a
 	// relationship, whatever the outbound message says about it.
 	WroteBack bool
+	// SenderAuthenticated is the triggering message's
+	// inbound_sender_authenticated stamp, true only when Email is that
+	// message's From. IsGoogleMeetingMail needs it.
+	SenderAuthenticated bool
 
 	// Claim is this lease's token, minted by the ClaimDue that handed the row
 	// out. Every write back to the ledger presents it, so a worker holding an

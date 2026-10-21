@@ -36,7 +36,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `authzcategories_test.go` | H2 | The outbound category vocabulary is spelled twice (once in Go, once as a CHECK constraint on communication\_decision), and the two must agree. |
 | `backfillwindow_test.go` | H3 | The capture backfill window set is the same in the contract's four enums, the Go validator and the capture\_backfill CHECK, derived from the tree rather than remembered here. |
 | `benchrecordswitch_test.go` | H2 | Both bench harnesses ask the same variable whether to publish a record, and both answer only to the same value. |
-| `bookinginvite_test.go` | H2 | What booking a meeting claims to do and what it does, held against each other. |
+| `bookinginvite_test.go` | H2 | Address use is a conservative signal of invitation delivery. |
 | `briefcachemirror_test.go` | H2 | The brief cache's upsert is spelled in two places and they must stay one statement. |
 | `captureledgerstatuses_test.go` | H2 | The disposition ledger's status vocabulary is defined by the column's own constraint, and nowhere else. |
 | `cla_test.go` | H2 | An acceptance of the CLA covers the text it was shown, under the version that text carries. |
@@ -82,7 +82,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendentrymounts_test.go` | H3 | Every slot pkg/extension accepts is mounted on a core screen, read from the screens themselves. |
 | `frontendentryslots_test.go` | H3 | A unit's entry names a slot and a glyph, and two sides must agree on both. |
 | `frontendfilterfieldlabels_test.go` | H3 | Every core filter field the engine can name has a word on the builder screen. |
-| `frontendfiscalyear_test.go` | H1 | A fiscal year's label is spelled twice: the server builds it in SQL (internal/compose/reportperiod.go) because that is what a report is actually cut by, and the browser builds it in TypeScript (frontend/src/format/fiscalyear.ts) to show an admin what the setting they are about to save will produce. |
+| `frontendfiscalyear_test.go` | H1 | A fiscal year's label is spelled twice. |
 | `frontendidlebase_test.go` | H3 | The deal board and the server must measure silence from the same timestamp, or a card ages differently from the list that filed the deal stalled. |
 | `frontendimportnamespace_test.go` | H3 | The browser parses the CSV importer's source stamp to say a record was imported, and from which upload. |
 | `frontendjobkinds_test.go` | H3 | System health names every declared job kind in words, with the kind under it. |
@@ -107,6 +107,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `grantrenewalcauses_test.go` | H1 | Every reason a standing grant needs renewing must reach the card that asks for it. |
 | `grouprolemapcap_test.go` | H3 | The ceiling on the group to role map is read in three places, and they have to be one number. |
 | `heldsendtwin_test.go` | H3 | The held-message reuse rule is written twice, and the two copies must agree. |
+| `homerepairreasons_test.go` | H3 | Home repair labels cover the reasons emitted by its canonical classifiers and reviewed projections. |
 | `humanonlyenforcement_test.go` | H1 | The declaration reaches the thing that enforces it. |
 | `idempotencymap_test.go` | H3 | The contract decides which operations promise Idempotency-Key retry safety, and internal/compose's hand-maintained replayableOperations map must list the same operations. |
 | `identifierfields_test.go` | H3 | A provider's match rules are checked against IdentifierFields(), so that list has to name every field a contact actually carries. |
@@ -249,6 +250,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `contractproducers_test.go` | H2 | A field the contract promises and nobody writes is invisible. |
 | `contractrefs_test.go` | H3 | Every local $ref in api/crm.yaml resolves, and a dangling one fails with a readable message. |
 | `contributorwiring_test.go` | H1 | What a contributor arriving from outside is promised, in the files they meet on the way in. |
+| `datataskregistry_test.go` | H2 | Removing a released registration must fail even when its ID constant remains. |
 | `datecolumncalendars_test.go` | H2 | Every `date` column states whose calendar it is a day in. |
 | `dealreaders_test.go` | H2 | `deal` is an RBAC object, and until this gate nothing held the object half of that anywhere outside the module that owns it. |
 | `dealtargettype_test.go` | H2 | Every deal-scoped staging names its target type through one constant. |
@@ -315,6 +317,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `migrationcitations_test.go` | H1 | No file acquires a citation of a migration version that does not exist. |
 | `moneysum_test.go` | H2 | Money this product computes has its arithmetic held by the database. |
 | `narrowindextwin_test.go` | H2 | A partial index whose columns already carry an unpredicated one says why it is worth a second B-tree on every write. |
+| `noopsaveinert_test.go` | H2 | A save that changes nothing changes nothing. |
 | `noticecasecolumns_test.go` | H2 | One SELECT list per whole-row read in the consent package. |
 | `noticedutycensus_test.go` | H3 | Every way a contact can arrive has a decided disclosure duty. |
 | `nullablebodyfields_test.go` | H2 | The handler of a PATCH or PUT with a nullable body field processes explicit nulls, by clearing or refusing the field. |
@@ -518,6 +521,8 @@ The eight shapes, what each is for, and how each one silently passes:
 | `meetingstatusnull_test.go` | H2 | A meeting with no recorded status is one nothing has said is off. |
 | `mergegateclockbounds_test.go` | H2 | No test in the merge gate decides anything by reading a stopwatch. |
 | `metriclabelescaping_test.go` | H2 | A label value in the hand-rolled exposition is escaped by httpserver.Label, never by %q. |
+| `migrationrewrite_test.go` | H2 | Applied migrations are immutable; the ratchet starts after the task ledger exists. |
+| `migrationrewritefixtures_test.go` | H2 | A lexer that drops a statement can make a rewrite appear to be harmless DDL. |
 | `migrationvalidatesplit_test.go` | H2 | A constraint is validated in a migration of its own, or the two-step buys nothing. |
 | `mintedv7_test.go` | H3 | A uuid this tree mints is a v7. |
 | `modulepoolsharing_test.go` | H2 | Module suites share the test process's pool per DSN rather than opening a pool per test. |
@@ -595,6 +600,7 @@ The eight shapes, what each is for, and how each one silently passes:
 
 | Gate | Hardness | What it holds |
 |---|---|---|
+| `bookingdisplay_test.go` | H2 | A projection may append display values, but cannot pass addresses to another call or retain them in another assignment for a later send. |
 | `extensionsqlscopecases_test.go` | H2 | The SQL-scope gate's own test, driven with synthetic unit sources rather than the tree, because the real units are supposed to pass. |
 | `historyfieldlabelsfalsify_test.go` | H3 | The label census, falsified. |
 | `jobfleetwideshapes_test.go` | H2 | The FleetWide gate's own falsification: every dispatch shape the tree uses is proven accepted, and the shapes it exists to reject (a dispatcher doing a tenant's work, and a fan-out built around the chokepoints) are proven rejected. |
@@ -604,8 +610,10 @@ The eight shapes, what each is for, and how each one silently passes:
 | `rbacbaselineerafixture_test.go` | H3 | The pre-state the RBAC composition gate replays over must not be hand-editable. |
 | `retainedcolumncases_test.go` | H1 | The retention sweep's two SQL claims, driven with synthetic statements rather than the tree, for the reason extensionsqlscopecases\_test.go gives for its own cases. |
 | `rowscopeplanted_test.go` | H2 | The defect this census is for, planted and run. |
+| `tableownershipexpressions_test.go` | H2 | Complete concatenations keep one statement identity. |
 | `triggerwrittencolumncases_test.go` | H2 | The trigger-written-column reader driven with synthetic statements, for the reason retainedcolumncases\_test.go gives for its own: the tree is supposed to pass, so a reader proven only by "nothing in the tree trips it" is one that keeps passing after it stops working. |
 | `txseamreach_test.go` | H2 | Following a call one hop further than the name it is spelled with. |
 | `updateguardcases_test.go` | H2 | What the concurrency-guard census judges a function on, driven with synthetic source rather than the tree, for the reason retainedcolumncases\_test.go gives for its own cases. |
 | `writeauthorityplanted_test.go` | H2 | The defect the reach census exists for, planted and run. |
+| `writeauthoritypreview_test.go` | H2 | Preview admissions ask for the eventual write grant while leaving every row unchanged. |
 | `writelivenesscases_test.go` | H2 | What the liveness census judges, and what it credits, driven with synthetic source rather than the tree, for the reason updateguardcases\_test.go gives for its own. |

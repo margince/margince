@@ -20,7 +20,6 @@ import {
   ordinalNumber,
 } from "../../format/format";
 import { formatAge } from "../../format/interval";
-import { jobKindNameKey } from "../../format/jobkinds";
 import { viewerZone } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -28,6 +27,7 @@ import { useCan } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { HealthCard } from "./healthcard";
 import { DeadWorkCallout } from "./jobhealthdead";
+import { jobKindNameKey } from "./jobkinds";
 
 // GET /admin/job-health — the operator's only window onto the background
 // system, for Settings → Maintenance. Until this card existed a stalled queue

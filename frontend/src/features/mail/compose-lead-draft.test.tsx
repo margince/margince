@@ -10,12 +10,12 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
-import { ComposeModal } from "./compose";
 import {
   allowedPreview,
   isPreviewDoor,
   previewedAddresses,
-} from "./sendpermission.testkit";
+} from "../../testing/sendpermission.testkit";
+import { ComposeModal } from "./compose";
 
 // Drafting to a LEAD.
 //

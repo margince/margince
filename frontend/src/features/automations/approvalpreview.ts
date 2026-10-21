@@ -1,11 +1,106 @@
 import type { components } from "../../api/schema";
-import { formatMoneyOrAbsent } from "../../format/format";
+import { DEAL_STATUS_LABEL } from "../../components/dealdials";
+import { acquisitionKindLabel } from "../../format/acquisitionkind";
+import { RELATIONSHIP_TYPE_LABELS } from "../../format/companyrelationships";
+import {
+  EMAIL_TYPE_LABEL,
+  PHONE_TYPE_LABEL,
+} from "../../format/contactchannels";
+import { formatMoneyOrAbsent, formatNumber } from "../../format/format";
+import { LEAD_STATUS_LABEL } from "../../format/leadstatus";
+import { offerStatusLabel } from "../../format/offerstatus";
+import { templateLanguage } from "../../format/offertemplatelocale";
+import { billingModelLabel } from "../../format/productbilling";
+import { unitLabel } from "../../format/productunit";
+import { PHASE_LABEL } from "../../format/projectphase";
+import { promotionTriggerLabel } from "../../format/promotion";
+import { sendPermissionReasonKey } from "../../format/sendpermissionreason";
 import type { Locale, Translator } from "../../i18n";
-import { historyFieldLabel } from "../../lib/historyfieldlabels";
-import { DEAL_STATUS_LABEL } from "../deals/dealdials";
-import { WON_REASON_LABELS } from "../deals/winreason";
+import type { MessageKey } from "../../i18n/en";
+import { contextOptions } from "../../lib/compose-context";
+import { KIND_LABELS } from "../../lib/relationshipkinds";
+import { WON_REASON_LABELS } from "../../lib/winreason";
 import type { ResolvedDisplayField } from "./approvaldisplay.types";
 import { COMPANY_LIFECYCLE_LABELS } from "./approvalkind";
+import { previewFieldLabel } from "./approvalpreviewfields";
+import { importPreviewFields } from "./approvalpreviewimport";
+import { mergeValueLabel } from "./approvalpreviewmergevalues";
+
+const PREVIEW_EFFECT_LABELS: Record<string, MessageKey> = {
+  create_activity_record: "approval.import.createActivity",
+  import_close_deal: "approval.import.closeDeal",
+  rearm_held_message: "approval.scheduled.rearm",
+  direct_refused_message: "approval.scheduled.direct",
+  apply_company_read: "approval.read.effect",
+  queue_vat_check: "approval.read.vat_check",
+  merge_records_release_source: "approval.preview.mergeRecords",
+  fill_empty_lead_fields: "approval.preview.fillLead",
+  merge_company_private_readings: "approval.preview.companyPrivateReadings",
+  merge_company_preserve_receipts: "approval.preview.companyReceipts",
+  merge_company_reconcile_lookups: "approval.preview.companyLookups",
+  attach_task_recipients: "approval.preview.attachRecipients",
+  archive_relationship_preserve_records: "approval.preview.archiveRelationship",
+  archive_relationship_promote_employer:
+    "approval.preview.archivePromoteEmployer",
+  archive_relationship_no_primary: "approval.preview.archiveNoPrimary",
+  merge_tags_release_source: "approval.preview.mergeTags",
+  archive_company_detach_scope: "approval.preview.archiveCompany",
+  archive_contact_detach_scope: "approval.preview.archiveContact",
+  archive_project_detach_scope: "approval.preview.archiveProject",
+  archive_deal_detach_scope: "approval.preview.archiveDeal",
+  archive_activity_preserve_content: "approval.preview.archiveActivity",
+  archive_product_preserve_snapshots: "approval.preview.archiveProduct",
+  archive_template_preserve_offers: "approval.preview.archiveTemplate",
+  archive_offer_preserve_lines: "approval.preview.archiveOffer",
+  record_confirmation_only: "approval.preview.confirmationOnly",
+  create_contact_record: "approval.preview.createContact",
+  record_contact_acquisition: "approval.preview.recordAcquisition",
+  create_promote_matching_leads: "approval.preview.createPromotions",
+  create_offer_draft: "approval.preview.createOffer",
+  assign_offer_number: "approval.preview.assignOfferNumber",
+  create_offer_template: "approval.preview.createTemplate",
+  set_template_locale_default: "approval.preview.defaultTemplate",
+  create_product_record: "approval.preview.createProduct",
+  create_project_record: "approval.preview.createProject",
+  assign_project_key: "approval.preview.assignProjectKey",
+  create_deal_record: "approval.preview.createDeal",
+  create_company_record: "approval.preview.createCompany",
+  create_workspace_visible: "approval.preview.workspaceVisible",
+  geocode_if_enabled: "approval.preview.geocodeConditional",
+  create_lead_record: "approval.preview.createLead",
+  reuse_existing_record: "approval.preview.reuseRecord",
+  queue_duplicate_review: "approval.preview.queueDuplicate",
+  relink_preserve_other_links: "approval.preview.relinkPreserve",
+  relink_project_retention: "approval.preview.relinkRetention",
+  promote_move_consent_links: "approval.preview.promotionMoveLinks",
+  promote_lead_archive_source: "approval.preview.promotionArchive",
+  promote_create_contact: "approval.preview.promotionCreate",
+  promote_fill_contact: "approval.preview.promotionFill",
+  promote_open_deal_seat_contact: "approval.preview.promotionDeal",
+  promote_queue_duplicate_review: "approval.preview.promotionReview",
+  restore_lead_archive_contact: "approval.preview.demoteArchive",
+  restore_lead_preserve_contact: "approval.preview.demotePreserve",
+  send_without_human_signature: "approval.preview.unsignedSend",
+  append_recipient_unsubscribe: "approval.preview.unsubscribeFooter",
+  authorize_channel_reply: "approval.preview.authorizeChannelReply",
+  authorize_calendar_invitation: "approval.preview.authorizeInvitation",
+  classify_correspondence: "approval.preview.correspondence",
+  start_project_delivery: "approval.preview.delivery",
+  authorize_message_send: "approval.preview.authorizeMessage",
+  archive_lead_remove_tags: "approval.preview.archiveLead",
+  record_meeting_with_consent: "approval.preview.recordMeetingConsent",
+  preserve_existing_consent: "approval.preview.preserveConsent",
+  request_marketing_confirmation: "approval.preview.requestConfirmation",
+  marketing_confirmation_unavailable:
+    "approval.preview.confirmationUnavailable",
+  record_meeting_only: "approval.preview.recordMeeting",
+  authorize_website_read: "approval.preview.authorizeWebsite",
+};
+const ENRICHMENT_DEPTH_LABELS: Record<string, MessageKey> = {
+  page: "approval.preview.readPage",
+  site: "approval.preview.readSite",
+  technical: "approval.preview.readTechnical",
+};
 
 type Preview = components["schemas"]["ApprovalPreview"];
 type Value = components["schemas"]["ApprovalPreviewValue"];
@@ -27,31 +122,141 @@ function previewValue(
   locale: Locale,
   formatDay?: (value: string) => string,
 ): string {
-  if (value.kind === "date")
-    return formatDay
-      ? formatDay(value.text)
-      : t("approval.preview.unavailable");
-  if (value.kind === "money") return previewMoney(value, t, locale);
-  if (value.kind === "structured")
-    return t("approval.preview.structured", { value: value.text });
-  if (value.kind === "unavailable_name")
-    return t("approval.preview.nameUnavailable");
-  if (value.kind === "execution") return t("approval.preview.execution");
-  if (value.kind === "empty") return t("approval.preview.empty");
-  if (value.kind === "boolean")
-    return t(value.text === "true" ? "field.yes" : "field.no");
-  return previewLabel(value, field, t);
+  switch (value.kind) {
+    case "date":
+      return formatDay
+        ? formatDay(value.text)
+        : t("approval.preview.unavailable");
+    case "money":
+      return previewMoney(value, t, locale);
+    case "number": {
+      if (
+        !["default_tax_rate", "quantity", "discount_pct", "tax_rate"].includes(
+          field,
+        )
+      )
+        return previewLabel(value, field, t);
+      const rate = Number(value.text);
+      return Number.isFinite(rate)
+        ? formatNumber(rate, locale)
+        : t("approval.preview.unavailable");
+    }
+    case "structured":
+      return t("approval.preview.structured", { value: value.text });
+    case "unavailable_name":
+      return t("approval.preview.nameUnavailable");
+    case "execution":
+      return t("approval.preview.execution");
+    case "empty":
+      if (field === "promotion_restriction_purpose")
+        return t("approval.preview.promotionAllMarketing");
+      return t(
+        field === "communication_context"
+          ? "approval.preview.contextAutomatic"
+          : "approval.preview.empty",
+      );
+    case "boolean":
+      return t(value.text === "true" ? "field.yes" : "field.no");
+    default:
+      return previewLabel(value, field, t);
+  }
 }
 
+const PREVIEW_TEXT_FORMATTERS = new Map<
+  string,
+  (value: string, t: Translator) => string
+>([
+  ["creation_acquisition", acquisitionKindLabel],
+  ["unit", unitLabel],
+  ["billing_model", billingModelLabel],
+  ["locale", templateLanguage],
+  ["offer_status", offerStatusLabel],
+]);
+
+const PREVIEW_CATALOG_ALIASES: Readonly<Record<string, string>> = {
+  merge_relationship_kind: "relationship_kind",
+  merge_participant_role: "relink_participant_role",
+  merge_company_relationship_type: "archive_company_type",
+  merge_override_authority: "promotion_restriction_authority",
+  promotion_consent_before: "consent_result",
+  creation_source_consent: "consent_result",
+  relationship_end_precision: "relationship_start_precision",
+};
+
 function previewLabel(value: Value, field: string, t: Translator): string {
+  const mergeLabel = mergeValueLabel(field, value.text, t);
+  if (mergeLabel !== undefined) return mergeLabel;
+  const formatter = PREVIEW_TEXT_FORMATTERS.get(field);
+  if (formatter) return formatter(value.text, t);
+  if (field === "promotion_trigger") {
+    const label = promotionTriggerLabel(value.text);
+    if (label) return t(label);
+  }
+  const catalogField = PREVIEW_CATALOG_ALIASES[field] ?? field;
+  if (field === "promotion_restriction")
+    return t(sendPermissionReasonKey(value.text));
+  if (field === "promotion_set_origin") return t("field.yes");
+
+  if (field === "communication_context") {
+    const option = contextOptions(t).find(
+      (option) => option.value === value.text,
+    );
+    if (option) return option.label;
+  }
+  const catalogs: Record<string, Readonly<Record<string, MessageKey>>> = {
+    relationship_kind: KIND_LABELS,
+    archive_company_type: RELATIONSHIP_TYPE_LABELS,
+    relationship_start_precision: {
+      day: "approval.preview.precisionDay",
+      month: "approval.preview.precisionMonth",
+    },
+    creation_email_type: EMAIL_TYPE_LABEL,
+    creation_phone_type: PHONE_TYPE_LABEL,
+    relink_participant_role: {
+      from: "client.sender",
+      to: "compose.to",
+      cc: "compose.cc",
+      bcc: "compose.bcc",
+      attendee: "log.attendee",
+      organizer: "approval.preview.meetingHost",
+    },
+    promotion_basis_kind: {
+      contract: "approval.preview.basisContract",
+      precontract_request: "approval.preview.basisRequest",
+      subject_initiated_correspondence: "approval.preview.basisCorrespondence",
+      legitimate_interests: "approval.preview.basisInterests",
+      legal_obligation: "approval.preview.basisObligation",
+      vital_or_security_interest: "approval.preview.basisSecurity",
+      existing_customer_exception: "approval.preview.basisCustomer",
+      vn_subject_agreement: "approval.preview.basisAgreement",
+    },
+    promotion_restriction_authority: {
+      machine: "approval.preview.promotionMachine",
+      user: "approval.preview.promotionUser",
+      admin: "approval.preview.promotionAdmin",
+      subject: "approval.preview.promotionSubject",
+    },
+    won_without_contract_reason: WON_REASON_LABELS,
+    lead_status: LEAD_STATUS_LABEL,
+    status: DEAL_STATUS_LABEL,
+    phase: PHASE_LABEL,
+    enrichment_depth: ENRICHMENT_DEPTH_LABELS,
+    communication_context: {
+      reply_to_inbound: "approval.preview.contextReply",
+      security_notice: "approval.preview.contextSecurity",
+      privacy_notice: "approval.preview.contextPrivacy",
+      record_confirmation: "approval.preview.contextRecord",
+      consent_confirmation: "approval.preview.contextConsent",
+      optout_confirmation: "approval.preview.contextOptout",
+    },
+    consent_result: {
+      granted: "approval.preview.consentGranted",
+      withdrawn: "approval.preview.consentWithdrawn",
+    },
+  };
   const labels =
-    field === "won_without_contract_reason"
-      ? WON_REASON_LABELS
-      : field === "status"
-        ? DEAL_STATUS_LABEL
-        : value.kind === "lifecycle"
-          ? COMPANY_LIFECYCLE_LABELS
-          : undefined;
+    catalogs[catalogField] ??
+    (value.kind === "lifecycle" ? COMPANY_LIFECYCLE_LABELS : undefined);
   const label = Object.entries(labels ?? {}).find(
     ([code]) => code === value.text,
   )?.[1];
@@ -60,23 +265,46 @@ function previewLabel(value: Value, field: string, t: Translator): string {
   return value.text;
 }
 
+export const LIFECYCLE_CONFLICT_LABELS: Record<
+  string,
+  Parameters<Translator>[0]
+> = {
+  active_contract: "approval.preview.activeContract",
+  active_delivery: "approval.preview.activeDelivery",
+  unknown_scope: "approval.preview.unknownScope",
+  incomplete_evidence: "approval.preview.incompleteEvidence",
+  newer_evidence: "approval.preview.newerEvidence",
+};
+const PREVIEW_CONFLICT_LABELS: Record<string, MessageKey> = {
+  ...LIFECYCLE_CONFLICT_LABELS,
+  sender_signature_private: "approval.preview.signaturePrivate",
+  import_scope_unavailable: "approval.preview.importScopeUnavailable",
+};
+
 export function commercialPreviewDisplay(
   preview: Preview,
   t: Translator,
   locale: Locale = "en",
   formatDay?: (value: string) => string,
 ): readonly ResolvedDisplayField[] {
-  const conflicts = (preview.conflicts ?? []).map((conflict, index) => ({
-    field: `preview_conflict_${index}`,
-    label: t("approval.preview.conflict"),
-    value: conflict.summary,
-    comparison: null,
-  }));
-  if (preview.version !== 1 || preview.state !== "ready") {
+  const evidence = lifecyclePreviewFields(preview, t, formatDay);
+  const conflicts = (preview.conflicts ?? []).map((conflict, index) => {
+    const label = PREVIEW_CONFLICT_LABELS[conflict.kind];
+    return {
+      field: `preview_conflict_${index}`,
+      label: t("approval.preview.conflict"),
+      value: label
+        ? t(label)
+        : conflict.summary.trim() || t("approval.preview.incompleteEvidence"),
+      comparison: null,
+    };
+  });
+  const readable = preview.version === 1 || preview.version === 2;
+  if (!readable || preview.state !== "ready") {
     const key =
-      preview.version === 1 && preview.state === "stale"
+      readable && preview.state === "stale"
         ? "approval.preview.stale"
-        : preview.version === 1 && preview.state === "incomplete"
+        : readable && preview.state === "incomplete"
           ? "approval.preview.incomplete"
           : "approval.preview.unavailable";
     return [
@@ -87,18 +315,16 @@ export function commercialPreviewDisplay(
         comparison: null,
         lead: true,
       },
+      ...evidence,
       ...conflicts,
     ];
   }
   const effects = (preview.effects ?? []).map((effect) => ({
     field: `effect_${effect}`,
     label: t("approval.preview.effects"),
-    value:
-      effect === "classify_correspondence"
-        ? t("approval.preview.correspondence")
-        : effect === "start_project_delivery"
-          ? t("approval.preview.delivery")
-          : effect,
+    value: PREVIEW_EFFECT_LABELS[effect]
+      ? t(PREVIEW_EFFECT_LABELS[effect])
+      : effect,
     comparison: null,
   }));
   const changes = preview.changes.map((change) => {
@@ -110,16 +336,45 @@ export function commercialPreviewDisplay(
       formatDay,
     );
     const to = previewValue(change.after, change.field, t, locale, formatDay);
+    const sameReference =
+      change.before.kind === "reference" &&
+      change.after.kind === "reference" &&
+      change.before.entity_id !== undefined &&
+      change.before.entity_id === change.after.entity_id &&
+      change.before.entity_type === change.after.entity_type;
     return {
       field: change.field,
       label: previewFieldLabel(change.field, t),
-      value: t("approval.preview.change", { before: from, after: to }),
-      comparison: { from, to },
+      value: sameReference
+        ? to
+        : t("approval.preview.change", { before: from, after: to }),
+      comparison: sameReference ? null : { from, to },
     };
   });
   return [
+    ...evidence,
     ...conflicts,
     ...changes,
+    ...importPreviewFields(
+      preview.import_rows ?? [],
+      t,
+      (value, field) => previewValue(value, field, t, locale, formatDay),
+      (effect) =>
+        PREVIEW_EFFECT_LABELS[effect]
+          ? t(PREVIEW_EFFECT_LABELS[effect])
+          : effect,
+    ),
+    ...(preview.details ?? []).map((detail, index) => ({
+      field: detail.field === "body" ? "body" : `detail_${index}`,
+      label: previewFieldLabel(detail.field, t),
+      href: detail.value.kind === "link" ? detail.value.text : undefined,
+      value: ["body", "html_body", "signature_text", "signature_html"].includes(
+        detail.field,
+      )
+        ? null
+        : previewValue(detail.value, detail.field, t, locale, formatDay),
+      comparison: null,
+    })),
     ...effects,
     {
       field: "reviewer_reason",
@@ -165,19 +420,38 @@ export function editedCommercialPreview(
   };
 }
 
-function previewFieldLabel(field: string, t: Translator): string {
-  switch (field) {
-    case "stage_id":
-      return t("deals.stage");
-    case "won_without_contract_reason":
-      return t("deals.winReason");
-    case "won_without_contract_detail":
-      return t("deals.winReasonDetail");
-    case "closed_at":
-      return t("history.field.closed_at");
-    case "amount_minor_base":
-      return t("history.field.amount_minor_base");
-    default:
-      return historyFieldLabel(field, t);
-  }
+function lifecyclePreviewFields(
+  preview: Preview,
+  t: Translator,
+  formatDay?: (value: string) => string,
+): ResolvedDisplayField[] {
+  const evidence = preview.lifecycle_evidence;
+  if (!evidence) return [];
+  const labels = {
+    company: "approval.preview.scopeCompany",
+    workstream: "approval.preview.scopeWorkstream",
+    unknown: "approval.preview.scopeUnknown",
+  } satisfies Record<typeof evidence.scope, Parameters<Translator>[0]>;
+  const fields: ResolvedDisplayField[] = [
+    {
+      field: "lifecycle_scope",
+      label: t("approval.preview.scope"),
+      value: t(labels[evidence.scope] ?? "approval.preview.scopeUnknown"),
+      comparison: null,
+    },
+    {
+      field: "source_date",
+      label: t("approval.preview.sourceDate"),
+      value: formatDay?.(evidence.occurred_at) ?? evidence.occurred_at,
+      comparison: null,
+    },
+  ];
+  if (evidence.workstream)
+    fields.push({
+      field: "workstream",
+      label: t("approval.preview.workstream"),
+      value: evidence.workstream,
+      comparison: null,
+    });
+  return fields;
 }

@@ -27,6 +27,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// DefaultMeetingSubject keeps booking previews and saved meetings aligned when no title is supplied.
+const DefaultMeetingSubject = "Meeting"
+
 // BookMeetingInput is one slot a caller is committing: whose calendar it lands
 // on, when, what it is called, and the records it is about.
 type BookMeetingInput struct {
@@ -36,6 +39,9 @@ type BookMeetingInput struct {
 	Subject        string
 	AttendeeEmails []string
 	Links          []ActivityLinkInput
+	// LinksFromRequest is LogActivityInput's flag: a door whose caller typed the
+	// links sets it.
+	LinksFromRequest bool
 	// Source names the capture surface ("manual" when empty — the
 	// authenticated default). The anonymous page passes public_booking
 	// so a stranger's submission never masquerades as hand-entered data.
@@ -78,7 +84,7 @@ func (s *Store) BookMeeting(ctx context.Context, in BookMeetingInput) (crmcontra
 
 	subject := in.Subject
 	if subject == "" {
-		subject = "Meeting"
+		subject = DefaultMeetingSubject
 	}
 	source := in.Source
 	if source == "" {
@@ -106,10 +112,11 @@ func (s *Store) BookMeeting(ctx context.Context, in BookMeetingInput) (crmcontra
 			MeetingStatus: &booked,
 			// This door takes the slot, which is what the overlap guard refuses a
 			// second of. Both booking doors arrive here; nothing else sets it.
-			ClaimsHostSlot:  true,
-			DurationSeconds: &durationSeconds,
-			Links:           in.Links,
-			Source:          source,
+			ClaimsHostSlot:   true,
+			DurationSeconds:  &durationSeconds,
+			Links:            in.Links,
+			LinksFromRequest: in.LinksFromRequest,
+			Source:           source,
 		})
 		return err
 	})
@@ -141,9 +148,10 @@ func (h Handlers) BookMeeting(w http.ResponseWriter, r *http.Request, _ crmcontr
 		return
 	}
 	in := BookMeetingInput{
-		Host:  ids.From[ids.UserKind](actor.UserID),
-		Start: req.Start,
-		End:   req.End,
+		Host:             ids.From[ids.UserKind](actor.UserID),
+		Start:            req.Start,
+		End:              req.End,
+		LinksFromRequest: true,
 	}
 	if req.Subject != nil {
 		in.Subject = *req.Subject
@@ -189,23 +197,20 @@ func (h Handlers) BookMeeting(w http.ResponseWriter, r *http.Request, _ crmcontr
 // a lead-only booking cannot carry consent through this endpoint yet —
 // that refuses loudly rather than accepting a consent it would not
 // record. Returns false after writing the response.
-func consentSubjectLink(w http.ResponseWriter, r *http.Request, links []ActivityLinkInput) (ids.UUID, bool) {
+// BookingConsentSubject preserves the authenticated booking's one-contact rule.
+func BookingConsentSubject(links []ActivityLinkInput) (ids.UUID, error) {
 	var contacts []ids.UUID
-	for _, l := range links {
-		if l.EntityType == linkEntityContact {
-			contacts = append(contacts, l.EntityID)
+	for _, link := range links {
+		if link.EntityType == linkEntityContact {
+			contacts = append(contacts, link.EntityID)
 		}
 	}
 	switch len(contacts) {
 	case 1:
-		return contacts[0], true
+		return contacts[0], nil
 	case 0:
-		httperr.Write(w, r, httperr.Validation("consent", "subject_required",
-			"recording consent with a booking requires a linked contact to attach it to"))
-		return ids.UUID{}, false
+		return ids.Nil, httperr.Validation("consent", "subject_required", "recording consent with a booking requires a linked contact to attach it to")
 	default:
-		httperr.Write(w, r, httperr.Validation("consent", "subject_ambiguous",
-			"recording consent with a booking requires exactly one linked contact"))
-		return ids.UUID{}, false
+		return ids.Nil, httperr.Validation("consent", "subject_ambiguous", "recording consent with a booking requires exactly one linked contact")
 	}
 }

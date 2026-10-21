@@ -11,6 +11,7 @@ import {
   formatMoneyCompact,
   formatNumber,
 } from "../../format/format";
+import { pipelineValueDetail } from "../../format/pipelinevalue";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { navigate } from "../../lib/router";
@@ -406,21 +407,20 @@ function RiskReading({ day }: Readonly<{ day: Worklist }>) {
                 : "brief.readings.unpriced",
             )
       }
-      detail={
-        nothingFlagged
-          ? t("brief.readings.noDealWorkWhy")
-          : incomplete
-            ? t("brief.readings.riskPartial")
-            : day.readings.unpriced_deals
-              ? plural(
-                  "brief.readings.unpricedCount",
-                  day.readings.unpriced_deals,
-                  {
-                    count: formatNumber(day.readings.unpriced_deals, locale),
-                  },
-                )
-              : t("brief.readings.riskBasis")
-      }
+      detail={pipelineValueDetail(
+        {
+          currency: amount != null ? currency : undefined,
+          basis: nothingFlagged
+            ? t("brief.readings.noDealWorkWhy")
+            : incomplete
+              ? t("brief.readings.riskPartial")
+              : t("brief.readings.riskBasis"),
+          unpriced: day.readings.unpriced_deals,
+          incomplete,
+        },
+        locale,
+        plural,
+      )}
       onOpen={() => openLane("deals_at_risk", day.scope)}
     />
   );

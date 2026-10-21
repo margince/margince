@@ -54,6 +54,9 @@ func (p *TranscriptProposer) commitmentFrom(
 	}
 	verified := verifiedCommitmentParties(parties)
 	kind, party := attributeCommitment(&c, step.PromiserRef, verified)
+	if err := attributeCommitmentRecipients(&c, step.RecipientRefs, verified); err != nil {
+		return Commitment{}, err
+	}
 	c.NeedsConfirmation = !transcriptPromiserSpoke(step, reading.Lines, verified)
 	c.Body = transcriptCommitmentBody(c.Party, step.SourceLines)
 	// The first cited line is part of the span: the same words said twice in

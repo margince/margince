@@ -4,41 +4,22 @@
 import type { components } from "../../api/schema";
 import { provenanceLabel } from "../../design-system/provenance";
 import { provenanceOf } from "../../design-system/provenanceof";
-import {
-  type AcquisitionKind,
-  isAcquisitionKind,
-} from "../../format/acquisitionkinds";
+import { acquisitionKindLabel } from "../../format/acquisitionkind";
 import { formatDate } from "../../format/format";
+import { humanizeToken } from "../../format/humanizetoken";
 import type { Locale, Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { humanizeToken } from "../settings/audit";
+
+export { acquisitionKindLabel } from "../../format/acquisitionkind";
 
 export type NoticeAcquisition = NonNullable<
   components["schemas"]["NoticeAcquisition"]
 >;
 
-const KIND_LABEL: Readonly<Record<AcquisitionKind, MessageKey>> = {
-  subject_initiated: "notice.acq.subjectInitiated",
-  customer_contract: "notice.acq.customerContract",
-  requested_quote_or_meeting: "notice.acq.requested",
-  in_person_permission: "notice.acq.faceToFace",
-  referral: "notice.acq.referral",
-  event_or_form: "notice.acq.eventOrForm",
-  public_or_business_source: "notice.acq.publicSource",
-  purchased_or_imported: "notice.acq.purchasedOrImported",
-  crm_migration: "notice.acq.crmMigration",
-  mailbox_history: "notice.acq.mailboxHistory",
-  unknown_legacy: "notice.acq.unknownLegacy",
-};
-
 const RULE: Partial<Record<string, { label: MessageKey; hint: MessageKey }>> = {
   art13: { label: "notice.rule.art13", hint: "notice.ruleHint.art13" },
   art14: { label: "notice.rule.art14", hint: "notice.ruleHint.art14" },
 };
-
-export function acquisitionKindLabel(kind: string, t: Translator): string {
-  return isAcquisitionKind(kind) ? t(KIND_LABEL[kind]) : humanizeToken(kind);
-}
 
 export function noticeRuleLabel(rule: string, t: Translator): string {
   const entry = RULE[rule];

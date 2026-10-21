@@ -27,10 +27,18 @@ func (d *CommitmentDispatcher) admission(ctx context.Context, tx pgx.Tx, c Commi
 		}
 		due = &at
 	}
+	return commitmentAdmissionForDue(ctx, tx, c, due)
+}
+
+func commitmentAdmissionForDue(ctx context.Context, tx pgx.Tx, c Commitment, due *time.Time) (activities.CommitmentAdmissionReason, error) {
+	return readCommitmentAdmission(ctx, tx, c, due, true)
+}
+
+func readCommitmentAdmission(ctx context.Context, tx pgx.Tx, c Commitment, due *time.Time, forDecision bool) (activities.CommitmentAdmissionReason, error) {
 	sourceID := c.SourceActivityID
 	if c.AdmissionSourceID != nil {
 		if _, err := activities.CommitmentAdmissionEvidenceTx(ctx, tx, activities.CommitmentAdmissionInput{
-			SourceID: ids.From[ids.ActivityKind](sourceID), ReadMessages: c.ReadMessages,
+			SourceID: ids.From[ids.ActivityKind](sourceID), ReadMessages: c.ReadMessages, Preview: !forDecision,
 		}); err != nil {
 			if errors.Is(err, apperrors.ErrNotFound) {
 				return activities.CommitmentSourceUnavailable, nil
@@ -40,7 +48,7 @@ func (d *CommitmentDispatcher) admission(ctx context.Context, tx pgx.Tx, c Commi
 		sourceID = *c.AdmissionSourceID
 	}
 	evidence, err := activities.CommitmentAdmissionEvidenceTx(ctx, tx, activities.CommitmentAdmissionInput{
-		SourceID: ids.From[ids.ActivityKind](sourceID), ReadMessages: c.ReadMessages,
+		SourceID: ids.From[ids.ActivityKind](sourceID), ReadMessages: c.ReadMessages, Preview: !forDecision,
 	})
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return activities.CommitmentSourceUnavailable, nil
@@ -148,8 +156,8 @@ func (d *CommitmentDispatcher) renewTask(ctx context.Context, tx pgx.Tx, c Commi
 	if err != nil || !changed {
 		return CommitmentRemembered, ids.UUID{}, err
 	}
-	if c.PromisedTo != nil {
-		if _, _, err := d.fileClaim(extractorContext(ctx, c.Extractor), tx, c, *c.PromisedTo, claimKindOurs, reason); err != nil {
+	for _, recipient := range commitmentRecipients(c) {
+		if _, _, err := d.fileClaim(extractorContext(ctx, c.Extractor), tx, c, recipient, claimKindOurs, reason); err != nil {
 			return CommitmentRemembered, ids.UUID{}, err
 		}
 	}

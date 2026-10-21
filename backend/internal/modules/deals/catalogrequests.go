@@ -4,10 +4,12 @@
 package deals
 
 import (
+	"encoding/json"
 	"slices"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // The catalog's request rules, read once by both doors: the REST handlers and
@@ -82,7 +84,8 @@ func productUpdateInput(req crmcontracts.UpdateProductRequest, cleared []string,
 	}, nil
 }
 
-func offerTemplateCreateInput(req crmcontracts.CreateOfferTemplateRequest) (CreateOfferTemplateInput, error) {
+// OfferTemplateCreationInput keeps layout presence checks shared by creation and review.
+func OfferTemplateCreationInput(req crmcontracts.CreateOfferTemplateRequest) (CreateOfferTemplateInput, error) {
 	name, err := httperr.RequireNonBlank(offerTemplateNameField, req.Name)
 	if err != nil {
 		return CreateOfferTemplateInput{}, err
@@ -113,4 +116,16 @@ func offerTemplateUpdateInput(req crmcontracts.UpdateOfferTemplateRequest, ifVer
 	return UpdateOfferTemplateInput{
 		Name: name, Locale: req.Locale, IsDefault: req.IsDefault, Layout: req.Layout, IfVersion: ifVersion,
 	}, nil
+}
+
+// ProductCreationFromJSON preserves price presence so omission cannot become a free product.
+func ProductCreationFromJSON(raw json.RawMessage, sourceOverride *string) (CreateProductInput, error) {
+	var req crmcontracts.CreateProductRequest
+	if err := datasource.StrictDecode(raw, &req); err != nil {
+		return CreateProductInput{}, err
+	}
+	if sourceOverride != nil {
+		req.Source = *sourceOverride
+	}
+	return productCreateInput(req, statesAValue(raw, "unit_price_minor"))
 }

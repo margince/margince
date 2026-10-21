@@ -12,7 +12,7 @@ import { NameDialog } from "../../design-system/namedialog";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { problemMessageOf } from "../../lib/problem";
-import { type SavedView, useSaveView } from "./savedviews.queries";
+import { type SavedView, useSaveView } from "../../lib/savedviews.queries";
 
 /** "Rename": the view's name, prefilled, against the version it was read at. */
 export function RenameViewAction({

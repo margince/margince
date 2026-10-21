@@ -75,6 +75,7 @@ type Service struct {
 	evaluator Evaluator
 	authority Authority
 	calendar  CalendarSource
+	questions Questions
 	now       func() time.Time
 }
 

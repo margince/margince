@@ -1,10 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { viewerZone } from "../../format/timezone";
+import { useSchedulingProfile } from "../../lib/scheduling-profile-query";
+import { firstBookingSlot } from "../../testing/book.testkit";
 import { bookingFrame } from "./book.storykit";
-import { firstBookingSlot } from "./book.testkit";
 import { BookingBlocked, BookingPicker } from "./booking-picker";
-import { useSchedulingProfile } from "./scheduling-profile-query";
 import { useWorkingHours } from "./working-hours";
 
 import "./book.css";

@@ -11,17 +11,17 @@ import { TokenInput } from "../../design-system/tokeninput";
 import { useT } from "../../i18n";
 import "./filterbuilder.css";
 import { RosterPartialNote } from "../../components/entityref";
+import {
+  boundedReference,
+  type Reference,
+  useReferenceOptions,
+} from "../../components/filterreference";
 import type { VocabularyField } from "../../lib/filterdata";
 import {
   type FilterOp,
   isRelativeDate,
   type LeafValue,
 } from "../../lib/segmentpredicate";
-import {
-  boundedReference,
-  type Reference,
-  useReferenceOptions,
-} from "./filterreference";
 import { MoneyControl } from "./filtervalue.money";
 import {
   ChosenRecords,

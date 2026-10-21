@@ -28,9 +28,9 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 312 |
-| Columns | 3718 |
-| Foreign keys | 518 |
+| Tables | 319 |
+| Columns | 3769 |
+| Foreign keys | 523 |
 | Owning areas | 36 |
 
 ## The 12 records everything else hangs off
@@ -39,10 +39,10 @@ Ranked by how many foreign keys point at them.
 
 | Record | Lives in | Columns | Foreign keys pointing at it |
 |---|---|--:|--:|
-| [`app_user`](identity.md#app_user) | [identity](identity.md) | 30 | 135 |
+| [`app_user`](identity.md#app_user) | [identity](identity.md) | 30 | 137 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 32 | 45 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 43 | 42 |
-| [`activity`](activities.md#activity) | [activities](activities.md) | 62 | 38 |
+| [`activity`](activities.md#activity) | [activities](activities.md) | 63 | 38 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 43 | 26 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 38 | 17 |
 | [`project`](projects.md#project) | [projects](projects.md) | 23 | 10 |
@@ -93,7 +93,7 @@ erDiagram
 | [agents](agents.md) | 3 |
 | [ai](ai.md) | 12 |
 | [aiactivity](aiactivity.md) | 1 |
-| [approvals](approvals.md) | 2 |
+| [approvals](approvals.md) | 3 |
 | [assignments](assignments.md) | 2 |
 | [assurance](assurance.md) | 7 |
 | [automation](automation.md) | 3 |
@@ -103,7 +103,7 @@ erDiagram
 | [comms](comms.md) | 1 |
 | [compose](compose.md) | 43 |
 | [consent](consent.md) | 19 |
-| [contacts](contacts.md) | 39 |
+| [contacts](contacts.md) | 40 |
 | [continuity](continuity.md) | 1 |
 | [contracts](contracts.md) | 1 |
 | [customfields](customfields.md) | 1 |
@@ -117,10 +117,10 @@ erDiagram
 | [knowledge](knowledge.md) | 3 |
 | [migration](migration.md) | 2 |
 | [notices](notices.md) | 3 |
-| [platform](platform.md) | 10 |
+| [platform](platform.md) | 13 |
 | [privacy](privacy.md) | 2 |
 | [projects](projects.md) | 3 |
-| [reporting](reporting.md) | 10 |
+| [reporting](reporting.md) | 12 |
 | [search](search.md) | 4 |
 | [signals](signals.md) | 2 |
 | [webhooks](webhooks.md) | 2 |
@@ -130,7 +130,7 @@ erDiagram
 
 | Table | Area | Columns | Referenced by |
 |---|---|--:|--:|
-| [`activity`](activities.md#activity) | activities | 62 | 38 |
+| [`activity`](activities.md#activity) | activities | 63 | 38 |
 | [`activity_audience_member`](activities.md#activity_audience_member) | activities | 5 | 0 |
 | [`activity_calendar_method_backfill`](activities.md#activity_calendar_method_backfill) | activities | 4 | 0 |
 | [`activity_commitment_admission`](activities.md#activity_commitment_admission) | activities | 13 | 0 |
@@ -164,9 +164,10 @@ erDiagram
 | [`ai_task_run`](aiactivity.md#ai_task_run) | aiactivity | 25 | 0 |
 | [`ai_usage`](ai.md#ai_usage) | ai | 10 | 0 |
 | [`analytics_share`](compose.md#analytics_share) | compose | 16 | 0 |
-| [`app_user`](identity.md#app_user) | identity | 30 | 135 |
+| [`app_user`](identity.md#app_user) | identity | 30 | 137 |
 | [`approval`](approvals.md#approval) | approvals | 32 | 4 |
 | [`approval_autonomy_policy`](approvals.md#approval_autonomy_policy) | approvals | 12 | 0 |
+| [`approval_preference`](approvals.md#approval_preference) | approvals | 3 | 0 |
 | [`assurance_cycle`](assurance.md#assurance_cycle) | assurance | 6 | 1 |
 | [`assurance_exception`](assurance.md#assurance_exception) | assurance | 20 | 3 |
 | [`assurance_resolution`](assurance.md#assurance_resolution) | assurance | 12 | 0 |
@@ -221,7 +222,8 @@ erDiagram
 | [`company`](contacts.md#company) | contacts | 43 | 42 |
 | [`company_brief`](compose.md#company_brief) | compose | 7 | 0 |
 | [`company_domain`](contacts.md#company_domain) | contacts | 10 | 0 |
-| [`company_domain_disposition`](contacts.md#company_domain_disposition) | contacts | 22 | 0 |
+| [`company_domain_disposition`](contacts.md#company_domain_disposition) | contacts | 22 | 1 |
+| [`company_domain_question_reader`](contacts.md#company_domain_question_reader) | contacts | 3 | 0 |
 | [`company_dossier`](compose.md#company_dossier) | compose | 6 | 0 |
 | [`company_fact`](contacts.md#company_fact) | contacts | 18 | 0 |
 | [`company_geocode_state`](contacts.md#company_geocode_state) | contacts | 5 | 0 |
@@ -255,6 +257,9 @@ erDiagram
 | [`currency_minor_digits`](platform.md#currency_minor_digits) | platform | 2 | 0 |
 | [`custom_field`](customfields.md#custom_field) | customfields | 16 | 0 |
 | [`data_subject_request`](consent.md#data_subject_request) | consent | 16 | 0 |
+| [`data_task_review`](platform.md#data_task_review) | platform | 6 | 0 |
+| [`data_task_run`](platform.md#data_task_run) | platform | 22 | 0 |
+| [`data_task_run_history`](platform.md#data_task_run_history) | platform | 5 | 0 |
 | [`deal`](deals.md#deal) | deals | 43 | 26 |
 | [`deal_acquisition_source`](deals.md#deal_acquisition_source) | deals | 9 | 1 |
 | [`deal_correction`](deals.md#deal_correction) | deals | 18 | 0 |
@@ -362,10 +367,12 @@ erDiagram
 | [`record_role`](assignments.md#record_role) | assignments | 11 | 1 |
 | [`relationship`](contacts.md#relationship) | contacts | 22 | 1 |
 | [`relationship_nudge_dismissal`](contacts.md#relationship_nudge_dismissal) | contacts | 5 | 0 |
-| [`report_definition`](reporting.md#report_definition) | reporting | 10 | 2 |
+| [`report_definition`](reporting.md#report_definition) | reporting | 11 | 2 |
 | [`report_definition_revision`](reporting.md#report_definition_revision) | reporting | 6 | 2 |
-| [`report_edition`](reporting.md#report_edition) | reporting | 12 | 1 |
+| [`report_edition`](reporting.md#report_edition) | reporting | 12 | 2 |
 | [`report_edition_contribution`](reporting.md#report_edition_contribution) | reporting | 9 | 0 |
+| [`report_edition_question`](reporting.md#report_edition_question) | reporting | 5 | 1 |
+| [`report_edition_question_source`](reporting.md#report_edition_question_source) | reporting | 5 | 0 |
 | [`report_execution`](reporting.md#report_execution) | reporting | 19 | 1 |
 | [`report_projection_fence`](platform.md#report_projection_fence) | platform | 2 | 0 |
 | [`report_run`](compose.md#report_run) | compose | 11 | 0 |

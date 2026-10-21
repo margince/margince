@@ -21,6 +21,8 @@ import {
   grants,
   type RbacObject,
 } from "../../lib/accessgrants";
+import { BUSINESS_PAGES } from "./settingscatalog.business";
+import { PLATFORM_PAGES } from "./settingscatalog.platform";
 
 type RbacAction = components["schemas"]["RbacAction"];
 
@@ -161,48 +163,6 @@ export type SettingsScope =
   | "mixed";
 
 /**
- * Every settings page, its group, its scope and what it takes to open it.
- *
- * `requires` says who may SEE the page. It is not automatically the read grant:
- * a page whose subject is the installation's own configuration asks for the
- * verb that changes it, because every seeded role reads far more than it may
- * change and the read arm handed a rep six destinations she could only look at.
- * A page she genuinely consults — the sales vocabulary, her own settings —
- * still opens on the read.
- *
- * It never decides what a card may DO. Each card asks its own write question,
- * because a page is routinely readable and only partly writable, and a
- * page-level write flag would either hide a page somebody may read or promise
- * controls they cannot use. A card narrower than its page is the safe
- * direction: the card withholds itself.
- *
- * `changes` is the second question, and it is about PROMINENCE rather than
- * permission: is this page one the reader can act on, or one they can only
- * consult? The rail lists what they can act on; everything else they may open
- * stays reachable from the settings home and from search. Both halves matter —
- * a reader who cannot change the pipeline vocabulary should not have it in the
- * furniture they navigate every day, and must still be able to look it up.
- *
- * Its value is read off the write verbs the page's own cards ask, never off the
- * heading the page sits under. On a page whose entire purpose IS a read — the
- * spend, the model calls, the audit trail, the seat count — reading is the
- * action, so `changes` is the same expression as `requires` and says so.
- */
-import {
-  acts,
-  allOf,
-  always,
-  anyOf,
-  composedUnits,
-  destroys,
-  flagged,
-  fullSeat,
-  readingIsTheAct,
-  reads,
-  writes,
-} from "./settingscapability";
-
-/**
  * Where a composed unit keeps its secrets. Mirrored rather than imported: the
  * extensions registry reaches `@composition/screens` and so pulls React and a
  * build alias into whatever imports it, which is the one thing this module may
@@ -222,9 +182,8 @@ export type CatalogContext = {
   composedUnitScopes?: readonly UnitSecretScope[];
 };
 
-// The shorthand the table below is written in. Re-exported rather than moved
-// outright: a dozen callers and two tests import these from here, and the
-// split is about this file's length, not about its surface.
+// The shorthand the page tables are written in. Re-exported because a dozen
+// callers and two tests import these from the catalog.
 export {
   acts,
   allOf,
@@ -240,558 +199,43 @@ export {
   writes,
 } from "./settingscapability";
 
-export const SETTINGS_PAGES = [
-  {
-    id: "account",
-    group: "me",
-    scope: "self",
-    requires: always,
-    // Yours to change, all of it: identity, password, signature, language.
-    changes: always,
-  },
-  {
-    id: "meetings",
-    group: "me",
-    scope: "self",
-    requires: always,
-    changes: always,
-  },
-  {
-    id: "voice",
-    group: "me",
-    scope: "self",
-    requires: always,
-    // The profile is the reader's own, but writing one is still a grant:
-    // voice-dna.tsx asks `voice_profile` create and update, and a read-only seat
-    // holds the read alone. `always` here would have put Voice in that reader's
-    // rail with nothing on it they could touch.
-    changes: acts(writes("voice_profile")),
-  },
-  {
-    id: "agents",
-    group: "me",
-    scope: "self",
-    requires: always,
-    // Passports, connected agents and the autonomy choice are all this reader's.
-    changes: always,
-  },
-  {
-    id: "notifications",
-    group: "me",
-    scope: "self",
-    requires: always,
-    // Both endpoints read and write the CALLING seat's rows, so there is
-    // nothing here an admin sets for somebody else and no grant to withhold.
-    changes: always,
-  },
-  // MIXED, not self: most of its cards are the reader's own, and ConnectorsCard
-  // carries the workspace's Telegram bot beside them. A page-level "Only you"
-  // over that panel would tell a reader a shared connection is private to them.
-  //
-  // The mail-sharing SWITCH left this page for Capture rules, where the rest of
-  // the installation's capture posture lives. What stays is a value-only row
-  // saying what the rule currently is, which claims nothing about who may
-  // change it.
-  {
-    id: "connections",
-    group: "me",
-    scope: "mixed",
-    requires: always,
-    // Acting, not consulting: the mailbox, sender and LinkedIn controls are the
-    // reader's own and need no grant, and the mail-sharing row states a value
-    // and offers no control at all. The Telegram panel gates its own verbs on
-    // `channel_connection`, so this field need not withhold the page for it.
-    changes: always,
-  },
-  // MIXED for the same reason as `connections`, one page along:
-  // CaptureExclusionsCard carries BOTH scopes by design — its own comment says
-  // so — and its workspace rules keep a correspondent out of the CRM for
-  // everybody. The workspace activity view behind `capture_trace:read` is the
-  // installation's too.
-  {
-    id: "capture-activity",
-    group: "me",
-    scope: "mixed",
-    requires: always,
-    // The reader's own capture trace and their own exclusions. The workspace
-    // half of CaptureExclusionsCard asks `capture_settings:update` itself.
-    changes: always,
-  },
-
-  {
-    id: "company",
-    group: "company",
-    scope: "installation",
-    // What the installation and currency cards ask for. `installation_settings`
-    // is asked as the UPDATE: every seeded role reads it for the base currency,
-    // and only admin and ops may change it.
-    //
-    // The company profile adds no arm. The server administers it — read and
-    // write both ask the admin ROLE, which no grant here can spell — so its card
-    // asks the role itself and draws nothing for anyone else on this page.
-    requires: anyOf(
-      writes("installation_settings", ["update"]),
-      reads("fx_rate"),
-    ),
-    changes: acts(
-      writes("installation_settings", ["update"]),
-      writes("fx_rate"),
-    ),
-  },
-  {
-    id: "authentication",
-    group: "company",
-    scope: "installation",
-    // Not `installation_settings`, which every role holds. The OAuth cards ride
-    // `capture_settings`: a card narrower than its page withholds itself.
-    requires: reads("authentication_policy"),
-    // Each card saves on its own grant, and any one makes the page the reader's.
-    changes: acts(
-      writes("installation_settings", ["update"]),
-      writes("authentication_policy", ["update"]),
-      writes("capture_settings", ["update"]),
-    ),
-  },
-
-  // `GET /users` answers 200 to any authenticated principal, and that is right:
-  // the share and assignee pickers every seat uses read this roster. But a
-  // DIRECTORY is not an administration page. A reader who may not invite, change
-  // a role or switch a seat off has nothing to do here — they look a colleague
-  // up in the app, where the answer is already beside the record.
-  //
-  // So the settings ENTRY follows the verbs, and the safe roster stays open
-  // underneath it: `user_admin` gates Members, `team_admin` gates Teams, and
-  // both pages' cards still withhold their own controls verb by verb.
-  {
-    id: "members",
-    group: "people",
-    scope: "workspace",
-    // The READ, and only the read. Every write verb needs what it carries, so a
-    // holder without it has no usable page:
-    //
-    //   - `include_inactive` is honoured only for a caller who passes the read
-    //     (handlers_roster.go), so a `delete` holder without it never sees a
-    //     deactivated member to reactivate.
-    //   - the roster omits `roles` without it, and `ChangeUserRole` REPLACES
-    //     the whole set — so an `update` holder would pick a role against a
-    //     list they cannot see.
-    //
-    // Opening the page on a write alone would offer exactly those two broken
-    // affordances. The card ANDs the same way, so the page and its controls
-    // agree.
-    requires: reads("user_admin"),
-    // Invite, role change and deactivate — the three verbs UsersAdminCard offers,
-    // and `delete` is deactivate rather than a row removal.
-    changes: acts(writes("user_admin"), destroys("user_admin")),
-  },
-  {
-    id: "teams",
-    group: "people",
-    scope: "workspace",
-    // The team verbs, or the roster read that carries `team_ids` — a holder of
-    // `user_admin:read` alone sees who is in which team, which is the page's
-    // whole content even when they may change none of it.
-    requires: anyOf(writes("team_admin"), reads("user_admin")),
-    // TeamsCard creates and renames teams. Membership rides `user_admin:read`,
-    // which is a read, so it does not make this page the reader's to change.
-    changes: acts(writes("team_admin")),
-  },
-  {
-    id: "roles",
-    group: "people",
-    scope: "workspace",
-    // `GET /roles` asks `role_admin:read`, and the role list IS the page, so
-    // the read opens it even for a reader who may change nothing.
-    requires: reads("role_admin"),
-    // Create is POST /roles, a rename, row scope or grant edit is update, and
-    // archive and restore are delete (identity/rolelifecycle.go).
-    changes: acts(writes("role_admin"), destroys("role_admin")),
-  },
-  {
-    id: "seats",
-    group: "people",
-    scope: "installation",
-    // Either grant, and they show different things: `LicenseCard` reads the
-    // entitlement for a `license` holder and falls back to the capacity
-    // endpoint for a `seat_usage` one — management sees how full the
-    // installation is without seeing what it pays.
-    requires: anyOf(reads("seat_usage"), reads("license")),
-    // LicenseCard has no write of any kind. Reading the seat count IS the action
-    // here, so the two questions have one answer.
-    changes: readingIsTheAct,
-  },
-
-  {
-    id: "pipelines",
-    group: "sales",
-    scope: "workspace",
-    requires: reads("pipeline"),
-    // PipelinesCard creates, renames and removes stages.
-    changes: acts(writes("pipeline"), destroys("pipeline")),
-  },
-  {
-    id: "stageautomation",
-    group: "sales",
-    scope: "workspace",
-    // The report reads stage_progression_outcome through a pipeline-gated
-    // endpoint, so `pipeline` read is exactly what opens it — the same grant
-    // that shows the stages the transitions are between.
-    requires: reads("pipeline"),
-    // The page now carries the per-transition switches beneath its report, so
-    // it WRITES. The table above them stays read-only, which is a layout
-    // decision rather than a permission one.
-    //
-    // UPDATE only. A rule is created by the same PUT that edits one, and this
-    // page never creates a pipeline — so a custom role holding pipeline:create
-    // without update would open a page whose every switch is refused.
-    changes: acts(writes("pipeline", ["update"])),
-  },
-  {
-    id: "leads",
-    group: "sales",
-    scope: "workspace",
-    // `custom_field`, not `pipeline`. The three cards here — lead sources,
-    // disqualify reasons, handling — are stored as custom-field vocabulary and
-    // the server gates their reads on that object. Asking for `pipeline` would
-    // hide the page from a holder who may read it, and open it for one whose
-    // reads then 403.
-    requires: reads("custom_field"),
-    // The three lead-vocabulary cards all write `custom_field`, delete included.
-    changes: acts(writes("custom_field"), destroys("custom_field")),
-  },
-  {
-    id: "acquisition",
-    // `custom_field` for the lead page's reason above; no destroys because a
-    // source is retired through its switch rather than deleted.
-    group: "sales",
-    scope: "workspace",
-    requires: reads("custom_field"),
-    changes: acts(writes("custom_field")),
-  },
-  {
-    id: "reviewtemplates",
-    // `custom_field` read, which is what the templates endpoint requires.
-    // Editing a template's questions is `custom_field` update on the server.
-    group: "sales",
-    scope: "workspace",
-    requires: reads("custom_field"),
-    changes: acts(writes("custom_field", ["update"])),
-  },
-  {
-    id: "recordroles",
-    // Same `custom_field` authority as the vocabularies above: everyone reads,
-    // admin/ops write. No destroys — a role is retired through its switch,
-    // because an assignment that carried it must stay resolvable.
-    group: "sales",
-    scope: "workspace",
-    requires: reads("custom_field"),
-    changes: acts(writes("custom_field")),
-  },
-  {
-    id: "fields",
-    group: "sales",
-    scope: "workspace",
-    requires: reads("custom_field"),
-    // customfields.tsx creates and edits; it offers no delete.
-    changes: acts(writes("custom_field")),
-  },
-  {
-    id: "tags",
-    group: "sales",
-    scope: "workspace",
-    requires: reads("tag"),
-    // tagadmin.tsx separates create, rename/merge and archive. Applying a tag TO
-    // a record is a different question and lives on the record, not here.
-    changes: acts(writes("tag"), destroys("tag")),
-  },
-  {
-    id: "products",
-    group: "sales",
-    scope: "workspace",
-    requires: anyOf(reads("product"), reads("offer_template")),
-    // Two cards, two objects: products.tsx and offertemplates.tsx, each with its
-    // own create/update/archive trio. Either one makes the page actionable.
-    changes: acts(
-      writes("product"),
-      destroys("product"),
-      writes("offer_template"),
-      destroys("offer_template"),
-    ),
-  },
-
-  {
-    id: "capture",
-    group: "data",
-    scope: "workspace",
-    requires: reads("capture_settings"),
-    // Five cards. Four write `capture_settings:update` — the sharing rule, the
-    // posture, the own-domain list and the consumer-mailbox list; the fifth,
-    // BlockedDomainsCard, writes `company:update`, which every seeded sales
-    // role holds — so a rep keeps this page in the rail.
-    changes: acts(
-      writes("capture_settings", ["update"]),
-      writes("company", ["update"]),
-    ),
-  },
-  {
-    id: "integrations",
-    group: "data",
-    // Mixed, and the provider card is why: `PATCH /integrations/settings` is
-    // "the installation's provider-lookup posture" in its own contract summary,
-    // while webhooks and the workspace extension units stay inside one
-    // workspace. One badge cannot name both.
-    scope: "mixed",
-    // The writes, not the reads: every seeded role reads the object, because
-    // "is capture working?" is everyone's question and the answer shows up on
-    // the records they already open. Pointing a webhook somewhere is admin and
-    // ops work.
-    requires: anyOf(
-      writes("webhook_subscription"),
-      // A composed workspace-scoped unit puts its settings on this page and
-      // nowhere else, so the page has to open for it even when the reader holds
-      // none of the grants above.
-      composedUnits("workspace"),
-    ),
-    // Provider and webhooks, each with its own object. Every verb the cards
-    // offer, delete included: WebhooksCard archives a subscription, which is
-    // acting on the page as much as creating one is.
-    //
-    // The composed-unit arm is not a grant and carries no seat: ExtensionUnitsCard
-    // renders an Open link for every composed workspace unit unconditionally, so
-    // on a build that composed one this page has a working control for anybody
-    // who can see it. That arm is what makes the page visible in the first place.
-    changes: anyOf(
-      acts(
-        writes("integrations"),
-        destroys("integrations"),
-        writes("webhook_subscription"),
-        destroys("webhook_subscription"),
-      ),
-      composedUnits("workspace"),
-    ),
-  },
-  {
-    id: "knowledge",
-    group: "data",
-    scope: "workspace",
-    requires: reads("knowledge_corpus"),
-    // KnowledgeCard adds a corpus; it asks the create alone.
-    changes: acts(writes("knowledge_corpus", ["create"])),
-  },
-  {
-    id: "import",
-    group: "data",
-    scope: "workspace",
-    requires: reads("import_run"),
-    // ImportCard starts a run and advances it — create and update, two verbs the
-    // card asks separately.
-    // BOTH verbs, because ImportCard asks for both: `mayImport` is
-    // `mayCreate && mayAdvance` — the dry run parks the run and the approval
-    // moves it, so create alone reaches the card and is refused at the first
-    // button.
-    changes: acts(
-      allOf(writes("import_run", ["create"]), writes("import_run", ["update"])),
-    ),
-  },
-
-  {
-    id: "usage",
-    group: "ai",
-    scope: "workspace",
-    // The spend card reads on `ai_diagnostics`, the allowance on `ai_budget`.
-    requires: anyOf(reads("ai_diagnostics"), reads("ai_budget")),
-    // The allowance is the one write here; the spend is a read.
-    changes: acts(writes("ai_budget", ["update"])),
-  },
-  {
-    id: "models",
-    group: "ai",
-    // Installation, not workspace: `PUT /ai/routing` re-points which vendor
-    // processes the installation's text, and `/ai/provider-keys` writes the
-    // installation key vault. Both contract summaries say "installation".
-    scope: "installation",
-    // The routing and provider-key cards read on `ai_routing`; the tiers card's
-    // health and the AI tasks card read on `ai_diagnostics` (ai/health.go), and
-    // on that grant alone the tiers card still answers (ai-routing.tsx
-    // HealthOnly). Management is seeded diagnostics WITHOUT routing.
-    // The model prices panel reads on `ai_model_rate`.
-    requires: anyOf(
-      reads("ai_routing"),
-      reads("ai_diagnostics"),
-      reads("ai_model_rate"),
-    ),
-    // Bindings and keys write on `ai_routing:update`; model prices, here and in
-    // a provider sheet, on the `ai_model_rate` upsert (removal is admitted on
-    // update).
-    changes: acts(writes("ai_routing", ["update"]), writes("ai_model_rate")),
-  },
-  {
-    id: "mcp",
-    group: "ai",
-    scope: "installation",
-    requires: reads("agent_client"),
-    changes: acts(
-      writes("agent_client"),
-      destroys("agent_client"),
-      writes("installation_settings", ["update"]),
-    ),
-  },
-  {
-    id: "model-calls",
-    group: "ai",
-    scope: "workspace",
-    requires: reads("ai_diagnostics"),
-    // AiCallsCard is a read of what the models were asked. Reading it is the act.
-    changes: readingIsTheAct,
-  },
-  {
-    id: "automations",
-    group: "ai",
-    scope: "workspace",
-    // The write, which admin and ops alone hold. Management and manager read
-    // `automation` — they see what ran, on the records it touched — but a role
-    // that cannot change an automation has nothing to do on the page that
-    // defines them.
-    requires: writes("automation"),
-    // Not the sentinel: this page's `requires` is already a write, so resolving
-    // `changes` to it would inherit a requirement that deliberately carries no
-    // seat ceiling — a read seat holding the automation grants would be told the
-    // page is theirs to work in. The card offers delete as well.
-    changes: acts(writes("automation"), destroys("automation")),
-  },
-
-  {
-    id: "privacy",
-    group: "governance",
-    // Installation: both retention endpoints the card writes are
-    // installation-wide, so what this page destroys, it destroys everywhere.
-    scope: "installation",
-    // `contact` is not an arm, though the purposes card reads through it:
-    // every seeded role holds `contact:read`, so it would open the page to the
-    // whole workspace. The purposes list stays gated on `contact` server-side,
-    // because the Contact 360 reads it. A card narrower than its page
-    // withholds itself. `consent_config` alone buys no read
-    // (consent/store.go ListPurposes is on `contact`).
-    requires: anyOf(
-      reads("retention_policy"),
-      reads("privacy_request"),
-      // The consent vocabulary, as a pair. `contact:read` is what the purposes
-      // endpoint asks. `consent_config` is whose vocabulary it is, and the one
-      // read management holds on this page.
-      allOf(reads("contact"), reads("consent_config")),
-    ),
-    // Four cards, four objects. `contact:update` is what PrivacyInboxCard asks to
-    // open a subject request — the request is about a contact's record, so the
-    // grant is the contact's, not the queue's.
-    changes: acts(
-      writes("consent_config", ["create"]),
-      writes("retention_policy"),
-      destroys("retention_policy"),
-      writes("privacy_request", ["update"]),
-      writes("contact", ["update"]),
-    ),
-  },
-  {
-    id: "jurisdiction",
-    group: "governance",
-    scope: "installation",
-    // The update, as on Company: every role holds `installation_settings:read`.
-    requires: writes("installation_settings", ["update"]),
-    // A weakening change also writes the carried floor, retention's object.
-    changes: acts(
-      writes("installation_settings", ["update"]),
-      writes("retention_policy", ["update"]),
-    ),
-  },
-  {
-    id: "audit",
-    group: "governance",
-    scope: "workspace",
-    // The trail's own object, which the card now asks for too. A role edited to
-    // carry `audit_log:read` reaches it and one that lost it does not — which
-    // the admin role name could not say either way.
-    requires: reads("audit_log"),
-    // The trail is a read by construction — nothing writes it from here, and
-    // reading it is precisely the operator's act.
-    changes: readingIsTheAct,
-  },
-  {
-    id: "system-health",
-    group: "governance",
-    scope: "installation",
-    // Any card's grant, so a reader holding one finds that card and the others
-    // withheld. The schedules answer to the settings editor's grant, not the
-    // read every role holds.
-    requires: anyOf(
-      reads("job_health"),
-      reads("embedding_reindex"),
-      writes("installation_settings", ["update"]),
-    ),
-    // The reindex and the schedules are writes and take the seat; watching a
-    // stalled queue is an operator acting, so that arm stands outside it.
-    changes: anyOf(
-      acts(writes("embedding_reindex", ["update"])),
-      acts(writes("installation_settings", ["update"])),
-      reads("job_health"),
-    ),
-  },
-  {
-    id: "configuration",
-    group: "governance",
-    scope: "installation",
-    // The update, as on Company: the endpoint answers only that grant.
-    requires: writes("installation_settings", ["update"]),
-    changes: acts(writes("installation_settings", ["update"])),
-  },
-  {
-    id: "extensions",
-    group: "governance",
-    // Workspace, though the page READS the installation's unit inventory. Scope
-    // names whose state a page CHANGES, and the only write here is
-    // `PATCH /roles/{key}/objects/{object}` — one workspace's role grants.
-    scope: "workspace",
-    // BOTH reads the card makes, because it makes them behind ONE flag: the
-    // unit inventory from `GET /v1/extensions` and every role's grant on every
-    // object from `GET /v1/roles`. On the inventory grant alone the page opens
-    // and the card 403s on its second query, which is an unreadable page rather
-    // than a narrower one.
-    requires: allOf(reads("extension_access"), reads("role_admin")),
-    // ExtensionAccessCard's only write is the role grant it PATCHes; the unit
-    // inventory above it is a read.
-    changes: acts(writes("role_admin", ["update"])),
-  },
-  {
-    id: "reset",
-    group: "governance",
-    scope: "installation",
-    // The grant AND the deployment's consent. `system_reset:delete` says this
-    // reader may wipe an installation that permits wiping; `data_reset_available`
-    // says whether this one does — the compiled default is false everywhere, and
-    // a deployment that never opted in has no such destination at all.
-    //
-    // Both, not either: a page offering a reset the server would refuse is worse
-    // here than anywhere else in settings.
-    requires: allOf(
-      { kind: "grant", object: "system_reset", action: "delete" },
-      flagged("data_reset_available"),
-    ),
-    // Not the sentinel, for the same reason as Automations: emptying an
-    // installation is a mutating request, and a read seat holding
-    // `system_reset:delete` is refused it. The armed flag rides along, so the
-    // page cannot be acted on where the deployment has not armed it.
-    changes: allOf(
-      fullSeat,
-      { kind: "grant", object: "system_reset", action: "delete" },
-      flagged("data_reset_available"),
-    ),
-  },
-] as const satisfies readonly {
+/**
+ * Every settings page, its group, its scope and what it takes to open it.
+ *
+ * `requires` says who may see the page. It is not always the read grant. A
+ * page whose subject is the installation's own configuration asks for the verb
+ * that changes it. Every seeded role reads far more than it may change, and
+ * the read arm would hand a rep destinations they could only look at. A page
+ * the rep consults, such as the sales vocabulary or their own settings, still
+ * opens on the read.
+ *
+ * It never decides what a card may do. Each card asks its own write question,
+ * because a page is often readable and only partly writable. A page-level
+ * write flag would either hide a page somebody may read or promise controls
+ * they cannot use. A card narrower than its page is the safe direction: the
+ * card withholds itself.
+ *
+ * `changes` is about prominence, not permission: can the reader act on this
+ * page, or only consult it? The rail lists what they can act on. Everything
+ * else they may open stays reachable from the settings home and from search.
+ *
+ * Its value is read off the write verbs the page's own cards ask, never off
+ * the heading the page sits under. On a page whose purpose is a read (the
+ * spend, the model calls, the audit trail, the seat count), reading is the
+ * action. So `changes` is the same expression as `requires`.
+ */
+export type SettingsPageRow = {
   id: string;
   group: SettingsGroupId;
   scope: SettingsScope;
   requires: CapabilityExpression;
   changes: CapabilityExpression;
-}[];
+};
+
+export const SETTINGS_PAGES = [
+  ...BUSINESS_PAGES,
+  ...PLATFORM_PAGES,
+] as const satisfies readonly SettingsPageRow[];
 
 export type SettingsPageId = (typeof SETTINGS_PAGES)[number]["id"];
 

@@ -126,6 +126,10 @@ const waitingHorizonStaleAfter = 24 * time.Hour
 // Ungated: the horizon decides which rows the queue holds, so two colleagues
 // reading one thread must be judged by one number. It names no record.
 func (s *Store) waitingHorizonFor(ctx context.Context, tx pgx.Tx) (int, error) {
+	return waitingHorizonAt(ctx, tx, s.now())
+}
+
+func waitingHorizonAt(ctx context.Context, tx pgx.Tx, asOf time.Time) (int, error) {
 	var days int
 	var measuredAt time.Time
 	err := tx.QueryRow(ctx,
@@ -136,7 +140,7 @@ func (s *Store) waitingHorizonFor(ctx context.Context, tx pgx.Tx) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("activities: reading the stored waiting horizon: %w", err)
 	}
-	if s.now().Sub(measuredAt) >= waitingHorizonStaleAfter {
+	if asOf.Sub(measuredAt) >= waitingHorizonStaleAfter {
 		return waitingHorizonDays, nil
 	}
 	return days, nil

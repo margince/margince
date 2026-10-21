@@ -284,6 +284,11 @@ func (s *Store) SetExpiry(ctx context.Context, id ids.DealRoomID, expiresAt *tim
 	}
 	var out crmcontracts.DealRoom
 	err := s.tx(ctx, func(tx pgx.Tx) error {
+		// Locked before the read: the empty-patch answer and a write without an
+		// If-Match both decide from the row as it stands when this lands.
+		if _, err := storekit.LockRow(ctx, tx, roomObject, id.UUID, storekit.LiveOnly); err != nil {
+			return err
+		}
 		current, err := readRoom(ctx, tx, id)
 		if err != nil {
 			return err
@@ -302,6 +307,13 @@ func (s *Store) SetExpiry(ctx context.Context, id ids.DealRoomID, expiresAt *tim
 		}
 		p := storekit.NewPatch()
 		p.Set("expires_at", current.ExpiresAt, expiresAt)
+		if p.Empty() {
+			if err := storekit.EnsureIfMatch(ctx, tx, roomObject, id.UUID, ifVersion); err != nil {
+				return err
+			}
+			out = current
+			return nil
+		}
 		if err := p.ApplyGuarded(ctx, tx, roomObject, id.UUID, ifVersion); err != nil {
 			return fmt.Errorf("set deal room expiry: %w", err)
 		}

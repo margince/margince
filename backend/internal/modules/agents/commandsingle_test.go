@@ -365,6 +365,9 @@ func TestAMergeStagesTheSurvivorAndNamesBothHalves(t *testing.T) {
 		t.Errorf("staged target %s, want the SURVIVOR %s — an approval bound to the archived half pins a "+
 			"row the merge is about to retire", info.TargetID, survivor)
 	}
+	if info.CoTargetType != "contact" || info.CoTargetID != source {
+		t.Fatalf("source pin = %s/%s, want contact/%s", info.CoTargetType, info.CoTargetID, source)
+	}
 	if info.TargetVersion == nil || *info.TargetVersion != 7 {
 		t.Errorf("TargetVersion = %v, want the survivor's 7", info.TargetVersion)
 	}

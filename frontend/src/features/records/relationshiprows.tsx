@@ -3,11 +3,10 @@
 
 // The relationship edges of one record, as a panel and as the rows inside it.
 //
-// Split from relationships.tsx, which owns the scope vocabulary and the ADD
-// form, because the rows grew a second shape: the deal draws its own panel
-// around them and the file was at its length ceiling. The import runs one way,
-// rows → relationships, so the add verb and the row verbs still agree on what a
-// scope is.
+// Apart from relationships.tsx (the add form) and relationships.edges.tsx (the
+// scope vocabulary), because the deal draws its own panel around these rows.
+// The import runs one way, rows to relationships, so the add verb and the row
+// verbs agree on what a scope is.
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
@@ -26,7 +25,7 @@ import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import "../../design-system/querystates.css";
 import { EntityRef } from "../../components/entityref";
-import { KIND_LABELS } from "./relationshipkinds";
+import { KIND_LABELS } from "../../lib/relationshipkinds";
 import "./relationshiprows.css";
 import {
   AddRelationshipAction,

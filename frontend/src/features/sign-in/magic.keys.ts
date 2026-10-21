@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { MessageKey } from "../../i18n/en";
-import { undoRefusalKey } from "../records/historyundo";
+import { undoRefusalKey } from "../../lib/historyundo";
 
 // The client half of a mirror: this registry, `en.ts` and the keys the receipt
 // service emits name exactly the same sentences, and a gate in the backend
@@ -18,6 +18,7 @@ import { undoRefusalKey } from "../records/historyundo";
 
 /** Every sentence `/magic` can send for a line. */
 export const MAGIC_SENTENCE_KEYS = [
+  "magic.action.forecast_changed",
   "magic.action.advance_stage",
   "magic.action.promote",
   "magic.action.update",
@@ -70,6 +71,8 @@ export type MagicSentenceKey = (typeof MAGIC_SENTENCE_KEYS)[number];
 
 /** Every reason `/magic` can give for a line: why the machinery did it. */
 export const MAGIC_WHY_KEYS = [
+  "magic.why.forecast_review",
+  "magic.why.forecast_date",
   "magic.why.mail_filed",
   "magic.why.public_records",
   "magic.why.site_read",

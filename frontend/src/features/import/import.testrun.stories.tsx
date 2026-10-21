@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { formatFixture } from "../../testing/import.fixtures";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { formatFixture } from "./import.fixtures";
 import { ProblemTable } from "./import.testrun";
 import { ImportWizardPage } from "./import.wizard";
 import type { ImportRowIssue } from "./importtypes";

@@ -26,7 +26,7 @@ func (e *PreviewContextError) Error() string {
 // MessageFault gives clients a recoverable context refusal without internal details.
 func (e *PreviewContextError) MessageFault() (code, message string) {
 	switch e.State {
-	case "incomplete":
+	case previewIncomplete:
 		return "approval_preview_incomplete", "The full change cannot be shown. Resolve the missing context before approving."
 	case "conflict":
 		return "approval_preview_conflict", "Resolve the conflicting context before approving this change."
@@ -69,7 +69,7 @@ func PreviewRefusal(preview *crmcontracts.ApprovalPreview) error {
 	if preview.State == "stale" {
 		return apperrors.ErrVersionSkew
 	}
-	if preview.Version != 1 || preview.State != "ready" {
+	if (preview.Version != 1 && preview.Version != 2) || preview.State != "ready" {
 		return &PreviewContextError{State: preview.State}
 	}
 	if preview.Conflicts != nil {
@@ -108,10 +108,12 @@ func (s *Service) proposalPreview(ctx context.Context, subject row, proposal crm
 		if preview.State != "ready" {
 			preview.Changes = []crmcontracts.ApprovalPreviewChange{}
 			preview.Effects = nil
+			preview.Details = nil
+			preview.Files = nil
 		}
 	}()
-	if (subject.Kind == "advance_deal" || subject.Kind == "progress_deal") && !stagePreviewPinned(subject, proposal) {
-		preview.State = "incomplete"
+	if !previewCoTargetPinned(subject, proposal) {
+		preview.State = previewIncomplete
 		return preview, nil
 	}
 	if subject.CoTargetVersion == nil {
@@ -127,27 +129,51 @@ func (s *Service) proposalPreview(ctx context.Context, subject row, proposal crm
 	return preview, err
 }
 
-func stagePreviewPinned(subject row, proposal crmcontracts.Approval) bool {
-	if subject.CoTargetVersion == nil || subject.CoTargetType == nil || *subject.CoTargetType != "stage" || subject.CoTargetID == nil {
+func previewCoTargetPinned(subject row, proposal crmcontracts.Approval) bool {
+	if subject.Kind == previewMergeRecords && subject.TargetType != nil && (*subject.TargetType == "contact" || *subject.TargetType == tableCompany) {
+		return previewMergePinsMatch(subject, proposal)
+	}
+	var entityType, field string
+	switch subject.Kind {
+	case "advance_deal", "progress_deal", previewStageProgression:
+		entityType, field = "stage", "to_stage_id"
+	case "merge_tags":
+		entityType, field = "tag", "into_tag_id"
+	default:
+		return true
+	}
+	if subject.CoTargetVersion == nil || subject.CoTargetType == nil || *subject.CoTargetType != entityType || subject.CoTargetID == nil || proposal.ProposedChange == nil {
 		return false
 	}
+	return proposalDestination(proposal, field) == *subject.CoTargetID && !subject.CoTargetID.IsZero()
+}
+
+func proposalDestination(proposal crmcontracts.Approval, field string) ids.UUID {
 	raw, err := json.Marshal(proposal.ProposedChange)
 	if err != nil {
-		return false
+		return ids.Nil
 	}
-	type move struct {
-		ToStageID ids.UUID `json:"to_stage_id"`
-	}
-	var payload struct {
-		move
-		Body *move `json:"body"`
-	}
+	var payload map[string]json.RawMessage
 	if err := json.Unmarshal(raw, &payload); err != nil {
-		return false
+		return ids.Nil
 	}
-	destination := payload.ToStageID
-	if payload.Body != nil {
-		destination = payload.Body.ToStageID
+	if _, rest := payload["operation"]; rest {
+		body := payload["body"]
+		payload = nil
+		if err := json.Unmarshal(body, &payload); err != nil {
+			return ids.Nil
+		}
 	}
-	return !destination.IsZero() && destination == *subject.CoTargetID
+	var destination ids.UUID
+	if err := json.Unmarshal(payload[field], &destination); err != nil {
+		return ids.Nil
+	}
+	return destination
 }
+
+const (
+	previewIncomplete       = "incomplete"
+	previewStageProgression = "stage_progression"
+)
+
+const previewMergeRecords = "merge_records"

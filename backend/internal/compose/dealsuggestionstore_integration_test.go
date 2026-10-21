@@ -16,6 +16,7 @@ import (
 	"maps"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -69,7 +70,7 @@ func TestOnlyTheSystemRecordsAWellFormedSuggestion(t *testing.T) {
 		}
 	}
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		_, err := deals.SupersedeStaleSuggestionsTx(e.Admin(), tx)
+		_, err := deals.SupersedeStaleSuggestionsTx(e.Admin(), tx, nil)
 		return err
 	}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("an admin running the superseding pass = %v, want permission denied", err)
@@ -84,8 +85,9 @@ func TestEvidenceOlderThanADismissalIsRefusedByTheWriter(t *testing.T) {
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
 	dana := e.employee(t, "Dana Buyer", acme)
 	old := e.meeting(e.Admin(), t, "Scoping workshop", &dana, e.daysAgo(3))
+	e.buyerPair(t, acme, e.daysAgo(6))
 	e.pass(t)
-	if _, err := e.decider().DismissSuggestion(e.Admin(), e.onlySuggestion(e.Admin(), t, acme).ID); err != nil {
+	if _, err := e.decider().DismissSuggestion(e.signalReader(), e.onlySuggestion(e.signalReader(), t, acme).ID); err != nil {
 		t.Fatalf("dismissing: %v", err)
 	}
 	// Written straight to the writer, past the scout's own filter: the writer
@@ -106,8 +108,9 @@ func TestAReaderWithoutTheGrantsReadsNoSuggestion(t *testing.T) {
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
 	dana := e.employee(t, "Dana Buyer", acme)
 	e.meeting(e.Admin(), t, "Scoping workshop", &dana, e.daysAgo(3))
+	e.buyerPair(t, acme, e.daysAgo(6))
 	e.pass(t)
-	suggestion := e.onlySuggestion(e.Admin(), t, acme)
+	suggestion := e.onlySuggestion(e.signalReader(), t, acme)
 
 	noCompany := e.withoutGrant(e.Rep1, e.Team1, "company")
 	if _, _, err := e.Deals.ListSuggestions(noCompany, deals.SuggestionQuery{}); !errors.Is(err, apperrors.ErrPermissionDenied) {
@@ -129,7 +132,7 @@ func TestAReaderWithoutTheGrantsReadsNoSuggestion(t *testing.T) {
 	if got, err := e.Deals.GetSuggestion(e.rep(e.Rep1, e.Team1), suggestion.ID); err != nil || got.ID != suggestion.ID {
 		t.Errorf("a rep reading it = %v, %v; want the suggestion", got.ID, err)
 	}
-	if _, err := e.Deals.AcceptSuggestion(e.Admin(), suggestion.ID, deals.AcceptSuggestionInput{}); err == nil {
+	if _, err := e.Deals.AcceptSuggestion(e.signalReader(), suggestion.ID, deals.AcceptSuggestionInput{}); err == nil {
 		t.Error("a store with no acceptance effects wired opened a deal")
 	}
 }
@@ -137,8 +140,8 @@ func TestAReaderWithoutTheGrantsReadsNoSuggestion(t *testing.T) {
 func TestAnAcceptanceSettlesOnlyTheSignalsItsReaderCouldSettle(t *testing.T) {
 	e := setupScout(t)
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
-	mail := e.email(t, "Next steps", "inbound", acme, e.daysAgo(6))
-	opportunity := e.signal(t, "new_opportunity", acme, mail, e.daysAgo(5), ids.Nil)
+	mail, buyer := e.buyingEmail(t, acme, e.daysAgo(6))
+	opportunity := e.signal(t, "new_opportunity", acme, mail, e.daysAgo(5), ids.Nil, buyer)
 	e.signal(t, "commitment_made", acme, mail, e.daysAgo(2), ids.Nil)
 	e.pass(t)
 	readsSignals := scoutRepPerms()
@@ -179,11 +182,26 @@ func (e *scoutEnv) twinsOf(t *testing.T, company ids.UUID) []ids.UUID {
 	return twins
 }
 
-// meetingDraft is one meeting held company, as the scout drafts it.
+// meetingDraft adds a buyer request while retaining the shared meeting used by duplicate checks.
 func (e *scoutEnv) meetingDraft(t *testing.T, company, meeting ids.UUID) deals.SuggestionDraft {
+	t.Helper()
+	at := e.daysAgo(3).Truncate(time.Microsecond)
+	var meetingAt time.Time
+	if err := database.WithWorkspaceTx(e.system(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(e.system(), `SELECT occurred_at FROM activity WHERE id = $1`, meeting).Scan(&meetingAt)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	source, buyer := e.buyingEmail(t, company, at)
+	opportunity := e.signal(t, "new_opportunity", company, source, e.now, ids.Nil, buyer)
+	commitment := e.signal(t, "commitment_made", company, source, e.now, ids.Nil)
 	return deals.SuggestionDraft{
-		CompanyID: company, NameHint: deals.HintMeetingHeld, Confidence: 0.6,
-		Evidence:    []deals.SuggestionEvidence{{Kind: deals.EvidenceMeeting, ActivityID: &meeting, OccurredAt: e.daysAgo(3)}},
+		CompanyID: company, NameHint: deals.HintOpportunitySignaled, Confidence: 0.8,
+		Evidence: []deals.SuggestionEvidence{
+			{Kind: deals.EvidenceMeeting, ActivityID: &meeting, OccurredAt: meetingAt},
+			{Kind: deals.EvidenceSignal, SignalID: &opportunity, OccurredAt: at},
+			{Kind: deals.EvidenceSignal, SignalID: &commitment, OccurredAt: at},
+		},
 		DuplicateOf: e.twinsOf(t, company),
 	}
 }
@@ -222,7 +240,7 @@ func TestOneMeetingWithTwoDistinctCompaniesRaisesASuggestionForEach(t *testing.T
 			t.Fatalf("the suggestion for %v = %v, %v; want each business raised", company, raised, err)
 		}
 	}
-	bought, partnered := e.onlySuggestion(e.Admin(), t, buyer).ID, e.onlySuggestion(e.Admin(), t, partner).ID
+	bought, partnered := e.onlySuggestion(e.signalReader(), t, buyer).ID, e.onlySuggestion(e.signalReader(), t, partner).ID
 	// A duplicate pair elsewhere in the workspace, so the pass has pairs to
 	// withdraw against and must tell this one apart from them.
 	e.SeedCompany(t, "Fabrikam Inc", nil)
@@ -251,7 +269,7 @@ func (e *scoutEnv) recordUnpaired(t *testing.T, company, meeting ids.UUID) ids.U
 	if raised, err := e.record(e.system(), t, draft); err != nil || !raised {
 		t.Fatalf("recording the suggestion on %v = %v, %v; want it raised", company, raised, err)
 	}
-	return e.onlySuggestion(e.Admin(), t, company).ID
+	return e.onlySuggestion(e.signalReader(), t, company).ID
 }
 
 // A business filed twice and offered one meeting twice, before the pair was
@@ -309,7 +327,7 @@ func TestADismissedSuggestionIsNotReofferedOnTheDuplicateCompany(t *testing.T) {
 	if raised, err := e.record(e.system(), t, e.meetingDraft(t, named, meeting)); err != nil || !raised {
 		t.Fatalf("the first suggestion = %v, %v; want it raised", raised, err)
 	}
-	if _, err := e.decider().DismissSuggestion(e.Admin(), e.onlySuggestion(e.Admin(), t, named).ID); err != nil {
+	if _, err := e.decider().DismissSuggestion(e.signalReader(), e.onlySuggestion(e.signalReader(), t, named).ID); err != nil {
 		t.Fatalf("dismissing: %v", err)
 	}
 
@@ -329,8 +347,14 @@ func TestAnAcceptedSuggestionIsNotReofferedOnTheDuplicateCompany(t *testing.T) {
 	if raised, err := e.record(e.system(), t, e.meetingDraft(t, named, meeting)); err != nil || !raised {
 		t.Fatalf("the first suggestion = %v, %v; want it raised", raised, err)
 	}
-	accepted := e.onlySuggestion(e.Admin(), t, named).ID
-	if _, err := e.decider().AcceptSuggestion(e.Admin(), accepted, deals.AcceptSuggestionInput{NoAmount: true}); err != nil {
+	accepted := e.onlySuggestion(e.signalReader(), t, named).ID
+	companyID := ids.From[ids.CompanyKind](named)
+	existing, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{Name: "Reviewed request", CompanyID: &companyID, PipelineID: e.pipeline, StageID: e.open, Source: "manual"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	dealID := ids.UUID(existing.Id)
+	if _, err := e.decider().AcceptSuggestion(e.signalReader(), accepted, deals.AcceptSuggestionInput{ExistingDealID: &dealID}); err != nil {
 		t.Fatalf("accepting: %v", err)
 	}
 
@@ -358,6 +382,7 @@ func TestAnArchivedTwinNoLongerPairsTheLiveCompany(t *testing.T) {
 // first's evidence lock, then finds its suggestion and writes nothing.
 func TestTwinsRecordedAtOnceRaiseOneSuggestion(t *testing.T) {
 	e := setupScout(t)
+	e.now = e.now.Truncate(time.Second).Add(123456789 * time.Nanosecond)
 	named := e.SeedCompany(t, "Northwind Traders", nil)
 	twin := e.SeedCompany(t, "NORTHWIND TRADERS", nil)
 	dana := e.employee(t, "Dana Buyer", named)
@@ -486,13 +511,14 @@ func TestAReviewerAnsweringAPairWaitsForTheScoutActingOnIt(t *testing.T) {
 // pass, though no older open suggestion claims it.
 func TestAScoutPassWithdrawsATwinOfADismissedSuggestion(t *testing.T) {
 	e := setupScout(t)
+	e.now = e.now.Truncate(time.Second).Add(123456789 * time.Nanosecond)
 	named := e.SeedCompany(t, "Northwind Traders", nil)
 	twin := e.SeedCompany(t, "NORTHWIND TRADERS", nil)
 	dana := e.employee(t, "Dana Buyer", named)
 	meeting := e.meeting(e.Admin(), t, "Scoping workshop", &dana, e.daysAgo(3))
 	dismissed := e.recordUnpaired(t, named, meeting)
 	raisedTwice := e.recordUnpaired(t, twin, meeting)
-	if _, err := e.decider().DismissSuggestion(e.Admin(), dismissed); err != nil {
+	if _, err := e.decider().DismissSuggestion(e.signalReader(), dismissed); err != nil {
 		t.Fatalf("dismissing: %v", err)
 	}
 
@@ -542,7 +568,7 @@ func TestAClaimantWaitsForTheWithdrawalThatTrustsIt(t *testing.T) {
 
 	dismissDone := make(chan error, 1)
 	go func() {
-		_, err := e.decider().DismissSuggestion(e.Admin(), claimant)
+		_, err := e.decider().DismissSuggestion(e.signalReader(), claimant)
 		dismissDone <- err
 	}()
 	probe, err := e.Pool.Begin(context.Background())

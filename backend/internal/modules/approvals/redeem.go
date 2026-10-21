@@ -93,42 +93,50 @@ func (s *Service) RedeemAndApplyPinned(
 // for an approval that carried none — a create, or a target type with no
 // version column.
 func (s *Service) RedeemInTx(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, tool, diffHash string) (version int64, pinned bool, err error) {
-	p, ok := principal.Actor(ctx)
-	if !ok {
-		return 0, false, errors.New("crmapprovals: no actor bound to context")
-	}
-	a, err := get(ctx, tx, id)
+	a, err := s.redeemRow(ctx, tx, id, tool, diffHash)
 	if err != nil {
-		// An unknown approval id reads as an invalid token, not a 404:
-		// the caller is asserting authority, not browsing.
-		return 0, false, fmt.Errorf("no such approval: %w", apperrors.ErrApprovalTokenInvalid)
-	}
-	if err := validateRedemption(a, redeemerFor(ctx, a, p), tool, diffHash, s.now()); err != nil {
-		return 0, false, err
-	}
-
-	if err := validateRedemptionTarget(ctx, tx, a); err != nil {
-		return 0, false, err
-	}
-
-	tag, err := tx.Exec(ctx,
-		`UPDATE approval SET consumed_at = now() WHERE id = $1 AND consumed_at IS NULL`, id)
-	if err != nil {
-		return 0, false, err
-	}
-	if tag.RowsAffected() != 1 {
-		return 0, false, &alreadyRedeemedError{}
-	}
-	if _, err := storekit.AuditWithEvidence(ctx, tx, "update", entityApproval, id.UUID,
-		map[string]any{approvalKeyRedeemed: false},
-		map[string]any{approvalKeyRedeemed: true},
-		map[string]any{approvalKeyKind: a.Kind}); err != nil {
 		return 0, false, err
 	}
 	if a.TargetVersion == nil {
 		return 0, false, nil
 	}
 	return *a.TargetVersion, true, nil
+}
+
+func (s *Service) redeemRow(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, tool, diffHash string) (row, error) {
+	p, ok := principal.Actor(ctx)
+	if !ok {
+		return row{}, errors.New("crmapprovals: no actor bound to context")
+	}
+	a, err := get(ctx, tx, id)
+	if err != nil {
+		// An unknown approval id reads as an invalid token, not a 404:
+		// the caller is asserting authority, not browsing.
+		return row{}, fmt.Errorf("no such approval: %w", apperrors.ErrApprovalTokenInvalid)
+	}
+	if err := validateRedemption(a, redeemerFor(ctx, a, p), tool, diffHash, s.now()); err != nil {
+		return row{}, err
+	}
+
+	if err := validateRedemptionTarget(ctx, tx, a); err != nil {
+		return row{}, err
+	}
+
+	tag, err := tx.Exec(ctx,
+		`UPDATE approval SET consumed_at = now() WHERE id = $1 AND consumed_at IS NULL`, id)
+	if err != nil {
+		return row{}, err
+	}
+	if tag.RowsAffected() != 1 {
+		return row{}, &alreadyRedeemedError{}
+	}
+	if _, err := storekit.AuditWithEvidence(ctx, tx, "update", entityApproval, id.UUID,
+		map[string]any{approvalKeyRedeemed: false},
+		map[string]any{approvalKeyRedeemed: true},
+		map[string]any{approvalKeyKind: a.Kind}); err != nil {
+		return row{}, err
+	}
+	return a, nil
 }
 
 // alreadyRedeemedError is a redemption refused because another call spent the
@@ -237,6 +245,7 @@ var versionTables = map[string]bool{
 	tableContact: true, tableCompany: true, tableDeal: true, tableLead: true, objectActivity: true,
 	targetOffer: true, targetProduct: true, tableList: true, targetTag: true, targetRelationship: true,
 	tableProject: true, targetSavedView: true, targetOfferTemplate: true, targetWebhookSubscription: true,
+	targetImportRun: true,
 }
 
 // contextTargetKinds are the staging kinds whose target_entity names what the

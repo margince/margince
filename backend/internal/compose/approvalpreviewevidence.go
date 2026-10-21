@@ -8,13 +8,18 @@ import (
 	"encoding/json"
 	"errors"
 
+	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/lifecyclereview"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -34,6 +39,37 @@ func (r approvalPreviewReader) lifecycleEvidence(ctx context.Context, approval c
 		preview.State = previewIncompleteState
 		return nil //nolint:nilerr // Invalid stored proposals are presented as incomplete rather than failing the inbox.
 	}
+	if proposal.Evidence == nil || proposal.Evidence.SourceID.IsZero() {
+		preview.State = previewIncompleteState
+		return nil
+	}
+	var current lifecyclereview.Finding
+	err = r.db.Tx(ctx, func(tx pgx.Tx) error {
+		if _, err := activities.ReadActivityContentTx(ctx, tx, ids.From[ids.ActivityKind](proposal.Evidence.SourceID), storekit.LiveOnly); err != nil {
+			return err
+		}
+		var readErr error
+		current, readErr = lifecyclereview.Reconcile(ctx, tx, proposal.CompanyID, r.now())
+		return readErr
+	})
+	if state := evidenceFailureState(err); state != "" {
+		preview.State = state
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	setLifecyclePreviewContext(preview, current, proposal.Evidence)
+	if !lifecyclereview.Matches(current, proposal.Evidence) {
+		if !current.SourceID.IsZero() {
+			evidence = append(evidence, crmcontracts.ApprovalEvidence{
+				EvidenceSnippet: approvals.SanitizeSummary(current.Quote),
+				SourceType:      new(crmcontracts.ApprovalEvidenceSourceTypeActivity), SourceId: new(openapi_types.UUID(current.SourceID)),
+			})
+		}
+		preview.State = previewStaleState
+		return nil
+	}
 	signal, err := r.signals.GetSignal(ctx, ids.From[ids.SignalKind](proposal.SignalID), storekit.LiveOnly)
 	if previewUnavailable(err) {
 		preview.State = previewUnavailableState
@@ -42,7 +78,7 @@ func (r approvalPreviewReader) lifecycleEvidence(ctx context.Context, approval c
 	if err != nil {
 		return err
 	}
-	if !lifecycleSignalMatches(signal, approval, proposal) {
+	if signal.Version == nil || *signal.Version != current.SignalVersion {
 		preview.State = previewStaleState
 		return nil
 	}
@@ -70,18 +106,29 @@ func (r approvalPreviewReader) signalActivityEvidence(ctx context.Context, signa
 		if err != nil {
 			return nil, apperrors.ErrInvalidArgument
 		}
-		sourceType := crmcontracts.ApprovalEvidenceSourceType(recordTypeActivity)
-		item := crmcontracts.ApprovalEvidence{EvidenceSnippet: citation.Snippet, SourceType: &sourceType, SourceId: new(openapi_types.UUID(id))}
-		current, err := r.currentCitation(ctx, item)
+		source, err := r.activities.GetActivityContent(ctx, ids.From[ids.ActivityKind](id), storekit.LiveOnly)
 		if err != nil {
 			return nil, err
 		}
+		if citation.SourceQuote == nil || source.Body == nil {
+			return nil, apperrors.ErrVersionSkew
+		}
+		proof := values.QuoteProof{Start: citation.SourceQuote.Start, End: citation.SourceQuote.End, SHA256: citation.SourceQuote.Sha256}
+		quote, valid := values.VerifyQuote(textlang.CurrentMessage(*source.Body), proof)
+		if !valid {
+			return nil, apperrors.ErrVersionSkew
+		}
+		sourceType := crmcontracts.ApprovalEvidenceSourceType(recordTypeActivity)
+		current := crmcontracts.ApprovalEvidence{EvidenceSnippet: approvals.SanitizeSummary(quote), SourceType: &sourceType, SourceId: new(openapi_types.UUID(id))}
 		out = append(out, current)
 	}
 	return out, nil
 }
 
 func (r approvalPreviewReader) currentEvidence(ctx context.Context, approval crmcontracts.Approval, preview *crmcontracts.ApprovalPreview) error {
+	if approval.Kind == deals.StageProgressionKind {
+		return r.progressionEvidencePreview(ctx, approval, preview)
+	}
 	if approval.Kind == lifecycleProposalKind {
 		return r.lifecycleEvidence(ctx, approval, preview)
 	}
@@ -155,6 +202,22 @@ func evidenceFailureState(err error) string {
 	}
 }
 
-func lifecycleSignalMatches(signal crmcontracts.Signal, approval crmcontracts.Approval, proposal lifecycleProposal) bool {
-	return signal.ResolvedCompanyId != nil && *signal.ResolvedCompanyId == *approval.TargetEntityId && string(signal.Kind) == signalKindContractEnded && string(signal.Status) == commitmentStateOpen && signal.Summary == proposal.Because
+func setLifecyclePreviewContext(preview *crmcontracts.ApprovalPreview, current lifecyclereview.Finding, shown *lifecyclereview.Finding) {
+	if !current.SourceID.IsZero() {
+		preview.LifecycleEvidence = &crmcontracts.LifecyclePreviewEvidence{
+			Scope: crmcontracts.LifecyclePreviewEvidenceScope(current.Scope), OccurredAt: current.OccurredAt,
+		}
+		if current.Workstream != "" {
+			preview.LifecycleEvidence.Workstream = &current.Workstream
+		}
+	}
+	conflicts := []crmcontracts.ApprovalPreviewConflict{}
+	reason := lifecyclereview.BlockingReason(current)
+	if reason == "" && !lifecyclereview.Matches(current, shown) {
+		reason = "newer_evidence"
+	}
+	if reason != "" {
+		conflicts = append(conflicts, crmcontracts.ApprovalPreviewConflict{Kind: reason, BlocksApproval: true})
+	}
+	preview.Conflicts = &conflicts
 }

@@ -69,6 +69,9 @@ func EraseUntoldLeadTx(ctx context.Context, tx pgx.Tx, in UntoldLead) error {
 	if err != nil {
 		return err
 	}
+	if err := redactQuestionSource(ctx, tx, "lead", []ids.UUID{in.LeadID.UUID}); err != nil {
+		return err
+	}
 	if err := deleteLeadRecordsTx(ctx, tx, in.LeadID.UUID); err != nil {
 		return err
 	}

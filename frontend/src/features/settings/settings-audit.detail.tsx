@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { ReactNode } from "react";
+import { ResolvedPassportChip } from "../../components/passportchip";
 import { type Fact, FactList } from "../../design-system/factlist";
 import { EvidenceChip, FieldDiff, toEvidence } from "../../design-system/trust";
 import {
@@ -10,9 +11,8 @@ import {
   usePlural,
   useT,
 } from "../../i18n";
-import { ResolvedPassportChip } from "../automations/passportchip";
+import { roleLabel } from "../../lib/roles.queries";
 import { humanizeToken } from "./audit";
-import { roleLabel } from "./roles.queries";
 import {
   type AuditLogEntry,
   type AuthorizationRule,

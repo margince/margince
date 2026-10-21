@@ -5,17 +5,637 @@ import type { MessageKey } from "./en";
 // build without typechecking still fails loudly. Every value is translated from
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de = {
+  "homeRepair.taskPermission":
+    "Zum Archivieren geprüfter Aufgaben brauchst du die Berechtigung, Aktivitäten zu archivieren.",
+  "homeRepair.classificationPermission":
+    "Zum Ändern von Nachrichtenergebnissen ist die Berechtigung zum Bearbeiten von Aktivitäten erforderlich.",
+  "homeRepair.reason.classificationNotAttempted":
+    "Es liegt keine abgeschlossene Prüfung vor. Prüfe erneut, sobald die Einordnung verfügbar ist.",
+  "homeRepair.reclassify": "Nachricht neu einordnen",
+  "homeRepair.classifications": "Nachrichtenergebnisse",
+  "homeRepair.asks": "Handlung angefragt",
+  "homeRepair.informs": "Nur Information",
+  "homeRepair.classificationChange":
+    "Aktuell: {before}. Vorgeschlagen: {after}.",
+  "homeRepair.reason.classificationDeclined":
+    "Die Klassifizierung hat diese Nachricht nicht bewertet. Prüfe sie selbst.",
+  "homeRepair.reason.classificationUncertain":
+    "Die neue Prüfung ist unsicher. Prüfe die Nachricht, bevor du das Ergebnis änderst.",
+  "homeRepair.reason.classificationAdopted":
+    "Menschliche Änderungen oder fehlende Nachweise verhindern eine automatische Korrektur.",
+  "homeRepair.reason.classificationWithheld":
+    "Ein Teil des Nachrichtenkontexts ist nicht zugänglich. Prüfe ihn vor einer Änderung.",
+  "homeRepair.reason.classificationCurrent":
+    "Die neue Prüfung bestätigt das aktuelle Ergebnis.",
+  "homeRepair.reason.classificationChanged":
+    "Die neue Prüfung schlägt ein anderes Ergebnis vor.",
+  "homeRepair.suggestionPermission":
+    "Zum Zurückziehen dieser Vorschläge brauchst du die Berechtigung, Deals zu erstellen.",
+  "homeRepair.supersede": "Automatischen Deal-Vorschlag zurückziehen",
+  "homeRepair.suggestions": "Deal-Vorschläge",
+  "homeRepair.reason.dealExists":
+    "Dieses Unternehmen hat bereits einen offenen Deal. Prüfe ihn, bevor du einen weiteren eröffnest.",
+  "homeRepair.reason.dealSource":
+    "Die Quelldaten stimmen nicht mehr mit den Belegen dieses Vorschlags überein.",
+  "homeRepair.reason.buyer":
+    "Die geprüften Quellen belegen keine aktuelle Käuferanfrage mehr.",
+  "homeRepair.reason.engagement":
+    "Ein aktiver Vertrag oder eine laufende Leistung spricht gegen das Ende der gesamten Kundenbeziehung.",
+  "homeRepair.reason.workstream":
+    "Die Belege betreffen das Ende eines einzelnen Auftrags, nicht der gesamten Kundenbeziehung.",
+  "homeRepair.reason.evidenceChanged":
+    "Neuere geprüfte Belege ersetzen den Kontext dieses Vorschlags.",
+  "homeRepair.withdraw": "Automatischen Vorschlag zurückziehen",
+  "homeRepair.reason.duplicate":
+    "Ein identischer offener Vorschlag bleibt verfügbar.",
+  "homeRepair.tasks": "Aufgaben",
+  "homeRepair.proposals": "Vorschläge",
+  "homeRepair.kind": "Zu prüfende Arbeit",
+  "homeRepair.preserved": "Behalten oder übersprungen",
+  "homeRepair.preservedNote":
+    "Enthält zur Prüfung behaltene und seit der Vorschau geänderte Aufgaben. Prüfe erneut, was übrig bleibt.",
+
+  "homeRepair.inspect": "Prüfen",
+  "dataTasks.blocked.review_required":
+    "Prüfe die vorgeschlagenen Änderungen vor dem Start.",
+  "homeRepair.archive": "Automatische Erinnerung archivieren",
+  "homeRepair.keepReview": "Zur persönlichen Prüfung behalten",
+  "homeRepair.keepCurrent": "Aktuelle Aufgabe behalten",
+  "homeRepair.reason.adopted":
+    "Diese Aufgabe wurde möglicherweise von einer Person erstellt, bearbeitet oder angeheftet.",
+  "homeRepair.reason.unverified":
+    "Die verfügbaren Belege rechtfertigen keine automatische Änderung.",
+  "homeRepair.reason.unavailable":
+    "Die Quelle kann mit deinem aktuellen Zugriff nicht geprüft werden.",
+  "homeRepair.reason.historical": "Historische Quelle ohne aktuelle Frist.",
+  "homeRepair.reason.baseline":
+    "Die Quelle liegt vor dem gewählten Beginn des Postfachverlaufs.",
+  "homeRepair.reason.cancelled": "Der zugrunde liegende Termin wurde abgesagt.",
+  "homeRepair.reason.requestAge":
+    "Die ursprüngliche Anfrage liegt außerhalb des Wartezeitraums. Archivieren markiert sie nicht als beantwortet.",
+  "homeRepair.reason.contextUnread":
+    "Spätere Nachrichten wurden noch nicht gelesen.",
+  "homeRepair.reason.contextUnassessed":
+    "Spätere Nachrichten wurden noch nicht auf Änderungen dieser Zusage geprüft.",
+  "homeRepair.reason.timeUnknown": "Das Datum der Quelle ist unbekannt.",
+  "homeRepair.reason.timeContradicted":
+    "Die Datumsangaben der Quelle widersprechen sich.",
+  "homeRepair.reason.meetingPending":
+    "Der zugrunde liegende Termin hat noch nicht stattgefunden.",
+  "homeRepair.reason.current":
+    "Die aktuellen Regeln lassen diese Aufgabe weiterhin zu.",
+  "homeRepair.unnamed": "Details nicht verfügbar",
+  "homeRepair.explain":
+    "Es wird nur Arbeit angezeigt, die du derzeit einsehen kannst. Prüfe bis zu 25 Einträge gleichzeitig. Veraltete automatische Erinnerungen können archiviert und doppelte oder veraltete Vorschläge zurückgezogen werden. Menschlich bearbeitete Aufgaben bleiben erhalten; nichts wird als erledigt markiert.",
+  "homeRepair.preview": "Einträge prüfen",
+  "homeRepair.next": "Nächste Seite prüfen",
+  "homeRepair.summary":
+    "Zu ändernde Ergebnisse: {reclassify}. Erinnerungen zum Archivieren: {archive}. Zurückzuziehende Vorschläge: {withdraw}. Zurückzuziehende Deal-Vorschläge: {supersede}. Zur Prüfung behalten: {review}; als aktuelle Arbeit behalten: {keep}.",
+  "homeRepair.apply_one": "{count} geprüfte Änderung anwenden",
+  "homeRepair.apply_other": "{count} geprüfte Änderungen anwenden",
+  "homeRepair.started":
+    "Der geprüfte Lauf ist vorgemerkt. Der Fortschritt erscheint oben.",
+
+  "approval.scheduled.rearm":
+    "Plant einen erneuten Versuch der angehaltenen Nachricht nach der angegebenen Wartezeit. Berechtigungen, Empfangende und Kommunikationsregeln werden vor dem Versand erneut geprüft.",
+  "approval.scheduled.direct":
+    "Dokumentiert deine Entscheidung, diese abgelehnte Nachricht in eigener Verantwortung zu senden, und versucht den Versand jetzt. Entscheidung und Erklärung werden festgehalten; die üblichen Versandprüfungen gelten weiterhin.",
+  "approval.scheduled.delay": "Wartezeit bis zum erneuten Versuch (Minuten)",
+  "approval.read.profileField": "Profilfeld",
+  "approval.read.factField": "Unternehmensfakt",
+  "approval.read.before": "Aktueller Wert",
+  "approval.read.after": "Wert nach Freigabe",
+  "approval.read.proposed": "Angabe auf der Website",
+  "approval.read.source": "Quellseite",
+  "approval.read.quote": "Quellzitat",
+  "approval.read.retained": "Menschliche Angabe bleibt erhalten",
+  "approval.read.effect":
+    "Übernimmt die angezeigten Unternehmensfelder und Belege. Menschlich bestätigte Belege bleiben unverändert; vorhandene Feldwerte bleiben wie angezeigt erhalten.",
+  "approval.merge.value.suppressed": "Ausgeblendet",
+  "approval.merge.value.corrected": "Korrigiert",
+  "approval.merge.value.confirmed": "Bestätigt",
+  "approval.merge.value.queued": "Eingereiht",
+  "approval.merge.value.submitting": "Wird übermittelt",
+  "approval.merge.value.in_progress": "In Bearbeitung",
+  "approval.merge.value.completed": "Abgeschlossen",
+  "approval.merge.value.no_match": "Kein Treffer",
+  "approval.merge.value.skipped": "Übersprungen",
+  "approval.merge.value.submission_unknown":
+    "Ergebnis der Übermittlung unbekannt",
+  "approval.merge.value.failed": "Fehlgeschlagen",
+  "approval.merge.value.cancelled": "Abgebrochen",
+  "approval.merge.value.budget_exhausted": "Budget ausgeschöpft",
+  "approval.merge.value.low_balance": "Guthaben reicht nicht aus",
+  "approval.merge.value.not_eligible": "Nicht berechtigt",
+  "approval.merge.value.duplicate_subject_candidate": "Doppelter Kandidat",
+  "approval.merge.value.rate_limited": "Anfragelimit des Anbieters erreicht",
+  "approval.merge.value.already_fresh": "Informationen sind bereits aktuell",
+  "approval.merge.value.no_identifiers": "Keine Angaben zur Identifizierung",
+  "approval.merge.value.category_in_flight":
+    "Diese Kategorie wird bereits abgerufen",
+  "approval.preview.mergeRecords":
+    "Übernimmt die angezeigten Datensätze und Werte in das Ziel und archiviert die Quelle. Vorhandene Zielwerte haben an den angezeigten Stellen Vorrang.",
+  "approval.preview.fillLead":
+    "Ergänzt nur die oben gezeigten leeren Lead-Felder. Vorhandene Werte und die E-Mail-Adresse bleiben erhalten; es wird kein zweiter Lead angelegt.",
+  "approval.preview.companyPrivateReadings":
+    "Hat eine Person Zusammenfassungen für beide Unternehmen, bleibt ihre Zusammenfassung des Ziels erhalten. Für die Quelle ausgeblendete Vorschläge können beim Ziel erneut erscheinen.",
+  "approval.preview.companyReceipts":
+    "Partnerprogramm- und Steuerprüfungsnachweise werden nur übernommen, wenn das Ziel keine hat. Andernfalls bleiben die Quellkopien beim archivierten Unternehmen.",
+  "approval.preview.companyLookups":
+    "Website-Abfragen wechseln zum Ziel; doppelte laufende Abfragen werden abgebrochen. Hintergrundprüfungen für das entfernte Unternehmen enden.",
+  "approval.merge.source": "Entfernter Datensatz",
+  "approval.merge.survivor": "Beibehaltener Datensatz",
+  "approval.merge.address": "Übernommene Adresse",
+  "approval.merge.address_kind": "Adressart",
+  "approval.merge.address_usage": "Verwendung der Adresse",
+  "approval.merge.address_primary_before": "Primäradresse der Quelle",
+  "approval.merge.address_primary_after": "Primäradresse des Ziels",
+  "approval.merge.assignment_collapsed": "Doppelte Zuständigkeit entfernt",
+  "approval.merge.assignment_moved": "Übernommene Zuständigkeit",
+  "approval.merge.assignment_role": "Rolle",
+  "approval.merge.channel_account": "Übernommenes Kanalkonto",
+  "approval.merge.channel_blocked": "Kanal gesperrt",
+  "approval.merge.channel_provider": "Kanalanbieter",
+  "approval.merge.channel_username": "Kanalname",
+  "approval.merge.claim": "Übernommene Gesprächsaussage",
+  "approval.merge.claim_quote": "Quellzitat",
+  "approval.merge.claim_source": "Gesprächsquelle",
+  "approval.merge.collapse_link": "Doppelte Verknüpfung entfernt",
+  "approval.merge.move_link": "Übernommene Verknüpfung",
+  "approval.merge.commitment": "Übernommene Zusage",
+  "approval.merge.company_contract": "Übernommener Vertrag",
+  "approval.merge.company_invoice": "Übernommene Rechnung",
+  "approval.merge.company_payment": "Übernommene Zahlung",
+  "approval.merge.company_triaged_domain": "Übernommene zugeordnete Domain",
+  "approval.merge.partner_moved":
+    "Partnerprogramm in verbleibendes Unternehmen übernehmen",
+  "approval.merge.partner_retained":
+    "Partnerprogramm am archivierten Unternehmen behalten",
+  "approval.merge.vat_check_moved":
+    "Umsatzsteuerbeleg in verbleibendes Unternehmen übernehmen",
+  "approval.merge.vat_check_retained":
+    "Umsatzsteuerbeleg am archivierten Unternehmen behalten",
+  "approval.read.vat_check":
+    "Prüfung der Umsatzsteuer-ID anfordern, sofern eingerichtet.",
+  "approval.merge.company_customer_link": "Übernommener Buchhaltungskunde",
+  "approval.merge.company_parent_after":
+    "Muttergesellschaft nach Zusammenführung",
+  "approval.merge.company_commission": "Übernommene Provision",
+  "approval.merge.company_offer": "Übernommenes Angebot",
+  "approval.merge.company_project": "Übernommenes Projekt",
+  "approval.merge.company_deal": "Übernommener Deal",
+  "approval.merge.company_company": "Übernommenes Tochterunternehmen",
+  "approval.merge.company_fact_category": "Faktenkategorie",
+  "approval.merge.company_fact_discarded": "Doppelter Fakt entfernt",
+  "approval.merge.company_fact_field": "Fakt",
+  "approval.merge.company_fact_kept": "Vorhandener Fakt bleibt",
+  "approval.merge.company_fact_moved": "Übernommener Fakt",
+  "approval.merge.company_profile_discarded": "Doppelter Profilwert entfernt",
+  "approval.merge.company_profile_field": "Profilfeld",
+  "approval.merge.company_profile_kept": "Vorhandener Profilwert bleibt",
+  "approval.merge.company_profile_moved": "Übernommener Profilwert",
+  "approval.merge.company_relationship_type":
+    "Übernommene Unternehmensbeziehung",
+  "approval.merge.confirmation": "Übernommene Bestätigung",
+  "approval.merge.consent_event": "Übernommener Einwilligungsnachweis",
+  "approval.merge.consent_event_at": "Nachweisdatum",
+  "approval.merge.consent_event_collapsed": "Doppelter Nachweis entfernt",
+  "approval.merge.consent_event_note": "Notiz zum Nachweis",
+  "approval.merge.consent_event_source": "Nachweisquelle",
+  "approval.merge.draft_bcc": "Verborgene Entwurfsempfänger",
+  "approval.merge.draft_body": "Entwurfstext",
+  "approval.merge.draft_cc": "Kopieempfänger des Entwurfs",
+  "approval.merge.draft_discarded": "Doppelter Entwurf entfernt",
+  "approval.merge.draft_kept": "Vorhandener Entwurf bleibt",
+  "approval.merge.draft_moved": "Übernommener Entwurf",
+  "approval.merge.draft_to": "Entwurfsempfänger",
+  "approval.merge.feedback_correction": "Korrektur",
+  "approval.merge.feedback_discarded": "Doppelte Rückmeldung entfernt",
+  "approval.merge.feedback_kept": "Vorhandene Rückmeldung bleibt",
+  "approval.merge.feedback_moved": "Übernommene Rückmeldung",
+  "approval.merge.feedback_value": "Geprüfter Wert",
+  "approval.merge.feedback_verdict": "Rückmeldungsentscheidung",
+  "approval.merge.file": "Übernommene Datei",
+  "approval.merge.file_archived": "Datei archiviert am",
+  "approval.merge.finance_archived": "Eintrag archiviert am",
+  "approval.merge.grant_active": "Zugriff bleibt aktiv",
+  "approval.merge.grant_after": "Zugriff nach Zusammenführung",
+  "approval.merge.grant_before": "Bisheriger Zugriff",
+  "approval.merge.grant_expiry_after": "Zugriffsende nach Zusammenführung",
+  "approval.merge.grant_expiry_before": "Bisheriges Zugriffsende",
+  "approval.merge.grant_reason": "Zugriffsgrund",
+  "approval.merge.grant_source": "Von der Quelle übernommener Zugriff",
+  "approval.merge.grant_subject": "Zugriff für",
+  "approval.merge.handoff": "Übernommene Übergabe",
+  "approval.merge.handoff_recipient": "Übergabeempfänger",
+  "approval.merge.handoff_sender": "Übergebende Person",
+  "approval.merge.introduction_after": "Vorstellung nach Zusammenführung",
+  "approval.merge.introduction_before": "Vorstellung vor Zusammenführung",
+  "approval.merge.introduction_cancellation": "Absagegrund",
+  "approval.merge.introduction_contact_after": "Vorgestellter Kontakt danach",
+  "approval.merge.introduction_contact_before": "Vorgestellter Kontakt zuvor",
+  "approval.merge.introduction_through_after": "Vermittelnder Kontakt danach",
+  "approval.merge.introduction_through_before": "Vermittelnder Kontakt zuvor",
+  "approval.merge.link_consumed": "Link verwendet am",
+  "approval.merge.link_note": "Verknüpfungsnotiz",
+  "approval.merge.link_opened": "Link geöffnet am",
+  "approval.merge.notice": "Übernommene Mitteilung",
+  "approval.merge.observation_after":
+    "Beziehung beobachtet nach Zusammenführung",
+  "approval.merge.observation_before": "Bisherige Beziehungsbeobachtung",
+  "approval.merge.optin": "Übernommene Einwilligungsbestätigung",
+  "approval.merge.override": "Übernommene Kommunikationsausnahme",
+  "approval.merge.override_authority": "Berechtigung für die Ausnahme",
+  "approval.merge.override_reason": "Ausnahmegrund",
+  "approval.merge.participant_activity": "Verknüpftes Gespräch",
+  "approval.merge.participant_address": "Teilnehmeradresse",
+  "approval.merge.participant_collapsed": "Doppelte Teilnahme entfernt",
+  "approval.merge.participant_role": "Teilnehmerrolle",
+  "approval.merge.payment_at": "Zahlungsdatum",
+  "approval.merge.preference_link": "Übernommener Einstellungslink",
+  "approval.merge.preference_reason": "Grund der Stilllegung",
+  "approval.merge.preference_retired": "Einstellungslink stillgelegt",
+  "approval.merge.profile_discarded": "Doppelter Kontaktfakt entfernt",
+  "approval.merge.profile_field": "Kontaktfeld",
+  "approval.merge.profile_kept": "Vorhandener Kontaktfakt bleibt",
+  "approval.merge.profile_moved": "Übernommener Kontaktfakt",
+  "approval.merge.provider": "Anreicherungsanbieter",
+  "approval.merge.relationship_kind": "Übernommene Beziehung",
+  "approval.merge.relationship_primary": "Primäre Beziehung danach",
+  "approval.merge.relationship_retired": "Beziehung beendet",
+  "approval.merge.run_after": "Abfragestatus danach",
+  "approval.merge.run_before": "Bisheriger Abfragestatus",
+  "approval.merge.run_created": "Abfrage angefordert am",
+  "approval.merge.run_moved": "Abfrage übernommen",
+  "approval.merge.run_skip": "Grund der ausgelassenen Abfrage",
+  "approval.merge.signal": "Übernommenes Signal",
+  "approval.merge.social_handle": "Übernommenes soziales Profil",
+  "approval.merge.social_platform": "Soziale Plattform",
+  "approval.merge.social_survivor": "Vorhandenes soziales Profil bleibt",
+  "approval.merge.support_collapsed": "Doppelte Herkunftseinträge entfernt",
+  "approval.merge.support_fields": "Übernommene Herkunftseinträge",
+  "approval.merge.support_resolutions": "Übernommene Beschäftigungszuordnungen",
+  "approval.capture.target": "Vorhandener Lead",
+  "approval.capture.full_name": "Erfasster Name",
+  "approval.capture.company_name": "Erfasstes Unternehmen",
+  "approval.capture.title": "Erfasste Position",
+  "approvalPreferences.title": "Persönlich stummgeschaltete Freigaben",
+  "approvalPreferences.explain":
+    "Stummgeschaltete Arten verschwinden nur aus deiner Worklist. Andere Mitglieder behalten ihre Vorschläge. Stummschalten und Wiederherstellen deaktivieren deine automatischen Änderungen dieser Art. Versand, Buchungen, Zusammenführungen und Vorschläge mit Agentenpass bleiben sichtbar.",
+  "approvalPreferences.review": "Auch stumme Vorschläge prüfen",
+  "approvalPreferences.reviewExplain":
+    "Diese Ansicht enthält stumme und abgelaufene Vorschläge. Pakete in deiner normalen Worklist können durch persönliche Einstellungen weniger Einträge zeigen. Prüfe jeden Vorschlag vor der Entscheidung.",
+  "approvalPreferences.close": "Prüfung schließen",
+  "approvalPreferences.next": "Nächste Seite",
+  "approvalPreferences.first": "Erste Seite",
+  "dealSuggestion.linkedUnlinked":
+    "Belege verknüpft. Einige Belege bleiben unverändert, da die Berechtigung zum Verschieben fehlt.",
+  "dealSuggestion.searchExisting": "Deals suchen",
+  "dealSuggestion.existingDeal": "Bestehender Deal",
+  "dealSuggestion.moreDeals": "Weitere Deals laden",
+  "dealSuggestion.noMatchingDeals":
+    "Keine passenden Deals bei diesem Unternehmen.",
+  "dealSuggestion.changed":
+    "Dieser Vorschlag ist nicht mehr verfügbar. Lade die Prüfpunkte neu, um den aktuellen Stand zu sehen.",
+  "dealSuggestion.linkExisting": "Mit bestehendem Deal verknüpfen",
+  "dealSuggestion.linked": "Belege mit dem Deal verknüpft.",
+  "dealSuggestion.dismissTitle": "Deal-Vorschlag verwerfen",
+  "dealSuggestion.linkEffect":
+    "Die genannten Belege mit einem Deal bei {company} verknüpfen; es entsteht kein neuer Deal.",
+  "dealSuggestion.dismissEffect":
+    "Diesen Vorschlag für {company} schließen und den Grund speichern.",
+  "dealSuggestion.dismissReason": "Grund",
+  "dealSuggestion.dismissReason.not_a_deal": "Kein Kaufinteresse",
+  "dealSuggestion.dismissReason.already_tracked": "Bereits erfasst",
+  "dealSuggestion.dismissReason.wrong_company": "Falsches Unternehmen",
+  "dealSuggestion.dismissReason.historical": "Frühere Aktivität",
+  "dealSuggestion.dismissReason.other": "Anderer Grund",
+  "dataTasks.unknownState":
+    "Aktualisiere die Anwendung, um diesen Status zu verwalten.",
+  "dataTasks.blockedBy": "Wartet auf: {name}",
+  "roles.object.data_task": "Datenaktualisierungen",
+  "dataTasks.title": "Datenaktualisierungen",
+  "dataTasks.sub":
+    "Gespeicherte Datensätze werden in kleinen Paketen aktualisiert. Bereits gespeicherte Änderungen bleiben bei einer Pause erhalten.",
+  "dataTasks.withheld":
+    "Zum Lesen der Datenaktualisierungen ist eine Berechtigung erforderlich. Wende dich an einen Admin, um Zugriff zu erhalten.",
+  "dataTasks.empty": "Keine Datenaktualisierungen registriert.",
+  "dataTasks.unknown": "Nicht geschätzt",
+  "dataTasks.atLeast_one": "Mindestens {count}",
+  "dataTasks.atLeast_other": "Mindestens {count}",
+  "dataTasks.scanned": "Geprüfte Zeilen",
+  "dataTasks.changed": "Geänderte Zeilen",
+  "dataTasks.estimate": "Geschätzte zu prüfende Zeilen",
+  "dataTasks.batchLimit": "Zeilen pro Paket",
+  "dataTasks.batches": "Gespeicherte Pakete",
+  "dataTasks.lastProgress": "Letzter Fortschritt",
+  "dataTasks.notStarted": "Nicht gestartet",
+  "dataTasks.nextAttempt": "Nächster Versuch",
+  "dataTasks.release": "Erste Version",
+  "dataTasks.run": "Lauf-ID",
+  "dataTasks.step": "Schritt: {step}",
+  "dataTasks.prerequisites": "Zuerst erforderlich: {names}",
+  "dataTasks.status.pending": "Ausstehend",
+  "dataTasks.status.running": "Läuft",
+  "dataTasks.status.paused": "Pausiert",
+  "dataTasks.status.done": "Abgeschlossen",
+  "dataTasks.status.failed": "Fehlgeschlagen",
+  "dataTasks.action.pause": "Pausieren",
+  "dataTasks.action.resume": "Fortsetzen",
+  "dataTasks.action.retry": "Erneut versuchen",
+  "dataTasks.action.estimate": "Zeilen schätzen",
+  "dataTasks.blocked.waiting_for_worker":
+    "Wartet auf einen Hintergrundprozess.",
+  "dataTasks.blocked.newer_release_required":
+    "Eine neuere Version ist erforderlich. Aktualisiere die Anwendung, bevor du fortfährst.",
+  "dataTasks.blocked.paused": "An der gespeicherten Position pausiert.",
+  "dataTasks.blocked.failed":
+    "Nach wiederholten Fehlern gestoppt. Prüfe den Fehler vor einem neuen Versuch.",
+  "dataTasks.blocked.retry_wait": "Wartet auf den nächsten Versuch.",
+  "dataTasks.blocked.earlier_step":
+    "Ein vorheriger Schritt muss zuerst abgeschlossen werden.",
+  "dataTasks.blocked.missing_prerequisite":
+    "Erforderliche Aktualisierungen müssen zuerst abgeschlossen werden.",
+  "approval.preview.createContact":
+    "Erlaubt dem vorschlagenden Aufrufer, diesen Kontakt einmal mit den angezeigten Werten anzulegen. Aktuelle Berechtigungen und doppelte Identitäten werden erneut geprüft.",
+  "approval.preview.recordAcquisition":
+    "Erfasst die angezeigten Angaben zur Herkunft. Das erlaubt noch keinen Nachrichtenversand.",
+  "approval.preview.createPromotions":
+    "Übernimmt die genannten Leads in diesen Kontakt und archiviert sie. Ergänzt fehlende Kontaktfelder und Telefonnummern, führt den Verlauf zusammen und erhält Widerrufe und geltende Kommunikationsbeschränkungen.",
+  "approval.preview.acquisition": "Warum dieser Kontakt angelegt wird",
+  "approval.preview.acquiredAt": "Erfasst am",
+  "approval.preview.promotedLead": "Zu übernehmender Lead",
+  "approval.preview.sourceActivity": "Verlauf dieses Quell-Leads",
+  "approval.preview.sourceConsent": "Einwilligung dieses Quell-Leads",
+  "approval.preview.channelPosition": "Position in der Liste",
+  "approval.preview.emailCorrespondence":
+    "Adresse gilt als bisherige Korrespondenz",
+  "approval.preview.socialPlatform": "Soziales Netzwerk",
+  "approval.preview.socialHandle": "Profil oder Nutzername",
+  "approval.preview.originLead": "Ursprünglicher Lead",
+  "approval.preview.archiveRelationship":
+    "Diese Verknüpfung archivieren. Die verknüpften Datensätze bleiben gespeichert.",
+  "approval.preview.archivePromoteEmployer":
+    "Die gezeigte verbleibende Anstellung als primären Arbeitgeber des Kontakts festlegen.",
+  "approval.preview.archiveNoPrimary":
+    "Der Kontakt bleibt ohne primären Arbeitgeber. Es wird kein Arbeitgeber automatisch ausgewählt.",
+  "approval.preview.newPrimaryEmployer": "Neuer primärer Arbeitgeber",
+  "approval.preview.startPrecision": "Genauigkeit des Startdatums",
+  "approval.preview.endPrecision": "Genauigkeit des Enddatums",
+  "approval.preview.precisionDay": "Genauer Tag",
+  "approval.preview.precisionMonth": "Nur Monat",
+  "approval.preview.mergeTags":
+    "Das Quell-Tag auf den gezeigten Datensätzen durch das verbleibende Tag ersetzen. Wenn beide Tags vorhanden sind, nur die doppelte Quell-Zuordnung entfernen. Das Quell-Tag archivieren und seinen Namen zur erneuten Verwendung freigeben; er bleibt nicht als Alias erhalten.",
+  "approval.preview.mergeTagSource": "Zu entfernendes Tag",
+  "approval.preview.mergeTagTarget": "Verbleibendes Tag",
+  "approval.preview.mergeTagMove": "Datensatz, der das verbleibende Tag erhält",
+  "approval.preview.mergeTagCollapse": "Datensatz, der bereits beide Tags hat",
+  "approval.preview.archiveCompany":
+    "Dieses Unternehmen mit den aufgeführten Domains, Klassifizierungen, dem Partnerprogramm und den Beziehungen archivieren. Listenzugehörigkeiten und Tags entfernen. Kontakte, Deals und Gesprächsverlauf bleiben erhalten.",
+  "approval.preview.archiveDomain": "Zu archivierende Domain",
+  "approval.preview.archiveCompanyType":
+    "Zu entfernende Unternehmensklassifizierung",
+  "approval.preview.archivePartner": "Zu archivierendes Partnerprogramm",
+  "approval.preview.archiveContact":
+    "Diesen Kontakt und die aufgeführten E-Mail-Adressen, Telefonnummern, Kanalverknüpfungen und Beziehungen archivieren. Die aufgeführten Listenmitgliedschaften und Tags entfernen. Der Gesprächsverlauf bleibt erhalten.",
+  "approval.preview.archiveEmail": "Zu archivierende E-Mail-Adresse",
+  "approval.preview.archivePhone": "Zu archivierende Telefonnummer",
+  "approval.preview.archiveChannel": "Zu archivierender Nachrichtenkanal",
+  "approval.preview.archiveProject":
+    "Dieses Projekt archivieren und die aufgeführten Beteiligten-Verknüpfungen, Listenmitgliedschaften und Tags entfernen. Aktivitäten, Deals und Firmenverknüpfungen bleiben erhalten.",
+  "approval.preview.archiveDeal":
+    "Diesen Deal archivieren und die gezeigten Stakeholder-Verknüpfungen, Listenzugehörigkeiten und Tag-Zuordnungen entfernen. Kontakte, Listen und Tags bleiben gespeichert.",
+  "approval.preview.archiveStakeholder": "Zu archivierender Stakeholder-Link",
+  "approval.preview.archiveRole": "Rolle in dieser Verknüpfung",
+  "approval.preview.archiveList": "Zu entfernende Listenzugehörigkeit",
+  "approval.preview.archiveTag": "Zu entfernende Tag-Zuordnung",
+  "approval.preview.archiveActivity":
+    "Diese Aktivität archivieren und aus der aktiven Arbeit entfernen. Der Inhalt bleibt gespeichert; bereits gesendete Nachrichten werden nicht zurückgerufen.",
+  "approval.preview.archiveProduct":
+    "Dieses Produkt archivieren und aus dem aktiven Katalog entfernen. Gespeicherte Angebotspositionen bleiben unverändert.",
+  "approval.preview.archiveTemplate":
+    "Diese Vorlage archivieren und aus der Vorlagenauswahl entfernen, auch als Standardvorlage. Bestehende Angebote behalten ihren Vorlagenverweis.",
+  "approval.preview.archiveOffer":
+    "Dieses Angebot archivieren und aus der aktiven Angebotsliste ausblenden. Seine Positionen bleiben gespeichert.",
+  "approval.preview.importScopeUnavailable":
+    "Dieser Importvorschlag enthält keine vollständigen Änderungen je Zeile. Öffne Datenimport und prüfe die Quelle und den Testlauf, bevor du den Import startest.",
+  "approval.preview.confirmationOnly":
+    "Diese Bestätigung erfassen und den wartenden Automatisierungslauf abschließen. Es wird keine Datensatzänderung und kein Nachrichtenversand freigegeben.",
+  "approval.preview.confirmationQuestion": "Zu bestätigende Frage",
+  "approval.preview.confirmationReason": "Grund für die Bestätigung",
+  "approval.preview.createOffer":
+    "Einen Angebotsentwurf mit den gezeigten Bedingungen, Positionen und Summen erstellen. Es wird kein Angebot versendet.",
+  "approval.preview.assignOfferNumber":
+    "Die Angebotsnummer wird beim Erstellen des Entwurfs vergeben.",
+  "approval.preview.createTemplate":
+    "Eine Angebotsvorlage mit der angezeigten Kopf- und Fußzeile erstellen.",
+  "approval.preview.defaultTemplate":
+    "Diese Vorlage als Standard für die angezeigte Sprache festlegen.",
+  "approval.preview.createProduct":
+    "Das Katalogprodukt mit dem angezeigten Preis und den Abrechnungsbedingungen erstellen. Bestehende Angebotspositionen behalten ihre Preise.",
+  "approval.preview.billingMonths": "Abrechnungszeitraum (Monate)",
+  "approval.preview.createProject":
+    "Das Projekt erstellen, das angezeigte Unternehmen als Kunden verknüpfen und die Anfangsphase dokumentieren.",
+  "approval.preview.assignProjectKey":
+    "Bei der Erstellung einen Projektschlüssel vergeben.",
+  "approval.preview.createDeal":
+    "Den Deal in der angezeigten Pipeline und Phase mit dem ersten Eintrag im Phasenverlauf erstellen.",
+  "approval.preview.createCompany":
+    "Erlaubt dem vorschlagenden Aufrufer, dieses Unternehmen einmal mit den angezeigten Werten anzulegen. Aktuelle Berechtigungen und doppelte Identitäten werden erneut geprüft.",
+  "approval.preview.workspaceVisible":
+    "Der neue Datensatz ist mit passenden Leserechten sichtbar.",
+  "approval.preview.geocodeConditional":
+    "Wenn die Adress-Geokodierung aktiviert ist, wird eine Koordinatenabfrage für die angezeigte Adresse eingeplant.",
+  "approval.preview.primaryDomain": "Primäre Domain",
+  "approval.preview.createLead":
+    "Erlaubt dem vorschlagenden Aufrufer, diesen Lead einmal mit den angezeigten Werten anzulegen. Beim Anlegen werden Berechtigungen und doppelte Identitäten erneut geprüft.",
+  "approval.preview.reuseRecord":
+    "Der Quellschlüssel bezeichnet bereits diesen Datensatz. Der Aufruf gibt ihn zurück, ohne einen weiteren anzulegen.",
+  "approval.preview.queueDuplicate":
+    "Legt neben dem neuen Datensatz einen Dublettenvorschlag zur Prüfung an.",
+  "approval.preview.creationExisting": "Zurückgegebener vorhandener Datensatz",
+  "approval.preview.creationDuplicate": "Vorgeschlagene Dublette",
   "approval.preview.nameUnavailable": "Name nicht verfügbar",
   "approval.preview.structured": "Strukturierter Wert: {value}",
   "approval.preview.resolveConflict":
     "Kläre die widersprüchlichen Angaben, bevor du diese Änderung freigibst.",
   "history.field.closed_at": "Abgeschlossen am",
   "history.field.amount_minor_base": "Betrag in Basiswährung",
+  "approval.preview.activeContract":
+    "Ein Vertrag ist noch aktiv. Prüfe ihn, bevor du die Kundenbeziehung beendest.",
+  "approval.preview.activeDelivery":
+    "Ein Projekt wird noch geliefert. Prüfe es, bevor du die Kundenbeziehung beendest.",
+  "approval.preview.unknownScope":
+    "Die Quelle belegt nicht, dass die gesamte Kundenbeziehung beendet wurde.",
+  "approval.preview.incompleteEvidence":
+    "Die aktuellen Belege sind unvollständig. Prüfe das Unternehmen, bevor du seinen Status änderst.",
+  "approval.preview.newerEvidence":
+    "Die Quelle wurde nach diesem Vorschlag geändert. Prüfe die aktuellen Belege.",
+  "approval.preview.scopeCompany": "Gesamte Kundenbeziehung",
+  "approval.preview.scopeWorkstream": "Ein Auftrag",
+  "approval.preview.scopeUnknown": "Umfang nicht geklärt",
+  "approval.preview.scope": "Umfang der Beendigung",
+  "approval.preview.sourceDate": "Datum der Quelle",
+  "approval.preview.workstream": "Auftrag",
   "approval.preview.conflict": "Widersprüchlicher Kontext",
   "approval.preview.execution": "Wird beim Anwenden festgelegt",
   "approval.preview.effects": "Weitere Änderungen",
+  "approval.preview.authorizeMessage":
+    "Erlaubt dem vorschlagenden Aufrufer, diese Nachricht einmal zu senden. Die Freigabe sendet sie nicht sofort und fügt deine Signatur nicht hinzu. Beim Senden werden die aktuellen Berechtigungen und Einwilligungen erneut geprüft.",
+  "approval.preview.archiveLead":
+    "Archiviert diesen Lead und entfernt alle seine Tags. Der Datensatz bleibt unter den archivierten Datensätzen verfügbar.",
+  "approval.preview.authorizeWebsite":
+    "Erlaubt dem vorschlagenden Aufrufer, diese Website mit den konfigurierten externen Diensten zu lesen. Dabei können KI und nutzungsabhängige Gebühren anfallen.",
+  "approval.preview.readPage":
+    "Eine Seite lesen und einen Anreicherungsvorschlag vorbereiten",
+  "approval.preview.readSite": "Einen Crawl der Website einreihen",
+  "approval.preview.readTechnical":
+    "Eine öffentliche technische Abfrage der Firmendomäne einreihen",
+  "approval.preview.targetURL": "Zu lesende Website oder Domäne",
+  "approval.preview.readScope": "Leseumfang",
+  "approval.preview.recordMeetingConsent":
+    "Autorisiert das Erfassen des Termins und der angezeigten transaktionalen Einwilligung vor der Zeitreservierung. Eine bestehende Entscheidung bleibt erhalten. Die Einwilligung kann erfasst werden, auch wenn der Zeitraum nicht mehr frei ist. Es wird keine Kalendereinladung versendet.",
+  "approval.preview.preserveConsent":
+    "Die bestehende Einwilligungsentscheidung bleibt unverändert; es wird kein neuer Nachweis erfasst.",
+  "approval.preview.requestConfirmation":
+    "Autorisiert den Versuch, eine Marketingbestätigung an die angezeigte Adresse anzufordern. Die Zustellung hängt vom konfigurierten Maildienst und aktuellen Einwilligungsprüfungen ab. Der Kontakt wird dadurch nicht angemeldet. Der eingereichte Marketingtext wird nicht als Nachweis gespeichert; maßgeblich ist der Text auf der Bestätigungsseite.",
+  "approval.preview.confirmationUnavailable":
+    "Die aktuellen Kontakt- oder Einwilligungsdaten verhindern eine Marketingbestätigung. Die Buchung kann ohne Versand und ohne Marketingeinwilligung fortgesetzt werden.",
+  "approval.preview.consentContact": "Kontakt der Einwilligung",
+  "approval.preview.consentPurpose": "Transaktionaler Zweck",
+  "approval.preview.consentVersion": "Version der Einwilligungsrichtlinie",
+  "approval.preview.consentWording": "Eingereichter Einwilligungstext",
+  "approval.preview.consentResult": "Einwilligungsentscheidung nach Ausführung",
+  "approval.preview.marketingPurpose": "Marketingzweck",
+  "approval.preview.marketingVersion":
+    "Eingereichte Version der Marketingrichtlinie",
+  "approval.preview.marketingWording": "Eingereichter Marketingtext",
+  "approval.preview.confirmationRecipient": "Zieladresse der Bestätigung",
+  "approval.preview.consentGranted": "Erteilt",
+  "approval.preview.consentWithdrawn": "Widerrufen",
+  "approval.preview.authorizeInvitation":
+    "Autorisiert die vorschlagende organisierende Person, den Zeitraum zu reservieren und diese Kalendereinladung an die angezeigte Adresse zum Versand einzureihen. Der Einladung wird ein privater Link zum Verschieben oder Absagen hinzugefügt. Video- und Erinnerungseinstellungen stehen oben. Kalenderzugriff, Verfügbarkeit und Empfangsberechtigungen werden bei der Ausführung geprüft. Eine Bestätigung des Anbieters belegt weder die Annahme noch den Empfang durch den Gast.",
+  "approval.preview.authorizeChannelReply":
+    "Autorisiert den vorschlagenden Aufrufer, einmal in dieser Unterhaltung mit dem vollständigen Text und den aufgelisteten Dateien an das angezeigte Kanalkonto zu antworten. Die Freigabe versendet noch nichts. Kanalverfügbarkeit, Empfangsberechtigungen und Dateien werden bei der Ausführung erneut geprüft.",
+  "approval.preview.channelProvider": "Nachrichtendienst",
+  "approval.preview.contextAutomatic":
+    "Wird beim Versand aus Unterhaltung und Belegen ermittelt",
+  "approval.preview.claimedContext": "Angegebene Kommunikationskategorie",
+  "approval.preview.messagePurpose": "Angegebener Zweckschlüssel",
+  "approval.preview.operatorReason":
+    "Erklärung der absendenden Person (kein Beleg)",
+  "approval.preview.evidenceContract": "Angeführter Vertrag",
+  "approval.preview.evidenceInvoice": "Angeführte Rechnung",
+  "approval.preview.evidenceDeal": "Angeführter Deal",
+  "approval.preview.contextReply": "Antwort auf eine eingegangene Nachricht",
+  "approval.preview.contextSecurity": "Sicherheitsmitteilung",
+  "approval.preview.contextPrivacy": "Datenschutzmitteilung",
+  "approval.preview.contextRecord": "Bestätigung der Angaben",
+  "approval.preview.contextConsent": "Einwilligungsbestätigung",
+  "approval.preview.contextOptout": "Bestätigung der Abmeldung",
+  "approval.preview.unsubscribeFooter":
+    "Beim Versand wird ein empfängerbezogener Abmeldelink ergänzt, wenn ein entsprechender Präferenzdatensatz besteht. Der private Link wird erst bei der Ausführung erstellt, nicht bei der Prüfung.",
+  "approval.preview.disclosureText": "Beim Versand ergänzte Pflichtangabe",
+  "approval.preview.demoteArchive":
+    "Stellt den Lead als Engagiert wieder her und entfernt seine Qualifizierungsverknüpfungen. Archiviert den Kontakt, seine E-Mail-Adressen, Telefonnummern, Kanalidentitäten und Beziehungen; entfernt seine Tags und Listenzugehörigkeiten. Aktivitäten bleiben unverändert zugeordnet.",
+  "approval.preview.demotePreserve":
+    "Stellt den Lead als Engagiert wieder her und entfernt seine Qualifizierungsverknüpfungen. Behält den bestehenden Kontakt und seine Historie; entfernt die Rückverknüpfung zu diesem Lead. Aktivitäten bleiben unverändert zugeordnet.",
+  "approval.preview.relinkPreserve":
+    "Andere Verknüpfungen bleiben bestehen. Beteiligte ersetzter Kontaktverknüpfungen wechseln zum Zielkontakt; gleiche Einträge werden zusammengeführt.",
+  "approval.preview.relinkRetention":
+    "Die Ablage unter diesem Projekt begründet die Aufbewahrung als Geschäftskorrespondenz. Eine spätere Verschiebung hebt diesen Grund nicht auf.",
+  "approval.preview.relinkDestination": "Zieldatensatz",
+  "approval.preview.relinkActivity": "Aktivität mit neuer Verknüpfung",
+  "approval.preview.relinkUnchanged": "Bereits verknüpfte Aktivität",
+  "approval.preview.relinkRemoved": "Ersetzte Verknüpfung",
+  "approval.preview.relinkParticipantMove":
+    "Beteiligte Person wechselt von Kontakt",
+  "approval.preview.relinkParticipantMerge":
+    "Doppelter Eintrag entfernt von Kontakt",
+  "approval.preview.relinkRole": "Rolle der beteiligten Person",
+  "approval.preview.relinkAddress": "Adresse der beteiligten Person",
+  "approval.preview.relinkUser": "Beteiligtes Teammitglied",
+  "approval.preview.promotionMoveLinks":
+    "Verschiebt die aufgeführten Abmeldelinks und Kommunikationsgrundlagen zum Kontakt. Geltungsbereich, Ablauf und Widerruf bleiben unverändert.",
+  "approval.preview.withdrawalAddress": "Abmeldelink für",
+  "approval.preview.linkIssued": "Link erstellt",
+  "approval.preview.linkExpires": "Link läuft ab",
+  "approval.preview.recordRevoked": "Widerrufen",
+  "approval.preview.basisKind": "Erfasste Kommunikationsgrundlage",
+  "approval.preview.basisFrom": "Grundlage gültig ab",
+  "approval.preview.basisUntil": "Grundlage gültig bis",
+  "approval.preview.basisActivity": "Belegende Aktivität für diese Grundlage",
+  "approval.preview.basisContract": "Vertrag",
+  "approval.preview.basisRequest": "Vorvertragliche Anfrage",
+  "approval.preview.basisCorrespondence":
+    "Von der empfangenden Person begonnene Korrespondenz",
+  "approval.preview.basisInterests": "Berechtigte Interessen",
+  "approval.preview.basisObligation": "Rechtliche Verpflichtung",
+  "approval.preview.basisSecurity":
+    "Lebenswichtiges Interesse oder Sicherheitsinteresse",
+  "approval.preview.basisCustomer": "Bestandskundenausnahme",
+  "approval.preview.basisAgreement": "Zustimmung der empfangenden Person",
+  "approval.preview.promotionTrigger": "Anlass der Qualifizierung",
+  "approval.preview.promotionNote": "Beleg zur Qualifizierung",
+  "approval.preview.promotionEvidence": "Belegende Aktivität",
+  "approval.preview.promotionContactName": "Kontaktname",
+  "approval.preview.promotionContactSource": "Kontaktquelle",
+  "approval.preview.promotionContactTitle": "Zu ergänzende Position",
+  "approval.preview.promotionContactOwner": "Kontaktverantwortlicher",
+  "approval.preview.promotionContactEmail": "Zu ergänzende E-Mail",
+  "approval.preview.promotionContactPhone": "Zu ergänzende Telefonnummer",
+  "approval.preview.promotionExistingContact": "Zu ergänzender Kontakt",
+  "approval.preview.promotionSetOrigin": "Kontakt mit diesem Lead verknüpfen",
+  "approval.preview.promotionDuplicateCandidate":
+    "Mögliche Dublette zur Prüfung",
+  "approval.preview.promotionMoveActivity":
+    "Zum Kontakt zu verschiebende Aktivität",
+  "approval.preview.promotionDuplicateActivity":
+    "Aktivität bereits am Kontakt; Lead-Verknüpfung entfernen",
+  "approval.preview.promotionConsentBefore":
+    "Einwilligung vor der Qualifizierung",
+  "approval.preview.promotionRestriction": "Zu übernehmende Einschränkung",
+  "approval.preview.promotionRestrictionAuthority":
+    "Einschränkung erfasst durch",
+  "approval.preview.promotionRestrictionPurpose":
+    "Geltungsbereich der Einschränkung",
+  "approval.preview.promotionDealName": "Name des neuen Deals",
+  "approval.preview.promotionDealAmount": "Betrag des neuen Deals",
+  "approval.preview.promotionDealOwner": "Verantwortlicher des neuen Deals",
+  "approval.preview.promotionArchive":
+    "Qualifiziert und archiviert diesen Lead und verknüpft ihn mit dem Kontakt. Die ursprünglichen Einwilligungsbelege bleiben am Lead.",
+  "approval.preview.promotionCreate":
+    "Erstellt einen Kontakt mit den angezeigten Angaben.",
+  "approval.preview.promotionFill":
+    "Ergänzt die angezeigten fehlenden Angaben am bestehenden Kontakt. Vorhandener Name, Position und Hauptnummer bleiben erhalten.",
+  "approval.preview.promotionDeal":
+    "Eröffnet den angezeigten Deal und fügt den Kontakt als Beteiligten hinzu. Der Lead wird mit diesem Deal verknüpft.",
+  "approval.preview.promotionReview":
+    "Erstellt einen separaten Kontakt und stellt die mögliche Dublette zur Prüfung bereit.",
+  "approval.preview.promotionAllMarketing": "Gesamtes Marketing",
+  "approval.preview.promotionMachine": "Automatisches System",
+  "approval.preview.promotionUser": "Teammitglied",
+  "approval.preview.promotionAdmin": "Admin",
+  "approval.preview.promotionSubject": "Empfangende Person",
+  "approval.preview.demotionContact": "Betroffener Kontakt",
+  "approval.preview.unsignedSend":
+    "Versand ohne menschlichen Anzeigenamen oder persönliche Signatur. Die Freigabe macht die prüfende Person nicht zur absendenden Person.",
+  "approval.preview.senderSignature": "Signatur der absendenden Person",
+  "approval.preview.signaturePrivate":
+    "Die private Signatur der absendenden Person darf dieser prüfenden Person nicht angezeigt werden. Lass die absendende Person diese Nachricht prüfen.",
+  "approval.preview.recordMeeting":
+    "Erlaubt das Erfassen eines Termins bei den verknüpften Einträgen. Es wird keine Kalendereinladung oder E-Mail versendet. Angegebene Adressen der Teilnehmenden werden nicht am Termin gespeichert. Der Zeitraum muss beim Erfassen für die organisierende Person noch verfügbar sein.",
+  "approval.preview.meetingStart": "Beginn (mit UTC-Abweichung)",
+  "approval.preview.meetingEnd": "Ende (mit UTC-Abweichung)",
+  "approval.preview.meetingHost": "Organisiert von",
+  "approval.preview.intendedAttendee":
+    "Vorgesehene teilnehmende Person (wird nicht benachrichtigt)",
+  "approval.preview.htmlBody": "Formatierte Nachricht",
   "approval.preview.correspondence":
     "Verknüpfte Korrespondenz als Geschäftsbriefe einordnen.",
+  "approval.preview.attachRecipients":
+    "Diese Kontakte mit der bestehenden Aufgabe verknüpfen.",
+  "approval.preview.existingTask": "Bestehende Aufgabe",
   "approval.preview.delivery":
     "Bei berechtigten verknüpften Projekten die Umsetzung starten.",
   "approval.preview.minorUnits":
@@ -29,6 +649,29 @@ export const de = {
   "approval.preview.unavailable":
     "Der Freigabekontext ist nicht verfügbar. Lade die Seite neu oder fordere einen neuen Vorschlag an.",
   "approval.preview.change": "{before} → {after}",
+  "approval.import.row": "{kind}, Zeile {line} ({key})",
+  "approval.import.create": "Neuen Datensatz erstellen",
+  "approval.import.duplicate":
+    "Datensatz erstellen und Dublettenprüfung vormerken",
+  "approval.import.update": "Bestehenden Datensatz aktualisieren",
+  "approval.import.unchanged": "Bestehende Felder beibehalten",
+  "approval.import.skip": "Diese Zeile überspringen",
+  "approval.import.createTag": "Tag erstellen",
+  "approval.import.applyTag": "Tag hinzufügen",
+  "approval.import.contextTag": "Neuen Datensatz einordnen unter",
+  "approval.import.linkCompany": "Mit Unternehmen verknüpfen",
+  "approval.import.linkContact": "Mit Kontakt verknüpfen",
+  "approval.import.linkLead": "Mit Lead verknüpfen",
+  "approval.import.linkDeal": "Mit Deal verknüpfen",
+  "approval.import.companyRow": "Mit Unternehmen aus Importzeile verknüpfen",
+  "approval.import.contactRow": "Mit Kontakt aus Importzeile verknüpfen",
+  "approval.import.leadRow": "Mit Lead aus Importzeile verknüpfen",
+  "approval.import.dealRow": "Mit Deal aus Importzeile verknüpfen",
+  "approval.import.droppedLink": "Nicht auflösbare Verknüpfung auslassen",
+  "approval.import.createActivity":
+    "Aktivität ablegen, ohne Nachricht oder Kalendereinladung zu senden",
+  "approval.import.closeDeal":
+    "Deal anhand des importierten Verlaufs abschließen",
   "approval.preview.authorityUnknown":
     "Der Grund für deine Freigabeberechtigung ist nicht verfügbar.",
   "approval.preview.reviewer": "Freigabeberechtigung",
@@ -174,6 +817,13 @@ export const de = {
   "reporting.draftPreviewing":
     "Hier steht der Entwurf. Wer den Bericht liest, sieht weiter die veröffentlichte Fassung.",
   "reporting.previewDraft": "Entwurf ansehen",
+  "reporting.previewAs": "Vorschau als",
+  "reporting.previewAsSelf": "Eigene Ansicht",
+  "reporting.previewAsBanner":
+    "Vorschau als {role}: was ein Platz mit dieser Rolle und denselben Teams von diesem Bericht liest. Private Datensätze anderer bleiben auch hier verborgen.",
+  "reporting.endPreview": "Vorschau beenden",
+  "reporting.previewNoRecords":
+    "In der Vorschau öffnen sich keine Datensätze. Nach dem Ende der Vorschau öffnen sie sich mit dem eigenen Zugriff.",
   "reporting.showPublished": "Veröffentlichte Fassung zeigen",
   "reporting.publishDraft": "Entwurf veröffentlichen",
   "reporting.discardDraft": "Entwurf verwerfen",
@@ -188,6 +838,51 @@ export const de = {
     "Vor dem Wiederherstellen einer früheren Version den Entwurf veröffentlichen oder verwerfen.",
   "reporting.moveUp": "Nach oben",
   "reporting.moveDown": "Nach unten",
+  "reporting.sectionN": "Abschnitt {n}",
+  "reporting.sectionTitle": "Titel von Abschnitt {n}",
+  "reporting.addSection": "Abschnitt hinzufügen",
+  "reporting.removeSection": "Abschnitt {n} entfernen",
+  "reporting.cardWidth": "Breite von {chart}",
+  "reporting.widthFull": "Volle Breite",
+  "reporting.widthHalf": "Halbe Breite",
+  "reporting.cardSection": "Abschnitt für {chart}",
+  "reporting.removeCard": "{chart} entfernen",
+  "reporting.addChart": "Diagramm hinzufügen",
+  "reporting.questionCard": "Frage: {population}",
+  "reporting.questionLoading": "Frage wird gestellt…",
+  "reporting.questionNotKept":
+    "In diesem gesendeten Bericht nicht enthalten. Der Live-Bericht zeigt die Antwort auf diese Frage.",
+  "reporting.questionLink": "Link zu einem gespeicherten eigenen Bericht",
+  "reporting.questionLinkInvalid":
+    "Den Link einfügen, den Link kopieren bei einem gespeicherten eigenen Bericht liefert.",
+  "reporting.addQuestion": "Frage hinzufügen",
+  "reporting.questionKeptWithheld":
+    "Dein Zugriff deckt diese Frage nicht ab, daher wird die gespeicherte Antwort nicht angezeigt.",
+  "reporting.questionNotKeptNoRetention":
+    "Nicht gespeichert: Beim Senden war für gesendete Berichte keine Aufbewahrungsfrist festgelegt.",
+  "reporting.questionNotKeptTooMany":
+    "Nicht gespeichert: Diese Antwort beruht auf mehr Datensätzen, als ein gesendeter Bericht speichert.",
+  "reporting.questionNotKeptUnanswered":
+    "Nicht gespeichert: Beim Senden konnte das sendende Konto diese Frage nicht stellen.",
+  "reporting.questionNotKeptOtherRecords":
+    "Nicht gespeichert: Diese Frage zählt andere Arten von Datensätzen als die aufgelisteten, und diese speichert ein gesendeter Bericht nicht.",
+  "reporting.questionExpired":
+    "Nicht mehr verfügbar. Die Aufbewahrungsregel hat die Antworten dieses gesendeten Berichts gelöscht.",
+  "reporting.questionRedacted":
+    "Durch eine Datenschutzanfrage aus diesem gesendeten Bericht entfernt.",
+  "reporting.editionRetention_one":
+    "Gesendete Berichte behalten ihre Werte und Antworten {count} Tag lang, danach löscht die Aufbewahrungsregel sie.",
+  "reporting.editionRetention_other":
+    "Gesendete Berichte behalten ihre Werte und Antworten {count} Tage lang, danach löscht die Aufbewahrungsregel sie.",
+  "reporting.questionNotPreviewed":
+    "In der Rollenvorschau nicht angezeigt. Diese Frage beantwortet beim Öffnen des Berichts der Zugriff des jeweiligen Kontos.",
+  "reporting.questionFiltered":
+    "Dieser eigene Bericht hat Filter, die eine Berichtskarte nicht behalten kann. Eine Kopie ohne Filter speichern; der Umfang des Berichts grenzt die Karte ein.",
+  "reporting.previewChart": "Vorschau",
+  "reporting.previewLoading": "Vorschau wird geladen…",
+  "reporting.previewEmpty":
+    "Für Zeitraum und Kennzahlen dieses Berichts gibt es noch nichts zu zeichnen. Das Diagramm trotzdem hinzufügen oder den Zeitraum unter Bericht anpassen ändern.",
+  "reporting.chooseChart": "Diagramm zum Hinzufügen",
   "reporting.exportCsv": "CSV exportieren",
   "reporting.captureContexts": "Täglichen Pipeline-Verlauf speichern",
   "reporting.captureHelp":
@@ -335,6 +1030,7 @@ export const de = {
   "reporting.restricted": "Geschützter Datensatz",
   "reporting.next": "Nächste Seite",
   "reporting.name": "Berichtsname",
+  "reporting.description": "Zweck",
   "reporting.audience": "Sichtbar für",
   "reporting.private": "Privat",
   "reporting.team": "Ausgewähltes Team",
@@ -739,9 +1435,6 @@ export const de = {
   "aiAdmin.rates": "Eingabe {input} · Ausgabe {output} pro Million Tokens",
 
   "brief.weekly.tasksCompleted": "Aufgaben erledigt",
-  "teamweekly.noPriority": "Die erfassten Kennzahlen zeigen keine Priorität",
-  "teamweekly.basis":
-    "Übersichten je Mitglied für die erfasste Woche. Aktuelle Pläne und Worklists zeigen, wer heute verantwortlich ist.",
   "brief.weekly.noMeetings": "Keine erfasst",
   "brief.weekly.noLeads": "Keine eingegangen",
   "brief.weekly.noCommitments": "Keine fällig",
@@ -756,8 +1449,6 @@ export const de = {
   "brief.weekly.partialValue": "{value} (teilweise)",
   "brief.week.beforeHistory":
     "Für diese Woche gibt es keine Zahlen, da sie vor den ersten Datensätzen liegt.",
-  "teamweekly.headline.notRecorded":
-    "Einige Zahlen wurden für diese Woche nicht erfasst und fehlen hier.",
   "home.receipt.date": "Abschlussdatum: {before} → {after}",
   "home.receipt.undated": "Kein Datum",
   "home.receipt.confidence": "Prognosesicherheit aktualisiert",
@@ -767,7 +1458,6 @@ export const de = {
   "home.change.stageUnknown": "Unbekannte Phase",
   "home.change.unidentified": "Unbekannt",
   "home.change.by": "Geändert von: {actor}",
-  "brief.focus.inQueue": "In der Worklist",
   "brief.focus.position": "{at} von {count}",
   "worklist.bandCount_one": "{count} Eintrag",
   "worklist.bandCount_other": "{count} Einträge",
@@ -776,16 +1466,9 @@ export const de = {
   "brief.queue.title": "Worklist",
   "brief.queue.show": "Worklist einblenden",
   "brief.queue.hide": "Worklist ausblenden",
-  "brief.focus.urgentRemaining_one":
-    "{count} weiterer dringender Eintrag in der Worklist",
-  "brief.focus.urgentRemaining_other":
-    "{count} weitere dringende Einträge in der Worklist",
-  "brief.focus.remaining": "Weitere Prioritäten in der Worklist: {count}",
   "brief.team.planUnavailable":
     "Für {name} ist kein aktueller Plan für dich sichtbar.",
   "brief.team.noCommitments": "{name} hat in diesem Plan keine Zusagen.",
-  "brief.team.outcomes":
-    "Gewonnen: {won} · Verloren: {lost} · Deals bewegt: {moved} · Leads zugewiesen: {leads}",
   "brief.schedule.unavailable": "Der Kalender konnte nicht geladen werden.",
   "brief.schedule.more":
     "Lade weitere Agenda-Einträge, um die übrigen Termine zu sehen.",
@@ -797,7 +1480,8 @@ export const de = {
   "brief.schedule.reconnect": "Kalender neu verbinden",
   "brief.schedule.nextAt": "Nächster Termin um {time}",
   "brief.readings.riskPartial": "Nur bekannter Wert · nicht alles geprüft",
-  "brief.readings.unpricedCount_one": "1 Deal ohne Preis · nicht enthalten",
+  "brief.readings.unpricedCount_one":
+    "{count} Deal ohne Preis · nicht enthalten",
   "brief.readings.unpricedCount_other":
     "{count} Deals ohne Preis · nicht enthalten",
   "brief.coverage.source.generic": "Sonstige Einträge",
@@ -849,6 +1533,8 @@ export const de = {
   "dealSuggestion.field.amount": "Betrag",
   "dealSuggestion.field.currency": "Währung",
   "dealSuggestion.field.stage": "Phase",
+  "dealSuggestion.accountOwner": "Für das Unternehmen zuständig",
+  "dealSuggestion.unassignedOwner": "Nicht zugewiesen",
   "dealSuggestion.field.owner": "Verantwortlich",
   "dealSuggestion.ownerMe": "Selbst",
   "dealSuggestion.field.closeDate": "Voraussichtlicher Abschluss",
@@ -858,11 +1544,6 @@ export const de = {
   "dealSuggestion.accepted": "Deal erstellt: {name}.",
   "dealSuggestion.acceptedUnlinked":
     "Deal erstellt: {name}. Einige Hinweise bleiben, wo sie waren, da die Berechtigungen kein Verschieben erlauben.",
-  "brief.team.commitmentRate": "Erledigte fällige Zusagen: {done} von {total}.",
-  "brief.team.meetingRate":
-    "Termine mit erfasstem nächsten Schritt: {done} von {total}.",
-  "brief.digest.messages": "Synchronisierte E-Mails",
-  "brief.team.week": "Woche ab",
   "brief.week.lostLabel": "Verloren",
   "brief.feed.refreshFailed":
     "Der Morgenbericht konnte nicht aktualisiert werden. Angezeigt wird die zuletzt geladene Arbeit.",
@@ -889,24 +1570,16 @@ export const de = {
   "brief.plan.select":
     "Einen Deal, einen Lead, einen Kontakt, ein Unternehmen oder ein Projekt finden",
   "brief.plan.period": "Aktueller Plan · Woche vom {date}",
-  "brief.forecast.period":
-    "Prognosezeitraum: {start} bis {end}. Mit diesem Wochenrückblick gespeichert.",
-  "brief.team.none":
-    "Keine Teams verfügbar. Erstelle ein Team in den Einstellungen.",
-  "brief.week.supporting": "Kennzahlen, Prognose und Beobachtungen",
   "brief.coverage.retry": "Morgenbericht aktualisieren",
   "brief.reply.owed": "Kontakt wartet auf deine Antwort",
-  "brief.createdAt": "Morgenbericht erstellt am {when}",
-  "brief.updatedAt": "Agenda aktualisiert am {when}",
   "brief.changes.superseded":
     "Dieser Deal wurde erneut geändert. Öffne den Deal, um seinen aktuellen Stand zu prüfen.",
-  "brief.changes.title": "Was für dich geändert wurde",
+  "brief.changes.title": "Wartet auf deine Zustimmung",
   "brief.changes.accept": "Annehmen",
   "brief.changes.accepted": "Angenommen",
   "brief.changes.undone": "Rückgängig gemacht",
   "brief.updates.title": "Updates",
   "brief.task.undated": "Kein Fälligkeitsdatum",
-  "brief.readings.summary": "Arbeitsübersicht",
   "brief.readings.unpriced": "Ohne Preis",
   "brief.readings.noDealWork": "Keine",
   "brief.readings.noDealWorkWhy": "Heute kein Deal markiert",
@@ -927,22 +1600,19 @@ export const de = {
   "brief.week.lost_one": "{count} Deal verloren.",
   "brief.week.lost_other": "{count} Deals verloren.",
   "brief.row.details": "Details",
-  "brief.glance.introTeam": "Der Tag deines Teams im Überblick.",
-  "teamweekly.focus.deals_at_risk": "Rettung gefährdeter Deals",
-  "teamweekly.headline.partial":
-    "Unvollständige Abdeckung. Diese Zahlen betreffen die unten gezählten Mitglieder.",
-  "teamweekly.headline.unmeasured":
-    "Für diese Woche liegen keine Snapshots der Mitglieder vor. Die Leistung wird nicht gemessen.",
   "worklist.lead.noTarget": "ohne Zielzeit",
   "worklist.lead.lastTouch": "letzte Aktivität {date}",
   "worklist.deal.omitted": "nicht in der Prognose",
   "worklist.deal.provisional":
     "prognostizierter Abschluss {date} (unbestätigt)",
-  "brief.readings.riskBasis":
-    "Erwarteter Wert · Deals ohne Preis nicht enthalten",
-  "brief.readings.risk": "Gefährdeter Umsatz",
-  "brief.glance.introTeamWeekly": "Prüfe die erfasste Woche deines Teams.",
-  "brief.feed.teamTitle": "Prioritäten im Team",
+  "brief.readings.riskBasis": "Nennwert · kein erwarteter Verlust",
+  "magic.action.forecast_changed": "Prognose angepasst",
+  "magic.why.forecast_review":
+    "Der Deal muss nach einer Zeit ohne Fortschritt geprüft werden.",
+  "magic.why.forecast_date":
+    "Das Prognosedatum wurde anhand des Pipeline-Fortschritts geschätzt.",
+  "magic.undescribed": "Aktivität nicht beschrieben",
+  "brief.readings.risk": "Wert markierter Pipeline-Deals",
   "theme.toDark": "Dunkles Design",
   "theme.toLight": "Helles Design",
   // Die drei Auswahlmöglichkeiten fürs Erscheinungsbild: das Kontomenü zeigt
@@ -2642,12 +3312,18 @@ export const de = {
   "approval.kind.vcard_create": "Kontakt aus Visitenkarte erstellen",
   "approval.kind.lifecycle_change": "Lebenszyklusphase",
   "approval.kind.stage_progression": "Deal-Phase voranbringen",
+  "approval.preview.requiredCriterionMet": "Erforderliches Kriterium erfüllt",
+  "approval.preview.requiredCriterionUnmet":
+    "Erforderliches Kriterium nicht erfüllt",
+  "approval.preview.optionalCriterionMet": "Optionales Kriterium erfüllt",
+  "approval.preview.optionalCriterionUnmet":
+    "Optionales Kriterium nicht erfüllt",
   "approval.field.because": "Grund",
   "approval.field.from_stage": "Von",
   "approval.field.to_stage": "Nach",
   "approval.kind.transcript_proposal":
     "Nächsten Schritt aus Transkript erstellen",
-  "approval.kind.commitment_task": "Aufgabe für eine Zusage erstellen",
+  "approval.kind.commitment_task": "Aufgabenzusage",
   "approval.kind.fx_rate_proposal": "Wechselkurse aktualisieren",
   "approval.kind.disqualify_lead": "Lead disqualifizieren",
   "approval.kind.demote_lead": "Lead-Qualifizierung zurücknehmen",
@@ -4234,7 +4910,6 @@ export const de = {
   "decision.status.expired": "Abgelaufen",
 
   "brief.panel.weekly": "Wochenrückblick",
-  "brief.weekly.learnings.title": "Zu prüfende Beobachtungen",
   "brief.weekly.learnings.worked": "Positives Ergebnis",
   "brief.weekly.learnings.didNotWork": "Erfolgloses Ergebnis",
   "brief.weekly.learnings.pattern": "Muster",
@@ -4243,8 +4918,7 @@ export const de = {
   "brief.weekly.learnings.insufficient":
     "Nicht genug erfasste Belege für aussagekräftige Beobachtungen.",
   "brief.weekly.scorecard.title": "Wochenbilanz",
-  "brief.weekly.scorecard.leadBlock": "Leads und Termine",
-  "brief.weekly.scorecard.dealBlock": "Deals",
+  "brief.weekly.scorecard.basis": "Grundlage",
   "brief.weekly.scorecard.advanced": "Lead-Fortschritte",
   "brief.weekly.scorecard.advancedBasis": "Je Schritt · nicht je Lead",
   "brief.weekly.scorecard.answeredInTarget": "Zielzeit überschritten",
@@ -4279,17 +4953,28 @@ export const de = {
   "plan.title": "Zusagen dieser Woche",
   // Die zwei Regler des Briefings: welches, und für wen.
   "brief.view.label": "Home-Ansicht",
-  "brief.view.morning": "Morgen",
+  "brief.view.morning": "Heute",
   "brief.view.weekly": "Woche",
-  "brief.scope.label": "Wessen Morgenbericht",
-  "brief.scope.mine": "Meine",
-  "brief.scope.team": "Team",
   // Der Eröffnungssatz des Briefings, aus den Zeilen zusammengesetzt, die die
   // Seite zeigt — nie von einem Modell geschrieben.
   "brief.sentence.clear": "Keine unmittelbaren Prioritäten gefunden.",
   "brief.sentence.one": "Zuerst: {lead}",
   "brief.sentence.many": "Zuerst: {lead}. Danach {rest}.",
   "brief.sentence.rest": "{count} weitere",
+  "brief.sentence.oneFor": "Zuerst, für {who}: {lead}",
+  "brief.sentence.manyFor": "Zuerst, für {who}: {lead}. Danach {rest}.",
+  "brief.sentence.meeting": "Dein nächster Termin ist {meeting} um {time}.",
+  "brief.briefedAt": "Von Margince zusammengefasst um {time}",
+  "brief.first.title": "Zuerst",
+  "brief.first.then": "Danach",
+  "brief.first.why": "Warum zuerst?",
+  "brief.intro.waiting": "Wartet auf dich",
+  "brief.intro.meetings": "Termine heute",
+  "brief.intro.urgent": "Dringend",
+  "brief.intro.read_one": "Letzter Nachtlauf: 1 E-Mail synchronisiert.",
+  "brief.intro.read_other":
+    "Letzter Nachtlauf: {count} E-Mails synchronisiert.",
+  "brief.intro.skip": "Beliebige Taste drücken oder klicken, um fortzufahren",
   "brief.order.withheld":
     "In dieser Reihenfolge nicht berücksichtigt: {factors}",
   "brief.factor.warmth": "Beziehungsnähe",
@@ -4309,96 +4994,12 @@ export const de = {
   "brief.week.andCarry": "{result} {carry}",
   "brief.week.quiet": "Keine erledigte Arbeit und keine Deal-Bewegung erfasst.",
 
-  "brief.feed.title": "Fokus",
   "brief.feed.changedBadge_one": "1 geändert",
   "brief.feed.changedBadge_other": "{count} geändert",
   "brief.feed.loading": "Morgenbericht wird geladen…",
   "brief.feed.clear":
     "Keine unmittelbaren Prioritäten. Die vollständige Worklist ist verfügbar.",
-  "teamweekly.title": "Teamwoche",
-  "teamweekly.weekOf": "{team} · Woche vom {day}",
-  "teamweekly.frozen": "Eingefroren",
-  "teamweekly.loading": "Teamwoche wird geladen…",
-  "teamweekly.empty": "Für diese Woche gibt es nichts anzuzeigen.",
-  "teamweekly.forbidden":
-    "Teamrückblicke stehen der Teamleitung und Rollen zur Verfügung, die alle Teams überblicken.",
-  "teamweekly.noSnapshot":
-    "Für dieses Team und diese Woche ist kein gespeicherter Rückblick verfügbar. Wähle eine andere Woche oder prüfe die aktuelle Arbeit des Teams.",
   "teamweekly.pickTeam": "Team auswählen",
-  "teamweekly.chooseTeam": "Wähle ein Team, um seine Arbeit zu prüfen.",
-  "teamweekly.repsUnread":
-    "Teammitglieder ohne Snapshot: {count}. In diesen Zahlen gezählt: {counted}.",
-  "teamweekly.ofTotal": "{part} von {whole}",
-  "teamweekly.headline.plain":
-    "Es wurden keine Termine oder fälligen Zusagen erfasst.",
-  "teamweekly.card.firstResponse": "Beantwortete Leads",
-  "teamweekly.card.firstResponseBasis": "Über der Zielzeit: {breached}",
-  "teamweekly.card.noLeads": "Keine eingegangen",
-  "teamweekly.card.meetings": "Termine mit Follow-up",
-  "teamweekly.card.meetingsBasis": "Aufgabe vor Ende der Woche verknüpft",
-  "teamweekly.card.noMeetings": "Keine erfasst",
-  "teamweekly.card.commitments": "Eingehaltene Zusagen",
-  "teamweekly.card.commitmentsBasis": "Im Plan fällig",
-  "teamweekly.card.noCommitments": "Keine fällig",
-  "teamweekly.card.won": "Gewonnen",
-  "teamweekly.card.wonBasis": "Verloren: {lost} · Wert nicht verfügbar",
-  "teamweekly.card.wonBasisValue": "{value} · Verloren: {lost}",
-  "teamweekly.card.reps": "Gezählte Mitglieder",
-  "teamweekly.card.repsBasis": "Ganze Woche erfasst",
-  "teamweekly.movement.title": "Aktivität der Woche",
-  "teamweekly.movement.won": "Gewonnen",
-  "teamweekly.movement.lost": "Verloren",
-  "teamweekly.movement.moved": "Vorangebracht",
-  "teamweekly.movement.meetings": "Abgehaltene Termine",
-  "teamweekly.movement.leads": "Verteilte Leads",
-  "teamweekly.agenda.title": "Agenda für Montag",
-  "teamweekly.agenda.empty":
-    "Für dieses Team konnte keine Woche eines Mitglieds geladen werden, daher gibt es keine Agenda.",
-  "teamweekly.agenda.summary_one":
-    "{count} Punkt für Montag, beginnend mit {first}.",
-  "teamweekly.agenda.summary_other":
-    "{count} Punkte für Montag, beginnend mit {first}.",
-  "teamweekly.agenda.copy": "Agenda kopieren",
-  "teamweekly.agenda.copied": "Kopiert",
-  "teamweekly.agenda.copyFailed":
-    "Die Agenda konnte nicht kopiert werden. Markiere die Liste und kopiere sie manuell.",
-  "teamweekly.focus.help_requested": "Hilfe angefragt",
-  "teamweekly.focus.leads_breached": "Zielzeiten für Antworten verfehlt",
-  "teamweekly.focus.commitments_missed": "Verpasste Planzusagen",
-  "teamweekly.focus.meetings_without_next_step": "Beleg für Follow-up fehlt",
-  "teamweekly.focus.strong_week": "Starke Woche",
-  "teamweekly.focus.quiet_week": "Keine Priorität erkannt",
-  "teamweekly.focus.forecast_downgrades": "Prognose herabgestuft",
-  "teamweekly.focus.stage_regressions": "Deals zurückgefallen",
-  "teamweekly.focus.close_dates_provisional": "Abschlusstermine vorläufig",
-  "teamweekly.focus.no_next_step_coverage": "Nächste Schritte fehlen",
-  "teamweekly.funnel.line": "{stage} → {next}: {rep} gegenüber {team} im Team",
-  "teamweekly.funnel.lineLast": "{stage}: {rep} gegenüber {team} im Team",
-  "teamweekly.attention.title": "Braucht jetzt Aufmerksamkeit",
-  "teamweekly.attention.live": "Aktuell",
-  "teamweekly.attention.basis":
-    "Jetzt aus den Deals der Teammitglieder gelesen, nicht mit der Woche eingefroren.",
-  "teamweekly.attention.empty":
-    "Bei den Deals des Teams braucht gerade nichts Aufmerksamkeit.",
-  "teamweekly.attention.quiet": "Seit {days} Tagen keine Aktivität",
-  "teamweekly.quality.title": "Datenqualität",
-  "teamweekly.quality.accepted": "Vorschläge angenommen",
-  "teamweekly.quality.rejected": "Vorschläge abgelehnt",
-  "teamweekly.quality.reversals": "Automatische Änderungen rückgängig gemacht",
-  "teamweekly.quality.notMeasured": "Nicht gemessen",
-  "teamweekly.quality.basis": "Mit der Woche eingefroren",
-  "teamweekly.coverage.title": "Deckung des Dealwerts",
-  "teamweekly.coverage.month": "Monat",
-  "teamweekly.coverage.quarter": "Quartal",
-  "teamweekly.coverage.atRisk": "Deckung gefährdet gegenüber {basis}",
-  "teamweekly.coverage.holds": "Deckung ausreichend gegenüber {basis}",
-  "teamweekly.coverage.percent": "{percent} des benötigten Dealwerts",
-  "teamweekly.coverage.replan": "Neuplanung empfohlen",
-  "teamweekly.coverage.notAuthorized":
-    "Die Einschätzung für diesen Zeitraum konnte beim Wochenabschluss nicht gelesen werden.",
-  "teamweekly.coverage.basis.manager_call":
-    "der Einschätzung der Führungskraft",
-  "teamweekly.coverage.basis.historical_median": "dem historischen Median",
 
   "plan.loading": "Plan wird geladen…",
   "plan.empty": "Noch nichts im Plan.",
@@ -4458,6 +5059,7 @@ export const de = {
   "brief.weekly.outlook.bestCaseDetail": "Enthält Commit",
   "brief.weekly.outlook.weighted": "Gewichteter Deal-Wert",
   "brief.weekly.outlook.landing": "Voraussichtliches Ergebnis",
+  "brief.weekly.outlook.open": "Prognose öffnen",
   "brief.weekly.outlook.measure.commit_evidence": "Aus Commit-Belegen",
   "brief.weekly.outlook.measure.weighted": "Aus gewichteten Deals",
   "brief.weekly.outlook.measure.manager_call":
@@ -4475,9 +5077,29 @@ export const de = {
   "brief.weekly.bar.won": "Gewonnen",
   "brief.weekly.bar.lost": "Verloren",
   "brief.weekly.bar.other": "Wechselkurse und Definitionen",
-  "brief.weekly.frozen": "Eingefroren",
-  "brief.weekly.written": "erstellt {at}",
   "brief.weekly.pickWeek": "Andere Woche öffnen",
+  "brief.report.kicker": "Wochenbericht · KW {week}",
+  "brief.weekly.outcome.moved": "Verkaufsphase geändert",
+  "brief.weekly.outcome.won": "gewonnen",
+  "brief.weekly.outcome.lost": "verloren",
+  "brief.report.frozenAt": "Eingefroren am {at}",
+  "brief.report.vsPrior": "{delta} gegenüber Vorwoche",
+  "brief.report.priorWeek": "Vorwoche = KW {week} ({range})",
+  "brief.report.chapter.forecast": "Prognose",
+  "brief.report.chapter.glance": "Auf einen Blick",
+  "brief.report.chapter.closed": "Abschlüsse",
+  "brief.report.chapter.movement": "Pipeline-Bewegung",
+  "brief.report.chapter.commitments": "Die kommende Woche",
+  "brief.report.chapter.figures": "Kennzahlen",
+  "brief.report.chapter.observations": "Beobachtungen",
+  "brief.report.closedTotal": "Gewonnen {won} · Verloren {lost}",
+  "brief.report.next": "Nächster Bericht am {date}",
+  "brief.report.earlier": "Frühere Woche öffnen",
+  "brief.report.later": "Spätere Woche öffnen",
+  "brief.report.col.figure": "Kennzahl",
+  "brief.report.col.week": "Diese Woche",
+  "brief.report.col.prior": "Vorwoche",
+  "brief.report.col.change": "Veränderung",
   "brief.weekly.none":
     "Noch kein Wochenrückblick. Der erste wird am Montag nach deiner ersten vollen Woche erstellt.",
   "brief.weekly.tasksDelivered": "Fällige Aufgaben erledigt",
@@ -4490,33 +5112,15 @@ export const de = {
     "{accepted} angenommen · {rejected} abgelehnt",
   "brief.weekly.queueWorked": "Einträge im Morgenbericht",
   "brief.weekly.actedDismissed": "{acted} erledigt · {dismissed} ausgeblendet",
-  "brief.weekly.sincePrior": "{delta} gegenüber der Woche vom {week}",
-  "brief.weekly.wonVsPrior": "{value} · {delta} gegenüber der Woche vom {week}",
   "brief.weekly.leadsAnswered": "Beantwortete Leads",
   "brief.weekly.ofRouted": "{answered} von {routed}",
   "brief.weekly.planCommitmentsKept": "Eingehaltene Zusagen",
   "brief.weekly.meetingsHeld": "Termine mit Follow-up",
   "brief.weekly.ofMeetings": "{withStep} von {held}",
   "brief.weekly.carriedOver": "Zum Wochenende offen",
-  "brief.weekly.outcome.moved": "Verkaufsphase geändert",
-  "brief.weekly.outcome.won": "gewonnen",
-  "brief.weekly.outcome.lost": "verloren",
   "brief.act": "Erledigt",
   "brief.dismiss": "Ausblenden",
 
-  "brief.digestSynced": "Synchronisierungsdetails",
-  "brief.digestContacts": "Erstellte Kontakte",
-  "brief.digestCompanies": "Erstellte Unternehmen",
-  "brief.digestDedupe": "Zu prüfende Duplikate",
-  "brief.digestClassify":
-    "Zusagen: {commitments} · Termine: {meetings} · Nachrichten ohne Vertriebsaktion: {noise}",
-  "brief.digestProjects": "Projekte",
-  "brief.digestPhaseChanges": "Phasenwechsel",
-  "brief.digestNewCommitments": "Neue Zusagen",
-  "brief.digestGoneQuiet": "Verstummt",
-  "brief.digestPhaseChange": "{from} → {to}",
-  "brief.digestCommitmentCount": "Neue offene Zusagen: {count}",
-  "brief.digestQuietDays": "Tage ohne Aktivität: {days}",
   "brief.glance.morning": "Guten Morgen, {name}.",
   "brief.glance.morningAnon": "Guten Morgen.",
   "brief.glance.afternoon": "Guten Tag, {name}.",
@@ -4529,11 +5133,8 @@ export const de = {
     "Prüfe die Ergebnisse und plane deine nächsten Schritte.",
   "brief.glance.intro": "Dein Tag im Überblick.",
   "brief.panel.decisions": "Freigaben",
-  "brief.panel.overnight": "Über Nacht",
   "brief.rail.quietSchedule": "Nichts gebucht",
   "brief.panel.schedule": "Anstehende Termine",
-  "brief.overnight.connectorsUnhealthy": "Connectors brauchen Aufmerksamkeit",
-  "brief.overnight.fixConnector": "Connector reparieren",
   "brief.readings.label": "Zahlen von heute",
   "brief.readings.floorTip":
     "Diese Zahl ist ein Mindestwert, da eine Quelle ihr Limit erreicht hat.",
@@ -4563,6 +5164,7 @@ export const de = {
   "brief.readings.leadsBasis": "Geplante Aufgaben für Leads",
   "brief.readings.leadsDue": "Nächste Fälligkeit {value}",
   "brief.rail": "Kontext",
+  "brief.rail.numbers": "Kennzahlen",
   "brief.deck.later": "Später",
   "brief.deck.showMore": "Ganze Nachricht anzeigen",
   "brief.deck.showLess": "Weniger anzeigen",
@@ -4732,6 +5334,9 @@ export const de = {
     "Erstellt ein neues Unternehmen, sofern keines aus der Liste ausgewählt wird.",
   "create.dealName": "Deal-Name",
   "create.amount": "Wert",
+  "create.amountNegative": "Gib einen Betrag von null oder mehr ein.",
+  "create.referenceNotFound":
+    "Dieser Datensatz existiert nicht mehr, oder du kannst ihn nicht sehen.",
   "create.currency": "Währung",
   "create.stage": "Phase",
   "create.relatedCompany": "Unternehmen",
@@ -5671,6 +6276,13 @@ export const de = {
   "analytics.share.closeBody":
     "Der Link funktioniert ab sofort für niemanden mehr, der ihn hat. Ein geschlossener Link lässt sich nicht wieder öffnen.",
   "analytics.frame": "Stand {asOf} · {zone}",
+  "review.unlinkedSignal": "Kaufinteresse ohne Deal",
+  "review.signalNotRelevant": "Nicht relevant",
+  "review.signalOccurred": "Datum der Quelle: {date}",
+  "review.uncertainBuyer":
+    "Prüfe vor dem Anlegen eines Deals, wer kauft und für welches Unternehmen.",
+  "review.historicalSignal":
+    "Diese Quelle ist alt. Prüfe vor dem Verknüpfen, ob das Kaufinteresse noch besteht.",
   "review.title": "Prüfungen vor der Einschätzung",
   "review.ready": "Bereit",
   "review.readyWithExceptions": "Bereit, mit Hinweisen",
@@ -6689,6 +7301,8 @@ export const de = {
     "Dieser Import läuft bereits. Er endet von selbst und diese Seite aktualisiert sich.",
   "import.reason.undo_failed":
     "Der Datensatz konnte nicht zurückgenommen werden.",
+  "import.reason.amount_negative":
+    "„{value}“ liegt unter null, und der Betrag eines Deals darf das nicht sein.",
   "import.reason.author_too_long":
     "Die Angabe, wer den Eintrag erstellt hat, ist länger als {max} Zeichen.",
   "import.reason.cannot_create":
@@ -6990,6 +7604,9 @@ export const de = {
     "Wiederherstellung geplanter Sendungen",
   "jobs.kind.comms_send_email": "E-Mail-Versand",
   "jobs.kind.company_name_promotion": "Unternehmensnamen aus Signaturen",
+  "systemJob.datatask": "Datenaktualisierung",
+  "jobs.kind.data_task_run": "Datenaktualisierung in Schritten",
+  "jobs.kind.data_task_reconcile": "Abgleich der Datenaktualisierung",
   "jobs.kind.deal_scout": "Deal Scout",
   "jobs.kind.document_extract": "Dokumentauswertung",
   "jobs.kind.embed_drift_sweep": "Nachholen des Suchindex",
@@ -8484,6 +9101,33 @@ export const de = {
   "blockedDomains.source.verdict": "Modellergebnis",
   "blockedDomains.source.heuristic": "Heuristik",
   "blockedDomains.source.human": "Mensch",
+  "blockedDomains.source.reservedDomain":
+    "Reservierte Domain: Firmenerkennung pausiert",
+  "blockedDomains.source.forwardedIdentity":
+    "Eine andere Website antwortete. Firmenzuordnung prüfen.",
+  "worklist.domainReview.defer": "Zurückstellen",
+  "worklist.domainReview.restore": "Zur Prüfung zurückholen",
+  "worklist.domainReview.deferEffect":
+    "Zurückstellen entfernt diese Frage aus deiner Warteschlange, bis neue Belege eintreffen. Hier bleibt sie erreichbar.",
+  "worklist.domainReview.title": "Domains prüfen",
+  "worklist.domainReview.loading": "Domains werden geladen…",
+  "worklist.domainReview.empty": "Keine Domains zu prüfen.",
+  "worklist.domainReview.more": "Weitere laden",
+  "worklist.domainReview.forwarded": "Antwortende Website: {url}",
+  "worklist.domainReview.evidenceAt": "Neuester Beleg: {date}",
+  "worklist.domainReview.noEvidenceDate": "Datum des Belegs fehlt",
+  "worklist.domainReview.match": "Unternehmen zuordnen",
+  "worklist.domainReview.matchEffect":
+    "Die Zuordnung verknüpft diese Domain und ihre erfassten Kontakte mit dem gewählten Unternehmen.",
+  "worklist.domainReview.create": "Unternehmen erstellen",
+  "worklist.domainReview.retry": "Website erneut lesen",
+  "worklist.domainReview.exclude": "Domain ausschließen",
+  "worklist.domainReview.forwardedEffects":
+    "Erneut lesen lässt die Identität offen. Ausschließen stoppt die Erfassung für deine Postfächer.",
+  "worklist.domainReview.effects":
+    "Erstellen legt ein Unternehmen an. Erneut lesen lässt die Identität offen. Ausschließen stoppt die Erfassung für deine Postfächer.",
+  "worklist.batch.domain_questions_one": "{count} Domain prüfen",
+  "worklist.batch.domain_questions_other": "{count} Domains prüfen",
   "blockedDomains.source.unevidenced":
     "Kein Unternehmen auf der Website genannt",
   "blockedDomains.source.staleEvidence": "Belegende E-Mails zu alt",
@@ -12621,6 +13265,10 @@ export const de = {
   "webhooks.event.voice.draft_outcome_recorded.when":
     "Das Ergebnis eines Entwurfs im Schreibstil des Mitglieds wird erfasst.",
   "webhooks.eventGroup.approvals_audit": "Freigaben und Audit",
+  "webhooks.event.approval.preference_changed.label":
+    "Freigabeeinstellung geändert",
+  "webhooks.event.approval.preference_changed.when":
+    "Ein Mitglied ändert, ob ein Freigabetyp in seiner Worklist erscheint.",
   "webhooks.event.approval.requested.label": "Freigabe angefragt",
   "webhooks.event.approval.requested.when":
     "Eine Agent-Aktion wird zurückgehalten, bis jemand entscheidet.",
@@ -14316,7 +14964,7 @@ export const de = {
   "worklist.exceptions.ownerWithheld": "Ausgeblendet",
   "worklist.exceptions.truncated": "Liste gekürzt. Es gibt weitere Einträge.",
   "worklist.exceptions.kind.response_breached": "Erste Antwort überfällig",
-  "worklist.exceptions.kind.revenue_at_risk": "Gefährdeter Umsatz",
+  "worklist.exceptions.kind.revenue_at_risk": "Wert markierter Pipeline-Deals",
   "worklist.exceptions.kind.unassigned": "Nicht zugewiesen",
   "worklist.exceptions.kind.repeated_failure": "Wiederholter Fehler",
   "worklist.board.loading": "Teamarbeit wird geladen…",
@@ -14351,9 +14999,8 @@ export const de = {
     "Die Zählung ist unvollständig. Jede Zahl ist ein Mindestwert.",
   "worklist.rowMenu": "Weitere Aktionen für {title}",
   "worklist.readings.label": "Zahlen von heute",
-  "worklist.readings.revenue": "Gefährdeter Umsatz",
-  "worklist.readings.revenue.detail": "Heute stagnierende Deals",
-  "worklist.readings.revenue.unpriced": "Stagnierende Deals · keiner mit Preis",
+  "worklist.readings.revenue": "Wert markierter Pipeline-Deals",
+  "worklist.readings.revenue.unpriced": "Markierte Deals · kein Wert verfügbar",
   "worklist.readings.revenue.noFigure": "Ohne Preis",
   "worklist.readings.replies": "Antworten der Käuferseite",
   "worklist.readings.replies.detail": "Wartende Kontakte",
@@ -14450,6 +15097,8 @@ export const de = {
   "worklist.because.champion_unknown": "Champion unbekannt",
   "worklist.because.promised": "von dir zugesagt",
   "worklist.because.approved_and_failed": "freigegeben, aber nicht ausgeführt",
+  "worklist.because.account_termination":
+    "Kontobeendigung braucht eine Entscheidung",
   "worklist.because.blocks_customer_work": "ein Kontakt wartet darauf",
   "worklist.because.routine": "routinemäßiges Aufräumen",
   "worklist.because.repeated_failure": "wiederholter Fehler",
@@ -14549,6 +15198,10 @@ export const de = {
   "worklist.untitled.dedupe_candidate": "Mögliche doppelte Datensätze",
   "worklist.untitled.task": "Aufgabe ohne Titel",
   "worklist.untitled.brief_item": "Zu prüfender Deal",
+  "worklist.recipients.label": "Empfangende",
+  "worklist.recipients.open": "Steht noch aus",
+  "worklist.recipients.done": "Erledigt",
+  "worklist.recipients.dismissed": "Verworfen",
   "worklist.untitled.conversation_claim": "Deine Zusage",
   "worklist.untitled.customer_waiting": "Kontakt wartet auf Antwort",
   "worklist.untitled.lead_response": "Lead ohne Titel",
@@ -15105,32 +15758,7 @@ export const de = {
     "JJJJ-MM oder JJJJ-MM-TT. Lass das Feld leer, wenn das Datum unbekannt ist.",
   "employment.more": "Weitere Anstellungen anzeigen",
 
-  "magic.window.label": "Zeitraum",
-  "magic.window.brief": "Seit meinem letzten Morgenbericht",
-  "magic.window.week": "Letzte 7 Tage",
-  "magic.window.month": "Letzte 30 Tage",
   "magic.heading.brief": "Seit deinem letzten Morgenbericht",
-  "magic.heading.week": "Die letzten 7 Tage",
-  "magic.heading.month": "Die letzten 30 Tage",
-  "magic.intro": "Was Margince seit {when} getan hat.",
-  "magic.summary": "Übersicht",
-  "magic.clear.done": "Nichts für dich erledigt",
-  "magic.clear.needsYou": "Nichts wartet auf dich",
-  "magic.clear.couldNotComplete": "Nichts ist fehlgeschlagen",
-  "magic.clear.watching": "Alle Quellen in Ordnung",
-  "magic.count.keptInSync_one": "{count} synchron gehalten",
-  "magic.count.keptInSync_other": "{count} synchron gehalten",
-  "magic.count.done_one": "{count} für dich erledigt",
-  "magic.count.done_other": "{count} für dich erledigt",
-  "magic.count.needsYou_one": "{count} wartet auf dich",
-  "magic.count.needsYou_other": "{count} warten auf dich",
-  "magic.count.couldNotComplete_one":
-    "{count} konnte nicht abgeschlossen werden",
-  "magic.count.couldNotComplete_other":
-    "{count} konnten nicht abgeschlossen werden",
-  "magic.count.watching_one": "{count} muss wiederhergestellt werden",
-  "magic.count.watching_other": "{count} müssen wiederhergestellt werden",
-  "magic.incomplete": "{lane}: möglicherweise unvollständig",
   "magic.loading": "Blick in den Maschinenraum",
   "magic.lane.done": "Für dich erledigt",
   "magic.lane.needsYou": "Wartet auf dich",
@@ -15219,26 +15847,10 @@ export const de = {
   "magic.notShown.unknownEntityType":
     "ein Datensatztyp, den diese Seite nicht einordnen kann",
   "magic.notShown.outOfScope": "außerhalb deiner eigenen Datensätze",
-  "magic.glance.label": "Was erledigt wurde",
-  "magic.glance.emailsFiled": "E-Mails zugeordnet",
-  "magic.glance.profilesRead": "Unternehmensprofile analysiert",
-  "magic.glance.recordsUpdated": "Datensätze aktualisiert",
-  "magic.glance.dealsMoved": "Deals weitergerückt",
-  "magic.glance.leadsPromoted": "Leads zu Deals geworden",
-  "magic.glance.ownersChanged": "Arbeit neu zugewiesen",
-  "magic.glance.activitiesRelinked": "Austausche neu zugeordnet",
-  "magic.glance.messagesSent": "Nachrichten gesendet",
-  "magic.glance.meetingsBooked": "Termine gebucht",
-  "magic.glance.leadsDisqualified": "Leads disqualifiziert",
-  "magic.glance.retention": "Aufbewahrung angewendet",
-  "magic.glance.recordsCreated": "Datensätze erstellt",
-  "magic.glance.recordsArchived": "Datensätze archiviert",
-  "magic.timeline.title": "Wann es passiert ist",
-  "magic.timeline.agent": "Agenten",
-  "magic.timeline.sync": "Synchronisierung und Regeln",
-  "magic.timeline.summary":
-    "Wann jede Zeile dieses Berichts passiert ist, von {from} bis jetzt",
-  "magic.timeline.now": "Jetzt",
+  "magic.visibleScope":
+    "Hier siehst du nur Änderungen, auf die du zugreifen darfst.",
+  "magic.coverageIncomplete":
+    "Einige Aktivitäten konnten nicht gezählt werden.",
   "magic.done.all_one": "{count} Änderung im Einzelnen",
   "magic.done.all_other": "Alle {count} Änderungen im Einzelnen",
   "magic.done.atLeast_one": "{count} Änderung im Einzelnen",

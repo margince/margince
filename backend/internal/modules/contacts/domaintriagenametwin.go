@@ -16,45 +16,16 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// adoptOrHoldForNameTwin decides what a domain does about a company that
-// already carries its name.
-//
-// Three outcomes, and the middle one is the whole point:
-//
-//   - Exactly ONE company has the same name → the domain joins it. Two domains
-//     of one business resolve to one label (the product brand and the corporate
-//     site, the country domains), and minting a second record for the second
-//     domain is what put one company in a workspace twice.
-//   - SEVERAL companies with the same name → nothing is created and the
-//     question is held for a human, because picking among exact twins by rank
-//     would be choosing by uuid.
-//   - No twin, or a merely CLOSE name → the caller creates, as before, and a
-//     near-match still goes on the review queue. The fuzzy tier scores on
-//     shared words, so two unrelated companies ending in the same nouns reach
-//     it easily; holding on that would strand the contacts of every domain
-//     whose name rhymes with an incumbent's.
-//
-// It reports the adopted company, or that the question was held. Both nil means
-// carry on and create.
-func (s *Store) adoptOrHoldForNameTwin(
-	ctx context.Context, tx pgx.Tx, in ResolveDomainTriageInput,
-	match CompanyMatch, by string,
-) (adopted *ids.CompanyID, held bool, err error) {
-	twins := exactNameRivals(match)
-	if len(twins) == 1 {
-		id, err := s.adoptDomainIntoCompany(ctx, tx, in, twins[0], by)
-		return id, false, err
-	}
-	// Several companies carry this exact name, so which one this domain belongs
-	// to is not something the machine can answer.
-	candidate, ok := heldRival(twins)
+// A name match alone does not prove that another mail domain belongs to the company.
+func withholdForNameTwin(ctx context.Context, tx pgx.Tx, in ResolveDomainTriageInput, match CompanyMatch) (bool, error) {
+	candidate, ok := heldRival(exactNameRivals(match))
 	if !ok {
-		return nil, false, nil
+		return false, nil
 	}
 	if err := withholdForNearDuplicate(ctx, tx, in, candidate); err != nil {
-		return nil, false, err
+		return false, err
 	}
-	return nil, true, nil
+	return true, nil
 }
 
 // auditKeyDomains names the domain list in an audit image, so the before and
@@ -126,7 +97,7 @@ func exactNameRivals(match CompanyMatch) []CompanyCandidateScore {
 // behaviour: the company is created and the pair goes on the review queue,
 // where a human sees both records and can merge them.
 func heldRival(twins []CompanyCandidateScore) (CompanyCandidateScore, bool) {
-	if len(twins) > 1 {
+	if len(twins) > 0 {
 		return twins[0], true
 	}
 	return CompanyCandidateScore{}, false

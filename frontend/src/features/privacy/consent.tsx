@@ -313,12 +313,11 @@ export function ConsentSection({
   const consent = consentQuery.data;
 
   // requires_double_opt_in lives only on ConsentPurpose, so a row's DOI gate
-  // depends on purposesQuery having actually succeeded — a failed fetch that
-  // fell back to `[]` here (rather than erroring loudly) would make every
-  // DOI-required purpose render as freely grantable, silently dropping a
-  // legal control. share.tsx's RosterPicker gates its two roster fetches the
-  // same explicit way, for the same reason: a collapsed-to-empty failure
-  // must never be mistaken for a real empty list.
+  // depends on purposesQuery having succeeded. A failed fetch that fell back
+  // to `[]` instead of erroring would render every DOI-required purpose as
+  // freely grantable, dropping a legal control. share.parts.tsx's RosterPicker
+  // gates its two roster fetches the same explicit way, for the same reason. A
+  // collapsed-to-empty failure must never be mistaken for a real empty list.
   // Until the consent read settles the panel shows that read's own state, and
   // every state but the settled one is prose that wants the body's margin. The
   // purposes themselves are rows of a list and run to the panel's edges.

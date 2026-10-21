@@ -237,7 +237,7 @@ func followUpDrafter(provider datasource.SystemOfRecordProvider) agents.FollowUp
 		subject, body := activities.DeterministicEmailDraft(activities.DraftContext{
 			Topic: deal.Name,
 			Band:  convstate.BandWeeks,
-		}, "")
+		})
 		fields, err := json.Marshal(map[string]any{
 			"kind":    "note",
 			"subject": "Draft follow-up: " + subject,

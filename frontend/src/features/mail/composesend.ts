@@ -9,6 +9,11 @@ import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { entityTimelineKeys } from "../../lib/activitykeys";
 import {
+  asksWhy,
+  type CommunicationContext,
+  contextFor,
+} from "../../lib/compose-context";
+import {
   isConsentNotGranted,
   ProblemError,
   problemFieldErrorsOf,
@@ -16,11 +21,7 @@ import {
   throwProblem,
 } from "../../lib/problem";
 import { navigate } from "../../lib/router";
-import {
-  asksWhy,
-  type CommunicationContext,
-  contextFor,
-} from "./compose-context";
+import { useSendPermission } from "../../lib/usesendpermission";
 import type { ChosenFile } from "./composeattachments";
 import type { Grounding } from "./composedraftcall";
 import type { ComposeFields } from "./composefields";
@@ -29,7 +30,6 @@ import type { useSavedDraft } from "./composesaveddraft";
 import { scheduleFields } from "./composeschedule";
 import { SCHEDULED_SCREEN } from "./scheduledqueue";
 import { sendReviewOf } from "./sendreview";
-import { useSendPermission } from "./usesendpermission";
 
 type Activity = components["schemas"]["Activity"];
 type Link = { entity_type: RelinkKind; entity_id: string };

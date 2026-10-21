@@ -4,15 +4,15 @@
 import type { components } from "../../api/schema";
 import { Card } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
-import {
-  type AcquisitionKind,
-  isAcquisitionKind,
-} from "../../format/acquisitionkinds";
 import { formatDate } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { labelOf } from "../settings/preferences.logic";
+import {
+  type AcquisitionKind,
+  isAcquisitionKind,
+} from "../../lib/acquisitionkinds";
+import { labelOf } from "../../lib/preferences.logic";
 
 type PrivacyInformationPage = components["schemas"]["PrivacyInformationPage"];
 

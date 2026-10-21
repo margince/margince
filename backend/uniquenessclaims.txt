@@ -286,7 +286,6 @@ internal/modules/agents/reserved.go#const block at const approvalIDArg
 internal/modules/agents/runner/window.go#const triggerProvenance
 internal/modules/agents/schemacheck.go#func ResultDefect
 internal/modules/agents/toollist.go#func invocableByCaller
-internal/modules/agents/tools_enrich.go#func readEnrichArgs
 internal/modules/agents/tools_import.go#const block at const importObjectCompany
 internal/modules/agents/tools_import.go#const block at const importOnDuplicateCreate
 internal/modules/agents/tools_lifecycle_test.go#func advertisedEnum
@@ -489,7 +488,6 @@ internal/modules/search/queryvocab.go#const block at const OpEq
 internal/modules/signals/audiencerescope.go#const block at const rescopeImageArchivedAt
 internal/modules/signals/derived.go#const block at const columnStatus
 internal/modules/signals/derived.go#type DerivedSignal.PrivateTo
-internal/modules/signals/signal.go#func OfCompanyWhere
 internal/modules/signals/warmroom.go#func RankRouteIn
 internal/modules/signals/warmroom.go#func RouteInEdges
 internal/modules/webhooks/store.go#const fieldEventTypes

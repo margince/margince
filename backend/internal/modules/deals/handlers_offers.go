@@ -93,7 +93,7 @@ func (h Handlers) CreateOffer(w http.ResponseWriter, r *http.Request, id crmcont
 		httperr.Write(w, r, httperr.Validation("body", "unreadable", "request body could not be read"))
 		return
 	}
-	in, err := offerCreateInput(raw)
+	in, err := OfferCreationInput(raw)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -150,8 +150,13 @@ func (h Handlers) UpdateOffer(w http.ResponseWriter, r *http.Request, id crmcont
 	httperr.WriteJSON(w, http.StatusOK, offer)
 }
 
-func (h Handlers) ArchiveOffer(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	offer, err := h.store.ArchiveOffer(r.Context(), pathID[ids.OfferKind](id))
+// ArchiveOffer preserves the request version through the native archive writer.
+func (h Handlers) ArchiveOffer(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.ArchiveOfferParams) {
+	ifVersion, ok := httperr.IfMatchVersion(w, r)
+	if !ok {
+		return
+	}
+	offer, err := h.store.ArchiveOfferAt(r.Context(), pathID[ids.OfferKind](id), ifVersion)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return

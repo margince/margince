@@ -144,16 +144,11 @@ func (s *Store) reserveAndQueueInvitation(ctx context.Context, host ids.UserID, 
 		return crmcontracts.MeetingInvitation{}, err
 	}
 	row := invitationRow{PublicIntent: intent.Public, ManagementRef: ref, Host: host, Provider: string(profile.Provider), Calendar: profile.CalendarId, ReminderStatus: "off", Status: invitationPending, Version: 1, Command: "create"}
-	row.Appointment = connector.CalendarAppointment{
-		ContactID: ids.UUID(in.ContactId), CalendarID: profile.CalendarId, Subject: in.Subject, Description: in.Description,
-		Location: in.Location, Start: in.Start, End: in.End, Attendees: []string{string(in.AttendeeEmail)},
-		VideoCall: videoCallFor(profile, in.VideoCall),
-	}
+	row.Appointment = invitationAppointment(profile, in)
 	if intent.DescriptionFromBooker {
 		row.Appointment.Description = ""
 	}
-	if profile.EmailReminder != nil && *profile.EmailReminder {
-		row.Appointment.EmailReminder = true
+	if row.Appointment.EmailReminder {
 		row.ReminderStatus = invitationPending
 	}
 	actor, _ := principal.Actor(ctx)

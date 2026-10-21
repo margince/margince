@@ -12,7 +12,7 @@ import { type ReactNode, StrictMode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { stubClipboard } from "../../design-system/clipboard-testing";
 import { LocaleProvider } from "../../i18n";
-import { SEEDED_ASSIGNABLE_ROLES } from "./roles.testkit";
+import { SEEDED_ASSIGNABLE_ROLES } from "../../testing/roles.testkit";
 import { UsersAdminCard } from "./users-admin";
 
 // The admin-issued set-password link. What matters here is WHEN the action is

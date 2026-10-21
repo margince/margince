@@ -8,6 +8,7 @@ import { ScreenView } from "./App.views";
 import { AskFromAddress } from "./app/askfromaddress";
 import { isPublicBookingId } from "./app/bookingroute";
 import { AuthSplash } from "./app/bootsplash";
+import { ConfinedAccountScreen, useProbeAnswer } from "./app/confinement";
 import { DateFormatsProvider } from "./app/dateformats";
 import {
   CommandPalette,
@@ -27,17 +28,16 @@ import {
   AvailabilityScreen,
   RESET_ROUTE,
 } from "./features/sign-in/auth";
-import { useInstallationDescribed } from "./features/sign-in/installationcompany";
 import {
   fetchSetupStatus,
   SetupClaimScreen,
 } from "./features/sign-in/setupclaim";
 import { useLocale } from "./i18n";
+import { useInstallationDescribed } from "./lib/installationcompany";
 import { RecordZoneProvider, useConfiguredRecordZone } from "./lib/recordzone";
 import { SPA_RELEASE } from "./lib/release";
 import { navigateReplacing, type Screen } from "./lib/router";
 import { AuthProbeError, consumeAuthExitNotice, useMe } from "./lib/session";
-import { ConfinedAccountScreen, useProbeAnswer } from "./screens/confinement";
 
 // The anonymous public surfaces render without a session — their slug in the
 // path is the whole address (security: [] in the contract).

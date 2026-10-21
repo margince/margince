@@ -5,6 +5,7 @@ import { ordinalNumber } from "../../../format/format";
 import { useT } from "../../../i18n";
 import { problemMessageOf } from "../../../lib/problem";
 import { navigateReplacing } from "../../../lib/router";
+import { useSaveLinkedInAccount } from "../../../lib/use-linkedin-account";
 import {
   forgetOvernightChoice,
   rememberedOvernightChoice,
@@ -28,7 +29,6 @@ import type {
 } from "./conversation-machine";
 import { presenceFor } from "./presence";
 import { railStops } from "./rail";
-import { useSaveLinkedInAccount } from "./use-linkedin-account";
 import type { WizardPersistInput } from "./use-wizard-state";
 import { ConversationWorkbench } from "./workbench";
 

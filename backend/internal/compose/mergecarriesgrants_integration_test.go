@@ -15,9 +15,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
 
 // share writes one grant through the real writer.
@@ -71,6 +76,10 @@ func TestACompanyMergeMovesAShareOntoTheSurvivor(t *testing.T) {
 	retired, survivor := c.companyNamed(t, "Moved Retired GmbH"), c.companyNamed(t, "Moved Survivor GmbH")
 	c.share(t, "company", retired.UUID, c.e.Rep1, "write", nil)
 
+	preview := c.grantPreview(t, "company", retired.UUID, survivor.UUID)
+	if preview.Before != nil || preview.TargetID != nil || preview.After.Access != "write" || preview.After.ExpiresAt != nil || !preview.ActiveAfter {
+		t.Fatalf("grant preview = %+v", preview)
+	}
 	c.mergeCompanies(t, retired, survivor)
 
 	if n := c.grantsNaming(t, "company", retired.UUID); n != 0 {
@@ -101,6 +110,10 @@ func TestACompanyMergeFoldsTwoSharesOfOneGrantee(t *testing.T) {
 	c.share(t, "company", retired.UUID, c.e.Rep1, "write", nil)
 	c.share(t, "company", survivor.UUID, c.e.Rep1, "read", &soon)
 
+	preview := c.grantPreview(t, "company", retired.UUID, survivor.UUID)
+	if preview.Before == nil || preview.Before.Access != "read" || preview.After.Access != "write" || preview.After.ExpiresAt != nil || !preview.ActiveAfter {
+		t.Fatalf("grant preview = %+v", preview)
+	}
 	c.mergeCompanies(t, retired, survivor)
 
 	if n := c.grantsNaming(t, "company", retired.UUID); n != 0 {
@@ -132,6 +145,10 @@ func TestAFoldKeepsTheLaterExpiry(t *testing.T) {
 	c.share(t, "company", retired.UUID, c.e.Rep1, "read", &later)
 	c.share(t, "company", survivor.UUID, c.e.Rep1, "read", &sooner)
 
+	preview := c.grantPreview(t, "company", retired.UUID, survivor.UUID)
+	if preview.After.ExpiresAt == nil || !preview.After.ExpiresAt.Equal(later.Truncate(time.Microsecond)) {
+		t.Fatalf("grant preview = %+v", preview)
+	}
 	c.mergeCompanies(t, retired, survivor)
 
 	_, expires := c.grantOn(t, "company", survivor.UUID, c.e.Rep1)
@@ -154,6 +171,10 @@ func TestAnExpiredShareDoesNotLiftTheSurvivorsShare(t *testing.T) {
 		t.Fatalf("letting the retired share lapse: %v", err)
 	}
 
+	preview := c.grantPreview(t, "company", retired.UUID, survivor.UUID)
+	if preview.Before == nil || preview.After.Access != "read" || preview.After.ExpiresAt != nil || !preview.ActiveAfter {
+		t.Fatalf("grant preview = %+v", preview)
+	}
 	c.mergeCompanies(t, retired, survivor)
 
 	if access, expires := c.grantOn(t, "company", survivor.UUID, c.e.Rep1); access != "read" || expires != nil {
@@ -172,6 +193,10 @@ func TestContactAndLeadMergesMoveTheirShares(t *testing.T) {
 	retired := c.contactAt(t, "Share Retired", "share-retired@carry.test")
 	survivor := c.contactAt(t, "Share Survivor", "share-survivor@carry.test")
 	c.share(t, "contact", retired.UUID, c.e.Rep1, "read", nil)
+	preview := c.grantPreview(t, "contact", retired.UUID, survivor.UUID)
+	if preview.Before != nil || preview.After.Access != "read" {
+		t.Fatalf("contact grant preview = %+v", preview)
+	}
 	c.merge(t, retired, survivor)
 	if access, _ := c.grantOn(t, "contact", survivor.UUID, c.e.Rep1); access != "read" {
 		t.Errorf("the contact survivor's grant is %q, want read", access)
@@ -205,8 +230,68 @@ func TestAnUnwiredMergeRefusesWhenAShareWouldBeStranded(t *testing.T) {
 	retired, survivor := c.companyNamed(t, "Unwired Retired GmbH"), c.companyNamed(t, "Unwired Survivor GmbH")
 	c.share(t, "company", retired.UUID, c.e.Rep1, "read", nil)
 
+	withheld, previewErr := unwired.PreviewMergeSurvivorship(c.admin, "company", retired.UUID, survivor.UUID, nil, nil)
+	if _, ok := errors.AsType[*contacts.SatelliteCarrierNotWiredError](previewErr); !ok || len(withheld.Grants) != 0 || len(withheld.Fields) != 0 {
+		t.Fatalf("unwired grant preview = %+v, %v", withheld, previewErr)
+	}
 	_, err := unwired.MergeCompany(c.admin, retired, survivor, nil)
 	if _, ok := errors.AsType[*contacts.SatelliteCarrierNotWiredError](err); !ok {
 		t.Fatalf("the merge answered %v, want SatelliteCarrierNotWiredError", err)
+	}
+}
+
+func (c *carryEnv) grantPreview(t *testing.T, kind string, source, target ids.UUID) authz.CarriedRecordGrant {
+	t.Helper()
+	preview, err := c.contacts.PreviewMergeSurvivorship(c.admin, kind, source, target, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(preview.Grants) != 1 {
+		t.Fatalf("grant scope = %+v", preview.Grants)
+	}
+	grant := preview.Grants[0]
+	if grant.SubjectType != "user" || grant.SubjectID != c.e.Rep1 || grant.SourceID.IsZero() || grant.SourceVersion < 1 {
+		t.Fatalf("grant identity = %+v", grant)
+	}
+	return grant
+}
+
+func TestGrantCarryRequiresWriteAuthorityOnBothSubjects(t *testing.T) {
+	for _, writeSource := range []bool{true, false} {
+		name := "target only"
+		if writeSource {
+			name = "source only"
+		}
+		t.Run(name, func(t *testing.T) {
+			c := setupCarry(t)
+			source := c.contactAt(t, "Source", "source-grants@example.test")
+			target := c.contactAt(t, "Target", "target-grants@example.test")
+			c.share(t, "contact", source.UUID, c.e.Rep1, "read", nil)
+			writable := target
+			if writeSource {
+				writable = source
+			}
+			c.share(t, "contact", writable.UUID, c.e.Rep2, "write", nil)
+			ctx := c.e.As(c.e.Rep2, nil, integration.RepPerms)
+			sourceCount, targetCount := c.grantsNaming(t, "contact", source.UUID), c.grantsNaming(t, "contact", target.UUID)
+			if err := c.e.DB().Tx(ctx, func(tx pgx.Tx) error {
+				preview, err := c.grants.PreviewGrantCarryTx(ctx, tx, "contact", source.UUID, target.UUID)
+				if !errors.Is(err, apperrors.ErrPermissionDenied) || len(preview) != 0 {
+					t.Fatalf("grant preview = %+v, %v", preview, err)
+				}
+				return nil
+			}); err != nil {
+				t.Fatal(err)
+			}
+			err := c.e.DB().Tx(ctx, func(tx pgx.Tx) error {
+				return c.grants.CarryGrantsTx(ctx, tx, "contact", source.UUID, target.UUID)
+			})
+			if !errors.Is(err, apperrors.ErrPermissionDenied) {
+				t.Fatalf("grant carry = %v", err)
+			}
+			if c.grantsNaming(t, "contact", source.UUID) != sourceCount || c.grantsNaming(t, "contact", target.UUID) != targetCount {
+				t.Fatal("refused grant carry changed the shares")
+			}
+		})
 	}
 }

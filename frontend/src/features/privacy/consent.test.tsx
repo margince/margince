@@ -524,9 +524,9 @@ describe("ConsentSection", () => {
 
   // I6: requires_double_opt_in lives only on ConsentPurpose, so a failed
   // purposes fetch must not fall back to rendering every row as freely
-  // grantable — share.tsx's RosterPicker gates its two roster fetches the
-  // same explicit way, for the same reason (a collapsed-to-[] failure must
-  // never be mistaken for a real empty list).
+  // grantable. share.parts.tsx's RosterPicker gates its two roster fetches the
+  // same explicit way, for the same reason. A collapsed-to-[] failure must
+  // never be mistaken for a real empty list.
   it("shows an error instead of quietly dropping the DOI gate when purposes fail to load", async () => {
     stubRoutes({
       "GET /consent-purposes": () => jsonResponse({ title: "boom" }, 500),

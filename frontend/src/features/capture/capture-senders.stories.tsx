@@ -4,7 +4,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
-import { ConnectionOutcomesCard } from "../../screens/connection-outcomes";
 import { linkedInReachFixture } from "../../testing/reachfixture";
 import {
   installFetchStub,
@@ -12,6 +11,7 @@ import {
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
+import { ConnectionOutcomesCard } from "./connection-outcomes";
 
 // The senders drawer, in the three states a reader tells apart at a glance: a
 // machine verdict, a verdict the seat overruled, and nothing decided.

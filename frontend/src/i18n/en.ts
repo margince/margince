@@ -3,17 +3,617 @@
 // use {name} and are filled by t(key, params).
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
+  "homeRepair.taskPermission":
+    "Activity archive permission is required to archive reviewed tasks.",
+  "homeRepair.classificationPermission":
+    "Activity editing permission is required to change message results.",
+  "homeRepair.reason.classificationNotAttempted":
+    "No completed check is available. Preview again when classification is available.",
+  "homeRepair.reclassify": "Reclassify message",
+  "homeRepair.classifications": "Message results",
+  "homeRepair.asks": "Requests action",
+  "homeRepair.informs": "Information only",
+  "homeRepair.classificationChange": "Current: {before}. Proposed: {after}.",
+  "homeRepair.reason.classificationDeclined":
+    "The classifier declined to assess this message. Review it yourself.",
+  "homeRepair.reason.classificationUncertain":
+    "The new check is uncertain. Review the message before changing its result.",
+  "homeRepair.reason.classificationAdopted":
+    "Human changes or missing audit evidence prevent an automatic correction.",
+  "homeRepair.reason.classificationWithheld":
+    "Some message context is outside current access. Review it before changing this result.",
+  "homeRepair.reason.classificationCurrent":
+    "The new check agrees with the current result.",
+  "homeRepair.reason.classificationChanged":
+    "The new check proposes a different message result.",
+  "homeRepair.suggestionPermission":
+    "Deal creation permission is required to retire these suggestions.",
+  "homeRepair.supersede": "Retire automatic deal suggestion",
+  "homeRepair.suggestions": "Deal suggestions",
+  "homeRepair.reason.dealExists":
+    "This company already has an open deal. Review that deal before opening another.",
+  "homeRepair.reason.dealSource":
+    "The source dates no longer match the evidence used for this suggestion.",
+  "homeRepair.reason.buyer":
+    "The reviewed sources no longer verify a current buyer request.",
+  "homeRepair.reason.engagement":
+    "An active contract or delivery contradicts ending the whole account.",
+  "homeRepair.reason.workstream":
+    "The evidence ends one engagement, not the whole account.",
+  "homeRepair.reason.evidenceChanged":
+    "Newer verified evidence replaces the context of this proposal.",
+  "homeRepair.withdraw": "Withdraw automatic proposal",
+  "homeRepair.reason.duplicate":
+    "An identical pending proposal remains available.",
+  "homeRepair.tasks": "Tasks",
+  "homeRepair.proposals": "Proposals",
+  "homeRepair.kind": "Work to review",
+  "homeRepair.preserved": "Preserved or skipped",
+  "homeRepair.preservedNote":
+    "Includes work kept for review and records changed since the preview. Preview again to inspect what remains.",
+
+  "homeRepair.inspect": "Inspect",
+  "dataTasks.blocked.review_required":
+    "Review the proposed changes before starting.",
+  "homeRepair.archive": "Archive automatic reminder",
+  "homeRepair.keepReview": "Keep for human review",
+  "homeRepair.keepCurrent": "Keep current work",
+  "homeRepair.reason.adopted":
+    "A human may have created, edited or pinned this work.",
+  "homeRepair.reason.unverified":
+    "The available evidence does not justify an automatic change.",
+  "homeRepair.reason.unavailable":
+    "The source cannot be checked with your current access.",
+  "homeRepair.reason.historical":
+    "Historical source without a current deadline.",
+  "homeRepair.reason.baseline":
+    "The source predates the mailbox history baseline.",
+  "homeRepair.reason.cancelled": "The source meeting was canceled.",
+  "homeRepair.reason.requestAge":
+    "The original request is past the waiting horizon; archiving does not mark it answered.",
+  "homeRepair.reason.contextUnread": "Later messages have not been read.",
+  "homeRepair.reason.contextUnassessed":
+    "Later messages have not been assessed for changes to this commitment.",
+  "homeRepair.reason.timeUnknown": "The source date is unknown.",
+  "homeRepair.reason.timeContradicted": "The source dates conflict.",
+  "homeRepair.reason.meetingPending":
+    "The source meeting has not taken place yet.",
+  "homeRepair.reason.current":
+    "The current admission rules still allow this work.",
+  "homeRepair.unnamed": "Details unavailable",
+  "homeRepair.explain":
+    "Only work you can currently inspect is included. Review up to 25 items at a time. Obsolete automatic reminders can be archived and duplicate or obsolete proposals withdrawn. Human work is preserved; nothing is marked completed.",
+  "homeRepair.preview": "Preview items",
+  "homeRepair.next": "Review next page",
+  "homeRepair.summary":
+    "Results to change: {reclassify}. Reminders to archive: {archive}. Proposals to withdraw: {withdraw}. Deal suggestions to retire: {supersede}. Keep for review: {review}; keep as current work: {keep}.",
+  "homeRepair.apply_one": "Apply {count} reviewed change",
+  "homeRepair.apply_other": "Apply {count} reviewed changes",
+  "homeRepair.started":
+    "The reviewed run is queued. Its progress appears above.",
+
+  "approval.scheduled.rearm":
+    "Schedules the displayed held message to be retried after the delay shown. Current permissions, recipients and communication rules are checked again before sending.",
+  "approval.scheduled.direct":
+    "Records your decision to send this refused message on your own authority and attempts delivery now. Your decision and explanation are recorded; the normal delivery safeguards still apply.",
+  "approval.scheduled.delay": "Retry delay (minutes)",
+  "approval.read.profileField": "Profile field",
+  "approval.read.factField": "Company fact",
+  "approval.read.before": "Current value",
+  "approval.read.after": "Value after approval",
+  "approval.read.proposed": "Website reading",
+  "approval.read.source": "Source page",
+  "approval.read.quote": "Source quotation",
+  "approval.read.retained": "Human value retained",
+  "approval.read.effect":
+    "Applies the displayed company fields and evidence. Human-owned evidence remains unchanged; existing column values are retained where shown.",
+  "approval.merge.value.suppressed": "Suppressed",
+  "approval.merge.value.corrected": "Corrected",
+  "approval.merge.value.confirmed": "Confirmed",
+  "approval.merge.value.queued": "Queued",
+  "approval.merge.value.submitting": "Submitting",
+  "approval.merge.value.in_progress": "In progress",
+  "approval.merge.value.completed": "Completed",
+  "approval.merge.value.no_match": "No match",
+  "approval.merge.value.skipped": "Skipped",
+  "approval.merge.value.submission_unknown": "Submission outcome unknown",
+  "approval.merge.value.failed": "Failed",
+  "approval.merge.value.cancelled": "Canceled",
+  "approval.merge.value.budget_exhausted": "Budget exhausted",
+  "approval.merge.value.low_balance": "Insufficient balance",
+  "approval.merge.value.not_eligible": "Not eligible",
+  "approval.merge.value.duplicate_subject_candidate": "Duplicate candidate",
+  "approval.merge.value.rate_limited": "Provider request limit reached",
+  "approval.merge.value.already_fresh": "Information is already current",
+  "approval.merge.value.no_identifiers": "No identifying information",
+  "approval.merge.value.category_in_flight":
+    "This category is already being retrieved",
+  "approval.preview.mergeRecords":
+    "Moves the displayed records and values to the survivor and archives the source. Existing survivor values take precedence where shown.",
+  "approval.preview.fillLead":
+    "Fills only the empty lead fields shown above. Existing values and the email address stay unchanged; no second lead is created.",
+  "approval.preview.companyPrivateReadings":
+    "Each reader keeps their existing survivor summary when both companies have one. Suggestions dismissed on the removed company may be offered again on the survivor.",
+  "approval.preview.companyReceipts":
+    "Partner-program and tax-verification records move only when the survivor has none. Otherwise the source copies remain with the archived company.",
+  "approval.preview.companyLookups":
+    "Website lookups move to the survivor; duplicate active lookups are canceled. Background company scans for the removed company stop.",
+  "approval.merge.source": "Record removed",
+  "approval.merge.survivor": "Record kept",
+  "approval.merge.address": "Address moved",
+  "approval.merge.address_kind": "Address kind",
+  "approval.merge.address_usage": "Address use",
+  "approval.merge.address_primary_before": "Primary on source",
+  "approval.merge.address_primary_after": "Primary on survivor",
+  "approval.merge.assignment_collapsed": "Duplicate responsibility removed",
+  "approval.merge.assignment_moved": "Responsibility moved",
+  "approval.merge.assignment_role": "Role",
+  "approval.merge.channel_account": "Channel account moved",
+  "approval.merge.channel_blocked": "Channel blocked",
+  "approval.merge.channel_provider": "Channel provider",
+  "approval.merge.channel_username": "Channel name",
+  "approval.merge.claim": "Conversation claim moved",
+  "approval.merge.claim_quote": "Source quote",
+  "approval.merge.claim_source": "Conversation source",
+  "approval.merge.collapse_link": "Duplicate link removed",
+  "approval.merge.move_link": "Link moved",
+  "approval.merge.commitment": "Commitment moved",
+  "approval.merge.company_contract": "Agreement moved",
+  "approval.merge.company_invoice": "Invoice moved",
+  "approval.merge.company_payment": "Payment moved",
+  "approval.read.vat_check":
+    "Request a VAT-number check if verification is configured.",
+  "approval.merge.company_customer_link": "Accounting customer moved",
+  "approval.merge.company_parent_after": "Parent company after merge",
+  "approval.merge.company_triaged_domain": "Resolved domain moved",
+  "approval.merge.partner_moved": "Move partner program to survivor",
+  "approval.merge.partner_retained":
+    "Keep source partner program on archived company",
+  "approval.merge.vat_check_moved": "Move VAT receipt to survivor",
+  "approval.merge.vat_check_retained":
+    "Keep source VAT receipt on archived company",
+  "approval.merge.company_commission": "Commission moved",
+  "approval.merge.company_offer": "Offer moved",
+  "approval.merge.company_project": "Project moved",
+  "approval.merge.company_deal": "Deal moved",
+  "approval.merge.company_company": "Subsidiary moved",
+  "approval.merge.company_fact_category": "Fact category",
+  "approval.merge.company_fact_discarded": "Duplicate fact removed",
+  "approval.merge.company_fact_field": "Fact",
+  "approval.merge.company_fact_kept": "Existing fact kept",
+  "approval.merge.company_fact_moved": "Fact moved",
+  "approval.merge.company_profile_discarded": "Duplicate profile value removed",
+  "approval.merge.company_profile_field": "Profile field",
+  "approval.merge.company_profile_kept": "Existing profile value kept",
+  "approval.merge.company_profile_moved": "Profile value moved",
+  "approval.merge.company_relationship_type": "Company relationship carried",
+  "approval.merge.confirmation": "Confirmation moved",
+  "approval.merge.consent_event": "Consent evidence moved",
+  "approval.merge.consent_event_at": "Evidence date",
+  "approval.merge.consent_event_collapsed": "Duplicate evidence removed",
+  "approval.merge.consent_event_note": "Evidence note",
+  "approval.merge.consent_event_source": "Evidence source",
+  "approval.merge.draft_bcc": "Draft hidden recipients",
+  "approval.merge.draft_body": "Draft text",
+  "approval.merge.draft_cc": "Draft copied recipients",
+  "approval.merge.draft_discarded": "Duplicate draft removed",
+  "approval.merge.draft_kept": "Existing draft kept",
+  "approval.merge.draft_moved": "Draft moved",
+  "approval.merge.draft_to": "Draft recipients",
+  "approval.merge.feedback_correction": "Correction",
+  "approval.merge.feedback_discarded": "Duplicate feedback removed",
+  "approval.merge.feedback_kept": "Existing feedback kept",
+  "approval.merge.feedback_moved": "Feedback moved",
+  "approval.merge.feedback_value": "Reviewed value",
+  "approval.merge.feedback_verdict": "Feedback decision",
+  "approval.merge.file": "File moved",
+  "approval.merge.file_archived": "File archived on",
+  "approval.merge.finance_archived": "Entry archived on",
+  "approval.merge.grant_active": "Access remains active",
+  "approval.merge.grant_after": "Access after merge",
+  "approval.merge.grant_before": "Existing access",
+  "approval.merge.grant_expiry_after": "Access expiry after merge",
+  "approval.merge.grant_expiry_before": "Existing access expiry",
+  "approval.merge.grant_reason": "Access reason",
+  "approval.merge.grant_source": "Access carried from source",
+  "approval.merge.grant_subject": "Access granted to",
+  "approval.merge.handoff": "Handoff moved",
+  "approval.merge.handoff_recipient": "Handoff recipient",
+  "approval.merge.handoff_sender": "Handoff sender",
+  "approval.merge.introduction_after": "Introduction after merge",
+  "approval.merge.introduction_before": "Introduction before merge",
+  "approval.merge.introduction_cancellation": "Cancellation reason",
+  "approval.merge.introduction_contact_after": "Contact introduced after merge",
+  "approval.merge.introduction_contact_before":
+    "Contact introduced before merge",
+  "approval.merge.introduction_through_after": "Introducer after merge",
+  "approval.merge.introduction_through_before": "Introducer before merge",
+  "approval.merge.link_consumed": "Link used on",
+  "approval.merge.link_note": "Link note",
+  "approval.merge.link_opened": "Link opened on",
+  "approval.merge.notice": "Notification moved",
+  "approval.merge.observation_after": "Relationship observed after merge",
+  "approval.merge.observation_before": "Previous relationship observation",
+  "approval.merge.optin": "Permission confirmation moved",
+  "approval.merge.override": "Communication exception moved",
+  "approval.merge.override_authority": "Exception authority",
+  "approval.merge.override_reason": "Exception reason",
+  "approval.merge.participant_activity": "Conversation linked",
+  "approval.merge.participant_address": "Participant address",
+  "approval.merge.participant_collapsed": "Duplicate participant removed",
+  "approval.merge.participant_role": "Participant role",
+  "approval.merge.payment_at": "Payment date",
+  "approval.merge.preference_link": "Preference link moved",
+  "approval.merge.preference_reason": "Retirement reason",
+  "approval.merge.preference_retired": "Preference link retired",
+  "approval.merge.profile_discarded": "Duplicate contact fact removed",
+  "approval.merge.profile_field": "Contact field",
+  "approval.merge.profile_kept": "Existing contact fact kept",
+  "approval.merge.profile_moved": "Contact fact moved",
+  "approval.merge.provider": "Enrichment provider",
+  "approval.merge.relationship_kind": "Relationship moved",
+  "approval.merge.relationship_primary": "Primary relationship after merge",
+  "approval.merge.relationship_retired": "Relationship retired",
+  "approval.merge.run_after": "Lookup state after merge",
+  "approval.merge.run_before": "Previous lookup state",
+  "approval.merge.run_created": "Lookup requested on",
+  "approval.merge.run_moved": "Lookup moved",
+  "approval.merge.run_skip": "Reason lookup is skipped",
+  "approval.merge.signal": "Signal moved",
+  "approval.merge.social_handle": "Social profile moved",
+  "approval.merge.social_platform": "Social platform",
+  "approval.merge.social_survivor": "Existing social profile kept",
+  "approval.merge.support_collapsed": "Duplicate provenance entries removed",
+  "approval.merge.support_fields": "Provenance entries moved",
+  "approval.merge.support_resolutions": "Employment resolutions moved",
+  "approval.capture.target": "Existing lead",
+  "approval.capture.full_name": "Captured name",
+  "approval.capture.company_name": "Captured company",
+  "approval.capture.title": "Captured role",
+  "approvalPreferences.title": "Personal approval mutes",
+  "approvalPreferences.explain":
+    "Muted kinds leave your queue only. Other readers keep their proposals. Muting or restoring a kind turns off your automatic changes for that kind. Sends, bookings, merges and proposals from agent passports stay visible.",
+  "approvalPreferences.review": "Review including muted",
+  "approvalPreferences.reviewExplain":
+    "This review includes muted proposals and expired items. Bundles in your ordinary queue can show fewer members because of your personal mutes; review each proposal before deciding.",
+  "approvalPreferences.close": "Close review",
+  "approvalPreferences.next": "Next page",
+  "approvalPreferences.first": "First page",
+  "dealSuggestion.linkedUnlinked":
+    "Evidence linked. Some evidence remains in place because permissions do not allow it to be moved.",
+  "dealSuggestion.searchExisting": "Search deals",
+  "dealSuggestion.existingDeal": "Existing deal",
+  "dealSuggestion.moreDeals": "Load more deals",
+  "dealSuggestion.noMatchingDeals": "No matching deals at this company.",
+  "dealSuggestion.changed":
+    "This suggestion is no longer available. Refresh the findings to see its current state.",
+  "dealSuggestion.linkExisting": "Link to existing deal",
+  "dealSuggestion.linked": "Evidence linked to the deal.",
+  "dealSuggestion.dismissTitle": "Dismiss deal suggestion",
+  "dealSuggestion.linkEffect":
+    "Attach the cited evidence to a deal at {company}; no new deal is created.",
+  "dealSuggestion.dismissEffect":
+    "Close this suggestion for {company} and record the reason.",
+  "dealSuggestion.dismissReason": "Reason",
+  "dealSuggestion.dismissReason.not_a_deal": "No buying interest",
+  "dealSuggestion.dismissReason.already_tracked": "Already tracked",
+  "dealSuggestion.dismissReason.wrong_company": "Wrong company",
+  "dealSuggestion.dismissReason.historical": "Historical activity",
+  "dealSuggestion.dismissReason.other": "Other reason",
+  "dataTasks.unknownState": "Update the application to manage this state.",
+  "dataTasks.blockedBy": "Waiting for: {name}",
+  "roles.object.data_task": "Data updates",
+  "dataTasks.title": "Data updates",
+  "dataTasks.sub":
+    "Stored records are updated in small batches. Changes already saved remain when a run pauses.",
+  "dataTasks.withheld":
+    "Permission is required to read data updates. Ask an admin for access.",
+  "dataTasks.empty": "No data updates are registered.",
+  "dataTasks.unknown": "Not estimated",
+  "dataTasks.atLeast_one": "At least {count}",
+  "dataTasks.atLeast_other": "At least {count}",
+  "dataTasks.scanned": "Rows checked",
+  "dataTasks.changed": "Rows changed",
+  "dataTasks.estimate": "Estimated rows to check",
+  "dataTasks.batchLimit": "Rows per batch",
+  "dataTasks.batches": "Batches saved",
+  "dataTasks.lastProgress": "Last progress",
+  "dataTasks.notStarted": "Not started",
+  "dataTasks.nextAttempt": "Next attempt",
+  "dataTasks.release": "First release",
+  "dataTasks.run": "Run ID",
+  "dataTasks.step": "Step: {step}",
+  "dataTasks.prerequisites": "Required first: {names}",
+  "dataTasks.status.pending": "Pending",
+  "dataTasks.status.running": "Running",
+  "dataTasks.status.paused": "Paused",
+  "dataTasks.status.done": "Done",
+  "dataTasks.status.failed": "Failed",
+  "dataTasks.action.pause": "Pause",
+  "dataTasks.action.resume": "Resume",
+  "dataTasks.action.retry": "Retry",
+  "dataTasks.action.estimate": "Estimate rows",
+  "dataTasks.blocked.waiting_for_worker": "Waiting for a worker.",
+  "dataTasks.blocked.newer_release_required":
+    "A newer release is required. Update the application before continuing.",
+  "dataTasks.blocked.paused": "Paused at the saved position.",
+  "dataTasks.blocked.failed":
+    "Stopped after repeated failures. Check the error before retrying.",
+  "dataTasks.blocked.retry_wait": "Waiting before the next attempt.",
+  "dataTasks.blocked.earlier_step": "An earlier step must finish first.",
+  "dataTasks.blocked.missing_prerequisite":
+    "Required updates must finish first.",
+  "approval.preview.createContact":
+    "Authorizes the proposing caller to create this contact once with the displayed values. Current permissions and duplicate identities are checked again.",
+  "approval.preview.recordAcquisition":
+    "Records the displayed acquisition history. This does not grant permission to send messages.",
+  "approval.preview.createPromotions":
+    "Promotes the named leads into this contact and archives them. Fills missing contact fields, adds missing phones, consolidates history, and preserves withdrawals and applicable communication restrictions.",
+  "approval.preview.acquisition": "Why this contact is being created",
+  "approval.preview.acquiredAt": "Acquired on",
+  "approval.preview.promotedLead": "Lead to promote",
+  "approval.preview.sourceActivity": "History linked to this source lead",
+  "approval.preview.sourceConsent": "Consent on this source lead",
+  "approval.preview.channelPosition": "Position in list",
+  "approval.preview.emailCorrespondence":
+    "Address treated as prior correspondence",
+  "approval.preview.socialPlatform": "Social network",
+  "approval.preview.socialHandle": "Profile or handle",
+  "approval.preview.originLead": "Origin lead",
+  "approval.preview.archiveRelationship":
+    "Archive this relationship link. The linked records remain stored.",
+  "approval.preview.archivePromoteEmployer":
+    "Make the shown remaining employment the contact’s primary employer.",
+  "approval.preview.archiveNoPrimary":
+    "Leave the contact without a primary employer. No employer is chosen automatically.",
+  "approval.preview.newPrimaryEmployer": "New primary employer",
+  "approval.preview.startPrecision": "Start date precision",
+  "approval.preview.endPrecision": "End date precision",
+  "approval.preview.precisionDay": "Exact day",
+  "approval.preview.precisionMonth": "Month only",
+  "approval.preview.mergeTags":
+    "Replace the source tag on the shown records with the surviving tag. Where both tags are present, remove only the duplicate source assignment. Archive the source tag and release its name for reuse; it is not retained as an alias.",
+  "approval.preview.mergeTagSource": "Tag to remove",
+  "approval.preview.mergeTagTarget": "Tag to keep",
+  "approval.preview.mergeTagMove": "Record that gains the surviving tag",
+  "approval.preview.mergeTagCollapse": "Record that already has both tags",
+  "approval.preview.archiveCompany":
+    "Archive this company and its listed domains, classifications, partner program and relationships. Remove its list memberships and tags. Contacts, deals and conversation history remain.",
+  "approval.preview.archiveDomain": "Domain to archive",
+  "approval.preview.archiveCompanyType": "Company classification to retire",
+  "approval.preview.archivePartner": "Partner program to archive",
+  "approval.preview.archiveContact":
+    "Archive this contact and retire the listed email addresses, phone numbers, channel bindings and relationships. Remove the listed memberships and tags. Conversation history remains.",
+  "approval.preview.archiveEmail": "Email address to archive",
+  "approval.preview.archivePhone": "Phone number to archive",
+  "approval.preview.archiveChannel": "Messaging channel binding to archive",
+  "approval.preview.archiveProject":
+    "Archive this project and remove the listed stakeholder links, list memberships and tags. Activities, deals and company links remain.",
+  "approval.preview.archiveDeal":
+    "Archive this deal and remove the shown stakeholder links, list memberships and tag assignments. Contacts, lists and tags remain stored.",
+  "approval.preview.archiveStakeholder": "Stakeholder link to archive",
+  "approval.preview.archiveRole": "Role on this link",
+  "approval.preview.archiveList": "List membership to remove",
+  "approval.preview.archiveTag": "Tag assignment to remove",
+  "approval.preview.archiveActivity":
+    "Archive this activity and remove it from active work. Its content remains stored; previously sent messages are not recalled.",
+  "approval.preview.archiveProduct":
+    "Archive this product and remove it from the active catalog. Existing offer line snapshots remain unchanged.",
+  "approval.preview.archiveTemplate":
+    "Archive this template and remove it from template selection, including its use as a default. Existing offers keep their template reference.",
+  "approval.preview.archiveOffer":
+    "Archive this offer and hide it from the active offer list. Its line items remain stored.",
+  "approval.preview.importScopeUnavailable":
+    "This import proposal has no complete row-by-row change set. Open Data import to review the source and test run before starting the import.",
+  "approval.preview.confirmationOnly":
+    "Record this confirmation and complete the waiting automation run. No record update or message send is authorized.",
+  "approval.preview.confirmationQuestion": "Question to confirm",
+  "approval.preview.confirmationReason": "Why confirmation is needed",
+  "approval.preview.createOffer":
+    "Create a draft offer with the shown terms, line items and totals. No offer is sent.",
+  "approval.preview.assignOfferNumber":
+    "Assign the offer number when the draft is created.",
+  "approval.preview.createTemplate":
+    "Create an offer template with the shown header and footer.",
+  "approval.preview.defaultTemplate":
+    "Set this template as the default for the shown language.",
+  "approval.preview.createProduct":
+    "Create the catalog product with the shown price and billing terms. Existing offer lines keep their prices.",
+  "approval.preview.billingMonths": "Billing period (months)",
+  "approval.preview.createProject":
+    "Create the project, link the shown company as its customer, and record the initial phase.",
+  "approval.preview.assignProjectKey":
+    "Assign a project key when the project is created.",
+  "approval.preview.createDeal":
+    "Create the deal in the shown pipeline and stage, with its initial stage history.",
+  "approval.preview.createCompany":
+    "Authorizes the proposing caller to create this company once with the displayed values. Current permissions and duplicate identities are checked again.",
+  "approval.preview.workspaceVisible":
+    "Makes the new record available to colleagues who have permission to see it.",
+  "approval.preview.geocodeConditional":
+    "If address geocoding is enabled, queues a coordinate lookup for the displayed address.",
+  "approval.preview.primaryDomain": "Primary domain",
+  "approval.preview.createLead":
+    "Authorizes the proposing caller to create this lead once with the displayed values. Creation checks current permissions and duplicate identities again.",
+  "approval.preview.reuseRecord":
+    "The source key already identifies this record. The call returns it without creating another record.",
+  "approval.preview.queueDuplicate":
+    "Creates a duplicate candidate for review alongside the new record.",
+  "approval.preview.creationExisting": "Existing record returned",
+  "approval.preview.creationDuplicate": "Suggested duplicate",
   "approval.preview.nameUnavailable": "Name unavailable",
   "approval.preview.structured": "Structured value: {value}",
   "approval.preview.resolveConflict":
     "Resolve the conflicting context before approving this change.",
   "history.field.closed_at": "Closed on",
   "history.field.amount_minor_base": "Amount in base currency",
+  "approval.preview.activeContract":
+    "An agreement is still active. Review it before ending the account relationship.",
+  "approval.preview.activeDelivery":
+    "A project is still in delivery. Review it before ending the account relationship.",
+  "approval.preview.unknownScope":
+    "The source does not establish that the whole account relationship ended.",
+  "approval.preview.incompleteEvidence":
+    "The current evidence is incomplete. Review the account before changing its lifecycle.",
+  "approval.preview.newerEvidence":
+    "The source changed after this proposal. Review the current evidence.",
+  "approval.preview.scopeCompany": "Whole account relationship",
+  "approval.preview.scopeWorkstream": "One engagement",
+  "approval.preview.scopeUnknown": "Scope not established",
+  "approval.preview.scope": "Scope of the ending",
+  "approval.preview.sourceDate": "Source date",
+  "approval.preview.workstream": "Engagement",
   "approval.preview.conflict": "Conflicting context",
   "approval.preview.execution": "Set when applied",
   "approval.preview.effects": "Also changes",
+  "approval.preview.authorizeMessage":
+    "Authorizes the proposing caller to send this message once. Approval does not send it immediately or add your signature. Sending still requires current permissions and consent checks.",
+  "approval.preview.archiveLead":
+    "Archives this lead and removes all its tags. The record remains available in archived records.",
+  "approval.preview.authorizeWebsite":
+    "Authorizes the proposing caller to read this website using configured external services. Reads may use AI and incur usage charges.",
+  "approval.preview.readPage":
+    "Read one page and prepare an enrichment proposal",
+  "approval.preview.readSite": "Queue a crawl of the website",
+  "approval.preview.readTechnical":
+    "Queue a public technical lookup of the company domain",
+  "approval.preview.targetURL": "Website or domain to read",
+  "approval.preview.readScope": "Read scope",
+  "approval.preview.recordMeetingConsent":
+    "Authorizes recording the meeting and capturing the displayed transactional consent before reserving the slot. An existing consent decision is preserved. Consent may be recorded even if the slot is no longer available. No calendar invitation is sent.",
+  "approval.preview.preserveConsent":
+    "The existing consent decision stays unchanged; no new consent proof is recorded.",
+  "approval.preview.requestConfirmation":
+    "Authorizes an attempt to request marketing confirmation at the displayed address. Delivery depends on the configured mail service and current consent checks. This does not subscribe the contact. The submitted marketing wording is not stored as proof; confirmation uses the wording on the confirmation page.",
+  "approval.preview.confirmationUnavailable":
+    "The current contact or consent details prevent a marketing confirmation request. Booking can continue without sending it or granting marketing consent.",
+  "approval.preview.consentContact": "Consent contact",
+  "approval.preview.consentPurpose": "Transactional purpose",
+  "approval.preview.consentVersion": "Consent policy version",
+  "approval.preview.consentWording": "Submitted consent wording",
+  "approval.preview.consentResult": "Consent decision after execution",
+  "approval.preview.marketingPurpose": "Marketing purpose",
+  "approval.preview.marketingVersion": "Submitted marketing policy version",
+  "approval.preview.marketingWording": "Submitted marketing wording",
+  "approval.preview.confirmationRecipient": "Confirmation destination",
+  "approval.preview.consentGranted": "Granted",
+  "approval.preview.consentWithdrawn": "Withdrawn",
+  "approval.preview.authorizeInvitation":
+    "Authorizes the proposing host to reserve the slot and queue this calendar invitation to the displayed address. A private reschedule/cancel link is appended to the invitation. Video and reminder settings are shown above. Current calendar access, availability and recipient permissions are checked when executed. Provider confirmation does not prove the guest accepted or received the invitation.",
+  "approval.preview.authorizeChannelReply":
+    "Authorizes the proposing caller to reply once on this conversation to the displayed channel account, with the full message and listed files. Approval does not send immediately. Current channel availability, recipient permissions and file checks still apply.",
+  "approval.preview.channelProvider": "Messaging provider",
+  "approval.preview.contextAutomatic":
+    "Determined from the conversation and evidence when sent",
+  "approval.preview.claimedContext": "Claimed communication category",
+  "approval.preview.messagePurpose": "Stated purpose key",
+  "approval.preview.operatorReason": "Sender’s explanation (not evidence)",
+  "approval.preview.evidenceContract": "Cited contract",
+  "approval.preview.evidenceInvoice": "Cited invoice",
+  "approval.preview.evidenceDeal": "Cited deal",
+  "approval.preview.contextReply": "Reply to an inbound message",
+  "approval.preview.contextSecurity": "Security notice",
+  "approval.preview.contextPrivacy": "Privacy notice",
+  "approval.preview.contextRecord": "Record confirmation",
+  "approval.preview.contextConsent": "Consent confirmation",
+  "approval.preview.contextOptout": "Opt-out confirmation",
+  "approval.preview.unsubscribeFooter":
+    "Sending adds a recipient-specific unsubscribe link when the recipient has an applicable preference record. The private link is created at execution, not during review.",
+  "approval.preview.disclosureText": "Disclosure appended when sent",
+  "approval.preview.demoteArchive":
+    "Restores the lead as Engaged and removes its qualification links. Archives the contact, its email addresses, phone numbers, channel identities and relationships; removes its tags and list memberships. Activities stay where they are.",
+  "approval.preview.demotePreserve":
+    "Restores the lead as Engaged and removes its qualification links. Keeps the existing contact and its history; removes the link back to this lead. Activities stay where they are.",
+  "approval.preview.relinkPreserve":
+    "Other record links remain. Participants tied to replaced contact links move to the destination contact; matching participant rows merge.",
+  "approval.preview.relinkRetention":
+    "Filing under this project records a commercial correspondence retention basis. Moving the activity later does not remove that basis.",
+  "approval.preview.relinkDestination": "Destination record",
+  "approval.preview.relinkActivity": "Activity gaining the link",
+  "approval.preview.relinkUnchanged": "Activity already linked",
+  "approval.preview.relinkRemoved": "Link replaced",
+  "approval.preview.relinkParticipantMove": "Participant moved from contact",
+  "approval.preview.relinkParticipantMerge":
+    "Duplicate participant removed from contact",
+  "approval.preview.relinkRole": "Participant role",
+  "approval.preview.relinkAddress": "Participant address",
+  "approval.preview.relinkUser": "Participant colleague",
+  "approval.preview.promotionMoveLinks":
+    "Moves the listed unsubscribe links and communication bases to the contact. Their scope, expiry and revocation remain unchanged.",
+  "approval.preview.withdrawalAddress": "Unsubscribe link for",
+  "approval.preview.linkIssued": "Link issued",
+  "approval.preview.linkExpires": "Link expires",
+  "approval.preview.recordRevoked": "Revoked",
+  "approval.preview.basisKind": "Recorded communication basis",
+  "approval.preview.basisFrom": "Basis valid from",
+  "approval.preview.basisUntil": "Basis valid until",
+  "approval.preview.basisActivity": "Activity supporting this basis",
+  "approval.preview.basisContract": "Contract",
+  "approval.preview.basisRequest": "Precontract request",
+  "approval.preview.basisCorrespondence":
+    "Correspondence initiated by the recipient",
+  "approval.preview.basisInterests": "Legitimate interests",
+  "approval.preview.basisObligation": "Legal obligation",
+  "approval.preview.basisSecurity": "Vital or security interest",
+  "approval.preview.basisCustomer": "Existing customer exception",
+  "approval.preview.basisAgreement": "Recipient agreement",
+  "approval.preview.promotionTrigger": "Qualification trigger",
+  "approval.preview.promotionNote": "Qualification evidence",
+  "approval.preview.promotionEvidence": "Supporting activity",
+  "approval.preview.promotionContactName": "Contact name",
+  "approval.preview.promotionContactSource": "Contact source",
+  "approval.preview.promotionContactTitle": "Contact title to add",
+  "approval.preview.promotionContactOwner": "Contact owner",
+  "approval.preview.promotionContactEmail": "Contact email to add",
+  "approval.preview.promotionContactPhone": "Contact phone to add",
+  "approval.preview.promotionExistingContact": "Existing contact to update",
+  "approval.preview.promotionSetOrigin": "Link contact back to this lead",
+  "approval.preview.promotionDuplicateCandidate":
+    "Possible duplicate to review",
+  "approval.preview.promotionMoveActivity": "Activity to move to contact",
+  "approval.preview.promotionDuplicateActivity":
+    "Activity already on contact; remove lead link",
+  "approval.preview.promotionConsentBefore":
+    "Contact consent before qualification",
+  "approval.preview.promotionRestriction": "Restriction to carry",
+  "approval.preview.promotionRestrictionAuthority": "Restriction recorded by",
+  "approval.preview.promotionRestrictionPurpose": "Restriction scope",
+  "approval.preview.promotionDealName": "New deal name",
+  "approval.preview.promotionDealAmount": "New deal amount",
+  "approval.preview.promotionDealOwner": "New deal owner",
+  "approval.preview.promotionArchive":
+    "Qualifies and archives this lead, linking it to the contact. Keeps the original consent evidence on the lead.",
+  "approval.preview.promotionCreate":
+    "Creates a contact with the displayed details.",
+  "approval.preview.promotionFill":
+    "Adds the displayed missing details to the existing contact. Keeps its existing name, title and primary phone.",
+  "approval.preview.promotionDeal":
+    "Opens the displayed deal and adds the contact as a stakeholder. The lead links to this deal.",
+  "approval.preview.promotionReview":
+    "Creates a separate contact and queues the possible duplicate for review.",
+  "approval.preview.promotionAllMarketing": "All marketing",
+  "approval.preview.promotionMachine": "Automated system",
+  "approval.preview.promotionUser": "Team member",
+  "approval.preview.promotionAdmin": "Administrator",
+  "approval.preview.promotionSubject": "Recipient",
+  "approval.preview.demotionContact": "Contact affected",
+  "approval.preview.unsignedSend":
+    "Sends without a human display name or personal signature. Approval does not make the reviewer the author.",
+  "approval.preview.senderSignature": "Sender signature",
+  "approval.preview.signaturePrivate":
+    "The sender’s private signature cannot be shown to this reviewer. Ask the sender to review this message.",
+  "approval.preview.recordMeeting":
+    "Authorizes recording a meeting on the linked records. No calendar invitation or email is sent. Supplied attendee addresses are not stored on the meeting. The host must still have a free slot when it is recorded.",
+  "approval.preview.meetingStart": "Start (UTC offset included)",
+  "approval.preview.meetingEnd": "End (UTC offset included)",
+  "approval.preview.meetingHost": "Meeting host",
+  "approval.preview.intendedAttendee": "Intended attendee (not notified)",
+  "approval.preview.htmlBody": "Formatted message",
   "approval.preview.correspondence":
     "Classify linked correspondence as business records.",
+  "approval.preview.attachRecipients":
+    "Link these recipients to the existing task.",
+  "approval.preview.existingTask": "Existing task",
   "approval.preview.delivery": "Start delivery on eligible linked projects.",
   "approval.preview.minorUnits": "{amount} {currency} minor units",
   "approval.preview.empty": "Not set",
@@ -25,6 +625,27 @@ export const en = {
   "approval.preview.unavailable":
     "Approval context is unavailable. Reload or request a new proposal.",
   "approval.preview.change": "{before} → {after}",
+  "approval.import.row": "{kind}, row {line} ({key})",
+  "approval.import.create": "Create a new record",
+  "approval.import.duplicate": "Create a record and queue duplicate review",
+  "approval.import.update": "Update the existing record",
+  "approval.import.unchanged": "Keep the existing fields",
+  "approval.import.skip": "Skip this row",
+  "approval.import.createTag": "Create tag",
+  "approval.import.applyTag": "Add tag",
+  "approval.import.contextTag": "File the new record under",
+  "approval.import.linkCompany": "Link to company",
+  "approval.import.linkContact": "Link to contact",
+  "approval.import.linkLead": "Link to lead",
+  "approval.import.linkDeal": "Link to deal",
+  "approval.import.companyRow": "Link to company from import row",
+  "approval.import.contactRow": "Link to contact from import row",
+  "approval.import.leadRow": "Link to lead from import row",
+  "approval.import.dealRow": "Link to deal from import row",
+  "approval.import.droppedLink": "Omit unresolved link",
+  "approval.import.createActivity":
+    "File the activity without sending a message or calendar invitation",
+  "approval.import.closeDeal": "Close the deal using the imported history",
   "approval.preview.authorityUnknown":
     "The reason you can review this change is unavailable.",
   "approval.preview.reviewer": "Review authority",
@@ -168,6 +789,13 @@ export const en = {
   "reporting.draftPreviewing":
     "You are looking at the draft. Readers still see the published report.",
   "reporting.previewDraft": "Preview draft",
+  "reporting.previewAs": "Preview as",
+  "reporting.previewAsSelf": "Your own view",
+  "reporting.previewAsBanner":
+    "Preview as {role}: what a seat with this role and your teams reads of this report. Records private to someone else stay hidden here too.",
+  "reporting.endPreview": "End preview",
+  "reporting.previewNoRecords":
+    "Records do not open in a preview. End the preview to open them under your own access.",
   "reporting.showPublished": "Show published report",
   "reporting.publishDraft": "Publish draft",
   "reporting.discardDraft": "Discard draft",
@@ -182,6 +810,51 @@ export const en = {
     "Publish or discard the draft before you restore an earlier version.",
   "reporting.moveUp": "Move up",
   "reporting.moveDown": "Move down",
+  "reporting.sectionN": "Section {n}",
+  "reporting.sectionTitle": "Section {n} title",
+  "reporting.addSection": "Add section",
+  "reporting.removeSection": "Remove section {n}",
+  "reporting.cardWidth": "Width of {chart}",
+  "reporting.widthFull": "Full width",
+  "reporting.widthHalf": "Half width",
+  "reporting.cardSection": "Section of {chart}",
+  "reporting.removeCard": "Remove {chart}",
+  "reporting.addChart": "Add chart",
+  "reporting.questionCard": "Question: {population}",
+  "reporting.questionLoading": "Asking the question…",
+  "reporting.questionNotKept":
+    "Not kept in this sent report. Open the live report to see this question’s answer.",
+  "reporting.questionLink": "Link to a saved custom report",
+  "reporting.questionLinkInvalid":
+    "Paste the link that Copy link gives on a saved custom report.",
+  "reporting.addQuestion": "Add question",
+  "reporting.questionKeptWithheld":
+    "Your access does not cover this question, so its kept answer is not shown.",
+  "reporting.questionNotKeptNoRetention":
+    "Not kept: sent reports had no retention period when this one was sent.",
+  "reporting.questionNotKeptTooMany":
+    "Not kept: this answer counted more records than a sent report keeps.",
+  "reporting.questionNotKeptUnanswered":
+    "Not kept: the sender could not ask this question when the report was sent.",
+  "reporting.questionNotKeptOtherRecords":
+    "Not kept: this question counts other kinds of records than the ones it lists, which a sent report does not keep.",
+  "reporting.questionExpired":
+    "No longer available. Retention erased this sent report’s answers.",
+  "reporting.questionRedacted":
+    "Removed from this sent report by a privacy request.",
+  "reporting.editionRetention_one":
+    "Sent reports keep their readings and question answers for {count} day, then retention erases them.",
+  "reporting.editionRetention_other":
+    "Sent reports keep their readings and question answers for {count} days, then retention erases them.",
+  "reporting.questionNotPreviewed":
+    "Not shown in a role preview. Each reader’s own access answers this question when they open the report.",
+  "reporting.questionFiltered":
+    "This custom report has filters, which a report card cannot keep. Save a copy without filters; the report’s scope narrows the card.",
+  "reporting.previewChart": "Preview",
+  "reporting.previewLoading": "Loading the preview…",
+  "reporting.previewEmpty":
+    "Nothing to draw for this report’s period and metrics yet. Add the chart anyway, or change the period under Customize report.",
+  "reporting.chooseChart": "Chart to add",
   "reporting.exportCsv": "Export CSV",
   "reporting.captureContexts": "Record daily pipeline history",
   "reporting.captureHelp":
@@ -327,6 +1000,7 @@ export const en = {
   "reporting.restricted": "Restricted record",
   "reporting.next": "Next page",
   "reporting.name": "Report name",
+  "reporting.description": "Purpose",
   "reporting.audience": "Visible to",
   "reporting.private": "Only me",
   "reporting.team": "Selected team",
@@ -713,9 +1387,6 @@ export const en = {
   "aiAdmin.rates": "Input {input} · Output {output} per 1M tokens",
 
   "brief.weekly.tasksCompleted": "Tasks completed",
-  "teamweekly.noPriority": "No priority indicated by the recorded metrics",
-  "teamweekly.basis":
-    "Member summaries for the recorded week. Current plans and Worklists show today’s responsibilities.",
   "brief.weekly.noMeetings": "None recorded",
   "brief.weekly.noLeads": "None received",
   "brief.weekly.noCommitments": "None due",
@@ -729,8 +1400,6 @@ export const en = {
   "brief.weekly.partialValue": "{value} (partial)",
   "brief.week.beforeHistory":
     "This week falls before the first records, so it has no figures to report.",
-  "teamweekly.headline.notRecorded":
-    "Some figures were not recorded for this week and are left out.",
   "home.receipt.date": "Close date: {before} → {after}",
   "home.receipt.undated": "No date",
   "home.receipt.confidence": "Updated forecast confidence",
@@ -740,7 +1409,6 @@ export const en = {
   "home.change.stageUnknown": "Unknown stage",
   "home.change.unidentified": "Unknown",
   "home.change.by": "Changed by: {actor}",
-  "brief.focus.inQueue": "In the Worklist",
   "brief.focus.position": "{at} of {count}",
   "worklist.bandCount_one": "{count} item",
   "worklist.bandCount_other": "{count} items",
@@ -749,14 +1417,8 @@ export const en = {
   "brief.queue.title": "Worklist",
   "brief.queue.show": "Show Worklist",
   "brief.queue.hide": "Hide Worklist",
-  "brief.focus.urgentRemaining_one": "{count} more urgent item in the Worklist",
-  "brief.focus.urgentRemaining_other":
-    "{count} more urgent items in the Worklist",
-  "brief.focus.remaining": "{count} more priorities in the Worklist",
   "brief.team.planUnavailable": "No current plan visible to you for {name}.",
   "brief.team.noCommitments": "{name} has no commitments in this plan.",
-  "brief.team.outcomes":
-    "{won} won · {lost} lost · {moved} deals moved · {leads} leads assigned",
   "brief.schedule.unavailable": "Calendar did not load.",
   "brief.schedule.more":
     "Load more agenda items to see the remaining meetings.",
@@ -768,7 +1430,7 @@ export const en = {
   "brief.schedule.reconnect": "Reconnect your calendar",
   "brief.schedule.nextAt": "Next meeting at {time}",
   "brief.readings.riskPartial": "Known value only · not all checked",
-  "brief.readings.unpricedCount_one": "1 deal not priced · excluded",
+  "brief.readings.unpricedCount_one": "{count} deal not priced · excluded",
   "brief.readings.unpricedCount_other": "{count} deals not priced · excluded",
   "brief.coverage.source.generic": "Other work",
   "brief.coverage.source.weekly_commitment": "Weekly commitments",
@@ -818,6 +1480,8 @@ export const en = {
   "dealSuggestion.field.amount": "Amount",
   "dealSuggestion.field.currency": "Currency",
   "dealSuggestion.field.stage": "Stage",
+  "dealSuggestion.accountOwner": "Account owner",
+  "dealSuggestion.unassignedOwner": "Unassigned",
   "dealSuggestion.field.owner": "Owner",
   "dealSuggestion.ownerMe": "Me",
   "dealSuggestion.field.closeDate": "Expected close",
@@ -826,12 +1490,6 @@ export const en = {
   "dealSuggestion.accepted": "Deal opened: {name}.",
   "dealSuggestion.acceptedUnlinked":
     "Deal opened: {name}. Some evidence remains in place because permissions do not allow it to be moved.",
-  "brief.team.commitmentRate":
-    "{done} of {total} due commitments were completed.",
-  "brief.team.meetingRate":
-    "{done} of {total} meetings had a recorded next step.",
-  "brief.digest.messages": "Emails synced",
-  "brief.team.week": "Week starting",
   "brief.week.lostLabel": "Lost",
   "brief.feed.refreshFailed":
     "The Morning brief did not refresh. Showing the last loaded work.",
@@ -857,23 +1515,16 @@ export const en = {
   "worklist.untitled.meeting_follow_up": "Meeting",
   "brief.plan.select": "Find a deal, lead, contact, company or project",
   "brief.plan.period": "Current plan · week of {date}",
-  "brief.forecast.period":
-    "Forecast period: {start} to {end}. Saved with this weekly review.",
-  "brief.team.none": "No teams available. Add a team in Settings.",
-  "brief.week.supporting": "Metrics, forecast and observations",
   "brief.coverage.retry": "Refresh brief",
   "brief.reply.owed": "Customer awaiting your reply",
-  "brief.createdAt": "Brief created {when}",
-  "brief.updatedAt": "Agenda updated {when}",
   "brief.changes.superseded":
     "This deal changed again. Open the deal to review its current state.",
-  "brief.changes.title": "Changes made for you",
+  "brief.changes.title": "Waiting for your word",
   "brief.changes.accept": "Accept",
   "brief.changes.accepted": "Accepted",
   "brief.changes.undone": "Undone",
   "brief.updates.title": "Updates",
   "brief.task.undated": "No due date",
-  "brief.readings.summary": "Work summary",
   "brief.readings.unpriced": "Not priced",
   "brief.readings.noDealWork": "None",
   "brief.readings.noDealWorkWhy": "No deal flagged today",
@@ -891,20 +1542,18 @@ export const en = {
   "brief.week.lost_one": "{count} deal lost.",
   "brief.week.lost_other": "{count} deals lost.",
   "brief.row.details": "Details",
-  "brief.glance.introTeam": "Your team’s day at a glance.",
-  "teamweekly.focus.deals_at_risk": "Deal recovery",
-  "teamweekly.headline.partial":
-    "Partial coverage. These figures cover the members counted below.",
-  "teamweekly.headline.unmeasured":
-    "No member snapshots are available for this week. Performance is not measured.",
   "worklist.lead.noTarget": "no response target set",
   "worklist.lead.lastTouch": "last activity {date}",
   "worklist.deal.omitted": "omitted from forecast",
   "worklist.deal.provisional": "forecast close {date} (unconfirmed)",
-  "brief.readings.riskBasis": "Expected value · unpriced excluded",
-  "brief.readings.risk": "Revenue at risk",
-  "brief.glance.introTeamWeekly": "Review your team’s recorded week.",
-  "brief.feed.teamTitle": "Team priorities",
+  "brief.readings.riskBasis": "Face value · not expected loss",
+  "magic.action.forecast_changed": "Adjusted forecast",
+  "magic.why.forecast_review":
+    "The deal needs review after a period without progress.",
+  "magic.why.forecast_date":
+    "The forecast date was estimated from pipeline progress.",
+  "magic.undescribed": "Activity not described",
+  "brief.readings.risk": "Flagged pipeline value",
   "theme.toDark": "Dark theme",
   "theme.toLight": "Light theme",
   // The three appearance choices, as the options of a chooser — the account menu
@@ -2025,8 +2674,6 @@ export const en = {
   "company.website": "Website",
   "company.contactCount": "Contacts",
   "company.openDealCount": "Open deals",
-  // Offered only where there is no partner programme yet: the tab that holds
-  // the form appears once one exists, so this is how the first one is made.
   // Where the account stands with us, and what it is to us — the two
   // questions the retired classification answered with one value.
   "company.lifecycle": "Lifecycle",
@@ -2674,11 +3321,15 @@ export const en = {
   "approval.kind.vcard_create": "Create contact from card",
   "approval.kind.lifecycle_change": "Lifecycle stage",
   "approval.kind.stage_progression": "Advance deal stage",
+  "approval.preview.requiredCriterionMet": "Required criterion met",
+  "approval.preview.requiredCriterionUnmet": "Required criterion not met",
+  "approval.preview.optionalCriterionMet": "Optional criterion met",
+  "approval.preview.optionalCriterionUnmet": "Optional criterion not met",
   "approval.field.because": "Reason",
   "approval.field.from_stage": "From",
   "approval.field.to_stage": "To",
   "approval.kind.transcript_proposal": "Add next step from transcript",
-  "approval.kind.commitment_task": "Add commitment task",
+  "approval.kind.commitment_task": "Task commitment",
   "approval.kind.fx_rate_proposal": "Update exchange rates",
   "approval.kind.disqualify_lead": "Disqualify lead",
   "approval.kind.demote_lead": "Reverse lead qualification",
@@ -4263,7 +4914,6 @@ export const en = {
   // What the week TAUGHT, as against what it was. Every learning shows what it
   // rests on, because a claim about cause is one the reader cannot check
   // against anything else on the page.
-  "brief.weekly.learnings.title": "Observations to review",
   "brief.weekly.learnings.worked": "Positive outcome",
   "brief.weekly.learnings.didNotWork": "Unsuccessful outcome",
   "brief.weekly.learnings.pattern": "Pattern",
@@ -4278,8 +4928,7 @@ export const en = {
   // the funnel, and an empty row would read as failure at something nobody
   // asked of them.
   "brief.weekly.scorecard.title": "Weekly scorecard",
-  "brief.weekly.scorecard.leadBlock": "Leads and meetings",
-  "brief.weekly.scorecard.dealBlock": "Deals",
+  "brief.weekly.scorecard.basis": "Basis",
   "brief.weekly.scorecard.advanced": "Lead advances",
   "brief.weekly.scorecard.advancedBasis": "Per step · not per lead",
   "brief.weekly.scorecard.answeredInTarget": "Target breaches",
@@ -4313,15 +4962,25 @@ export const en = {
   "brief.view.label": "Home view",
   "brief.view.morning": "Morning",
   "brief.view.weekly": "Weekly",
-  "brief.scope.label": "Whose brief",
-  "brief.scope.mine": "Mine",
-  "brief.scope.team": "Team",
   // The Brief's opening sentence, composed from the rows the page is showing —
   // never model-written, so it cannot say what the rows contradict.
   "brief.sentence.clear": "No immediate priorities found.",
   "brief.sentence.one": "First: {lead}",
   "brief.sentence.many": "First: {lead}. Then {rest}.",
   "brief.sentence.rest": "{count} more",
+  "brief.sentence.oneFor": "First, for {who}: {lead}",
+  "brief.sentence.manyFor": "First, for {who}: {lead}. Then {rest}.",
+  "brief.sentence.meeting": "Your next meeting is {meeting} at {time}.",
+  "brief.briefedAt": "Briefed by Margince at {time}",
+  "brief.first.title": "First",
+  "brief.first.then": "Then",
+  "brief.first.why": "Why first?",
+  "brief.intro.waiting": "Waiting on you",
+  "brief.intro.meetings": "Meetings today",
+  "brief.intro.urgent": "Urgent",
+  "brief.intro.read_one": "Last nightly run: 1 email synced.",
+  "brief.intro.read_other": "Last nightly run: {count} emails synced.",
+  "brief.intro.skip": "Press any key or click to continue",
   // What the ORDER could not weigh, as against what scored low. A fragment
   // like the source lines it sits with, and it names no cause: the run says
   // which factor it lost, never why.
@@ -4344,95 +5003,13 @@ export const en = {
   "brief.week.andCarry": "{result} {carry}",
   "brief.week.quiet": "No completed work or deal movement recorded.",
 
-  "brief.feed.title": "Focus",
   // What is on screen out of what the day holds, on the panel's own line.
   "brief.feed.changedBadge_one": "1 changed",
   "brief.feed.changedBadge_other": "{count} changed",
   "brief.feed.loading": "Loading Morning brief…",
   "brief.feed.clear":
     "No immediate priorities. The full Worklist is available.",
-  "teamweekly.title": "Team week",
-  "teamweekly.weekOf": "{team} · week of {day}",
-  "teamweekly.frozen": "Frozen",
-  "teamweekly.loading": "Loading team week…",
-  "teamweekly.empty": "Nothing to show for this week.",
-  "teamweekly.forbidden":
-    "Team reviews are available to the team’s lead and to roles that oversee every team.",
-  "teamweekly.noSnapshot":
-    "No saved review is available for this team and week. Choose another week or review the team’s current work.",
   "teamweekly.pickTeam": "Choose a team",
-  "teamweekly.chooseTeam": "Choose a team to review its work.",
-  "teamweekly.repsUnread":
-    "Snapshots are missing for {count} team members. These figures cover {counted} members.",
-  "teamweekly.ofTotal": "{part} of {whole}",
-  "teamweekly.headline.plain": "No meetings or due commitments were recorded.",
-  "teamweekly.card.firstResponse": "Leads answered",
-  "teamweekly.card.firstResponseBasis": "{breached} past target",
-  "teamweekly.card.noLeads": "None received",
-  "teamweekly.card.meetings": "Meetings with follow-up",
-  "teamweekly.card.meetingsBasis": "Task linked before week end",
-  "teamweekly.card.noMeetings": "None recorded",
-  "teamweekly.card.commitments": "Commitments kept",
-  "teamweekly.card.commitmentsBasis": "Due in the plan",
-  "teamweekly.card.noCommitments": "None due",
-  "teamweekly.card.won": "Won",
-  "teamweekly.card.wonBasis": "{lost} lost · value unavailable",
-  "teamweekly.card.wonBasisValue": "{value} · {lost} lost",
-  "teamweekly.card.reps": "Members counted",
-  "teamweekly.card.repsBasis": "Full week recorded",
-  "teamweekly.movement.title": "Week activity",
-  "teamweekly.movement.won": "Won",
-  "teamweekly.movement.lost": "Lost",
-  "teamweekly.movement.moved": "Advanced",
-  "teamweekly.movement.meetings": "Meetings held",
-  "teamweekly.movement.leads": "Leads routed",
-  "teamweekly.agenda.title": "Monday agenda",
-  "teamweekly.agenda.empty":
-    "No member’s week could be loaded for this team, so there is no agenda.",
-  "teamweekly.agenda.summary_one":
-    "{count} item for Monday, starting with {first}.",
-  "teamweekly.agenda.summary_other":
-    "{count} items for Monday, starting with {first}.",
-  "teamweekly.agenda.copy": "Copy agenda",
-  "teamweekly.agenda.copied": "Copied",
-  "teamweekly.agenda.copyFailed":
-    "Agenda was not copied. Select the list and copy it manually.",
-  "teamweekly.focus.help_requested": "Help requested",
-  "teamweekly.focus.leads_breached": "Response targets missed",
-  "teamweekly.focus.commitments_missed": "Plan commitments missed",
-  "teamweekly.focus.meetings_without_next_step": "Follow-up evidence missing",
-  "teamweekly.focus.strong_week": "Strong week",
-  "teamweekly.focus.quiet_week": "No priority identified",
-  "teamweekly.focus.forecast_downgrades": "Forecast downgraded",
-  "teamweekly.focus.stage_regressions": "Deals moved back",
-  "teamweekly.focus.close_dates_provisional": "Close dates provisional",
-  "teamweekly.focus.no_next_step_coverage": "Next steps missing",
-  "teamweekly.funnel.line": "{stage} → {next}: {rep} against the team’s {team}",
-  "teamweekly.funnel.lineLast": "{stage}: {rep} against the team’s {team}",
-  "teamweekly.attention.title": "Needs attention now",
-  "teamweekly.attention.live": "Live",
-  "teamweekly.attention.basis":
-    "Read now from the deals the team’s members own, not frozen with the week.",
-  "teamweekly.attention.empty":
-    "Nothing on the team’s deals needs attention now.",
-  "teamweekly.attention.quiet": "No activity for {days} days",
-  "teamweekly.quality.title": "Record quality",
-  "teamweekly.quality.accepted": "Proposals accepted",
-  "teamweekly.quality.rejected": "Proposals rejected",
-  "teamweekly.quality.reversals": "Automatic changes undone",
-  "teamweekly.quality.notMeasured": "Not measured",
-  "teamweekly.quality.basis": "Frozen with the week",
-  "teamweekly.coverage.title": "Deal value coverage",
-  "teamweekly.coverage.month": "Month",
-  "teamweekly.coverage.quarter": "Quarter",
-  "teamweekly.coverage.atRisk": "Coverage at risk against {basis}",
-  "teamweekly.coverage.holds": "Coverage holds against {basis}",
-  "teamweekly.coverage.percent": "{percent} of the deal value needed",
-  "teamweekly.coverage.replan": "Replan recommended",
-  "teamweekly.coverage.notAuthorized":
-    "The call for this period could not be read when the week closed.",
-  "teamweekly.coverage.basis.manager_call": "the manager’s call",
-  "teamweekly.coverage.basis.historical_median": "the historical median",
 
   "plan.loading": "Loading plan…",
   "plan.empty": "Nothing on the plan yet.",
@@ -4495,6 +5072,7 @@ export const en = {
   "brief.weekly.outlook.bestCaseDetail": "Includes commit",
   "brief.weekly.outlook.weighted": "Weighted deal value",
   "brief.weekly.outlook.landing": "Projected landing",
+  "brief.weekly.outlook.open": "Open the forecast",
   "brief.weekly.outlook.measure.commit_evidence": "From commit evidence",
   "brief.weekly.outlook.measure.weighted": "From weighted deals",
   "brief.weekly.outlook.measure.manager_call": "From the manager call",
@@ -4511,9 +5089,29 @@ export const en = {
   "brief.weekly.bar.won": "Won",
   "brief.weekly.bar.lost": "Lost",
   "brief.weekly.bar.other": "Rates and definitions",
-  "brief.weekly.frozen": "Frozen",
-  "brief.weekly.written": "created {at}",
   "brief.weekly.pickWeek": "Open another week",
+  "brief.report.kicker": "Weekly report · Week {week}",
+  "brief.weekly.outcome.moved": "stage changed",
+  "brief.weekly.outcome.won": "won",
+  "brief.weekly.outcome.lost": "lost",
+  "brief.report.frozenAt": "Frozen on {at}",
+  "brief.report.vsPrior": "{delta} since last week",
+  "brief.report.priorWeek": "Last week = week {week} ({range})",
+  "brief.report.chapter.forecast": "Forecast",
+  "brief.report.chapter.glance": "At a glance",
+  "brief.report.chapter.closed": "Closed deals",
+  "brief.report.chapter.movement": "Pipeline movement",
+  "brief.report.chapter.commitments": "The week ahead",
+  "brief.report.chapter.figures": "Figures",
+  "brief.report.chapter.observations": "Observations",
+  "brief.report.closedTotal": "Won {won} · Lost {lost}",
+  "brief.report.next": "Next report on {date}",
+  "brief.report.earlier": "Earlier week",
+  "brief.report.later": "Later week",
+  "brief.report.col.figure": "Figure",
+  "brief.report.col.week": "This week",
+  "brief.report.col.prior": "Week before",
+  "brief.report.col.change": "Change",
   "brief.weekly.none":
     "No weekly review yet. The first one is created on the Monday after your first full week.",
   "brief.weekly.tasksDelivered": "Due tasks completed",
@@ -4525,33 +5123,15 @@ export const en = {
   "brief.weekly.acceptedRejected": "{accepted} accepted · {rejected} rejected",
   "brief.weekly.queueWorked": "Morning brief items",
   "brief.weekly.actedDismissed": "{acted} acted · {dismissed} dismissed",
-  "brief.weekly.sincePrior": "{delta} compared with {week}",
-  "brief.weekly.wonVsPrior": "{value} · {delta} compared with {week}",
   "brief.weekly.leadsAnswered": "Leads answered",
   "brief.weekly.ofRouted": "{answered} of {routed}",
   "brief.weekly.planCommitmentsKept": "Commitments kept",
   "brief.weekly.meetingsHeld": "Meetings with follow-up",
   "brief.weekly.ofMeetings": "{withStep} of {held}",
   "brief.weekly.carriedOver": "Open at week’s end",
-  "brief.weekly.outcome.moved": "stage changed",
-  "brief.weekly.outcome.won": "won",
-  "brief.weekly.outcome.lost": "lost",
   "brief.act": "Done",
   "brief.dismiss": "Dismiss",
 
-  "brief.digestSynced": "Sync details",
-  "brief.digestContacts": "Contacts created",
-  "brief.digestCompanies": "Companies created",
-  "brief.digestDedupe": "Duplicates to review",
-  "brief.digestClassify":
-    "Commitments: {commitments} · Meetings: {meetings} · Messages without a sales action: {noise}",
-  "brief.digestProjects": "Projects",
-  "brief.digestPhaseChanges": "Phase changes",
-  "brief.digestNewCommitments": "New commitments",
-  "brief.digestGoneQuiet": "Gone quiet",
-  "brief.digestPhaseChange": "{from} → {to}",
-  "brief.digestCommitmentCount": "{count} new open commitments",
-  "brief.digestQuietDays": "quiet for {days} days",
   "brief.glance.morning": "Good morning, {name}.",
   "brief.glance.morningAnon": "Good morning.",
   "brief.glance.afternoon": "Good afternoon, {name}.",
@@ -4563,14 +5143,11 @@ export const en = {
   "brief.glance.introWeekly": "Review results and plan your next steps.",
   "brief.glance.intro": "Your day at a glance.",
   "brief.panel.decisions": "Approvals",
-  "brief.panel.overnight": "Overnight",
   // The rail's own panel titles, after the rename that made each claim exactly
   // what its rows are. "Promises & tasks" named a thing the product does not
   // have and stood over a standing line of apology for it.
   "brief.rail.quietSchedule": "Nothing booked",
   "brief.panel.schedule": "Upcoming meetings",
-  "brief.overnight.connectorsUnhealthy": "Connectors need attention",
-  "brief.overnight.fixConnector": "Fix connector",
   "brief.readings.label": "Today’s figures",
   // Why a figure on this plate wears a `+`. It rides the whole cell, because a
   // mark that explains itself only to a pointer resting on three characters is
@@ -4612,6 +5189,7 @@ export const en = {
   "brief.readings.leadsBasis": "Planned tasks for prospects",
   "brief.readings.leadsDue": "Next due {value}",
   "brief.rail": "Context",
+  "brief.rail.numbers": "Numbers",
   "brief.deck.later": "Later",
   "brief.deck.showMore": "Show full message",
   "brief.deck.showLess": "Show less",
@@ -4803,6 +5381,9 @@ export const en = {
     "Creates a new company unless one is picked from the list.",
   "create.dealName": "Deal name",
   "create.amount": "Value",
+  "create.amountNegative": "Enter an amount of zero or more.",
+  "create.referenceNotFound":
+    "This record no longer exists, or you cannot see it.",
   "create.currency": "Currency",
   "create.stage": "Stage",
   "create.relatedCompany": "Company",
@@ -5720,6 +6301,13 @@ export const en = {
   "analytics.share.closeBody":
     "The link stops opening at once, for anyone who has it. A closed link cannot be reopened.",
   "analytics.frame": "As of {asOf} · {zone}",
+  "review.unlinkedSignal": "Buying interest without a deal",
+  "review.signalNotRelevant": "Not relevant",
+  "review.signalOccurred": "Source date: {date}",
+  "review.uncertainBuyer":
+    "Confirm who is buying and which company they represent before creating a deal.",
+  "review.historicalSignal":
+    "This source is old. Check whether the buyer still wants this before linking it.",
   "review.title": "Checks before the call",
   "review.ready": "Ready",
   "review.readyWithExceptions": "Ready, with notes",
@@ -6772,6 +7360,8 @@ export const en = {
   "import.reason.run_in_flight":
     "This import is already running. It finishes on its own and this page updates.",
   "import.reason.undo_failed": "The record could not be undone.",
+  "import.reason.amount_negative":
+    "“{value}” is below zero, and a deal’s amount cannot be.",
   "import.reason.author_too_long": "Author is longer than {max} characters.",
   "import.reason.cannot_create":
     "You cannot create {plural}, so the {plural} file is skipped.",
@@ -7068,6 +7658,9 @@ export const en = {
   "jobs.kind.comms_scheduled_send_recovery": "Scheduled send recovery",
   "jobs.kind.comms_send_email": "Email sending",
   "jobs.kind.company_name_promotion": "Company names from signatures",
+  "systemJob.datatask": "Data update",
+  "jobs.kind.data_task_run": "Data update batch",
+  "jobs.kind.data_task_reconcile": "Data update reconciliation",
   "jobs.kind.deal_scout": "Deal Scout",
   "jobs.kind.document_extract": "Document extraction",
   "jobs.kind.embed_drift_sweep": "Search index catch-up",
@@ -8546,6 +9139,33 @@ export const en = {
   "blockedDomains.source.verdict": "Model result",
   "blockedDomains.source.heuristic": "Heuristic",
   "blockedDomains.source.human": "Person",
+  "blockedDomains.source.reservedDomain":
+    "Reserved domain: company identification paused",
+  "blockedDomains.source.forwardedIdentity":
+    "Different site answered. Confirm the company match.",
+  "worklist.domainReview.defer": "Set aside",
+  "worklist.domainReview.restore": "Return to Review",
+  "worklist.domainReview.deferEffect":
+    "Set aside removes this question from your queue until new evidence arrives. You can still find it here.",
+  "worklist.domainReview.title": "Domain review",
+  "worklist.domainReview.loading": "Loading domains…",
+  "worklist.domainReview.empty": "No domains need review.",
+  "worklist.domainReview.more": "Load more",
+  "worklist.domainReview.forwarded": "Answering site: {url}",
+  "worklist.domainReview.evidenceAt": "Latest evidence: {date}",
+  "worklist.domainReview.noEvidenceDate": "Evidence date unavailable",
+  "worklist.domainReview.match": "Match company",
+  "worklist.domainReview.matchEffect":
+    "Matching links this domain and its captured contacts to the selected company.",
+  "worklist.domainReview.create": "Create company",
+  "worklist.domainReview.retry": "Retry site read",
+  "worklist.domainReview.exclude": "Exclude domain",
+  "worklist.domainReview.forwardedEffects":
+    "Retry keeps identity undecided. Exclude stops capture for your mailboxes.",
+  "worklist.domainReview.effects":
+    "Create adds a company. Retry keeps identity undecided. Exclude stops capture for your mailboxes.",
+  "worklist.batch.domain_questions_one": "Review {count} domain",
+  "worklist.batch.domain_questions_other": "Review {count} domains",
   "blockedDomains.source.unevidenced": "No company named on the site",
   "blockedDomains.source.staleEvidence": "Supporting mail too old",
   "blockedDomains.source.nearDuplicate": "Company name already exists",
@@ -12601,6 +13221,10 @@ export const en = {
   "webhooks.event.voice.draft_outcome_recorded.when":
     "The outcome of a draft written in the member’s voice is recorded.",
   "webhooks.eventGroup.approvals_audit": "Approvals and audit",
+  "webhooks.event.approval.preference_changed.label":
+    "Approval preference changed",
+  "webhooks.event.approval.preference_changed.when":
+    "A reader changes whether an approval type appears in their Worklist.",
   "webhooks.event.approval.requested.label": "Approval requested",
   "webhooks.event.approval.requested.when":
     "An agent action is held for a member to decide.",
@@ -14303,7 +14927,7 @@ export const en = {
   "worklist.exceptions.ownerWithheld": "Hidden",
   "worklist.exceptions.truncated": "List truncated. More items exist.",
   "worklist.exceptions.kind.response_breached": "First reply overdue",
-  "worklist.exceptions.kind.revenue_at_risk": "Revenue at risk",
+  "worklist.exceptions.kind.revenue_at_risk": "Flagged pipeline value",
   "worklist.exceptions.kind.unassigned": "Unassigned",
   "worklist.exceptions.kind.repeated_failure": "Repeated failure",
   "worklist.board.loading": "Loading team work…",
@@ -14340,9 +14964,8 @@ export const en = {
     "Counts are incomplete. Each figure is a minimum.",
   "worklist.rowMenu": "More actions for {title}",
   "worklist.readings.label": "Today’s figures",
-  "worklist.readings.revenue": "Revenue at risk",
-  "worklist.readings.revenue.detail": "Deals drifting today",
-  "worklist.readings.revenue.unpriced": "Drifting deals · none priced",
+  "worklist.readings.revenue": "Flagged pipeline value",
+  "worklist.readings.revenue.unpriced": "Flagged deals · no value available",
   "worklist.readings.revenue.noFigure": "Not priced",
   "worklist.readings.replies": "Buyer replies",
   "worklist.readings.replies.detail": "Customers waiting",
@@ -14437,6 +15060,8 @@ export const en = {
   "worklist.because.champion_unknown": "champion unknown",
   "worklist.because.promised": "committed by you",
   "worklist.because.approved_and_failed": "approved but did not run",
+  "worklist.because.account_termination":
+    "account termination needs a decision",
   "worklist.because.blocks_customer_work": "customer waiting on this",
   "worklist.because.routine": "routine cleanup",
   "worklist.because.repeated_failure": "repeated failure",
@@ -14527,6 +15152,10 @@ export const en = {
   "worklist.untitled.dedupe_candidate": "Possible duplicate records",
   "worklist.untitled.task": "Untitled task",
   "worklist.untitled.brief_item": "Deal to review",
+  "worklist.recipients.label": "Recipients",
+  "worklist.recipients.open": "Still waiting",
+  "worklist.recipients.done": "Done",
+  "worklist.recipients.dismissed": "Dismissed",
   "worklist.untitled.conversation_claim": "Commitment you made",
   "worklist.untitled.customer_waiting": "Customer awaiting reply",
   "worklist.untitled.lead_response": "Untitled lead",
@@ -14583,9 +15212,7 @@ export const en = {
   "worklist.verb.promiseSettled": "Marked as kept",
   "worklist.verb.promiseSettleFailed":
     "Commitment was not marked as kept. Retry.",
-  // The card's two verbs. "Update" opens the composer on this meeting; the
-  // three answers below it are what that composer offers, and "Cancelled" is
-  // the one the card writes by itself.
+  // Updating opens the composer; cancellation is recorded directly by the card.
   "worklist.verb.meetingUpdate": "Update",
   "worklist.verb.meetingUpdateTitle": "Meeting",
   "worklist.verb.meetingReading": "Loading meeting…",
@@ -15095,30 +15722,7 @@ export const en = {
   // four lanes. The `magic.action.*` and `magic.consequence.*` families are
   // the client half of a mirror the server sends keys against. So the set is
   // the contract (src/features/sign-in/magic.keys.ts), not one screen's copy.
-  "magic.window.label": "Show",
-  "magic.window.brief": "Since my last brief",
-  "magic.window.week": "Last 7 days",
-  "magic.window.month": "Last 30 days",
   "magic.heading.brief": "Since your last brief",
-  "magic.heading.week": "The last 7 days",
-  "magic.heading.month": "The last 30 days",
-  "magic.intro": "What Margince did since {when}.",
-  "magic.summary": "Summary",
-  "magic.clear.done": "Nothing done for you",
-  "magic.clear.needsYou": "Nothing waiting on you",
-  "magic.clear.couldNotComplete": "Nothing failed",
-  "magic.clear.watching": "Every source healthy",
-  "magic.count.keptInSync_one": "{count} kept in sync",
-  "magic.count.keptInSync_other": "{count} kept in sync",
-  "magic.count.done_one": "{count} done for you",
-  "magic.count.done_other": "{count} done for you",
-  "magic.count.needsYou_one": "{count} waiting on you",
-  "magic.count.needsYou_other": "{count} waiting on you",
-  "magic.count.couldNotComplete_one": "{count} could not be finished",
-  "magic.count.couldNotComplete_other": "{count} could not be finished",
-  "magic.count.watching_one": "{count} needs restoring",
-  "magic.count.watching_other": "{count} need restoring",
-  "magic.incomplete": "{lane}: may be incomplete",
   "magic.loading": "Reading what the machinery did",
   "magic.lane.done": "Done for you",
   "magic.lane.needsYou": "Waiting on you",
@@ -15204,26 +15808,8 @@ export const en = {
   "magic.notShown.unadmittedAction": "housekeeping with nothing to tell you",
   "magic.notShown.unknownEntityType": "a record type this page cannot place",
   "magic.notShown.outOfScope": "outside your own records",
-  "magic.glance.label": "What got done",
-  "magic.glance.emailsFiled": "Emails filed",
-  "magic.glance.profilesRead": "Company profiles read",
-  "magic.glance.recordsUpdated": "Records updated",
-  "magic.glance.dealsMoved": "Deals moved on",
-  "magic.glance.leadsPromoted": "Leads turned into deals",
-  "magic.glance.ownersChanged": "Work handed over",
-  "magic.glance.activitiesRelinked": "Exchanges refiled",
-  "magic.glance.messagesSent": "Messages sent",
-  "magic.glance.meetingsBooked": "Meetings booked",
-  "magic.glance.leadsDisqualified": "Leads disqualified",
-  "magic.glance.retention": "Retention applied",
-  "magic.glance.recordsCreated": "Records created",
-  "magic.glance.recordsArchived": "Records archived",
-  "magic.timeline.title": "When it happened",
-  "magic.timeline.agent": "Agents",
-  "magic.timeline.sync": "Sync and rules",
-  "magic.timeline.summary":
-    "When each line in this receipt happened, from {from} to now",
-  "magic.timeline.now": "Now",
+  "magic.visibleScope": "Only changes visible to you are shown.",
+  "magic.coverageIncomplete": "Some activity could not be counted.",
   "magic.done.all_one": "{count} change, in full",
   "magic.done.all_other": "All {count} changes, one by one",
   "magic.done.atLeast_one": "{count} change, one by one",

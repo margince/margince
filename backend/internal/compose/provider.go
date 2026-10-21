@@ -16,7 +16,9 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/profileverdicts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/commissions"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -24,10 +26,14 @@ import (
 	"github.com/margince/margince/backend/internal/modules/dealrooms"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/integrations"
 	"github.com/margince/margince/backend/internal/modules/introductions"
+	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/modules/projects"
+	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -63,6 +69,14 @@ func NewProviderFor(db *database.DB) *Provider {
 			WithFieldCatalog(customfields.NewService(pool, nil)).
 			WithStopCarrier(consent.NewStore(db)).
 			WithSatelliteCarriers(consent.NewStore(db), introductions.NewStore(db, time.Now)).
+			WithParticipantRosterReader(activities.EnsureParticipantRosterVisibleTx).
+			WithProviderRunReader(integrations.ReadRunForContactTx).
+			WithMergeSignalReader(signals.PreviewSignalCarryTx).
+			WithMergeCommitmentReader(weeklyPlanStore(pool).PreviewCommitmentCarryTx).
+			WithMergeNoticeReader(notices.PreviewNoticeCarryTx).
+			WithMergeContentReader(activities.NewStore(db)).
+			WithProfileVerdictReader(profileverdicts.MergeReader(db)).
+			WithFeedbackCarryReader(ai.NewFeedbackStore(db)).
 			WithGrantCarrier(identity.NewServiceFor(db)).
 			WithInstallationRenamer(installationRenamer(pool)),
 		deals:       deals.NewProvider(db, DealsInstallation()).WithFieldCatalog(customfields.NewService(pool, nil)),
@@ -310,4 +324,9 @@ func (p *Provider) ArchiveAt(ctx context.Context, in datasource.ArchiveInput) (d
 		return datasource.EntityRef{}, &datasource.UnsupportedEntityError{Type: string(in.Ref.Type)}
 	}
 	return module.ArchiveAt(ctx, in)
+}
+
+// ReadLeadForReversal retains native authorization for a promoted lead that ordinary reads hide.
+func (p *Provider) ReadLeadForReversal(ctx context.Context, id ids.UUID) (datasource.Record, error) {
+	return p.contacts.ReadLeadForReversal(ctx, id)
 }

@@ -109,7 +109,7 @@ func NewCounterpartyVerdictEngine(
 		approvals:  NewApprovalsService(InstallationDB(pool)),
 		eraser:     privacy.NewEraser(InstallationDB(pool)).WithCountry(identity.CountryForDecision).WithRawCapturePurger(RawCapturePurgerFor(InstallationDB(pool))),
 		brain:      brain,
-		triage:     newDomainTriageTrigger(pool, log),
+		triage:     newDomainTriageTrigger(pool, log, lists.SkipReservedDomainProposals),
 		tagFiler:   newConnectorTagFiler(pool),
 		transactional: capture.NewTransactionalList(
 			lists.TransactionalExtra, lists.TransactionalNever),
@@ -295,6 +295,12 @@ func (e *CounterpartyVerdictEngine) judgeOne(
 		return e.applyOwnerDecision(ctx, row, kind)
 	}
 	if addressIsARoleMailbox(row.Email) {
+		return e.applyJudged(ctx, row, capture.KindRoleMailbox, capture.VerdictMeasurement{})
+	}
+	// Google's meeting mail is evidence a meeting took place, and a model's
+	// noise answer would hide every later message from that sender. Settled as
+	// a role mailbox: the mail stays visible and nobody is recorded.
+	if capture.IsGoogleMeetingMail(row.Email, row.SenderAuthenticated) {
 		return e.applyJudged(ctx, row, capture.KindRoleMailbox, capture.VerdictMeasurement{})
 	}
 	// The other address-only refusal, and the one this lane was missing: an

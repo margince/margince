@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"reflect"
 	"slices"
 	"strings"
 	"time"
@@ -188,7 +187,12 @@ func (p *Patch) SetStamp(column string, val any) {
 	}
 }
 
-func (p *Patch) Empty() bool { return len(p.sets) == 0 }
+// Empty reports that nothing the caller set differs from what the row holds.
+//
+// Set records an assignment without comparing, so counting staged assignments
+// would call a repeat of the stored values a change. A stamp is derived from an
+// edit, so it never makes a patch non-empty on its own.
+func (p *Patch) Empty() bool { return len(p.Moved()) == 0 }
 
 // liveClause renders the archive predicate every guarded write and its
 // row lock share, so a lock and the update it authorizes can never resolve
@@ -218,15 +222,14 @@ func (p *Patch) After() map[string]any  { return p.after }
 // or a form resaving an untouched field, froze a provisional derived name for
 // good, with nothing in the record saying a contact had never chosen it.
 //
-// A value whose before and after are different TYPES counts as moved. That is
-// the safe direction: it is what the presence test already did, so a caller
-// switching to Moved cannot start missing a change it used to see.
+// Two values are the same when the audit image renders them alike. A pair that
+// renders differently counts as moved, the safe direction for a reader.
 //
 //craft:ignore naked-any the audit images are map[string]any by contract
 func (p *Patch) Moved() map[string]any {
 	moved := make(map[string]any, len(p.after))
 	for column, next := range p.after {
-		if !reflect.DeepEqual(p.before[column], next) {
+		if !sameColumnValue(p.before[column], next) {
 			moved[column] = next
 		}
 	}

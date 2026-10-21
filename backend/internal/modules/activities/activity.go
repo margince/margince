@@ -54,6 +54,9 @@ type LogActivityInput struct {
 	// false and keeps handing work to active seats only.
 	invitedAssignee bool
 	Kind            string
+	// LinksFromRequest says the caller typed Links, so a missing record is
+	// refused naming `links`. A writer that derives its links leaves it false.
+	LinksFromRequest bool
 	// ChannelProvider names the messaging transport that carried this activity —
 	// a channel_provider row — and is empty for anything that did not travel on
 	// one. Separate from Kind because they answer separate questions: what sort
@@ -396,7 +399,7 @@ func writeActivitySatellites(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, in LogActivityInput,
 	occurredAt time.Time, by string,
 ) error {
-	if err := insertActivityLinks(ctx, tx, id, in.Kind, in.Links); err != nil {
+	if err := insertActivityLinks(ctx, tx, id, in.Kind, in.Links, in.LinksFromRequest); err != nil {
 		return err
 	}
 	// The first transition, where this capture named a status. A meeting

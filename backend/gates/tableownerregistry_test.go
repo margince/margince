@@ -16,17 +16,19 @@ package gates
 // gatekit:fixture the owning module path each table's writes are compared
 // against — expected data, not a cost anyone is paying.
 var tableOwners = map[string]string{
-	"report_projection_fence":      storekitOwned,
-	"reporting_framework":          "internal/modules/reporting",
-	"reporting_framework_revision": "internal/modules/reporting",
-	"report_definition":            "internal/modules/reporting",
-	"report_definition_revision":   "internal/modules/reporting",
-	"sales_target":                 "internal/modules/reporting",
-	"sales_target_revision":        "internal/modules/reporting",
-	"report_schedule":              "internal/modules/reporting",
-	"report_execution":             "internal/modules/reporting",
-	"report_edition":               "internal/modules/reporting",
-	"report_edition_contribution":  "internal/modules/reporting",
+	"report_projection_fence":        storekitOwned,
+	"reporting_framework":            "internal/modules/reporting",
+	"reporting_framework_revision":   "internal/modules/reporting",
+	"report_definition":              "internal/modules/reporting",
+	"report_definition_revision":     "internal/modules/reporting",
+	"sales_target":                   "internal/modules/reporting",
+	"sales_target_revision":          "internal/modules/reporting",
+	"report_schedule":                "internal/modules/reporting",
+	"report_execution":               "internal/modules/reporting",
+	"report_edition":                 "internal/modules/reporting",
+	"report_edition_contribution":    "internal/modules/reporting",
+	"report_edition_question":        "internal/modules/reporting",
+	"report_edition_question_source": "internal/modules/reporting",
 	// identity
 	"workspace":           "internal/modules/identity",
 	"app_user":            "internal/modules/identity",
@@ -107,8 +109,9 @@ var tableOwners = map[string]string{
 	// What a mail domain is allowed to create. It governs COMPANY
 	// creation, which contacts owns, so the verdict lives with the records it
 	// authorizes rather than with the capture path that asks the question.
-	"company_domain_disposition": "internal/modules/contacts",
-	"site_read":                  "internal/modules/contacts",
+	"company_domain_disposition":     "internal/modules/contacts",
+	"company_domain_question_reader": "internal/modules/contacts",
+	"site_read":                      "internal/modules/contacts",
 	// DH-DDL-1: the pair verdicts live with the ONE dedupe implementation.
 	"dedupe_candidate": "internal/modules/contacts",
 	// deals (incl. the E03 offer engine: rate-card + versioned offers)
@@ -242,15 +245,19 @@ var tableOwners = map[string]string{
 	// its own key on the transaction writing its owning row, so the writes reach this
 	// table from all of them through platform's helper — which is why the helper, and
 	// the table with it, sit below every module rather than inside one.
-	"stored_object_intent": "internal/platform/storedobjects",
-	"deal_document_hide":   "internal/modules/activities",
-	"meeting_proposal":     "internal/modules/activities",
-	"meeting_invitation":   "internal/modules/activities",
-	"booking_page":         "internal/modules/activities",
+	"stored_object_intent":  "internal/platform/storedobjects",
+	"data_task_run_history": "internal/platform/datatask",
+	"data_task_review":      "internal/platform/datatask",
+	"data_task_run":         "internal/platform/datatask",
+	"deal_document_hide":    "internal/modules/activities",
+	"meeting_proposal":      "internal/modules/activities",
+	"meeting_invitation":    "internal/modules/activities",
+	"booking_page":          "internal/modules/activities",
 	// approvals. The autonomy policy is what each rep decided about a KIND of
 	// proposal, so it sits with the kinds and the decisions it counts.
 	"approval":                 "internal/modules/approvals",
 	"approval_autonomy_policy": "internal/modules/approvals",
+	"approval_preference":      "internal/modules/approvals",
 	// consent (the DSR case queue and the retention-policy catalog are
 	// consent's; the engines that EXECUTE them live in privacy)
 	"consent_purpose":   "internal/modules/consent",

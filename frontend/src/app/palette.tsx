@@ -10,13 +10,13 @@ import {
 import { Callout } from "../design-system/callout";
 import { liveDialogs, useDialogFocus } from "../design-system/dialogfocus";
 import { usePresence } from "../design-system/presence";
-import { useCompanyContextShown } from "../features/companies/companycontextreach";
 import { SCHEDULED_SCREEN } from "../features/mail/scheduledqueue";
 import { useVisibleSettingsPages } from "../features/settings/settingsnav";
 import { settingsHref } from "../features/settings/settingsrouting";
 import { settingsPageKeywords } from "../features/settings/settingssearch";
 import { holdsEveryWord, searchWords } from "../format/collate";
 import { useLocale, useT } from "../i18n";
+import { useCompanyContextShown } from "../lib/companycontextreach";
 import { isImeCommit } from "../lib/imecommit";
 import { navigate, type Route } from "../lib/router";
 import { openAsk, type UrlParams } from "../lib/urlstate";

@@ -1,5 +1,6 @@
 import { ArrowUpRight, CheckSquare, FileText } from "lucide-react";
 import { type ReactNode, useEffect, useId, useState } from "react";
+import { AddToShortlistAction } from "../../components/addtoshortlist";
 import { EntityRef } from "../../components/entityref";
 import { Button, OverflowMenu } from "../../design-system/atoms";
 import { leadIdentityName } from "../../format/leadname";
@@ -7,7 +8,6 @@ import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { useMe } from "../../lib/session";
 import { useUrlParams } from "../../lib/urlstate";
-import { AddToShortlistAction } from "../lists/addtoshortlist";
 import { LogActivityAction } from "../records/logactivity";
 import { RecordEmailVerb } from "../records/recordemail";
 import { ShareAction } from "../records/share";

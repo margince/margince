@@ -37,6 +37,7 @@ export function RecordFormBody({
   setRows,
   pending,
   error,
+  fieldRefusals,
   existing,
   resolveExisting,
   onSubmit,
@@ -51,6 +52,8 @@ export function RecordFormBody({
   setRows: (next: FormRows) => void;
   pending: boolean;
   error: string | null;
+  // What the server refused per field, shown beside the field it names.
+  fieldRefusals?: ReadonlyMap<string, string>;
   // A duplicate (409)'s collided record and the screen's route to it: both
   // present, the "view existing" link renders under the error.
   existing?: { id: string; code: string } | null;
@@ -141,7 +144,7 @@ export function RecordFormBody({
                 ? offeredHint(field.offers, field.key, values, t)
                 : field.hint
             }
-            error={refusals.get(field.key)}
+            error={refusals.get(field.key) ?? fieldRefusals?.get(field.key)}
           >
             {(control) =>
               field.offers ? (

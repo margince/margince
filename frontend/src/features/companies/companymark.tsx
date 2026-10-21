@@ -12,6 +12,7 @@ import { FileDropzoneControl } from "../../design-system/filedropzone";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { storeCompany } from "../../lib/installationcompany";
 import { postMultipart } from "../../lib/multipart";
 import {
   ProblemError,
@@ -19,7 +20,6 @@ import {
   problemMessageOf,
   unwrap,
 } from "../../lib/problem";
-import { storeCompany } from "../sign-in/installationcompany";
 import "./companymark.css";
 
 type CompanyProfile = components["schemas"]["CompanyProfile"];

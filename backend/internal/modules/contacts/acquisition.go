@@ -104,14 +104,11 @@ type Acquisition struct {
 // nothing still leaves a row saying nobody knows, rather than leaving the
 // question unasked.
 func recordAcquisition(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, in Acquisition, capturedBy string) error {
-	kind := in.Kind
-	if kind == "" {
-		kind = AcquiredUnknownLegacy
-	}
+	in = normalizedAcquisition(in)
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO contact_acquisition_evidence (contact_id, kind, occurred_at, captured_by)
 		VALUES ($1, $2, $3, $4)`,
-		contactID, kind, in.OccurredAt, capturedBy); err != nil {
+		contactID, in.Kind, in.OccurredAt, capturedBy); err != nil {
 		return fmt.Errorf("contacts: recording how this contact was acquired: %w", err)
 	}
 	return nil
@@ -158,4 +155,11 @@ func acquisitionForCreate(in CreateContactInput) Acquisition {
 		return out
 	}
 	return in.Acquisition
+}
+
+func normalizedAcquisition(in Acquisition) Acquisition {
+	if in.Kind == "" {
+		in.Kind = AcquiredUnknownLegacy
+	}
+	return in
 }

@@ -169,7 +169,7 @@ const contractColumns = `id, company_id, deal_id, project_id, contract_number, t
 	status, signed_on, cancellation_notice_on, cancellation_effective_on,
 	superseded_by_id, source, captured_by, version, created_at, updated_at, archived_at`
 
-// underContractSQL is CONTRACT-FORM-1 as a SQL expression, taking the as-of
+// UnderContractSQL is CONTRACT-FORM-1 as a SQL expression, taking the as-of
 // date as its one parameter.
 //
 // The effective end is the EARLIER of the term end and the cancellation
@@ -177,7 +177,7 @@ const contractColumns = `id, company_id, deal_id, project_id, contract_number, t
 // null-safe behaviour wanted here, and an absent value on both means the
 // agreement is open-ended. A cancellation never extends a term that already
 // ran out.
-func underContractSQL(asOfPos int) string {
+func UnderContractSQL(asOfPos int) string {
 	return storekit.SQLf(`(
 		archived_at IS NULL
 		AND status NOT IN ('draft', 'superseded')
@@ -318,7 +318,7 @@ func readContract(ctx context.Context, tx pgx.Tx, id ids.ContractID, asOf time.T
 
 	row := tx.QueryRow(ctx, storekit.SQLf(
 		`SELECT %s%s, %s FROM contract WHERE %s`,
-		contractColumns, storekit.SelectSuffix(active), underContractSQL(asOfPos), where), args...)
+		contractColumns, storekit.SelectSuffix(active), UnderContractSQL(asOfPos), where), args...)
 	out, err := scanContract(row, active)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return crmcontracts.Contract{}, apperrors.ErrNotFound

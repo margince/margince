@@ -2,6 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../api/schema";
+import {
+  ProviderHealthBadge,
+  type ProviderHealthEntry,
+} from "../../components/ai-provider-health-notice";
 import { Badge } from "../../design-system/atoms";
 import { CellStack } from "../../design-system/cellstack";
 import { DataTable } from "../../design-system/datatable";
@@ -9,10 +13,6 @@ import { RowOpen } from "../../design-system/rowopen";
 import { forReader } from "../../format/collate";
 import { useLocale, useT } from "../../i18n";
 import { ProviderCallsLine } from "./ai-call-figures";
-import {
-  ProviderHealthBadge,
-  type ProviderHealthEntry,
-} from "./ai-provider-health-notice";
 import { providerName } from "./ai-provider-names";
 import {
   type ProviderState,

@@ -15,15 +15,14 @@ import { StatStrip } from "../../design-system/statstrip";
 import { calendarMonth } from "../../format/calendarday";
 import { formatMoney, formatNumber, monthAndYear } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
-import { formatTokens } from "../../format/tokens";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { useRouting } from "../../lib/ai-routing-query";
 import { aiTaskLabel } from "../../lib/ai-task-label";
 import { useCan } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { routeHash } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import { settingsHref } from "../settings/settingsrouting";
-import { useRouting } from "./ai-routing-query";
 import { DecisionSummary } from "./aiusage-decisions";
 import {
   aggregate,
@@ -34,6 +33,7 @@ import {
   type SpendView,
   spendRows,
 } from "./aiusage-spend";
+import { formatTokens } from "./tokens";
 import "./aiusage.css";
 
 type AiUsage = components["schemas"]["AiUsage"];

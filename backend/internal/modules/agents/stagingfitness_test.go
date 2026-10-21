@@ -245,6 +245,10 @@ func (localProvider) ArchiveAt(_ context.Context, in datasource.ArchiveInput) (d
 	return in.Ref, nil
 }
 
+func (p localProvider) ReadLeadForReversal(ctx context.Context, id ids.UUID) (datasource.Record, error) {
+	return p.Read(ctx, datasource.EntityRef{Type: datasource.EntityLead, ID: id})
+}
+
 func (localProvider) Read(_ context.Context, ref datasource.EntityRef) (datasource.Record, error) {
 	return nativeRecord(datasource.Record{
 		Ref: ref, Version: 1,

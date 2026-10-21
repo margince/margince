@@ -18,7 +18,7 @@ import {
   type TokenSuggestion,
 } from "../../design-system/tokeninput";
 import { useT } from "../../i18n";
-import type { Transport } from "../contacts/contacttransports";
+import type { Transport } from "../../lib/contacttransports";
 import "./composehead.css";
 
 type Contact360 = components["schemas"]["Contact360"];

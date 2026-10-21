@@ -215,8 +215,9 @@ func assertModelAndFallbackDrafts(ctx context.Context, t *testing.T, adapter com
 	if err != nil {
 		t.Fatalf("fallback draft: %v", err)
 	}
-	if subject != pricingReplySubject || !strings.Contains(body, "confirm the discount") {
-		t.Fatalf("fallback draft = %q / %q", subject, body)
+	// The intent steers a model; with none answering, it is not message text.
+	if subject != pricingReplySubject || !strings.Contains(body, "Pricing question") || strings.Contains(body, "confirm the discount") {
+		t.Fatalf("fallback draft = %q / %q, want a reply about the thread without the steering text", subject, body)
 	}
 }
 

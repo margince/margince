@@ -99,8 +99,6 @@ const STANDALONE: readonly string[] = [
 const PENDING: readonly string[] = [
   "brief.deck.bundleMembers",
   "brief.deck.bundleSummary",
-  "brief.digestCommitmentCount",
-  "brief.focus.remaining",
   "co.spine.andOthers",
   "co.spine.exchangeCount",
   "compose.carriageAggregate",
@@ -115,7 +113,6 @@ const PENDING: readonly string[] = [
   "ob.conv.voice.dimSentenceEvidence",
   "settings.voice.meter",
   "tagResult.totalVisible",
-  "teamweekly.repsUnread",
   "today.silence.days",
   "voice.insights.next.addWords",
   "voice.insights.statSentence",

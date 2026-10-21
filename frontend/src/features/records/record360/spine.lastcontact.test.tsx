@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import type { components } from "../../../api/schema";
 import { LocaleProvider } from "../../../i18n";
-import { company360 } from "../../companies/company.fixtures";
+import { company360 } from "../../../testing/company.fixtures";
 import { RecordSpine, type SpineSource } from "./spine";
 import { timelineSpineSource } from "./timelinespine";
 

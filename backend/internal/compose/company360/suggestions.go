@@ -30,6 +30,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/lifecyclereview"
 	"github.com/margince/margince/backend/internal/compose/receiptcopy"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -363,19 +364,19 @@ func lifecycleConflict(
 	companyID ids.CompanyID, in suggestionInputs,
 ) *crmcontracts.Company360Suggestion {
 	said := suggestionCopyFor(in.language)
-	if !in.contractEnded || !liveLifecycles[in.lifecycle] {
+	if !in.contractEnded || !lifecyclereview.LiveStage(in.lifecycle) {
 		return nil
 	}
-	// The record cited is the account, because the contract's citable kinds
-	// have no word for a signal; the WORDS are the signal's own, so the
-	// reader checks the conflict against what the mail said rather than
-	// against this rule's paraphrase of it.
 	evidence := []crmcontracts.CompanyBriefEvidence{{
 		EntityType: crmcontracts.CompanyBriefEvidenceEntityTypeCompany,
 		EntityId:   openapi_types.UUID(companyID.UUID),
 		Quote:      nonEmpty(in.contractEndedSaid),
 		Origin:     new(said.Say(suggestionWords.OriginContractEnded)),
 	}}
+	if !in.contractEndedSource.IsZero() {
+		evidence[0].EntityType = crmcontracts.CompanyBriefEvidenceEntityTypeActivity
+		evidence[0].EntityId = openapi_types.UUID(in.contractEndedSource)
+	}
 	if !in.contractEndedAt.IsZero() {
 		evidence[0].At = new(in.contractEndedAt)
 	}
@@ -394,8 +395,3 @@ func lifecycleConflict(
 		Title: new(suggestionCopyFor(in.language).Say(suggestionWords.ConflictTitle)),
 	}
 }
-
-// liveLifecycles are the stages a contract_ended signal contradicts. A stage
-// that already reads as over — former_customer, disqualified — is not in
-// conflict with the mail that says so; it is the mail's conclusion.
-var liveLifecycles = map[string]bool{"prospect": true, "opportunity": true, "customer": true}

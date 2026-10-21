@@ -496,6 +496,7 @@ var piiTables = map[string]piiHandling{
 // the only package that can call sarSections.
 var sarAssemblyFiles = []string{
 	"internal/modules/privacy/sarreporting.go",
+	"internal/modules/privacy/reportingquestions.go",
 	"internal/modules/privacy/sar.go",
 	"internal/modules/privacy/sarsections.go",
 	// What this installation CONCLUDED about the subject's correspondence —
@@ -614,14 +615,8 @@ func TestErasureAndSARReachEveryPIITable(t *testing.T) {
 	for _, path := range retentionSweepFiles {
 		maps.Copy(assembled, assembledSweepTargets(t, path))
 		for _, lit := range sqlLiterals(t, path) {
-			// Before the split, whether the split can be trusted. A quoting
-			// form the scan cannot track leaves it inverted, and an inverted
-			// scan cuts inside a string — which is the fragment naming no
-			// table that sqlStatements was written to prevent.
-			if form := quotingBeyondTheSplit(lit); form != "" {
-				t.Fatalf("%s carries a `%s` literal, which the statement split cannot track: %q\n"+
-					"the split would cut inside the string and the fragment carrying the assignment would name no table. "+
-					"Teach sqlStatements this form, or keep the statement out of the swept files", path, form, collapsedSQL(lit))
+			if form := unclosedWriteSpan(lit); form != "" {
+				t.Fatalf("%s carries an unclosed SQL span %q; complete the literal before the statement scan", path, form)
 			}
 			// SPLIT, because the unit both checks below name is the statement
 			// and a literal is not one. Read whole, a literal carrying two

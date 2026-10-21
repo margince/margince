@@ -21,11 +21,11 @@ import { Meter } from "../../design-system/readings";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { lockFor } from "../../format/settinglocks";
-import { formatTokens } from "../../format/tokens";
 import { useLocale, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { AiFeatureTable } from "./ai-feature-table";
+import { formatTokens } from "./tokens";
 import "./ai-admin.css";
 
 type Budget = components["schemas"]["AiBudgetSnapshot"];

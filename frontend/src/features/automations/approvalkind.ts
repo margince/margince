@@ -1,7 +1,7 @@
 import { formatNumber } from "../../format/format";
 import type { Locale, PluralTranslator, Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { WON_REASON_LABELS, WON_REASONS } from "../deals/winreason";
+import { WON_REASON_LABELS, WON_REASONS } from "../../lib/winreason";
 import { KIND_LABEL } from "./approvalkindlabel";
 
 // Re-exported so the surfaces that read the map by name keep their import, and
@@ -197,8 +197,9 @@ export function approvalAcceptLabel(
   fallback: string,
   locale: Locale,
   count = 1,
+  genericAction = false,
 ): string {
-  if (kind !== "commitment_task") return fallback;
+  if (kind !== "commitment_task" || genericAction) return fallback;
   return plural("approval.commitment.createTask", count, {
     count: formatNumber(count, locale),
   });

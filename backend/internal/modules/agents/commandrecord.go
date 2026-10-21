@@ -122,24 +122,7 @@ func (r *mergeResolver) halves(ctx context.Context, cmd MergeCommand) (survivor,
 	return survivor, source, nil
 }
 
-// Subject pins the SURVIVOR's version: the human's yes is a judgment about
-// merging into B as it is now, so if B changes before redemption the approval
-// no longer covers it (version skew, re-stage). The summary names both halves,
-// because a merge that named only the survivor would ask a human to release a
-// change without saying what disappears into it.
-//
-// Naming the survivor as the target also decides WHO may release this, and
-// that bound is stated rather than left to be discovered. The approvals
-// surface scopes an inbox row by probing its target, so the approver is the
-// one whose row scope reaches B — and B alone. An approver who can see the
-// survivor but not the source still decides the source's archival, and reads
-// the source's name out of the summary above. Guards below proves the STAGER
-// can see both halves; nothing proves it of the approver, and closing that
-// needs a second, source-scoped probe the approvals surface has no shape for
-// (margince/margince#1021 is where a target's visibility question
-// gets its home). Both alternatives are worse: binding to the source pins a
-// row the merge is about to archive, and binding to both is not something one
-// approval row can express.
+// Both versions bind the decision: merging retires the source and changes the survivor.
 func (r *mergeResolver) Subject(ctx context.Context, cmd MergeCommand) (StageInfo, error) {
 	survivor, source, err := r.halves(ctx, cmd)
 	if err != nil {
@@ -150,6 +133,8 @@ func (r *mergeResolver) Subject(ctx context.Context, cmd MergeCommand) (StageInf
 		TargetType:    cmd.RecordType,
 		TargetID:      cmd.TargetID,
 		TargetVersion: &survivor.Version,
+		CoTargetType:  cmd.RecordType,
+		CoTargetID:    cmd.SourceID,
 		Summary:       fmt.Sprintf(said.merge, said.noun(cmd.RecordType), recordLabel(source), recordLabel(survivor)),
 	}, nil
 }
@@ -188,9 +173,9 @@ func (r *mergeResolver) Guards(ctx context.Context, cmd MergeCommand) error {
 // URL is the caller's override for the company's own domain, empty when
 // they named none.
 type EnrichCommand struct {
-	CompanyID ids.UUID
-	URL       string
-	Depth     EnrichDepth
+	CompanyID ids.UUID    `json:"company_id"`
+	URL       string      `json:"url"`
+	Depth     EnrichDepth `json:"depth"`
 }
 
 // NewEnrichCall binds one site read to the resolver that answers for it,
@@ -241,14 +226,8 @@ func (r *enrichResolver) Guards(ctx context.Context, cmd EnrichCommand) error {
 	return r.company.refuse(ctx, cmd.CompanyID)
 }
 
-// requireEnrichURL admits the override target: the same admission the REST
-// route applies before it fetches, so a scheme-less or hostless target is a bad
-// argument rather than a thin page. An empty override is not a target at all —
-// the company's own domain is read instead — so it passes.
-//
-// One function for both doors: the staging path asks it through Guards above
-// and the execution path through readEnrichArgs, so a URL refused before a
-// human is asked cannot be a URL the approved retry fetches.
+// Staging and execution share URL admission. An empty override uses the
+// company's domain; a supplied override must be an absolute HTTP(S) URL.
 func requireEnrichURL(raw string) error {
 	if raw == "" {
 		return nil

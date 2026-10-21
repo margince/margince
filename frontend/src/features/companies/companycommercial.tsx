@@ -5,6 +5,7 @@ import { Badge } from "../../design-system/atoms";
 import { PanelBody } from "../../design-system/panel";
 import { stable } from "../../format/collate";
 import { formatDate, formatMoney, formatNumber } from "../../format/format";
+import { offerStatusLabel } from "../../format/offerstatus";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
@@ -91,7 +92,7 @@ export function CompanyLastOffer({ view }: Readonly<{ view?: Company360 }>) {
           {offer.offer_number ?? t("commercial.offerUnnumbered")}
         </button>
         <Badge tone={OFFER_TONE[offer.status]}>
-          {t(`commercial.offer.${offer.status}`)}
+          {offerStatusLabel(offer.status, t)}
         </Badge>
         <span>{offerAmount(offer, locale)}</span>
         {offer.valid_until && (

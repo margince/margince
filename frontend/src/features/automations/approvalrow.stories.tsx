@@ -4,14 +4,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
 import type { Locale } from "../../i18n";
-import { commercialApproval } from "../../testing/commercial-approval";
 import {
-  installFetchStub,
-  jsonResponse,
-  meRoute,
-  StoryProviders,
-} from "../../testing/story-utils";
-import { ApprovalRow } from "./approvalrow";
+  approvalRowSubject as approval,
+  ApprovalRowStory as Row,
+} from "../../testing/approval-row-story";
+import { commercialApproval } from "../../testing/commercial-approval";
+import { messageApproval } from "../../testing/message-approval";
+import { jsonResponse } from "../../testing/story-utils";
 
 // One staged proposal as a decidable row — the canonical affordance for
 // anything an agent proposes and a human decides. Several surfaces draw this
@@ -33,84 +32,101 @@ export default meta;
 type Story = StoryObj;
 type Approval = components["schemas"]["Approval"];
 
-function approval(over: Partial<Approval>): Approval {
-  return {
-    id: "ap-1",
-    kind: "send_email",
-    status: "pending",
-    proposed_by: "agent:runner",
-    summary: "Send the follow-up to Anna Weber",
-    proposed_change: {
-      subject: "Following up on the depot quote",
-      body: "Hallo Frau Weber, anbei die überarbeitete Kalkulation.",
+export const CompleteMessage: Story = {
+  render: () => <Row subject={messageApproval()} />,
+};
+
+export const CompleteMessageGerman: Story = {
+  render: () => <Row subject={messageApproval()} locale="de" />,
+};
+
+export const CompleteMessageVietnamese: Story = {
+  render: () => <Row subject={messageApproval()} locale="vi" />,
+};
+
+function promotionApproval(): Approval {
+  return approval({
+    kind: "promote_lead",
+    summary: "Qualify Dana Buyer and open Example Buyer",
+    target_entity_type: "lead",
+    target_entity_id: "11111111-1111-4111-8111-111111111111",
+    proposed_change: { trigger: "human_qualify" },
+    preview: {
+      version: 2,
+      state: "ready",
+      current_version: 3,
+      reviewer_reason: "on_behalf_of",
+      changes: [],
+      details: [
+        {
+          field: "promotion_trigger",
+          value: { kind: "text", text: "human_qualify" },
+        },
+        {
+          field: "promotion_note",
+          value: { kind: "text", text: "Buyer confirmed the delivery scope." },
+        },
+        {
+          field: "promotion_contact_name",
+          value: { kind: "text", text: "Dana Buyer" },
+        },
+        {
+          field: "promotion_contact_email",
+          value: { kind: "text", text: "dana@example.test" },
+        },
+        {
+          field: "promotion_withdrawal_address",
+          value: { kind: "text", text: "dana@example.test" },
+        },
+        {
+          field: "promotion_restriction_purpose",
+          value: { kind: "text", text: "Product updates" },
+        },
+        {
+          field: "promotion_link_issued",
+          value: { kind: "date", text: "2026-08-20T09:00:00Z" },
+        },
+        {
+          field: "promotion_link_expires",
+          value: { kind: "date", text: "2028-08-20T09:00:00Z" },
+        },
+        {
+          field: "promotion_record_revoked",
+          value: { kind: "boolean", text: "true" },
+        },
+        {
+          field: "promotion_contact_owner",
+          value: { kind: "empty", text: "" },
+        },
+        {
+          field: "promotion_deal_name",
+          value: { kind: "text", text: "Example Buyer" },
+        },
+        { field: "pipeline_id", value: { kind: "reference", text: "Sales" } },
+        { field: "stage_id", value: { kind: "reference", text: "Discovery" } },
+        {
+          field: "promotion_deal_amount",
+          value: { kind: "money", text: "250000", currency: "USD" },
+        },
+      ],
+      effects: [
+        "promote_lead_archive_source",
+        "promote_create_contact",
+        "promote_open_deal_seat_contact",
+      ],
     },
-    confidence: 0.82,
-    target_version: 3,
-    on_behalf_of: "u-1",
-    created_at: "2026-08-20T09:00:00Z",
-    ...over,
-  };
+  });
 }
 
-// `decide` is what the approve/reject buttons hit. A story that wants the row's
-// refusal states answers that route with the problem document the server sends.
-function Row({
-  subject,
-  locale = "en",
-  decided,
-  decide,
-}: Readonly<{
-  subject: Approval;
-  locale?: Locale;
-  decided?: boolean;
-  decide?: () => Response;
-}>) {
-  installFetchStub({
-    // The row gates on nothing but the viewer's identity — deciding a staged
-    // proposal is authorised server-side on the effect, not on an object grant
-    // this surface could read — so the grants here are the ones the DECISIONS
-    // land on rather than a grant for the row itself.
-    "GET /me": meRoute({ deal: ["read", "update"] }),
-    "GET /users/names": () =>
-      jsonResponse({
-        data: [
-          { id: "original", display_name: "Theo" },
-          { id: "assignee", display_name: "Mira" },
-        ],
-      }),
-    "GET /activities/22222222-2222-4222-8222-222222222222": () =>
-      jsonResponse({
-        id: "22222222-2222-4222-8222-222222222222",
-        kind: "meeting",
-        subject: "Quarterly account review",
-        body: "Alex: I will send the revised scope.",
-        occurred_at: "2026-09-01T09:00:00Z",
-        is_done: true,
-        source: "manual",
-        captured_by: "human:reviewer",
-        created_at: "2026-09-01T09:00:00Z",
-        updated_at: "2026-09-01T09:00:00Z",
-        links: [],
-        version: 1,
-      }),
-    "GET /agent-tools": () =>
-      jsonResponse({
-        data: [{ name: "send_email", tier: "confirm" }],
-        page: { next_cursor: null, has_more: false },
-      }),
-    ...(decide
-      ? {
-          "POST /approvals/ap-1/approve": decide,
-          "POST /approvals/ap-1/reject": decide,
-        }
-      : {}),
-  });
-  return (
-    <StoryProviders locale={locale}>
-      <ApprovalRow approval={subject} decided={decided} />
-    </StoryProviders>
-  );
-}
+export const LeadQualification: Story = {
+  render: () => <Row subject={promotionApproval()} />,
+};
+export const LeadQualificationGerman: Story = {
+  render: () => <Row subject={promotionApproval()} locale="de" />,
+};
+export const LeadQualificationVietnamese: Story = {
+  render: () => <Row subject={promotionApproval()} locale="vi" />,
+};
 
 export const Pending: Story = {
   render: () => <Row subject={approval({})} />,
@@ -311,4 +327,476 @@ export const StaleCommercialDecision: Story = {
       })}
     />
   ),
+};
+
+export const AdditionalRecipient: Story = {
+  render: () => (
+    <Row
+      subject={approval({
+        kind: "commitment_task",
+        summary: "Send the recording",
+        proposed_change: {
+          summary: "Send the recording",
+          existing_task_id: "33333333-3333-4333-8333-333333333333",
+        },
+        preview: {
+          version: 1,
+          state: "ready",
+          reviewer_reason: "record_authority",
+          effects: ["attach_task_recipients"],
+          changes: [
+            {
+              field: "existing_task_id",
+              before: {
+                kind: "reference",
+                text: "Human wording for the recording",
+                entity_type: "activity",
+                entity_id: "33333333-3333-4333-8333-333333333333",
+              },
+              after: {
+                kind: "reference",
+                text: "Human wording for the recording",
+                entity_type: "activity",
+                entity_id: "33333333-3333-4333-8333-333333333333",
+              },
+            },
+            {
+              field: "recipients",
+              before: { kind: "empty", text: "" },
+              after: { kind: "text", text: "Pat Buyer" },
+            },
+          ],
+        },
+      })}
+    />
+  ),
+};
+export const AdditionalRecipientDark: Story = {
+  ...AdditionalRecipient,
+  globals: { theme: "dark" },
+};
+
+function lifecycleDecision(blocked: boolean): Approval {
+  return approval({
+    kind: "lifecycle_change",
+    target_entity_type: "company",
+    target_entity_id: "company-one",
+    target_label: "Cedar Labs",
+    summary: "Review the end of the account relationship",
+    proposed_change: {
+      company_id: "company-one",
+      proposed_lifecycle: "former_customer",
+    },
+    preview: {
+      version: 1,
+      state: blocked ? "stale" : "ready",
+      reviewer_reason: "requested_decider",
+      lifecycle_evidence: {
+        scope: "company",
+        occurred_at: "2026-07-31T12:00:00Z",
+      },
+      changes: [
+        {
+          field: "lifecycle",
+          before: { kind: "lifecycle", text: "customer" },
+          after: { kind: "lifecycle", text: "former_customer" },
+        },
+      ],
+      conflicts: blocked
+        ? [
+            {
+              kind: "active_contract",
+              summary: "An agreement remains active.",
+              blocks_approval: true,
+            },
+          ]
+        : [],
+    },
+  });
+}
+export const AccountTermination: Story = {
+  render: () => <Row subject={lifecycleDecision(false)} />,
+};
+export const ContinuingAgreement: Story = {
+  render: () => <Row subject={lifecycleDecision(true)} />,
+};
+export const ContinuingAgreementDark: Story = {
+  ...ContinuingAgreement,
+  globals: { theme: "dark" },
+};
+
+function relinkApproval(): Approval {
+  return approval({
+    kind: "relink_activity",
+    summary: "File buyer discussion under Delivery project",
+    target_entity_type: "activity",
+    target_entity_id: "11111111-1111-4111-8111-111111111111",
+    proposed_change: {
+      entity_type: "project",
+      entity_id: "22222222-2222-4222-8222-222222222222",
+      replace_existing_of_type: true,
+    },
+    preview: {
+      version: 2,
+      state: "ready",
+      current_version: 3,
+      reviewer_reason: "record_authority",
+      changes: [],
+      details: [
+        {
+          field: "relink_destination",
+          value: { kind: "text", text: "Delivery project" },
+        },
+        {
+          field: "relink_activity",
+          value: { kind: "text", text: "Buyer discussion" },
+        },
+        {
+          field: "relink_removed_link",
+          value: { kind: "text", text: "Earlier project" },
+        },
+      ],
+      effects: ["relink_preserve_other_links", "relink_project_retention"],
+    },
+  });
+}
+
+export const ProjectRelink: Story = {
+  render: () => <Row subject={relinkApproval()} />,
+};
+export const ProjectRelinkGerman: Story = {
+  render: () => <Row subject={relinkApproval()} locale="de" />,
+};
+export const ProjectRelinkVietnamese: Story = {
+  render: () => <Row subject={relinkApproval()} locale="vi" />,
+};
+
+function leadCreationApproval(): Approval {
+  return approval({
+    kind: "create_record",
+    summary: "Create New Buyer as a lead",
+    target_entity_type: "lead",
+    target_entity_id: undefined,
+    target_version: undefined,
+    proposed_change: {
+      record_type: "lead",
+      fields: { full_name: "New Buyer", email: "buyer@example.test" },
+    },
+    preview: {
+      version: 2,
+      state: "ready",
+      reviewer_reason: "record_authority",
+      changes: [],
+      details: [
+        { field: "full_name", value: { kind: "text", text: "New Buyer" } },
+        { field: "email", value: { kind: "text", text: "buyer@example.test" } },
+        { field: "lead_status", value: { kind: "text", text: "new" } },
+        { field: "owner_id", value: { kind: "empty", text: "" } },
+      ],
+      effects: ["create_lead_record"],
+    },
+  });
+}
+export const LeadCreation: Story = {
+  render: () => <Row subject={leadCreationApproval()} />,
+};
+export const LeadCreationGerman: Story = {
+  render: () => <Row subject={leadCreationApproval()} locale="de" />,
+};
+export const LeadCreationVietnamese: Story = {
+  render: () => <Row subject={leadCreationApproval()} locale="vi" />,
+};
+
+function companyCreationApproval(): Approval {
+  return approval({
+    kind: "create_record",
+    summary: "Create Approval Buyer as a company",
+    target_entity_type: "company",
+    target_entity_id: undefined,
+    target_version: undefined,
+    proposed_change: {
+      record_type: "company",
+      fields: { display_name: "Approval Buyer" },
+    },
+    preview: {
+      version: 2,
+      state: "ready",
+      reviewer_reason: "record_authority",
+      changes: [],
+      details: [
+        {
+          field: "display_name",
+          value: { kind: "text", text: "Approval Buyer" },
+        },
+        {
+          field: "creation_primary_domain",
+          value: { kind: "text", text: "buyer.example.test" },
+        },
+        { field: "address_city", value: { kind: "text", text: "Berlin" } },
+        { field: "lifecycle", value: { kind: "lifecycle", text: "unknown" } },
+      ],
+      effects: [
+        "create_company_record",
+        "create_workspace_visible",
+        "geocode_if_enabled",
+      ],
+    },
+  });
+}
+export const CompanyCreation: Story = {
+  render: () => <Row subject={companyCreationApproval()} />,
+};
+export const CompanyCreationGerman: Story = {
+  render: () => <Row subject={companyCreationApproval()} locale="de" />,
+};
+export const CompanyCreationVietnamese: Story = {
+  render: () => <Row subject={companyCreationApproval()} locale="vi" />,
+};
+
+function contactCreationApproval(): Approval {
+  return approval({
+    kind: "create_record",
+    summary: "Create Confirmed Buyer as a contact",
+    target_entity_type: "contact",
+    target_entity_id: undefined,
+    target_version: undefined,
+    proposed_change: {
+      record_type: "contact",
+      fields: { full_name: "Confirmed Buyer" },
+    },
+    preview: {
+      version: 2,
+      state: "ready",
+      reviewer_reason: "record_authority",
+      changes: [],
+      details: [
+        {
+          field: "full_name",
+          value: { kind: "text", text: "Confirmed Buyer" },
+        },
+        {
+          field: "creation_acquisition",
+          value: { kind: "text", text: "unknown_legacy" },
+        },
+        { field: "email", value: { kind: "text", text: "buyer@example.test" } },
+        { field: "creation_email_type", value: { kind: "text", text: "work" } },
+        { field: "creation_primary", value: { kind: "boolean", text: "true" } },
+        {
+          field: "creation_promoted_lead",
+          value: { kind: "text", text: "Earlier Buyer" },
+        },
+        { field: "title", value: { kind: "text", text: "Director" } },
+        {
+          field: "creation_source_activity",
+          value: { kind: "text", text: "Buyer discussion" },
+        },
+        {
+          field: "creation_source_consent",
+          value: { kind: "text", text: "withdrawn" },
+        },
+      ],
+      effects: [
+        "create_contact_record",
+        "create_workspace_visible",
+        "record_contact_acquisition",
+        "create_promote_matching_leads",
+      ],
+    },
+  });
+}
+export const ContactCreation: Story = {
+  render: () => <Row subject={contactCreationApproval()} />,
+};
+export const ContactCreationGerman: Story = {
+  render: () => <Row subject={contactCreationApproval()} locale="de" />,
+};
+export const ContactCreationVietnamese: Story = {
+  render: () => <Row subject={contactCreationApproval()} locale="vi" />,
+};
+
+function commercialCreationApproval(recordType: "deal" | "project"): Approval {
+  const project = recordType === "project";
+  return approval({
+    kind: "create_record",
+    summary: project ? "Create Buyer rollout" : "Create Buyer expansion",
+    target_entity_type: recordType,
+    target_entity_id: undefined,
+    target_version: undefined,
+    proposed_change: { record_type: recordType, fields: { name: "Buyer" } },
+    preview: {
+      version: 2,
+      state: "ready",
+      reviewer_reason: "record_authority",
+      changes: [],
+      details: project
+        ? [
+            { field: "name", value: { kind: "text", text: "Buyer rollout" } },
+            {
+              field: "company_id",
+              value: { kind: "text", text: "Project Buyer" },
+            },
+            { field: "owner_id", value: { kind: "text", text: "Dana Seller" } },
+            { field: "phase", value: { kind: "text", text: "initiative" } },
+            {
+              field: "started_at",
+              value: { kind: "date", text: "2030-01-02" },
+            },
+            {
+              field: "target_end_date",
+              value: { kind: "date", text: "2030-06-30" },
+            },
+          ]
+        : [
+            { field: "name", value: { kind: "text", text: "Buyer expansion" } },
+            {
+              field: "pipeline_id",
+              value: { kind: "text", text: "Enterprise sales" },
+            },
+            { field: "stage_id", value: { kind: "text", text: "Discovery" } },
+            { field: "owner_id", value: { kind: "text", text: "Dana Seller" } },
+            {
+              field: "amount_minor",
+              value: { kind: "money", text: "250000", currency: "EUR" },
+            },
+            {
+              field: "expected_arr_minor",
+              value: { kind: "money", text: "120000", currency: "EUR" },
+            },
+          ],
+      effects: project
+        ? ["create_project_record", "assign_project_key"]
+        : ["create_deal_record"],
+    },
+  });
+}
+export const DealCreation: Story = {
+  render: () => <Row subject={commercialCreationApproval("deal")} />,
+};
+export const DealCreationGerman: Story = {
+  render: () => (
+    <Row subject={commercialCreationApproval("deal")} locale="de" />
+  ),
+};
+export const DealCreationVietnamese: Story = {
+  render: () => (
+    <Row subject={commercialCreationApproval("deal")} locale="vi" />
+  ),
+};
+export const ProjectCreation: Story = {
+  render: () => <Row subject={commercialCreationApproval("project")} />,
+};
+export const ProjectCreationGerman: Story = {
+  render: () => (
+    <Row subject={commercialCreationApproval("project")} locale="de" />
+  ),
+};
+export const ProjectCreationVietnamese: Story = {
+  render: () => (
+    <Row subject={commercialCreationApproval("project")} locale="vi" />
+  ),
+};
+
+function productCreationApproval(): Approval {
+  return approval({
+    kind: "create_record",
+    summary: "Create Support subscription",
+    target_entity_type: "product",
+    target_entity_id: undefined,
+    target_version: undefined,
+    proposed_change: {
+      record_type: "product",
+      fields: {
+        name: "Support subscription",
+        unit_price_minor: 25000,
+        currency: "EUR",
+      },
+    },
+    preview: {
+      version: 2,
+      state: "ready",
+      reviewer_reason: "record_authority",
+      changes: [],
+      details: [
+        {
+          field: "name",
+          value: { kind: "text", text: "Support subscription" },
+        },
+        { field: "sku", value: { kind: "text", text: "SUPPORT" } },
+        { field: "unit", value: { kind: "text", text: "piece" } },
+        {
+          field: "unit_price_minor",
+          value: { kind: "money", text: "25000", currency: "EUR" },
+        },
+        { field: "default_tax_rate", value: { kind: "number", text: "19.12" } },
+        { field: "active", value: { kind: "boolean", text: "true" } },
+        { field: "billing_model", value: { kind: "text", text: "recurring" } },
+        {
+          field: "billing_interval_months",
+          value: { kind: "number", text: "3" },
+        },
+      ],
+      effects: ["create_product_record"],
+    },
+  });
+}
+export const ProductCreation: Story = {
+  render: () => <Row subject={productCreationApproval()} />,
+};
+export const ProductCreationGerman: Story = {
+  render: () => <Row subject={productCreationApproval()} locale="de" />,
+};
+export const ProductCreationVietnamese: Story = {
+  render: () => <Row subject={productCreationApproval()} locale="vi" />,
+};
+
+function templateCreationApproval(): Approval {
+  return approval({
+    kind: "create_record",
+    summary: "Create Standard offer template",
+    target_entity_type: "offer_template",
+    target_entity_id: undefined,
+    target_version: undefined,
+    proposed_change: {
+      record_type: "offer_template",
+      fields: {
+        name: "Standard offer",
+        layout: { header: "Example Services" },
+      },
+    },
+    preview: {
+      version: 2,
+      state: "ready",
+      reviewer_reason: "record_authority",
+      changes: [],
+      details: [
+        { field: "name", value: { kind: "text", text: "Standard offer" } },
+        { field: "locale", value: { kind: "text", text: "de-DE" } },
+        { field: "is_default", value: { kind: "boolean", text: "true" } },
+        {
+          field: "template_header",
+          value: {
+            kind: "text",
+            text: "Example Services\nEngineering and delivery\n12 Example Street, Berlin",
+          },
+        },
+        {
+          field: "template_footer",
+          value: {
+            kind: "text",
+            text: "Example Services GmbH · Registered in Berlin\nPlease include the offer reference in all correspondence.\nThis letterhead identifies the issuer; payment and delivery terms are set on each offer.",
+          },
+        },
+      ],
+      effects: ["create_offer_template", "set_template_locale_default"],
+    },
+  });
+}
+export const TemplateCreation: Story = {
+  render: () => <Row subject={templateCreationApproval()} />,
+};
+export const TemplateCreationGerman: Story = {
+  render: () => <Row subject={templateCreationApproval()} locale="de" />,
+};
+export const TemplateCreationVietnamese: Story = {
+  render: () => <Row subject={templateCreationApproval()} locale="vi" />,
 };

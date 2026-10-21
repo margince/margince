@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { leadRow, readingsDay, wholeLeads } from "../../testing/brief.fixtures";
 import { StoryProviders } from "../../testing/story-utils";
-import { leadRow, readingsDay, wholeLeads } from "./brief.fixtures";
 import { BriefReadingsStrip } from "./brief.readings";
 
 const meta: Meta<typeof BriefReadingsStrip> = {
@@ -84,5 +84,19 @@ export const PlannedOutreachDark: Story = {
 
 export const TaskSourceUnavailableDark: Story = {
   ...TaskSourceUnavailable,
+  globals: { theme: "dark" },
+};
+
+export const FlaggedValueWithUnpricedDeals: Story = {
+  args: {
+    day: readingsDay({
+      revenue_at_risk_minor: 12500000,
+      revenue_currency: "USD",
+      unpriced_deals: 2,
+    }),
+  },
+};
+export const FlaggedValueWithUnpricedDealsDark: Story = {
+  ...FlaggedValueWithUnpricedDeals,
   globals: { theme: "dark" },
 };

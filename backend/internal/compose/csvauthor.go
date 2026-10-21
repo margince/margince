@@ -21,6 +21,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
@@ -111,4 +112,10 @@ func (s authorSeats) resolve(ctx context.Context, tx pgx.Tx, author *storekit.So
 	}
 	author.AuthorID = seat
 	return nil
+}
+
+func (w *csvWriters) resolveSourceAuthor(ctx context.Context, author *storekit.SourceAuthorInput) error {
+	return database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+		return w.authors.resolve(ctx, tx, author)
+	})
 }

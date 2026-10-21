@@ -24,6 +24,9 @@ import (
 func (e *dedupeEnv) releaseQuestion(ctx context.Context, t *testing.T, domain string) {
 	t.Helper()
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `DELETE FROM company_domain_question_reader WHERE domain = $1`, domain); err != nil {
+			return err
+		}
 		_, err := tx.Exec(ctx, `UPDATE company_domain_disposition SET owner_id = NULL WHERE domain = $1`, domain)
 		return err
 	}); err != nil {

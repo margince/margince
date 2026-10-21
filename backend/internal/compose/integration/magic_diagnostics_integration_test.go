@@ -36,6 +36,10 @@ func TestTheUnplaceableCountReachesOnlyADiagnosticsSeat(t *testing.T) {
 		t.Fatalf("a seat without ai_diagnostics read was told %d workspace-wide unplaceable actions", count)
 	}
 
+	if rep.NotShownCountWithheld == nil || !*rep.NotShownCountWithheld {
+		t.Fatal("restricted receipt must state its unsupported counts are withheld")
+	}
+
 	diagnostics := RepPerms
 	diagnostics.Objects = maps.Clone(RepPerms.Objects)
 	diagnostics.Objects["ai_diagnostics"] = principal.ObjectGrant{Read: true}
@@ -43,8 +47,11 @@ func TestTheUnplaceableCountReachesOnlyADiagnosticsSeat(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the receipt as a diagnostics seat: %v", err)
 	}
-	if count, ok := unknownEntityCount(diag); !ok || count < 1 {
-		t.Fatalf("a diagnostics seat was not told of the unplaceable action: %+v", diag.NotShown)
+	if diag.NotShownCountWithheld == nil || *diag.NotShownCountWithheld {
+		t.Fatal("diagnostics receipt must state its counts were read")
+	}
+	if count, ok := unknownEntityCount(diag); !ok || count != 1 {
+		t.Fatalf("a diagnostics seat must count only the update, excluding creation and archive bookkeeping: %+v", diag.NotShown)
 	}
 }
 
@@ -55,7 +62,9 @@ func seedUnplaceableMachineAction(t *testing.T, e *Env) {
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, occurred_at)
-			VALUES ('agent', 'agent:auto-apply', 'update', 'tag', $1, now())`, ids.NewV7())
+			VALUES ('agent', 'agent:auto-apply', 'update', 'tag', $1, now()),
+                   ('agent', 'agent:auto-apply', 'create', 'tag', $1, now()),
+                   ('agent', 'agent:auto-apply', 'archive', 'tag', $1, now())`, ids.NewV7())
 		return err
 	})
 	if err != nil {

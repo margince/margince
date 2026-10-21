@@ -173,7 +173,7 @@ func (s *Store) deferCompanyToTriage(ctx context.Context, tx pgx.Tx, in EnsureCo
 		// again. New mail is new evidence, so it rearms the question: a company
 		// whose site was down when we first looked gets another chance the next
 		// time somebody there writes, instead of waiting for a human forever.
-		return reopenWithheldDispositionTx(ctx, tx, base, in.OwnerID, newestEvidenceFor(ctx, tx, base, in.ActivityID))
+		return reopenWithheldDispositionTx(ctx, tx, base, in.OwnerID, newestEvidenceFor(ctx, tx, base, in.ActivityID), false)
 	}
 	opened, err := recordPendingDispositionTx(ctx, tx, base, in.OwnerID,
 		newestEvidenceFor(ctx, tx, base, in.ActivityID))

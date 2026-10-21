@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { pickOption } from "../../design-system/select-testing";
+import { readingsDay } from "../../testing/brief.fixtures";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -11,7 +12,6 @@ import {
   type RouteMap,
   StoryProviders,
 } from "../../testing/story-utils";
-import { readingsDay } from "../brief/brief.fixtures";
 import { SettingsScreen, settingsAddress } from "./settings";
 import { PipelinesCard } from "./settings.pipelines";
 import type { SettingsPageId } from "./settingscatalog";
@@ -380,11 +380,17 @@ const selectScoutPassport = async ({
   const canvas = within(canvasElement);
   // The listbox is portalled to the body, outside this story's canvas, so the
   // pick goes through the shared helper rather than a canvas-scoped query.
-  await pickOption(
-    userEvent.setup(),
-    await canvas.findByRole("combobox", { name: "All passports" }),
-    "Reachable by Scout",
+  const passport = await canvas.findByRole("combobox", {
+    name: "All passports",
+  });
+  const disclosure = passport.closest("details");
+  if (!disclosure)
+    throw new Error("The passport filter needs its developer section.");
+  await Promise.all(
+    disclosure.getAnimations().map((motion) => motion.finished),
   );
+  passport.scrollIntoView({ block: "center", behavior: "instant" });
+  await pickOption(userEvent.setup(), passport, "Reachable by Scout");
   await userEvent.click(await canvas.findByText("Send messages"));
 };
 

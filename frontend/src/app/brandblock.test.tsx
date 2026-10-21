@@ -9,14 +9,14 @@ import {
 } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { en } from "../i18n/en";
-import { WorkspaceRail } from "./shell";
 import {
   MARKER,
   newClient,
   renderWith,
   repSeeing,
   TWO_MARKS,
-} from "./testing/shellharness";
+} from "../testing/shellharness";
+import { WorkspaceRail } from "./shell";
 
 // The sidebar's head: whose company this is, drawn from /me's
 // installation_brand for every seat, and the product's own mark when /me

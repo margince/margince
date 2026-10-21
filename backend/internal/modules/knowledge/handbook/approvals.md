@@ -17,6 +17,25 @@ Open the source evidence before answering a lifecycle proposal. A linked proposa
 separate decision. If the record changed or the full change cannot be shown, you cannot approve it.
 Request a new proposal with current context, or reject the old one.
 
+## Reading an import proposal
+
+An import proposal shows each source row, its planned result, and the values to create or change.
+Links name an existing record or the source row that will create it. Review skipped rows and new tags too.
+Approval starts the queued import. It checks again the reviewed source and existing record versions before writing.
+
+The queue requires a complete plan of at most 500 rows. Older test runs, larger files, or rows that update
+the same record twice need a new plan. Open **Settings → Data import**, split larger files or resolve
+rows that change the same record, and run another test. You can reject the queued proposal without starting the import.
+
+## Reading a confirmation request
+
+An automation can ask you to confirm a question. The card shows the question and the effect of your answer.
+It also shows the reason if the request has one. A confirmation records your answer and finishes the waiting
+automation run. It does not authorize a record change or send a message.
+
+If an old request has no clear question, ask for a new request or reject it. An event name
+or a list of fields does not tell you what you are confirming.
+
 ## Answering approvals
 
 ### How do I approve an action in Margince?
@@ -65,6 +84,16 @@ Also called: approver, who signs off, permission to approve.
 ### How do I stop Margince making automatic changes?
 To make Margince ask before changing close dates, company names or lifecycle stages, open **Settings → AI access**, then **For developers**, then **Agent rules**. Turn off the matching switch under **Automatic changes**. The switches apply to your work only. A kind you switch off comes back to your Worklist as an approval.
 Also called: autopilot, auto-apply, stop the AI editing my records.
+
+### How do I hide a kind of proposal from my own queue?
+Open **Settings → AI access**, then **For developers**, then **Agent rules**, then
+**Personal approval mutes**.
+Turn on a kind to hide it from your own queue. Other readers keep their proposals, and nobody has accepted or rejected anything.
+
+Both hiding and showing a kind turn off your automatic changes for that kind. Showing it again does not restore an old automatic choice.
+Sends, bookings, merges and proposals from agent passports stay visible.
+
+Use **Review including muted** to read hidden proposals, including those that have expired. A group in the ordinary queue can have fewer entries because of your choice; check each proposal before deciding.
 
 ### Can I undo what the AI changed?
 Yes. To undo a change the AI or an agent made in Margince, press **Undo** on its row under **Handled for you** in the Worklist. You can also press it on the entry in the record's history.

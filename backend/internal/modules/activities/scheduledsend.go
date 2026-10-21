@@ -152,20 +152,24 @@ type SendSchedule struct {
 // gate an immediate send passes through.
 // ScheduledSend is one message waiting for its moment.
 type ScheduledSend struct {
-	ID          ids.UUID
-	Status      string
-	ScheduledAt time.Time
-	ScheduledTZ string
-	OriginKind  string
-	Anchor      ids.ActivityID
-	Subject     string
-	Recipients  []string
-	Cc          []string
-	Bcc         []string
-	Body        string
-	ScheduledBy ids.UUID
-	ActivityID  ids.UUID
-	HeldReason  string
+	frozen          scheduledPayload
+	PayloadVersion  int
+	PrincipalKind   string
+	additionalLinks []byte
+	ID              ids.UUID
+	Status          string
+	ScheduledAt     time.Time
+	ScheduledTZ     string
+	OriginKind      string
+	Anchor          ids.ActivityID
+	Subject         string
+	Recipients      []string
+	Cc              []string
+	Bcc             []string
+	Body            string
+	ScheduledBy     ids.UUID
+	ActivityID      ids.UUID
+	HeldReason      string
 	// ReviewID is the review standing over this message's refusal, when one
 	// does. Zero on every message nobody refused — and on a held row whose
 	// review has since been answered, which is a row a rep can only cancel or

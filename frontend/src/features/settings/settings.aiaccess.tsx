@@ -5,10 +5,11 @@ import { useState } from "react";
 import { SegmentedControl } from "../../design-system/atoms";
 import { Disclosure } from "../../design-system/disclosure";
 import { useT } from "../../i18n";
-import { AutonomySettingsCard } from "../automations/autonomy-settings";
+import { ApprovalPreferencesCard } from "../automations/approval-preferences";
 import { CodingAgentsCard } from "../automations/coding-agents";
 import { ConnectAiToolCard } from "../automations/connect-ai-tool";
 import { ConnectedAgentsCard } from "../automations/connected-agents";
+import { AutonomySettingsCard } from "./autonomy-settings";
 import { AgentToolsCard } from "./settings-agenttools";
 import { AutonomyTiersCard } from "./settings-autonomytiers";
 import { PassportCard } from "./settings-passports";
@@ -68,6 +69,7 @@ function DeveloperTabs() {
         <AgentToolsCard />
         <AutonomyTiersCard />
         <AutonomySettingsCard />
+        <ApprovalPreferencesCard />
       </div>
     </div>
   );

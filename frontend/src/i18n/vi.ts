@@ -14,17 +14,618 @@ import type { MessageKey } from "./en";
 //     "pháp nhân" (onboarding's legal-block copy). The two senses share no
 //     string in this catalog and must stay that way.
 export const vi = {
+  "homeRepair.taskPermission":
+    "Cần quyền lưu trữ hoạt động để lưu trữ các công việc đã xem xét.",
+  "homeRepair.classificationPermission":
+    "Cần quyền chỉnh sửa hoạt động để đổi kết quả tin nhắn.",
+  "homeRepair.reason.classificationNotAttempted":
+    "Chưa có lần kiểm tra hoàn tất. Xem trước lại khi có thể phân loại.",
+  "homeRepair.reclassify": "Phân loại lại",
+  "homeRepair.classifications": "Kết quả tin nhắn",
+  "homeRepair.asks": "Yêu cầu hành động",
+  "homeRepair.informs": "Chỉ cung cấp thông tin",
+  "homeRepair.classificationChange": "Hiện tại: {before}. Đề xuất: {after}.",
+  "homeRepair.reason.classificationDeclined":
+    "Bộ phân loại từ chối đánh giá tin nhắn này. Hãy tự xem xét.",
+  "homeRepair.reason.classificationUncertain":
+    "Lần kiểm tra mới chưa chắc chắn. Xem xét tin nhắn trước khi đổi kết quả.",
+  "homeRepair.reason.classificationAdopted":
+    "Thay đổi của người dùng hoặc thiếu bằng chứng kiểm toán ngăn việc sửa tự động.",
+  "homeRepair.reason.classificationWithheld":
+    "Một phần ngữ cảnh tin nhắn nằm ngoài quyền truy cập hiện tại. Xem xét trước khi đổi kết quả.",
+  "homeRepair.reason.classificationCurrent":
+    "Lần kiểm tra mới khớp với kết quả hiện tại.",
+  "homeRepair.reason.classificationChanged":
+    "Lần kiểm tra mới đề xuất kết quả khác cho tin nhắn.",
+  "homeRepair.suggestionPermission":
+    "Cần quyền tạo deal để ngừng các đề xuất này.",
+  "homeRepair.supersede": "Ngừng đề xuất deal tự động",
+  "homeRepair.suggestions": "Đề xuất deal",
+  "homeRepair.reason.dealExists":
+    "Công ty này đã có deal đang mở. Xem xét deal đó trước khi mở deal khác.",
+  "homeRepair.reason.dealSource":
+    "Ngày của nguồn không còn khớp với bằng chứng dùng cho đề xuất này.",
+  "homeRepair.reason.buyer":
+    "Các nguồn đã xem xét không còn xác minh yêu cầu hiện tại của bên mua.",
+  "homeRepair.reason.engagement":
+    "Hợp đồng hoặc công việc đang thực hiện không phù hợp với việc kết thúc toàn bộ quan hệ khách hàng.",
+  "homeRepair.reason.workstream":
+    "Bằng chứng chỉ kết thúc một công việc, không phải toàn bộ quan hệ khách hàng.",
+  "homeRepair.reason.evidenceChanged":
+    "Bằng chứng mới hơn đã xác minh thay thế ngữ cảnh của đề xuất này.",
+  "homeRepair.withdraw": "Rút đề xuất tự động",
+  "homeRepair.reason.duplicate": "Một đề xuất đang chờ giống hệt vẫn còn.",
+  "homeRepair.tasks": "Công việc",
+  "homeRepair.proposals": "Đề xuất",
+  "homeRepair.kind": "Công việc cần xem xét",
+  "homeRepair.preserved": "Được giữ lại hoặc bỏ qua",
+  "homeRepair.preservedNote":
+    "Bao gồm công việc được giữ lại để xem xét và các bản ghi đã thay đổi sau khi xem trước. Xem trước lần nữa để kiểm tra những gì còn lại.",
+
+  "homeRepair.inspect": "Xem chi tiết",
+  "dataTasks.blocked.review_required":
+    "Xem xét các thay đổi được đề xuất trước khi bắt đầu.",
+  "homeRepair.archive": "Lưu trữ lời nhắc tự động",
+  "homeRepair.keepReview": "Giữ lại để xem xét",
+  "homeRepair.keepCurrent": "Giữ công việc hiện tại",
+  "homeRepair.reason.adopted":
+    "Công việc này có thể đã được người dùng tạo, sửa hoặc ghim.",
+  "homeRepair.reason.unverified":
+    "Bằng chứng hiện có chưa đủ để thay đổi tự động.",
+  "homeRepair.reason.unavailable":
+    "Quyền truy cập hiện tại không cho phép kiểm tra nguồn.",
+  "homeRepair.reason.historical": "Nguồn cũ không có thời hạn hiện tại.",
+  "homeRepair.reason.baseline": "Nguồn có trước mốc lịch sử hộp thư đã chọn.",
+  "homeRepair.reason.cancelled": "Cuộc họp nguồn đã bị hủy.",
+  "homeRepair.reason.requestAge":
+    "Yêu cầu gốc đã quá thời hạn chờ; lưu trữ không đánh dấu yêu cầu là đã trả lời.",
+  "homeRepair.reason.contextUnread": "Các tin nhắn sau đó chưa được đọc.",
+  "homeRepair.reason.contextUnassessed":
+    "Các tin nhắn sau đó chưa được đánh giá về thay đổi đối với cam kết này.",
+  "homeRepair.reason.timeUnknown": "Chưa xác định được ngày của nguồn.",
+  "homeRepair.reason.timeContradicted": "Các ngày của nguồn không khớp nhau.",
+  "homeRepair.reason.meetingPending": "Cuộc họp nguồn chưa diễn ra.",
+  "homeRepair.reason.current":
+    "Công việc này vẫn đáp ứng các quy tắc hiện tại.",
+  "homeRepair.unnamed": "Không có chi tiết",
+  "homeRepair.explain":
+    "Chỉ bao gồm công việc hiện có quyền xem. Xem xét tối đa 25 mục mỗi lần. Có thể lưu trữ lời nhắc tự động đã cũ và rút các đề xuất trùng lặp hoặc đã cũ. Công việc do người dùng xử lý được giữ lại; không mục nào được đánh dấu hoàn thành.",
+  "homeRepair.preview": "Xem trước các mục",
+  "homeRepair.next": "Xem trang tiếp theo",
+  "homeRepair.summary":
+    "Kết quả cần đổi: {reclassify}. Lời nhắc cần lưu trữ: {archive}. Đề xuất cần rút: {withdraw}. Đề xuất deal cần ngừng: {supersede}. Giữ để xem xét: {review}; giữ làm công việc hiện tại: {keep}.",
+  "homeRepair.apply_one": "Áp dụng {count} thay đổi đã xem xét",
+  "homeRepair.apply_other": "Áp dụng {count} thay đổi đã xem xét",
+  "homeRepair.started":
+    "Lượt xử lý đã xem xét đang chờ chạy. Tiến độ hiển thị ở trên.",
+  "approval.scheduled.rearm":
+    "Lên lịch thử gửi lại tin nhắn đang giữ sau khoảng chờ hiển thị. Quyền, người nhận và quy tắc liên lạc hiện tại được kiểm tra lại trước khi gửi.",
+  "approval.scheduled.direct":
+    "Ghi lại quyết định gửi tin nhắn bị từ chối này theo thẩm quyền của bạn và thử gửi ngay. Quyết định và giải thích được lưu; các kiểm tra gửi thông thường vẫn áp dụng.",
+  "approval.scheduled.delay": "Thời gian chờ thử lại (phút)",
+  "approval.read.profileField": "Trường hồ sơ",
+  "approval.read.factField": "Thông tin công ty",
+  "approval.read.before": "Giá trị hiện tại",
+  "approval.read.after": "Giá trị sau phê duyệt",
+  "approval.read.proposed": "Thông tin đọc từ trang web",
+  "approval.read.source": "Trang nguồn",
+  "approval.read.quote": "Trích dẫn nguồn",
+  "approval.read.retained": "Giữ giá trị do người dùng nhập",
+  "approval.read.effect":
+    "Áp dụng các trường và bằng chứng công ty được hiển thị. Giữ nguyên bằng chứng do người dùng xác nhận và các giá trị hiện có như đã hiển thị.",
+  "approval.merge.value.suppressed": "Đã ẩn",
+  "approval.merge.value.corrected": "Đã sửa",
+  "approval.merge.value.confirmed": "Đã xác nhận",
+  "approval.merge.value.queued": "Đang chờ",
+  "approval.merge.value.submitting": "Đang gửi",
+  "approval.merge.value.in_progress": "Đang xử lý",
+  "approval.merge.value.completed": "Đã hoàn tất",
+  "approval.merge.value.no_match": "Không tìm thấy",
+  "approval.merge.value.skipped": "Đã bỏ qua",
+  "approval.merge.value.submission_unknown": "Chưa rõ kết quả gửi",
+  "approval.merge.value.failed": "Không thành công",
+  "approval.merge.value.cancelled": "Đã hủy",
+  "approval.merge.value.budget_exhausted": "Đã hết ngân sách",
+  "approval.merge.value.low_balance": "Số dư không đủ",
+  "approval.merge.value.not_eligible": "Không đủ điều kiện",
+  "approval.merge.value.duplicate_subject_candidate": "Ứng viên trùng lặp",
+  "approval.merge.value.rate_limited":
+    "Đã đạt giới hạn yêu cầu của nhà cung cấp",
+  "approval.merge.value.already_fresh": "Thông tin đã được cập nhật",
+  "approval.merge.value.no_identifiers": "Không có thông tin nhận dạng",
+  "approval.merge.value.category_in_flight": "Đang truy xuất danh mục này",
+  "approval.preview.mergeRecords":
+    "Chuyển các hồ sơ và giá trị được hiển thị sang hồ sơ giữ lại rồi lưu trữ hồ sơ nguồn. Giá trị hiện có của hồ sơ giữ lại được ưu tiên ở những mục được chỉ rõ.",
+  "approval.preview.fillLead":
+    "Chỉ điền các trường trống của khách hàng tiềm năng được hiển thị ở trên. Giá trị hiện có và địa chỉ email được giữ nguyên; không tạo hồ sơ thứ hai.",
+  "approval.preview.companyPrivateReadings":
+    "Nếu một người có bản tóm tắt cho cả hai công ty, bản của công ty giữ lại được giữ nguyên. Đề xuất đã bỏ qua trên công ty bị loại bỏ có thể xuất hiện lại trên công ty giữ lại.",
+  "approval.preview.companyReceipts":
+    "Hồ sơ chương trình đối tác và xác minh thuế chỉ được chuyển khi công ty giữ lại chưa có. Nếu đã có, bản nguồn vẫn thuộc công ty được lưu trữ.",
+  "approval.preview.companyLookups":
+    "Các lượt tra cứu trang web được chuyển sang công ty giữ lại; lượt đang chạy trùng lặp bị hủy. Việc kiểm tra nền cho công ty bị loại bỏ dừng lại.",
+  "approval.merge.source": "Hồ sơ bị loại bỏ",
+  "approval.merge.survivor": "Hồ sơ được giữ lại",
+  "approval.merge.address": "Địa chỉ được chuyển",
+  "approval.merge.address_kind": "Loại địa chỉ",
+  "approval.merge.address_usage": "Mục đích địa chỉ",
+  "approval.merge.address_primary_before": "Địa chỉ chính trước khi chuyển",
+  "approval.merge.address_primary_after": "Địa chỉ chính sau khi chuyển",
+  "approval.merge.assignment_collapsed": "Trách nhiệm trùng lặp bị loại bỏ",
+  "approval.merge.assignment_moved": "Trách nhiệm được chuyển",
+  "approval.merge.assignment_role": "Vai trò",
+  "approval.merge.channel_account": "Tài khoản kênh được chuyển",
+  "approval.merge.channel_blocked": "Kênh bị chặn",
+  "approval.merge.channel_provider": "Nhà cung cấp kênh",
+  "approval.merge.channel_username": "Tên trên kênh",
+  "approval.merge.claim": "Nội dung trao đổi được chuyển",
+  "approval.merge.claim_quote": "Trích dẫn nguồn",
+  "approval.merge.claim_source": "Nguồn trao đổi",
+  "approval.merge.collapse_link": "Liên kết trùng lặp bị loại bỏ",
+  "approval.merge.move_link": "Liên kết được chuyển",
+  "approval.merge.commitment": "Cam kết được chuyển",
+  "approval.merge.company_contract": "Hợp đồng được chuyển",
+  "approval.merge.company_invoice": "Hóa đơn được chuyển",
+  "approval.merge.company_payment": "Khoản thanh toán được chuyển",
+  "approval.read.vat_check":
+    "Yêu cầu kiểm tra mã số VAT nếu dịch vụ xác minh được cấu hình.",
+  "approval.merge.company_customer_link": "Khách hàng kế toán được chuyển",
+  "approval.merge.company_parent_after": "Công ty mẹ sau khi hợp nhất",
+  "approval.merge.company_triaged_domain": "Tên miền đã xác định được chuyển",
+  "approval.merge.partner_moved":
+    "Chuyển chương trình đối tác sang công ty được giữ lại",
+  "approval.merge.partner_retained":
+    "Giữ chương trình đối tác tại công ty được lưu trữ",
+  "approval.merge.vat_check_moved":
+    "Chuyển biên nhận VAT sang công ty được giữ lại",
+  "approval.merge.vat_check_retained":
+    "Giữ biên nhận VAT tại công ty được lưu trữ",
+  "approval.merge.company_commission": "Hoa hồng được chuyển",
+  "approval.merge.company_offer": "Báo giá được chuyển",
+  "approval.merge.company_project": "Dự án được chuyển",
+  "approval.merge.company_deal": "Cơ hội kinh doanh được chuyển",
+  "approval.merge.company_company": "Công ty con được chuyển",
+  "approval.merge.company_fact_category": "Nhóm dữ kiện",
+  "approval.merge.company_fact_discarded": "Dữ kiện trùng lặp bị loại bỏ",
+  "approval.merge.company_fact_field": "Dữ kiện",
+  "approval.merge.company_fact_kept": "Dữ kiện hiện có được giữ lại",
+  "approval.merge.company_fact_moved": "Dữ kiện được chuyển",
+  "approval.merge.company_profile_discarded":
+    "Giá trị hồ sơ trùng lặp bị loại bỏ",
+  "approval.merge.company_profile_field": "Trường hồ sơ",
+  "approval.merge.company_profile_kept": "Giá trị hồ sơ hiện có được giữ lại",
+  "approval.merge.company_profile_moved": "Giá trị hồ sơ được chuyển",
+  "approval.merge.company_relationship_type":
+    "Loại quan hệ công ty được chuyển",
+  "approval.merge.confirmation": "Xác nhận được chuyển",
+  "approval.merge.consent_event": "Bằng chứng đồng ý được chuyển",
+  "approval.merge.consent_event_at": "Ngày của bằng chứng",
+  "approval.merge.consent_event_collapsed": "Bằng chứng trùng lặp bị loại bỏ",
+  "approval.merge.consent_event_note": "Ghi chú bằng chứng",
+  "approval.merge.consent_event_source": "Nguồn bằng chứng",
+  "approval.merge.draft_bcc": "Người nhận ẩn của bản nháp",
+  "approval.merge.draft_body": "Nội dung bản nháp",
+  "approval.merge.draft_cc": "Người nhận bản sao của bản nháp",
+  "approval.merge.draft_discarded": "Bản nháp trùng lặp bị loại bỏ",
+  "approval.merge.draft_kept": "Bản nháp hiện có được giữ lại",
+  "approval.merge.draft_moved": "Bản nháp được chuyển",
+  "approval.merge.draft_to": "Người nhận bản nháp",
+  "approval.merge.feedback_correction": "Nội dung sửa",
+  "approval.merge.feedback_discarded": "Phản hồi trùng lặp bị loại bỏ",
+  "approval.merge.feedback_kept": "Phản hồi hiện có được giữ lại",
+  "approval.merge.feedback_moved": "Phản hồi được chuyển",
+  "approval.merge.feedback_value": "Giá trị đã xem xét",
+  "approval.merge.feedback_verdict": "Quyết định phản hồi",
+  "approval.merge.file": "Tệp được chuyển",
+  "approval.merge.file_archived": "Ngày lưu trữ tệp",
+  "approval.merge.finance_archived": "Ngày lưu trữ khoản mục",
+  "approval.merge.grant_active": "Quyền truy cập vẫn có hiệu lực",
+  "approval.merge.grant_after": "Quyền truy cập sau khi gộp",
+  "approval.merge.grant_before": "Quyền truy cập hiện có",
+  "approval.merge.grant_expiry_after": "Hạn truy cập sau khi gộp",
+  "approval.merge.grant_expiry_before": "Hạn truy cập hiện có",
+  "approval.merge.grant_reason": "Lý do cấp quyền",
+  "approval.merge.grant_source": "Quyền truy cập được chuyển từ hồ sơ nguồn",
+  "approval.merge.grant_subject": "Người được cấp quyền",
+  "approval.merge.handoff": "Bàn giao được chuyển",
+  "approval.merge.handoff_recipient": "Người nhận bàn giao",
+  "approval.merge.handoff_sender": "Người bàn giao",
+  "approval.merge.introduction_after": "Trạng thái giới thiệu sau khi gộp",
+  "approval.merge.introduction_before": "Trạng thái giới thiệu trước khi gộp",
+  "approval.merge.introduction_cancellation": "Lý do hủy giới thiệu",
+  "approval.merge.introduction_contact_after":
+    "Liên hệ được giới thiệu sau khi gộp",
+  "approval.merge.introduction_contact_before":
+    "Liên hệ được giới thiệu trước khi gộp",
+  "approval.merge.introduction_through_after": "Liên hệ giới thiệu sau khi gộp",
+  "approval.merge.introduction_through_before":
+    "Liên hệ giới thiệu trước khi gộp",
+  "approval.merge.link_consumed": "Ngày sử dụng liên kết",
+  "approval.merge.link_note": "Ghi chú liên kết",
+  "approval.merge.link_opened": "Ngày mở liên kết",
+  "approval.merge.notice": "Thông báo được chuyển",
+  "approval.merge.observation_after": "Mốc ghi nhận quan hệ sau khi gộp",
+  "approval.merge.observation_before": "Mốc ghi nhận quan hệ trước đó",
+  "approval.merge.optin": "Xác nhận đồng ý được chuyển",
+  "approval.merge.override": "Ngoại lệ liên lạc được chuyển",
+  "approval.merge.override_authority": "Thẩm quyền cho ngoại lệ",
+  "approval.merge.override_reason": "Lý do ngoại lệ",
+  "approval.merge.participant_activity": "Cuộc trao đổi được liên kết",
+  "approval.merge.participant_address": "Địa chỉ người tham gia",
+  "approval.merge.participant_collapsed": "Người tham gia trùng lặp bị loại bỏ",
+  "approval.merge.participant_role": "Vai trò người tham gia",
+  "approval.merge.payment_at": "Ngày thanh toán",
+  "approval.merge.preference_link": "Liên kết tùy chọn được chuyển",
+  "approval.merge.preference_reason": "Lý do ngừng sử dụng",
+  "approval.merge.preference_retired": "Liên kết tùy chọn ngừng sử dụng",
+  "approval.merge.profile_discarded": "Dữ kiện liên hệ trùng lặp bị loại bỏ",
+  "approval.merge.profile_field": "Trường liên hệ",
+  "approval.merge.profile_kept": "Dữ kiện liên hệ hiện có được giữ lại",
+  "approval.merge.profile_moved": "Dữ kiện liên hệ được chuyển",
+  "approval.merge.provider": "Nhà cung cấp bổ sung dữ liệu",
+  "approval.merge.relationship_kind": "Quan hệ được chuyển",
+  "approval.merge.relationship_primary": "Quan hệ chính sau khi gộp",
+  "approval.merge.relationship_retired": "Quan hệ ngừng sử dụng",
+  "approval.merge.run_after": "Trạng thái tra cứu sau khi gộp",
+  "approval.merge.run_before": "Trạng thái tra cứu trước đó",
+  "approval.merge.run_created": "Ngày yêu cầu tra cứu",
+  "approval.merge.run_moved": "Lượt tra cứu được chuyển",
+  "approval.merge.run_skip": "Lý do bỏ qua tra cứu",
+  "approval.merge.signal": "Tín hiệu được chuyển",
+  "approval.merge.social_handle": "Hồ sơ mạng xã hội được chuyển",
+  "approval.merge.social_platform": "Nền tảng mạng xã hội",
+  "approval.merge.social_survivor": "Hồ sơ mạng xã hội hiện có được giữ lại",
+  "approval.merge.support_collapsed": "Nguồn gốc dữ liệu trùng lặp bị loại bỏ",
+  "approval.merge.support_fields": "Nguồn gốc dữ liệu được chuyển",
+  "approval.merge.support_resolutions": "Kết quả xác minh việc làm được chuyển",
+  "approval.capture.target": "Khách hàng tiềm năng hiện có",
+  "approval.capture.full_name": "Tên đã ghi nhận",
+  "approval.capture.company_name": "Công ty đã ghi nhận",
+  "approval.capture.title": "Chức vụ đã ghi nhận",
+  "approvalPreferences.title": "Ẩn phê duyệt cho riêng bạn",
+  "approvalPreferences.explain":
+    "Loại bị ẩn chỉ rời hàng đợi của bạn. Thành viên khác vẫn thấy đề xuất. Ẩn hoặc khôi phục một loại sẽ tắt thay đổi tự động của bạn cho loại đó. Gửi tin, đặt lịch, hợp nhất và đề xuất có passport vẫn hiển thị.",
+  "approvalPreferences.review": "Xem cả đề xuất đã ẩn",
+  "approvalPreferences.reviewExplain":
+    "Chế độ này gồm đề xuất đã ẩn và hết hạn. Gói trong hàng đợi thường có thể hiển thị ít mục hơn do tùy chọn cá nhân. Xem từng đề xuất trước khi quyết định.",
+  "approvalPreferences.close": "Đóng xem xét",
+  "approvalPreferences.next": "Trang tiếp",
+  "approvalPreferences.first": "Trang đầu",
+
+  "dealSuggestion.linkedUnlinked":
+    "Đã liên kết bằng chứng. Một số bằng chứng giữ nguyên vì không có quyền di chuyển.",
+  "dealSuggestion.searchExisting": "Tìm giao dịch",
+  "dealSuggestion.existingDeal": "Giao dịch hiện có",
+  "dealSuggestion.moreDeals": "Tải thêm giao dịch",
+  "dealSuggestion.noMatchingDeals":
+    "Không có giao dịch phù hợp tại công ty này.",
+  "dealSuggestion.changed":
+    "Đề xuất này không còn khả dụng. Tải lại các mục cần kiểm tra để xem trạng thái hiện tại.",
+  "dealSuggestion.linkExisting": "Liên kết với giao dịch hiện có",
+  "dealSuggestion.linked": "Đã liên kết bằng chứng với giao dịch.",
+  "dealSuggestion.dismissTitle": "Bỏ qua đề xuất giao dịch",
+  "dealSuggestion.linkEffect":
+    "Liên kết bằng chứng được trích dẫn với giao dịch tại {company}; không tạo giao dịch mới.",
+  "dealSuggestion.dismissEffect":
+    "Đóng đề xuất này cho {company} và lưu lý do.",
+  "dealSuggestion.dismissReason": "Lý do",
+  "dealSuggestion.dismissReason.not_a_deal": "Không có ý định mua",
+  "dealSuggestion.dismissReason.already_tracked": "Đã được theo dõi",
+  "dealSuggestion.dismissReason.wrong_company": "Sai công ty",
+  "dealSuggestion.dismissReason.historical": "Hoạt động trong quá khứ",
+  "dealSuggestion.dismissReason.other": "Lý do khác",
+  "dataTasks.unknownState": "Cập nhật ứng dụng để quản lý trạng thái này.",
+  "dataTasks.blockedBy": "Đang chờ: {name}",
+  "roles.object.data_task": "Cập nhật dữ liệu",
+  "dataTasks.title": "Cập nhật dữ liệu",
+  "dataTasks.sub":
+    "Các bản ghi được cập nhật theo từng lô nhỏ. Những thay đổi đã lưu vẫn được giữ lại khi tạm dừng.",
+  "dataTasks.withheld":
+    "Cần có quyền để xem các bản cập nhật dữ liệu. Liên hệ quản trị viên để được cấp quyền.",
+  "dataTasks.empty": "Chưa có bản cập nhật dữ liệu nào được đăng ký.",
+  "dataTasks.unknown": "Chưa ước tính",
+  "dataTasks.atLeast_one": "Ít nhất {count}",
+  "dataTasks.atLeast_other": "Ít nhất {count}",
+  "dataTasks.scanned": "Số dòng đã kiểm tra",
+  "dataTasks.changed": "Số dòng đã thay đổi",
+  "dataTasks.estimate": "Ước tính số dòng cần kiểm tra",
+  "dataTasks.batchLimit": "Số dòng mỗi lô",
+  "dataTasks.batches": "Số lô đã lưu",
+  "dataTasks.lastProgress": "Tiến độ gần nhất",
+  "dataTasks.notStarted": "Chưa bắt đầu",
+  "dataTasks.nextAttempt": "Lần thử tiếp theo",
+  "dataTasks.release": "Phiên bản đầu tiên",
+  "dataTasks.run": "Mã lần chạy",
+  "dataTasks.step": "Bước: {step}",
+  "dataTasks.prerequisites": "Cần hoàn tất trước: {names}",
+  "dataTasks.status.pending": "Đang chờ",
+  "dataTasks.status.running": "Đang chạy",
+  "dataTasks.status.paused": "Đã tạm dừng",
+  "dataTasks.status.done": "Đã hoàn tất",
+  "dataTasks.status.failed": "Có lỗi",
+  "dataTasks.action.pause": "Tạm dừng",
+  "dataTasks.action.resume": "Tiếp tục",
+  "dataTasks.action.retry": "Thử lại",
+  "dataTasks.action.estimate": "Ước tính số dòng",
+  "dataTasks.blocked.waiting_for_worker": "Đang chờ tiến trình nền.",
+  "dataTasks.blocked.newer_release_required":
+    "Cần phiên bản mới hơn. Hãy cập nhật ứng dụng trước khi tiếp tục.",
+  "dataTasks.blocked.paused": "Đã tạm dừng tại vị trí đã lưu.",
+  "dataTasks.blocked.failed":
+    "Đã dừng sau nhiều lần thất bại. Hãy kiểm tra lỗi trước khi thử lại.",
+  "dataTasks.blocked.retry_wait": "Đang chờ lần thử tiếp theo.",
+  "dataTasks.blocked.earlier_step": "Cần hoàn tất bước trước đó.",
+  "dataTasks.blocked.missing_prerequisite":
+    "Cần hoàn tất các bản cập nhật bắt buộc trước.",
+
+  "approval.preview.createContact":
+    "Cho phép bên đề xuất tạo bản ghi liên hệ này một lần với các giá trị hiển thị. Quyền hiện tại và danh tính trùng được kiểm tra lại.",
+  "approval.preview.recordAcquisition":
+    "Ghi lại thông tin nguồn thu thập hiển thị. Việc này không cấp quyền gửi tin nhắn.",
+  "approval.preview.createPromotions":
+    "Chuyển các lead được nêu vào bản ghi liên hệ này rồi lưu trữ chúng. Bổ sung trường và số điện thoại còn thiếu, hợp nhất lịch sử, giữ các lần rút đồng ý và hạn chế liên lạc áp dụng.",
+  "approval.preview.acquisition": "Lý do tạo bản ghi liên hệ này",
+  "approval.preview.acquiredAt": "Ngày thu thập",
+  "approval.preview.promotedLead": "Lead sẽ chuyển đổi",
+  "approval.preview.sourceActivity": "Lịch sử gắn với lead nguồn này",
+  "approval.preview.sourceConsent": "Đồng ý của lead nguồn này",
+  "approval.preview.channelPosition": "Vị trí trong danh sách",
+  "approval.preview.emailCorrespondence": "Địa chỉ được coi là đã có trao đổi",
+  "approval.preview.socialPlatform": "Mạng xã hội",
+  "approval.preview.socialHandle": "Hồ sơ hoặc tên tài khoản",
+  "approval.preview.originLead": "Lead gốc",
+  "approval.preview.archiveRelationship":
+    "Lưu trữ liên kết quan hệ này. Các bản ghi được liên kết vẫn được lưu.",
+  "approval.preview.archivePromoteEmployer":
+    "Đặt công ty của quan hệ công tác còn lại được hiển thị làm nhà tuyển dụng chính của liên hệ.",
+  "approval.preview.archiveNoPrimary":
+    "Để liên hệ không có nhà tuyển dụng chính. Không tự động chọn nhà tuyển dụng.",
+  "approval.preview.newPrimaryEmployer": "Nhà tuyển dụng chính mới",
+  "approval.preview.startPrecision": "Độ chính xác ngày bắt đầu",
+  "approval.preview.endPrecision": "Độ chính xác ngày kết thúc",
+  "approval.preview.precisionDay": "Ngày chính xác",
+  "approval.preview.precisionMonth": "Chỉ tháng",
+  "approval.preview.mergeTags":
+    "Thay nhãn nguồn trên các bản ghi được hiển thị bằng nhãn giữ lại. Nếu đã có cả hai nhãn, chỉ xóa gán nhãn nguồn trùng lặp. Lưu trữ nhãn nguồn và cho phép dùng lại tên; tên không được giữ làm bí danh.",
+  "approval.preview.mergeTagSource": "Nhãn sẽ xóa",
+  "approval.preview.mergeTagTarget": "Nhãn giữ lại",
+  "approval.preview.mergeTagMove": "Bản ghi sẽ nhận nhãn giữ lại",
+  "approval.preview.mergeTagCollapse": "Bản ghi đã có cả hai nhãn",
+  "approval.preview.archiveCompany":
+    "Lưu trữ công ty này cùng các tên miền, phân loại, chương trình đối tác và mối quan hệ được liệt kê. Xóa tư cách thành viên danh sách và thẻ. Giữ lại liên hệ, cơ hội bán hàng và lịch sử hội thoại.",
+  "approval.preview.archiveDomain": "Tên miền sẽ lưu trữ",
+  "approval.preview.archiveCompanyType": "Phân loại công ty sẽ gỡ bỏ",
+  "approval.preview.archivePartner": "Chương trình đối tác sẽ lưu trữ",
+  "approval.preview.archiveContact":
+    "Lưu trữ liên hệ này cùng các địa chỉ email, số điện thoại, liên kết kênh và mối quan hệ được liệt kê. Xóa tư cách thành viên danh sách và thẻ được liệt kê. Lịch sử hội thoại được giữ nguyên.",
+  "approval.preview.archiveEmail": "Địa chỉ email sẽ lưu trữ",
+  "approval.preview.archivePhone": "Số điện thoại sẽ lưu trữ",
+  "approval.preview.archiveChannel": "Liên kết kênh nhắn tin sẽ lưu trữ",
+  "approval.preview.archiveProject":
+    "Lưu trữ dự án này và xóa các liên kết bên liên quan, tư cách thành viên danh sách và thẻ được liệt kê. Hoạt động, giao dịch và liên kết công ty được giữ nguyên.",
+  "approval.preview.archiveDeal":
+    "Lưu trữ deal này và xóa các liên kết bên liên quan, tư cách thành viên danh sách và gán nhãn được hiển thị. Liên hệ, danh sách và nhãn vẫn được lưu.",
+  "approval.preview.archiveStakeholder": "Liên kết bên liên quan sẽ lưu trữ",
+  "approval.preview.archiveRole": "Vai trò trong liên kết này",
+  "approval.preview.archiveList": "Tư cách thành viên danh sách sẽ xóa",
+  "approval.preview.archiveTag": "Gán nhãn sẽ xóa",
+  "approval.preview.archiveActivity":
+    "Lưu trữ hoạt động này và loại khỏi công việc đang hoạt động. Nội dung vẫn được lưu; tin nhắn đã gửi không bị thu hồi.",
+  "approval.preview.archiveProduct":
+    "Lưu trữ sản phẩm này và loại khỏi danh mục đang hoạt động. Các bản chụp hạng mục báo giá hiện có không thay đổi.",
+  "approval.preview.archiveTemplate":
+    "Lưu trữ mẫu này và loại khỏi danh sách chọn mẫu, kể cả vai trò mẫu mặc định. Các báo giá hiện có giữ tham chiếu tới mẫu.",
+  "approval.preview.archiveOffer":
+    "Lưu trữ báo giá này và ẩn khỏi danh sách báo giá đang hoạt động. Các hạng mục vẫn được lưu.",
+  "approval.preview.importScopeUnavailable":
+    "Đề xuất nhập này không có đầy đủ thay đổi theo từng dòng. Mở Nhập dữ liệu để xem nguồn và lần chạy thử trước khi bắt đầu nhập.",
+  "approval.preview.confirmationOnly":
+    "Ghi nhận xác nhận này và hoàn tất lượt tự động hóa đang chờ. Không cho phép cập nhật bản ghi hoặc gửi tin nhắn.",
+  "approval.preview.confirmationQuestion": "Câu hỏi cần xác nhận",
+  "approval.preview.confirmationReason": "Lý do cần xác nhận",
+  "approval.preview.createOffer":
+    "Tạo bản nháp báo giá với các điều khoản, hạng mục và tổng tiền được hiển thị. Chưa gửi báo giá.",
+  "approval.preview.assignOfferNumber": "Cấp số báo giá khi tạo bản nháp.",
+  "approval.preview.createTemplate":
+    "Tạo mẫu báo giá với nội dung đầu trang và chân trang được hiển thị.",
+  "approval.preview.defaultTemplate":
+    "Đặt mẫu này làm mặc định cho ngôn ngữ được hiển thị.",
+  "approval.preview.createProduct":
+    "Tạo sản phẩm trong danh mục với giá và điều khoản thanh toán được hiển thị. Các dòng báo giá hiện có giữ nguyên giá.",
+  "approval.preview.billingMonths": "Kỳ thanh toán (tháng)",
+  "approval.preview.createProject":
+    "Tạo dự án, liên kết công ty được hiển thị làm khách hàng và ghi lại giai đoạn ban đầu.",
+  "approval.preview.assignProjectKey": "Cấp mã dự án khi tạo dự án.",
+  "approval.preview.createDeal":
+    "Tạo cơ hội trong quy trình và giai đoạn được hiển thị, kèm lịch sử giai đoạn ban đầu.",
+  "approval.preview.createCompany":
+    "Cho phép bên đề xuất tạo công ty này một lần với các giá trị hiển thị. Quyền hiện tại và danh tính trùng được kiểm tra lại.",
+  "approval.preview.workspaceVisible":
+    "Bản ghi mới hiển thị trong tổ chức theo quyền truy cập bản ghi.",
+  "approval.preview.geocodeConditional":
+    "Nếu tính năng mã hóa địa lý được bật, hệ thống sẽ xếp hàng tra cứu tọa độ cho địa chỉ hiển thị.",
+  "approval.preview.primaryDomain": "Tên miền chính",
+  "approval.preview.createLead":
+    "Cho phép bên đề xuất tạo lead này một lần với các giá trị hiển thị. Khi tạo, quyền và danh tính trùng được kiểm tra lại.",
+  "approval.preview.reuseRecord":
+    "Khóa nguồn đã xác định bản ghi này. Lệnh trả về bản ghi đó mà không tạo thêm bản ghi.",
+  "approval.preview.queueDuplicate":
+    "Tạo đề xuất trùng lặp để kiểm tra cùng với bản ghi mới.",
+  "approval.preview.creationExisting": "Bản ghi hiện có được trả về",
+  "approval.preview.creationDuplicate": "Đề xuất trùng lặp",
   "approval.preview.nameUnavailable": "Không có tên",
   "approval.preview.structured": "Giá trị có cấu trúc: {value}",
   "approval.preview.resolveConflict":
     "Làm rõ thông tin mâu thuẫn trước khi phê duyệt thay đổi này.",
   "history.field.closed_at": "Ngày chốt",
   "history.field.amount_minor_base": "Giá trị theo tiền tệ cơ sở",
+  "approval.preview.activeContract":
+    "Một hợp đồng vẫn đang hoạt động. Kiểm tra trước khi kết thúc quan hệ với khách hàng.",
+  "approval.preview.activeDelivery":
+    "Một dự án vẫn đang được thực hiện. Kiểm tra trước khi kết thúc quan hệ với khách hàng.",
+  "approval.preview.unknownScope":
+    "Nguồn chưa xác nhận toàn bộ quan hệ với khách hàng đã kết thúc.",
+  "approval.preview.incompleteEvidence":
+    "Bằng chứng hiện tại chưa đầy đủ. Kiểm tra công ty trước khi đổi trạng thái.",
+  "approval.preview.newerEvidence":
+    "Nguồn đã thay đổi sau đề xuất này. Kiểm tra bằng chứng hiện tại.",
+  "approval.preview.scopeCompany": "Toàn bộ quan hệ với khách hàng",
+  "approval.preview.scopeWorkstream": "Một công việc",
+  "approval.preview.scopeUnknown": "Chưa xác định phạm vi",
+  "approval.preview.scope": "Phạm vi kết thúc",
+  "approval.preview.sourceDate": "Ngày của nguồn",
+  "approval.preview.workstream": "Công việc",
   "approval.preview.conflict": "Thông tin mâu thuẫn",
   "approval.preview.execution": "Được xác định khi áp dụng",
   "approval.preview.effects": "Thay đổi kèm theo",
+  "approval.preview.authorizeMessage":
+    "Cho phép bên đề xuất gửi tin nhắn này một lần. Phê duyệt không gửi ngay và không thêm chữ ký của bạn. Khi gửi, hệ thống vẫn kiểm tra quyền truy cập và sự đồng ý hiện tại.",
+  "approval.preview.archiveLead":
+    "Lưu trữ lead này và xóa tất cả thẻ của lead. Bạn vẫn có thể xem bản ghi trong danh sách đã lưu trữ.",
+  "approval.preview.authorizeWebsite":
+    "Cho phép bên đề xuất đọc trang web này bằng các dịch vụ bên ngoài đã cấu hình. Việc đọc có thể sử dụng AI và phát sinh phí sử dụng.",
+  "approval.preview.readPage":
+    "Đọc một trang và chuẩn bị đề xuất bổ sung thông tin",
+  "approval.preview.readSite":
+    "Đưa việc thu thập các trang của trang web vào hàng đợi",
+  "approval.preview.readTechnical":
+    "Đưa việc tra cứu kỹ thuật công khai của tên miền công ty vào hàng đợi",
+  "approval.preview.targetURL": "Trang web hoặc tên miền cần đọc",
+  "approval.preview.readScope": "Phạm vi đọc",
+  "approval.preview.recordMeetingConsent":
+    "Cho phép ghi cuộc hẹn và sự đồng ý giao dịch hiển thị trước khi giữ khung giờ. Quyết định đồng ý hiện có được giữ nguyên. Sự đồng ý có thể được ghi ngay cả khi khung giờ không còn trống. Không gửi lời mời lịch.",
+  "approval.preview.preserveConsent":
+    "Giữ nguyên quyết định đồng ý hiện có; không ghi bằng chứng đồng ý mới.",
+  "approval.preview.requestConfirmation":
+    "Cho phép thử gửi yêu cầu xác nhận tiếp thị tới địa chỉ hiển thị. Việc gửi phụ thuộc vào dịch vụ thư đã cấu hình và kiểm tra sự đồng ý hiện tại. Hành động này không đăng ký liên hệ. Nội dung tiếp thị đã gửi không được lưu làm bằng chứng; xác nhận sử dụng nội dung trên trang xác nhận.",
+  "approval.preview.confirmationUnavailable":
+    "Thông tin liên hệ hoặc sự đồng ý hiện tại ngăn yêu cầu xác nhận tiếp thị. Vẫn có thể đặt lịch mà không gửi yêu cầu hoặc cấp sự đồng ý tiếp thị.",
+  "approval.preview.consentContact": "Liên hệ đồng ý",
+  "approval.preview.consentPurpose": "Mục đích giao dịch",
+  "approval.preview.consentVersion": "Phiên bản chính sách đồng ý",
+  "approval.preview.consentWording": "Nội dung đồng ý đã gửi",
+  "approval.preview.consentResult": "Quyết định đồng ý sau khi thực hiện",
+  "approval.preview.marketingPurpose": "Mục đích tiếp thị",
+  "approval.preview.marketingVersion": "Phiên bản chính sách tiếp thị đã gửi",
+  "approval.preview.marketingWording": "Nội dung tiếp thị đã gửi",
+  "approval.preview.confirmationRecipient": "Địa chỉ nhận xác nhận",
+  "approval.preview.consentGranted": "Đã đồng ý",
+  "approval.preview.consentWithdrawn": "Đã rút lại",
+  "approval.preview.authorizeInvitation":
+    "Cho phép người chủ trì đề xuất giữ khung giờ và xếp lời mời lịch này vào hàng đợi gửi tới địa chỉ hiển thị. Một liên kết riêng để đổi lịch hoặc hủy được thêm vào lời mời. Cài đặt video và nhắc nhở được hiển thị ở trên. Quyền truy cập lịch, thời gian trống và quyền gửi tới người nhận được kiểm tra khi thực hiện. Xác nhận từ nhà cung cấp không chứng minh khách đã chấp nhận hoặc nhận được lời mời.",
+  "approval.preview.authorizeChannelReply":
+    "Cho phép người đề xuất trả lời một lần trong cuộc hội thoại này tới tài khoản kênh hiển thị, với toàn bộ nội dung và các tệp đã liệt kê. Phê duyệt không gửi ngay. Vẫn phải kiểm tra khả năng gửi của kênh, quyền gửi tới người nhận và các tệp tại thời điểm thực hiện.",
+  "approval.preview.channelProvider": "Nhà cung cấp nhắn tin",
+  "approval.preview.contextAutomatic":
+    "Được xác định từ cuộc hội thoại và bằng chứng khi gửi",
+  "approval.preview.claimedContext": "Loại giao tiếp được khai báo",
+  "approval.preview.messagePurpose": "Mã mục đích đã khai báo",
+  "approval.preview.operatorReason":
+    "Giải thích của người gửi (không phải bằng chứng)",
+  "approval.preview.evidenceContract": "Hợp đồng được viện dẫn",
+  "approval.preview.evidenceInvoice": "Hóa đơn được viện dẫn",
+  "approval.preview.evidenceDeal": "Cơ hội được viện dẫn",
+  "approval.preview.contextReply": "Trả lời tin nhắn đến",
+  "approval.preview.contextSecurity": "Thông báo bảo mật",
+  "approval.preview.contextPrivacy": "Thông báo quyền riêng tư",
+  "approval.preview.contextRecord": "Xác nhận thông tin",
+  "approval.preview.contextConsent": "Xác nhận đồng ý",
+  "approval.preview.contextOptout": "Xác nhận hủy đăng ký",
+  "approval.preview.unsubscribeFooter":
+    "Khi gửi, hệ thống thêm liên kết hủy đăng ký riêng nếu người nhận có bản ghi tùy chọn phù hợp. Liên kết riêng được tạo khi thực hiện, không phải khi xem xét.",
+  "approval.preview.disclosureText": "Thông tin công bố được thêm khi gửi",
+  "approval.preview.demoteArchive":
+    "Khôi phục khách hàng tiềm năng về trạng thái Đã tương tác và xóa các liên kết xác định đủ điều kiện. Lưu trữ liên hệ, địa chỉ email, số điện thoại, danh tính kênh và các mối quan hệ; xóa thẻ và tư cách thành viên danh sách. Hoạt động giữ nguyên liên kết.",
+  "approval.preview.demotePreserve":
+    "Khôi phục khách hàng tiềm năng về trạng thái Đã tương tác và xóa các liên kết xác định đủ điều kiện. Giữ liên hệ hiện có và lịch sử; xóa liên kết ngược đến khách hàng tiềm năng này. Hoạt động giữ nguyên liên kết.",
+  "approval.preview.relinkPreserve":
+    "Các liên kết khác được giữ nguyên. Người tham gia thuộc liên kết liên hệ bị thay thế được chuyển sang liên hệ đích; các mục trùng khớp được gộp.",
+  "approval.preview.relinkRetention":
+    "Gắn hoạt động với dự án này tạo căn cứ lưu giữ thư từ thương mại. Chuyển hoạt động sau đó không xóa căn cứ này.",
+  "approval.preview.relinkDestination": "Bản ghi đích",
+  "approval.preview.relinkActivity": "Hoạt động được thêm liên kết",
+  "approval.preview.relinkUnchanged": "Hoạt động đã có liên kết",
+  "approval.preview.relinkRemoved": "Liên kết bị thay thế",
+  "approval.preview.relinkParticipantMove": "Người tham gia chuyển từ liên hệ",
+  "approval.preview.relinkParticipantMerge":
+    "Mục người tham gia trùng bị xóa khỏi liên hệ",
+  "approval.preview.relinkRole": "Vai trò người tham gia",
+  "approval.preview.relinkAddress": "Địa chỉ người tham gia",
+  "approval.preview.relinkUser": "Đồng nghiệp tham gia",
+  "approval.preview.promotionMoveLinks":
+    "Chuyển các liên kết hủy đăng ký và căn cứ liên lạc đã liệt kê sang liên hệ. Giữ nguyên phạm vi, thời hạn và trạng thái thu hồi.",
+  "approval.preview.withdrawalAddress": "Liên kết hủy đăng ký cho",
+  "approval.preview.linkIssued": "Ngày tạo liên kết",
+  "approval.preview.linkExpires": "Ngày hết hạn liên kết",
+  "approval.preview.recordRevoked": "Đã thu hồi",
+  "approval.preview.basisKind": "Căn cứ liên lạc đã ghi nhận",
+  "approval.preview.basisFrom": "Căn cứ có hiệu lực từ",
+  "approval.preview.basisUntil": "Căn cứ có hiệu lực đến",
+  "approval.preview.basisActivity": "Hoạt động làm bằng chứng cho căn cứ",
+  "approval.preview.basisContract": "Hợp đồng",
+  "approval.preview.basisRequest": "Yêu cầu trước hợp đồng",
+  "approval.preview.basisCorrespondence": "Trao đổi do người nhận bắt đầu",
+  "approval.preview.basisInterests": "Lợi ích hợp pháp",
+  "approval.preview.basisObligation": "Nghĩa vụ pháp lý",
+  "approval.preview.basisSecurity": "Lợi ích thiết yếu hoặc an ninh",
+  "approval.preview.basisCustomer": "Ngoại lệ dành cho khách hàng hiện có",
+  "approval.preview.basisAgreement": "Sự đồng ý của người nhận",
+  "approval.preview.promotionTrigger": "Lý do xác định đủ điều kiện",
+  "approval.preview.promotionNote": "Bằng chứng đủ điều kiện",
+  "approval.preview.promotionEvidence": "Hoạt động làm bằng chứng",
+  "approval.preview.promotionContactName": "Tên liên hệ",
+  "approval.preview.promotionContactSource": "Nguồn liên hệ",
+  "approval.preview.promotionContactTitle": "Chức danh sẽ thêm",
+  "approval.preview.promotionContactOwner": "Người phụ trách liên hệ",
+  "approval.preview.promotionContactEmail": "Email liên hệ sẽ thêm",
+  "approval.preview.promotionContactPhone": "Số điện thoại sẽ thêm",
+  "approval.preview.promotionExistingContact": "Liên hệ hiện có sẽ cập nhật",
+  "approval.preview.promotionSetOrigin": "Liên kết liên hệ với lead này",
+  "approval.preview.promotionDuplicateCandidate":
+    "Liên hệ có thể trùng cần xem xét",
+  "approval.preview.promotionMoveActivity": "Hoạt động sẽ chuyển sang liên hệ",
+  "approval.preview.promotionDuplicateActivity":
+    "Hoạt động đã có ở liên hệ; bỏ liên kết lead",
+  "approval.preview.promotionConsentBefore": "Sự đồng ý trước khi chuyển đổi",
+  "approval.preview.promotionRestriction": "Hạn chế sẽ chuyển sang",
+  "approval.preview.promotionRestrictionAuthority": "Hạn chế được ghi nhận bởi",
+  "approval.preview.promotionRestrictionPurpose": "Phạm vi hạn chế",
+  "approval.preview.promotionDealName": "Tên cơ hội mới",
+  "approval.preview.promotionDealAmount": "Giá trị cơ hội mới",
+  "approval.preview.promotionDealOwner": "Người phụ trách cơ hội mới",
+  "approval.preview.promotionArchive":
+    "Xác định lead đủ điều kiện, lưu trữ lead và liên kết với liên hệ. Giữ bằng chứng đồng ý ban đầu ở lead.",
+  "approval.preview.promotionCreate": "Tạo liên hệ với thông tin đã hiển thị.",
+  "approval.preview.promotionFill":
+    "Bổ sung thông tin còn thiếu đã hiển thị vào liên hệ hiện có. Giữ tên, chức danh và số điện thoại chính hiện có.",
+  "approval.preview.promotionDeal":
+    "Mở cơ hội đã hiển thị và thêm liên hệ làm bên liên quan. Lead được liên kết với cơ hội này.",
+  "approval.preview.promotionReview":
+    "Tạo một liên hệ riêng và đưa cặp có thể trùng vào danh sách xem xét.",
+  "approval.preview.promotionAllMarketing": "Tất cả hoạt động tiếp thị",
+  "approval.preview.promotionMachine": "Hệ thống tự động",
+  "approval.preview.promotionUser": "Thành viên nhóm",
+  "approval.preview.promotionAdmin": "Quản trị viên",
+  "approval.preview.promotionSubject": "Người nhận",
+  "approval.preview.demotionContact": "Liên hệ bị ảnh hưởng",
+  "approval.preview.unsignedSend":
+    "Gửi không kèm tên hiển thị của cá nhân hoặc chữ ký cá nhân. Việc phê duyệt không biến người xem xét thành tác giả.",
+  "approval.preview.senderSignature": "Chữ ký người gửi",
+  "approval.preview.signaturePrivate":
+    "Không thể hiển thị chữ ký riêng của người gửi cho người xem xét này. Hãy yêu cầu người gửi xem xét tin nhắn.",
+  "approval.preview.recordMeeting":
+    "Cho phép ghi lại cuộc họp trên các bản ghi được liên kết. Không gửi lời mời lịch hoặc email. Địa chỉ người tham dự được cung cấp không được lưu trong cuộc họp. Khung giờ của người chủ trì phải còn trống khi ghi lại.",
+  "approval.preview.meetingStart": "Bắt đầu (kèm độ lệch UTC)",
+  "approval.preview.meetingEnd": "Kết thúc (kèm độ lệch UTC)",
+  "approval.preview.meetingHost": "Người chủ trì",
+  "approval.preview.intendedAttendee":
+    "Người dự kiến tham dự (không được thông báo)",
+  "approval.preview.htmlBody": "Nội dung có định dạng",
   "approval.preview.correspondence":
     "Phân loại thư từ liên quan là hồ sơ kinh doanh.",
+  "approval.preview.attachRecipients":
+    "Liên kết các liên hệ nhận với công việc hiện có.",
+  "approval.preview.existingTask": "Công việc hiện có",
   "approval.preview.delivery":
     "Bắt đầu triển khai các dự án liên quan đủ điều kiện.",
   "approval.preview.minorUnits":
@@ -38,6 +639,27 @@ export const vi = {
   "approval.preview.unavailable":
     "Ngữ cảnh phê duyệt không có sẵn. Tải lại hoặc yêu cầu đề xuất mới.",
   "approval.preview.change": "Từ {before} thành {after}",
+  "approval.import.row": "{kind}, dòng {line} ({key})",
+  "approval.import.create": "Tạo bản ghi mới",
+  "approval.import.duplicate": "Tạo bản ghi và yêu cầu xem xét trùng lặp",
+  "approval.import.update": "Cập nhật bản ghi hiện có",
+  "approval.import.unchanged": "Giữ nguyên các trường hiện có",
+  "approval.import.skip": "Bỏ qua dòng này",
+  "approval.import.createTag": "Tạo thẻ",
+  "approval.import.applyTag": "Thêm thẻ",
+  "approval.import.contextTag": "Gắn bản ghi mới vào",
+  "approval.import.linkCompany": "Liên kết với công ty",
+  "approval.import.linkContact": "Liên kết với liên hệ",
+  "approval.import.linkLead": "Liên kết với khách hàng tiềm năng",
+  "approval.import.linkDeal": "Liên kết với cơ hội",
+  "approval.import.companyRow": "Liên kết với công ty từ dòng nhập",
+  "approval.import.contactRow": "Liên kết với liên hệ từ dòng nhập",
+  "approval.import.leadRow": "Liên kết với khách hàng tiềm năng từ dòng nhập",
+  "approval.import.dealRow": "Liên kết với cơ hội từ dòng nhập",
+  "approval.import.droppedLink": "Bỏ liên kết không xác định được",
+  "approval.import.createActivity":
+    "Lưu hoạt động mà không gửi tin nhắn hoặc lời mời lịch",
+  "approval.import.closeDeal": "Đóng cơ hội theo lịch sử đã nhập",
   "approval.preview.authorityUnknown":
     "Không có thông tin về lý do bạn có thể duyệt thay đổi này.",
   "approval.preview.reviewer": "Quyền phê duyệt",
@@ -182,6 +804,13 @@ export const vi = {
   "reporting.draftPreviewing":
     "Bạn đang xem bản nháp. Ai đọc báo cáo vẫn thấy bản đã công bố.",
   "reporting.previewDraft": "Xem trước bản nháp",
+  "reporting.previewAs": "Xem trước với vai trò",
+  "reporting.previewAsSelf": "Góc nhìn của bạn",
+  "reporting.previewAsBanner":
+    "Xem trước với vai trò {role}: những gì một tài khoản có vai trò này và cùng các nhóm đọc được trong báo cáo này. Bản ghi riêng tư của tài khoản khác vẫn bị ẩn ở đây.",
+  "reporting.endPreview": "Kết thúc xem trước",
+  "reporting.previewNoRecords":
+    "Bản xem trước không mở bản ghi. Kết thúc xem trước để mở chúng với quyền truy cập của bạn.",
   "reporting.showPublished": "Hiện bản đã công bố",
   "reporting.publishDraft": "Công bố bản nháp",
   "reporting.discardDraft": "Bỏ bản nháp",
@@ -196,6 +825,51 @@ export const vi = {
     "Hãy công bố hoặc bỏ bản nháp trước khi khôi phục một phiên bản trước.",
   "reporting.moveUp": "Chuyển lên",
   "reporting.moveDown": "Chuyển xuống",
+  "reporting.sectionN": "Phần {n}",
+  "reporting.sectionTitle": "Tiêu đề phần {n}",
+  "reporting.addSection": "Thêm phần",
+  "reporting.removeSection": "Xóa phần {n}",
+  "reporting.cardWidth": "Độ rộng của {chart}",
+  "reporting.widthFull": "Toàn chiều rộng",
+  "reporting.widthHalf": "Nửa chiều rộng",
+  "reporting.cardSection": "Phần của {chart}",
+  "reporting.removeCard": "Xóa {chart}",
+  "reporting.addChart": "Thêm biểu đồ",
+  "reporting.questionCard": "Câu hỏi: {population}",
+  "reporting.questionLoading": "Đang hỏi…",
+  "reporting.questionNotKept":
+    "Không lưu trong báo cáo đã gửi này. Mở báo cáo trực tiếp để xem câu trả lời cho câu hỏi này.",
+  "reporting.questionLink": "Liên kết tới báo cáo tùy chỉnh đã lưu",
+  "reporting.questionLinkInvalid":
+    "Dán liên kết mà Sao chép liên kết đưa ra trên báo cáo tùy chỉnh đã lưu.",
+  "reporting.addQuestion": "Thêm câu hỏi",
+  "reporting.questionKeptWithheld":
+    "Quyền truy cập của bạn không bao gồm câu hỏi này, nên câu trả lời đã lưu không được hiển thị.",
+  "reporting.questionNotKeptNoRetention":
+    "Không lưu: báo cáo đã gửi chưa có thời hạn lưu giữ khi báo cáo này được gửi.",
+  "reporting.questionNotKeptTooMany":
+    "Không lưu: câu trả lời này dựa trên nhiều bản ghi hơn mức một báo cáo đã gửi lưu giữ.",
+  "reporting.questionNotKeptUnanswered":
+    "Không lưu: tài khoản gửi không thể đặt câu hỏi này khi báo cáo được gửi.",
+  "reporting.questionNotKeptOtherRecords":
+    "Không lưu: câu hỏi này đếm các loại bản ghi khác với loại được liệt kê, và báo cáo đã gửi không lưu các loại đó.",
+  "reporting.questionExpired":
+    "Không còn khả dụng. Quy tắc lưu giữ đã xóa các câu trả lời của báo cáo đã gửi này.",
+  "reporting.questionRedacted":
+    "Đã bị xóa khỏi báo cáo đã gửi này theo một yêu cầu quyền riêng tư.",
+  "reporting.editionRetention_one":
+    "Báo cáo đã gửi giữ các số liệu và câu trả lời trong {count} ngày, sau đó quy tắc lưu giữ sẽ xóa chúng.",
+  "reporting.editionRetention_other":
+    "Báo cáo đã gửi giữ các số liệu và câu trả lời trong {count} ngày, sau đó quy tắc lưu giữ sẽ xóa chúng.",
+  "reporting.questionNotPreviewed":
+    "Không hiển thị trong bản xem trước theo vai trò. Quyền truy cập của mỗi tài khoản đọc sẽ trả lời câu hỏi này khi mở báo cáo.",
+  "reporting.questionFiltered":
+    "Báo cáo tùy chỉnh này có bộ lọc, thẻ báo cáo không thể giữ bộ lọc. Lưu một bản sao không có bộ lọc; phạm vi của báo cáo sẽ thu hẹp thẻ.",
+  "reporting.previewChart": "Xem trước",
+  "reporting.previewLoading": "Đang tải bản xem trước…",
+  "reporting.previewEmpty":
+    "Chưa có gì để vẽ cho kỳ và chỉ số của báo cáo này. Vẫn thêm biểu đồ, hoặc đổi kỳ trong Tùy chỉnh báo cáo.",
+  "reporting.chooseChart": "Biểu đồ cần thêm",
   "reporting.exportCsv": "Xuất CSV",
   "reporting.captureContexts": "Ghi nhận lịch sử pipeline hằng ngày",
   "reporting.captureHelp":
@@ -343,6 +1017,7 @@ export const vi = {
   "reporting.restricted": "Hồ sơ bị hạn chế",
   "reporting.next": "Trang tiếp",
   "reporting.name": "Tên báo cáo",
+  "reporting.description": "Mục đích",
   "reporting.audience": "Hiển thị với",
   "reporting.private": "Chỉ tôi",
   "reporting.team": "Nhóm đã chọn",
@@ -725,9 +1400,6 @@ export const vi = {
   "aiAdmin.rates": "Đầu vào {input} · Đầu ra {output} mỗi 1 triệu token",
 
   "brief.weekly.tasksCompleted": "Việc cần làm đã hoàn tất",
-  "teamweekly.noPriority": "Chỉ số đã ghi nhận không cho thấy ưu tiên nào",
-  "teamweekly.basis":
-    "Tóm tắt của từng thành viên cho tuần đã ghi nhận. Kế hoạch và Danh sách công việc hiện tại cho thấy trách nhiệm hôm nay.",
   "brief.weekly.noMeetings": "Chưa ghi nhận",
   "brief.weekly.noLeads": "Chưa nhận lead nào",
   "brief.weekly.noCommitments": "Không có cam kết đến hạn",
@@ -740,8 +1412,6 @@ export const vi = {
   "brief.weekly.partialValue": "{value} (một phần)",
   "brief.week.beforeHistory":
     "Tuần này nằm trước thời điểm có dữ liệu đầu tiên nên không có số liệu để báo cáo.",
-  "teamweekly.headline.notRecorded":
-    "Một số số liệu của tuần này không được ghi nhận nên đã bị lược bỏ.",
   "home.receipt.date": "Ngày chốt: {before} → {after}",
   "home.receipt.undated": "Chưa có ngày",
   "home.receipt.confidence": "Đã cập nhật độ tin cậy dự báo",
@@ -751,7 +1421,6 @@ export const vi = {
   "home.change.stageUnknown": "Không rõ giai đoạn",
   "home.change.unidentified": "Không rõ",
   "home.change.by": "Người đổi: {actor}",
-  "brief.focus.inQueue": "Trong Danh sách công việc",
   "brief.focus.position": "{at} / {count}",
   "worklist.bandCount_one": "{count} việc",
   "worklist.bandCount_other": "{count} việc",
@@ -760,16 +1429,9 @@ export const vi = {
   "brief.queue.title": "Danh sách công việc",
   "brief.queue.show": "Hiển thị Danh sách công việc",
   "brief.queue.hide": "Ẩn Danh sách công việc",
-  "brief.focus.urgentRemaining_one":
-    "Còn {count} việc khẩn cấp trong Danh sách công việc",
-  "brief.focus.urgentRemaining_other":
-    "Còn {count} việc khẩn cấp trong Danh sách công việc",
-  "brief.focus.remaining": "Còn {count} việc ưu tiên trong Danh sách công việc",
   "brief.team.planUnavailable":
     "Không có kế hoạch hiện tại nào của {name} mà bạn có quyền xem.",
   "brief.team.noCommitments": "{name} chưa có cam kết trong kế hoạch này.",
-  "brief.team.outcomes":
-    "{won} thắng · {lost} thua · {moved} deal đã chuyển · {leads} lead đã giao",
   "brief.schedule.unavailable": "Không thể tải lịch.",
   "brief.schedule.more": "Tải thêm mục lịch trình để xem các cuộc họp còn lại.",
   "brief.schedule.notConnected":
@@ -780,7 +1442,7 @@ export const vi = {
   "brief.schedule.reconnect": "Kết nối lại lịch",
   "brief.schedule.nextAt": "Cuộc họp tiếp theo lúc {time}",
   "brief.readings.riskPartial": "Chỉ giá trị đã biết · chưa kiểm tra hết",
-  "brief.readings.unpricedCount_one": "1 deal chưa định giá · không tính",
+  "brief.readings.unpricedCount_one": "{count} deal chưa định giá · không tính",
   "brief.readings.unpricedCount_other":
     "{count} deal chưa định giá · không tính",
   "brief.coverage.source.generic": "Công việc khác",
@@ -830,6 +1492,8 @@ export const vi = {
   "dealSuggestion.field.amount": "Số tiền",
   "dealSuggestion.field.currency": "Loại tiền",
   "dealSuggestion.field.stage": "Giai đoạn",
+  "dealSuggestion.accountOwner": "Phụ trách công ty",
+  "dealSuggestion.unassignedOwner": "Chưa phân công",
   "dealSuggestion.field.owner": "Người chịu trách nhiệm",
   "dealSuggestion.ownerMe": "Tôi",
   "dealSuggestion.field.closeDate": "Ngày chốt dự kiến",
@@ -838,12 +1502,6 @@ export const vi = {
   "dealSuggestion.accepted": "Đã mở deal: {name}.",
   "dealSuggestion.acceptedUnlinked":
     "Đã mở deal: {name}. Một số bằng chứng vẫn ở chỗ cũ vì quyền không cho phép chuyển.",
-  "brief.team.commitmentRate":
-    "Đã hoàn tất {done} trên {total} cam kết đến hạn.",
-  "brief.team.meetingRate":
-    "{done} trên {total} cuộc họp đã ghi nhận bước tiếp theo.",
-  "brief.digest.messages": "Email đã đồng bộ",
-  "brief.team.week": "Tuần bắt đầu",
   "brief.week.lostLabel": "Thua",
   "brief.feed.refreshFailed":
     "Không thể làm mới Bản tin sáng. Đang hiển thị công việc đã tải lần trước.",
@@ -869,23 +1527,16 @@ export const vi = {
   "worklist.untitled.meeting_follow_up": "Cuộc họp",
   "brief.plan.select": "Tìm deal, lead, liên hệ, công ty hoặc dự án",
   "brief.plan.period": "Kế hoạch hiện tại · tuần từ {date}",
-  "brief.forecast.period":
-    "Kỳ dự báo: {start} đến {end}. Lưu cùng bản tổng kết tuần này.",
-  "brief.team.none": "Chưa có nhóm nào. Thêm nhóm trong Cài đặt.",
-  "brief.week.supporting": "Chỉ số, dự báo và nhận xét",
   "brief.coverage.retry": "Làm mới bản tin",
   "brief.reply.owed": "Khách hàng đang chờ bạn trả lời",
-  "brief.createdAt": "Bản tin tạo lúc {when}",
-  "brief.updatedAt": "Lịch trình cập nhật lúc {when}",
   "brief.changes.superseded":
     "Deal này lại vừa thay đổi. Mở deal để xem lại trạng thái hiện tại.",
-  "brief.changes.title": "Các thay đổi đã làm thay bạn",
+  "brief.changes.title": "Đang chờ bạn xác nhận",
   "brief.changes.accept": "Chấp nhận",
   "brief.changes.accepted": "Đã chấp nhận",
   "brief.changes.undone": "Đã hoàn tác",
   "brief.updates.title": "Cập nhật",
   "brief.task.undated": "Chưa có hạn",
-  "brief.readings.summary": "Tóm tắt công việc",
   "brief.readings.unpriced": "Chưa có giá",
   "brief.readings.noDealWork": "Không có",
   "brief.readings.noDealWorkWhy": "Hôm nay không có deal nào bị gắn cờ",
@@ -906,20 +1557,18 @@ export const vi = {
   "brief.week.lost_one": "Thua {count} deal.",
   "brief.week.lost_other": "Thua {count} deal.",
   "brief.row.details": "Chi tiết",
-  "brief.glance.introTeam": "Tổng quan hôm nay của nhóm.",
-  "teamweekly.focus.deals_at_risk": "Vực dậy deal",
-  "teamweekly.headline.partial":
-    "Độ bao phủ chưa đầy đủ. Số liệu này gồm các thành viên được tính bên dưới.",
-  "teamweekly.headline.unmeasured":
-    "Tuần này không có ảnh chụp số liệu nào của thành viên. Hiệu suất không được đo lường.",
   "worklist.lead.noTarget": "chưa đặt mục tiêu phản hồi",
   "worklist.lead.lastTouch": "hoạt động gần nhất {date}",
   "worklist.deal.omitted": "không tính vào dự báo",
   "worklist.deal.provisional": "dự kiến chốt {date} (chưa xác nhận)",
-  "brief.readings.riskBasis": "Giá trị kỳ vọng · không tính deal chưa định giá",
-  "brief.readings.risk": "Doanh thu có rủi ro",
-  "brief.glance.introTeamWeekly": "Xem lại tuần đã ghi nhận của nhóm.",
-  "brief.feed.teamTitle": "Ưu tiên của nhóm",
+  "brief.readings.riskBasis":
+    "Giá trị danh nghĩa · không phải tổn thất dự kiến",
+  "magic.action.forecast_changed": "Đã điều chỉnh dự báo",
+  "magic.why.forecast_review":
+    "Deal cần được xem xét sau một thời gian không có tiến triển.",
+  "magic.why.forecast_date": "Ngày dự báo được ước tính từ tiến độ pipeline.",
+  "magic.undescribed": "Hoạt động chưa được mô tả",
+  "brief.readings.risk": "Giá trị pipeline được đánh dấu",
   "theme.toDark": "Giao diện tối",
   "theme.toLight": "Giao diện sáng",
   // Ba lựa chọn giao diện — menu tài khoản hiện cả ba cùng lúc, nên mỗi nhãn nói
@@ -2578,11 +3227,16 @@ export const vi = {
   "approval.kind.vcard_create": "Tạo liên hệ từ danh thiếp",
   "approval.kind.lifecycle_change": "Giai đoạn vòng đời",
   "approval.kind.stage_progression": "Chuyển giai đoạn deal",
+  "approval.preview.requiredCriterionMet": "Đã đáp ứng tiêu chí bắt buộc",
+  "approval.preview.requiredCriterionUnmet": "Chưa đáp ứng tiêu chí bắt buộc",
+  "approval.preview.optionalCriterionMet": "Đã đáp ứng tiêu chí không bắt buộc",
+  "approval.preview.optionalCriterionUnmet":
+    "Chưa đáp ứng tiêu chí không bắt buộc",
   "approval.field.because": "Lý do",
   "approval.field.from_stage": "Từ",
   "approval.field.to_stage": "Đến",
   "approval.kind.transcript_proposal": "Thêm bước tiếp theo từ bản chép lời",
-  "approval.kind.commitment_task": "Thêm việc cần làm cho cam kết",
+  "approval.kind.commitment_task": "Cam kết công việc",
   "approval.kind.fx_rate_proposal": "Cập nhật tỷ giá",
   "approval.kind.disqualify_lead": "Loại lead",
   "approval.kind.demote_lead": "Hủy xác nhận lead đủ điều kiện",
@@ -4140,7 +4794,6 @@ export const vi = {
   "decision.status.expired": "Đã hết hạn",
 
   "brief.panel.weekly": "Tổng kết tuần",
-  "brief.weekly.learnings.title": "Nhận xét cần xem lại",
   "brief.weekly.learnings.worked": "Kết quả tích cực",
   "brief.weekly.learnings.didNotWork": "Kết quả không thành công",
   "brief.weekly.learnings.pattern": "Xu hướng",
@@ -4149,8 +4802,7 @@ export const vi = {
   "brief.weekly.learnings.insufficient":
     "Chưa đủ bằng chứng đã ghi nhận để đưa ra nhận xét hữu ích.",
   "brief.weekly.scorecard.title": "Bảng điểm tuần",
-  "brief.weekly.scorecard.leadBlock": "Lead và cuộc họp",
-  "brief.weekly.scorecard.dealBlock": "Deal",
+  "brief.weekly.scorecard.basis": "Cơ sở",
   "brief.weekly.scorecard.advanced": "Lượt lead tiến lên",
   "brief.weekly.scorecard.advancedBasis": "Theo bước · không theo lead",
   "brief.weekly.scorecard.answeredInTarget": "Trễ hạn mục tiêu",
@@ -4186,15 +4838,27 @@ export const vi = {
   "brief.view.label": "Chế độ xem Trang chủ",
   "brief.view.morning": "Buổi sáng",
   "brief.view.weekly": "Tuần",
-  "brief.scope.label": "Bản tin của ai",
-  "brief.scope.mine": "Của tôi",
-  "brief.scope.team": "Nhóm",
   // Câu mở đầu của bản tóm tắt, ghép từ chính những dòng trang đang hiển thị —
   // không do mô hình viết.
   "brief.sentence.clear": "Không có ưu tiên cần xử lý ngay.",
   "brief.sentence.one": "Trước tiên: {lead}",
   "brief.sentence.many": "Trước tiên: {lead}. Sau đó là {rest}.",
   "brief.sentence.rest": "{count} việc nữa",
+  "brief.sentence.oneFor": "Trước tiên, cho {who}: {lead}",
+  "brief.sentence.manyFor": "Trước tiên, cho {who}: {lead}. Sau đó là {rest}.",
+  "brief.sentence.meeting":
+    "Cuộc họp tiếp theo của bạn là {meeting} lúc {time}.",
+  "brief.briefedAt": "Margince tóm tắt lúc {time}",
+  "brief.first.title": "Trước tiên",
+  "brief.first.then": "Sau đó",
+  "brief.first.why": "Vì sao mục này được ưu tiên?",
+  "brief.intro.waiting": "Đang chờ bạn",
+  "brief.intro.meetings": "Cuộc họp hôm nay",
+  "brief.intro.urgent": "Khẩn cấp",
+  "brief.intro.read_one": "Lần chạy ban đêm gần nhất: đã đồng bộ 1 email.",
+  "brief.intro.read_other":
+    "Lần chạy ban đêm gần nhất: đã đồng bộ {count} email.",
+  "brief.intro.skip": "Nhấn phím bất kỳ hoặc bấm để tiếp tục",
   "brief.order.withheld": "Thứ tự này chưa tính: {factors}",
   "brief.factor.warmth": "mức độ thân thiết của quan hệ",
   "brief.factor.unknown": "một yếu tố mà phiên bản này không thể gọi tên",
@@ -4214,95 +4878,12 @@ export const vi = {
   "brief.week.quiet":
     "Chưa ghi nhận công việc hoàn tất hay biến động deal nào.",
 
-  "brief.feed.title": "Ưu tiên",
   "brief.feed.changedBadge_one": "1 đã thay đổi",
   "brief.feed.changedBadge_other": "{count} đã thay đổi",
   "brief.feed.loading": "Đang tải Bản tin sáng…",
   "brief.feed.clear":
     "Không có ưu tiên cần xử lý ngay. Có thể xem toàn bộ Danh sách công việc.",
-  "teamweekly.title": "Tuần của nhóm",
-  "teamweekly.weekOf": "{team} · tuần từ {day}",
-  "teamweekly.frozen": "Đã cố định",
-  "teamweekly.loading": "Đang tải tuần của nhóm…",
-  "teamweekly.empty": "Tuần này không có gì để hiển thị.",
-  "teamweekly.forbidden":
-    "Tổng kết nhóm dành cho trưởng nhóm và các vai trò giám sát mọi nhóm.",
-  "teamweekly.noSnapshot":
-    "Chưa có bản tổng kết đã lưu cho nhóm và tuần này. Chọn tuần khác hoặc xem công việc hiện tại của nhóm.",
   "teamweekly.pickTeam": "Chọn nhóm",
-  "teamweekly.chooseTeam": "Chọn nhóm để xem công việc của nhóm.",
-  "teamweekly.repsUnread":
-    "Thiếu ảnh chụp số liệu của {count} thành viên nhóm. Số liệu này gồm {counted} thành viên.",
-  "teamweekly.ofTotal": "{part} trên {whole}",
-  "teamweekly.headline.plain":
-    "Không ghi nhận cuộc họp hay cam kết đến hạn nào.",
-  "teamweekly.card.firstResponse": "Lead đã được phản hồi",
-  "teamweekly.card.firstResponseBasis": "{breached} quá hạn phản hồi",
-  "teamweekly.card.noLeads": "Chưa nhận lead nào",
-  "teamweekly.card.meetings": "Cuộc họp có việc tiếp theo",
-  "teamweekly.card.meetingsBasis": "Đã liên kết việc cần làm trước cuối tuần",
-  "teamweekly.card.noMeetings": "Chưa ghi nhận",
-  "teamweekly.card.commitments": "Cam kết đã giữ đúng",
-  "teamweekly.card.commitmentsBasis": "Đến hạn trong kế hoạch",
-  "teamweekly.card.noCommitments": "Không có cam kết đến hạn",
-  "teamweekly.card.won": "Thắng",
-  "teamweekly.card.wonBasis": "{lost} thua · giá trị không khả dụng",
-  "teamweekly.card.wonBasisValue": "{value} · {lost} thua",
-  "teamweekly.card.reps": "Thành viên được tính",
-  "teamweekly.card.repsBasis": "Đã ghi nhận đủ tuần",
-  "teamweekly.movement.title": "Hoạt động trong tuần",
-  "teamweekly.movement.won": "Thắng",
-  "teamweekly.movement.lost": "Thua",
-  "teamweekly.movement.moved": "Tiến lên",
-  "teamweekly.movement.meetings": "Cuộc họp đã diễn ra",
-  "teamweekly.movement.leads": "Lead đã phân bổ",
-  "teamweekly.agenda.title": "Chương trình họp thứ Hai",
-  "teamweekly.agenda.empty":
-    "Không thể tải tuần làm việc của thành viên nào trong nhóm này, nên chưa có chương trình họp.",
-  "teamweekly.agenda.summary_one":
-    "{count} mục cho thứ Hai, bắt đầu bằng {first}.",
-  "teamweekly.agenda.summary_other":
-    "{count} mục cho thứ Hai, bắt đầu bằng {first}.",
-  "teamweekly.agenda.copy": "Sao chép chương trình",
-  "teamweekly.agenda.copied": "Đã sao chép",
-  "teamweekly.agenda.copyFailed":
-    "Không thể sao chép chương trình họp. Chọn danh sách rồi sao chép thủ công.",
-  "teamweekly.focus.help_requested": "Đã yêu cầu hỗ trợ",
-  "teamweekly.focus.leads_breached": "Không đạt mục tiêu phản hồi",
-  "teamweekly.focus.commitments_missed": "Cam kết kế hoạch bị lỡ",
-  "teamweekly.focus.meetings_without_next_step":
-    "Thiếu bằng chứng về việc tiếp theo",
-  "teamweekly.focus.strong_week": "Tuần hiệu quả",
-  "teamweekly.focus.quiet_week": "Chưa xác định ưu tiên",
-  "teamweekly.focus.forecast_downgrades": "Dự báo bị hạ",
-  "teamweekly.focus.stage_regressions": "Deal bị lùi giai đoạn",
-  "teamweekly.focus.close_dates_provisional": "Ngày chốt còn tạm tính",
-  "teamweekly.focus.no_next_step_coverage": "Thiếu bước tiếp theo",
-  "teamweekly.funnel.line": "{stage} → {next}: {rep} so với {team} của nhóm",
-  "teamweekly.funnel.lineLast": "{stage}: {rep} so với {team} của nhóm",
-  "teamweekly.attention.title": "Cần chú ý ngay",
-  "teamweekly.attention.live": "Hiện tại",
-  "teamweekly.attention.basis":
-    "Đọc ngay từ các deal của thành viên nhóm, không cố định cùng tuần.",
-  "teamweekly.attention.empty": "Hiện không có deal nào của nhóm cần chú ý.",
-  "teamweekly.attention.quiet": "Không có hoạt động trong {days} ngày",
-  "teamweekly.quality.title": "Chất lượng dữ liệu",
-  "teamweekly.quality.accepted": "Đề xuất được chấp nhận",
-  "teamweekly.quality.rejected": "Đề xuất bị từ chối",
-  "teamweekly.quality.reversals": "Thay đổi tự động đã hoàn tác",
-  "teamweekly.quality.notMeasured": "Chưa đo",
-  "teamweekly.quality.basis": "Cố định cùng tuần",
-  "teamweekly.coverage.title": "Độ phủ giá trị deal",
-  "teamweekly.coverage.month": "Tháng",
-  "teamweekly.coverage.quarter": "Quý",
-  "teamweekly.coverage.atRisk": "Độ phủ có rủi ro so với {basis}",
-  "teamweekly.coverage.holds": "Độ phủ đạt so với {basis}",
-  "teamweekly.coverage.percent": "{percent} giá trị deal cần có",
-  "teamweekly.coverage.replan": "Nên lập lại kế hoạch",
-  "teamweekly.coverage.notAuthorized":
-    "Không đọc được nhận định của kỳ này khi tuần khép lại.",
-  "teamweekly.coverage.basis.manager_call": "nhận định của quản lý",
-  "teamweekly.coverage.basis.historical_median": "trung vị lịch sử",
 
   "plan.loading": "Đang tải kế hoạch…",
   "plan.empty": "Chưa có gì trong kế hoạch.",
@@ -4361,6 +4942,7 @@ export const vi = {
   "brief.weekly.outlook.bestCaseDetail": "Gồm Commit",
   "brief.weekly.outlook.weighted": "Giá trị deal có trọng số",
   "brief.weekly.outlook.landing": "Kết quả dự kiến",
+  "brief.weekly.outlook.open": "Mở dự báo",
   "brief.weekly.outlook.measure.commit_evidence": "Theo bằng chứng Commit",
   "brief.weekly.outlook.measure.weighted": "Theo deal có trọng số",
   "brief.weekly.outlook.measure.manager_call": "Theo nhận định của quản lý",
@@ -4377,9 +4959,29 @@ export const vi = {
   "brief.weekly.bar.won": "Thắng",
   "brief.weekly.bar.lost": "Thua",
   "brief.weekly.bar.other": "Tỷ giá và định nghĩa",
-  "brief.weekly.frozen": "Đã khóa",
-  "brief.weekly.written": "tạo lúc {at}",
   "brief.weekly.pickWeek": "Mở tuần khác",
+  "brief.report.kicker": "Báo cáo tuần · Tuần {week}",
+  "brief.weekly.outcome.moved": "đã đổi giai đoạn",
+  "brief.weekly.outcome.won": "đã chốt",
+  "brief.weekly.outcome.lost": "đã mất",
+  "brief.report.frozenAt": "Chốt lúc {at}",
+  "brief.report.vsPrior": "{delta} so với tuần trước",
+  "brief.report.priorWeek": "Tuần trước = tuần {week} ({range})",
+  "brief.report.chapter.forecast": "Dự báo",
+  "brief.report.chapter.glance": "Tổng quan",
+  "brief.report.chapter.closed": "Deal đã đóng",
+  "brief.report.chapter.movement": "Biến động pipeline",
+  "brief.report.chapter.commitments": "Tuần tới",
+  "brief.report.chapter.figures": "Số liệu",
+  "brief.report.chapter.observations": "Nhận xét",
+  "brief.report.closedTotal": "Thắng {won} · Thua {lost}",
+  "brief.report.next": "Báo cáo tiếp theo vào {date}",
+  "brief.report.earlier": "Tuần trước đó",
+  "brief.report.later": "Tuần sau đó",
+  "brief.report.col.figure": "Chỉ số",
+  "brief.report.col.week": "Tuần này",
+  "brief.report.col.prior": "Tuần trước",
+  "brief.report.col.change": "Thay đổi",
   "brief.weekly.none":
     "Chưa có bản tổng kết tuần. Bản đầu tiên sẽ có vào thứ Hai sau tuần đầy đủ đầu tiên.",
   "brief.weekly.tasksDelivered": "Việc đến hạn đã hoàn tất",
@@ -4392,33 +4994,15 @@ export const vi = {
     "{accepted} đã chấp nhận · {rejected} đã từ chối",
   "brief.weekly.queueWorked": "Việc trong Bản tin sáng",
   "brief.weekly.actedDismissed": "{acted} đã xử lý · {dismissed} đã bỏ qua",
-  "brief.weekly.sincePrior": "{delta} so với tuần từ {week}",
-  "brief.weekly.wonVsPrior": "{value} · {delta} so với tuần từ {week}",
   "brief.weekly.leadsAnswered": "Lead đã được phản hồi",
   "brief.weekly.ofRouted": "{answered} trên {routed}",
   "brief.weekly.planCommitmentsKept": "Cam kết đã hoàn thành",
   "brief.weekly.meetingsHeld": "Cuộc họp có việc tiếp theo",
   "brief.weekly.ofMeetings": "{withStep} trên {held}",
   "brief.weekly.carriedOver": "Việc còn mở cuối tuần",
-  "brief.weekly.outcome.moved": "đã đổi giai đoạn",
-  "brief.weekly.outcome.won": "đã chốt",
-  "brief.weekly.outcome.lost": "đã mất",
   "brief.act": "Xong",
   "brief.dismiss": "Bỏ qua",
 
-  "brief.digestSynced": "Chi tiết đồng bộ",
-  "brief.digestContacts": "Liên hệ đã tạo",
-  "brief.digestCompanies": "Công ty đã tạo",
-  "brief.digestDedupe": "Bản trùng cần xem lại",
-  "brief.digestClassify":
-    "Cam kết: {commitments} · Cuộc họp: {meetings} · Tin nhắn không cần thao tác bán hàng: {noise}",
-  "brief.digestProjects": "Dự án",
-  "brief.digestPhaseChanges": "Chuyển giai đoạn",
-  "brief.digestNewCommitments": "Cam kết mới",
-  "brief.digestGoneQuiet": "Đã im lặng",
-  "brief.digestPhaseChange": "{from} → {to}",
-  "brief.digestCommitmentCount": "{count} cam kết mới còn mở",
-  "brief.digestQuietDays": "im lặng {days} ngày",
   "brief.glance.morning": "Chào buổi sáng, {name}.",
   "brief.glance.morningAnon": "Chào buổi sáng.",
   "brief.glance.afternoon": "Chào buổi chiều, {name}.",
@@ -4431,11 +5015,8 @@ export const vi = {
     "Xem lại kết quả và lên kế hoạch cho bước tiếp theo.",
   "brief.glance.intro": "Tổng quan hôm nay.",
   "brief.panel.decisions": "Phê duyệt",
-  "brief.panel.overnight": "Trong đêm",
   "brief.rail.quietSchedule": "Không có lịch hẹn",
   "brief.panel.schedule": "Cuộc họp sắp tới",
-  "brief.overnight.connectorsUnhealthy": "Trình kết nối cần xử lý",
-  "brief.overnight.fixConnector": "Sửa trình kết nối",
   "brief.readings.label": "Số liệu hôm nay",
   "brief.readings.floorTip":
     "Một nguồn đã chạm giới hạn, nên con số này là mức tối thiểu.",
@@ -4464,6 +5045,7 @@ export const vi = {
   "brief.readings.leadsBasis": "Việc cần làm đã lên kế hoạch cho lead",
   "brief.readings.leadsDue": "Hạn tiếp theo {value}",
   "brief.rail": "Ngữ cảnh",
+  "brief.rail.numbers": "Số liệu",
   "brief.deck.later": "Để sau",
   "brief.deck.showMore": "Hiển thị toàn bộ tin nhắn",
   "brief.deck.showLess": "Thu gọn",
@@ -4632,6 +5214,9 @@ export const vi = {
     "Tạo công ty mới nếu không chọn công ty có sẵn trong danh sách.",
   "create.dealName": "Tên deal",
   "create.amount": "Giá trị",
+  "create.amountNegative": "Nhập số tiền từ 0 trở lên.",
+  "create.referenceNotFound":
+    "Bản ghi này không còn tồn tại hoặc bạn không thể xem.",
   "create.currency": "Loại tiền",
   "create.stage": "Giai đoạn",
   "create.relatedCompany": "Công ty",
@@ -5539,6 +6124,13 @@ export const vi = {
   "analytics.share.closeBody":
     "Liên kết sẽ ngừng hoạt động ngay với bất kỳ ai có liên kết. Không thể mở lại liên kết đã đóng.",
   "analytics.frame": "Tính đến {asOf} · {zone}",
+  "review.unlinkedSignal": "Nhu cầu mua chưa có cơ hội bán hàng",
+  "review.signalNotRelevant": "Không liên quan",
+  "review.signalOccurred": "Ngày của nguồn: {date}",
+  "review.uncertainBuyer":
+    "Xác nhận ai muốn mua và họ đại diện cho công ty nào trước khi tạo deal.",
+  "review.historicalSignal":
+    "Nguồn này đã cũ. Kiểm tra xem cơ hội còn hiện tại trước khi liên kết.",
   "review.title": "Kiểm tra trước khi đưa nhận định",
   "review.ready": "Sẵn sàng",
   "review.readyWithExceptions": "Sẵn sàng, có lưu ý",
@@ -6513,6 +7105,8 @@ export const vi = {
   "import.reason.run_in_flight":
     "Lần nhập này đang chạy. Nó tự hoàn tất và trang này tự cập nhật.",
   "import.reason.undo_failed": "Không thể hoàn tác bản ghi này.",
+  "import.reason.amount_negative":
+    "“{value}” nhỏ hơn 0, mà số tiền của deal thì không được âm.",
   "import.reason.author_too_long": "Tác giả dài hơn {max} ký tự.",
   "import.reason.cannot_create":
     "Bạn không có quyền tạo {plural} nên tệp {plural} bị bỏ qua.",
@@ -6806,6 +7400,9 @@ export const vi = {
   "jobs.kind.comms_scheduled_send_recovery": "Khôi phục thư hẹn giờ",
   "jobs.kind.comms_send_email": "Gửi thư",
   "jobs.kind.company_name_promotion": "Lấy tên công ty từ chữ ký thư",
+  "systemJob.datatask": "Cập nhật dữ liệu",
+  "jobs.kind.data_task_run": "Lô cập nhật dữ liệu",
+  "jobs.kind.data_task_reconcile": "Đối soát cập nhật dữ liệu",
   "jobs.kind.deal_scout": "Trinh sát deal",
   "jobs.kind.document_extract": "Trích xuất tài liệu",
   "jobs.kind.embed_drift_sweep": "Cập nhật bù chỉ mục tìm kiếm",
@@ -8271,6 +8868,33 @@ export const vi = {
   "blockedDomains.source.verdict": "Kết quả mô hình",
   "blockedDomains.source.heuristic": "Quy tắc suy đoán",
   "blockedDomains.source.human": "Thành viên",
+  "blockedDomains.source.reservedDomain":
+    "Tên miền dành riêng: tạm dừng nhận dạng công ty",
+  "blockedDomains.source.forwardedIdentity":
+    "Trang web khác đã phản hồi. Xác nhận công ty phù hợp.",
+  "worklist.domainReview.defer": "Để sau",
+  "worklist.domainReview.restore": "Đưa lại vào mục xem xét",
+  "worklist.domainReview.deferEffect":
+    "Để sau ẩn câu hỏi khỏi hàng đợi của bạn cho đến khi có bằng chứng mới. Bạn vẫn có thể tìm thấy câu hỏi tại đây.",
+  "worklist.domainReview.title": "Xem xét tên miền",
+  "worklist.domainReview.loading": "Đang tải tên miền…",
+  "worklist.domainReview.empty": "Không có tên miền cần xem xét.",
+  "worklist.domainReview.more": "Tải thêm",
+  "worklist.domainReview.forwarded": "Trang phản hồi: {url}",
+  "worklist.domainReview.evidenceAt": "Bằng chứng mới nhất: {date}",
+  "worklist.domainReview.noEvidenceDate": "Không có ngày bằng chứng",
+  "worklist.domainReview.match": "Ghép công ty",
+  "worklist.domainReview.matchEffect":
+    "Ghép sẽ liên kết tên miền và liên hệ đã ghi nhận với công ty đã chọn.",
+  "worklist.domainReview.create": "Tạo công ty",
+  "worklist.domainReview.retry": "Đọc lại trang",
+  "worklist.domainReview.exclude": "Loại tên miền",
+  "worklist.domainReview.forwardedEffects":
+    "Đọc lại giữ danh tính chưa xác định. Loại sẽ ngừng ghi nhận cho hộp thư của bạn.",
+  "worklist.domainReview.effects":
+    "Tạo sẽ thêm công ty. Đọc lại giữ danh tính chưa xác định. Loại sẽ ngừng ghi nhận cho hộp thư của bạn.",
+  "worklist.batch.domain_questions_one": "Xem xét {count} tên miền",
+  "worklist.batch.domain_questions_other": "Xem xét {count} tên miền",
   "blockedDomains.source.unevidenced": "Trang web không nêu tên công ty nào",
   "blockedDomains.source.staleEvidence": "Email làm căn cứ đã quá cũ",
   "blockedDomains.source.nearDuplicate": "Tên công ty đã tồn tại",
@@ -12310,6 +12934,10 @@ export const vi = {
   "webhooks.event.voice.draft_outcome_recorded.when":
     "Kết quả của bản nháp viết theo giọng văn của thành viên được ghi nhận.",
   "webhooks.eventGroup.approvals_audit": "Phê duyệt và nhật ký hoạt động",
+  "webhooks.event.approval.preference_changed.label":
+    "Đã đổi tùy chọn phê duyệt",
+  "webhooks.event.approval.preference_changed.when":
+    "Thành viên đổi việc hiển thị một loại phê duyệt trong Danh sách công việc.",
   "webhooks.event.approval.requested.label": "Đã yêu cầu phê duyệt",
   "webhooks.event.approval.requested.when":
     "Hành động của trợ lý AI được giữ lại để chờ quyết định.",
@@ -13971,7 +14599,7 @@ export const vi = {
   "worklist.exceptions.truncated":
     "Danh sách đã bị cắt bớt. Vẫn còn việc khác.",
   "worklist.exceptions.kind.response_breached": "Quá hạn phản hồi lần đầu",
-  "worklist.exceptions.kind.revenue_at_risk": "Doanh thu có rủi ro",
+  "worklist.exceptions.kind.revenue_at_risk": "Giá trị pipeline được đánh dấu",
   "worklist.exceptions.kind.unassigned": "Chưa giao",
   "worklist.exceptions.kind.repeated_failure": "Lỗi lặp lại",
   "worklist.board.loading": "Đang tải việc của nhóm…",
@@ -14007,10 +14635,8 @@ export const vi = {
     "Số đếm chưa đầy đủ. Mỗi con số là mức tối thiểu.",
   "worklist.rowMenu": "Thao tác khác cho {title}",
   "worklist.readings.label": "Số liệu hôm nay",
-  "worklist.readings.revenue": "Doanh thu có rủi ro",
-  "worklist.readings.revenue.detail": "Deal đang chững lại hôm nay",
-  "worklist.readings.revenue.unpriced":
-    "Deal đang chững lại · chưa deal nào có giá trị",
+  "worklist.readings.revenue": "Giá trị pipeline được đánh dấu",
+  "worklist.readings.revenue.unpriced": "Deal được đánh dấu · chưa có giá trị",
   "worklist.readings.revenue.noFigure": "Chưa có giá trị",
   "worklist.readings.replies": "Phản hồi của bên mua",
   "worklist.readings.replies.detail": "Khách hàng đang chờ",
@@ -14106,6 +14732,8 @@ export const vi = {
   "worklist.because.champion_unknown": "chưa rõ người ủng hộ",
   "worklist.because.promised": "bạn đã cam kết",
   "worklist.because.approved_and_failed": "đã duyệt nhưng không chạy",
+  "worklist.because.account_termination":
+    "cần quyết định có chấm dứt quan hệ với khách hàng hay không",
   "worklist.because.blocks_customer_work": "khách hàng đang chờ việc này",
   "worklist.because.routine": "dọn dẹp thường lệ",
   "worklist.because.repeated_failure": "lỗi lặp lại",
@@ -14196,6 +14824,10 @@ export const vi = {
   "worklist.untitled.dedupe_candidate": "Hồ sơ có thể trùng",
   "worklist.untitled.task": "Việc cần làm chưa có tiêu đề",
   "worklist.untitled.brief_item": "Deal cần xem lại",
+  "worklist.recipients.label": "Liên hệ nhận",
+  "worklist.recipients.open": "Đang chờ",
+  "worklist.recipients.done": "Đã hoàn tất",
+  "worklist.recipients.dismissed": "Đã loại bỏ",
   "worklist.untitled.conversation_claim": "Cam kết của bạn",
   "worklist.untitled.customer_waiting": "Khách hàng chờ trả lời",
   "worklist.untitled.lead_response": "Lead chưa có tên",
@@ -14727,30 +15359,7 @@ export const vi = {
   "employment.dateHint": "YYYY-MM hoặc YYYY-MM-DD. Để trống nếu chưa biết.",
   "employment.more": "Xem thêm vị trí công tác",
 
-  "magic.window.label": "Hiển thị",
-  "magic.window.brief": "Từ bản tin sáng gần nhất",
-  "magic.window.week": "7 ngày qua",
-  "magic.window.month": "30 ngày qua",
   "magic.heading.brief": "Kể từ bản tin sáng gần nhất",
-  "magic.heading.week": "7 ngày qua",
-  "magic.heading.month": "30 ngày qua",
-  "magic.intro": "Những việc Margince đã làm kể từ {when}.",
-  "magic.summary": "Tóm tắt",
-  "magic.clear.done": "Chưa có việc nào làm giúp bạn",
-  "magic.clear.needsYou": "Không có gì đang chờ bạn",
-  "magic.clear.couldNotComplete": "Không có việc nào bị lỗi",
-  "magic.clear.watching": "Mọi nguồn đều ổn",
-  "magic.count.keptInSync_one": "{count} mục đã đồng bộ",
-  "magic.count.keptInSync_other": "{count} mục đã đồng bộ",
-  "magic.count.done_one": "{count} việc đã làm giúp bạn",
-  "magic.count.done_other": "{count} việc đã làm giúp bạn",
-  "magic.count.needsYou_one": "{count} việc đang chờ bạn",
-  "magic.count.needsYou_other": "{count} việc đang chờ bạn",
-  "magic.count.couldNotComplete_one": "{count} việc không thể hoàn tất",
-  "magic.count.couldNotComplete_other": "{count} việc không thể hoàn tất",
-  "magic.count.watching_one": "{count} mục cần khôi phục",
-  "magic.count.watching_other": "{count} mục cần khôi phục",
-  "magic.incomplete": "{lane}: có thể chưa đầy đủ",
   "magic.loading": "Đang đọc những gì hệ thống đã làm",
   "magic.lane.done": "Đã làm giúp bạn",
   "magic.lane.needsYou": "Đang chờ bạn",
@@ -14837,26 +15446,8 @@ export const vi = {
   "magic.notShown.unadmittedAction": "việc bảo trì không có gì cần báo",
   "magic.notShown.unknownEntityType": "loại hồ sơ mà trang này không thể xếp",
   "magic.notShown.outOfScope": "nằm ngoài hồ sơ của bạn",
-  "magic.glance.label": "Việc đã làm",
-  "magic.glance.emailsFiled": "Email đã xếp",
-  "magic.glance.profilesRead": "Hồ sơ công ty đã đọc",
-  "magic.glance.recordsUpdated": "Hồ sơ đã cập nhật",
-  "magic.glance.dealsMoved": "Deal đã chuyển giai đoạn",
-  "magic.glance.leadsPromoted": "Lead đã chuyển thành deal",
-  "magic.glance.ownersChanged": "Việc đã bàn giao",
-  "magic.glance.activitiesRelinked": "Trao đổi đã xếp lại",
-  "magic.glance.messagesSent": "Tin nhắn đã gửi",
-  "magic.glance.meetingsBooked": "Cuộc họp đã đặt",
-  "magic.glance.leadsDisqualified": "Lead đã loại",
-  "magic.glance.retention": "Đã áp dụng quy tắc lưu trữ",
-  "magic.glance.recordsCreated": "Hồ sơ đã tạo",
-  "magic.glance.recordsArchived": "Hồ sơ đã chuyển vào kho lưu trữ",
-  "magic.timeline.title": "Thời điểm diễn ra",
-  "magic.timeline.agent": "Trợ lý AI",
-  "magic.timeline.sync": "Đồng bộ và quy tắc",
-  "magic.timeline.summary":
-    "Thời điểm từng dòng trong bản kê này diễn ra, từ {from} đến nay",
-  "magic.timeline.now": "Bây giờ",
+  "magic.visibleScope": "Chỉ hiển thị những thay đổi bạn có quyền xem.",
+  "magic.coverageIncomplete": "Chưa thể đếm một số hoạt động.",
   "magic.done.all_one": "Tất cả {count} thay đổi, từng mục một",
   "magic.done.all_other": "Tất cả {count} thay đổi, từng mục một",
   "magic.done.atLeast_one": "{count} thay đổi, từng mục một",

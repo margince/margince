@@ -140,6 +140,16 @@ describe("commitment decision wording", () => {
           count: "3",
         }),
       );
+      expect(
+        approvalAcceptLabel(
+          "commitment_task",
+          plural,
+          "Approve recipients",
+          locale,
+          1,
+          true,
+        ),
+      ).toBe("Approve recipients");
       expect(approvalExpiryLabel("commitment_task", "2h", tr)).toBe(
         tr("approval.commitment.proposalExpiresIn", { countdown: "2h" }),
       );

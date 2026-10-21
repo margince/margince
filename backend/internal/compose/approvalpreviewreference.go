@@ -11,9 +11,11 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 func (r approvalPreviewReader) referenceValue(ctx context.Context, field, text string) (crmcontracts.ApprovalPreviewValue, error) {
@@ -34,7 +36,7 @@ func (r approvalPreviewReader) referenceValue(ctx context.Context, field, text s
 	if !found || strings.TrimSpace(label) == "" {
 		return value, apperrors.ErrNotFound
 	}
-	kind := "reference"
+	kind := previewValueReference
 	if field == bulkParamOwner {
 		kind = ScopeKindOwner
 	}
@@ -46,9 +48,11 @@ func (r approvalPreviewReader) referenceValue(ctx context.Context, field, text s
 
 func previewReferenceType(field string) string {
 	switch field {
+	case previewFieldTemplateID:
+		return string(recordTypeOfferTemplate)
 	case bulkParamOwner:
 		return entityUser
-	case "parent_company_id", "partner_company_id":
+	case previewFieldBuyerCompanyID, refColParentCompany, refColPartnerCompany:
 		return string(recordTypeCompany)
 	default:
 		return strings.TrimSuffix(field, "_id")
@@ -86,4 +90,66 @@ func (r approvalPreviewReader) referenceNames(ctx context.Context, current, chan
 		labels[entityType] = names
 	}
 	return labels, nil
+}
+
+func previewDetail(field, value string) crmcontracts.ApprovalPreviewDetail {
+	kind := previewValueText
+	if value == "" {
+		kind = previewValueEmpty
+	}
+	return crmcontracts.ApprovalPreviewDetail{Field: field, Value: crmcontracts.ApprovalPreviewValue{Kind: kind, Text: value}}
+}
+
+func (r approvalPreviewReader) previewFiles(ctx context.Context, attachments *[]openapi_types.UUID) ([]crmcontracts.ApprovalPreviewFile, error) {
+	requested := []ids.UUID{}
+	if attachments != nil {
+		for _, id := range *attachments {
+			requested = append(requested, ids.UUID(id))
+		}
+	}
+	files, err := r.activities.PreviewSendAttachments(ctx, requested)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]crmcontracts.ApprovalPreviewFile, 0, len(files))
+	for _, file := range files {
+		if file.Filename == "" {
+			return nil, apperrors.ErrInvalidArgument
+		}
+		out = append(out, crmcontracts.ApprovalPreviewFile{Id: openapi_types.UUID(file.AttachmentID), Filename: file.Filename, ContentType: file.ContentType, ByteSize: file.ByteSize})
+	}
+	return out, nil
+}
+
+func (r approvalPreviewReader) previewLinkedRecords(ctx context.Context, links []activities.ActivityLinkInput) ([]crmcontracts.ApprovalPreviewDetail, error) {
+	details := make([]crmcontracts.ApprovalPreviewDetail, 0, len(links))
+	for _, link := range links {
+		record, err := r.records.Read(ctx, datasource.EntityRef{Type: datasource.EntityType(link.EntityType), ID: link.EntityID})
+		if previewUnavailable(err) {
+			return nil, apperrors.ErrInvalidArgument
+		}
+		if err != nil {
+			return nil, err
+		}
+		name, err := r.names.Labels(ctx, string(link.EntityType), []ids.UUID{record.Ref.ID})
+		if err != nil {
+			return nil, err
+		}
+		label, ok := name[record.Ref.ID]
+		if !ok || label == "" {
+			return nil, apperrors.ErrInvalidArgument
+		}
+		details = append(details, crmcontracts.ApprovalPreviewDetail{Field: "filed_under", Value: crmcontracts.ApprovalPreviewValue{
+			Kind: previewValueReference, Text: label, EntityType: new(string(link.EntityType)), EntityId: new(openapi_types.UUID(link.EntityID)),
+		}})
+	}
+	return details, nil
+}
+
+func previewLinkDetail(field, value string) crmcontracts.ApprovalPreviewDetail {
+	detail := previewDetail(field, value)
+	if value != "" {
+		detail.Value.Kind = "link"
+	}
+	return detail
 }

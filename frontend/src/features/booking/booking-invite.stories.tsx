@@ -1,11 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { jsonResponse } from "../../testing/story-utils";
-import { bookingFrame } from "./book.storykit";
 import {
   bookingConnection,
   bookingContact,
   bookingProfile,
-} from "./book.testkit";
+} from "../../testing/book.testkit";
+import { jsonResponse } from "../../testing/story-utils";
+import { bookingFrame } from "./book.storykit";
 import { BookingInviteScreen } from "./booking-invite";
 
 import "./book.css";

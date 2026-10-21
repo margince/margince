@@ -410,6 +410,14 @@ func stageForApproval(ctx context.Context, approvals Approvals, language baselan
 	if len(raw) == 0 {
 		raw = json.RawMessage(`{}`)
 	}
+	summary := fmt.Sprintf(summaryIn(ctx, language).stagedAction, action.Kind, action.Target.Type, action.Target.ID)
+	if action.Kind == workflow.ActionEmitFlowEvent {
+		request, err := ReadConfirmationRequest(raw)
+		if err != nil {
+			return ids.ApprovalID{}, err
+		}
+		summary = fmt.Sprintf(summaryIn(ctx, language).confirmation, request.Question)
+	}
 	canonical, diffHash, err := diffhash.Canonical(raw)
 	if err != nil {
 		return ids.ApprovalID{}, fmt.Errorf("automation: canonicalizing %s for staging: %w", action.Kind, err)
@@ -420,7 +428,7 @@ func stageForApproval(ctx context.Context, approvals Approvals, language baselan
 		DiffHash:       diffHash,
 		TargetType:     string(action.Target.Type),
 		TargetID:       action.Target.ID,
-		Summary:        fmt.Sprintf(summaryIn(ctx, language).stagedAction, action.Kind, action.Target.Type, action.Target.ID),
+		Summary:        summary,
 	})
 }
 

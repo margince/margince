@@ -12,6 +12,7 @@ import { RowOpen } from "../../design-system/rowopen";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
+import type { ModelCatalogue, ModelLane } from "../../lib/ai-models";
 import {
   TierCallsLine,
   TierSwitchedBadge,
@@ -23,7 +24,6 @@ import {
   gaveUpLabel,
   tierLabel,
 } from "./ai-decision-labels";
-import type { ModelCatalogue, ModelLane } from "./ai-models";
 import { providerName } from "./ai-provider-names";
 import { laneGloss, priceLabel, servingSort } from "./ai-routing-lane-text";
 import { TermChip } from "./ai-terms";

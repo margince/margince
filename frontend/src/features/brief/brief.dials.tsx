@@ -3,36 +3,19 @@
 
 import { SegmentedControl } from "../../design-system/atoms";
 import { useT } from "../../i18n";
-import {
-  type BriefAddress,
-  type BriefScope,
-  type BriefView,
-  SCOPES,
-  scopesFor,
-  type TeamOffers,
-  VIEWS,
-} from "./brief.view";
+import { type BriefAddress, type BriefView, VIEWS } from "./brief.view";
 
 import "./brief.dials.css";
 
-// The two dials, in one band above the page.
-//
-// A control is drawn only where it has something to choose between: a rep whose
-// scope reaches no team gets the view dial alone, because a segmented control
-// with one option asks a reader to confirm what they cannot change.
-
+// The one dial above the page: the day or the week.
 export function BriefDials({
   address,
-  offered,
   onChange,
 }: Readonly<{
   address: BriefAddress;
-  /** Which views have a team surface for this reader, off the worklist read. */
-  offered: TeamOffers;
   onChange: (next: BriefAddress) => void;
 }>) {
   const t = useT();
-  const scopes = scopesFor(address.view, offered);
   return (
     <div className="brief-dials">
       <SegmentedControl<BriefView>
@@ -45,15 +28,6 @@ export function BriefDials({
         }}
         onChange={(view) => onChange({ ...address, view })}
       />
-      {scopes.length > 1 && (
-        <SegmentedControl<BriefScope>
-          label={t("brief.scope.label")}
-          options={SCOPES}
-          value={address.scope}
-          labels={{ mine: t("brief.scope.mine"), team: t("brief.scope.team") }}
-          onChange={(scope) => onChange({ ...address, scope })}
-        />
-      )}
     </div>
   );
 }

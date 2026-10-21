@@ -1,6 +1,7 @@
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch } from "../../api/version";
+import { ArchiveAction } from "../../components/archive";
 import { CreateAction, type CreateField } from "../../components/create";
 import { EditAction } from "../../components/edit";
 import {
@@ -13,12 +14,14 @@ import {
 import { Badge, OverflowMenu } from "../../design-system/atoms";
 import type { ListColumn } from "../../design-system/listtable";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
+import {
+  OFFER_TEMPLATE_LOCALES,
+  templateLanguage,
+} from "../../format/offertemplatelocale";
 import { type Translator, useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
 import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
-import { ArchiveAction } from "../records/archive";
 import "../lists/listsection.css";
 
 type OfferTemplate = components["schemas"]["OfferTemplate"];
@@ -49,16 +52,6 @@ async function fetchTemplatesPage(
   };
 }
 
-const LOCALE_OPTIONS: { value: string; label: MessageKey }[] = [
-  { value: "de-DE", label: "template.localeDE" },
-  { value: "en-US", label: "template.localeEN" },
-];
-
-function languageOf(locale: string, t: Translator): string {
-  const known = LOCALE_OPTIONS.find((option) => option.value === locale);
-  return known ? t(known.label) : locale;
-}
-
 // Built per render: option labels are shown as given, so they arrive translated.
 function templateFields(t: Translator): CreateField[] {
   return [
@@ -68,7 +61,7 @@ function templateFields(t: Translator): CreateField[] {
       label: "template.locale",
       type: "select",
       required: true,
-      options: LOCALE_OPTIONS.map(({ value, label }) => ({
+      options: OFFER_TEMPLATE_LOCALES.map(({ value, label }) => ({
         value,
         label: t(label),
       })),
@@ -199,7 +192,7 @@ export function OfferTemplatesAdmin() {
               archive={async () => {
                 const data = unwrap(
                   await api.DELETE("/offer-templates/{id}", {
-                    params: { path: { id: tpl.id } },
+                    params: { path: { id: tpl.id }, ...ifMatch(tpl.version) },
                   }),
                 );
                 return data ?? tpl;
@@ -262,7 +255,7 @@ export function OfferTemplatesAdmin() {
             key: "locale",
             header: t("template.locale"),
             sort: "locale",
-            cell: (tpl: OfferTemplate) => languageOf(tpl.locale, t),
+            cell: (tpl: OfferTemplate) => templateLanguage(tpl.locale, t),
           },
           {
             key: "is_default",
@@ -279,7 +272,7 @@ export function OfferTemplatesAdmin() {
             key: "locale",
             label: "template.localeFilter",
             allLabel: "template.localeFilterAll",
-            options: LOCALE_OPTIONS,
+            options: OFFER_TEMPLATE_LOCALES,
           },
         ]}
       />

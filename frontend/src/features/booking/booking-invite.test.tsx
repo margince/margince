@@ -15,7 +15,7 @@ import {
   bookingInvitation,
   bookingProfile,
   bookingSlots,
-} from "./book.testkit";
+} from "../../testing/book.testkit";
 import { BookingInviteScreen } from "./booking-invite";
 
 vi.mock("../mail/compose", () => ({

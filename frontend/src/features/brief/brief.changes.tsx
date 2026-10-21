@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useId } from "react";
 import { EntityRef } from "../../components/entityref";
-import { PanelBody, PanelGroupHead } from "../../design-system/panel";
+import { Eyebrow } from "../../design-system/eyebrow";
+import { PanelBody } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { sameCalendarDay } from "../../format/calendarday";
 import {
@@ -13,21 +15,21 @@ import {
 import { viewerZone } from "../../format/timezone";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
-import { listReadState } from "../worklist/worklist.listread";
+import { listReadState } from "../../lib/worklist.listread";
 import { useHandledForYou } from "../worklist/worklist.queries";
 import { receiptSummary } from "../worklist/worklist.receiptcopy";
 import { ReceiptReview } from "../worklist/worklist.receiptreview";
 
-// The changes made for the reader that they can still accept or take back, as
-// one group of Home's receipt. Drawn only when there is one: the group sits
-// under a summary that already answers for the quiet day, and a heading over
-// "none" was a second card saying nothing.
+// The changes made for the reader that they can still accept or take back, in
+// Home's rail. Drawn only when there is one: a heading over "none" would be a
+// panel saying nothing.
 export function BriefChanges() {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   const zone = viewerZone();
   const query = useHandledForYou();
+  const titleId = useId();
   const receipts = query.data?.receipts;
   const asOf = query.data?.as_of;
   const state = listReadState(query, receipts);
@@ -35,8 +37,10 @@ export function BriefChanges() {
     return null;
   }
   return (
-    <>
-      <PanelGroupHead title={t("brief.changes.title")} level="h3" />
+    <section className="brief-section" aria-labelledby={titleId}>
+      <Eyebrow as="h2" id={titleId} className="brief-section-label">
+        {t("brief.changes.title")}
+      </Eyebrow>
       <PanelBody>
         <SurfaceState
           state={state}
@@ -75,7 +79,7 @@ export function BriefChanges() {
           )}
         </SurfaceState>
       </PanelBody>
-    </>
+    </section>
   );
 }
 

@@ -77,6 +77,7 @@ func (h Handlers) LogActivity(w http.ResponseWriter, r *http.Request, _ crmcontr
 	// A caller who NAMES an invited colleague as a new task's assignee is
 	// allowed to; automatic writers never pass through here.
 	in.invitedAssignee = req.AssigneeId != nil
+	in.LinksFromRequest = true
 	if in.FollowUpTask != nil {
 		in.FollowUpTask.invitedAssignee = req.FollowUpTask.AssigneeId != nil
 	}

@@ -29,6 +29,9 @@ func classifyDecision(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	if blocksCustomerWork(item) {
 		level, consequence, why = levelBlocking, "work_blocked", "blocks_customer_work"
 	}
+	if item.Staged != nil && item.Staged.AccountTermination != nil && *item.Staged.AccountTermination {
+		level, consequence, why = levelWaiting, "work_blocked", "account_termination"
+	}
 	row := base(item, level, "decisions", consequence)
 	row.Because = []crmcontracts.WorklistReason{reason(crmcontracts.WorklistReasonKind(why), nil)}
 	// The two facts a routine contact decision is grouped by, from the typed
@@ -108,4 +111,17 @@ func blocksCustomerWork(item crmcontracts.AttentionItem) bool {
 	default:
 		return false
 	}
+}
+
+func accountTerminationPreview(approval crmcontracts.Approval) bool {
+	if approval.Kind != "lifecycle_change" || approval.RequestedDeciderId == nil ||
+		approval.Preview == nil || approval.Preview.State != "ready" {
+		return false
+	}
+	for _, change := range approval.Preview.Changes {
+		if change.Field == "lifecycle" && change.After.Text == string(crmcontracts.CompanyLifecycleFormerCustomer) {
+			return true
+		}
+	}
+	return false
 }

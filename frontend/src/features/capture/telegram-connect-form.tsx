@@ -15,8 +15,8 @@ import {
 import { Callout } from "../../design-system/callout";
 import { Heading } from "../../design-system/heading";
 import { useT } from "../../i18n";
+import { statusLabel, statusTone } from "../../lib/connector-status";
 import { problemMessageOf, unwrap } from "../../lib/problem";
-import { statusLabel, statusTone } from "./connector-status";
 import "../../design-system/querystates.css";
 
 // The Telegram connector: one bot connects for the WHOLE workspace, not

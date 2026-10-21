@@ -4,22 +4,25 @@
 import { CalendarDays, CheckSquare, FileText, Phone } from "lucide-react";
 import type { ReactNode } from "react";
 import { useId } from "react";
+import { AddToShortlistAction } from "../../components/addtoshortlist";
 import { ExtensionEntries } from "../../components/extensionentries";
 import { Button, OverflowMenu } from "../../design-system/atoms";
 import { IconAction } from "../../design-system/iconaction";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
+import type { Transport, TransportSource } from "../../lib/contacttransports";
+import {
+  primaryTransportAction,
+  useTransports,
+} from "../../lib/contacttransports";
 import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
-import { AddToShortlistAction } from "../lists/addtoshortlist";
 import { EmailVerb } from "../records/recordemail";
 import { ShareAction } from "../records/share";
 import { openContactTab } from "../worklist/worklist.return";
 import { ImportActivitiesAction } from "./contactimportaction";
 import { WorkAsLeadAction } from "./contactleadaction";
 import { ContactRecordActions } from "./contactrecordactions";
-import type { Transport, TransportSource } from "./contacttransports";
-import { primaryTransportAction, useTransports } from "./contacttransports";
 
 // The header's verbs on the contact record page (contactpage.tsx): writing,
 // calling, meeting, logging, and the menu that holds everything else.

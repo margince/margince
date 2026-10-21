@@ -180,9 +180,7 @@ export const NewDealPending: Story = {
   },
 };
 
-// Failed: the server's own refusal (amount and currency travel together or
-// not at all) renders verbatim under the form, per problemMessageOf's rule
-// that the server's words are never replaced from here.
+// Field refusals appear beside the input that can correct them.
 export const NewDealFailed: Story = {
   render: () => (
     <NewDeal
@@ -221,7 +219,9 @@ export const NewDealFailed: Story = {
       "Fleet renewal",
     );
     await userEvent.click(body.getByRole("button", { name: "Create" }));
-    await body.findByText(/travel together/);
+    await body.findByText(
+      "currency comes with amount_minor or expected_arr_minor, and neither figure comes without it",
+    );
   },
 };
 

@@ -474,21 +474,24 @@ test-integration-serial: composition ## Escape hatch: the old sequential lane, a
 	fi; \
 	rm -f "$$log"; echo "OK: integration passed with 0 skips"
 
-# PERF-3/PERF-7 at the tier the SLO binds at, and the only target that WRITES a
-# record. The suite used to ride the standing integration lane at the SMB tier
-# as well; it does not any more (see its own file comment), so this target and
-# bench-perf-check below are the two ways it runs.
-bench-perf: composition ## PERF-3/PERF-7 benchmark harness on the mid-market §6.7 tier (needs db-up; seeds 250k contacts)
+# PERF-3/PERF-7, and the only target that WRITES its record. A run by hand gets the
+# tier the SLO binds at. The weekly scheduled job records the SMB tier through
+# this same target and proposes the record as a pull request, so a number
+# reaches the tree only when a human merges it.
+BENCH_PERF_TIER    ?= mid_market
+BENCH_PERF_TIMEOUT ?= 30m
+# Empty skips the page render, for a caller that renders once after collecting
+# records: a render failure must not read as the measurement failing.
+BENCH_RENDER       ?= 1
+bench-perf: composition ## PERF-3/PERF-7 benchmark harness, writing a record; mid-market unless BENCH_PERF_TIER=smb (needs db-up; seeds 250k contacts)
 	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && parse_test_dsn && bench_db $(BENCH_DB_NAME) \
-	  && cd backend && MARGINCE_BENCH_TIER=mid_market MARGINCE_BENCH_RECORD=1 \
+	  && cd backend && MARGINCE_BENCH_TIER=$(BENCH_PERF_TIER) MARGINCE_BENCH_RECORD=1 \
 	     MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$$BENCH_APP_DSN" \
-	     $(GO) test -tags "integration bench" -run TestPerfBudgetsHoldOnSeededVolumeTier -count=1 -v -timeout 30m ./internal/compose/integration'
-	@$(MAKE) --no-print-directory perfdoc
+	     $(GO) test -tags "integration bench" -run TestPerfBudgetsHoldOnSeededVolumeTier -count=1 -v -timeout $(BENCH_PERF_TIMEOUT) ./internal/compose/integration'
+	@if [ -n "$(BENCH_RENDER)" ]; then $(MAKE) --no-print-directory perfdoc; fi
 
-# The SMB budgets, recording NOTHING — what the weekly scheduled workflow runs.
-# Records are a human's to publish: a machine writing its own numbers into the
-# tree is the failure MARGINCE_BENCH_RECORD exists to prevent, and a scheduled
-# job is exactly the machine meant.
+# The SMB budgets, recording NOTHING: a drift check, run by hand, without
+# touching the published page.
 #
 # SMB ONLY, and the omission is the honest half of this target. Mid-market is
 # where the PERF-7 SLO binds, so a drift alarm would ideally watch it. What
@@ -518,7 +521,7 @@ bench-perf: composition ## PERF-3/PERF-7 benchmark harness on the mid-market §6
 # nothing" must be a property of the target, not of whatever the caller's shell
 # happened to export. A developer with it set from an earlier `bench-perf` would
 # otherwise have this target rewrite the published record from the SMB tier.
-bench-perf-check: composition ## PERF-3/PERF-7 on the SMB tier, no record written (needs db-up; the scheduled lane's target)
+bench-perf-check: composition ## PERF-3/PERF-7 on the SMB tier, no record written (needs db-up)
 	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && parse_test_dsn && bench_db $(BENCH_DB_NAME) \
 	  && cd backend && MARGINCE_BENCH_TIER=smb MARGINCE_BENCH_RECORD= \
 	     MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$$BENCH_APP_DSN" \
@@ -530,10 +533,9 @@ bench-perf-check: composition ## PERF-3/PERF-7 on the SMB tier, no record writte
 # runs any of them. `make vet` and both golangci passes still TYPE-CHECK them,
 # which is the only thing standing between a by-hand lane and rot.
 #
-# bench-perf and bench-perf-check above are the one exception to "by hand": the
-# scheduled workflow runs bench-perf-check weekly, because PERF-3/PERF-7 lost
-# its standing merge-gate canary and drift nobody looks for is drift nobody
-# finds. It still writes no record — publishing a number stays a human's act.
+# bench-perf above is the one exception to "by hand": the scheduled workflow
+# runs it weekly on the SMB tier, because PERF-3/PERF-7 lost its standing
+# merge-gate canary and drift nobody looks for is drift nobody finds.
 #
 # Separate targets rather than one, because they measure unrelated promises and
 # cost unrelated amounts of time: a reader chasing a slow save should not have

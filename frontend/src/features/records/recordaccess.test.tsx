@@ -12,18 +12,18 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { components } from "../../api/schema";
-import { RecordShell } from "../../app/testing/recordshell.testkit";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
-import { meFixture } from "../../testing/mefixture";
-import { CompanyScreen } from "../companies/companies";
 import {
   emptyPage,
   jsonResponse,
   company as pageCompany,
-} from "../companies/company.fixtures";
-import { stubFetch } from "../companies/company.testkit";
+} from "../../testing/company.fixtures";
+import { stubFetch } from "../../testing/company.testkit";
+import { meFixture } from "../../testing/mefixture";
+import { RecordShell } from "../../testing/recordshell.testkit";
+import { CompanyScreen } from "../companies/companies";
 import { useContact360 } from "../contacts/contact360";
 import { RecordAccess } from "./recordaccess";
 

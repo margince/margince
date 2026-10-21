@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 37 |
 | Resources | 9 |
-| Tool catalog | 122.2 KB |
+| Tool catalog | 123.8 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 32189 |
+| Approx. wire tokens | 32583 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -32,11 +32,11 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 24.6 KB | 20% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 31.5 KB | 25% | Yes, every step |
-| Input schemas | 57.4 KB | 46% | Yes, every step |
+| Output schemas | 24.6 KB | 19% | **No**: a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 31.6 KB | 25% | Yes, every step |
+| Input schemas | 58.9 KB | 47% | Yes, every step |
 | _Names, annotations, punctuation_ | 8.7 KB | 7% | Partly |
-| **Description + input schema** | **88.9 KB** | **72%** | **the recurring cost** |
+| **Description + input schema** | **90.5 KB** | **73%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -74,10 +74,10 @@ descriptions and input schemas are what each step pays for.
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 517 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
 | [`find_records`](#find_records) | Find records | yes |  | 1697 |
-| [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 336 |
+| [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 401 |
 | [`list_documents`](#list_documents) | List a record's documents | yes |  | 216 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1001 |
-| [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 834 |
+| [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 998 |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_attention`](#read_attention) | See what needs attention | yes |  | 326 |
 | [`read_context`](#read_context) | Get the story so far | yes |  | 395 |
@@ -87,7 +87,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 292 |
 | [`read_record`](#read_record) | Read a record | yes |  | 307 |
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
-| [`read_reports`](#read_reports) | Read sales reports | yes |  | 1647 |
+| [`read_reports`](#read_reports) | Read sales reports | yes |  | 1812 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 351 |
 | [`read_view`](#read_view) | Read a view | yes |  | 989 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 488 |
@@ -3309,9 +3309,10 @@ The staged actions waiting for a human's decision: what was proposed and what ea
 where a proposal that is already waiting turns up — a message staged and unsent is not one that
 needs writing again. It lists what the colleague you act for could decide themselves; anything else
 is absent rather than refused. A proposal past its expiry reads as expired and can no longer be
-answered. Each item carries its one-line summary, not the change itself. read_approval opens one and
-shows what it holds; decide_approvals answers it. Keep the staged_action_id you mean to act on, the
-bundle_id when one act staged several, and next_cursor.
+answered. Personal mutes hide eligible pending rows, so a bundle may be partial. Use include_muted
+for a complete authorized bundle review. Each item carries its one-line summary, not the change
+itself. read_approval opens one and shows what it holds; decide_approvals answers it. Keep the
+staged_action_id you mean to act on, the bundle_id when one act staged several, and next_cursor.
 ```
 
 <details><summary>Input schema</summary>
@@ -3328,6 +3329,10 @@ bundle_id when one act staged several, and next_cursor.
     "cursor": {
       "description": "next_cursor from a previous page.",
       "type": "string"
+    },
+    "include_muted": {
+      "description": "Include your muted proposals for explicit review; visibility rules still apply.",
+      "type": "boolean"
     },
     "kind": {
       "description": "One staged action's kind, e.g. advance_deal.",
@@ -4427,6 +4432,86 @@ read_reports for the standard metrics and named reports. Keep a saved query's id
                             "start_at"
                           ],
                           "type": "object"
+                        },
+                        "layout": {
+                          "items": {
+                            "properties": {
+                              "cards": {
+                                "items": {
+                                  "properties": {
+                                    "id": {
+                                      "type": "string"
+                                    },
+                                    "kind": {
+                                      "type": "string"
+                                    },
+                                    "metric": {
+                                      "type": "string"
+                                    },
+                                    "question": {
+                                      "properties": {
+                                        "entity": {
+                                          "type": "string"
+                                        },
+                                        "group_by": {
+                                          "items": {
+                                            "type": "string"
+                                          },
+                                          "type": "array"
+                                        },
+                                        "limit": {
+                                          "type": "integer"
+                                        },
+                                        "measures": {
+                                          "items": {
+                                            "properties": {
+                                              "as": {
+                                                "type": "string"
+                                              },
+                                              "field": {
+                                                "type": "string"
+                                              },
+                                              "fn": {
+                                                "type": "string"
+                                              }
+                                            },
+                                            "required": [
+                                              "fn"
+                                            ],
+                                            "type": "object"
+                                          },
+                                          "type": "array"
+                                        }
+                                      },
+                                      "required": [
+                                        "entity",
+                                        "measures"
+                                      ],
+                                      "type": "object"
+                                    },
+                                    "width": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "kind",
+                                    "width"
+                                  ],
+                                  "type": "object"
+                                },
+                                "type": "array"
+                              },
+                              "title": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "cards"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
                         },
                         "metrics": {
                           "items": {
@@ -5872,6 +5957,86 @@ search its evidence, and quote coverage with each number.
             "start_at"
           ],
           "type": "object"
+        },
+        "layout": {
+          "items": {
+            "properties": {
+              "cards": {
+                "items": {
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string"
+                    },
+                    "metric": {
+                      "type": "string"
+                    },
+                    "question": {
+                      "properties": {
+                        "entity": {
+                          "type": "string"
+                        },
+                        "group_by": {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "limit": {
+                          "type": "integer"
+                        },
+                        "measures": {
+                          "items": {
+                            "properties": {
+                              "as": {
+                                "type": "string"
+                              },
+                              "field": {
+                                "type": "string"
+                              },
+                              "fn": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "fn"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "entity",
+                        "measures"
+                      ],
+                      "type": "object"
+                    },
+                    "width": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "kind",
+                    "width"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "title": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "cards"
+            ],
+            "type": "object"
+          },
+          "type": "array"
         },
         "metrics": {
           "items": {

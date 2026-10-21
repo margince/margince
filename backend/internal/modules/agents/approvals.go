@@ -140,6 +140,19 @@ func withApprovalRedeemed(ctx context.Context, version int64, pinned bool) conte
 // caller to remember.
 func RedeemAndMark(ctx context.Context, approvals Approvals, approvalID ids.ApprovalID, tool, diffHash string,
 ) (marked context.Context, version int64, pinned bool, err error) {
+	if records, ok := approvals.(interface {
+		RedeemRecords(context.Context, ids.ApprovalID, string, string) (auth.ReleasedRecordPins, error)
+	}); ok {
+		pins, err := records.RedeemRecords(ctx, approvalID, tool, diffHash)
+		if err != nil {
+			return ctx, 0, false, err
+		}
+		if pins.Target != nil {
+			version, pinned = pins.Target.Version, true
+		}
+		ctx = auth.WithReleasedRecordPins(ctx, pins)
+		return withApprovalRedeemed(ctx, version, pinned), version, pinned, nil
+	}
 	version, pinned, err = approvals.Redeem(ctx, approvalID, tool, diffHash)
 	if err != nil {
 		return ctx, 0, false, err

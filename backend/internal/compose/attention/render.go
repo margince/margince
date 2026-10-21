@@ -270,6 +270,12 @@ func approvalItem(approval crmcontracts.Approval, machine MachineSender) crmcont
 	if staged, ok := stagedFacts(approval, machine); ok {
 		item.Staged = &staged
 	}
+	if accountTerminationPreview(approval) && len(item.Actions) > 0 {
+		if item.Staged == nil {
+			item.Staged = &crmcontracts.AttentionStagedFacts{}
+		}
+		item.Staged.AccountTermination = new(true)
+	}
 	return item
 }
 
@@ -323,6 +329,9 @@ func taskItem(task Task, asOf, until time.Time, loc *time.Location) crmcontracts
 		Title:   &subject,
 		Subject: subjectOf(task.LinkType, task.LinkID),
 		Actions: []crmcontracts.AttentionItemActions{"complete", "snooze"},
+	}
+	if len(task.Recipients) > 0 {
+		item.PromiseRecipients = &task.Recipients
 	}
 	// Both verbs PATCH the task, so a reader who may not change it is offered
 	// neither.

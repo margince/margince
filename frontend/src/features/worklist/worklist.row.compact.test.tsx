@@ -4,11 +4,11 @@ import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { en } from "../../i18n/en";
-import { waitingEmailRow } from "../brief/brief.fixtures";
-import { render } from "../brief/brief.testkit";
+import { waitingEmailRow } from "../../testing/brief.fixtures";
+import { render } from "../../testing/brief.testkit";
+import { findRowMenu } from "../../testing/worklist.testkit";
 import type { WorklistItem } from "./worklist.queries";
 import { WorklistRow } from "./worklist.row";
-import { findRowMenu } from "./worklist.testkit";
 
 // The row at LIST DENSITY.
 //
@@ -199,4 +199,60 @@ describe("a worklist row at list density", () => {
       screen.getByRole("button", { name: en["worklist.verb.pin"] }),
     ).toBeTruthy();
   });
+});
+
+it.each(["compact", "full"])(
+  "keeps each recipient's status in the %s row",
+  (density) => {
+    const campaign = item({
+      source: "task",
+      category: "tasks",
+      title: "Send the recording",
+      promise_recipients: [
+        {
+          claim_id: "claim-a",
+          contact_id: "a",
+          display_name: "Ines Huber",
+          status: "done",
+        },
+        {
+          claim_id: "claim-b",
+          contact_id: "b",
+          display_name: "Morgan Recipient",
+          status: "open",
+        },
+        {
+          claim_id: "claim-c",
+          contact_id: "c",
+          display_name: "Pat Buyer",
+          status: "dismissed",
+        },
+      ],
+    });
+    render(
+      density === "compact" ? (
+        <WorklistRow item={campaign} density="compact" owner="" />
+      ) : (
+        <WorklistRow item={campaign} position={1} owner="" />
+      ),
+    );
+    const recipients = within(
+      screen.getByRole("list", { name: en["worklist.recipients.label"] }),
+    );
+    const entries = recipients.getAllByRole("listitem");
+    expect(entries).toHaveLength(3);
+    expect(entries[0]).toHaveTextContent("Ines Huber");
+    expect(entries[0]).toHaveTextContent(en["worklist.recipients.done"]);
+    expect(entries[1]).toHaveTextContent("Morgan Recipient");
+    expect(entries[1]).toHaveTextContent(en["worklist.recipients.open"]);
+    expect(entries[2]).toHaveTextContent("Pat Buyer");
+    expect(entries[2]).toHaveTextContent(en["worklist.recipients.dismissed"]);
+  },
+);
+
+it("does not claim that unavailable recipients are an empty campaign", () => {
+  render(row({ source: "task", promise_recipients: undefined }));
+  expect(
+    screen.queryByRole("list", { name: en["worklist.recipients.label"] }),
+  ).not.toBeInTheDocument();
 });

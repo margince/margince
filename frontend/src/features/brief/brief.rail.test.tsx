@@ -1,13 +1,16 @@
 /** @vitest-environment happy-dom */
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { cleanup, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
+import { readingsDay } from "../../testing/brief.fixtures";
+import {
+  fleetDeal,
+  jsonResponse,
+  render,
+  stubApi,
+} from "../../testing/brief.testkit";
 import type { WorklistItem } from "../worklist/worklist.queries";
 import { BriefScreen } from "./brief";
-import { readingsDay } from "./brief.fixtures";
-import { OvernightDigest } from "./brief.rail.overnight";
-import { fleetDeal, jsonResponse, render, stubApi } from "./brief.testkit";
 
 // Context panels keep their own loading and failure states so a failed source
 // cannot erase an independently available answer.
@@ -73,224 +76,8 @@ describe("BriefScreen — the context rail", () => {
         jsonResponse({ ...readingsDay({}, []), next_cursor: "next" }),
     });
     const { container } = render(<BriefScreen />);
-    await screen.findByText(en["brief.feed.title"]);
+    await screen.findByText(en["brief.first.title"]);
     expect(container.querySelector("#brief-watch")).toBeNull();
-  });
-
-  const digestBase = {
-    date: "2026-07-16",
-    generated_at: "2026-07-17T03:00:00Z",
-    capture: {
-      messages_synced: 42,
-      activities_created: 42,
-      contacts_created: 5,
-      companies_created: 2,
-    },
-    review: {
-      dedupe_open: 3,
-      approvals_pending: 1,
-      classify: { commitments: 4, meetings: 2, noise: 30 },
-    },
-  };
-
-  it("renders the overnight counts and jumps into the duplicates queue", async () => {
-    stubApi({
-      "GET /digest": () => jsonResponse({ ...digestBase, connectors: [] }),
-    });
-    const user = userEvent.setup();
-    render(<BriefScreen />);
-
-    // Waited on CONTENT, not on the panel's name: the name is also what the
-    // pending state announces now that a wait says what it is waiting for, so
-    // finding it proves the panel exists rather than that the digest arrived.
-    await screen.findByText("Emails synced");
-    expect(screen.getByText("Contacts created")).toBeTruthy();
-    expect(screen.getByText("Companies created")).toBeTruthy();
-    expect(
-      screen.getByText(
-        "Commitments: 4 · Meetings: 2 · Messages without a sales action: 30",
-      ),
-    ).toBeTruthy();
-    await user.click(screen.getByText("Duplicates to review"));
-    expect(window.location.hash).toBe("#/worklist");
-  });
-
-  it("draws the night inside Home's receipt rather than beside it", async () => {
-    stubApi({
-      "GET /digest": () => jsonResponse({ ...digestBase, connectors: [] }),
-    });
-    render(<BriefScreen />);
-
-    const receipt = await screen.findByRole("region", {
-      name: "Since your last brief",
-    });
-    expect(
-      await within(receipt).findByRole("heading", { name: "Overnight" }),
-    ).toBeTruthy();
-    expect(within(receipt).getByText("Emails synced")).toBeTruthy();
-  });
-
-  it("names the night over a digest read that failed", async () => {
-    stubApi({
-      "GET /digest": () =>
-        jsonResponse({ title: "Server error", code: "internal" }, 500),
-    });
-    render(<BriefScreen />);
-
-    const receipt = await screen.findByRole("region", {
-      name: "Since your last brief",
-    });
-    // Not a bare failure at the foot of the receipt: it says what failed.
-    expect(
-      await within(receipt).findByRole("heading", { name: "Overnight" }),
-    ).toBeTruthy();
-  });
-
-  // /digest is a specified operation an installation may not implement yet, so
-  // the honest answer is 501 — and a refusal is not a delay. Read as an error,
-  // the client retried it, and React Query pauses between retries while the tab
-  // is hidden: the panel carried skeleton bars that would still be there the
-  // next day.
-  it("renders no overnight panel for a 501, and no loading block either", async () => {
-    stubApi({
-      "GET /digest": () =>
-        jsonResponse(
-          {
-            title: "Not Implemented",
-            code: "not_implemented",
-            detail:
-              "operation GetMorningDigest is specified but not yet implemented",
-          },
-          501,
-        ),
-    });
-    render(<BriefScreen />);
-
-    await screen.findByRole("region", { name: en["brief.feed.title"] });
-    // The rail's own reads settle after the feed's region appears, so this
-    // waits for the page to go quiet rather than asserting into a page still
-    // in flight.
-    await waitFor(() =>
-      expect(document.querySelector("[aria-busy='true']")).toBeNull(),
-    );
-    expect(screen.queryByRole("heading", { name: "Overnight" })).toBeNull();
-    expect(screen.queryByText(/couldn't load/i)).toBeNull();
-    expect(document.body.textContent).not.toContain("not yet implemented");
-  });
-
-  it("renders no overnight panel at all before the first nightly run", async () => {
-    stubApi({});
-    render(<BriefScreen />);
-
-    // The rail's reads must have ANSWERED before absence means anything. The
-    // feed's region is drawn on the first paint, so awaiting it proves only
-    // that the page mounted — an assertion made against it would pass over a
-    // panel that renders unconditionally, which is the defect being excluded.
-    await waitFor(() =>
-      expect(document.querySelector("[aria-busy='true']")).toBeNull(),
-    );
-    expect(screen.queryByRole("heading", { name: "Overnight" })).toBeNull();
-  });
-
-  // The one place connector health reaches a reader without visiting Settings.
-  // A degraded source is news, in Settings' own vocabulary, and it jumps to
-  // where a reader's mailboxes actually live.
-  it("names an unhealthy source and jumps to Settings → Connections", async () => {
-    stubApi({
-      "GET /digest": () =>
-        jsonResponse({
-          ...digestBase,
-          connectors: [
-            {
-              provider: "gmail",
-              status: "reauth_required",
-              last_sync_error_class: "auth",
-            },
-          ],
-        }),
-    });
-    const user = userEvent.setup();
-    render(<BriefScreen />);
-
-    expect(
-      await screen.findByText(/rejected the stored credentials/i),
-    ).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Fix connector" }));
-    expect(window.location.hash).toBe("#/settings/connections");
-  });
-
-  it("stays quiet when every source is healthy — a green row is noise", async () => {
-    stubApi({
-      "GET /digest": () =>
-        jsonResponse({
-          ...digestBase,
-          connectors: [{ provider: "gmail", status: "connected" }],
-        }),
-    });
-    render(<BriefScreen />);
-
-    await screen.findByText("Overnight");
-    expect(screen.queryByRole("button", { name: "Fix connector" })).toBeNull();
-  });
-
-  it("lists the projects that moved or went quiet, each linking to its page", async () => {
-    const projectId = "01a00000-0000-7000-8000-000000000001";
-    stubApi({
-      "GET /projects/01a00000-0000-7000-8000-000000000001": () =>
-        jsonResponse({ id: projectId, name: "ERP replacement" }),
-      "GET /digest": () =>
-        jsonResponse({
-          ...digestBase,
-          connectors: [],
-          projects: {
-            phase_changes: [
-              {
-                project_id: projectId,
-                name: "ERP replacement",
-                from_phase: "pursuing",
-                to_phase: "delivering",
-                occurred_at: "2026-07-17T01:00:00Z",
-              },
-            ],
-            new_commitments: [],
-            gone_quiet: [
-              {
-                project_id: projectId,
-                name: "ERP replacement",
-                phase: "delivering",
-                quiet_since: "2026-06-07T01:00:00Z",
-                days_quiet: 40,
-              },
-            ],
-          },
-        }),
-    });
-    render(<BriefScreen />);
-
-    const moves = await screen.findByLabelText("Phase changes");
-    expect(moves.textContent).toContain("Pursuing → Delivering");
-    // By ROLE as well as by name: the watch panel in the rail carries the same
-    // words as its heading, and this assertion is about the digest's list.
-    expect(
-      screen.getByRole("list", { name: "Gone quiet" }).textContent,
-    ).toContain("quiet for 40 days");
-    const links = await screen.findAllByRole("link", {
-      name: "ERP replacement",
-    });
-    expect(links.length).toBe(2);
-    // The href is the destination, and it is also what a new tab and a
-    // middle-click follow — neither of which goes through an onClick.
-    expect(links[0].getAttribute("href")).toBe(`#/projects/${projectId}`);
-  });
-
-  it("renders no projects block when the digest carries no section", async () => {
-    stubApi({
-      "GET /digest": () => jsonResponse({ ...digestBase, connectors: [] }),
-    });
-    render(<BriefScreen />);
-
-    await screen.findByText("Overnight");
-    expect(screen.queryByLabelText("Phase changes")).toBeNull();
   });
 });
 
@@ -315,26 +102,3 @@ function taskRow(id: string, title: string): WorklistItem {
     actions: ["complete", "open"],
   };
 }
-
-describe("the overnight group with no digest", () => {
-  // /v1/digest answers 404 before the first nightly run and 501 where the
-  // installation does not implement it. Both mean the same thing to a reader,
-  // and the group draws NOTHING for either — not a row of zeros, which a reader
-  // cannot tell from a real count, and not a skeleton, which never resolves.
-  for (const [status, code] of [
-    [404, "no_digest_yet"],
-    [501, "not_implemented"],
-  ] as const) {
-    it(`renders nothing at all for a ${status}`, async () => {
-      stubApi({
-        "GET /digest": () => jsonResponse({ title: "Absent", code }, status),
-      });
-      const { container } = render(<OvernightDigest />);
-
-      await waitFor(() =>
-        expect(container.querySelector("[aria-busy='true']")).toBeNull(),
-      );
-      expect(container.innerHTML).toBe("");
-    });
-  }
-});

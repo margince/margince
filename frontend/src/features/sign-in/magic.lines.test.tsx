@@ -26,13 +26,15 @@ const undoable = {
   version: 7,
 } as const;
 
-// A line as a reader scans it, and the detail it keeps for a hover.
+// A line and its visible explanation.
 function rowOf(item: HTMLElement) {
   return {
     mark: item.querySelector<HTMLElement>(".magic-mark")?.dataset.kind,
     sentence: item.querySelector(".magic-line-text")?.firstChild?.textContent,
     subject: item.querySelector(".magic-line-subject")?.textContent,
-    detail: item.title,
+    detail: item
+      .querySelector(".magic-line-text > .t-caption")
+      ?.textContent?.trim(),
     when: item.querySelector("time"),
   };
 }
@@ -44,7 +46,7 @@ async function onlyLine(name: string): Promise<HTMLElement> {
 }
 
 describe("a receipt line is one row", () => {
-  it("prints what happened and its record, and keeps who, why and why not for a hover", async () => {
+  it("prints what happened, its record and the reason visibly", async () => {
     stub(
       receipt({
         done: [
@@ -66,7 +68,7 @@ describe("a receipt line is one row", () => {
     expect(row.sentence).toBe("A deal moved to its next stage");
     expect(row.subject).toBe("Fleet retrofit");
     expect(row.detail).toBe(
-      "Overnight agent · The deal sits in a later stage now. · This kind of change cannot be undone.",
+      "Overnight agent The deal sits in a later stage now. This kind of change cannot be undone.",
     );
     // The hour on the clock the reader is on, the full instant one hover away.
     const zone = viewerZone();

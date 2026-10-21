@@ -321,8 +321,8 @@ describe("layout is a class, not a style attribute", () => {
   it("reads a corpus that is every rendered module in the tree", () => {
     // A census that read a smaller tree would report the same word, PASS. So
     // the floor sits just under the real count, and one file of each shape is
-    // named: flat, nested, outside `screens/`, a `.ts` module with no JSX, and
-    // a unit's own layer.
+    // named. The shapes: flat, nested, outside `features/`, a `.ts` module
+    // with no JSX, and a unit's own layer.
     const paths = files.map(pathOf);
     expect(files.length).toBeGreaterThan(900);
     expect(paths).toContain("frontend/src/features/companies/company360.tsx");

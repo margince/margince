@@ -7,7 +7,7 @@ import {
 import type { TokenSuggestion } from "../../design-system/tokeninput";
 import { INTL_LOCALE } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
-import type { Transport } from "../contacts/contacttransports";
+import type { Transport } from "../../lib/contacttransports";
 import { useProjectRecord } from "../projects/projectrecord";
 import type { VoiceProfile } from "./compose";
 import { StaleThreadNotice } from "./compose.notices";

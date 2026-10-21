@@ -149,7 +149,7 @@ func (s *Store) insertSkipped(ctx context.Context, tx pgx.Tx, conn admittedConne
 	if err != nil {
 		return provider.Run{}, fmt.Errorf("integrations: recording the skipped run: %w", err)
 	}
-	return s.readRun(ctx, tx, id)
+	return readRun(ctx, tx, id)
 }
 
 // markSkipped turns an already-inserted run into a skip, for the refusals
@@ -166,7 +166,7 @@ func (s *Store) markSkipped(ctx context.Context, tx pgx.Tx, runID string, reason
 }
 
 // readRun loads one run and its reservations.
-func (s *Store) readRun(ctx context.Context, tx pgx.Tx, runID string) (provider.Run, error) {
+func readRun(ctx context.Context, tx pgx.Tx, runID string) (provider.Run, error) {
 	var r provider.Run
 	var contactID, skipReason, safeCode *string
 	var snapJSON []byte
@@ -229,17 +229,9 @@ func (s *Store) GetRun(ctx context.Context, contactID, runID string) (provider.R
 	}
 	var out provider.Run
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// Existence-hiding: a run belonging to a contact this caller cannot
-		// see answers 404, never 403.
-		if err := auth.EnsureVisible(ctx, tx, "contact", uuidOf(&contactID)); err != nil {
-			return err
-		}
-		run, err := s.readRun(ctx, tx, runID)
+		run, err := ReadRunForContactTx(ctx, tx, contactID, runID)
 		if err != nil {
 			return err
-		}
-		if run.ContactID != contactID {
-			return apperrors.ErrNotFound
 		}
 		out = run
 		return nil
@@ -248,6 +240,24 @@ func (s *Store) GetRun(ctx context.Context, contactID, runID string) (provider.R
 		return provider.Run{}, err
 	}
 	return out, nil
+}
+
+// ReadRunForContactTx shares the authorized run view with transactional merge previews.
+func ReadRunForContactTx(ctx context.Context, tx pgx.Tx, contactID, runID string) (provider.Run, error) {
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
+		return provider.Run{}, err
+	}
+	if err := auth.EnsureVisible(ctx, tx, "contact", uuidOf(&contactID)); err != nil {
+		return provider.Run{}, err
+	}
+	run, err := readRun(ctx, tx, runID)
+	if err != nil {
+		return provider.Run{}, err
+	}
+	if run.ContactID != contactID {
+		return provider.Run{}, apperrors.ErrNotFound
+	}
+	return run, nil
 }
 
 func nullableUUID(s string) *string {

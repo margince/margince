@@ -20,13 +20,19 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func TestOwnerPreviewIncludesEmptyAndStructuredCompanionFields(t *testing.T) {
-	for _, tc := range []struct{ entity, field, value, kind string }{
-		{"contact", "title", `"Head of sales"`, "text"},
-		{"company", "address", `{"city":"Berlin"}`, "structured"},
-		{"deal", "description", `"Renew the support agreement"`, "text"},
+func TestRecordPreviewIncludesEmptyAndStructuredFields(t *testing.T) {
+	for _, tc := range []struct {
+		entity, field, value, kind string
+		owner                      bool
+	}{
+		{"contact", "title", `"Head of sales"`, "text", true},
+		{"contact", "title", `"Head of sales"`, "text", false},
+		{"company", "address", `{"city":"Berlin"}`, "structured", true},
+		{"company", "address", `{"city":"Berlin"}`, "structured", false},
+		{"deal", "description", `"Renew the support agreement"`, "text", true},
+		{"deal", "description", `"Renew the support agreement"`, "text", false},
 	} {
-		t.Run(tc.entity, func(t *testing.T) {
+		t.Run(fmt.Sprintf("%s/owner=%t", tc.entity, tc.owner), func(t *testing.T) {
 			e := integration.Setup(t)
 			var target ids.UUID
 			switch tc.entity {
@@ -38,7 +44,13 @@ func TestOwnerPreviewIncludesEmptyAndStructuredCompanionFields(t *testing.T) {
 				pipeline, open, _ := integration.DealFixture(t, e)
 				target = e.SeedDeal(t, "Harbor renewal", pipeline, open, &e.AdminUser)
 			}
-			raw, hash, err := diffhash.Canonical([]byte(fmt.Sprintf(`{"record_type":%q,"id":%q,"fields":{"owner_id":null,%q:%s}}`, tc.entity, target, tc.field, tc.value)))
+			fields := fmt.Sprintf(`%q:%s`, tc.field, tc.value)
+			wantChanges := 1
+			if tc.owner {
+				fields += `,"owner_id":null`
+				wantChanges++
+			}
+			raw, hash, err := diffhash.Canonical([]byte(fmt.Sprintf(`{"record_type":%q,"id":%q,"fields":{%s}}`, tc.entity, target, fields)))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -48,8 +60,8 @@ func TestOwnerPreviewIncludesEmptyAndStructuredCompanionFields(t *testing.T) {
 				t.Fatal(err)
 			}
 			proposal, err := svc.GetWire(e.Admin(), id)
-			if err != nil || proposal.Preview == nil || proposal.Preview.State != "ready" || len(proposal.Preview.Changes) != 2 {
-				t.Fatalf("mixed owner preview: %+v, %v", proposal.Preview, err)
+			if err != nil || proposal.Preview == nil || proposal.Preview.State != "ready" || len(proposal.Preview.Changes) != wantChanges {
+				t.Fatalf("record preview: %+v, %v", proposal.Preview, err)
 			}
 			found := false
 			for _, change := range proposal.Preview.Changes {

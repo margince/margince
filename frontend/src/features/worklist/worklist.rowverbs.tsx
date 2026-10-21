@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The verbs one row of the day offers, on one right-aligned line. The row
-// decides how a piece of work reads; this decides what can be done about it.
-// The line holds Done where the row offers it, then the lane's answer, then
-// the row's menu. So the answer and the menu stand at one x down the queue.
+// The verbs one row of the day offers, on one line: Done where the row offers
+// it, then the lane's answer, then the row's menu. So the answer and the menu
+// stand at one x down the queue; in a card the answer leads.
 // The menu holds the rest, most used first: the snooze, a way to the record,
 // the pin, the hand-off, then the hand-backs.
 
@@ -91,19 +90,37 @@ export function RowActs({
   const putsDown = write.offered.some(
     (disposition) => folded || disposition !== "handled",
   );
-  return (
-    <div className="worklist-row-acts">
+  const answer = (
+    <RowAnswer
+      item={item}
+      lead={lead}
+      primary={primary}
+      onOpenEmail={onOpenEmail}
+    />
+  );
+  const others = (
+    <>
       {context}
       {reviews && onReview && <BatchVerb onReview={onReview} />}
       {equals}
       <DoneVerb write={write} />
-      {!item.batch && <PreparedMove item={item} onOpenEmail={onOpenEmail} />}
-      {lead && (
-        <a className={NAVIGATING_VERB} href={lead.destination}>
-          {VERB_LABEL[lead.action](t)}
-        </a>
+    </>
+  );
+  // A card is read top to bottom and finished on its answer, so the answer
+  // leads there. Down the queue it stands last, at one x on every row.
+  return (
+    <div className="worklist-row-acts">
+      {framed ? (
+        <>
+          {answer}
+          {others}
+        </>
+      ) : (
+        <>
+          {others}
+          {answer}
+        </>
       )}
-      {primary}
       {(ways.length > 0 || pins || handsOff || putsDown) && (
         <OverflowMenu label={t("worklist.rowMenu", { title })}>
           <PutDownLines write={write} />
@@ -129,6 +146,32 @@ export function RowActs({
         />
       )}
     </div>
+  );
+}
+
+/** The row's answer: the prepared move, the verb a page reaches, the lane's. */
+function RowAnswer({
+  item,
+  lead,
+  primary,
+  onOpenEmail,
+}: Readonly<{
+  item: WorklistItem;
+  lead: RoutedVerb | undefined;
+  primary?: ReactNode;
+  onOpenEmail?: (id: string) => void;
+}>) {
+  const t = useT();
+  return (
+    <>
+      {!item.batch && <PreparedMove item={item} onOpenEmail={onOpenEmail} />}
+      {lead && (
+        <a className={NAVIGATING_VERB} href={lead.destination}>
+          {VERB_LABEL[lead.action](t)}
+        </a>
+      )}
+      {primary}
+    </>
   );
 }
 
@@ -306,9 +349,8 @@ const VERB_LABEL: Record<
   // AutomationRetry, which acts in place, so VERB_DESTINATION routes it
   // nowhere and this label is never the one a reader sees.
   retry: (t) => t("worklist.verb.retry"),
-  // An undecided domain's pair, drawn in place by DomainQuestionAnswer. Named
-  // here because the map is total; the words a reader actually presses come
-  // from that control, which reads these same two keys.
+  // Domain review owns the inline controls; these labels keep the contract map total.
+  reopen: (t) => t("worklist.domainReview.retry"),
   keep: (t) => t("worklist.verb.keep"),
   discard: (t) => t("worklist.verb.discard"),
   // The composer's own word, not a second one: ChannelReplyAction draws the

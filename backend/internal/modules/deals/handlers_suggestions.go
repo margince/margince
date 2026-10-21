@@ -43,6 +43,16 @@ func (h Handlers) ListDealSuggestions(w http.ResponseWriter, r *http.Request, pa
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.DealSuggestionListResponse{Data: data, Page: page})
 }
 
+// GetDealSuggestion uses the same source visibility as the suggestion list.
+func (h Handlers) GetDealSuggestion(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	suggestion, err := h.store.GetSuggestion(r.Context(), ids.UUID(id))
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, SuggestionWire(suggestion))
+}
+
 // AcceptDealSuggestion opens the suggested deal. The body is optional: without
 // one the suggestion's own values stand.
 func (h Handlers) AcceptDealSuggestion(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.AcceptDealSuggestionParams) {
@@ -52,7 +62,8 @@ func (h Handlers) AcceptDealSuggestion(w http.ResponseWriter, r *http.Request, i
 		return
 	}
 	in := AcceptSuggestionInput{
-		Name: req.Name, AmountMinor: req.AmountMinor, Currency: req.Currency,
+		ExistingDealID: optionalUUID(req.ExistingDealId),
+		Name:           req.Name, AmountMinor: req.AmountMinor, Currency: req.Currency,
 		NoAmount: req.NoAmount != nil && *req.NoAmount,
 		StageID:  optionalUUID(req.StageId), OwnerID: optionalUUID(req.OwnerId),
 	}
@@ -76,7 +87,16 @@ func (h Handlers) AcceptDealSuggestion(w http.ResponseWriter, r *http.Request, i
 
 // DismissDealSuggestion records, for the workspace, that the suggestion is not a deal.
 func (h Handlers) DismissDealSuggestion(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.DismissDealSuggestionParams) {
-	out, err := h.store.DismissSuggestion(r.Context(), ids.UUID(id))
+	var req crmcontracts.DismissDealSuggestionRequest
+	if err := httperr.DecodeOrRefusal(w, r, &req); err != nil && !errors.Is(err, io.EOF) {
+		httperr.Write(w, r, err)
+		return
+	}
+	reason := dismissReasonNotADeal
+	if req.Reason != nil {
+		reason = string(*req.Reason)
+	}
+	out, err := h.store.DismissSuggestion(r.Context(), ids.UUID(id), reason)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -98,7 +118,7 @@ func SuggestionWire(s Suggestion) crmcontracts.DealSuggestion {
 	out := crmcontracts.DealSuggestion{
 		Id: openapi_types.UUID(s.ID), Kind: crmcontracts.DealSuggestionKind(s.Kind),
 		State: crmcontracts.DealSuggestionState(s.State), CompanyId: openapi_types.UUID(s.CompanyID),
-		CompanyName: s.CompanyName, PipelineId: openapi_types.UUID(s.PipelineID),
+		CompanyName: s.CompanyName, OwnerId: uuidPtr(s.OwnerID), PipelineId: openapi_types.UUID(s.PipelineID),
 		StageId: openapi_types.UUID(s.StageID), NameHint: crmcontracts.DealSuggestionNameHint(s.NameHint), AmountMinor: s.AmountMinor,
 		Currency: s.Currency, Confidence: float32(s.Confidence), CreatedAt: s.CreatedAt,
 		Evidence: make([]crmcontracts.DealSuggestionEvidence, 0, len(s.Evidence)),

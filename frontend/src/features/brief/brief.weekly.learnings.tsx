@@ -2,21 +2,15 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { EntityRef } from "../../components/entityref";
-import { Card } from "../../design-system/atoms";
-import { PanelBody, PanelGroupHead } from "../../design-system/panel";
+import { Badge } from "../../design-system/atoms";
+import { Panel, PanelRow } from "../../design-system/panel";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { WeeklyReview } from "./brief.queries";
 
-// The interval between two lessons is declared beside the week's own, in the
-// sheet the panel that holds this one imports.
 import "./brief.weekly.css";
 
-// What the week taught, beside what it was.
-//
-// A GROUP inside the week's panel rather than a panel of its own: a titled
-// boxed surface inside another panel's column reads as a second product, and
-// the pane already has one head.
+// What the week taught, as a chapter of the report, which names it.
 //
 // EVERY LEARNING SHOWS WHAT IT RESTS ON. The narrative above this describes a
 // week the reader can already see; a learning is a claim about cause that they
@@ -46,17 +40,16 @@ export function LearningsPanel({
   if (!learnings) return null;
 
   return (
-    <>
-      <PanelGroupHead title={t("brief.weekly.learnings.title")} level="h3" />
-      <PanelBody className="brief-weekly-learnings">
-        {learnings.items.length > 0 && (
-          <p className="t-caption">{t("brief.weekly.learnings.caveat")}</p>
-        )}
-        {learnings.items.length === 0 ? (
-          <EmptyLearnings state={learnings.state} />
-        ) : (
-          learnings.items.map((item) => (
-            <LearningCard
+    <div className="brief-weekly-learnings">
+      {learnings.items.length > 0 && (
+        <p className="t-caption">{t("brief.weekly.learnings.caveat")}</p>
+      )}
+      {learnings.items.length === 0 ? (
+        <EmptyLearnings state={learnings.state} />
+      ) : (
+        <Panel>
+          {learnings.items.map((item) => (
+            <LearningItem
               // Keyed on what the learning RESTS ON rather than its position:
               // a frozen week's list never reorders, but a key built from an
               // index says the opposite to anybody reading it later. The first
@@ -65,10 +58,10 @@ export function LearningsPanel({
               key={`${item.citations[0]?.subject_id}-${item.kind}`}
               learning={item}
             />
-          ))
-        )}
-      </PanelBody>
-    </>
+          ))}
+        </Panel>
+      )}
+    </div>
   );
 }
 
@@ -89,29 +82,32 @@ function EmptyLearnings({ state }: Readonly<{ state: Learnings["state"] }>) {
   );
 }
 
-function LearningCard({ learning }: Readonly<{ learning: Learning }>) {
+function LearningItem({ learning }: Readonly<{ learning: Learning }>) {
   const t = useT();
   return (
-    <Card title={t(KIND_LABEL[learning.kind])}>
-      <p>{learning.text}</p>
-      <ul className="weekly-learnings-citations">
-        {learning.citations.map((c) => (
-          <li key={`${c.subject_type}-${c.subject_id}`}>
-            {/* A deal links through to its record; a commitment is a row of the
+    <PanelRow>
+      <div className="brief-weekly-learning">
+        <Badge>{t(KIND_LABEL[learning.kind])}</Badge>
+        <p>{learning.text}</p>
+        <ul className="weekly-learnings-citations">
+          {learning.citations.map((c) => (
+            <li key={`${c.subject_type}-${c.subject_id}`}>
+              {/* A deal links through to its record; a commitment is a row of the
                 rep's own plan with no 360 to send them to, so it is named and
                 not linked.
 
                 Either way the label is the one FROZEN into the week, passed so
                 the link does not resolve today's name — a deal renamed in March
                 must not relabel the lesson it taught in January. */}
-            {c.subject_type === "deal" ? (
-              <EntityRef kind="deal" id={c.subject_id} name={c.label} />
-            ) : (
-              c.label
-            )}
-          </li>
-        ))}
-      </ul>
-    </Card>
+              {c.subject_type === "deal" ? (
+                <EntityRef kind="deal" id={c.subject_id} name={c.label} />
+              ) : (
+                c.label
+              )}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </PanelRow>
   );
 }

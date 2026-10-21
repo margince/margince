@@ -1,15 +1,11 @@
 <!-- prose:plain -->
 # Leads, deals and projects
 
-A lead is someone you may sell to. A deal is one opportunity with one
-company, and a project is a body of work a deal may belong to. Contacts and
-companies are in [Contacts, companies, leads, deals and projects](records.md).
-So are archiving, undo, custom fields and tags for every record.
+A lead is someone you may sell to. A deal is one opportunity with one company, and a project is work a deal may belong to. See [Records](records.md) for contacts, companies, archiving, undo, custom fields and tags.
 
 ## Leads
 
-> "Leads are kept apart from Contacts. A lead becomes a contact only when you
-> qualify it."
+> "Leads are kept apart from Contacts. A lead becomes a contact only when you qualify it."
 
 A lead needs only a source. Email and LinkedIn address are the fields used to
 find copies of one lead; a second live lead with the same email is refused.
@@ -44,9 +40,7 @@ A lead has five statuses. The first three are open, the last two are final.
 | **Qualified** | A contact now exists for this lead |
 | **Disqualified** | Closed, with a reason |
 
-Contacted and engaged are set on their own from captured activity, and can also
-be set by hand. The record tells you which: "set automatically from captured
-activity" or "set by hand".
+Captured activity sets Contacted and Engaged automatically. You can also set them by hand; the record tells you which.
 
 You may move an open lead to any open step, forward or back, on its **Lead
 status** ladder. Margince itself only ever moves it forward.
@@ -173,6 +167,15 @@ soon** or **Overdue**.
 A deal is created on **Deals**, on a company page, on a project page, from the
 command palette, or by qualifying a lead. How a deal then moves through stages,
 closes and reopens is on [The pipeline: how a deal moves](the-pipeline.md).
+
+### How do I review a possible deal?
+A deal suggestion names the buyer's company and shows the dated evidence behind it. Read the source before accepting it. A meeting, an invitation or a proposal you sent does not establish that someone wants your services.
+
+Choose **Link to existing deal** when the request belongs to a deal already at that company. For a new deal, check the proposed details before creating a deal. Dismiss a suggestion with a reason when it should not become a deal.
+
+Buying evidence without a proposal appears in **Input checks**. Open **Answer** to read the source, check who is buying, and choose a deal. You can create a deal there when you have permission, then save the answer to file the source on it. **Not relevant** and **Remind later** record your choice.
+
+Old buying evidence carries its source date and a warning to check whether the buyer still wants it. The mailbox history date can exclude old promises from automatic work while leaving this evidence available for review.
 
 ### How do I create a deal?
 To create a deal in Margince, open **Deals** in the sidebar and choose **New deal**.
@@ -361,13 +364,9 @@ A project always has at least one company. Trying to remove the last one is
 refused: "A project keeps at least one company; add another before taking this
 one off." A company with deals still on the project cannot be removed either.
 
-Companies on a project are offered three roles: **Customer, Partner,
-Subcontractor**. These are labels only. Two companies can both be Customer, or
-none can be.
+Companies on a project can be a customer, partner or subcontractor. These are labels only; a project can have several customers or none.
 
-Stakeholders on a project use these roles: **Champion, Economic buyer, Blocker,
-Influencer, User, Sponsor, Project lead, Delivery lead, Subject-matter
-expert.**
+Stakeholder roles: champion, economic buyer, blocker, influencer, user, sponsor, project lead, delivery lead, subject-matter expert.
 
 You can add someone from either end. The project's own Stakeholders card adds,
 removes and changes roles, and so does the contact's page. The contact page

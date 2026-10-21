@@ -1,3 +1,4 @@
+import { SendPermission } from "../../components/sendpermission";
 import { Badge, Button, Card } from "../../design-system/atoms";
 import {
   formatDateTime,
@@ -8,10 +9,9 @@ import {
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { logUnexpectedError } from "../../lib/problem";
+import { useSendPermission } from "../../lib/usesendpermission";
 import type { ScheduledSend, Status } from "./scheduledqueue";
 import { type Move, RescheduleMenu } from "./scheduledsends.reschedule";
-import { SendPermission } from "./sendpermission";
-import { useSendPermission } from "./usesendpermission";
 
 // What each status says, in the five-state vocabulary. `scheduled` is work
 // still in flight, `sent` is the favourable outcome, `held` needs a human

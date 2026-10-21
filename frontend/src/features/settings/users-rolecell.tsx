@@ -13,7 +13,7 @@ import {
   roleLabel,
   roleOptions,
   type useAssignableRoles,
-} from "./roles.queries";
+} from "../../lib/roles.queries";
 import type { Role } from "./users-invite-form";
 import {
   memberMutationKey,

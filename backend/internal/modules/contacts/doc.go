@@ -14,6 +14,7 @@
 // contact_provider_claim, provider_applied_field, company_vat_check,
 // relationship_nudge_dismissal, sdr_handoff, sdr_handoff_event,
 // sdr_handoff_reason.
+// Also owned: company_domain_disposition, company_domain_question_reader.
 // The sdr_handoff trio is a prospect being passed from an SDR to an account
 // executive: the row carrying its current state, the append-only transitions
 // behind it, and the administered reason list a refusal names. It lives here

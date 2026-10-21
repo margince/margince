@@ -119,12 +119,13 @@ func TestRelationshipLifecycle(t *testing.T) {
 	}, nil, nil); status != 422 {
 		t.Fatalf("shape-violating edge → %d, want 422", status)
 	}
-	// An invisible endpoint reads as absent (H1).
+	// An invisible endpoint reads as absent (H1), and the refusal names it.
+	var refused problemBody
 	if status := e.Call(t, "POST", "/v1/relationships", AnyMap{
 		"kind": "employment", "contact_id": "00000000-0000-7000-8000-00000000dead",
 		"company_id": e.companyID, "source": "manual",
-	}, nil, nil); status != http.StatusNotFound {
-		t.Fatalf("invisible endpoint → %d, want 404", status)
+	}, nil, &refused); status != http.StatusUnprocessableEntity || !namesFieldWithCode(refused, "contact_id", "reference_not_found") {
+		t.Fatalf("invisible endpoint → %d %+v, want 422 reference_not_found on contact_id", status, refused.Details.Errors)
 	}
 }
 

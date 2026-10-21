@@ -2,14 +2,14 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
-import { jsonResponse } from "../../testing/story-utils";
 import {
   type Contact360,
   mount,
   quietMoment,
   recordHeader,
   view,
-} from "./contactpage.testkit";
+} from "../../testing/contactpage.testkit";
+import { jsonResponse } from "../../testing/story-utils";
 
 afterEach(() => {
   cleanup();

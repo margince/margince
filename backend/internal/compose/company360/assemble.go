@@ -358,7 +358,7 @@ func (a *assembly) suggestionInputsOnce() (suggestionInputs, error) {
 // describing different instants.
 func (a *assembly) signalFactsOnce() (signalFacts, error) {
 	if !a.signalsRead {
-		a.signals, a.signalsErr = readSignalFacts(a.ctx, a.tx, a.companyID)
+		a.signals, a.signalsErr = readSignalFacts(a.ctx, a.tx, a.companyID, a.now)
 		a.signalsRead = true
 	}
 	return a.signals, a.signalsErr

@@ -22,34 +22,7 @@ import type { DealSuggestion } from "./dealsuggestions.queries";
 // amount only where a finished document reading stated one with its currency,
 // the evidence in the reader's words, and the two answers.
 
-const suggestion: DealSuggestion = {
-  id: "01a0e9f1-0000-7000-8000-000000000001",
-  kind: "open_deal",
-  state: "open",
-  company_id: "01a0e9f1-0000-7000-8000-0000000000c1",
-  company_name: "Acme GmbH",
-  pipeline_id: "01a0e9f1-0000-7000-8000-0000000000p1",
-  stage_id: "01a0e9f1-0000-7000-8000-0000000000s1",
-  name_hint: "proposal_sent",
-  amount_minor: 1250000,
-  currency: "EUR",
-  confidence: 0.9,
-  created_at: "2026-09-27T09:00:00Z",
-  evidence: [
-    {
-      kind: "attachment",
-      attachment_id: "01a0e9f1-0000-7000-8000-0000000000a1",
-      occurred_at: "2026-09-26T15:00:00Z",
-      title: "Angebot_2026.pdf",
-    },
-    {
-      kind: "meeting",
-      activity_id: "01a0e9f1-0000-7000-8000-0000000000m1",
-      occurred_at: "2026-09-24T10:00:00Z",
-      title: "Scoping workshop",
-    },
-  ],
-};
+import { suggestion } from "../../testing/dealsuggestion.fixture";
 
 const unpriced: DealSuggestion = {
   ...suggestion,
@@ -84,6 +57,10 @@ function stub(allowDecide: boolean) {
             : { deal: ["read"], company: ["read"] },
         }),
       ),
+    "GET /users/names": () =>
+      jsonResponse({
+        data: [{ id: "account-owner", display_name: "Mira Chen" }],
+      }),
     "GET /deal-suggestions": () =>
       jsonResponse({ data: [suggestion], page: { has_more: false } }),
     "GET /pipelines": () =>
@@ -130,6 +107,19 @@ export const WithEvidence: Story = {
     return (
       <StoryProviders>
         <DealSuggestionCard suggestion={suggestion} />
+      </StoryProviders>
+    );
+  },
+};
+
+export const Retired: Story = {
+  render: () => {
+    stub(true);
+    return (
+      <StoryProviders>
+        <DealSuggestionCard
+          suggestion={{ ...suggestion, state: "superseded" }}
+        />
       </StoryProviders>
     );
   },
@@ -209,6 +199,19 @@ export const German: Story = {
     return (
       <StoryProviders locale="de">
         <DealSuggestionCard suggestion={suggestion} />
+      </StoryProviders>
+    );
+  },
+};
+
+export const WithAccountOwner: Story = {
+  render: () => {
+    stub(true);
+    return (
+      <StoryProviders>
+        <DealSuggestionCard
+          suggestion={{ ...suggestion, owner_id: "account-owner" }}
+        />
       </StoryProviders>
     );
   },

@@ -2,11 +2,11 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { SignatureHtml } from "../../components/signaturehtml";
 import { useToast } from "../../design-system/toast";
 import { meFixture } from "../../testing/mefixture";
-import { jsonResponse, render } from "../settings/settings.testkit";
+import { jsonResponse, render } from "../../testing/settings.testkit";
 import { SignatureSettingRow } from "../settings/settingssignaturerow";
-import { SignatureHtml } from "./signaturehtml";
 import { SignatureTemplateCard } from "./signaturetemplatecard";
 
 // A workspace signature template: an admin writes the layout once, and each

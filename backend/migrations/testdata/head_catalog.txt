@@ -73,6 +73,7 @@ public.activity.foreign_link boolean gen=- def=-
 public.activity.has_calendar_part boolean NOT NULL gen=- def=false
 public.activity.host_user_id uuid gen=- def=-
 public.activity.id uuid NOT NULL gen=- def=uuidv7()
+public.activity.inbound_sender_authenticated boolean NOT NULL gen=- def=false
 public.activity.is_done boolean NOT NULL gen=- def=false
 public.activity.kind text NOT NULL gen=- def=-
 public.activity.language text gen=- def=-
@@ -1151,6 +1152,13 @@ public.approval_autonomy_policy.veto_window interval gen=- def=-
 public.approval_autonomy_policy_pkey CREATE UNIQUE INDEX approval_autonomy_policy_pkey ON public.approval_autonomy_policy USING btree (id)
 public.approval_effect_failed_idx CREATE INDEX approval_effect_failed_idx ON public.approval USING btree (effect_failed_at DESC) WHERE (effect_failed_at IS NOT NULL)
 public.approval_pkey CREATE UNIQUE INDEX approval_pkey ON public.approval USING btree (id)
+public.approval_preference acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.approval_preference.approval_preference_pkey PRIMARY KEY (user_id, kind)
+public.approval_preference.approval_preference_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.approval_preference.kind text NOT NULL gen=- def=-
+public.approval_preference.muted boolean NOT NULL gen=- def=false
+public.approval_preference.user_id uuid NOT NULL gen=- def=-
+public.approval_preference_pkey CREATE UNIQUE INDEX approval_preference_pkey ON public.approval_preference USING btree (user_id, kind)
 public.assert_deal_project_same_company() secdef=false cfg=- acl=- 
 BEGIN
   IF NEW.project_id IS NULL THEN
@@ -2461,7 +2469,7 @@ public.company_domain_disposition.company_domain_disposition_admission_source_ch
 public.company_domain_disposition.company_domain_disposition_company_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
 public.company_domain_disposition.company_domain_disposition_domain_check CHECK (((domain = lower(domain)) AND (domain <> ''::text)))
 public.company_domain_disposition.company_domain_disposition_owner_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
-public.company_domain_disposition.company_domain_disposition_pending_reason_check CHECK (((pending_reason IS NULL) OR (pending_reason = ANY (ARRAY['unevidenced'::text, 'stale_evidence'::text, 'near_duplicate'::text]))))
+public.company_domain_disposition.company_domain_disposition_pending_reason_check CHECK (((pending_reason IS NULL) OR (pending_reason = ANY (ARRAY['unevidenced'::text, 'stale_evidence'::text, 'near_duplicate'::text, 'forwarded_identity'::text, 'reserved_domain'::text]))))
 public.company_domain_disposition.company_domain_disposition_pending_reason_shape CHECK (((pending_reason IS NULL) OR ((status = 'pending'::text) AND (admission IS DISTINCT FROM 'suppressed'::text))))
 public.company_domain_disposition.company_domain_disposition_pkey PRIMARY KEY (id)
 public.company_domain_disposition.company_domain_disposition_settled_shape CHECK ((((status = 'pending'::text) AND (source IS NULL)) OR ((status = 'company'::text) AND (source IS NOT NULL) AND (company_id IS NOT NULL)) OR ((status = ANY (ARRAY['personal'::text, 'provider'::text, 'no_site'::text])) AND (source IS NOT NULL))))
@@ -2484,6 +2492,15 @@ public.company_domain_disposition.status text NOT NULL gen=- def='pending'::text
 public.company_domain_disposition.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.company_domain_disposition_pkey CREATE UNIQUE INDEX company_domain_disposition_pkey ON public.company_domain_disposition USING btree (id)
 public.company_domain_pkey CREATE UNIQUE INDEX company_domain_pkey ON public.company_domain USING btree (id)
+public.company_domain_question_reader acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.company_domain_question_reader.company_domain_question_reader_domain_fkey FOREIGN KEY (domain) REFERENCES company_domain_disposition(domain) ON DELETE CASCADE
+public.company_domain_question_reader.company_domain_question_reader_pkey PRIMARY KEY (domain, reader_id)
+public.company_domain_question_reader.company_domain_question_reader_reader_id_fkey FOREIGN KEY (reader_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.company_domain_question_reader.domain text NOT NULL gen=- def=-
+public.company_domain_question_reader.evidence_at timestamp with time zone gen=- def=-
+public.company_domain_question_reader.reader_id uuid NOT NULL gen=- def=-
+public.company_domain_question_reader_pkey CREATE UNIQUE INDEX company_domain_question_reader_pkey ON public.company_domain_question_reader USING btree (domain, reader_id)
+public.company_domain_question_reader_reader_idx CREATE INDEX company_domain_question_reader_reader_idx ON public.company_domain_question_reader USING btree (reader_id, domain)
 public.company_dossier acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.company_dossier.company_dossier_company_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
 public.company_dossier.company_dossier_generated_by_check CHECK ((generated_by = ANY (ARRAY['model'::text, 'deterministic'::text])))
@@ -3370,6 +3387,61 @@ public.data_subject_request.updated_at timestamp with time zone NOT NULL gen=- d
 public.data_subject_request_one_case_per_submission CREATE UNIQUE INDEX data_subject_request_one_case_per_submission ON public.data_subject_request USING btree (source_submission_id) WHERE (source_submission_id IS NOT NULL)
 public.data_subject_request_pkey CREATE UNIQUE INDEX data_subject_request_pkey ON public.data_subject_request USING btree (id)
 public.data_subject_request_receipt_reference CREATE UNIQUE INDEX data_subject_request_receipt_reference ON public.data_subject_request USING btree (receipt_reference) WHERE (receipt_reference IS NOT NULL)
+public.data_task_review acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.data_task_review.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.data_task_review.data_task_review_pkey PRIMARY KEY (token_hash)
+public.data_task_review.data_task_review_token_hash_check CHECK ((octet_length(token_hash) = 32))
+public.data_task_review.expires_at timestamp with time zone NOT NULL gen=- def=-
+public.data_task_review.operator text NOT NULL gen=- def=-
+public.data_task_review.review jsonb NOT NULL gen=- def=-
+public.data_task_review.task_id text NOT NULL gen=- def=-
+public.data_task_review.token_hash bytea NOT NULL gen=- def=-
+public.data_task_review_expiry CREATE INDEX data_task_review_expiry ON public.data_task_review USING btree (expires_at)
+public.data_task_review_pkey CREATE UNIQUE INDEX data_task_review_pkey ON public.data_task_review USING btree (token_hash)
+public.data_task_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.data_task_run.activation jsonb gen=- def=-
+public.data_task_run.batch_limit integer NOT NULL gen=- def=-
+public.data_task_run.batches bigint NOT NULL gen=- def=0
+public.data_task_run.changed bigint NOT NULL gen=- def=0
+public.data_task_run.consecutive_failures integer NOT NULL gen=- def=0
+public.data_task_run.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.data_task_run.cursor jsonb gen=- def=-
+public.data_task_run.data_task_run_batch_limit_check CHECK ((batch_limit > 0))
+public.data_task_run.data_task_run_batches_check CHECK (((batches >= 0) AND (batches <= '9007199254740991'::bigint)))
+public.data_task_run.data_task_run_changed_check CHECK (((changed >= 0) AND (changed <= '9007199254740991'::bigint)))
+public.data_task_run.data_task_run_consecutive_failures_check CHECK ((consecutive_failures >= 0))
+public.data_task_run.data_task_run_estimate_check CHECK (((estimate >= 0) AND (estimate <= '9007199254740991'::bigint)))
+public.data_task_run.data_task_run_pkey PRIMARY KEY (task_id, step)
+public.data_task_run.data_task_run_run_id_key UNIQUE (run_id)
+public.data_task_run.data_task_run_scanned_check CHECK (((scanned >= 0) AND (scanned <= '9007199254740991'::bigint)))
+public.data_task_run.data_task_run_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'running'::text, 'paused'::text, 'done'::text, 'failed'::text])))
+public.data_task_run.data_task_run_task_version_check CHECK ((task_version > 0))
+public.data_task_run.data_task_run_version_check CHECK (((version >= 1) AND (version <= '9007199254740991'::bigint)))
+public.data_task_run.estimate bigint gen=- def=-
+public.data_task_run.estimate_capped boolean NOT NULL gen=- def=false
+public.data_task_run.estimated_at timestamp with time zone gen=- def=-
+public.data_task_run.first_release text NOT NULL gen=- def=-
+public.data_task_run.last_error_class text gen=- def=-
+public.data_task_run.last_progress_at timestamp with time zone gen=- def=-
+public.data_task_run.next_attempt_at timestamp with time zone gen=- def=-
+public.data_task_run.run_id uuid NOT NULL gen=- def=-
+public.data_task_run.scanned bigint NOT NULL gen=- def=0
+public.data_task_run.status text NOT NULL gen=- def='pending'::text
+public.data_task_run.step text NOT NULL gen=- def=-
+public.data_task_run.task_id text NOT NULL gen=- def=-
+public.data_task_run.task_version integer NOT NULL gen=- def=-
+public.data_task_run.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.data_task_run.version bigint NOT NULL gen=- def=1
+public.data_task_run_history acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.data_task_run_history.data_task_run_history_pkey PRIMARY KEY (run_id)
+public.data_task_run_history.preserved_at timestamp with time zone NOT NULL gen=- def=-
+public.data_task_run_history.progress jsonb NOT NULL gen=- def=-
+public.data_task_run_history.run_id uuid NOT NULL gen=- def=-
+public.data_task_run_history.step text NOT NULL gen=- def=-
+public.data_task_run_history.task_id text NOT NULL gen=- def=-
+public.data_task_run_history_pkey CREATE UNIQUE INDEX data_task_run_history_pkey ON public.data_task_run_history USING btree (run_id)
+public.data_task_run_pkey CREATE UNIQUE INDEX data_task_run_pkey ON public.data_task_run USING btree (task_id, step)
+public.data_task_run_run_id_key CREATE UNIQUE INDEX data_task_run_run_id_key ON public.data_task_run USING btree (run_id)
 public.deal acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.deal.acquisition_source text gen=- def=-
 public.deal.amount_minor bigint gen=- def=-
@@ -6300,6 +6372,7 @@ public.report_definition.archived_at timestamp with time zone gen=- def=-
 public.report_definition.audience text NOT NULL gen=- def=-
 public.report_definition.audience_team_id uuid gen=- def=-
 public.report_definition.created_at timestamp with time zone NOT NULL gen=- def=-
+public.report_definition.description text gen=- def=-
 public.report_definition.draft_revision bigint gen=- def=-
 public.report_definition.id uuid NOT NULL gen=- def=-
 public.report_definition.name text NOT NULL gen=- def=-
@@ -6364,6 +6437,26 @@ public.report_edition_contribution.source_type text NOT NULL gen=- def=-
 public.report_edition_contribution_pkey CREATE UNIQUE INDEX report_edition_contribution_pkey ON public.report_edition_contribution USING btree (edition_id, metric, context_id, contribution_key)
 public.report_edition_execution_id_key CREATE UNIQUE INDEX report_edition_execution_id_key ON public.report_edition USING btree (execution_id)
 public.report_edition_pkey CREATE UNIQUE INDEX report_edition_pkey ON public.report_edition USING btree (id)
+public.report_edition_question acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.report_edition_question.answer jsonb gen=- def=-
+public.report_edition_question.card_id text NOT NULL gen=- def=-
+public.report_edition_question.edition_id uuid NOT NULL gen=- def=-
+public.report_edition_question.entity text NOT NULL gen=- def=-
+public.report_edition_question.reason text gen=- def=-
+public.report_edition_question.report_edition_question_edition_id_fkey FOREIGN KEY (edition_id) REFERENCES report_edition(id) ON DELETE CASCADE
+public.report_edition_question.report_edition_question_kept_or_reasoned CHECK (((answer IS NULL) <> (reason IS NULL)))
+public.report_edition_question.report_edition_question_pkey PRIMARY KEY (edition_id, card_id)
+public.report_edition_question.report_edition_question_reason_known CHECK ((reason = ANY (ARRAY['retention_unconfigured'::text, 'too_many_records'::text, 'unanswered'::text])))
+public.report_edition_question_pkey CREATE UNIQUE INDEX report_edition_question_pkey ON public.report_edition_question USING btree (edition_id, card_id)
+public.report_edition_question_source acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.report_edition_question_source.card_id text NOT NULL gen=- def=-
+public.report_edition_question_source.edition_id uuid NOT NULL gen=- def=-
+public.report_edition_question_source.report_edition_question_source_edition_id_card_id_fkey FOREIGN KEY (edition_id, card_id) REFERENCES report_edition_question(edition_id, card_id) ON DELETE CASCADE
+public.report_edition_question_source.report_edition_question_source_pkey PRIMARY KEY (edition_id, card_id, row_index, source_id)
+public.report_edition_question_source.row_index integer NOT NULL gen=- def=-
+public.report_edition_question_source.source_id uuid NOT NULL gen=- def=-
+public.report_edition_question_source.source_type text NOT NULL gen=- def=-
+public.report_edition_question_source_pkey CREATE UNIQUE INDEX report_edition_question_source_pkey ON public.report_edition_question_source USING btree (edition_id, card_id, row_index, source_id)
 public.report_execution acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.report_execution.attempt bigint NOT NULL gen=- def=0
 public.report_execution.edition_id uuid gen=- def=-
@@ -6403,6 +6496,7 @@ public.report_projection_fence.report_projection_fence_pkey PRIMARY KEY (singlet
 public.report_projection_fence.report_projection_fence_singleton_check CHECK (singleton)
 public.report_projection_fence.singleton boolean NOT NULL gen=- def=true
 public.report_projection_fence_pkey CREATE UNIQUE INDEX report_projection_fence_pkey ON public.report_projection_fence USING btree (singleton)
+public.report_question_source CREATE INDEX report_question_source ON public.report_edition_question_source USING btree (source_type, source_id)
 public.report_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.report_run.asked_by uuid NOT NULL gen=- def=-
 public.report_run.captured_by text NOT NULL gen=- def=-

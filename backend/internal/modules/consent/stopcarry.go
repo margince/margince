@@ -120,26 +120,9 @@ func (s *Store) CarryStopsTx(ctx context.Context, tx pgx.Tx, from, to commsauthz
 		INSERT INTO communication_suppression
 		  (contact_id, lead_id, address, kind, source, decided_by_level,
 		   captured_by, carried_from, purpose_id)
-		SELECT DISTINCT ON (live.kind, live.purpose_id)
-		       $3, $4, live.address, live.kind, live.source, live.decided_by_level,
-		       $5, live.id, live.purpose_id
-		  FROM communication_suppression live
-		 WHERE (($1::uuid IS NOT NULL AND live.contact_id = $1)
-		     OR ($2::uuid IS NOT NULL AND live.lead_id = $2))
-		   AND live.revoked_at IS NULL
-		   AND NOT EXISTS (
-		         SELECT 1 FROM communication_suppression held
-		          WHERE (($3::uuid IS NOT NULL AND held.contact_id = $3)
-		              OR ($4::uuid IS NOT NULL AND held.lead_id = $4))
-		            AND held.kind = live.kind
-		            AND held.purpose_id IS NOT DISTINCT FROM live.purpose_id
-		            AND held.revoked_at IS NULL
-		            AND coalesce(array_position($6::text[], held.decided_by_level), array_length($6::text[], 1) + 1)
-		                >= coalesce(array_position($6::text[], live.decided_by_level), array_length($6::text[], 1) + 1))
-		 ORDER BY live.kind, live.purpose_id, coalesce(array_position($6::text[], live.decided_by_level), array_length($6::text[], 1) + 1) DESC, live.recorded_at DESC
-		RETURNING kind, decided_by_level`,
-		zeroAsNull(from.ContactID.UUID), zeroAsNull(from.LeadID.UUID),
-		zeroAsNull(to.ContactID.UUID), zeroAsNull(to.LeadID.UUID), by, authorityLadder())
+		SELECT @to_contact, @to_lead, address, kind, source, decided_by_level,
+		       @by, id, purpose_id FROM (`+stopCarryCandidates+`) candidates
+		RETURNING kind, decided_by_level`, carryAuthorityArgs(from, to, by))
 	if err != nil {
 		return fmt.Errorf("consent: carrying the subject's stops onto the surviving record: %w", err)
 	}

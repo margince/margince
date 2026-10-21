@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The focus panel's inside: the row in hand as a card on a stack, and the
-// ranked column beside it. The panel's chrome (head, states, foot) is
-// brief.feed.tsx.
+// The focus panel's body: the row in hand as a card, and the ranked column
+// beside it. The panel's head, states and foot are in brief.feed.tsx.
 
-import { Avatar, Badge, Button, Card } from "../../design-system/atoms";
+import { useRef } from "react";
+import { Button, Card } from "../../design-system/atoms";
+import { Disclosure } from "../../design-system/disclosure";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { openingCase } from "../../format/collate";
 import {
@@ -17,7 +18,9 @@ import { viewerZone } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
+import { consequenceText } from "../worklist/worklist.connection";
 import {
+  comparisonText,
   itemTitle,
   phrasedReasons,
   reasonText,
@@ -25,10 +28,10 @@ import {
   whenText,
 } from "../worklist/worklist.copy";
 import { eyebrowKeyFor } from "../worklist/worklist.eyebrow";
-import { hasPane, lastTouch } from "../worklist/worklist.pane";
+import { hasPane } from "../worklist/worklist.pane";
 import type { WorklistItem } from "../worklist/worklist.queries";
 import { WorklistRow } from "../worklist/worklist.row";
-import { contactHref, rowTouch } from "../worklist/worklist.row.captions";
+import { contactHref } from "../worklist/worklist.row.captions";
 
 import "./brief.feed.css";
 
@@ -56,8 +59,17 @@ export function Triage({
   const { locale } = useLocale();
   const zone = viewerZone();
   const recordZone = useRecordZone();
-  // A meeting earns the door too. Its subject is the activity, not a contact,
-  // so `hasPane` answers no for it.
+  // A press removes the pressed button from the list. Focus follows it onto
+  // the card it brought in hand; a first render takes no focus.
+  const pressed = useRef(false);
+  const takeFocus = (frame: HTMLDivElement | null) => {
+    if (frame && pressed.current) {
+      pressed.current = false;
+      frame.focus();
+    }
+  };
+  // A meeting gets the door too. Its subject is the activity, not a contact,
+  // so `hasPane` alone would leave it with no way through.
   const context =
     onContext &&
     (hasPane(lead) ||
@@ -68,11 +80,9 @@ export function Triage({
       {t("brief.focus.context")}
     </Button>
   ) : undefined;
-  // The head's facts, off the same helpers the row prints them with, so the
-  // card and the queue cannot describe one piece of work two ways. A message
-  // is dated by its arrival, day and hour; everything else by its own clock.
-  // The reader's own pin is the queue's reason, not the focus projection's
-  // (`allowPin`).
+  // The head's facts come from the helpers the row uses, so the card and the
+  // queue agree. A message is dated by its arrival, the rest by its own clock.
+  // The reader's own pin is the queue's reason, not the card's.
   const arrived = lead.email_summary?.occurred_at;
   const when = arrived
     ? `${formatDayMonth(arrived, locale, zone)}, ${formatTimeOfDay(arrived, locale, zone)}`
@@ -80,8 +90,9 @@ export function Triage({
   const weighed = phrasedReasons(lead, when !== null).filter(
     (reason) => reason.kind !== "pinned",
   );
-  // The label is the reason that carries a figure ("Waiting 13 days"), else
-  // the first weighed. The rest stay on the queue's row, behind the fold.
+  // The label is the first reason with a figure, else the first weighed:
+  // "Waiting 13 days" says more than "they wrote last". The rest stay on the
+  // queue's row.
   const strongest = weighed.find((reason) => reason.value) ?? weighed[0];
   const phrased = strongest ? reasonText(strongest, t, locale, zone) : null;
   // The reasons are written as fragments of a line ("waiting 13 days"); as a
@@ -90,32 +101,31 @@ export function Triage({
   const label = phrased ? openingCase(phrased, locale) : t(eyebrowKeyFor(lead));
   return (
     <div className="brief-triage">
-      {/* The row in hand is a card on a stack. The edges of the work behind
-          it show, so a reader sees the day has more. Depth is what remains, at
-          most two edges: a third reads as texture, not a count.
-
-          Keyed by the row, so pressing another mounts a new card and replays
-          its arrival, an answer on the card as well as in the column. */}
+      {/* Keyed by the row, so pressing another one in the list mounts a new
+          card and replays its arrival. The press is answered on the card. */}
       <div
-        className="brief-triage-stack"
-        data-behind={Math.min(rows.length - 1, 2)}
+        ref={takeFocus}
+        tabIndex={-1}
+        className="brief-triage-frame"
+        key={identity(lead)}
       >
-        <Card as="article" className="brief-triage-lead" key={identity(lead)}>
-          <div className="brief-triage-lead-head">
-            {/* Why it is here: the strongest reason the ranking weighed, in
-              the warning tone on a row the day put first; else the kind of work. */}
-            <Badge tone={lead.band === "now" ? "warning" : undefined}>
+        <Card as="article" className="brief-triage-lead">
+          {/* Why it is here, whose it is, and when: the strongest reason the
+              ranking weighed, in the warning ink on a row the day put first,
+              then the contact and the moment. */}
+          <p className="t-caption brief-triage-lead-head">
+            <span
+              className={
+                lead.band === "now"
+                  ? "brief-triage-label brief-triage-label-now"
+                  : "brief-triage-label"
+              }
+            >
               {label}
-            </Badge>
-            {when && <span className="t-caption">{when}</span>}
-            <Eyebrow className="t-num brief-triage-position">
-              {t("brief.focus.position", {
-                at: formatNumber(at + 1, locale),
-                count: formatNumber(rows.length, locale),
-              })}
-            </Eyebrow>
-          </div>
-          <AboutLine item={lead} />
+            </span>
+            <AboutLine item={lead} />
+            {when && <span className="t-num">{when}</span>}
+          </p>
           <WorklistRow
             // Personal ordering is the queue's, not the focus projection's.
             allowPin={false}
@@ -130,104 +140,125 @@ export function Triage({
               )
             }
             context={details}
-            // The card around this row says whose it is and why it is here.
-            // It also gives its place in the day and links the record.
+            // The card around this row says whose it is, why it is here and
+            // where it stands in the day. Each is said once, in its own place.
             framed
           />
+          <WhyFirst item={lead} />
         </Card>
       </div>
-      <div className="brief-triage-queue">
-        <Eyebrow as="h3" className="brief-triage-queue-head">
-          {t("brief.focus.inQueue")}
-        </Eyebrow>
-        {/* An ordered list, so the order reaches a screen reader as the
-            claim it is; the tile states the rank for everybody else. */}
-        <ol className="brief-focus-list">
-          {rows.map((item, index) => {
-            const line = queueLine(item, t, locale, zone);
-            return (
-              <li key={identity(item)}>
-                <button
-                  type="button"
-                  className={
-                    index === at
-                      ? "brief-focus-item brief-focus-item-inhand"
-                      : "brief-focus-item"
-                  }
-                  aria-pressed={index === at}
-                  onClick={() => onChoose(item)}
-                >
-                  <span className="brief-focus-rank t-label t-num">
-                    {formatNumber(index + 1, locale)}
-                  </span>
-                  <span className="brief-focus-item-text">
-                    <span className="t-body brief-focus-item-title">
-                      {itemTitle(item, t, locale)}
-                    </span>
-                    {line && (
-                      <span className="t-caption brief-focus-item-line">
-                        {line}
-                      </span>
-                    )}
-                  </span>
-                </button>
-              </li>
-            );
-          })}
-        </ol>
-      </div>
+      {rows.length > 1 && (
+        <div className="brief-triage-queue">
+          <Eyebrow as="h3" className="brief-triage-queue-head">
+            {t("brief.first.then")}
+          </Eyebrow>
+          {/* An ordered list, so the order reaches a screen reader as the
+              claim it is; the tile states the rank for everybody else. */}
+          <ol className="brief-focus-list">
+            {rows.map((item, index) =>
+              index === at ? null : (
+                <li key={identity(item)}>
+                  <QueueEntry
+                    item={item}
+                    rank={index + 1}
+                    onChoose={() => {
+                      pressed.current = true;
+                      onChoose(item);
+                    }}
+                  />
+                </li>
+              ),
+            )}
+          </ol>
+        </div>
+      )}
     </div>
   );
 }
 
-/**
- * Whose row this is, and how the silence runs in both directions, over the
- * row, where a reader meets the relationship before the work.
- *
- * The record the row is about, linked. It carries the two moments a rep would
- * otherwise open a second page for: when they last wrote, and when we did.
- * Which direction went last is the whole question. The moments come off the row
- * itself (`rowTouch`), so the row and the pane cannot describe one
- * relationship two ways. A contact's row and a company's carry them; any other
- * record is linked with no moments.
- */
-function AboutLine({ item }: Readonly<{ item: WorklistItem }>) {
+/** One row still waiting behind the card; a press puts it in hand. */
+function QueueEntry({
+  item,
+  rank,
+  onChoose,
+}: Readonly<{ item: WorklistItem; rank: number; onChoose: () => void }>) {
   const t = useT();
   const { locale } = useLocale();
-  // The contact the server put on the row, else the record it is about: the
-  // sender of a thread filed under a deal is a contact, and the reply goes
-  // to them.
-  const contact = item.contact;
-  const label = contact?.label ?? item.subject?.label;
-  const href = contact?.label ? contactHref(contact) : subjectHref(item);
-  if (!label || !href) return null;
-  const touch = lastTouch(rowTouch(item), t, locale, viewerZone());
-  // Where the message sits (team inbox or the reader's own), in the access
-  // badge's words.
-  const inbox = item.email_summary?.display_status;
+  const line = queueLine(item, t, locale, viewerZone());
   return (
-    <p className="t-caption brief-triage-about">
-      {contact?.label && <Avatar name={contact.label} identity={contact.id} />}
-      <a className="entity-link" href={href}>
-        {label}
-      </a>
-      {inbox && (
-        <span className="brief-triage-inbox">{t(`visibility.${inbox}`)}</span>
-      )}
-      {touch.map((fact) => (
-        <span key={fact.term} className="brief-triage-about-fact">
-          <span>{fact.term}</span> <span className="t-num">{fact.value}</span>
-        </span>
-      ))}
-    </p>
+    <button type="button" className="brief-focus-item" onClick={onChoose}>
+      <span className="brief-focus-rank t-num">
+        {formatNumber(rank, locale)}
+      </span>
+      <span className="brief-focus-item-title">
+        {itemTitle(item, t, locale)}
+      </span>
+      {line && <span className="t-caption brief-focus-item-line">{line}</span>}
+    </button>
   );
 }
 
 /**
- * The one line under a queued row's name: who it is with, and the first of
- * the reasons it is here. It uses the row's own helpers, so the column and the
- * row in hand cannot describe one piece of work two ways. Null where the row
- * has neither, so no empty line is drawn.
+ * The whole case for the row in hand, folded. It holds every reason the
+ * ranking weighed, why it beat the row under it, and what doing nothing costs.
+ *
+ * The same sentences the Worklist's rows print, through the same helpers, so
+ * the card and the queue cannot argue one row two ways. Nothing to fold, no
+ * fold.
+ */
+function WhyFirst({ item }: Readonly<{ item: WorklistItem }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const zone = viewerZone();
+  const lines = [
+    ...phrasedReasons(item, false)
+      .filter((reason) => reason.kind !== "pinned")
+      .map((reason) => reasonText(reason, t, locale, zone)),
+    // A pin is the reader's own order in the queue, not the brief's reason.
+    item.above_next?.comparator === "pin"
+      ? null
+      : comparisonText(item.above_next, t, locale, zone),
+    consequenceText(item, t),
+  ].filter((line): line is string => line !== null && line !== "");
+  if (lines.length === 0) return null;
+  return (
+    <Disclosure className="brief-why" summary={t("brief.first.why")}>
+      <ul className="brief-why-list">
+        {lines.map((line) => (
+          <li key={line}>{line}</li>
+        ))}
+      </ul>
+    </Disclosure>
+  );
+}
+
+/**
+ * Whose row this is, linked: the contact the server put on the row, else the
+ * record it is about. The sender of a thread filed under a deal is a contact,
+ * and the reply goes to them. Where the message sits (the team's inbox, the
+ * reader's own) follows in the access badge's own words.
+ */
+function AboutLine({ item }: Readonly<{ item: WorklistItem }>) {
+  const t = useT();
+  const contact = item.contact;
+  const label = contact?.label ?? item.subject?.label;
+  const href = contact?.label ? contactHref(contact) : subjectHref(item);
+  const inbox = item.email_summary?.display_status;
+  return (
+    <>
+      {label && href && (
+        <a className="entity-link" href={href}>
+          {label}
+        </a>
+      )}
+      {inbox && <span>{t(`visibility.${inbox}`)}</span>}
+    </>
+  );
+}
+
+/**
+ * The line under a queued row's name: who it is with and its first reason,
+ * through the row's own helpers. Null when the row has neither.
  */
 function queueLine(
   item: WorklistItem,
@@ -235,10 +266,8 @@ function queueLine(
   locale: Locale,
   zone: string,
 ): string | null {
-  // The contact the server put on the row, not the message's counterparty: a
-  // task or a meeting carries a contact and no message. On a waiting message
-  // the two are the same, so this one field serves every row, as in the row's
-  // own captions (`aboutRecord`).
+  // The contact on the row, not the message's counterparty: a task or meeting
+  // has no message. On a waiting message the backend puts the sender here.
   const who = item.contact?.label ?? null;
   // The reader's own pin is the queue's reason and not the focus projection's,
   // for the reason the row in hand withholds it (`allowPin`).

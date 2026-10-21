@@ -11,9 +11,9 @@ import {
   translatePlural,
   type Words,
 } from "../../i18n";
-import { defaultAgentAllowances } from "../automations/agentallowances.fixtures";
-import { defaultOperations } from "../settings/operationsettings.fixtures";
-import { currencyNote } from "./installation-settings.currency";
+import { currencyNote } from "../../lib/installation-settings.currency";
+import { defaultAgentAllowances } from "../../testing/agentallowances.fixtures";
+import { defaultOperations } from "../../testing/operationsettings.fixtures";
 
 type InstallationSettings = components["schemas"]["InstallationSettings"];
 type BaseCurrencyLock = components["schemas"]["BaseCurrencyLock"];

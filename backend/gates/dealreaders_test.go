@@ -59,6 +59,7 @@ var dealGate = objectGate{
 // the gated set: removing the deal condition could only WIDEN the result the
 // caller already sees.
 var predicateDealReads = gatekit.Waive(map[string]string{
+	"internal/compose/dealscoutbuyer.go:unlinkedCommercialMatter":                    "existence-only refusal of an automatic proposal already handled by a same-company deal or project; no deal fields leave the predicate",
 	"internal/modules/activities/awaitingreply.go":                                   "the follow-up reminder's customer test: an EXISTS asking whether the reader's own sent message is filed under an open deal. No deal column is selected, and the deal id it returns comes off the gated link join",
 	"internal/modules/deals/stagesemanticflip.go:refuseFlipUnderDecidedDeals":        "the mirror of the terminal rule: a COUNT of the deals in one stage whose status the stage's current semantic decided, taken to refuse a configuration change. No deal column leaves the statement and the refusal carries no number, so an admin holding pipeline:update learns that the stage holds decided deals and nothing about any of them. Its only effect is to REFUSE a write, never to surface a deal",
 	"internal/modules/dealrooms/store_public_threads.go:liveRoomForBuyerWrite":       "the buyer write's share lock on the room's deal: the deal appears only as a JOIN asking whether it is still live, locked FOR SHARE so an archive committing mid-write is seen and refuses. Nothing of the deal is selected — deal_id comes off the room row — and the buyer holds no principal to gate. Its only effect is to REFUSE a write into a room whose deal is archived, never to surface a deal",
@@ -118,6 +119,7 @@ var predicateDealReads = gatekit.Waive(map[string]string{
 // gate would admit them anyway and the entry records why asking was never the
 // point.
 var lifecycleDealReads = gatekit.Waive(map[string]string{
+	"internal/modules/privacy/reportingquestions.go:heldQuestionSource":         "Retention lifecycle checks legal holds on every record behind a kept question answer before selecting an edition for expiry; it returns edition ids to the audited eraser, not source records to a reader.",
 	"internal/modules/privacy/reportingretention.go:reportingRetentionSelector": "Retention lifecycle checks legal holds across all linked subjects before selecting an edition for expiry; it returns edition ids to the audited eraser, not source records to a reader.",
 	// Deal Scout: its system-principal evidence read and the suggestion writer's own conditions.
 	"internal/modules/deals/suggestion.go:SuggestionFloorExpr":         "the instant a company's suggestion evidence must be newer than, read from the latest close of a deal on it. Composed only into the system-only suggestion writer and the scout's system-principal evidence read; it selects a timestamp that decides which evidence counts, never a deal",

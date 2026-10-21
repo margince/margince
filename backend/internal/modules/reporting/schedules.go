@@ -238,3 +238,11 @@ func scheduleReady(ctx context.Context, tx pgx.Tx) (bool, error) {
 	err := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM retention_policy WHERE object_type='report_edition' AND action='erase' AND enabled)").Scan(&ready)
 	return ready, err
 }
+
+// editionRetentionDays is the shortest enabled erase policy for editions, the
+// one that removes an edition first.
+func editionRetentionDays(ctx context.Context, tx pgx.Tx) (int, error) {
+	var days int
+	err := tx.QueryRow(ctx, "SELECT min(retain_days) FROM retention_policy WHERE object_type='report_edition' AND action='erase' AND enabled").Scan(&days)
+	return days, err
+}

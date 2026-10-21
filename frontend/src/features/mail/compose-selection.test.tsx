@@ -16,12 +16,12 @@ import {
   writeMessage,
 } from "../../design-system/richtext-testing";
 import { LocaleProvider } from "../../i18n";
-import { ComposeModal } from "./compose";
 import {
   allowedPreview,
   isPreviewDoor,
   previewedAddresses,
-} from "./sendpermission.testkit";
+} from "../../testing/sendpermission.testkit";
+import { ComposeModal } from "./compose";
 
 type Activity = components["schemas"]["Activity"];
 function email(

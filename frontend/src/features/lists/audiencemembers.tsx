@@ -100,8 +100,8 @@ export function memberKey(member: AudienceMember): string {
  *
  * Agent seats are excluded for the reason the share picker excludes them: a
  * message is limited to contacts and teams, never to an agent. The rule is spelled
- * here rather than borrowed, because share.tsx's copy answers a different
- * question — who a RECORD is shared with — and one changing is no reason for
+ * here rather than borrowed, because share.parts.tsx's copy answers a different
+ * question: who a record is shared with. One changing is no reason for
  * the other to.
  */
 export function useAudienceCandidates(enabled: boolean): Candidate[] {

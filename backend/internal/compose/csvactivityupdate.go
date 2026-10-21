@@ -82,6 +82,7 @@ func (w *csvWriters) reconcileActivity(
 	case !auth.Allows(ctx, w.object, principal.ActionUpdate):
 		return skippedFor(cannotEditWhy(w.object)), nil
 	}
+	plan.patch.IfVersion = w.reviewedVersion(id)
 	_, err = w.activities.UpdateActivity(ctx, ids.From[ids.ActivityKind](id), plan.patch)
 	if why, refused := activityRefusalOf(err, textFields(row.Fields)); refused {
 		return skippedFor(why), nil

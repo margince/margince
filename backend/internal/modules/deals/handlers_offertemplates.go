@@ -50,7 +50,7 @@ func (h Handlers) CreateOfferTemplate(w http.ResponseWriter, r *http.Request, _ 
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	in, err := offerTemplateCreateInput(req)
+	in, err := OfferTemplateCreationInput(req)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
@@ -100,8 +100,12 @@ func (h Handlers) UpdateOfferTemplate(w http.ResponseWriter, r *http.Request, id
 
 // ArchiveOfferTemplate soft-deletes a template; a repeat archive is a
 // no-op that returns the same entity.
-func (h Handlers) ArchiveOfferTemplate(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	template, err := h.store.ArchiveOfferTemplate(r.Context(), pathID[ids.OfferTemplateKind](id))
+func (h Handlers) ArchiveOfferTemplate(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.ArchiveOfferTemplateParams) {
+	ifVersion, ok := httperr.IfMatchVersion(w, r)
+	if !ok {
+		return
+	}
+	template, err := h.store.ArchiveOfferTemplateAt(r.Context(), pathID[ids.OfferTemplateKind](id), ifVersion)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return

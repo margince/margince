@@ -114,10 +114,11 @@ func NewTranscriptProposer(
 
 // proposedStep is one next step as the model reports it.
 type proposedStep struct {
-	Meaning     *commitmentMeaning `json:"commitment"`
-	PromiserRef string             `json:"promiser_ref"`
-	Summary     string             `json:"summary"`
-	Owner       string             `json:"owner"`
+	Meaning       *commitmentMeaning `json:"commitment"`
+	PromiserRef   string             `json:"promiser_ref"`
+	RecipientRefs []string           `json:"recipient_refs,omitempty"`
+	Summary       string             `json:"summary"`
+	Owner         string             `json:"owner"`
 	// DueDate is the day the transcript says the thing is due, as YYYY-MM-DD,
 	// or empty where it says none.
 	//
@@ -168,9 +169,10 @@ func transcriptRequest(lines []string, meetingDay string, lang string, parties [
 	}
 	fmt.Fprintf(&prompt,
 		`This meeting happened on %s.`+"\n"+
-			`Return JSON: { "proposals": [ { "summary", "owner", "promiser_ref", "due_date", "source_lines", "commitment", "confidence" } ] } — `+
+			`Return JSON: { "proposals": [ { "summary", "owner", "promiser_ref", "recipient_refs", "due_date", "source_lines", "commitment", "confidence" } ] } — `+
 			`at most %d, and an empty list when the transcript states none. `+
 			`"summary" is one plain sentence naming the thing to be done. `+
+			commitmentRecipientsPrompt+
 			`"owner" is the party who promised, as the transcript names them; a speaker may report someone else's promise. `+
 			`"promiser_ref" is that participant's verified participant reference. Use "" when the cited clause `+
 			`does not distinguish the participant, including same-name or collective attribution, or when no `+
@@ -211,11 +213,12 @@ func transcriptSchema() json.RawMessage {
 					"summary":               schema.String(),
 					"owner":                 schema.String(),
 					"promiser_ref":          schema.String(),
+					commitmentRecipientsKey: schema.Array(schema.String()),
 					"due_date":              schema.String(),
 					"source_lines":          schema.Array(schema.Integer()),
 					extractionConfidenceKey: schema.Number(),
 				},
-				"summary", "owner", "promiser_ref", "due_date", "source_lines", extractionConfidenceKey, commitmentMeaningField,
+				"summary", "owner", "promiser_ref", "recipient_refs", "due_date", "source_lines", extractionConfidenceKey, commitmentMeaningField,
 			)),
 		},
 		"proposals",
@@ -251,6 +254,9 @@ func validateTranscriptPayload(payload transcriptPayload, lines []string, partie
 			len(proposals), maxTranscriptProposals)
 	}
 	for _, step := range proposals {
+		if msg := validateCommitmentRecipients(step.RecipientRefs, parties); msg != "" {
+			return msg
+		}
 		if step.PromiserRef != "" {
 			if _, found := referencedPromiser(step.PromiserRef, parties); !found {
 				return "a proposal names a promiser outside the verified meeting participants"

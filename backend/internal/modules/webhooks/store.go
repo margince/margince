@@ -347,7 +347,7 @@ func (s *Store) UpdateSubscription(ctx context.Context, id ids.UUID, in UpdateSu
 			if err != nil {
 				return err
 			}
-			p.Set(fieldCustomHeaders, nil, sealed)
+			p.Set(fieldCustomHeaders, current.HeaderNames, sealed)
 			headerNamesAfter, replaced = headerNames(sealed), newValues
 		}
 		if p.Empty() {

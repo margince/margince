@@ -1,7 +1,6 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { navGroupNames } from "../../app/testing/shellharness";
 import { translate } from "../../i18n";
 import type { RbacObject } from "../../lib/capability";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
@@ -15,7 +14,8 @@ import {
   renderHome,
   settingsNavBackend,
   UNGATED_IDS,
-} from "./settings.testkit";
+} from "../../testing/settings.testkit";
+import { navGroupNames } from "../../testing/shellharness";
 import {
   SETTINGS_GROUPS,
   SETTINGS_PAGES,

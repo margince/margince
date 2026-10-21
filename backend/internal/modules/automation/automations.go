@@ -288,6 +288,10 @@ func (s *AutomationStore) Update(ctx context.Context, id ids.AutomationID, in Up
 		if in.IfVersion != nil && *in.IfVersion != before.Version {
 			return apperrors.ErrVersionSkew
 		}
+		if updateChangesNothing(before, in) {
+			a = before
+			return nil
+		}
 		if in.Enabled != nil && *in.Enabled {
 			owner, err := claimDraftStarter(ctx, tx, before)
 			if err != nil {

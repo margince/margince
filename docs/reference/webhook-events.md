@@ -48,6 +48,7 @@ Every delivery with the standard body is this envelope, with the event's own fie
 | [`activity.updated`](#activityupdated) | activity | 1 |
 | [`approval.decided`](#approvaldecided) | approval | 1 |
 | [`approval.failure_acknowledged`](#approvalfailure_acknowledged) | approval | 1 |
+| [`approval.preference_changed`](#approvalpreference_changed) | user | 1 |
 | [`approval.requested`](#approvalrequested) | approval | 1 |
 | [`attachment.archived`](#attachmentarchived) | attachment | 1 |
 | [`attachment.created`](#attachmentcreated) | attachment | 1 |
@@ -260,6 +261,16 @@ Payload for approval.failure_acknowledged: the human who approved a decision has
 |---|---|---|---|
 | `data.failed_at` | string (date-time) | yes | When the failure that was acknowledged was recorded. |
 | `data.kind` | string | yes | The approval's kind. |
+
+### `approval.preference_changed`
+
+Record: `user` · version 1
+
+A reader changed a personal approval preference. The private choice is not included.
+
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.kind` | string | yes |  |
 
 ### `approval.requested`
 

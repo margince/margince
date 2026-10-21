@@ -14,8 +14,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
-import type { ExtensionUnit } from "../automations/extensions.queries";
-import type { Role } from "./roles.queries";
+import type { ExtensionUnit } from "../../lib/extensions.queries";
+import type { Role } from "../../lib/roles.queries";
 import { RoleDetail, useRoleWrites } from "./roles-detail";
 
 const NONE = { read: false, create: false, update: false, delete: false };

@@ -121,8 +121,8 @@ const maxRecordDuration = 10 * time.Second
 // precisely what would make this bound a fiction, which is why both facts are
 // enforced rather than assumed.
 //
-// The §3.4 ladder is unaffected: its rungs are different scopes (`activity` at
-// 1095, `activity/transcript` at 365), never repeated ones.
+// A ladder is unaffected: its rungs are different scopes (`activity` and
+// `activity/transcript`), never repeated ones.
 //
 // aiRetentionStages adds the engine-owned AI stores, which batch the same way,
 // and restrictionExpiryStages the erasure of held records whose window closed.
