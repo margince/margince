@@ -34,8 +34,6 @@ func boardRowsByID(board crmcontracts.TeamBoard) map[openapi_types.UUID]crmcontr
 func TestANamedTeamListsAnInvitedSeatWithoutMeasuringIt(t *testing.T) {
 	t.Parallel()
 	svc := boardService()
-	promises := &promisesSaying{per: map[ids.UUID]int{}}
-	svc.promiseLoad = promises
 	svc.overdueLoad = overdueSaying{theColleague: 2, theInvitee: 3}
 	svc.WithNamedTeams(namedRoster{
 		{UserID: theColleague, DisplayName: "Bb Colleague"},
@@ -56,11 +54,6 @@ func TestANamedTeamListsAnInvitedSeatWithoutMeasuringIt(t *testing.T) {
 	colleague := rows[openapi_types.UUID(theColleague)]
 	if colleague.Activation != crmcontracts.TeamBoardMemberActivationActive || colleague.Counts.Overdue != 2 {
 		t.Errorf("an active teammate keeps their measured load: %+v", colleague)
-	}
-	for _, owner := range promises.asked {
-		if owner == theInvitee {
-			t.Error("the invited seat's promises were counted, though its workload is not measured")
-		}
 	}
 }
 

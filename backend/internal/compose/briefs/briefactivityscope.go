@@ -81,3 +81,10 @@ func servedActivityRefsSQL(ctx context.Context, arg func(any) int) (evidence, re
 		THEN bi.returned_with_activity_at END)`, readable)
 	return evidence, returnedWith, nil
 }
+
+// A cached finding depends on its original evidence. A reader who lost any
+// cited activity may still see the deal, but cannot receive that derived text.
+func servedFindingSQL(evidence string) string {
+	return fmt.Sprintf(`CASE WHEN cardinality(%s) = cardinality(bi.evidence_ids)
+		THEN coalesce(bi.finding, '') ELSE '' END`, evidence)
+}

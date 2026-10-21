@@ -1586,6 +1586,7 @@ test.describe("§3.8: 390px mobile", () => {
     }) => {
       await page.goto("/#/worklist");
       await page.waitForLoadState("networkidle");
+      await settleAnimations(page);
       await expect(
         page.getByText(/Send the follow-up to Anna Weber/).first(),
       ).toBeVisible();

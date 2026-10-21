@@ -113,7 +113,7 @@ func (s *Store) listLeadWorkQueue(ctx context.Context, in ListLeadsInput) ([]crm
 		where = append(where, storekit.SQLf("("+rank+", -score, created_at, id) > ($%d, $%d, $%d, $%d)",
 			arg(cursor.Rank), arg(-cursor.Score), arg(cursor.CreatedAt), arg(cursor.ID)))
 	}
-	query := `SELECT ` + leadColumns + storekit.SelectSuffix(active) + `, ` + rank +
+	query := `SELECT ` + leadColumns(withPinnedSLANow(ctx, asOf), arg) + storekit.SelectSuffix(active) + `, ` + rank +
 		` FROM lead WHERE ` + strings.Join(where, " AND ") +
 		` ORDER BY ` + rank + `, score DESC, created_at, id` + storekit.SQLf(` LIMIT %d`, limit+1)
 	return s.readLeadQueuePage(ctx, query, *args, active, limit, asOf, policy, total)

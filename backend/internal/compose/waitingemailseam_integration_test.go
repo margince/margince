@@ -97,7 +97,7 @@ func TestTheWaitingSeamAttachesAnEmailRowToEmailsAlone(t *testing.T) {
 		store: activities.NewStore(e.DB()),
 		now:   func() time.Time { return asOf },
 	}
-	rows, _, err := seam.Unanswered(e.Admin(), asOf)
+	rows, _, err := seam.Unanswered(e.Admin(), asOf, nil)
 	if err != nil {
 		t.Fatalf("reading who is waiting: %v", err)
 	}
@@ -142,7 +142,7 @@ func TestTheWaitingSeamHandsNoRowForAMessageTheReaderCannotRead(t *testing.T) {
 		store: activities.NewStore(e.DB()),
 		now:   func() time.Time { return asOf },
 	}
-	before, _, err := seam.Unanswered(e.Admin(), asOf)
+	before, _, err := seam.Unanswered(e.Admin(), asOf, nil)
 	if err != nil {
 		t.Fatalf("reading who is waiting: %v", err)
 	}
@@ -162,7 +162,7 @@ func TestTheWaitingSeamHandsNoRowForAMessageTheReaderCannotRead(t *testing.T) {
 	// missing permission. A reader who could not have seen it either way would
 	// pass this test while proving nothing about the audience.
 	colleague := e.As(e.Rep3, []ids.UUID{e.Team2}, integration.AdminPerms)
-	after, _, err := seam.Unanswered(colleague, asOf)
+	after, _, err := seam.Unanswered(colleague, asOf, nil)
 	if err != nil {
 		t.Fatalf("colleague reading who is waiting: %v", err)
 	}
@@ -223,7 +223,7 @@ func TestAFloodOfMachineMailDoesNotHideAWaitingCustomer(t *testing.T) {
 		store: activities.NewStore(e.DB()),
 		now:   func() time.Time { return asOf },
 	}
-	rows, _, err := seam.Unanswered(e.Admin(), asOf)
+	rows, _, err := seam.Unanswered(e.Admin(), asOf, nil)
 	if err != nil {
 		t.Fatalf("reading who is waiting: %v", err)
 	}

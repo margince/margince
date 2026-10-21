@@ -22,6 +22,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -179,7 +180,7 @@ func briefCandidates(ctx context.Context, tx pgx.Tx, userID ids.UUID, now time.T
 			SELECT 1 FROM activity a
 			JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = d.id
 			WHERE a.kind = 'task' AND NOT a.is_done
-			  AND a.archived_at IS NULL AND a.assignee_id = $%d))`, userPos, userPos)
+			  AND a.archived_at IS NULL AND a.assignee_id = $%d AND %s))`, userPos, userPos, activities.CurrentCommitmentTaskClause("a", now, arg))
 	q += " ORDER BY d.id"
 
 	rows, err := tx.Query(ctx, q, args...)

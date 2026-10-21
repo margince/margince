@@ -99,13 +99,15 @@ type CompanyCommitment struct {
 func (s *Store) OpenCommitmentsForCompany(
 	ctx context.Context, tx pgx.Tx, companyID ids.UUID, limit int,
 ) ([]CompanyCommitment, bool, error) {
-	return openCompanyClaims(ctx, tx, companyID, limit, ourPromiseNotYetATask)
+	return openCompanyClaims(ctx, tx, companyID, limit, s.clock(), ourPromiseNotYetATask)
 }
 
 // theirPromiseOpen is a commitment the customer made that nobody has settled
 // yet. A disputed one (needs_review) is left out, as the project read leaves
 // it out, because stating a contested promise as owed states it as a fact.
-const theirPromiseOpen = `c.kind = 'commitment_theirs' AND c.status = 'open' AND NOT c.needs_review AND ` + currentCommitmentAdmission
+func theirPromiseOpen(asOf time.Time, arg func(any) int) string {
+	return `c.kind = 'commitment_theirs' AND c.status = 'open' AND NOT c.needs_review AND ` + currentCommitmentAdmission(asOf, arg)
+}
 
 // OpenTheirCommitmentsForCompany reads the open commitments the contacts
 // currently employed at one account made to us: what the deal page watches.
@@ -113,13 +115,13 @@ const theirPromiseOpen = `c.kind = 'commitment_theirs' AND c.status = 'open' AND
 func (s *Store) OpenTheirCommitmentsForCompany(
 	ctx context.Context, tx pgx.Tx, companyID ids.UUID, limit int,
 ) ([]CompanyCommitment, bool, error) {
-	return openCompanyClaims(ctx, tx, companyID, limit, theirPromiseOpen)
+	return openCompanyClaims(ctx, tx, companyID, limit, s.clock(), theirPromiseOpen)
 }
 
 // openCompanyClaims is the read both sides share. `side` is one of this
 // file's compile-time predicates, never anything off a request.
 func openCompanyClaims(
-	ctx context.Context, tx pgx.Tx, companyID ids.UUID, limit int, side string,
+	ctx context.Context, tx pgx.Tx, companyID ids.UUID, limit int, asOf time.Time, side func(time.Time, func(any) int) string,
 ) ([]CompanyCommitment, bool, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return nil, false, err
@@ -184,7 +186,7 @@ func openCompanyClaims(
 		  FROM conversation_claim c
 		  JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
 		  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
-		 WHERE `+side+`
+		 WHERE `+side(asOf, arg)+`
 		   AND c.archived_at IS NULL
 		   AND (%[4]s)
 		   AND (%[3]s) AND (%[2]s)
@@ -222,7 +224,7 @@ func openCompanyClaims(
 	// account's open promises exist at all. Fewer admitted than exist means
 	// something was withheld, and the card can say it is speaking about less
 	// than the account rather than reporting silence as "nothing outstanding".
-	total, err := countCompanyCommitments(ctx, tx, companyID, side)
+	total, err := countCompanyCommitments(ctx, tx, companyID, asOf, side)
 	if err != nil {
 		return nil, false, err
 	}
@@ -238,21 +240,23 @@ func openCompanyClaims(
 // owes", and those two must never render the same. The cost is that the number
 // weakly reflects that promises exist the reader cannot open, which is exactly
 // what the card has to admit to avoid claiming an account is clear.
-func countCompanyCommitments(ctx context.Context, tx pgx.Tx, companyID ids.UUID, side string) (int, error) {
+func countCompanyCommitments(ctx context.Context, tx pgx.Tx, companyID ids.UUID, asOf time.Time, side func(time.Time, func(any) int) string) (int, error) {
 	var total int
+	args := []any{companyID}
+	arg := func(v any) int { args = append(args, v); return len(args) }
 	err := tx.QueryRow(ctx, `
 		SELECT count(*)
 		  FROM conversation_claim c
 		  JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
 		  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
-		 WHERE `+side+`
+		 WHERE `+side(asOf, arg)+`
 		   AND c.archived_at IS NULL
 		   AND EXISTS (
 		         SELECT 1 FROM relationship r
 		          WHERE r.contact_id = pr.id AND r.kind = 'employment'
 		            AND r.company_id = $1
 		            AND `+employment.IsCurrentSQL("r.ended_at")+` AND r.archived_at IS NULL)`,
-		companyID).Scan(&total)
+		args...).Scan(&total)
 	if err != nil {
 		return 0, fmt.Errorf("count the account's open commitments: %w", err)
 	}
@@ -319,7 +323,7 @@ func (s *Store) OpenCommitmentsAcrossWorkspace(
 		  FROM conversation_claim c
 		  JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
 		  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
-		 WHERE `+ourPromiseNotYetATask+`
+		 WHERE `+ourPromiseNotYetATask(s.clock(), arg)+`
 		   AND c.archived_at IS NULL
 		   AND (%[1]s) AND (%[2]s)
 		 ORDER BY (c.due_at IS NOT NULL AND c.due_at < now()) DESC,
@@ -356,7 +360,9 @@ func (s *Store) OpenCommitmentsAcrossWorkspace(
 
 // openCommitmentEitherSide is an open commitment either side made that no task
 // holds yet: ours not yet a task, or the customer's still owed.
-const openCommitmentEitherSide = `((` + ourPromiseNotYetATask + `) OR (` + theirPromiseOpen + `))`
+func openCommitmentEitherSide(asOf time.Time, arg func(any) int) string {
+	return `((` + ourPromiseNotYetATask(asOf, arg) + `) OR (` + theirPromiseOpen(asOf, arg) + `))`
+}
 
 // CountAccountCommitments is how many open commitments either side made with
 // the contacts currently employed at one account, as far as this caller may see
@@ -396,7 +402,7 @@ func (s *Store) CountAccountCommitments(ctx context.Context, tx pgx.Tx, companyI
 		  FROM conversation_claim c
 		  JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
 		  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
-		 WHERE `+openCommitmentEitherSide+`
+		 WHERE `+openCommitmentEitherSide(s.clock(), arg)+`
 		   AND c.archived_at IS NULL
 		   AND (%[4]s)
 		   AND (%[2]s) AND (%[3]s)`, companyPos, activityScope, contactScope, employed), args...).Scan(&total); err != nil {

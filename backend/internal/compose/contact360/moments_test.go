@@ -584,7 +584,7 @@ func TestTheLatestOverduePromiseWinsWhicheverSourceHoldsIt(t *testing.T) {
 
 	// The claim is, so it leads — and it brings the quote a task cannot.
 	older := momentCopyFor("en").deriveMoment(readerCtx(), now, pageWith(now.Add(-30*24*time.Hour)))
-	if older.Headline != "You owe them: Send the revised quote" {
+	if older.Headline != "Your team owes them: Send the revised quote" {
 		t.Errorf("headline = %q, want the claim, whose deadline passed most recently", older.Headline)
 	}
 	if older.Evidence[0].Snippet == nil {
@@ -629,7 +629,7 @@ func TestTheRungLooksPastTheOldestOverduePromise(t *testing.T) {
 
 	// Yesterday's claim is the most recent slip, ahead of the 5-day task and
 	// the 10-day claim.
-	if got := momentCopyFor("en").deriveMoment(readerCtx(), now, page).Headline; got != "You owe them: Send yesterday's quote" {
+	if got := momentCopyFor("en").deriveMoment(readerCtx(), now, page).Headline; got != "Your team owes them: Send yesterday's quote" {
 		t.Errorf("headline = %q, want the promise that slipped most recently", got)
 	}
 
@@ -695,7 +695,7 @@ func TestAnUpcomingCommitmentIsTheMomentWithNoTaskFiled(t *testing.T) {
 	if moment.Rule != crmcontracts.ContactMomentRuleOpenPromise {
 		t.Fatalf("rule = %q, want open_promise; a commitment nobody typed as a task is still owed", moment.Rule)
 	}
-	if moment.Headline != "You owe them: Send the security questionnaire" {
+	if moment.Headline != "Your team owes them: Send the security questionnaire" {
 		t.Errorf("headline = %q, want the promise itself", moment.Headline)
 	}
 	if moment.Evidence[0].Snippet == nil {
@@ -738,7 +738,7 @@ func TestTheNearestUpcomingPromiseWinsWhicheverSourceHoldsIt(t *testing.T) {
 	if got := momentCopyFor("en").deriveMoment(readerCtx(), now, pageWith(9, 2)).Headline; got != "You owe them: Book the workshop" {
 		t.Errorf("headline = %q, want the task, whose deadline is nearer", got)
 	}
-	if got := momentCopyFor("en").deriveMoment(readerCtx(), now, pageWith(2, 9)).Headline; got != "You owe them: Send the questionnaire" {
+	if got := momentCopyFor("en").deriveMoment(readerCtx(), now, pageWith(2, 9)).Headline; got != "Your team owes them: Send the questionnaire" {
 		t.Errorf("headline = %q, want the claim, whose deadline is nearer", got)
 	}
 }
@@ -808,19 +808,19 @@ func TestDismissingOnePromiseShowsTheNext(t *testing.T) {
 	}
 
 	first := momentCopyFor("en").deriveMoment(readerCtx(), now, page)
-	if first.Headline != "You owe them: Send the NDA" {
+	if first.Headline != "Your team owes them: Send the NDA" {
 		t.Fatalf("headline = %q, want the nearer promise first", first.Headline)
 	}
 
 	// The reader puts that one away. The second promise is untouched.
 	next := momentCopyFor("en").deriveMomentPast(readerCtx(), now, page, func(m crmcontracts.ContactMoment) bool {
 		return m.ClaimKey == first.ClaimKey
-	}, asIs)
+	})
 	if next.Rule == crmcontracts.ContactMomentRuleNothingNeeded {
 		t.Fatal("dismissing one promise reported the contact as needing nothing, " +
 			"while a second promise is still open")
 	}
-	if next.Headline != "You owe them: Send the quote" {
+	if next.Headline != "Your team owes them: Send the quote" {
 		t.Errorf("headline = %q, want the promise the reader has not dismissed", next.Headline)
 	}
 }
@@ -842,7 +842,7 @@ func TestDismissingEveryPromiseReachesTheQuietState(t *testing.T) {
 			OccurredAt:       &said,
 		}},
 	}
-	got := momentCopyFor("en").deriveMomentPast(readerCtx(), now, page, func(crmcontracts.ContactMoment) bool { return true }, asIs)
+	got := momentCopyFor("en").deriveMomentPast(readerCtx(), now, page, func(crmcontracts.ContactMoment) bool { return true })
 	if got.Rule != crmcontracts.ContactMomentRuleNothingNeeded {
 		t.Errorf("rule = %q, want nothing_needed once every card is dismissed", got.Rule)
 	}

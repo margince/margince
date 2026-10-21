@@ -126,7 +126,6 @@ function registry(
 }
 
 const SENTENCES = registry(MAGIC_SENTENCE_KEYS);
-const CONSEQUENCES = registry(MAGIC_CONSEQUENCE_KEYS);
 const WHYS = registry(MAGIC_WHY_KEYS);
 const BYS = registry(MAGIC_BY_KEYS);
 
@@ -143,11 +142,6 @@ export function magicWhyKey(key: string): MessageKey | null {
 /** The actor-name key this build carries, or null for one it predates. */
 export function magicByKey(key: string): MessageKey | null {
   return BYS.get(key) ?? null;
-}
-
-/** The consequence key this build carries, or null for one it predates. */
-export function magicConsequenceKey(key: string): MessageKey | null {
-  return CONSEQUENCES.get(key) ?? null;
 }
 
 // The two refusals this surface mints for itself: a lane whose rows never

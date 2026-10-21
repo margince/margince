@@ -77,10 +77,7 @@ func (s *OwnDomainStore) ReaderAddressesTx(
 		if err := rows.Scan(&label, &source); err != nil {
 			return nil, err
 		}
-		if discoveredMachineAddress(source, label) {
-			continue
-		}
-		if address := strings.ToLower(strings.TrimSpace(bareAddress(label))); address != "" {
+		if address := ownReaderAddress(label, source); address != "" {
 			folded[address] = true
 		}
 	}
@@ -111,4 +108,11 @@ func selfOnly(ctx context.Context, user ids.UUID) error {
 	}
 	return fmt.Errorf("capture: a seat's own addresses are theirs alone: %w",
 		apperrors.ErrPermissionDenied)
+}
+
+func ownReaderAddress(label, source string) string {
+	if discoveredMachineAddress(source, label) {
+		return ""
+	}
+	return strings.ToLower(strings.TrimSpace(bareAddress(label)))
 }

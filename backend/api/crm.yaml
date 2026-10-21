@@ -61205,6 +61205,9 @@ components:
             Withheld — named in `lanes_omitted` — for a caller with no human
             behind it. Absent — not empty — on an installation whose feed does
             not read notices.
+        at_risk_more_available:
+          type: boolean
+          description: The deal risk scan was cut before its final scope and state checks. True means the returned rows are a lower bound, even when fewer than the scan limit remain. Absent when this source could not be read.
         notices_more_available:
           type: boolean
           description: |
@@ -62336,8 +62339,9 @@ components:
         waiting:
           type: integer
           description: |
-            Customers who wrote and have had no reply, attributed by the record the thread is
-            filed under: deal, then lead, then contact, then company, first owner found.
+            Customers who wrote and have had no reply. Email counts for each directly addressed
+            seat, including their own mail aliases; copies alone leave it unassigned.
+            Other messages follow the owner of the linked record.
             The same eligibility the ranked queue applies, so the board and the day agree.
         at_risk:
           type: integer
@@ -62348,12 +62352,10 @@ components:
         promises_due:
           type: integer
           description: |
-            Commitments due by the instant the board was read, from the same extracted claims
-            the rep's own day counts — not from open tasks, which are a different question
-            wearing the same heading.
-
-            A zero here means they owe nothing, not that nobody asked: claims have a writer on
-            every installation, so this count is always read.
+            Assigned conversation commitments due by the instant the board was read.
+            Only open, current commitment tasks count, under the same admission and age
+            rules as the assignee's Worklist. Future and undated promises do not count.
+            This count is always read; zero means no visible commitments are due.
 
     WorklistBand:
       type: object
@@ -63441,6 +63443,10 @@ components:
       required: [id, occurred_at, summary, actor, lane]
       properties:
         id: { type: string, format: uuid, description: "The underlying row's id — an audit entry, an approval." }
+        receipt_ids:
+          type: array
+          items: { type: string, format: uuid }
+          description: Exact Receipt.id values represented by this done line. A grouped line includes every underlying change, so a client may omit it only when all are shown elsewhere. Absent on older responses; never infer identity from the record or time.
         occurred_at:
           type: string
           format: date-time

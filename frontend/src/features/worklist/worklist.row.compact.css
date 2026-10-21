@@ -75,6 +75,7 @@
    press that holds the rest. */
 .worklist-row-line {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   gap: var(--space-2);
   min-width: 0;
@@ -207,4 +208,9 @@
   .worklist-row.worklist-row-compact button.worklist-row-why {
     min-block-size: auto;
   }
+}
+
+.worklist-row-line > .worklist-row-because {
+  flex-basis: 100%;
+  order: 1;
 }

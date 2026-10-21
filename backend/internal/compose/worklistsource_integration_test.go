@@ -14,7 +14,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
-	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -39,14 +38,22 @@ func TestWorklistCommitmentKeepsItsContactAndReadableSource(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		claim := e.RecordClaim(owner, t, contacts.ClaimInput{ContactID: ids.From[ids.ContactKind](contact), Kind: "commitment_ours", Body: body, ActivityID: ids.UUID(source.Id), Quote: body, DueAt: &due, Source: "manual"})
+		assignee := ids.From[ids.UserKind](e.Rep1)
+		if private {
+			assignee = ids.From[ids.UserKind](e.Rep2)
+		}
+		task, _, err := e.Activities.LogActivity(owner, activities.LogActivityInput{Kind: "task", Subject: new("Send revised scope"), Source: "manual", DueAt: &due, AssigneeID: &assignee, SourceActivityID: new(ids.UUID(source.Id)), Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}}})
+		if err != nil {
+			t.Fatal(err)
+		}
+
 		day, err := feed.Worklist(reader, "mine", "all", ids.Nil, 100, "")
 		if err != nil {
 			t.Fatal(err)
 		}
 		found := false
 		for _, row := range day.Queue {
-			if row.Id != claim.Id.String() {
+			if row.Id != task.Id.String() {
 				continue
 			}
 			found = true

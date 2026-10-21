@@ -19,6 +19,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -336,7 +337,16 @@ func bindReportTokens(
 	}); err != nil {
 		return "", nil, err
 	}
-	if err := bindScope(reportActivityScopeToken, func() (string, error) { return auth.ActivityContentClause(ctx, "a", arg) }); err != nil {
+	if err := bindScope(reportActivityScopeToken, func() (string, error) {
+		scope, err := auth.ActivityContentClause(ctx, "a", arg)
+		if err != nil {
+			return "", err
+		}
+		if scope == "" {
+			scope = sqlUnnarrowed
+		}
+		return "(" + scope + ") AND " + activities.CurrentCommitmentTaskClause("a", frame.AsOf, arg), nil
+	}); err != nil {
 		return "", nil, err
 	}
 	return sql, args, nil

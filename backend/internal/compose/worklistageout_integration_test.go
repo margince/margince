@@ -35,7 +35,7 @@ func TestATaskMoreThanAMonthOverdueLeavesTheWorklistUnlessPinned(t *testing.T) {
 	logOn := func(subject string, overdueDays int) string {
 		due := now.AddDate(0, 0, -overdueDays)
 		row, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-			Kind: "task", Subject: &subject, DueAt: &due, Source: "manual",
+			Kind: "task", Subject: &subject, DueAt: &due, Source: "manual", AssigneeID: new(ids.From[ids.UserKind](e.AdminUser)),
 			Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contactID}},
 		})
 		if err != nil {

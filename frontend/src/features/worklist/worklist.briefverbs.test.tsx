@@ -8,6 +8,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
 import {
   day,
   jsonResponse,
@@ -110,16 +111,29 @@ describe("a brief item is answerable from the queue", () => {
     renderWorklist();
 
     await screen.findByText(/Advance the Northstar deal/);
-    expect(screen.getByRole("button", { name: "Done" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: en["brief.act"] })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Snooze" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Dismiss" })).toBeTruthy();
+  });
+
+  it("opens the deal without claiming to perform its work", async () => {
+    const fetched = stubWrites();
+    renderWorklist();
+    const link = await screen.findByRole("link", { name: en["deal.openDeal"] });
+    expect(link.getAttribute("href")).toBe(
+      "#/deals/01a05500-0000-7000-8000-0000000000bb",
+    );
+    expect(screen.queryByRole("button", { name: "Done" })).toBeNull();
+    expect(writes(fetched)).toEqual([]);
   });
 
   it("acts through the brief's own act endpoint", async () => {
     const fetched = stubWrites();
     renderWorklist();
 
-    await userEvent.click(await screen.findByRole("button", { name: "Done" }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: en["brief.act"] }),
+    );
 
     await waitFor(() => {
       expect(writes(fetched)).toEqual([
@@ -247,7 +261,7 @@ describe("a brief item is answerable from the queue", () => {
     const held = stubHeldWrite();
     renderWorklist();
 
-    const done = await screen.findByRole("button", { name: "Done" });
+    const done = await screen.findByRole("button", { name: en["brief.act"] });
     await userEvent.click(done);
     await userEvent.click(done);
     held.release();
@@ -268,7 +282,7 @@ describe("a brief item is answerable from the queue", () => {
     const held = stubHeldRefetch();
     renderWorklist();
 
-    const done = await screen.findByRole("button", { name: "Done" });
+    const done = await screen.findByRole("button", { name: en["brief.act"] });
     await userEvent.click(done);
     // The write has settled: one POST is on the record.
     await waitFor(() => {
@@ -304,7 +318,7 @@ describe("a brief item is answerable from the queue", () => {
     await waitFor(() => {
       expect(document.querySelectorAll(".worklist-list li")).toHaveLength(1);
     });
-    expect(screen.queryByRole("button", { name: "Done" })).toBeNull();
+    expect(screen.queryByRole("button", { name: en["brief.act"] })).toBeNull();
     expect(screen.queryByRole("button", { name: "Dismiss" })).toBeNull();
   });
 
@@ -323,7 +337,9 @@ describe("a brief item is answerable from the queue", () => {
     );
     renderWorklist();
 
-    expect(await screen.findByRole("button", { name: "Done" })).toBeTruthy();
+    expect(
+      await screen.findByRole("button", { name: en["brief.act"] }),
+    ).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Snooze" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Dismiss" })).toBeNull();
   });
@@ -339,7 +355,9 @@ describe("a brief item is answerable from the queue", () => {
     stubRefusedAnswer();
     renderUnderAToastRegion();
 
-    await userEvent.click(await screen.findByRole("button", { name: "Done" }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: en["brief.act"] }),
+    );
 
     expect(await screen.findByText(A_CONFLICT)).toBeTruthy();
   });

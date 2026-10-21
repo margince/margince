@@ -108,21 +108,6 @@ func momentFacts(moment contracts.ContactMoment) contracts.ContactMoment {
 	return moment
 }
 
-func TestTranslatedCompletionQuestionPreservesPromiseAndLocalDay(t *testing.T) {
-	page, _ := overdueTaskPage()
-	sent := sentAt(time.Date(2026, 8, 3, 20, 0, 0, 0, time.UTC))
-	zone := time.FixedZone("UTC+7", 7*60*60)
-	original := momentCopyFor("en").deriveMomentPast(readerCtx(), now, page, neverDismissed, momentCopyFor("en").proposer(readerCtx(), page, sent, zone, neverDismissed))
-	for _, language := range []string{"de", "vi"} {
-		said := momentCopyFor(language)
-		got := said.deriveMomentPast(readerCtx(), now, page, neverDismissed, said.proposer(readerCtx(), page, sent, zone, neverDismissed))
-		if !strings.Contains(got.Headline, "2026-08-04") {
-			t.Fatalf("local date lost: %s", got.Headline)
-		}
-		checkMomentLanguage(t, language, "completion question", original, got)
-	}
-}
-
 func TestUnknownContactRoleDoesNotBecomeARecordedRoleInTranslation(t *testing.T) {
 	for _, language := range []string{"de", "vi"} {
 		said := momentCopyFor(language)
@@ -168,10 +153,10 @@ func TestUndatedTaskUsesTheRecordDayInEveryLanguage(t *testing.T) {
 }
 
 func TestContactEvidenceFallbackCaptionsFollowLanguage(t *testing.T) {
-	for _, tc := range []struct{ lang, inbound, outbound, email, meeting string }{
-		{"en", "Their last message", "Your last message", "Your email", "Meeting"},
-		{"de", "Letzte Nachricht des Kontakts", "Ihre letzte Nachricht", "Ihre E-Mail", "die Besprechung"},
-		{"vi", "Tin nhắn gần nhất của họ", "Tin nhắn gần nhất của bạn", "Email của bạn", "Cuộc họp"},
+	for _, tc := range []struct{ lang, inbound, outbound, meeting string }{
+		{"en", "Their last message", "Your last message", "Meeting"},
+		{"de", "Letzte Nachricht des Kontakts", "Ihre letzte Nachricht", "die Besprechung"},
+		{"vi", "Tin nhắn gần nhất của họ", "Tin nhắn gần nhất của bạn", "Cuộc họp"},
 	} {
 		said := momentCopyFor(tc.lang)
 		if got := said.inboundEvidence(&contracts.Contact360{}, now).Label; got != tc.inbound {
@@ -179,14 +164,6 @@ func TestContactEvidenceFallbackCaptionsFollowLanguage(t *testing.T) {
 		}
 		if got := said.outboundEvidence(&contracts.Contact360{}, now)[0].Label; got != tc.outbound {
 			t.Errorf("outbound %s: %s", tc.lang, got)
-		}
-		page, _ := overdueTaskPage()
-		sent := sentAt(now.Add(-time.Hour))
-		sent.subject = ""
-		task := said.deriveMoment(readerCtx(), now, page)
-		question, ok := said.mayBeDone(readerCtx(), task, page, sent, time.UTC)
-		if !ok || len(question.Evidence) != 2 || question.Evidence[1].Label != tc.email {
-			t.Fatalf("%s email fallback: %+v", tc.lang, question)
 		}
 		meeting, ok := said.meetingPrepMoment(readerCtx(), now, &contracts.Contact360{NextMeeting: &contracts.Contact360NextMeeting{StartsAt: ahead(24)}})
 		if !ok || meeting.Evidence[0].Label != tc.meeting {

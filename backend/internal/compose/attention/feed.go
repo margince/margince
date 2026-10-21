@@ -214,9 +214,6 @@ type Service struct {
 	// teamLoad refuses without it — and read by nothing else, so a feed
 	// assembled for the ranked queue alone leaves it nil.
 	overdueLoad OverdueLoad
-	// promiseLoad is the board's counting reader for commitments due, required
-	// on the same terms.
-	promiseLoad PromiseLoad
 	// decisionDepth is how many staged decisions a read takes. The lane feed's
 	// page is a prefetch for a surface that answers one at a time; the ranked
 	// queue takes a census, because a batch row that says "10" over a pile of

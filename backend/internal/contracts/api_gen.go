@@ -27023,6 +27023,9 @@ type Attention struct {
 	// Absent — not empty — on an installation whose feed does not read deals.
 	AtRisk *[]AttentionItem `json:"at_risk,omitempty"`
 
+	// AtRiskMoreAvailable The deal risk scan was cut before its final scope and state checks. True means the returned rows are a lower bound, even when fewer than the scan limit remain. Absent when this source could not be read.
+	AtRiskMoreAvailable *bool `json:"at_risk_more_available,omitempty"`
+
 	// AutomationHealth The automations whose recent firings failed or were blocked, newest
 	// report first — a rule its owner believes is running and is not. The
 	// card names the rule (`title`), how it stopped (`kind`: failed or
@@ -42001,6 +42004,9 @@ type MagicLine struct {
 	// reaches a German reader in English.
 	Reason *MagicSentence `json:"reason,omitempty"`
 
+	// ReceiptIds Exact Receipt.id values represented by this done line. A grouped line includes every underlying change, so a client may omit it only when all are shown elsewhere. Absent on older responses; never infer identity from the record or time.
+	ReceiptIds *[]openapi_types.UUID `json:"receipt_ids,omitempty"`
+
 	// Summary What happened, as a key and the values to fill it with.
 	//
 	// Typed rather than composed on the server for the reason every other sentence in
@@ -49534,16 +49540,15 @@ type TeamBoardCounts struct {
 	// Overdue Open tasks whose due moment has already passed.
 	Overdue int `json:"overdue"`
 
-	// PromisesDue Commitments due by the instant the board was read, from the same extracted claims
-	// the rep's own day counts — not from open tasks, which are a different question
-	// wearing the same heading.
-	//
-	// A zero here means they owe nothing, not that nobody asked: claims have a writer on
-	// every installation, so this count is always read.
+	// PromisesDue Assigned conversation commitments due by the instant the board was read.
+	// Only open, current commitment tasks count, under the same admission and age
+	// rules as the assignee's Worklist. Future and undated promises do not count.
+	// This count is always read; zero means no visible commitments are due.
 	PromisesDue int `json:"promises_due"`
 
-	// Waiting Customers who wrote and have had no reply, attributed by the record the thread is
-	// filed under: deal, then lead, then contact, then company, first owner found.
+	// Waiting Customers who wrote and have had no reply. Email counts for each directly addressed
+	// seat, including their own mail aliases; copies alone leave it unassigned.
+	// Other messages follow the owner of the linked record.
 	// The same eligibility the ranked queue applies, so the board and the day agree.
 	Waiting int `json:"waiting"`
 }

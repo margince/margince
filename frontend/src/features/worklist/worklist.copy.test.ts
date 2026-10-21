@@ -1,16 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// comparisonText and reasonText: the sentences the Worklist draws for why one
-// row beat the next, and for each fact behind an item's rank.
+// Worklist copy names records, supported moves and concrete reasons.
 
 import { describe, expect, it } from "vitest";
 import { viewerZone } from "../../format/timezone";
 import type { Translator } from "../../i18n";
 import { translate } from "../../i18n";
-import { consequenceText } from "./worklist.connection";
 import {
-  comparisonText,
   itemTitle,
   KNOWN_SOURCES,
   moveHref,
@@ -20,67 +17,13 @@ import {
   sourceName,
   sourceUnavailableText,
 } from "./worklist.copy";
-import type {
-  WorklistComparison,
-  WorklistItem,
-  WorklistReason,
-} from "./worklist.queries";
+import type { WorklistItem, WorklistReason } from "./worklist.queries";
 
 const t: Translator = (key, params) => translate("en", key, params);
 // The "still renders a full date" case below only asserts the year, so the
 // viewer's own zone stands in rather than a pinned literal
 // (format/zone-by-purpose.test.ts).
 const zone = viewerZone();
-
-describe("comparisonText", () => {
-  it("renders a waiting_days pair as day counts", () => {
-    const comparison: WorklistComparison = {
-      comparator: "waiting_days",
-      mine: { kind: "days", days: 12 },
-      theirs: { kind: "days", days: 30 },
-    };
-    expect(comparisonText(comparison, t, "en", zone)).toBe(
-      "Ranked above the next item: 12 compared with 30.",
-    );
-  });
-
-  it("falls back to the bare sentence when the server sends no values", () => {
-    // The occurrence step withholds both values when they would print the
-    // same day count — a comparator that decided but has nothing a reader
-    // could check draws the plain sentence rather than a false tie.
-    const comparison: WorklistComparison = { comparator: "waiting_days" };
-    expect(comparisonText(comparison, t, "en", zone)).toBe(
-      "Ranked above the next item by waiting time.",
-    );
-  });
-
-  it("still renders a full date for a non-waiting_days comparator's date value", () => {
-    const comparison: WorklistComparison = {
-      comparator: "deadline",
-      mine: { kind: "date", date: "2026-08-30T21:52:00.000Z" },
-      theirs: { kind: "date", date: "2026-08-29T22:24:00.000Z" },
-    };
-    expect(comparisonText(comparison, t, "en", zone)).toContain("2026");
-  });
-
-  it("draws nothing for order (every comparator tied, ids broke it)", () => {
-    expect(comparisonText({ comparator: "order" }, t, "en", zone)).toBeNull();
-  });
-
-  // The comparator this build emits and could not name.
-  //
-  // `crowded` is the anti-monopoly rule: the row BELOW was held back so one
-  // lane could not own the page. It carries no values on purpose — "8th
-  // against 9th" describes the lane, not either row — and the client's
-  // known-comparator guard, written to drop values from NEWER servers, was
-  // dropping one this same build sends. The row whose position is hardest to
-  // explain was the one row with no explanation.
-  it("names crowded, which this build's own server emits", () => {
-    expect(comparisonText({ comparator: "crowded" }, t, "en", zone)).toBe(
-      "Ranked above the next item, which is one of many of its kind.",
-    );
-  });
-});
 
 // The move that became performable.
 //
@@ -441,25 +384,6 @@ describe("itemTitle — a capture connection says which kind it is", () => {
       "en",
     );
     expect(title).toBe("Mailbox connection needs attention");
-  });
-
-  it("says what a broken calendar costs, not what a mailbox does", () => {
-    const calendar = health({
-      connection: { provider: "gcal", medium: "calendar" },
-    });
-    const mailbox = health({
-      connection: { provider: "gmail", medium: "mailbox" },
-    });
-    const unsure = health({ source: "batch" });
-    expect(consequenceText(calendar, t)).toBe(
-      t("worklist.consequence.calendar_blind"),
-    );
-    expect(consequenceText(mailbox, t)).toBe(
-      t("worklist.consequence.mailbox_blind"),
-    );
-    expect(consequenceText(unsure, t)).toBe(
-      t("worklist.consequence.connection_blind"),
-    );
   });
 
   it("names a folded connection with no account by its provider", () => {

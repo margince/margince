@@ -73,8 +73,8 @@ a customer**, press **More actions** at the end of the row.
    customer**.
 4. Press **Undo** in the note if you picked wrong.
 
-Every kind of row offers **Done**: a follow-up, a meeting, a deal at risk, a system or delivery
-problem. A row with no **Done** says why, such as "you can read this but not change it".
+A follow-up, meeting, deal risk or system problem can offer **Done** to clear your list.
+A deal suggestion offers its next action, or **Open deal**, plus **Mark handled**. Marking it handled clears the suggestion; it does not change the deal.
 
 To clear several rows at once, tick them, or press **Select all**, then press **Mark done**. One
 **Undo** brings them all back.
@@ -140,12 +140,13 @@ Also called: weekly report, week in review, weekly summary.
 ## Morning
 
 ### What is on Morning?
-**Morning**, on **Home**, opens with the count of items that need attention.
-Press a name to open its record. A badge says when Margince made the brief.
+**Morning**, on **Home**, shows the kinds of work that need attention when the list is complete.
+Each item names its record and shows the facts that call for action. A badge says when Margince made the brief.
 - **First**: the first thing to do on one card, the rest as **Then**; at most 6 in all, in Worklist
-  order. Press a row to bring it onto the card; **Why first?** says why it ranks there.
+  order. Press a row to bring it onto the card. Its reason stays visible beside the record.
   Proposals to answer, commitments due today and meetings to prepare in the next 24 hours sit here;
   tasks due later never do. A quiet day says "No immediate priorities. The full Worklist is available."
+- **Review deal suggestions** opens the saved brief. Its deals stay separate from the work that needs action now.
 - **Show Worklist**, under the list: the whole list, with its own filters and pages, and work that
   is not due yet. Stage change notices stay in the notification center.
 - **Since your last brief**: what Margince did since your last brief, what waits on you, what it
@@ -266,23 +267,25 @@ sit under the band heading, because that is what the band already means.
 A row that does not fit moves down, never up. When one band fills, the rows that do not fit drop to
 Keep momentum. They never go before work that was already urgent.
 
-### Why a row is where it is
-Each Worklist row explains itself three ways, in sentences, not under headings:
+### Which mail is mine?
+Mine shows reply work addressed to you. Owning a contact does not make every message to that contact your work.
+Being copied alone does not assign a reply. Team shows shared work under the access you already have.
 
-- **The facts that put it there**: a buyer wrote last, a promise is due, a meeting is close, nobody
-  has replied in so many days.
-- **Why it ranks above the row under it**, written out: "Ranked above the next item because you
-  pinned it."
-- **What happens if you leave it**: "If ignored, the buyer keeps waiting."
+Old automatic findings without a current check stay with their source for review.
+On a contact, **Review conversation findings** shows their words, source and date without calling them overdue.
+Tasks you typed, changed or reopened keep their own state. An import does not count as such a change.
+An email on another subject does not mean a promise was kept.
 
-The rank comes from a fixed ladder of checks, not from one number. A pin comes first, then the band,
-then whether the row did not fit its band. Next comes what
-**kind** of work it is. It may be waiting on someone, a promise, a risk to real money, something
-agreed, something that holds up a colleague, or daily work. Then comes its due date, then the money
-it may bring, and so on down.
+### Why an item needs attention
+Each item shows its record, the current facts that call for action, and the action it offers.
+A request can name who is waiting and when they asked. A task shows its due date.
+A deal can show days since the last recorded activity, a missing next step or a close date that needs review.
 
-Each step decides before the next one is looked at. Nothing adds up into a single number you cannot
-take apart.
+A deal suggestion needs current facts before it enters this list. A score or a label such as
+“stalled” cannot put it here alone. **Review deal suggestions** opens the saved brief, including suggestions without those facts.
+
+The order comes from the same checks for Home and the Worklist. Pins, deadlines and customer work
+keep their order without a sentence comparing each item with the one below it.
 
 ### Pinning
 

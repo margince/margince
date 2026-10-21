@@ -14,7 +14,6 @@ import { approvalKindLabel } from "../automations/approvalkind";
 import { MagicApproval } from "./magic.approval";
 import {
   magicByKey,
-  magicConsequenceKey,
   magicSentenceKey,
   magicUndoReasonKey,
   magicWhyKey,
@@ -116,7 +115,11 @@ function MagicLineRow({
         <p className="magic-line-text">
           {sentence
             ? t(sentence, readableValues(line.summary.values, t))
-            : t("magic.undescribed")}{" "}
+            : t(
+                line.lane === "needs_you"
+                  ? "magic.approval.reviewChange"
+                  : "magic.undescribed",
+              )}{" "}
           <LineSubject line={line} since={since} />{" "}
           {detail.length > 0 && (
             <span className="t-caption">
@@ -141,17 +144,24 @@ function lineDetail(
 ): string[] {
   const by = line.actor.label ? magicByKey(line.actor.label.key) : null;
   const why = line.reason ? magicWhyKey(line.reason.key) : null;
-  const consequence =
-    line.consequence &&
-    line.consequence !== "magic.consequence.awaits_your_decision"
-      ? magicConsequenceKey(line.consequence)
-      : null;
   return [
     by && t(by, line.actor.label?.values),
     why && t(why, forecastReasonValues(line, locale)),
-    consequence && t(consequence),
+    captureCoverage(line, t),
     noWayBack(line, t),
   ].filter((part): part is string => Boolean(part));
+}
+
+function captureCoverage(line: MagicLine, t: Translator): string | null {
+  if (line.lane !== "watching") return null;
+  switch (line.consequence) {
+    case "magic.consequence.capture_not_collecting":
+    case "magic.consequence.capture_may_be_incomplete":
+    case "magic.consequence.capture_history_incomplete":
+      return t(line.consequence);
+    default:
+      return null;
+  }
 }
 
 function forecastReasonValues(line: MagicLine, locale: Locale) {

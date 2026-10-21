@@ -50,6 +50,7 @@ func (a *assembly) readDocuments() error {
 // order a reviewer works it: soonest due first, undated last.
 func (a *assembly) readCommitments() error {
 	tasks, truncated, err := a.svc.activities.ListOpenTasksTx(a.ctx, a.tx, activities.ListOpenTasksInput{
+		AsOf:       a.now,
 		EntityType: &entityTypeProject, EntityID: &a.projectID.UUID, Limit: sectionLimit,
 		ExcludeSystemMinted: a.reading.ExcludeSystemMinted,
 	})

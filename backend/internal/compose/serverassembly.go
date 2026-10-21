@@ -157,9 +157,7 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 		WithWorkingHours(workingHoursResolver(pool))
 }
 
-// ownDomainReader adapts capture's own-domain store to the seam the waiting
-// queue takes. It borrows the caller's transaction so one read's strict and
-// relaxed counts see a single snapshot of the domains.
+// Capture identities share the waiting scan's transaction snapshot.
 type ownDomainReader struct{ store *capture.OwnDomainStore }
 
 func (o ownDomainReader) Domains(ctx context.Context, tx pgx.Tx) ([]string, error) {
@@ -494,4 +492,8 @@ func newConsentHandlers(pool *pgxpool.Pool) consent.Handlers {
 		// The privacy queues name the contacts and leads they point at through
 		// the resolver every other surface names records with.
 		WithRecordNames(newAttentionNames(InstallationDB(pool)))
+}
+
+func (o ownDomainReader) MailSeatIdentitiesSQL(ctx context.Context, tx pgx.Tx, bind func(any) int) (string, error) {
+	return o.store.MailSeatIdentitiesSQL(ctx, tx, bind)
 }

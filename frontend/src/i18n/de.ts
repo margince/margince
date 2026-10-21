@@ -1460,12 +1460,9 @@ export const de = {
   "magic.approval.markWon": "Als gewonnen markieren",
   "magic.approval.markLost": "Als verloren markieren",
   "magic.approval.reviewChange": "Vorgeschlagene Änderung prüfen",
-  "magic.approval.noEvidence":
-    "Keine Quelle beigefügt. Prüfe den Deal vor der Freigabe.",
   "home.receipt.dateReverted":
     "Geschätztes Abschlussdatum zurückgenommen; {before} wiederhergestellt (zuvor {after})",
-  "home.receipt.basisUnknown":
-    "Hier ist keine belegte Verkaufshistorie verfügbar. Kläre das Datum mit der Käuferseite.",
+  "home.receipt.basisUnknown": "Schätzgrundlage nicht verfügbar",
   "home.receipt.basis_one":
     "Schätzung aus {count} gewonnenem Deal · Median der Tage je Phase: {days} · Verbleibende Phasen: {stages}. Kein von der Käuferseite bestätigtes Datum.",
   "home.receipt.basis_other":
@@ -5010,17 +5007,9 @@ export const de = {
   "brief.view.weekly": "Woche",
   // Der Eröffnungssatz des Briefings, aus den Zeilen zusammengesetzt, die die
   // Seite zeigt — nie von einem Modell geschrieben.
-  "brief.sentence.clear": "Keine unmittelbaren Prioritäten gefunden.",
-  "brief.sentence.one": "Zuerst: {lead}",
-  "brief.sentence.many": "Zuerst: {lead}. Danach {rest}.",
-  "brief.sentence.rest": "{count} weitere",
-  "brief.sentence.oneFor": "Zuerst, für {who}: {lead}",
-  "brief.sentence.manyFor": "Zuerst, für {who}: {lead}. Danach {rest}.",
-  "brief.sentence.meeting": "Dein nächster Termin ist {meeting} um {time}.",
   "brief.briefedAt": "Von Margince zusammengefasst um {time}",
   "brief.first.title": "Zuerst",
   "brief.first.then": "Danach",
-  "brief.first.why": "Warum zuerst?",
   "brief.intro.waiting": "Wartet auf dich",
   "brief.intro.meetings": "Termine heute",
   "brief.intro.urgent": "Dringend",
@@ -5171,7 +5160,7 @@ export const de = {
   "brief.weekly.meetingsHeld": "Termine mit Follow-up",
   "brief.weekly.ofMeetings": "{withStep} von {held}",
   "brief.weekly.carriedOver": "Zum Wochenende offen",
-  "brief.act": "Erledigt",
+  "brief.act": "Als bearbeitet markieren",
   "brief.dismiss": "Ausblenden",
 
   "brief.glance.morning": "Guten Morgen, {name}.",
@@ -5184,10 +5173,24 @@ export const de = {
   "brief.glance.nightAnon": "Noch bei der Arbeit.",
   "brief.glance.introWeekly":
     "Prüfe die Ergebnisse und plane deine nächsten Schritte.",
-  "brief.glance.attention_one": "1 Eintrag braucht Aufmerksamkeit.",
-  "brief.glance.attention_other": "{count} Einträge brauchen Aufmerksamkeit.",
+  "brief.suggestions.review": "Deal-Vorschläge ansehen",
+  "brief.suggestions.empty": "Keine Deal-Vorschläge in diesem Morgenbericht.",
+  "brief.agenda.summary": "{agenda}",
+  "brief.agenda.customer_waiting_one": "{count} Kundenanfrage",
+  "brief.agenda.customer_waiting_other": "{count} Kundenanfragen",
+  "brief.agenda.leads_one": "{count} Lead",
+  "brief.agenda.leads_other": "{count} Leads",
+  "brief.agenda.deals_at_risk_one": "{count} Deal mit Handlungsbedarf",
+  "brief.agenda.deals_at_risk_other": "{count} Deals mit Handlungsbedarf",
+  "brief.agenda.meetings_one": "{count} Besprechung",
+  "brief.agenda.meetings_other": "{count} Besprechungen",
+  "brief.agenda.tasks_one": "{count} Aufgabe",
+  "brief.agenda.tasks_other": "{count} Aufgaben",
+  "brief.agenda.decisions_one": "{count} Entscheidung",
+  "brief.agenda.decisions_other": "{count} Entscheidungen",
+  "brief.agenda.system_one": "{count} Systemproblem",
+  "brief.agenda.system_other": "{count} Systemprobleme",
   "worklist.source.failed_approval": "Freigegeben, aber nicht ausgeführt",
-  "brief.glance.intro": "Dein Tag im Überblick.",
   "brief.panel.decisions": "Freigaben",
   "brief.rail.quietSchedule": "Nichts gebucht",
   "brief.panel.schedule": "Anstehende Termine",
@@ -13810,6 +13813,8 @@ export const de = {
   "contact.loops.empty":
     "Keine Zusagen oder Fragen in den erfassten Nachrichten.",
   "contact.loops.ours": "Du",
+  "contact.loops.team": "Team",
+  "contact.loops.review": "Gesprächsaussagen prüfen",
   "contact.loops.question": "Offene Frage",
   "contact.loops.overdue_one": "{count} Tag überfällig",
   "contact.loops.overdue_other": "{count} Tage überfällig",
@@ -15153,8 +15158,6 @@ export const de = {
   "worklist.because.buyer_wrote_last":
     "die Käuferseite hat zuletzt geschrieben",
   "worklist.because.waiting_days": "wartet",
-  "worklist.because.more_one": "+{count} weitere",
-  "worklist.because.more_other": "+{count} weitere",
   "worklist.because.waiting_days.value_one": "wartet seit {value} Tag",
   "worklist.because.waiting_days.value_other": "wartet seit {value} Tagen",
   "worklist.because.overdue": "überfällig",
@@ -15172,7 +15175,7 @@ export const de = {
   "worklist.because.quiet_days": "verstummt",
   "worklist.because.quiet_days.value_one": "seit {value} Tag still",
   "worklist.because.quiet_days.value_other": "seit {value} Tagen still",
-  "worklist.because.no_next_step": "kein nächster Schritt geplant",
+  "worklist.because.no_next_step": "kein nächster Schritt erfasst",
   "worklist.because.no_champion": "kein Champion",
   "worklist.because.champion_unknown": "Champion unbekannt",
   "worklist.because.promised": "von dir zugesagt",
@@ -15220,60 +15223,12 @@ export const de = {
   "worklist.because.link_off_sender":
     "der Link führt auf eine andere Website als die Absendedomain",
   "worklist.because.read_only": "du kannst das lesen, aber nicht ändern",
-  "worklist.above.pin":
-    "Steht über dem nächsten Eintrag, da du diesen Eintrag angeheftet hast.",
-  "worklist.above.level":
-    "Steht über dem nächsten Eintrag, da dieser Eintrag dringender ist.",
-  "worklist.above.deadline":
-    "Steht wegen des Datums über dem nächsten Eintrag.",
-  "worklist.above.deadline.pair":
-    "Steht über dem nächsten Eintrag: {mine} gegenüber {theirs}.",
-  "worklist.above.expected_revenue":
-    "Steht wegen des erwarteten Umsatzes über dem nächsten Eintrag.",
-  "worklist.above.expected_revenue.pair":
-    "Steht über dem nächsten Eintrag: {mine} gegenüber {theirs}.",
-  "worklist.above.waiting_days":
-    "Steht wegen der Wartezeit über dem nächsten Eintrag.",
-  "worklist.above.waiting_days.pair":
-    "Steht über dem nächsten Eintrag: {mine} gegenüber {theirs}.",
-  "worklist.above.relationship":
-    "Steht wegen der Beziehungsstärke über dem nächsten Eintrag.",
-  "worklist.above.crowded":
-    "Steht über dem nächsten Eintrag, der einer von vielen seiner Art ist.",
   "worklist.verdict.live": "Aktiv",
   "worklist.verdict.drifting": "Stagnierend",
   "worklist.verdict.blocked": "Blockiert",
   "worklist.verdict.cold": "Kalt",
   "worklist.verdict.believes": "Bewertung",
-  "worklist.verdict.rule": "Warum das hier steht",
   "worklist.verdict.asOf": "Stand {when}",
-  "worklist.consequence.buyer_waits":
-    "Ohne Reaktion wartet die Käuferseite weiter.",
-  "worklist.consequence.promise_breaks":
-    "Ohne Reaktion wird eine Zusage gebrochen.",
-  "worklist.consequence.deal_drifts":
-    "Ohne Reaktion stagniert der Deal weiter.",
-  "worklist.consequence.deal_slips_past_close":
-    "Ohne Reaktion verstreicht das vereinbarte Abschlussdatum.",
-  "worklist.consequence.meeting_unprepared":
-    "Ohne Reaktion gehst du unvorbereitet in den Termin.",
-  "worklist.consequence.task_slips":
-    "Ohne Reaktion verzögert sich die Aufgabe.",
-  "worklist.consequence.work_blocked":
-    "Ohne Reaktion bleibt die Arbeit blockiert.",
-  "worklist.consequence.customer_never_received":
-    "Ohne Reaktion erhält der Kontakt es nie.",
-  "worklist.consequence.you_believe_it_happened":
-    "Ohne Reaktion wirkt es weiter erledigt, obwohl es nie ausgeführt wurde.",
-  "worklist.consequence.legal_deadline_missed":
-    "Ohne Reaktion verstreicht eine gesetzliche Frist.",
-  "worklist.consequence.mailbox_blind":
-    "Ohne Reaktion fehlen auf dieser Seite weiterhin E-Mails, die nicht ankommen.",
-  "worklist.consequence.data_drifts": "Ohne Reaktion veralten die Datensätze.",
-  "worklist.consequence.calendar_blind":
-    "Ohne Reaktion fehlen auf dieser Seite weiterhin Termine, die nicht ankommen.",
-  "worklist.consequence.connection_blind":
-    "Ohne Reaktion fehlt auf dieser Seite weiterhin, was diese Verbindung bringt.",
   "worklist.untitled.approval": "Freigabe ausstehend",
   "worklist.untitled.dedupe_candidate": "Mögliche doppelte Datensätze",
   "worklist.untitled.task": "Aufgabe ohne Titel",
@@ -15945,16 +15900,11 @@ export const de = {
   "magic.action.schedule": "Ein Termin wurde gebucht",
   "magic.action.disqualify": "Ein Lead wurde disqualifiziert",
   "magic.action.automation_troubled": "{name} hat Probleme: {outcome}",
-  "magic.action.approval_coldstart":
-    "Eine Erstansprache wartet auf deine Freigabe",
-  "magic.action.approval_send_email":
-    "Eine Nachricht wartet auf deine Freigabe",
-  "magic.action.approval_advance_deal":
-    "Ein Phasenwechsel wartet auf deine Freigabe",
-  "magic.action.approval_promote_lead":
-    "Eine Lead-Umwandlung wartet auf deine Freigabe",
-  "magic.action.approval_overnight":
-    "Ein Vorschlag aus der Nacht wartet auf deine Freigabe",
+  "magic.action.approval_coldstart": "Erstansprache prüfen",
+  "magic.action.approval_send_email": "Nachricht prüfen",
+  "magic.action.approval_advance_deal": "Phasenwechsel prüfen",
+  "magic.action.approval_promote_lead": "Lead-Umwandlung prüfen",
+  "magic.action.approval_overnight": "Vorschlag prüfen",
   "approval.commitment.proposalExpiresIn": "Vorschlag läuft in {countdown} ab",
   "approval.commitment.noDueDay": "Kein Tag genannt",
   "approval.commitment.promiseStatus": "Stand der Zusage",
@@ -15968,13 +15918,11 @@ export const de = {
   "magic.action.approval_commitment_task_summary": "{summary}",
   "magic.action.approval_commitment_task_unverified":
     "{party} (nicht bestätigt): {summary}",
-  "magic.action.approval_commitment_task":
-    "Eine Zusage aus einem Gespräch wartet auf deine Freigabe",
+  "magic.action.approval_commitment_task": "Vorgeschlagene Aufgabe prüfen",
   "magic.action.approval_capture_counterparty":
     "{target} hat dir geschrieben. Als Kontakt behalten?",
   "magic.action.approval_summary": "Vorschlag: {summary}",
-  "magic.action.approval_pending":
-    "Ein Vorschlag vom Typ {kind} wartet auf deine Freigabe",
+  "magic.action.approval_pending": "{kind}",
   "magic.action.capture_reauth_required":
     "{provider} muss neu verbunden werden",
   "magic.action.capture_connection_error": "{provider} war nicht erreichbar",
@@ -15993,12 +15941,11 @@ export const de = {
   "magic.consequence.lead_disqualified": "Der Lead hat die Pipeline verlassen.",
   "magic.consequence.automation_did_nothing":
     "Nichts von dem, was die Regel zugesagt hat, ist passiert.",
-  "magic.consequence.capture_not_collecting":
-    "Aus dieser Quelle wird nichts mehr erfasst.",
+  "magic.consequence.capture_not_collecting": "Erfassung angehalten.",
   "magic.consequence.capture_may_be_incomplete":
-    "Was du aus dieser Quelle siehst, kann unvollständig sein.",
+    "Die letzten Daten sind möglicherweise unvollständig.",
   "magic.consequence.capture_history_incomplete":
-    "Älterer Austausch aus dieser Quelle fehlt.",
+    "Import des Verlaufs unvollständig.",
   "aiFigures.window.24h": "24 h",
   "aiFigures.window.7d": "7 T",
   "aiFigures.window.30d": "30 T",

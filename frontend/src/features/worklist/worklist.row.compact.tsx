@@ -41,13 +41,8 @@ export type RowReadings = Readonly<{
   /** The clock this row is racing, and what it is worth. */
   when: string | null;
   facts: string | null;
-  /** Why it is here: what the line says outright, and what the fold holds. */
+  /** Concrete reasons, visible at every density. */
   said: readonly string[];
-  folded: readonly string[];
-  /** Why it beat the row below it. A full sentence, so never on the line. */
-  above: string | null;
-  /** What doing nothing costs. */
-  consequence: string | null;
   /** The supporting sentence, from every source that sends prose. */
   detail?: string | null;
   /** A grouped row's named members. */
@@ -84,7 +79,7 @@ export function CompactRowLine({
    */
   named: boolean;
 }>) {
-  const { item, title, href, said, folded, zone } = readings;
+  const { item, title, href, said, zone } = readings;
   const t = useT();
   // ONE STRING, so there is ONE truncation and one tip over it. Drawn as
   // separate fragments the line would clip whichever happened to be last and
@@ -93,19 +88,11 @@ export function CompactRowLine({
     readings.when,
     item.move?.action === "draft_reply" ? t("brief.reply.owed") : null,
     readings.facts,
-    ...said,
   ]
     .filter((part): part is string => part !== null && part !== "")
     .join(" · ");
   const tip = useTruncationTooltip<HTMLSpanElement>(inline);
   const rest: ReactNode[] = [];
-  if (folded.length > 0) {
-    rest.push(
-      <p className="t-caption" key="reasons">
-        {folded.join(" · ")}
-      </p>,
-    );
-  }
   if (readings.detail && item.source !== "notice") {
     rest.push(
       <p className="t-caption" key="detail">
@@ -140,6 +127,9 @@ export function CompactRowLine({
           <Badge tone="warning">{t("worklist.needsPrep")}</Badge>
         )}
       </p>
+      {said.length > 0 && (
+        <p className="worklist-row-because">{said.join(" · ")}</p>
+      )}
       {inline && (
         <span
           className="t-caption worklist-row-inline"

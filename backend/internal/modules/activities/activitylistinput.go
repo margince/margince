@@ -52,6 +52,8 @@ type ListActivitiesInput struct {
 	// what the partial index behind it is built on. Done-ness is part of
 	// that question rather than a second dial — see openTaskAssigneeClause.
 	AssigneeID *ids.UserID
+	// TaskAsOf is required for transaction reads filtered by assignee; store reads supply their clock.
+	TaskAsOf *time.Time
 
 	// OwnQueueOf narrows to the open work one contact is answerable for.
 	// Distinct from AssigneeID, which means exact assignment on any kind and is

@@ -5,11 +5,6 @@
 
 package compose
 
-// An overdue promise card asks "you may have done this" once we have written
-// to the contact after the promise was made, and never closes it by itself.
-// Seeded through the real activity writer, so the attestation, the links and
-// the audience the read filters on are the ones capture and send produce.
-
 import (
 	"context"
 	"testing"
@@ -27,55 +22,33 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func TestAnEmailAfterTheTaskProposesItDoneAndNotYetHoldsUntilTheNext(t *testing.T) {
+func TestAnUnrelatedLaterEmailDoesNotSuggestTheTaskWasCompleted(t *testing.T) {
 	e := integration.Setup(t)
-	const anna, bert = "anna@kunde.example", "bert@kunde.example"
-	contact := seedLinkedContact(t, e, anna)
-	other := seedLinkedContact(t, e, bert)
+	const address = "anna@kunde.example"
+	contact := seedLinkedContact(t, e, address)
 	contactID := ids.From[ids.ContactKind](contact)
-
-	task := logTaskFor(t, e, contact, "Send demo email", new(time.Now().Add(-48*time.Hour)))
+	task := logTaskFor(t, e, contact, "Send revised installation plan", new(time.Date(2026, 8, 3, 9, 0, 0, 0, time.UTC)))
 	filed := readTask(t, e, task).OccurredAt
-	after := filed.Add(time.Hour)
 	svc := pageAsOf(e, filed.Add(3*time.Hour))
-	read := func() crmcontracts.ContactMoment { return momentOf(e.Admin(), t, svc, contactID) }
-
-	logEmailFor(e.Admin(), t, e, contact, anna, "outbound", true, filed.Add(-time.Hour))
-	logEmailFor(e.Admin(), t, e, contact, anna, "inbound", false, after)
-	logEmailFor(e.Admin(), t, e, other, bert, "outbound", true, after)
-	logEmailFor(e.Admin(), t, e, contact, anna, "outbound", false, after)
-	if got := read(); got.MayBeDone != nil || got.Headline != "You owe them: Send demo email" {
-		t.Fatalf("card = %q, want the overdue card: no attested email to them came after the task", got.Headline)
-	}
-
-	sent := logEmailFor(e.Admin(), t, e, contact, anna, "outbound", true, after)
-	question := read()
-	if question.MayBeDone == nil || ids.UUID(question.MayBeDone.PromiseId) != task ||
-		ids.UUID(question.MayBeDone.EmailActivityId) != sent {
-		t.Fatalf("card = %q (%+v), want the question about the task naming the email", question.Headline, question.MayBeDone)
+	before := momentOf(e.Admin(), t, svc, contactID)
+	for _, delay := range []time.Duration{time.Hour, 2 * time.Hour} {
+		sent := logEmailFor(e.Admin(), t, e, contact, address, "outbound", true, filed.Add(delay))
+		got := momentOf(e.Admin(), t, svc, contactID)
+		if got.MayBeDone != nil || got.ClaimKey != before.ClaimKey || got.Headline != before.Headline {
+			t.Fatalf("an unrelated email changed the task into completion advice: %+v", got)
+		}
+		for _, evidence := range got.Evidence {
+			if evidence.Id != nil && ids.UUID(*evidence.Id) == sent {
+				t.Fatal("task evidence cites unrelated correspondence")
+			}
+		}
 	}
 	if done := readTask(t, e, task).IsDone; done != nil && *done {
-		t.Fatal("the task was completed without anybody pressing Done")
-	}
-
-	if err := svc.DismissMoment(e.Admin(), contactID, crmcontracts.DismissContactMomentRequest{
-		ClaimKey: question.ClaimKey, EvidenceFingerprint: question.EvidenceFingerprint,
-	}); err != nil {
-		t.Fatalf("Not yet: %v", err)
-	}
-	if got := read(); got.MayBeDone != nil || got.Headline != "You owe them: Send demo email" {
-		t.Fatalf("after Not yet the card is %q, want the overdue card back", got.Headline)
-	}
-
-	later := logEmailFor(e.Admin(), t, e, contact, anna, "outbound", true, after.Add(time.Hour))
-	if got := read(); got.MayBeDone == nil || ids.UUID(got.MayBeDone.EmailActivityId) != later {
-		t.Errorf("after a later email the card is %q, want the question asked again", got.Headline)
+		t.Fatal("the task was completed without its own completion action")
 	}
 }
 
-// The card names the email, so it is asked only of a reader who may open it:
-// the author of a participants-only email is asked, a colleague outside it is not.
-func TestOnlyAReaderWhoMayOpenTheEmailIsAskedAboutIt(t *testing.T) {
+func TestAnEmailNeverMakesAColleaguesTaskTheReadersToComplete(t *testing.T) {
 	e := integration.Setup(t)
 	perms := principal.Permissions{
 		RoleKeys: []string{"rep"},
@@ -87,24 +60,23 @@ func TestOnlyAReaderWhoMayOpenTheEmailIsAskedAboutIt(t *testing.T) {
 	}
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, perms)
 	colleague := e.As(e.Rep3, []ids.UUID{e.Team2}, perms)
-	const carla = "carla@kunde.example"
-	contact := seedLinkedContact(t, e, carla)
-	contactID := ids.From[ids.ContactKind](contact)
-
-	task := logTaskFor(t, e, contact, "Send the pricing sheet", new(time.Now().Add(-48*time.Hour)))
+	const address = "carla@kunde.example"
+	contact := seedLinkedContact(t, e, address)
+	task := logTaskFor(t, e, contact, "Send the pricing sheet", new(time.Date(2026, 8, 3, 9, 0, 0, 0, time.UTC)))
 	filed := readTask(t, e, task).OccurredAt
-	sent := logEmailFor(author, t, e, contact, carla, "outbound", true, filed.Add(time.Hour))
-	if _, err := e.Activities.SetAudience(author, ids.From[ids.ActivityKind](sent),
-		activities.SetAudienceInput{Audience: "participants"}); err != nil {
+	sent := logEmailFor(author, t, e, contact, address, "outbound", true, filed.Add(time.Hour))
+	if _, err := e.Activities.SetAudience(author, ids.From[ids.ActivityKind](sent), activities.SetAudienceInput{Audience: "participants"}); err != nil {
 		t.Fatalf("limiting the email to its participants: %v", err)
 	}
 	svc := pageAsOf(e, filed.Add(3*time.Hour))
-
-	if got := momentOf(author, t, svc, contactID); got.MayBeDone == nil || ids.UUID(got.MayBeDone.EmailActivityId) != sent {
-		t.Errorf("the author's card is %q, want the question naming their own email", got.Headline)
-	}
-	if got := momentOf(colleague, t, svc, contactID); got.MayBeDone != nil {
-		t.Errorf("a colleague outside the email's audience was asked %q, citing mail they cannot open", got.Headline)
+	for _, reader := range []context.Context{author, colleague} {
+		got := momentOf(reader, t, svc, ids.From[ids.ContactKind](contact))
+		if got.MayBeDone != nil {
+			t.Fatalf("a later email generated completion advice: %+v", got)
+		}
+		if got.Headline != "Your team owes them: Send the pricing sheet" {
+			t.Fatalf("a reader was assigned the contact owner's task: %s", got.Headline)
+		}
 	}
 }
 
@@ -130,7 +102,7 @@ func momentOf(as context.Context, t *testing.T, svc *contact360.Service, contact
 // writer. attested is the provider's filing of it as sent by us.
 func logEmailFor(as context.Context, t *testing.T, e *integration.Env, contact ids.UUID, address, direction string, attested bool, occurred time.Time) ids.UUID {
 	t.Helper()
-	subject := "Your demo"
+	subject := "Invoice payment instructions"
 	row, _, err := e.Activities.LogActivity(as, activities.LogActivityInput{
 		Kind: "email", Subject: &subject, Direction: &direction, OccurredAt: &occurred, Source: "manual",
 		CounterpartyEmail: address, CounterpartyOutboundAttested: attested,

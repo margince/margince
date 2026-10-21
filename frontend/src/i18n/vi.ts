@@ -1423,12 +1423,9 @@ export const vi = {
   "magic.approval.markWon": "Đánh dấu thắng",
   "magic.approval.markLost": "Đánh dấu thua",
   "magic.approval.reviewChange": "Xem thay đổi đề xuất",
-  "magic.approval.noEvidence":
-    "Chưa đính kèm nguồn chứng minh. Kiểm tra deal trước khi phê duyệt.",
   "home.receipt.dateReverted":
     "Đã hoàn tác ngày chốt ước tính; khôi phục {before} (trước đó {after})",
-  "home.receipt.basisUnknown":
-    "Không có lịch sử bán hàng làm căn cứ ở đây. Xác nhận ngày với bên mua trước khi giữ lại.",
+  "home.receipt.basisUnknown": "Không có cơ sở ước tính",
   "home.receipt.basis_one":
     "Ước tính từ {count} deal thắng · Số ngày trung vị mỗi giai đoạn: {days} · Số giai đoạn còn lại: {stages}. Chưa được bên mua xác nhận.",
   "home.receipt.basis_other":
@@ -4892,18 +4889,9 @@ export const vi = {
   "brief.view.weekly": "Tuần",
   // Câu mở đầu của bản tóm tắt, ghép từ chính những dòng trang đang hiển thị —
   // không do mô hình viết.
-  "brief.sentence.clear": "Không có ưu tiên cần xử lý ngay.",
-  "brief.sentence.one": "Trước tiên: {lead}",
-  "brief.sentence.many": "Trước tiên: {lead}. Sau đó là {rest}.",
-  "brief.sentence.rest": "{count} việc nữa",
-  "brief.sentence.oneFor": "Trước tiên, cho {who}: {lead}",
-  "brief.sentence.manyFor": "Trước tiên, cho {who}: {lead}. Sau đó là {rest}.",
-  "brief.sentence.meeting":
-    "Cuộc họp tiếp theo của bạn là {meeting} lúc {time}.",
   "brief.briefedAt": "Margince tóm tắt lúc {time}",
   "brief.first.title": "Trước tiên",
   "brief.first.then": "Sau đó",
-  "brief.first.why": "Vì sao mục này được ưu tiên?",
   "brief.intro.waiting": "Đang chờ bạn",
   "brief.intro.meetings": "Cuộc họp hôm nay",
   "brief.intro.urgent": "Khẩn cấp",
@@ -5052,7 +5040,7 @@ export const vi = {
   "brief.weekly.meetingsHeld": "Cuộc họp có việc tiếp theo",
   "brief.weekly.ofMeetings": "{withStep} trên {held}",
   "brief.weekly.carriedOver": "Việc còn mở cuối tuần",
-  "brief.act": "Xong",
+  "brief.act": "Đánh dấu đã xử lý",
   "brief.dismiss": "Bỏ qua",
 
   "brief.glance.morning": "Chào buổi sáng, {name}.",
@@ -5065,10 +5053,24 @@ export const vi = {
   "brief.glance.nightAnon": "Đang làm việc khuya.",
   "brief.glance.introWeekly":
     "Xem lại kết quả và lên kế hoạch cho bước tiếp theo.",
-  "brief.glance.attention_one": "1 mục cần chú ý.",
-  "brief.glance.attention_other": "{count} mục cần chú ý.",
+  "brief.suggestions.review": "Xem các cơ hội được gợi ý",
+  "brief.suggestions.empty": "Không có cơ hội được gợi ý trong bản tin này.",
+  "brief.agenda.summary": "{agenda}",
+  "brief.agenda.customer_waiting_one": "{count} yêu cầu của khách hàng",
+  "brief.agenda.customer_waiting_other": "{count} yêu cầu của khách hàng",
+  "brief.agenda.leads_one": "{count} khách hàng tiềm năng",
+  "brief.agenda.leads_other": "{count} khách hàng tiềm năng",
+  "brief.agenda.deals_at_risk_one": "{count} cơ hội cần xử lý",
+  "brief.agenda.deals_at_risk_other": "{count} cơ hội cần xử lý",
+  "brief.agenda.meetings_one": "{count} cuộc họp",
+  "brief.agenda.meetings_other": "{count} cuộc họp",
+  "brief.agenda.tasks_one": "{count} công việc",
+  "brief.agenda.tasks_other": "{count} công việc",
+  "brief.agenda.decisions_one": "{count} quyết định",
+  "brief.agenda.decisions_other": "{count} quyết định",
+  "brief.agenda.system_one": "{count} sự cố hệ thống",
+  "brief.agenda.system_other": "{count} sự cố hệ thống",
   "worklist.source.failed_approval": "Đã duyệt nhưng chưa thực hiện",
-  "brief.glance.intro": "Tổng quan hôm nay.",
   "brief.panel.decisions": "Phê duyệt",
   "brief.rail.quietSchedule": "Không có lịch hẹn",
   "brief.panel.schedule": "Cuộc họp sắp tới",
@@ -13450,6 +13452,8 @@ export const vi = {
   "contact.loops.empty":
     "Không có cam kết hay câu hỏi nào trong các tin nhắn đã thu thập.",
   "contact.loops.ours": "Bạn",
+  "contact.loops.team": "Nhóm",
+  "contact.loops.review": "Xem lại thông tin từ cuộc trao đổi",
   "contact.loops.question": "Câu hỏi mở",
   "contact.loops.overdue_one": "quá hạn {count} ngày",
   "contact.loops.overdue_other": "quá hạn {count} ngày",
@@ -14787,8 +14791,6 @@ export const vi = {
   "worklist.because.non_buyer_request": "chưa xác định là việc của khách hàng",
   "worklist.because.buyer_wrote_last": "bên mua gửi tin sau cùng",
   "worklist.because.waiting_days": "đang chờ",
-  "worklist.because.more_one": "+{count} khác",
-  "worklist.because.more_other": "+{count} khác",
   "worklist.because.waiting_days.value_one": "đã chờ {value} ngày",
   "worklist.because.waiting_days.value_other": "đã chờ {value} ngày",
   "worklist.because.overdue": "quá hạn",
@@ -14806,7 +14808,7 @@ export const vi = {
   "worklist.because.quiet_days": "đã im lặng",
   "worklist.because.quiet_days.value_one": "im lặng {value} ngày",
   "worklist.because.quiet_days.value_other": "im lặng {value} ngày",
-  "worklist.because.no_next_step": "chưa lên kế hoạch bước tiếp theo",
+  "worklist.because.no_next_step": "chưa ghi nhận bước tiếp theo",
   "worklist.because.no_champion": "chưa có người ủng hộ",
   "worklist.because.champion_unknown": "chưa rõ người ủng hộ",
   "worklist.because.promised": "bạn đã cam kết",
@@ -14853,52 +14855,12 @@ export const vi = {
   "worklist.because.link_off_sender":
     "liên kết dẫn đến một trang web khác với trang web của bên gửi",
   "worklist.because.read_only": "bạn có thể xem nhưng không thể thay đổi",
-  "worklist.above.pin": "Xếp trên việc kế tiếp vì bạn đã ghim.",
-  "worklist.above.level": "Xếp trên việc kế tiếp vì khẩn cấp hơn.",
-  "worklist.above.deadline": "Xếp trên việc kế tiếp, xét theo ngày.",
-  "worklist.above.deadline.pair":
-    "Xếp trên việc kế tiếp: {mine} so với {theirs}.",
-  "worklist.above.expected_revenue":
-    "Xếp trên việc kế tiếp, xét theo doanh thu dự kiến.",
-  "worklist.above.expected_revenue.pair":
-    "Xếp trên việc kế tiếp: {mine} so với {theirs}.",
-  "worklist.above.waiting_days":
-    "Xếp trên việc kế tiếp, xét theo thời gian chờ.",
-  "worklist.above.waiting_days.pair":
-    "Xếp trên việc kế tiếp: {mine} so với {theirs}.",
-  "worklist.above.relationship":
-    "Xếp trên việc kế tiếp, xét theo độ mạnh của quan hệ.",
-  "worklist.above.crowded":
-    "Xếp trên việc kế tiếp, vốn là một trong nhiều việc cùng loại.",
   "worklist.verdict.live": "Đang tiến triển",
   "worklist.verdict.drifting": "Đang chững lại",
   "worklist.verdict.blocked": "Bị chặn",
   "worklist.verdict.cold": "Đã nguội",
   "worklist.verdict.believes": "Đánh giá",
-  "worklist.verdict.rule": "Vì sao việc này xuất hiện ở đây",
   "worklist.verdict.asOf": "Tính đến {when}",
-  "worklist.consequence.buyer_waits": "Nếu bỏ qua, bên mua tiếp tục chờ.",
-  "worklist.consequence.promise_breaks": "Nếu bỏ qua, một cam kết sẽ bị lỡ.",
-  "worklist.consequence.deal_drifts": "Nếu bỏ qua, deal sẽ tiếp tục chững lại.",
-  "worklist.consequence.deal_slips_past_close":
-    "Nếu bỏ qua, deal sẽ trễ qua ngày chốt đã thống nhất.",
-  "worklist.consequence.meeting_unprepared":
-    "Nếu bỏ qua, bạn sẽ vào cuộc họp mà chưa chuẩn bị.",
-  "worklist.consequence.task_slips": "Nếu bỏ qua, việc cần làm sẽ bị trễ.",
-  "worklist.consequence.work_blocked": "Nếu bỏ qua, công việc sẽ vẫn bị chặn.",
-  "worklist.consequence.customer_never_received":
-    "Nếu bỏ qua, khách hàng sẽ không bao giờ nhận được.",
-  "worklist.consequence.you_believe_it_happened":
-    "Nếu bỏ qua, việc này vẫn trông như đã xong dù chưa từng chạy.",
-  "worklist.consequence.legal_deadline_missed":
-    "Nếu bỏ qua, thời hạn pháp lý sẽ trôi qua.",
-  "worklist.consequence.mailbox_blind":
-    "Nếu bỏ qua, trang này sẽ tiếp tục thiếu các thư không đến được.",
-  "worklist.consequence.data_drifts": "Nếu bỏ qua, các hồ sơ sẽ lỗi thời.",
-  "worklist.consequence.calendar_blind":
-    "Nếu bỏ qua, trang này sẽ tiếp tục thiếu các cuộc họp không đến được.",
-  "worklist.consequence.connection_blind":
-    "Nếu bỏ qua, trang này sẽ tiếp tục thiếu những gì kết nối này mang về.",
   "worklist.untitled.approval": "Phê duyệt đang chờ",
   "worklist.untitled.dedupe_candidate": "Hồ sơ có thể trùng",
   "worklist.untitled.task": "Việc cần làm chưa có tiêu đề",
@@ -15540,15 +15502,12 @@ export const vi = {
   "magic.action.schedule": "Đã đặt một cuộc họp",
   "magic.action.disqualify": "Một lead đã bị loại",
   "magic.action.automation_troubled": "{name} đang gặp trục trặc: {outcome}",
-  "magic.action.approval_coldstart":
-    "Một lần tiếp cận đầu tiên đang chờ bạn duyệt",
-  "magic.action.approval_send_email": "Một tin nhắn đang chờ bạn duyệt",
-  "magic.action.approval_advance_deal":
-    "Một lần chuyển giai đoạn đang chờ bạn duyệt",
+  "magic.action.approval_coldstart": "Xem xét tiếp cận ban đầu",
+  "magic.action.approval_send_email": "Xem xét tin nhắn",
+  "magic.action.approval_advance_deal": "Xem xét chuyển giai đoạn",
   "magic.action.approval_promote_lead":
-    "Đề xuất chuyển lead thành deal đang chờ bạn duyệt",
-  "magic.action.approval_overnight":
-    "Một đề xuất từ đêm qua đang chờ bạn duyệt",
+    "Xem xét chuyển khách hàng tiềm năng thành cơ hội",
+  "magic.action.approval_overnight": "Xem xét đề xuất",
   "approval.commitment.proposalExpiresIn": "Đề xuất hết hạn sau {countdown}",
   "approval.commitment.noDueDay": "Chưa nêu ngày",
   "approval.commitment.promiseStatus": "Trạng thái cam kết",
@@ -15562,12 +15521,11 @@ export const vi = {
   "magic.action.approval_commitment_task_summary": "{summary}",
   "magic.action.approval_commitment_task_unverified":
     "{party} (chưa xác minh): {summary}",
-  "magic.action.approval_commitment_task":
-    "Một cam kết từ cuộc trao đổi đang chờ bạn duyệt",
+  "magic.action.approval_commitment_task": "Xem xét công việc được đề xuất",
   "magic.action.approval_capture_counterparty":
     "{target} đã viết cho bạn. Lưu thành liên hệ?",
   "magic.action.approval_summary": "Đề xuất: {summary}",
-  "magic.action.approval_pending": "Một đề xuất {kind} đang chờ bạn duyệt",
+  "magic.action.approval_pending": "{kind}",
   "magic.action.capture_reauth_required": "Cần kết nối lại {provider}",
   "magic.action.capture_connection_error": "Không thể kết nối tới {provider}",
   "magic.action.capture_sync_failing": "{provider} đang đồng bộ không kịp",
@@ -15584,12 +15542,10 @@ export const vi = {
   "magic.consequence.lead_disqualified": "Lead đã rời khỏi pipeline.",
   "magic.consequence.automation_did_nothing":
     "Những gì quy tắc hứa hẹn chưa xảy ra.",
-  "magic.consequence.capture_not_collecting":
-    "Hiện không thu thập gì từ nguồn này.",
+  "magic.consequence.capture_not_collecting": "Đã dừng thu thập.",
   "magic.consequence.capture_may_be_incomplete":
-    "Dữ liệu hiển thị từ nguồn này có thể còn thiếu.",
-  "magic.consequence.capture_history_incomplete":
-    "Các trao đổi cũ hơn từ nguồn này đang bị thiếu.",
+    "Dữ liệu thu thập gần đây có thể chưa đầy đủ.",
+  "magic.consequence.capture_history_incomplete": "Nhập lịch sử chưa hoàn tất.",
   "aiFigures.window.24h": "24 giờ",
   "aiFigures.window.7d": "7 ngày",
   "aiFigures.window.30d": "30 ngày",

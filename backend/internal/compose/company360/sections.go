@@ -182,9 +182,9 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now 
 	if err != nil {
 		return nil, crmcontracts.PageInfo{}, nil, err
 	}
-	extra := ""
+	extra := " AND " + activities.CurrentCommitmentTaskClause("a", now, arg)
 	if promisesOnly {
-		extra = " AND " + activities.NotSystemMinted("a", arg)
+		extra += " AND " + activities.NotSystemMinted("a", arg)
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT a.id, coalesce(a.subject, ''), a.due_at, a.assignee_id, a.occurred_at, a.version,

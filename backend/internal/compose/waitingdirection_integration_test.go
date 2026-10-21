@@ -88,7 +88,7 @@ func TestWaitingDirectionUsesExistingRelationshipAndRelevanceFacts(t *testing.T)
 			if applied, err := e.Activities.SetOwedVerdict(judge, id, activities.OwedVerdictAsksUs, "test-rules", at); err != nil || !applied {
 				t.Fatalf("request: %t %v", applied, err)
 			}
-			waiting, cut, err := (attentionWaiting{store: e.Activities, contacts: e.Contacts}).Unanswered(e.Admin(), at.Add(time.Hour))
+			waiting, cut, err := (attentionWaiting{store: e.Activities, contacts: e.Contacts}).Unanswered(e.Admin(), at.Add(time.Hour), nil)
 			if err != nil || cut {
 				t.Fatalf("waiting: truncated=%t err=%v", cut, err)
 			}

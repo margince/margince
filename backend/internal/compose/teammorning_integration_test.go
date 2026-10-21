@@ -158,6 +158,10 @@ func TestTeamWorklistExcludesUnlinkedOutsideTasksAndRefusesTheirOwner(t *testing
 
 func TestTeamBoardCountsOnlyReadableWaitingMail(t *testing.T) {
 	e := integration.Setup(t)
+	var recipient string
+	if err := integration.OwnerConn(t).QueryRow(t.Context(), `SELECT email FROM app_user WHERE id=$1`, e.Rep1).Scan(&recipient); err != nil {
+		t.Fatal(err)
+	}
 	now := time.Date(2026, 10, 18, 12, 0, 0, 0, time.UTC)
 	pipeline, open, _ := integration.DealFixture(t, e)
 	deal := e.SeedDeal(t, "Example mail renewal", pipeline, open, &e.Rep1)
@@ -170,7 +174,8 @@ func TestTeamBoardCountsOnlyReadableWaitingMail(t *testing.T) {
 		at := now.Add(-time.Hour)
 		input := activities.LogActivityInput{
 			Kind: "email", Source: "manual", Subject: &subject, Direction: &direction, OccurredAt: &at, ThreadKey: thread,
-			Links: []activities.ActivityLinkInput{{EntityType: "deal", EntityID: deal}},
+			EmailTo: []string{recipient},
+			Links:   []activities.ActivityLinkInput{{EntityType: "deal", EntityID: deal}},
 		}
 		if private {
 			input.VisibleOnlyTo(e.Rep1)

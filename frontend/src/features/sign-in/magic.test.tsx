@@ -12,7 +12,7 @@ import {
   stub,
   stubPending,
   stubRefusal,
-} from "./magic.testkit";
+} from "../../testing/magic.testkit";
 
 afterEach(() => {
   cleanup();
@@ -75,9 +75,7 @@ describe("the receipt draws every lane it promises", () => {
       ),
     ).toBeTruthy();
     expect(
-      within(await lane("Waiting on you")).getByText(
-        "A message is waiting for your word",
-      ),
+      within(await lane("Waiting on you")).getByText("Review message"),
     ).toBeTruthy();
     expect(
       within(await lane("Could not be finished")).getByText(

@@ -105,7 +105,8 @@ func TestABriefEntryFoldsOnlyIntoTheReadersOwnQueue(t *testing.T) {
 	risk := item(deal.String(), "deal_at_risk", withDeal(90_000_00), withDealSubject(deal))
 	risk.Deal.OwnerId = uuidPtr(colleague)
 	risk.Actions = []crmcontracts.AttentionItemActions{"open"}
-	night := item(briefItem.String(), "brief_item", withDealSubject(deal))
+	withDue(rankInstant)(&risk)
+	night := item(briefItem.String(), "brief_item", withCurrentIntervention(), withDealSubject(deal))
 	night.Actions = []crmcontracts.AttentionItemActions{"act", "set_aside", "dismiss"}
 	day := crmcontracts.Attention{
 		AsOf: rankInstant, AtRisk: lane(risk), ThisMorning: []crmcontracts.AttentionItem{night},

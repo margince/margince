@@ -50,9 +50,7 @@ export function RowText({
     when,
     facts,
     said,
-    folded,
-    above,
-    consequence,
+
     detail,
     sample,
     zone,
@@ -124,9 +122,6 @@ export function RowText({
         when={when}
         facts={facts}
         said={said}
-        folded={folded}
-        consequence={consequence}
-        above={above}
       />
     </>
   );

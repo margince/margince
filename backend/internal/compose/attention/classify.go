@@ -31,7 +31,8 @@ func classifyDay(day crmcontracts.Attention, asOf time.Time, money dayMoney) []r
 	bar := materialBarOf(day, money)
 	rows = appendLane(rows, day.Meetings, asOf, classifyMeeting)
 	rows = appendLane(rows, day.MeetingsUnreported, asOf, classifyUnansweredMeeting)
-	rows = appendLane(rows, &day.ThisMorning, asOf, func(item crmcontracts.AttentionItem, at time.Time) ranked {
+	admitted := admittedBriefItems(day, asOf)
+	rows = appendLane(rows, &admitted, asOf, func(item crmcontracts.AttentionItem, at time.Time) ranked {
 		return classifyBriefItem(item, at, money)
 	})
 	rows = appendLane(rows, day.Commitments, asOf, classifyCommitment)
@@ -142,8 +143,7 @@ func base(
 	}
 }
 
-// classifyCommitment: a promise the rep made. Level 2 whether or not it is
-// overdue — the promise is the fact, and the date only orders it.
+// A team claim alone does not identify the colleague who promised.
 func classifyCommitment(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	row := base(item, levelPromise, "tasks", "promise_breaks")
 	stampDeadline(&row, item.DueAt, asOf)
@@ -153,7 +153,7 @@ func classifyCommitment(item crmcontracts.AttentionItem, asOf time.Time) ranked 
 	}
 	row.Because = appendReadOnly(row)
 	return ranked{
-		ownerRef:   ownedByWhoeverIsReading(),
+		ownerRef:   unassigned(),
 		item:       row,
 		deadlineAt: deadlineOf(item.DueAt),
 		overdue:    overdueAt(item.DueAt, asOf),

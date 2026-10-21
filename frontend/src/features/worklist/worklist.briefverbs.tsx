@@ -127,7 +127,7 @@ export function useBriefAnswer(item: WorklistItem) {
 
 export type BriefAnswer = ReturnType<typeof useBriefAnswer>;
 
-// Doing what the overnight ranking asked for: the row's call to action.
+// The reader records work done elsewhere; this does not change the deal.
 export function BriefAct({
   item,
   brief,
@@ -135,7 +135,6 @@ export function BriefAct({
   const t = useT();
   return (
     <Button
-      variant="primary"
       pending={brief.working}
       onClick={() => brief.answer({ itemId: item.id, mark: "act" })}
     >

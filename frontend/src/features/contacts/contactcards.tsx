@@ -16,6 +16,7 @@ import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
 import { DismissClaimButton } from "../records/claimdismiss";
+import { ContactClaimsReview, claimsForReview } from "./contactclaimsreview";
 
 // The overview's four cards (concept §5.6–5.9). Each one is a read of what the
 // 360 already assembled — none of them fetches, so a card can never show a
@@ -59,7 +60,10 @@ export function ContactMattersCard({
     <Panel title={t("contact.matters.title", { name: firstName })}>
       {MATTERS.map((row) => {
         const match = claims.find(
-          (claim) => claim.kind === row.kind && claim.status !== "dismissed",
+          (claim) =>
+            claim.kind === row.kind &&
+            claim.status !== "dismissed" &&
+            !claim.needs_review,
         );
         return (
           <PanelRow className="pe-row" key={row.kind}>
@@ -82,7 +86,10 @@ export function hasMatters(view: Contact360): boolean {
   const claims = view.claims ?? [];
   return MATTERS.some((row) =>
     claims.some(
-      (claim) => claim.kind === row.kind && claim.status !== "dismissed",
+      (claim) =>
+        claim.kind === row.kind &&
+        claim.status !== "dismissed" &&
+        !claim.needs_review,
     ),
   );
 }
@@ -209,7 +216,7 @@ export function readableRole(role: string): string {
 // A loop whose prefix key is null is prefixed with the contact's own name
 // instead, which no catalog can carry.
 const LOOPS: ReadonlyArray<{ kind: string; prefixKey: MessageKey | null }> = [
-  { kind: "commitment_ours", prefixKey: "contact.loops.ours" },
+  { kind: "commitment_ours", prefixKey: "contact.loops.team" },
   { kind: "commitment_theirs", prefixKey: null },
   { kind: "open_question", prefixKey: "contact.loops.question" },
 ];
@@ -277,6 +284,7 @@ function openLoops(
         (claim) =>
           claim.kind === loop.kind &&
           claim.status !== "dismissed" &&
+          !claim.needs_review &&
           (!claim.task_activity_id ||
             (claim.status === "done" &&
               !openTasks.has(claim.task_activity_id))),
@@ -315,15 +323,11 @@ type OpenLoop = {
   dismissible?: boolean;
 };
 
-// Whether this task is the reader's to deliver. Unassigned work is the
-// workspace's, and the reader is the workspace.
+// Personal wording needs an explicit assignee matching the signed-in reader.
 function heldByReader(
   assigneeId: string | null | undefined,
   viewerId: string | undefined,
 ): boolean {
-  if (!assigneeId) {
-    return true;
-  }
   return viewerId !== undefined && assigneeId === viewerId;
 }
 
@@ -336,7 +340,7 @@ export function ContactCommitmentsCard({
   const rows = openLoops(view, useViewerId(), includeTasks);
   return (
     <Panel title={t("contact.loops.title")}>
-      {rows.length === 0 && (
+      {rows.length === 0 && claimsForReview(view.claims ?? []).length === 0 && (
         // An empty commitments card on a record whose mail contains no
         // promises is CORRECT behaviour, not a gap (ADR-0097 consequences).
         <PanelBody>
@@ -372,6 +376,7 @@ export function ContactCommitmentsCard({
           <LoopStatus loop={loop} />
         </PanelRow>
       ))}
+      <ContactClaimsReview claims={view.claims ?? []} />
     </Panel>
   );
 }

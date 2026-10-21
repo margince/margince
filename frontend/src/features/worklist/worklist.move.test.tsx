@@ -62,36 +62,37 @@ describe("a deal row carrying a decided next step", () => {
     ).not.toBeNull();
   });
 
-  it("sends the server's own arguments, not a body the row rebuilt", async () => {
-    // The move's arguments ARE the task the server prepared. A row that
-    // re-derived them from what it happens to render would send a different
-    // task than the one the reason on screen describes.
-    const sent: unknown[] = [];
-    stub(aDayWith(aQuietDeal()));
-    const passthrough = globalThis.fetch;
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-        const url = String(input instanceof Request ? input.url : input);
-        if (url.endsWith("/tasks")) {
-          const body =
-            input instanceof Request
-              ? await input.clone().text()
-              : String(init?.body ?? "");
-          sent.push(JSON.parse(body));
-          return jsonResponse({ id: "01a05500-0000-7000-8000-0000000000d3" });
-        }
-        return passthrough(input, init);
-      }),
-    );
-    const user = userEvent.setup();
-    renderWorklist();
+  it.each(["deal_at_risk", "brief_item"])(
+    "%s sends the server's own task arguments",
+    async (source) => {
+      // Creating the task must preserve the server-prepared arguments.
+      const sent: unknown[] = [];
+      stub(aDayWith(aQuietDeal({ source })));
+      const passthrough = globalThis.fetch;
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+          const url = String(input instanceof Request ? input.url : input);
+          if (url.endsWith("/tasks")) {
+            const body =
+              input instanceof Request
+                ? await input.clone().text()
+                : String(init?.body ?? "");
+            sent.push(JSON.parse(body));
+            return jsonResponse({ id: "01a05500-0000-7000-8000-0000000000d3" });
+          }
+          return passthrough(input, init);
+        }),
+      );
+      const user = userEvent.setup();
+      renderWorklist();
 
-    await user.click(
-      await screen.findByRole("button", { name: /^add task$/i }),
-    );
-    await waitFor(() => expect(sent).toEqual([TASK_BODY]));
-  });
+      await user.click(
+        await screen.findByRole("button", { name: /^add task$/i }),
+      );
+      await waitFor(() => expect(sent).toEqual([TASK_BODY]));
+    },
+  );
 
   it("leaves every other move to the link that already draws it", async () => {
     // Only create_task is drawn here. The other moves reach the reader as
@@ -134,10 +135,6 @@ describe("a deal row carrying a decided next step", () => {
   });
 
   it("does not take a brief item's own verbs away", async () => {
-    // A brief item carries a deal subject, and the backend attaches a cached
-    // move to any deal-subject row that has none. Drawn before BriefVerbs, the
-    // task button would replace Act, Set aside and Dismiss on a row whose own
-    // verbs are the whole point of it.
     stub(
       aDayWith(
         aQuietDeal({
@@ -150,9 +147,13 @@ describe("a deal row carrying a decided next step", () => {
     renderWorklist();
 
     await screen.findByText(/Turbinenbau/);
+    expect(screen.getByRole("button", { name: /^add task$/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: en["brief.act"] })).toBeTruthy();
     expect(
-      screen.queryByRole("button", { name: /^add task$/i }),
-      "a brief item lost its own verbs to a move button",
+      screen.getByRole("button", { name: en["brief.snooze"] }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("link", { name: en["deal.openDeal"] }),
     ).toBeNull();
   });
 

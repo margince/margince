@@ -80,8 +80,8 @@ func orderByLeadLastActivity(context.Context, func(any) int) (string, error) {
 // orderByLeadNextTaskDue orders by the deadline the Next task column prints.
 // A lead with no open task shows none and orders by none, which the list's
 // ORDER BY already puts last.
-func orderByLeadNextTaskDue(context.Context, func(any) int) (string, error) {
-	return leadNextTaskDueSQL, nil
+func orderByLeadNextTaskDue(ctx context.Context, arg func(any) int) (string, error) {
+	return leadNextTaskDueSQL(leadTaskWorkSQL(ctx, arg)), nil
 }
 
 // orderByLeadSourceLabel orders by the words the Source column prints rather

@@ -169,40 +169,26 @@ export function rowAnswer(
   if (replyTo) {
     return { primary: <WaitingReply item={item} to={replyTo} /> };
   }
-  // A brief item's three verbs, ranked the way the row ranks them. Acting on the
-  // day's pick is what the reader came for; setting it aside or dismissing it
-  // are the two ways of declining. All three share one write.
+  const primary =
+    item.move?.action === "create_task" && hasMoveControl(item.move) ? (
+      <MoveButton
+        dealId={item.subject?.type === "deal" ? item.subject.id : undefined}
+        move={item.move}
+      />
+    ) : undefined;
+  // A suggestion's acknowledgment never replaces the supported deal move.
   if (item.source === "brief_item" && !item.batch) {
     return {
-      primary: brief.offered("act") ? (
-        <BriefAct item={item} brief={brief} />
-      ) : undefined,
-      equals: <BriefSetAsides item={item} brief={brief} />,
-    };
-  }
-  // The one decided step a link cannot take.
-  //
-  // Reply moves open their conversation or composer; other navigable moves
-  // open the task or meeting they name. Creating a task needs the deal
-  // status card’s writer rather than a destination.
-  //
-  // The button is the deal status card's own, mounted a second time. So "what
-  // does Add this task do" has one answer on the two surfaces that draw it.
-  //
-  // Last, and after brief_item. A brief item carries a deal subject, and the
-  // backend attaches a cached move to any deal-subject row that has none. Any
-  // earlier, a task button would replace the row's own Act, Set aside, Dismiss.
-  if (item.move?.action === "create_task" && hasMoveControl(item.move)) {
-    return {
-      primary: (
-        <MoveButton
-          dealId={item.subject?.type === "deal" ? item.subject.id : undefined}
-          move={item.move}
-        />
+      primary,
+      equals: (
+        <>
+          {brief.offered("act") && <BriefAct item={item} brief={brief} />}
+          <BriefSetAsides item={item} brief={brief} />
+        </>
       ),
     };
   }
-  return {};
+  return { primary };
 }
 
 // Setting a lapsed contact aside for a month.

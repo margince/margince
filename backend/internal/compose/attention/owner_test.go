@@ -206,7 +206,7 @@ func dayOfEveryLane() crmcontracts.Attention {
 		AsOf:               rankInstant,
 		Meetings:           lane(item("meeting", "meeting")),
 		MeetingsUnreported: lane(item("meeting-over", "meeting_outcome")),
-		ThisMorning:        []crmcontracts.AttentionItem{item("brief", "brief_item")},
+		ThisMorning:        []crmcontracts.AttentionItem{item("brief", "brief_item", withCurrentIntervention())},
 		Commitments:        lane(item("promise", "conversation_claim")),
 		DidNotRun:          lane(item("failed", "failed_approval")),
 		Dsr:                lane(item("dsr", "dsr")),
@@ -244,7 +244,6 @@ func dayOfEveryLane() crmcontracts.Attention {
 func TestOnlyAReaderBoundLaneNamesTheReader(t *testing.T) {
 	t.Parallel()
 	readerBound := map[crmcontracts.WorklistItemSource]string{
-		"conversation_claim":   "OpenCommitmentsDue takes the actor's id",
 		"failed_approval":      "ListWire with FailedForDecider carries the decider",
 		"introduction_request": "AwaitingMyAnswer is the reader's own asks",
 		"relationship_decay":   "QuietEdgesForUser binds the edges to the actor",

@@ -40,7 +40,8 @@ type Waiting interface {
 	// can be what is left of a full two hundred — and a hundred and eighty is
 	// also what a smaller, complete installation returns. A caller counting rows
 	// against the bound would read the truncated scan as complete.
-	Unanswered(ctx context.Context, asOf time.Time) (rows []WaitingCustomer, cut bool, err error)
+	// A named owner narrows mail to their direct recipient evidence before paging.
+	Unanswered(ctx context.Context, asOf time.Time, owner *ids.UUID) (rows []WaitingCustomer, cut bool, err error)
 	// Hidden answers what the queue's own hiding rules are keeping off this
 	// reader's page, one rule at a time.
 	//
@@ -197,8 +198,9 @@ type WaitingCustomer struct {
 	// ActionUnconfirmed keeps unclassified or conflicting evidence out of Focus.
 	ActionUnconfirmed bool
 	// Ownership is resolved only from records this reader may see.
-	OwnerID    ids.UUID
-	OwnerKnown bool
+	DirectRecipients []ids.UUID
+	OwnerID          ids.UUID
+	OwnerKnown       bool
 	// SenderWasStranger says the workspace had never written to the sender
 	// when the mail arrived. BccOnly says this reader was in neither To nor Cc;
 	// ForeignLink that a link leads to a site unrelated to the sender. All three
@@ -224,7 +226,16 @@ func (s *Service) waitingCustomers(
 	var cut bool
 	err := s.degradable(ctx, laneBudget, func(ctx context.Context) error {
 		var err error
-		rows, cut, err = s.waiting.Unanswered(ctx, asOf)
+		var owner *ids.UUID
+		if s.taskScope == TasksMine {
+			value := readerOf(ctx)
+			owner = &value
+		}
+		if s.taskScope == TasksOwnedBy {
+			value := s.taskOwner
+			owner = &value
+		}
+		rows, cut, err = s.waiting.Unanswered(ctx, asOf, owner)
 		return err
 	})
 	switch {

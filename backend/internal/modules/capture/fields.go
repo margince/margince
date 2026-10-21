@@ -62,6 +62,8 @@ type ActivityFields struct {
 
 // MailEnvelope is what one mail's headers and body say, before any judgement.
 type MailEnvelope struct {
+	// DirectRecipients preserves To separately from copied readers.
+	DirectRecipients []string
 	// OpenRecipients holds the To and Cc addresses, the mailbox owner's included.
 	// Empty for a mail sent to undisclosed recipients.
 	OpenRecipients []string

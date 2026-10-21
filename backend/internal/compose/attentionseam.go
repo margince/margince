@@ -185,17 +185,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 			figures: attentionDealFacts{store: deals.NewStore(db, DealsInstallation())},
 			now:     now,
 		},
-		// Commitments is bound now that claims have a writer. It was nil while
-		// nothing could put a row behind the lane: a lane fed only by demo
-		// seeds would have shown every real customer an empty promise list
-		// dressed as a feature, and absent is the honest rendering of "this
-		// feed does not do commitments".
-		//
-		// That is no longer true. POST /contacts/{id}/claims writes through
-		// contacts.RecordConversationClaim, and the transcript reader files what
-		// a reader accepts from a meeting. A promise a rep made is then real
-		// data the queue was still refusing to show.
-		attentionCommitments{store: contacts.NewStore(db)},
+		nil, // Assigned promises are tasks; taskless claims name no personal owner.
 		attentionAtRisk{lister: quietDealScanWithClock(pool, deals.QuietThresholdDays, now), pool: pool, now: now},
 		attentionDecay{pool: pool, store: contacts.NewStore(db), now: now},
 		attentionMeetings{store: activities.NewStore(db)},
@@ -330,8 +320,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		// board. Counted rather than listed, because the task lane above stops
 		// at a dozen and a board built from it would call every loaded rep
 		// equally loaded.
-		WithOverdueLoad(attentionOverdue{store: activities.NewStore(db)}).
-		WithPromiseLoad(attentionPromiseLoad{store: contacts.NewStore(db)})
+		WithOverdueLoad(attentionOverdue{store: activities.NewStore(db)})
 }
 
 // attentionZone binds the feed's day boundary to the installation's timezone,

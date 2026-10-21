@@ -30,10 +30,9 @@ outranks one customer who waits; with levels, sixty duplicate merges never reach
 `rankSteps` in `ranksteps.go` is the order of ranking steps, and `less` stops at the first step that decides
 a pair. `pin`, `band` and `crowded` come before `level`, so a crowded row can sort below a row of a lower level. The steps, in order,
 are `pin`, `band`, `crowded`, `level`, `deadline`, `expected_revenue`, `opportunity`,
-`waiting_days`, `relationship`, `occurrence`. Both the sort and the "why it ranks here" sentence walk them.
-One slice serves both, so a step that can decide a pair always
-explains it too. Deadline leads the steps after `level` because a date somebody agreed to is the one fact on the page
-that runs out.
+`waiting_days`, `relationship`, `occurrence`. The comparison data follows the same steps.
+The screen shows the facts that admit work, without a sentence for each comparison.
+Deadline leads the steps after `level` because an agreed date runs out.
 
 Bands are headings drawn from the level and the source, never stored (`bands.go`). `bandOrder` is `now`,
 `keep_momentum`, `build_pipeline`, `review`. Crowding moves a row down and never up. Past the first group of waiting customers, the rest leave the `now` band but stay ahead of upkeep work. Without that rule a hundred
@@ -48,6 +47,29 @@ That is imported history, not today's breach; a duty that fell due while on reco
 `recoveryHorizonDays` (14, `classifyrisk.go`) makes deal recovery urgent when the expected close is past or
 inside it.
 
+## Deal suggestions need current facts
+
+`admittedBriefItems` in `attention/briefadmission.go` checks each brief suggestion before counts, filters and pages.
+It uses current deal facts and the risk facts already read for this caller.
+A stored signal or finding cannot create current work alone. Suggestions without current facts stay in the stored brief.
+
+Home and Worklist use the same typed reasons. Deal values and dates keep their own fields.
+Cached deal facts add context after the page is cut; they do not admit work.
+Stored findings follow the current audience of their cited activities on both run reads and item read-backs.
+
+## Personal work needs its own owner
+
+The mail request writer and waiting read share the direct-recipient rule in
+`activities/mailresponsibility.go`. Owning a contact or being able to read shared mail does not assign its reply.
+A personal or chosen team member view applies that rule before the source limit, counts and Focus. Team keeps its shared view.
+The capture writer keeps the mailbox owner's parsed To and Cc roles without creating another contact.
+A delivery record alone is not a To role.
+
+Record task lists, project counts and deal next-step checks share
+`activities.CurrentCommitmentTaskClause`. Old automatic work needs current source evidence or a real human change.
+Import audits do not count as human changes. Raw history keeps the original records and their status.
+A later email to a contact does not show that a task or promise was done.
+
 ## Focus is a cut of the same ranking
 
 `focusOf` in `focus.go` sorts the whole assembled day, keeps the rows `focusEligible` accepts, and cuts at
@@ -56,7 +78,7 @@ hide a card. It is a projection of the one ranking, not a second scoring system.
 
 `focusEligible` keeps rows under `levelRoutine`, with four rules by source. A notice must be urgent work. A
 task with a future deadline counts only when it is due today. A meeting counts only when it is unprepared
-and starts within 24 hours. A `brief_item` of kind `moved` never counts.
+and starts within 24 hours. An admitted deal suggestion counts when current facts call for action.
 
 The counts on `WorklistFocus` in `backend/api/crm.yaml`:
 
@@ -121,7 +143,7 @@ Its rule version is `CommitmentAdmissionVersion`, in `backend/internal/modules/a
 The commitment window uses `automaticCommitmentHorizonDays` (30). A promise or agreed deadline within that window stays current, as does a deadline still ahead.
 
 Unknown times and unread later context stop new work. This does not mark the promise done.
-Existing tasks keep their human changes. Open customer claims and pending proposals from before admission tracking also stay current until their own lifecycle changes them.
+Human changes keep tasks current. A machine claim without a current admission stays with its source for review. It does not become personal work because the reader owns the contact. Assigned promises use the task lane; claims without tasks name no personal owner.
 
 Canceled meetings create no new work after their scheduled start. A future booked meeting waits until it has taken place.
 Promises that need review do not create fresh open account signals.

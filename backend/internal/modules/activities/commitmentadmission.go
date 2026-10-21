@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // CommitmentAdmissionVersion identifies the policy used by extraction and reviewed repair.
@@ -21,10 +22,6 @@ const CommitmentAdmissionVersion = "2"
 
 // AutomaticMailContent is the content boundary shared by extraction and its admission check.
 const AutomaticMailContent = `audience = 'workspace' AND restricted_at IS NULL`
-
-// Automatic commitments retain a month of recent promises and overdue deadlines.
-// Older undated evidence stays history until a colleague adopts it.
-const automaticCommitmentHorizonDays = 30
 
 // CommitmentAdmissionReason explains whether evidence supports current automatic work.
 type CommitmentAdmissionReason string
@@ -77,7 +74,7 @@ func AdmitAutomaticCommitment(evidence CommitmentAdmissionEvidence, asOf time.Ti
 		}
 		return CommitmentSourceUnknown
 	}
-	cutoff := asOf.AddDate(0, 0, -automaticCommitmentHorizonDays)
+	cutoff := asOf.AddDate(0, 0, -provenance.CommitmentHorizonDays)
 	if arrival := evidence.ProviderReceivedAt; arrival != nil {
 		if evidence.OccurredAt.After(arrival.Add(24*time.Hour)) || (evidence.OccurredAt.Before(cutoff) && !arrival.Before(cutoff)) {
 			return CommitmentTimeContradicted

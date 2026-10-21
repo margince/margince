@@ -60,7 +60,6 @@ reach features/brief/brief.feed.tsx features/mail/openemaildrawer.tsx
 reach features/brief/brief.feed.tsx features/worklist/worklist.css
 reach features/brief/brief.feed.tsx features/worklist/worklist.queries.ts
 reach features/brief/brief.focus.stories.tsx features/worklist/worklist.queries.ts
-reach features/brief/brief.focus.tsx features/worklist/worklist.connection.ts
 reach features/brief/brief.focus.tsx features/worklist/worklist.copy.ts
 reach features/brief/brief.focus.tsx features/worklist/worklist.eyebrow.ts
 reach features/brief/brief.focus.tsx features/worklist/worklist.pane.tsx
@@ -94,9 +93,7 @@ reach features/brief/brief.schedule.test.tsx features/worklist/worklist.queries.
 reach features/brief/brief.schedule.tsx features/settings/settingsrouting.ts
 reach features/brief/brief.schedule.tsx features/worklist/worklist.copy.ts
 reach features/brief/brief.schedule.tsx features/worklist/worklist.queries.ts
-reach features/brief/brief.sentence.test.ts features/worklist/worklist.copy.ts
 reach features/brief/brief.sentence.test.ts features/worklist/worklist.queries.ts
-reach features/brief/brief.sentence.ts features/worklist/worklist.copy.ts
 reach features/brief/brief.sentence.ts features/worklist/worklist.queries.ts
 reach features/brief/brief.stories.tsx features/worklist/worklist.queries.ts
 reach features/brief/brief.tsx features/automations/approvaldrawer.tsx

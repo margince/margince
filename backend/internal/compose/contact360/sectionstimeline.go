@@ -237,6 +237,9 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	contactPos := arg(contactID)
+	if order != byRecency {
+		extra += " AND " + activities.CurrentCommitmentTaskClause("a", s.now(), arg)
+	}
 	// DISCOVER-gated, like the activities list: a limited conversation on
 	// this contact is still a row on the timeline — date, direction, kind —
 	// with its content withheld (content_state), not a gap the reader

@@ -1,10 +1,5 @@
 /** @vitest-environment happy-dom */
-import {
-  cleanup,
-  render as rtlRender,
-  screen,
-  within,
-} from "@testing-library/react";
+import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
 import {
@@ -85,6 +80,7 @@ describe("BriefGlance — the greeting follows the reader's own hour", () => {
     // panels — so an unread queue leaves the header saying only the greeting.
     expect(screen.queryByTestId("glance-sentence")).toBeNull();
     expect(screen.queryByText("Nothing is waiting on you.")).toBeNull();
+    expect(screen.queryByText("Your day at a glance.")).toBeNull();
   });
 });
 
@@ -190,19 +186,16 @@ describe("BriefGlance — the chips in the morning's sentence", () => {
   it("summarizes the focus count without repeating its leading card", () => {
     const lead = renderMorning();
     const sentence = screen.getByTestId("glance-sentence");
-    expect(sentence.textContent).toContain("1 item needs attention.");
+    expect(sentence.textContent).toContain("1 customer request");
     expect(sentence.textContent).not.toContain(lead.title);
     expect(screen.queryByRole("button", { name: "Sonya Beck" })).toBeNull();
   });
 
-  it("names the next meeting as a chip in the same sentence", () => {
+  it("does not repeat the schedule in the agenda", () => {
     renderMorning();
-    const sentence = screen.getByTestId("glance-sentence");
-    expect(
-      within(sentence).getByRole("button", {
-        name: "Weber GmbH · quarterly review",
-      }),
-    ).toBeTruthy();
+    expect(screen.getByTestId("glance-sentence").textContent).not.toContain(
+      "Weber GmbH",
+    );
   });
 
   it("says the agent wrote the brief only when it was given the run", () => {

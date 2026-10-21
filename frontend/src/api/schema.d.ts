@@ -45692,6 +45692,8 @@ export interface components {
              *     not read notices.
              */
             notices?: components["schemas"]["AttentionItem"][];
+            /** @description The deal risk scan was cut before its final scope and state checks. True means the returned rows are a lower bound, even when fewer than the scan limit remain. Absent when this source could not be read. */
+            at_risk_more_available?: boolean;
             /**
              * @description The unread notice scan reached its limit before equivalent decision
              *     announcements were folded. When true, an empty notices array does
@@ -46685,8 +46687,9 @@ export interface components {
          */
         TeamBoardCounts: {
             /**
-             * @description Customers who wrote and have had no reply, attributed by the record the thread is
-             *     filed under: deal, then lead, then contact, then company, first owner found.
+             * @description Customers who wrote and have had no reply. Email counts for each directly addressed
+             *     seat, including their own mail aliases; copies alone leave it unassigned.
+             *     Other messages follow the owner of the linked record.
              *     The same eligibility the ranked queue applies, so the board and the day agree.
              */
             waiting: number;
@@ -46695,12 +46698,10 @@ export interface components {
             /** @description Open tasks whose due moment has already passed. */
             overdue: number;
             /**
-             * @description Commitments due by the instant the board was read, from the same extracted claims
-             *     the rep's own day counts — not from open tasks, which are a different question
-             *     wearing the same heading.
-             *
-             *     A zero here means they owe nothing, not that nobody asked: claims have a writer on
-             *     every installation, so this count is always read.
+             * @description Assigned conversation commitments due by the instant the board was read.
+             *     Only open, current commitment tasks count, under the same admission and age
+             *     rules as the assignee's Worklist. Future and undated promises do not count.
+             *     This count is always read; zero means no visible commitments are due.
              */
             promises_due: number;
         };
@@ -47693,6 +47694,8 @@ export interface components {
              * @description The underlying row's id — an audit entry, an approval.
              */
             id: string;
+            /** @description Exact Receipt.id values represented by this done line. A grouped line includes every underlying change, so a client may omit it only when all are shown elsewhere. Absent on older responses; never infer identity from the record or time. */
+            receipt_ids?: string[];
             /**
              * Format: date-time
              * @description When the thing happened. On a `watching` line it is when the condition was OBSERVED instead, uniformly: a source that is off rather than failing has no beginning to report, and dating the observation as the outage would tell a reader a long-dead mailbox broke just now. Where a condition does have a start, it travels as the `failing_since` value on the summary.
