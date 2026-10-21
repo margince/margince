@@ -25,14 +25,12 @@ package gates
 // subjects all of those. The composition holds exactly while this does.
 //
 // So: nothing outside `internal` may hold a read the census would subject. The
-// binaries compose, the published surface is stdlib-only by its own gate, and
-// an extension unit reaches core data through the seam — none of the three has
-// business writing this statement, and if one ever does, the census it would
-// need is the one that cannot see it.
+// binaries compose, and the published surface is stdlib-only by its own gate.
+// An extension unit reaches core data through the seam. None of the three has
+// business writing this statement, and the census cannot see one that does.
 //
-// The census's own subject, not a wider one. An extension unit asking
-// Authority().CanRead about the deal's fields names `amount_minor` as a field,
-// in a Go list, and reads no table at all; a byte match failed every such unit.
+// The census's own subject, not a wider one. A unit asking Authority().CanRead
+// names `amount_minor` as a field in a Go list and reads no table.
 
 import (
 	"go/parser"
@@ -110,9 +108,9 @@ func TestNoDealAmountStatementLivesWhereTheCensusCannotSeeIt(t *testing.T) {
 	}
 }
 
-// TestTheRootsGateJudgesReadsAndNotFieldNames holds the boundary the gate turns
-// on: a unit naming the money field to the seam reads nothing, and a statement
-// beside internal/ that reads the deal's money is the shape the gate exists for.
+// TestTheRootsGateJudgesReadsAndNotFieldNames holds the gate's boundary. A unit
+// naming the money field to the seam reads nothing. A statement reading the
+// deal's money is what the gate exists for.
 func TestTheRootsGateJudgesReadsAndNotFieldNames(t *testing.T) {
 	t.Parallel()
 	columns := dealMaskedColumns(t)

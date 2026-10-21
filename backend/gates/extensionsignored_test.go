@@ -43,16 +43,13 @@ import (
 // extensions/ may be ignored.
 //
 // A unit's go.mod says whose it is. This repository's units are
-// github.com/margince/margince/extensions/<name>, as the how-to prescribes; a
-// unit under any other path is an installation's own, staged into its checkout
-// of the core and meant to stay ignored. So an ignored unit fails here unless
-// its module line names another owner, and a tracked one fails unless it names
-// this repository: the second half is what keeps the first from being waved
-// through by a module line nobody checks.
+// github.com/margince/margince/extensions/<name>, as the how-to prescribes. A
+// unit under any other path belongs to an installation and stays ignored. A
+// tracked unit must name this repository, so no module line can wave a
+// first-party unit through.
 //
-// It covers fixtures/extensions/ too, whatever their module paths: the fixtures
-// are what CI copies into extensions/ to exercise the tier, so a fixture git
-// does not have is the same defect one lane further out.
+// Fixtures are checked whatever their module paths. CI copies them into
+// extensions/, so a fixture git does not have is the same defect.
 func TestEveryEnabledExtensionIsTracked(t *testing.T) {
 	t.Parallel()
 	namespace := repositoryModuleNamespace(t)
