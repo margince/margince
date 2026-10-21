@@ -111,9 +111,9 @@ func (q reportingQuestions) Capture(ctx context.Context, tx pgx.Tx, question crm
 }
 
 // Reveal implements reporting.Questions. The reader must be able to ask the
-// question today, and a row stays only while they may read every record
-// behind it. A row they may not read goes the way a floored row does: kept in
-// place with every value blanked, so the row count says nothing.
+// question today. A row stays only while they may read every record behind it.
+// Any other row goes the way a floored row does: kept in place with every
+// value blanked, so the row count says nothing.
 func (q reportingQuestions) Reveal(ctx context.Context, tx pgx.Tx, question crmcontracts.ReportingCardQuestion, scope crmcontracts.ReportingScope, kept reporting.KeptQuestion) (crmcontracts.AnalyticsAnswer, bool, error) {
 	query := questionQuery(question, scope)
 	only := []string{}

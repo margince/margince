@@ -249,9 +249,9 @@ func privacyController(e *forecastEnv) context.Context {
 	return principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalHuman, ID: "human:controller", UserID: e.Rep1, SeatType: principal.SeatFull, Permissions: principal.Permissions{RowScope: principal.RowScopeAll, Objects: grants}})
 }
 
-// A row stays only while the reader may read every record behind it. One of
-// the counted deals moving to another owner leaves the report's scope, so even
-// the sender is no longer shown the row it was counted in.
+// A row stays only while the reader may read every record behind it. Here one
+// counted deal moves to another owner and leaves the report's scope. Even the
+// sender is then no longer shown the row it was counted in.
 func TestAKeptRowIsWithheldOnceOneOfItsRecordsLeavesTheReadersReach(t *testing.T) {
 	q := newQuestionEditions(t)
 	q.keepForAYear(t)

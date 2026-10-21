@@ -535,8 +535,8 @@ const (
 	// ids feed a SHA-256 the stage gate compares and never leave the server.
 	//
 	// 123: privacy.subjectQuestionSources follows a rights-case subject to the
-	// deals and projects they are a stakeholder of, so subject access and
-	// erasure reach every kept question answer those records were counted in.
+	// deals and projects they are a stakeholder of. Subject access and erasure
+	// then reach every kept question answer those records were counted in.
 	// The operator's own seat must not narrow a subject's rights case.
 	modulesTierUnscopedCeiling = 123
 )
