@@ -184,6 +184,11 @@
   gap: var(--space-2);
   margin: 0;
 }
+/* A name long enough to wrap reads from the row's start edge, not centred as a
+   verb's label is. */
+.worklist-row-title > .btn-valuelabel {
+  text-align: start;
+}
 
 .worklist-row-detail,
 .worklist-row-verdict,

@@ -497,6 +497,19 @@ it("preserves a concrete brief action supplied by the server", () => {
   expect(inHand(container).getAllByText("Acme Expansion")).toHaveLength(1);
 });
 
+// The defect was layout, and happy-dom lays nothing out. What holds is the
+// mark: a task's name is a button, and only a button so marked may wrap.
+it("marks a long task name in hand as data, so the headline wraps", () => {
+  stubApi({});
+  const title =
+    "Call Alice back about the retrofit quote and the revised delivery window by noon";
+  const { container } = render(
+    <BriefFeed day={readingsDay({}, [taskRow("long", title)])} state="ready" />,
+  );
+  const name = inHand(container).getByRole("button", { name: title });
+  expect(name.classList).toContain("btn-valuelabel");
+});
+
 it("keeps the canonical deal title for an unframed brief row", () => {
   stubApi({});
   const { container } = render(

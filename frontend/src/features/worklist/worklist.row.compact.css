@@ -99,12 +99,19 @@
   white-space: nowrap;
 }
 
-/* The name itself, where it is a link: the ellipsis belongs to the string and
-   not to the box around it, so it has to be on the element holding the text. */
-.worklist-row-line > .worklist-row-title > a {
+/* The name itself, link or button: the ellipsis belongs to the string and not
+   to the box around it, so it has to be on the element holding the text. */
+.worklist-row-line > .worklist-row-title > a,
+.worklist-row-line > .worklist-row-title > .btn-valuelabel {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+/* A button's label is a flex line, and an ellipsis needs a block one; the name
+   wraps at the default density, and here the line holds it to one. */
+.worklist-row-line > .worklist-row-title > .btn-valuelabel {
+  display: block;
+  white-space: nowrap;
 }
 
 /* WHEN, WHAT IT IS WORTH, WHY and WHAT IT COSTS, as one dot-separated

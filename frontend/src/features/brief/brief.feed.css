@@ -220,6 +220,11 @@
   overflow: visible;
   white-space: normal;
 }
+/* A task's name is a button, and a button sets its label in the body face; the
+   headline is one type whichever control draws it. */
+.brief-triage-lead .worklist-row-title > .btn {
+  font: inherit;
+}
 .brief-triage-lead .emailentry {
   padding: 0;
 }
@@ -344,7 +349,7 @@
     order: 2;
   }
   /* ds:ignore the phone rung of the same one headline */
-  .brief-triage-lead .worklist-row-title,
+  .brief-triage-lead p.worklist-row-title,
   .brief-triage-lead .emailentry__subject {
     font: var(--fontHeadingLarge);
   }

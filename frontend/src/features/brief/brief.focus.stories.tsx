@@ -139,6 +139,18 @@ export const AccountInHand: Story = {
   ]),
 };
 
+/** A task whose name is longer than one headline line: it wraps inside the
+    card, starting where the card's text starts. */
+export const LongTaskInHand: Story = {
+  render: panel([
+    taskRow(
+      "retrofit",
+      "Call Alice back about the retrofit quote and the revised delivery window",
+    ),
+    taskRow("one", "Call the buyer"),
+  ]),
+};
+
 /** The last row of a short day: the one before it is listed under the card. */
 export const NothingBehindIt: Story = {
   render: panel([waitingEmailRow(), taskRow("one", "Call the buyer")], 1),
