@@ -476,3 +476,19 @@ func TestAnAttendedCanReadAnswersTheCallerUnderTheirOwnGrants(t *testing.T) {
 		}
 	}
 }
+
+// A deal id no row holds is no deal anyone may open, even for a colleague
+// whose row scope is every deal.
+func TestCanReadAnswersNoForADealThatDoesNotExist(t *testing.T) {
+	s := setupSystemRead(t)
+	var shown bool
+	s.onDelivery(t, func(ctx context.Context, rt extension.Runtime) error {
+		var err error
+		shown, err = rt.Authority().CanRead(ctx, asUser(s.Rep1),
+			extension.EntityRef{Type: "deal", ID: ids.NewV7().String()}, []string{"name"})
+		return err
+	})
+	if shown {
+		t.Error("a colleague who may read every deal may read one that does not exist")
+	}
+}
