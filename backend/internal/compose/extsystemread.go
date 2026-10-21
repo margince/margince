@@ -300,22 +300,12 @@ func dealShownTo(ctx context.Context, pool *pgxpool.Pool, colleague, deal ids.UU
 	if slices.ContainsFunc(fields, func(f string) bool { return slices.Contains(masked, f) }) {
 		return false, nil
 	}
-	if err := auth.Require(ownCtx, fieldmask.Deal, principal.ActionRead); err != nil {
-		if errors.Is(err, apperrors.ErrPermissionDenied) {
-			return false, nil
-		}
-		return false, err
-	}
 	// The existing-row probe, so a colleague who may read every deal is not
 	// shown one no row holds.
 	var visible bool
 	err = database.WithWorkspaceTx(ownCtx, pool, func(tx pgx.Tx) error {
-		probe := auth.EnsureVisibleExisting(ownCtx, tx, fieldmask.Deal, deal)
-		visible = probe == nil
-		if errors.Is(probe, apperrors.ErrNotFound) {
-			return nil
-		}
-		return probe
+		visible, err = auth.VisibleToExisting(ownCtx, tx, fieldmask.Deal, deal)
+		return err
 	})
 	return visible, err
 }
