@@ -966,3 +966,21 @@ it.each(LOCALES)("describes offer creation and full terms in %s", (locale) => {
     ),
   ).toBe(true);
 });
+
+it("shows an extension argument named like a markup detail as its text", () => {
+  const markup = "<img src=x onerror=alert(1)>";
+  const rows = commercialPreviewDisplay(
+    {
+      ...preview,
+      version: 2,
+      changes: [],
+      details: [
+        { field: "argument:html_body", value: { kind: "text", text: markup } },
+      ],
+    },
+    (key, params) => translate("en", key, params),
+  );
+  const row = rows.find((candidate) => candidate.label === "html_body");
+  expect(row?.value).toBe(markup);
+  expect(row?.href).toBeUndefined();
+});

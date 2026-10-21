@@ -237,3 +237,22 @@ it("shows the authorized sender signature under the message", () => {
     screen.getByText("Dana Seller — Account Director"),
   ).toBeInTheDocument();
 });
+
+it("never renders an extension argument as message markup", () => {
+  show({
+    ...proposal,
+    kind: "forget_record",
+    preview: {
+      version: 2,
+      state: "ready",
+      changes: [],
+      reviewer_reason: "record_authority",
+      details: ["html_body", "signature_html"].map((name) => ({
+        field: `argument:${name}`,
+        value: { kind: "text", text: "<b data-testid='injected'>bold</b>" },
+      })),
+    },
+  });
+  expect(screen.queryByTestId("injected")).not.toBeInTheDocument();
+  expect(document.querySelector("iframe")).toBeNull();
+});

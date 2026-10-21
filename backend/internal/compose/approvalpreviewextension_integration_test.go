@@ -89,7 +89,7 @@ func TestAStagedExtensionCallIsReviewedWithEveryArgumentAndCanBeApproved(t *test
 		shown[detail.Field] = detail.Value.Text
 	}
 	if shown["state"] != "ready" || shown["summary"] != "Forget record (demo)" ||
-		shown["record_id"] != row.String() || shown["reason"] != "duplicate" {
+		shown["argument:record_id"] != row.String() || shown["argument:reason"] != "duplicate" {
 		t.Fatalf("review context = %+v, want the operation and every argument", shown)
 	}
 	if _, err := svc.Decide(ctx, id, true, nil); err != nil {

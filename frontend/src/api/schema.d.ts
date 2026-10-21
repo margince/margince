@@ -40780,7 +40780,7 @@ export interface components {
             after: components["schemas"]["ApprovalPreviewValue"];
         };
         ApprovalPreviewDetail: {
-            /** @description Semantic field key translated by the client. */
+            /** @description Semantic field key translated by the client. A key starting with `argument:` is one argument of an extension call, shown as plain text and labelled by the rest of the key. Its text is cut to 4096 bytes and ends in an ellipsis when cut; proposed_change keeps the full value. */
             field: string;
             value: components["schemas"]["ApprovalPreviewValue"];
         };

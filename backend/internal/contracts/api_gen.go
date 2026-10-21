@@ -26644,7 +26644,7 @@ type ApprovalPreviewConflict struct {
 
 // ApprovalPreviewDetail defines model for ApprovalPreviewDetail.
 type ApprovalPreviewDetail struct {
-	// Field Semantic field key translated by the client.
+	// Field Semantic field key translated by the client. A key starting with `argument:` is one argument of an extension call, shown as plain text and labelled by the rest of the key. Its text is cut to 4096 bytes and ends in an ellipsis when cut; proposed_change keeps the full value.
 	Field string               `json:"field"`
 	Value ApprovalPreviewValue `json:"value"`
 }

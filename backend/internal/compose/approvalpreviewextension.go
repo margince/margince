@@ -6,10 +6,20 @@ package compose
 import (
 	"encoding/json"
 	"sort"
+	"unicode/utf8"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 )
+
+// extensionArgumentPrefix keeps a unit's argument names out of the detail keys
+// a client gives meaning to, such as html_body. The client shows such a detail
+// as plain text labelled with the name after the prefix.
+const extensionArgumentPrefix = "argument:"
+
+// maxArgumentPreviewBytes bounds one argument's display text, so an approval
+// list stays small. The full value stays in proposed_change.
+const maxArgumentPreviewBytes = 4096
 
 // extensionPreview shows the operation the composed declaration names and
 // every argument the approved call runs with. The approvals module shows the
@@ -37,8 +47,19 @@ func extensionPreview(approval crmcontracts.Approval, kind approvals.ExtensionKi
 			}
 			text = string(encoded)
 		}
-		details = append(details, previewDetail(name, text))
+		details = append(details, previewDetail(extensionArgumentPrefix+name, shortenedArgument(text)))
 	}
 	out.Details, out.State = &details, previewReadyState
 	return out, nil
+}
+
+func shortenedArgument(text string) string {
+	if len(text) <= maxArgumentPreviewBytes {
+		return text
+	}
+	cut := maxArgumentPreviewBytes
+	for cut > 0 && !utf8.RuneStart(text[cut]) {
+		cut--
+	}
+	return text[:cut] + "…"
 }
