@@ -78,7 +78,7 @@ func draftingSurfaces(fence promptfence.Fence) map[string][]string {
 }
 
 // exemptFromSharedRules names the files that assemble a drafting call and are
-// kept out of draftingSurfaces on purpose, each with the reason. A row is an
+// kept out of draftingSurfaces, each with the reason. A row is an
 // assertion rather than an absence: TestAnExemptWriterStillWritesWithoutTheSharedRules
 // fails when the file starts reading the block or stops existing.
 var exemptFromSharedRules = map[string]string{

@@ -45,10 +45,9 @@ const (
 // facts that answer them, and a word floor over a factless reply is filled
 // with invented reasons. Each built-voice call states its own length.
 //
-// Deliberately without draftrules.Shared: the judge scores voice only, and the
-// shared block adds variance it ignores and names inputs this call never gets
-// (a recipient, a conversation state). Once the eval scores correspondence or
-// supplies those inputs this is a drafting surface and the exemption lapses
+// Carries no draftrules.Shared: the judge scores voice only. The block adds
+// variance it ignores and names inputs this call never gets. If the eval scores
+// correspondence or supplies them, this becomes a drafting surface
 // (exemptFromSharedRules holds the row).
 const voiceEvalDraftSystem = voiceDraftOpening + "\n" +
 	"Length: at most two or three short paragraphs, under 140 words — as long as the answers need, never padded to a length.\n" +
