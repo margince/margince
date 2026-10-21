@@ -526,6 +526,21 @@ func TestCanWriteAnswersUnderTheColleaguesOwnGrants(t *testing.T) {
 	}
 }
 
+// The write scope and both verbs decide, not the update verb alone.
+func TestCanWriteNeedsTheRowScopeAndTheReadVerb(t *testing.T) {
+	s := setupSystemRead(t)
+	ownOnly := s.seat(t, "own@example.test", "active", false)
+	s.grant(t, ownOnly, `{"objects":{"deal":{"read":true,"update":true}},"row_scope":"own"}`)
+	if s.canWrite(t, ownOnly, s.deal) {
+		t.Error("a writer of their own deals may change a deal someone else owns")
+	}
+	blind := s.seat(t, "blind@example.test", "active", false)
+	s.grant(t, blind, `{"objects":{"deal":{"update":true}},"row_scope":"all"}`)
+	if s.canWrite(t, blind, s.deal) {
+		t.Error("a role with update but no read on deals may change one")
+	}
+}
+
 // On an attended call CanWrite answers its human caller about themselves.
 func TestAnAttendedCanWriteAnswersTheCaller(t *testing.T) {
 	s := setupSystemRead(t)

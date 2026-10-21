@@ -40,8 +40,10 @@ export function ExtensionPanels({
   if (shown.length === 0) {
     return null;
   }
+  // Keyed on the record too, so a panel that failed on one deal starts afresh
+  // on the next, with none of the first deal's state.
   return shown.map(({ unit, Component }) => (
-    <div key={unit} data-ext-panel={unit}>
+    <div key={`${unit}:${record.id}`} data-ext-panel={unit}>
       <CardBoundary>
         <Component record={record} />
       </CardBoundary>

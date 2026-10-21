@@ -313,10 +313,10 @@ func TestExtScreensGenImportsEachDeclaredPanel(t *testing.T) {
 		"beta":  {{Slot: "record_panel.deal", Export: "DealPanel", Object: "ext_beta_x"}},
 	}))
 	for _, want := range []string{
-		`import AlphaScreen, { DealPanel as AlphaPanelDealPanel } from "@margince-ext/alpha";`,
-		`import BetaScreen, { DealPanel as BetaPanelDealPanel } from "@margince-ext/beta";`,
+		`import AlphaScreen, { DealPanel as Alpha__DealPanel } from "@margince-ext/alpha";`,
+		`import BetaScreen, { DealPanel as Beta__DealPanel } from "@margince-ext/beta";`,
 		`import GammaScreen from "@margince-ext/gamma";`,
-		"export const extensionPanels = {\n  \"alpha\": {\n    \"record_panel.deal\": AlphaPanelDealPanel,\n  },\n  \"beta\": {",
+		"export const extensionPanels = {\n  \"alpha\": {\n    \"record_panel.deal\": Alpha__DealPanel,\n  },\n  \"beta\": {",
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("emitted registry is missing %q:\n%s", want, got)
@@ -327,5 +327,21 @@ func TestExtScreensGenImportsEachDeclaredPanel(t *testing.T) {
 	}
 	if !strings.HasSuffix(string(extScreensGen(nil, nil)), "export const extensionPanels = {};\n") {
 		t.Error("the empty set must still export an empty panel registry")
+	}
+}
+
+// Two different unit and export pairs never share an import name, and a panel
+// name is never a screen's.
+func TestPanelIdentsAreInjective(t *testing.T) {
+	seen := map[string]string{
+		screenIdent("foo-panel-x"): "screen foo-panel-x",
+		screenIdent("foo"):         "screen foo",
+	}
+	for _, pair := range [][2]string{{"foo", "BarPanelBaz"}, {"foo-panel-bar", "Baz"}, {"foo", "XScreen"}, {"foo", "Screen"}} {
+		ident := panelIdent(pair[0], pair[1])
+		if other, taken := seen[ident]; taken {
+			t.Errorf("panel %s/%s is imported as %s, which %s already is", pair[0], pair[1], ident, other)
+		}
+		seen[ident] = "panel " + pair[0] + "/" + pair[1]
 	}
 }

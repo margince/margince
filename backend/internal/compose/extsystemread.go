@@ -53,8 +53,8 @@ func (r *callRuntime) systemRead(ctx context.Context, read extension.SystemRead)
 	return r.gatedRead(ctx, read, r.systemReads)
 }
 
-// authorityRead is systemRead for CanRead. CanRead also answers a signed-in
-// human about themselves. That answer is what their own grants already show
+// authorityRead is systemRead for CanRead and CanWrite. They also answer a
+// signed-in human about themselves. That answer is what their own grants already show
 // them, so it hands the caller nothing they could not open.
 func (r *callRuntime) authorityRead(ctx context.Context, user extension.UserID) (context.Context, error) {
 	return r.gatedRead(ctx, extension.SystemReadAuthority, r.systemReads || r.asksAboutItself(user))
@@ -324,8 +324,8 @@ func dealShownTo(ctx context.Context, pool *pgxpool.Pool, colleague, deal ids.UU
 }
 
 // dealWritableBy answers whether colleague, under their own grants, could
-// change deal now. It must be live and theirs to open, and their update verb
-// must reach the row through their write scope.
+// change deal now. Live, not merely existing: an archived deal takes no new
+// work.
 func dealWritableBy(ctx context.Context, pool *pgxpool.Pool, colleague, deal ids.UUID) (bool, error) {
 	ownCtx, _, ok, err := asColleague(ctx, pool, colleague)
 	if err != nil || !ok {
@@ -333,15 +333,7 @@ func dealWritableBy(ctx context.Context, pool *pgxpool.Pool, colleague, deal ids
 	}
 	var writable bool
 	err = database.WithWorkspaceTx(ownCtx, pool, func(tx pgx.Tx) error {
-		// Live, not merely existing: an archived deal takes no new work.
-		if probe := auth.EnsureVisibleLive(ownCtx, tx, fieldmask.Deal, deal); probe != nil {
-			if errors.Is(probe, apperrors.ErrNotFound) {
-				return nil
-			}
-			return probe
-		}
-		rows, err := auth.WritableSubset(ownCtx, tx, fieldmask.Deal, []ids.UUID{deal})
-		writable = rows[deal]
+		writable, err = auth.WritableLiveBy(ownCtx, tx, fieldmask.Deal, deal)
 		return err
 	})
 	return writable, err

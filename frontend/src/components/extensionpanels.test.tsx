@@ -109,6 +109,38 @@ describe("ExtensionPanels", () => {
     expect(container.innerHTML).toBe("");
   });
 
+  it("starts a failed panel afresh on the next deal", () => {
+    const quiet = vi.spyOn(console, "error").mockImplementation(() => {});
+    function OnlyD2({ record }: ExtensionPanelProps) {
+      if (record.id !== "d-2") {
+        throw new Error("unit bug");
+      }
+      return <p>fine for {record.id}</p>;
+    }
+    const client = new QueryClient();
+    client.setQueryData(
+      ["me"],
+      meFixture({ allow: { ext_alpha_x: ["read"] } }),
+    );
+    const slot = (id: string) => (
+      <QueryClientProvider client={client}>
+        <LocaleProvider>
+          <ExtensionPanels
+            slot="record_panel.deal"
+            record={{ type: "deal", id }}
+            registry={[unit("alpha", "ext_alpha_x")]}
+            components={{ alpha: { "record_panel.deal": OnlyD2 } }}
+          />
+        </LocaleProvider>
+      </QueryClientProvider>
+    );
+    const { rerender } = render(slot("d-1"));
+    expect(screen.getByRole("alert")).toBeTruthy();
+    rerender(slot("d-2"));
+    expect(screen.getByText("fine for d-2")).toBeTruthy();
+    quiet.mockRestore();
+  });
+
   it("keeps one unit's crash in its own card, and retries it", async () => {
     // React logs the caught throw itself; silenced so the run stays readable.
     const quiet = vi.spyOn(console, "error").mockImplementation(() => {});
