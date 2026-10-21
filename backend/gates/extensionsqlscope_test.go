@@ -136,7 +136,7 @@ func scanUnitSQL(t testing.TB, unit string, sources map[string]string) extSQLSca
 	fset := gatekit.SourceFileSet()
 	files := make([]*ast.File, 0, len(sources))
 	for _, path := range slices.Sorted(maps.Keys(sources)) {
-		file, parseErr := parser.ParseFile(fset, path, sources[path], 0)
+		file, parseErr := parser.ParseFile(fset, path, sources[path], parser.ParseComments)
 		if parseErr != nil {
 			t.Fatalf("%s does not parse, and a source this gate cannot read may hold the SQL it exists to judge: %v", path, parseErr)
 		}
@@ -146,7 +146,12 @@ func scanUnitSQL(t testing.TB, unit string, sources map[string]string) extSQLSca
 	consts := stringConstants(files)
 	scan := extSQLScan{}
 	for _, file := range files {
+		marked, unexplained := vendorQueryLines(fset, file)
+		scan.findings = append(scan.findings, unexplained...)
 		for _, stmt := range sqlStrings(file, consts) {
+			if marked[fset.Position(stmt.pos).Line] {
+				continue
+			}
 			for _, ref := range tableRefs(stmt.text) {
 				scan.tables++
 				if refused := judgeTable(ref, unit, prefix); refused != "" {
@@ -156,6 +161,33 @@ func scanUnitSQL(t testing.TB, unit string, sources map[string]string) extSQLSca
 		}
 	}
 	return scan
+}
+
+// vendorQueryMarker marks a string a unit sends to a vendor's own SQL-like
+// query API. It never reaches the database, so it names no table of ours.
+const vendorQueryMarker = "//margince:vendor-query"
+
+// vendorQueryLines answers the lines each marker covers, its own and the next,
+// and a finding for each marker that gives no reason.
+func vendorQueryLines(fset *token.FileSet, file *ast.File) (map[int]bool, []string) {
+	marked := map[int]bool{}
+	var unexplained []string
+	for _, group := range file.Comments {
+		for _, comment := range group.List {
+			rest, ok := strings.CutPrefix(comment.Text, vendorQueryMarker)
+			if !ok || (rest != "" && rest[0] != ' ' && rest[0] != '\t') {
+				continue
+			}
+			at := fset.Position(comment.Pos())
+			if strings.TrimSpace(rest) == "" {
+				unexplained = append(unexplained, fmt.Sprintf("%s: %s needs a reason: say where the string goes, "+
+					"so a reader can check it never reaches the database", at, vendorQueryMarker))
+				continue
+			}
+			marked[at.Line], marked[at.Line+1] = true, true
+		}
+	}
+	return marked, unexplained
 }
 
 // judgeTable returns the refusal a reference earns, or "" when the name is the
