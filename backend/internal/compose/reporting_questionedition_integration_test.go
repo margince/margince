@@ -267,7 +267,7 @@ func TestAKeptAnswerIsWithheldOnceOneOfItsRecordsLeavesTheReadersReach(t *testin
 }
 
 // A record that stays readable but moves to another group no longer vouches
-// for the row it was counted in, so the kept answer is withheld.
+// for its row. The kept answer is then withheld.
 func TestAKeptAnswerIsWithheldOnceOneOfItsRecordsChangesGroup(t *testing.T) {
 	q := newQuestionEditions(t)
 	q.keepForAYear(t)

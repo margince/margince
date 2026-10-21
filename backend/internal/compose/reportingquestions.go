@@ -121,8 +121,8 @@ func (q reportingQuestions) Capture(ctx context.Context, tx pgx.Tx, question crm
 }
 
 // Reveal implements reporting.Questions. The reader is shown the kept answer
-// only when they could ask the question today, and every record behind every
-// served row is still in their population and still in that row's group.
+// only when they could ask the question today. Every record behind every
+// served row must also still be in their population and in that row's group.
 // Anything less withholds the whole answer: a part of it, read beside the
 // floor's complements, could describe the rows left out.
 func (q reportingQuestions) Reveal(ctx context.Context, tx pgx.Tx, question crmcontracts.ReportingCardQuestion, scope crmcontracts.ReportingScope, kept reporting.KeptQuestion) (crmcontracts.AnalyticsAnswer, bool, error) {

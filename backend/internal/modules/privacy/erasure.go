@@ -110,10 +110,7 @@ func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason st
 			return err
 		}
 
-		if err := redactSubjectReporting(ctx, tx, subject); err != nil {
-			return err
-		}
-		if err := redactSubjectQuestions(ctx, tx, subject, emails); err != nil {
+		if err := redactSubjectReporting(ctx, tx, subject, emails); err != nil {
 			return err
 		}
 		leadsWiped, err := anonymizeSubjectRows(ctx, tx, subject, emails, identities, reason)

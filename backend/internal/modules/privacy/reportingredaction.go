@@ -15,7 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func redactSubjectReporting(ctx context.Context, tx pgx.Tx, subject ids.ContactID) error {
+func redactSubjectReporting(ctx context.Context, tx pgx.Tx, subject ids.ContactID, emails []string) error {
 	if err := storekit.FenceReportProjection(ctx, tx); err != nil {
 		return err
 	}
@@ -45,7 +45,7 @@ func redactSubjectReporting(ctx context.Context, tx pgx.Tx, subject ids.ContactI
 			return err
 		}
 	}
-	return nil
+	return redactSubjectQuestions(ctx, tx, subject, emails)
 }
 
 //craft:ignore naked-any Bound SQL parameters carry pgx's heterogeneous value types.
