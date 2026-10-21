@@ -24,6 +24,7 @@ package agents
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
@@ -223,7 +224,39 @@ func (r *enrichResolver) Guards(ctx context.Context, cmd EnrichCommand) error {
 	if err := requireEnrichURL(cmd.URL); err != nil {
 		return err
 	}
-	return r.company.refuse(ctx, cmd.CompanyID)
+	if err := r.company.refuse(ctx, cmd.CompanyID); err != nil {
+		return err
+	}
+	return r.requireReadTarget(ctx, cmd)
+}
+
+// requireReadTarget refuses a read with nothing to read: no url and no company
+// domain, or a technical read, which only ever reads the domain. Staged, such a
+// call is an approval nobody can accept, because its review cannot show a target.
+func (r *enrichResolver) requireReadTarget(ctx context.Context, cmd EnrichCommand) error {
+	if cmd.URL != "" && cmd.Depth != EnrichDepthTechnical {
+		return nil
+	}
+	rec, err := r.company.row(ctx, cmd.CompanyID)
+	if err != nil {
+		return err
+	}
+	var company struct {
+		Domains []struct {
+			Domain string `json:"domain"`
+		} `json:"domains"`
+	}
+	if err := json.Unmarshal(rec.Fields, &company); err != nil {
+		return fmt.Errorf("crmagents: reading the company's domains: %w", err)
+	}
+	if len(company.Domains) > 0 {
+		return nil
+	}
+	guidance := "pass `url` with the page to read, or add a domain to the company first"
+	if cmd.Depth == EnrichDepthTechnical {
+		guidance = "a technical read reads the company's domain; add a domain to the company first"
+	}
+	return &BadArgsError{Cause: errors.New("the company has no domain to read"), Guidance: guidance}
 }
 
 // Staging and execution share URL admission. An empty override uses the

@@ -22,6 +22,8 @@ export function nonBuyerRequest(item: WorklistItem): boolean {
 
 // Labels follow the row's evidence when its broad category would misstate the work.
 export function eyebrowKeyFor(item: WorklistItem): MessageKey {
+  if (item.source === "failed_approval")
+    return "worklist.source.failed_approval";
   if (nonBuyerRequest(item)) return "worklist.source.awaiting_reply";
   if (item.source === "notice") return "brief.updates.title";
   if (item.source === "weekly_commitment")

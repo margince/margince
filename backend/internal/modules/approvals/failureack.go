@@ -32,6 +32,23 @@ import (
 const stillFailing = `effect_failed_at IS NOT NULL
 	AND acknowledged_effect_failed_at IS DISTINCT FROM effect_failed_at`
 
+// Absolute stage moves can satisfy an older identical request; relative advances
+// and repeatable sends cannot. The later decision must belong to the same decider.
+const noCompletedStageReplacement = `NOT (approval.kind = 'progress_deal'
+ AND approval.target_entity_type = 'deal'
+ AND EXISTS (SELECT 1 FROM approval completed
+  WHERE completed.kind = approval.kind
+   AND completed.target_entity_type = approval.target_entity_type
+   AND completed.target_entity_id = approval.target_entity_id
+   AND completed.co_target_entity_type IS NOT DISTINCT FROM approval.co_target_entity_type
+   AND completed.co_target_entity_id IS NOT DISTINCT FROM approval.co_target_entity_id
+   AND completed.decided_by = approval.decided_by
+   AND completed.status = 'approved' AND completed.consumed_at IS NOT NULL
+   AND completed.effect_failed_at IS NULL
+   AND completed.created_at > approval.created_at
+   AND completed.diff_hash = approval.diff_hash
+   AND completed.proposed_change = approval.proposed_change))`
+
 // FailedDecision is one of the caller's own approvals whose work did not run.
 type FailedDecision struct {
 	Approval crmcontracts.Approval

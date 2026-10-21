@@ -35,6 +35,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/auditentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -351,7 +352,9 @@ func admittedActions(bulk bool) []string {
 	return actions
 }
 
-// unplaceableSince counts the admitted machine actions this build cannot place.
+// unplaceableSince counts admitted CRM changes this build cannot place.
+// Infrastructure and configuration audits are not unfinished business work;
+// their writers share the maintenance classification with this read.
 //
 // An entity type absent from every arm above has no table this read knows to
 // join, and therefore no gate it can apply. Such a row is never served — serving
@@ -378,8 +381,9 @@ func unplaceableSince(ctx context.Context, tx pgx.Tx, since time.Time) (int, err
 		 WHERE a.occurred_at >= $%d
 		   AND a.actor_type = ANY($%d)
 		   AND a.action = ANY($%d)
+		   AND NOT (a.entity_type = ANY($%d))
 		   AND NOT (a.entity_type = ANY($%d))`,
-		arg(since), arg(machineActors()), arg(admittedActions(false)), arg(placed))
+		arg(since), arg(machineActors()), arg(admittedActions(false)), arg(auditentity.MaintenanceTypes()), arg(placed))
 	var count int
 	if err := tx.QueryRow(ctx, query, args...).Scan(&count); err != nil {
 		return 0, fmt.Errorf("count the machine actions this build cannot place: %w", err)

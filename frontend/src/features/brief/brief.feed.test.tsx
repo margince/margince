@@ -2,8 +2,10 @@
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { ToastProvider } from "../../design-system/toast";
 import { en } from "../../i18n/en";
 import {
+  failedApprovalRow,
   meetingRow,
   readingsDay,
   taskRow,
@@ -11,6 +13,7 @@ import {
 } from "../../testing/brief.fixtures";
 import { render, stubApi } from "../../testing/brief.testkit";
 import { BriefFeed } from "./brief.feed";
+import { BriefGlance } from "./brief.glance";
 
 afterEach(() => {
   cleanup();
@@ -396,3 +399,42 @@ it("folds the whole case for the row in hand under Why first", async () => {
   ).toBeTruthy();
   expect(inHand(container).getByText("waiting 13 days")).toBeTruthy();
 });
+
+it.each([true, false])(
+  "keeps action, failure and recovery separate from the hero (title %s)",
+  (hasTitle) => {
+    stubApi({});
+    const failed = {
+      ...failedApprovalRow(),
+      title: hasTitle ? "Move deal to Won" : undefined,
+    };
+    const day = readingsDay({}, [failed]);
+    const { container } = render(
+      <ToastProvider>
+        <BriefGlance
+          view="morning"
+          firstName="Ada"
+          now={new Date("2026-09-03T08:00:00Z")}
+          day={day}
+          week={undefined}
+        />
+        <BriefFeed day={day} state="ready" />
+      </ToastProvider>,
+    );
+    const hero = screen.getByTestId("brief-glance");
+    expect(hero.textContent).toContain("1 item needs attention.");
+    expect(hero.textContent).not.toContain("Move deal to Won");
+    expect(hero.textContent).not.toContain(failed.detail);
+    const card = inHand(container);
+    expect(container.querySelector(".worklist-row-title")?.textContent).toBe(
+      hasTitle
+        ? "Move deal to Won · Nordwind renewal"
+        : "Approved action did not run · Nordwind renewal",
+    );
+    expect(card.getAllByText(failed.detail ?? "")).toHaveLength(1);
+    expect(card.getAllByText("Approved but not run").length).toBeGreaterThan(0);
+    expect(
+      card.getByRole("button", { name: en["worklist.verb.retry"] }),
+    ).toBeTruthy();
+  },
+);

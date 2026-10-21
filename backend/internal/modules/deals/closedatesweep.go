@@ -169,7 +169,7 @@ func (c *CloseDateCorrector) sweepWorkspace(ctx context.Context) error {
 		return err
 	}
 
-	velocities := map[ids.PipelineID]float64{}
+	velocities := map[ids.PipelineID]closeDatePace{}
 	for {
 		var page []closeDateCandidate
 		var members []closeDateMember
@@ -218,7 +218,7 @@ func (c *CloseDateCorrector) sweepWorkspace(ctx context.Context) error {
 // the denominator.
 func (c *CloseDateCorrector) settleMember(
 	ctx context.Context, live map[ids.DealID]closeDateCandidate, m closeDateMember,
-	velocities map[ids.PipelineID]float64, now time.Time, loc *time.Location, runID ids.UUID,
+	velocities map[ids.PipelineID]closeDatePace, now time.Time, loc *time.Location, runID ids.UUID,
 ) (string, error) {
 	if m.gone {
 		return closeDateMemberSkipped, nil
@@ -245,24 +245,30 @@ func (c *CloseDateCorrector) settleMember(
 		StageWinProbability: cand.winProbability,
 		RemainingOpenStages: cand.remainingOpen,
 		InForecastCommit:    category == forecastCommit || category == forecastBestCase,
-		StageVelocityDays:   velocity,
+		StageVelocityDays:   velocity.days,
 	}, now, loc)
 	// The outcome is whatever correct actually DID — see closeDateOutcome. A
 	// tier that decided to act and then wrote nothing (the switch off, or the
 	// deal already holding what it proposed) settles as checked, so the run's
 	// counters never claim a correction that did not reach a deal.
-	outcome, err := c.correct(ctx, cand, hygiene, category, now, loc, runID)
+	outcome, err := c.correct(ctx, cand, hygiene, category, velocity, now, loc, runID)
 	if err != nil {
 		return "", fmt.Errorf("close-date correction on %s: %w", cand.id, err)
 	}
 	return outcome, nil
 }
 
+type closeDatePace struct {
+	days     float64
+	wonDeals int
+}
+
 // stageVelocityDays is §11's experience-informed pace: the workspace
 // median duration of completed stage stints across won deals of the
 // pipeline. Below the CLOSE_DATE_MIN_HISTORY floor the observation is
-// noise, so zero is returned and the fold falls back to the default.
-func (c *CloseDateCorrector) stageVelocityDays(ctx context.Context, pipelineID ids.PipelineID) (float64, error) {
+// insufficient evidence, so the fold leaves the date unchanged.
+
+func (c *CloseDateCorrector) stageVelocityDays(ctx context.Context, pipelineID ids.PipelineID) (closeDatePace, error) {
 	var wonDeals int
 	var medianSeconds *float64
 	err := c.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -279,12 +285,12 @@ func (c *CloseDateCorrector) stageVelocityDays(ctx context.Context, pipelineID i
 			FROM stints WHERE secs IS NOT NULL`, pipelineID).Scan(&wonDeals, &medianSeconds)
 	})
 	if err != nil {
-		return 0, err
+		return closeDatePace{}, err
 	}
 	if wonDeals < CloseDateMinHistory || medianSeconds == nil || *medianSeconds <= 0 {
-		return 0, nil
+		return closeDatePace{}, nil
 	}
-	return *medianSeconds / 86400, nil
+	return closeDatePace{days: *medianSeconds / 86400, wonDeals: wonDeals}, nil
 }
 
 // apply runs one tier's write shape: re-verify the deal is still open

@@ -98,7 +98,12 @@ export function Triage({
   // The reasons are written as fragments of a line ("waiting 13 days"); as a
   // label one opens a line, and recasing its first letter is the reader's own
   // locale decision, spelled once in `openingCase`.
-  const label = phrased ? openingCase(phrased, locale) : t(eyebrowKeyFor(lead));
+  const label =
+    lead.source === "failed_approval"
+      ? t(eyebrowKeyFor(lead))
+      : phrased
+        ? openingCase(phrased, locale)
+        : t(eyebrowKeyFor(lead));
   return (
     <div className="brief-triage">
       {/* Keyed by the row, so pressing another one in the list mounts a new

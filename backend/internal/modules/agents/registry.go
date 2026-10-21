@@ -54,6 +54,9 @@ type Registry struct {
 	// `required` binds the surface rather than describing an intention that
 	// each handler then re-states in its own words.
 	requiredArgs map[string][]string
+	// typedArgs[tool] is the JSON type its schema declares for each top-level
+	// argument, read off the schema once at registration.
+	typedArgs map[string][]typedArg
 	// unitOwned[tool] is true when an extension unit shipped that tool's
 	// handler, read off the registered tool once (mcp.UnitScopedTool). It is
 	// remembered rather than re-asserted because two decisions depend on it and
@@ -106,6 +109,7 @@ func NewRegistry(approvals Approvals, gate *auth.Gate, opts ...RegistryOption) *
 		numArgs:      map[string][]numBound{},
 		enumArgs:     map[string][]enumArg{},
 		requiredArgs: map[string][]string{},
+		typedArgs:    map[string][]typedArg{},
 		unitOwned:    map[string]bool{},
 		approvals:    approvals,
 		gate:         gate,

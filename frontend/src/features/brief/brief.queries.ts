@@ -10,7 +10,7 @@ import {
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { throwProblem, unwrap } from "../../lib/problem";
-import { worklistKey } from "../worklist/worklist.queries";
+import { briefKey, digestKey, worklistKey } from "../../lib/workkeys";
 
 // Brief's reads, in one place. The screen fans out to five of them and each is
 // gated on its own, deliberately: a transient failure in the decisions queue
@@ -25,7 +25,7 @@ export type Deal = components["schemas"]["Deal"];
 
 export function useMorningBrief(): UseQueryResult<MorningBrief | null> {
   return useQuery({
-    queryKey: ["brief"],
+    queryKey: briefKey,
     // On the same schedule as the attention feed, because the Worklist's
     // briefing lane is BOTH of them: the feed says which entries are still
     // waiting and this says what each one is. Refreshing one without the other
@@ -60,7 +60,7 @@ export function useMorningBrief(): UseQueryResult<MorningBrief | null> {
  */
 export function useMorningDigest(): UseQueryResult<MorningDigest | null> {
   return useQuery({
-    queryKey: ["digest"],
+    queryKey: digestKey,
     queryFn: async (): Promise<MorningDigest | null> => {
       const { data, error, response } = await api.GET("/digest");
       if (response.status === 404 || response.status === 501) {

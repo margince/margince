@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/auditentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -113,7 +114,7 @@ func (s *Store) CreateTag(ctx context.Context, name string, color, description *
 			}
 			return err
 		}
-		_, err = storekit.Audit(ctx, tx, "create", "tag", out.ID.UUID, nil, map[string]any{"name": out.Name})
+		_, err = storekit.Audit(ctx, tx, "create", auditentity.Tag, out.ID.UUID, nil, map[string]any{nameField: out.Name})
 		return err
 	})
 	return out, err
@@ -133,7 +134,7 @@ func (s *Store) ArchiveTag(ctx context.Context, id ids.TagID) (tagRow, error) {
 		} else if err != nil {
 			return err
 		}
-		_, err = storekit.Audit(ctx, tx, "archive", "tag", id.UUID, nil, nil)
+		_, err = storekit.Audit(ctx, tx, "archive", auditentity.Tag, id.UUID, nil, nil)
 		return err
 	})
 	return out, err
@@ -315,7 +316,7 @@ const (
 )
 
 func auditTagLink(ctx context.Context, tx pgx.Tx, tagID ids.TagID, change string, link linkImage, evidence map[string]any) (ids.UUID, error) {
-	return storekit.AuditEventWithEvidence(ctx, tx, "update", "tag", tagID.UUID, map[string]any{change: link}, evidence)
+	return storekit.AuditEventWithEvidence(ctx, tx, "update", auditentity.Tag, tagID.UUID, map[string]any{change: link}, evidence)
 }
 
 // EnsureTaggable refuses a record this caller may not tag.

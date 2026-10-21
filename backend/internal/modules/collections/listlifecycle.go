@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/auditentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -71,7 +72,7 @@ func (s *Store) UpdateList(ctx context.Context, id ids.ListID, in UpdateListInpu
 		if err := writeRevision(ctx, tx, out); err != nil {
 			return err
 		}
-		auditID, err := storekit.Audit(ctx, tx, "update", listObject, id.UUID, p.Before(), p.After())
+		auditID, err := storekit.Audit(ctx, tx, "update", auditentity.List, id.UUID, p.Before(), p.After())
 		if err != nil {
 			return err
 		}
@@ -202,13 +203,13 @@ func (s *Store) setArchived(ctx context.Context, id ids.ListID, archive bool) (l
 
 func auditArchiveChange(ctx context.Context, tx pgx.Tx, id ids.ListID, archive bool, p *storekit.Patch) error {
 	if archive {
-		auditID, err := storekit.Audit(ctx, tx, "archive", listObject, id.UUID, nil, nil)
+		auditID, err := storekit.Audit(ctx, tx, "archive", auditentity.List, id.UUID, nil, nil)
 		if err != nil {
 			return err
 		}
 		return storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventListArchived{})
 	}
-	auditID, err := storekit.Audit(ctx, tx, "restore", listObject, id.UUID, p.Before(), p.After())
+	auditID, err := storekit.Audit(ctx, tx, "restore", auditentity.List, id.UUID, p.Before(), p.After())
 	if err != nil {
 		return err
 	}

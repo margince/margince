@@ -4366,7 +4366,7 @@ paths:
     get:
       tags: [Reports]
       operationId: exportReportingEdition
-      summary: Export this edition's permitted frozen metrics and chart readings.
+      summary: Export this edition's permitted frozen metrics, chart readings and kept question answers.
       parameters:
         - $ref: '#/components/parameters/Id'
       responses:
@@ -4378,7 +4378,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
-      description: Export this edition's permitted frozen metrics and chart readings.
+      description: Export this edition's permitted frozen metrics, chart readings and kept question answers.
   /analytics/evaluate:
     get:
       tags:
@@ -19001,7 +19001,10 @@ components:
       type: object
       required: [field, value]
       properties:
-        field: {type: string, description: Semantic field key translated by the client.}
+        field:
+          type: string
+          description: >-
+            Semantic field key translated by the client. A key starting with `argument:` is one argument of an extension call, shown as plain text and labelled by the rest of the key. Its text is cut to 4096 bytes and ends in an ellipsis when cut; proposed_change keeps the full value.
         value: {$ref: '#/components/schemas/ApprovalPreviewValue'}
     ApprovalPreviewImportRow:
       type: object

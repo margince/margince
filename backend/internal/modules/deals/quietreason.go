@@ -14,16 +14,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// pacedBasis says where a proposed date came from, without showing the
-// arithmetic. "3 open stage(s) remaining × stage velocity" is the formula that
-// produced the number, and a formula is not a reason a salesperson can weigh.
-func (said quietCopy) pacedBasis(remainingStages int) string {
-	if remainingStages == 1 {
-		return said.Say(quietWords.PacedOne)
-	}
-	return fmt.Sprintf(
-		said.Say(quietWords.Paced),
-		remainingStages)
+// pacedBasis names the observations behind an unconfirmed estimate.
+func (said quietCopy) pacedBasis(remainingStages int, pace closeDatePace) string {
+	return fmt.Sprintf(said.Say(quietWords.Paced), pace.wonDeals, pace.days, remainingStages)
 }
 
 // QuietNames maps the counterparty on each side of ReadQuietFacts to a display

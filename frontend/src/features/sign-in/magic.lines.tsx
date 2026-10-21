@@ -89,7 +89,8 @@ function MagicLineRow({
 }>) {
   const t = useT();
   const sentence = magicSentenceKey(line.summary.key);
-  const detail = lineDetail(line, t);
+  const { locale } = useLocale();
+  const detail = lineDetail(line, t, locale);
   return (
     <li className="magic-line">
       {/* A watching line is off the clock, so its mark is its lane's. */}
@@ -118,18 +119,41 @@ function MagicLineRow({
 }
 
 // Unknown detail keys cannot supply a trustworthy explanation.
-function lineDetail(line: MagicLine, t: ReturnType<typeof useT>): string[] {
+function lineDetail(
+  line: MagicLine,
+  t: ReturnType<typeof useT>,
+  locale: Locale,
+): string[] {
   const by = line.actor.label ? magicByKey(line.actor.label.key) : null;
   const why = line.reason ? magicWhyKey(line.reason.key) : null;
-  const consequence = line.consequence
-    ? magicConsequenceKey(line.consequence)
-    : null;
+  const consequence =
+    line.consequence &&
+    line.consequence !== "magic.consequence.awaits_your_decision"
+      ? magicConsequenceKey(line.consequence)
+      : null;
   return [
     by && t(by, line.actor.label?.values),
-    why && t(why, line.reason?.values),
+    why && t(why, forecastReasonValues(line, locale)),
     consequence && t(consequence),
     noWayBack(line, t),
   ].filter((part): part is string => Boolean(part));
+}
+
+function forecastReasonValues(line: MagicLine, locale: Locale) {
+  const values = line.reason?.values;
+  if (line.reason?.key !== "magic.why.forecast_date_basis" || !values)
+    return values;
+  return Object.fromEntries(
+    Object.entries(values).map(([key, value]) => {
+      const number = Number(value);
+      return [
+        key,
+        value.trim() !== "" && Number.isFinite(number)
+          ? formatNumber(number, locale)
+          : value,
+      ];
+    }),
+  );
 }
 
 // Why a done change to one record cannot be put back, said rather than shown as

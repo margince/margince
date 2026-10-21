@@ -55,8 +55,8 @@ func (s *Service) WithQuestions(questions Questions) *Service {
 	return s
 }
 
-// questionCards lists the layout's question cards in page order.
-func questionCards(selection crmcontracts.ReportingSelection) []crmcontracts.ReportingCard {
+// QuestionCards lists the layout's question cards in page order.
+func QuestionCards(selection crmcontracts.ReportingSelection) []crmcontracts.ReportingCard {
 	cards := []crmcontracts.ReportingCard{}
 	if selection.Layout == nil {
 		return cards
@@ -74,7 +74,7 @@ func questionCards(selection crmcontracts.ReportingSelection) []crmcontracts.Rep
 // captureQuestions answers every question card as the sender. An edition keeps
 // an answer only under a retention policy, which also erases it.
 func (s *Service) captureQuestions(ctx context.Context, tx pgx.Tx, selection crmcontracts.ReportingSelection) (map[string]CapturedQuestion, error) {
-	cards := questionCards(selection)
+	cards := QuestionCards(selection)
 	out := make(map[string]CapturedQuestion, len(cards))
 	if len(cards) == 0 || s.questions == nil {
 		return out, nil
@@ -169,7 +169,7 @@ func (s *Service) editionQuestions(ctx context.Context, tx pgx.Tx, edition *crmc
 		return err
 	}
 	cards := map[string]crmcontracts.ReportingCard{}
-	for _, card := range questionCards(edition.Evaluation.Selection) {
+	for _, card := range QuestionCards(edition.Evaluation.Selection) {
 		cards[card.Id] = card
 	}
 	out := []crmcontracts.ReportingEditionQuestion{}

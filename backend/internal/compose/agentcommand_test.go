@@ -56,7 +56,7 @@ func (seamRecord) ArchiveAt(_ context.Context, in datasource.ArchiveInput) (data
 func (seamRecord) Read(_ context.Context, ref datasource.EntityRef) (datasource.Record, error) {
 	return datasource.Record{
 		Ref:       ref,
-		Fields:    json.RawMessage(`{"name":"Acme"}`),
+		Fields:    json.RawMessage(`{"name":"Acme","domains":[{"domain":"acme.example"}]}`),
 		Version:   4,
 		Freshness: datasource.FreshnessInfo{Authoritative: true},
 	}, nil

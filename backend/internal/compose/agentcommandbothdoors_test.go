@@ -576,7 +576,7 @@ type channelAnchor struct{ seamRecord }
 func (channelAnchor) Read(_ context.Context, ref datasource.EntityRef) (datasource.Record, error) {
 	return datasource.Record{
 		Ref:       ref,
-		Fields:    json.RawMessage(`{"name":"Acme","kind":"message","channel_provider":"telegram"}`),
+		Fields:    json.RawMessage(`{"name":"Acme","kind":"message","channel_provider":"telegram","domains":[{"domain":"acme.example"}]}`),
 		Version:   4,
 		Freshness: datasource.FreshnessInfo{Authoritative: true},
 	}, nil

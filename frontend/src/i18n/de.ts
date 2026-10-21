@@ -836,6 +836,10 @@ export const de = {
   "reporting.restoreRevision": "Version {revision} wiederherstellen",
   "reporting.restoreBlocked":
     "Vor dem Wiederherstellen einer früheren Version den Entwurf veröffentlichen oder verwerfen.",
+  "reporting.cardOrderHint":
+    "Ziehe eine Karte am Griff, oder fokussiere den Griff und drücke die Pfeiltaste nach oben oder unten.",
+  "reporting.cardHandle": "{chart} verschieben, {position} von {total}",
+  "reporting.cardMoved": "{chart} auf {position} von {total} verschoben",
   "reporting.moveUp": "Nach oben",
   "reporting.moveDown": "Nach unten",
   "reporting.sectionN": "Abschnitt {n}",
@@ -1450,6 +1454,8 @@ export const de = {
   "brief.week.beforeHistory":
     "Für diese Woche gibt es keine Zahlen, da sie vor den ersten Datensätzen liegt.",
   "home.receipt.date": "Abschlussdatum: {before} → {after}",
+  "home.receipt.dateUnconfirmed":
+    "Geschätztes Abschlussdatum: {before} → {after} (Bestätigung nötig)",
   "home.receipt.undated": "Kein Datum",
   "home.receipt.confidence": "Prognosesicherheit aktualisiert",
   "home.receipt.forecast": "Prognosekategorie geändert",
@@ -1610,7 +1616,9 @@ export const de = {
   "magic.why.forecast_review":
     "Der Deal muss nach einer Zeit ohne Fortschritt geprüft werden.",
   "magic.why.forecast_date":
-    "Das Prognosedatum wurde anhand des Pipeline-Fortschritts geschätzt.",
+    "Unbestätigte Schätzung; keine nutzbare aufgezeichnete Grundlage verfügbar.",
+  "magic.why.forecast_date_basis":
+    "Unbestätigte Schätzung aus {sample_count} gewonnenen Deals: Median {median_days} Tage pro Phase, noch {remaining_stages} Phasen.",
   "magic.undescribed": "Aktivität nicht beschrieben",
   "brief.readings.risk": "Wert markierter Pipeline-Deals",
   "theme.toDark": "Dunkles Design",
@@ -5131,6 +5139,9 @@ export const de = {
   "brief.glance.nightAnon": "Noch bei der Arbeit.",
   "brief.glance.introWeekly":
     "Prüfe die Ergebnisse und plane deine nächsten Schritte.",
+  "brief.glance.attention_one": "1 Eintrag braucht Aufmerksamkeit.",
+  "brief.glance.attention_other": "{count} Einträge brauchen Aufmerksamkeit.",
+  "worklist.source.failed_approval": "Freigegeben, aber nicht ausgeführt",
   "brief.glance.intro": "Dein Tag im Überblick.",
   "brief.panel.decisions": "Freigaben",
   "brief.rail.quietSchedule": "Nichts gebucht",
@@ -15892,6 +15903,7 @@ export const de = {
     "Eine Zusage aus einem Gespräch wartet auf deine Freigabe",
   "magic.action.approval_capture_counterparty":
     "{target} hat dir geschrieben. Als Kontakt behalten?",
+  "magic.action.approval_summary": "Vorschlag: {summary}",
   "magic.action.approval_pending":
     "Ein Vorschlag vom Typ {kind} wartet auf deine Freigabe",
   "magic.action.capture_reauth_required":
@@ -15912,8 +15924,6 @@ export const de = {
   "magic.consequence.lead_disqualified": "Der Lead hat die Pipeline verlassen.",
   "magic.consequence.automation_did_nothing":
     "Nichts von dem, was die Regel zugesagt hat, ist passiert.",
-  "magic.consequence.awaits_your_decision":
-    "Es passiert nichts, bis du entscheidest.",
   "magic.consequence.capture_not_collecting":
     "Aus dieser Quelle wird nichts mehr erfasst.",
   "magic.consequence.capture_may_be_incomplete":

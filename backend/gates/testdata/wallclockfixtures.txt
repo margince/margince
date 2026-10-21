@@ -165,7 +165,6 @@ internal/compose/integration/leadscore_override_integration_test.go 1
 internal/compose/integration/license_entitlement_integration_test.go 3
 internal/compose/integration/listlivechecks_integration_test.go 1
 internal/compose/integration/listreferencesorts_integration_test.go 3
-internal/compose/integration/magic_diagnostics_integration_test.go 2
 internal/compose/integration/magic_linerecords_integration_test.go 6
 internal/compose/integration/magic_retention_integration_test.go 2
 internal/compose/integration/magic_scope_integration_test.go 29

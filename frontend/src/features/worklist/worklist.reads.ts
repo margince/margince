@@ -1,6 +1,7 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import { unwrap } from "../../lib/problem";
+import { worklistKey } from "../../lib/workkeys";
 import type {
   HandledForYou,
   TeamBoard,
@@ -12,7 +13,7 @@ import type {
 } from "./worklist.queries";
 import { represented } from "./worklistunits";
 
-export const worklistKey = ["worklist"] as const;
+export { worklistKey } from "../../lib/workkeys";
 
 // The whole day in one read, at one scope or one named owner, and one filter.
 //

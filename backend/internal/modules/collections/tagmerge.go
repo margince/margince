@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/auditentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -123,7 +124,7 @@ func (s *Store) MergeTags(ctx context.Context, source, target ids.TagID, expecte
 			 WHERE id = $1 AND archived_at IS NULL`, source); err != nil {
 			return err
 		}
-		_, err = storekit.Audit(ctx, tx, "update", "tag", source.UUID,
+		_, err = storekit.Audit(ctx, tx, "update", auditentity.Tag, source.UUID,
 			map[string]any{nameField: sourceRow.Name},
 			map[string]any{
 				"merged_into": target.UUID,

@@ -17,9 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // AnalyticsAnswer is one generic query's result.
@@ -80,7 +78,7 @@ func RunAnalyticsQuery(
 	// installation's compile-time table, so the name's existence is not the
 	// caller's secret to be kept — and a saved run's reader must hear the
 	// denial, not be told the population their citation names does not exist.
-	if err := auth.Require(ctx, string(spec.entity), principal.ActionRead); err != nil {
+	if err := requireAnalyticsRead(ctx, spec.entity); err != nil {
 		return AnalyticsAnswer{}, err
 	}
 

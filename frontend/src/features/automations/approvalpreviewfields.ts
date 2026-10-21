@@ -129,7 +129,14 @@ const PREVIEW_DETAIL_LABELS: Record<string, MessageKey> = {
   promotion_deal_owner: "approval.preview.promotionDealOwner",
 };
 
+// An extension call's own argument names arrive under this prefix, so none can
+// take a detail key this file or approvalevidence.tsx renders as markup.
+const EXTENSION_ARGUMENT_PREFIX = "argument:";
+
 export function previewFieldLabel(field: string, t: Translator): string {
+  if (field.startsWith(EXTENSION_ARGUMENT_PREFIX)) {
+    return field.slice(EXTENSION_ARGUMENT_PREFIX.length);
+  }
   const promotion = PREVIEW_DETAIL_LABELS[field] ?? MERGE_FIELD_LABELS[field];
   if (promotion) return t(promotion);
   switch (field) {

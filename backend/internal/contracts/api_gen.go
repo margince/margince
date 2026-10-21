@@ -26644,7 +26644,7 @@ type ApprovalPreviewConflict struct {
 
 // ApprovalPreviewDetail defines model for ApprovalPreviewDetail.
 type ApprovalPreviewDetail struct {
-	// Field Semantic field key translated by the client.
+	// Field Semantic field key translated by the client. A key starting with `argument:` is one argument of an extension call, shown as plain text and labelled by the rest of the key. Its text is cut to 4096 bytes and ends in an ellipsis when cut; proposed_change keeps the full value.
 	Field string               `json:"field"`
 	Value ApprovalPreviewValue `json:"value"`
 }
@@ -41926,10 +41926,11 @@ type MagicNotShown struct {
 
 	// Reason `unadmitted_action` — a machine write whose action carries no customer-facing
 	// meaning: a maintenance sweep, a projection refresh.
-	// `unknown_entity_type` — an entity kind this build cannot scope, and therefore
+	// `unknown_entity_type` — a CRM entity kind this build cannot scope, and therefore
 	// cannot safely show. Counted rather than served: showing a row this read cannot
 	// place is showing a row it cannot prove the reader may see. The count is
-	// workspace-wide machine actions, not the reader's own, and is reported only to a
+	// workspace-wide machine changes to CRM entities, not the reader's own. Infrastructure
+	// and configuration audits do not contribute. It is reported only to a
 	// seat holding `ai_diagnostics` read. Its absence for any other seat is not a zero.
 	// `out_of_scope` — a row about a record outside the reader's own scope. Counted
 	// so the total is honest, and never named.
@@ -41938,10 +41939,11 @@ type MagicNotShown struct {
 
 // MagicNotShownReason `unadmitted_action` — a machine write whose action carries no customer-facing
 // meaning: a maintenance sweep, a projection refresh.
-// `unknown_entity_type` — an entity kind this build cannot scope, and therefore
+// `unknown_entity_type` — a CRM entity kind this build cannot scope, and therefore
 // cannot safely show. Counted rather than served: showing a row this read cannot
 // place is showing a row it cannot prove the reader may see. The count is
-// workspace-wide machine actions, not the reader's own, and is reported only to a
+// workspace-wide machine changes to CRM entities, not the reader's own. Infrastructure
+// and configuration audits do not contribute. It is reported only to a
 // seat holding `ai_diagnostics` read. Its absence for any other seat is not a zero.
 // `out_of_scope` — a row about a record outside the reader's own scope. Counted
 // so the total is honest, and never named.
@@ -41967,8 +41969,9 @@ type MagicReceipt struct {
 	// in would turn internal churn into apparent value. Reporting the count instead
 	// means a preview showing five lines can never imply it is showing everything.
 	//
-	// The `unknown_entity_type` entry counts workspace-wide machine actions this build
-	// cannot place, and is reported only to a seat holding `ai_diagnostics` read. Its
+	// The `unknown_entity_type` entry counts workspace-wide machine changes to CRM entities
+	// this build cannot place. Infrastructure and configuration audits do not contribute
+	// to this count. It is reported only to a seat holding `ai_diagnostics` read. Its
 	// absence for any other seat is not a zero.
 	NotShown []MagicNotShown `json:"not_shown"`
 
@@ -73424,7 +73427,7 @@ type ServerInterface interface {
 	// Get reporting edition evidence
 	// (GET /analytics/editions/{id}/evidence)
 	GetReportingEditionEvidence(w http.ResponseWriter, r *http.Request, id Id, params GetReportingEditionEvidenceParams)
-	// Export this edition's permitted frozen metrics and chart readings.
+	// Export this edition's permitted frozen metrics, chart readings and kept question answers.
 	// (GET /analytics/editions/{id}/export.csv)
 	ExportReportingEdition(w http.ResponseWriter, r *http.Request, id Id)
 	// Evaluate reporting
@@ -76304,7 +76307,7 @@ func (_ Unimplemented) GetReportingEditionEvidence(w http.ResponseWriter, r *htt
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Export this edition's permitted frozen metrics and chart readings.
+// Export this edition's permitted frozen metrics, chart readings and kept question answers.
 // (GET /analytics/editions/{id}/export.csv)
 func (_ Unimplemented) ExportReportingEdition(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)

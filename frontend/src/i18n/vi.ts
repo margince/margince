@@ -823,6 +823,10 @@ export const vi = {
   "reporting.restoreRevision": "Khôi phục phiên bản {revision}",
   "reporting.restoreBlocked":
     "Hãy công bố hoặc bỏ bản nháp trước khi khôi phục một phiên bản trước.",
+  "reporting.cardOrderHint":
+    "Kéo thẻ bằng tay nắm, hoặc chọn tay nắm rồi nhấn phím mũi tên lên hoặc xuống.",
+  "reporting.cardHandle": "Di chuyển {chart}, vị trí {position} trên {total}",
+  "reporting.cardMoved": "Đã chuyển {chart} đến vị trí {position} trên {total}",
   "reporting.moveUp": "Chuyển lên",
   "reporting.moveDown": "Chuyển xuống",
   "reporting.sectionN": "Phần {n}",
@@ -1413,6 +1417,8 @@ export const vi = {
   "brief.week.beforeHistory":
     "Tuần này nằm trước thời điểm có dữ liệu đầu tiên nên không có số liệu để báo cáo.",
   "home.receipt.date": "Ngày chốt: {before} → {after}",
+  "home.receipt.dateUnconfirmed":
+    "Ngày chốt ước tính: {before} → {after} (cần xác nhận)",
   "home.receipt.undated": "Chưa có ngày",
   "home.receipt.confidence": "Đã cập nhật độ tin cậy dự báo",
   "home.receipt.forecast": "Đã đổi danh mục dự báo",
@@ -1566,7 +1572,10 @@ export const vi = {
   "magic.action.forecast_changed": "Đã điều chỉnh dự báo",
   "magic.why.forecast_review":
     "Deal cần được xem xét sau một thời gian không có tiến triển.",
-  "magic.why.forecast_date": "Ngày dự báo được ước tính từ tiến độ pipeline.",
+  "magic.why.forecast_date":
+    "Ước tính chưa được xác nhận; không có cơ sở đã ghi lại phù hợp để hiển thị.",
+  "magic.why.forecast_date_basis":
+    "Ước tính chưa được xác nhận từ {sample_count} deal đã thắng: trung vị {median_days} ngày mỗi giai đoạn, còn {remaining_stages} giai đoạn.",
   "magic.undescribed": "Hoạt động chưa được mô tả",
   "brief.readings.risk": "Giá trị pipeline được đánh dấu",
   "theme.toDark": "Giao diện tối",
@@ -5013,6 +5022,9 @@ export const vi = {
   "brief.glance.nightAnon": "Đang làm việc khuya.",
   "brief.glance.introWeekly":
     "Xem lại kết quả và lên kế hoạch cho bước tiếp theo.",
+  "brief.glance.attention_one": "1 mục cần chú ý.",
+  "brief.glance.attention_other": "{count} mục cần chú ý.",
+  "worklist.source.failed_approval": "Đã duyệt nhưng chưa thực hiện",
   "brief.glance.intro": "Tổng quan hôm nay.",
   "brief.panel.decisions": "Phê duyệt",
   "brief.rail.quietSchedule": "Không có lịch hẹn",
@@ -15487,6 +15499,7 @@ export const vi = {
     "Một cam kết từ cuộc trao đổi đang chờ bạn duyệt",
   "magic.action.approval_capture_counterparty":
     "{target} đã viết cho bạn. Lưu thành liên hệ?",
+  "magic.action.approval_summary": "Đề xuất: {summary}",
   "magic.action.approval_pending": "Một đề xuất {kind} đang chờ bạn duyệt",
   "magic.action.capture_reauth_required": "Cần kết nối lại {provider}",
   "magic.action.capture_connection_error": "Không thể kết nối tới {provider}",
@@ -15504,8 +15517,6 @@ export const vi = {
   "magic.consequence.lead_disqualified": "Lead đã rời khỏi pipeline.",
   "magic.consequence.automation_did_nothing":
     "Những gì quy tắc hứa hẹn chưa xảy ra.",
-  "magic.consequence.awaits_your_decision":
-    "Sẽ không có gì xảy ra cho đến khi bạn quyết định.",
   "magic.consequence.capture_not_collecting":
     "Hiện không thu thập gì từ nguồn này.",
   "magic.consequence.capture_may_be_incomplete":

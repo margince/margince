@@ -8100,7 +8100,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Export this edition's permitted frozen metrics and chart readings. */
+        /** Export this edition's permitted frozen metrics, chart readings and kept question answers. */
         get: operations["exportReportingEdition"];
         put?: never;
         post?: never;
@@ -11088,7 +11088,7 @@ export interface paths {
          *     write with no customer-facing meaning — a maintenance sweep, a projection
          *     refresh — is not Magic, and folding it in would turn internal churn into apparent
          *     value. Counting it instead means the preview can never imply completeness it does
-         *     not have. Its `unknown_entity_type` entry counts workspace-wide machine actions this
+         *     not have. Its `unknown_entity_type` entry counts workspace-wide machine changes to CRM entities this
          *     build cannot place and is reported only to a seat holding `ai_diagnostics` read; its
          *     absence for any other seat is not a zero.
          *
@@ -40780,7 +40780,7 @@ export interface components {
             after: components["schemas"]["ApprovalPreviewValue"];
         };
         ApprovalPreviewDetail: {
-            /** @description Semantic field key translated by the client. */
+            /** @description Semantic field key translated by the client. A key starting with `argument:` is one argument of an extension call, shown as plain text and labelled by the rest of the key. Its text is cut to 4096 bytes and ends in an ellipsis when cut; proposed_change keeps the full value. */
             field: string;
             value: components["schemas"]["ApprovalPreviewValue"];
         };
@@ -47200,8 +47200,9 @@ export interface components {
              *     in would turn internal churn into apparent value. Reporting the count instead
              *     means a preview showing five lines can never imply it is showing everything.
              *
-             *     The `unknown_entity_type` entry counts workspace-wide machine actions this build
-             *     cannot place, and is reported only to a seat holding `ai_diagnostics` read. Its
+             *     The `unknown_entity_type` entry counts workspace-wide machine changes to CRM entities
+             *     this build cannot place. Infrastructure and configuration audits do not contribute
+             *     to this count. It is reported only to a seat holding `ai_diagnostics` read. Its
              *     absence for any other seat is not a zero.
              */
             not_shown: components["schemas"]["MagicNotShown"][];
@@ -47230,10 +47231,11 @@ export interface components {
             /**
              * @description `unadmitted_action` — a machine write whose action carries no customer-facing
              *     meaning: a maintenance sweep, a projection refresh.
-             *     `unknown_entity_type` — an entity kind this build cannot scope, and therefore
+             *     `unknown_entity_type` — a CRM entity kind this build cannot scope, and therefore
              *     cannot safely show. Counted rather than served: showing a row this read cannot
              *     place is showing a row it cannot prove the reader may see. The count is
-             *     workspace-wide machine actions, not the reader's own, and is reported only to a
+             *     workspace-wide machine changes to CRM entities, not the reader's own. Infrastructure
+             *     and configuration audits do not contribute. It is reported only to a
              *     seat holding `ai_diagnostics` read. Its absence for any other seat is not a zero.
              *     `out_of_scope` — a row about a record outside the reader's own scope. Counted
              *     so the total is honest, and never named.

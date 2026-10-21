@@ -290,6 +290,9 @@ func validateAliases(q Query) error {
 // measureAlias is what a measure's column will be called — the same answer
 // measureName gives in the compiler, asked here so the check judges the name
 // that actually ships.
+// Column is the answer column a measure is served under.
+func (m Measure) Column() string { return measureAlias(m) }
+
 func measureAlias(m Measure) string {
 	if m.As != "" {
 		return m.As

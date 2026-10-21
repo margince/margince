@@ -5,7 +5,6 @@ import {
   screen,
   within,
 } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
 import {
@@ -188,20 +187,12 @@ describe("BriefGlance — the chips in the morning's sentence", () => {
     return lead;
   }
 
-  it("opens what a chip was read from, and closes it on a second press", async () => {
-    const user = userEvent.setup();
+  it("summarizes the focus count without repeating its leading card", () => {
     const lead = renderMorning();
-    const chip = screen.getByRole("button", { name: "Sonya Beck" });
-    expect(chip.getAttribute("aria-pressed")).toBe("false");
-    expect(screen.queryByRole("note")).toBeNull();
-    await user.click(chip);
-    expect(chip.getAttribute("aria-pressed")).toBe("true");
-    // Cited by its subject, never quoted: the preview is the message itself.
-    const note = screen.getByRole("note").textContent ?? "";
-    expect(note).toContain(lead.email_summary?.subject ?? "");
-    expect(note).not.toContain(lead.email_summary?.preview ?? "");
-    await user.click(chip);
-    expect(screen.queryByRole("note")).toBeNull();
+    const sentence = screen.getByTestId("glance-sentence");
+    expect(sentence.textContent).toContain("1 item needs attention.");
+    expect(sentence.textContent).not.toContain(lead.title);
+    expect(screen.queryByRole("button", { name: "Sonya Beck" })).toBeNull();
   });
 
   it("names the next meeting as a chip in the same sentence", () => {

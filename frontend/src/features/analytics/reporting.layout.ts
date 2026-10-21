@@ -187,20 +187,34 @@ export const layoutEdits = {
         at === 0 ? [...moved, ...section.cards] : [...section.cards, ...moved],
     })).filter((_, index) => index !== at);
   },
-  moveCard(
+  // Puts a section's cards in the order of keys, which must name each of
+  // them once; any other order leaves the layout as it was.
+  reorderCards(
     layout: ReportingLayout,
     at: number,
-    card: number,
-    step: -1 | 1,
+    keys: readonly string[],
   ): ReportingLayout {
     return withSection(layout, at, (section) => {
-      const next = card + step;
-      if (next < 0 || next >= section.cards.length) return section;
-      const cards = [...section.cards];
-      const [moving] = cards.splice(card, 1);
-      if (moving) cards.splice(next, 0, moving);
-      return { ...section, cards };
+      const byId = new Map(section.cards.map((card) => [card.id, card]));
+      const cards = keys.flatMap((key) => byId.get(key) ?? []);
+      const permutation =
+        keys.length === section.cards.length &&
+        new Set(keys).size === keys.length &&
+        cards.length === keys.length;
+      return permutation ? { ...section, cards } : section;
     });
+  },
+  moveSection(
+    layout: ReportingLayout,
+    at: number,
+    step: -1 | 1,
+  ): ReportingLayout {
+    const next = at + step;
+    const moving = layout[at];
+    if (!moving || next < 0 || next >= layout.length) return layout;
+    const sections = layout.filter((_, index) => index !== at);
+    sections.splice(next, 0, moving);
+    return sections;
   },
   moveCardTo(
     layout: ReportingLayout,

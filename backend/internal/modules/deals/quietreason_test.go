@@ -208,18 +208,27 @@ func TestQuietForNeverReportsTheFuture(t *testing.T) {
 	}
 }
 
-// The paced basis explains where a date came from. It must never show the
-// arithmetic that produced it — a formula is not a reason a rep can weigh.
+// The basis names observed inputs in plain words rather than displaying a formula.
 func TestPacedBasisExplainsWithoutShowingTheFormula(t *testing.T) {
 	for _, stages := range []int{1, 4} {
-		got := quietCopyFor("en").pacedBasis(stages)
+		got := quietCopyFor("en").pacedBasis(stages, closeDatePace{days: 14.5, wonDeals: 23})
 		for _, forbidden := range []string{"×", "*", "velocity", "stage(s)"} {
 			if strings.Contains(got, forbidden) {
 				t.Errorf("pacedBasis(%d) = %q, want no %q in it", stages, got, forbidden)
 			}
 		}
 	}
-	if got := quietCopyFor("en").pacedBasis(1); strings.Contains(got, "1 stages") {
+	if got := quietCopyFor("en").pacedBasis(1, closeDatePace{days: 14.5, wonDeals: 23}); strings.Contains(got, "1 stages") {
 		t.Errorf("pacedBasis(1) = %q, want the singular reading", got)
+	}
+}
+
+func TestPacedBasisNamesActualObservationsAndUncertainty(t *testing.T) {
+	t.Parallel()
+	got := quietCopyFor("en").pacedBasis(2, closeDatePace{days: 14.5, wonDeals: 23})
+	for _, want := range []string{"Unconfirmed", "23 won deals", "14.5 days", "open stages remaining: 2", "No buyer confirmed"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("basis %q lacks %q", got, want)
+		}
 	}
 }

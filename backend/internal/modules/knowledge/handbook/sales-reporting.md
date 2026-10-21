@@ -44,7 +44,7 @@ Open **Definitions** to see how each number is worked out, the rules for credit,
 
 ## How do I save or share a report?
 
-Choose **Save report**, name it and choose **Visible to**. A **Purpose** tells readers what the report is for and shows under its name. Use **Customize report** to change numbers and graphs. Under **Charts and order**, put graphs into titled sections, each graph taking a whole row or half of one. **Preview** shows a graph with this report's figures before you add it.
+Choose **Save report**, name it and choose **Visible to**. A **Purpose** tells readers what the report is for and shows under its name. Use **Customize report** to change numbers and graphs. Under **Charts and order**, put graphs into titled sections, each graph taking a whole row or half of one. Drag a graph by its handle to change its place, or press Tab to reach the handle and use the arrow keys. **Preview** shows a graph with this report's figures before you add it.
 
 **Add question** places a saved custom report with no filters from its link, answered for each reader. An edition keeps the answer its sender was given, if a retention rule for editions exists. A reader of the edition sees only the rows whose records they may open.
 
@@ -72,7 +72,7 @@ Select an edition in the history to see the values, targets, graphs and records 
 
 Open **Targets** and choose sales won, qualified pipeline created, meetings held or accepted opportunities. Select the owner or team, the pipeline where that is offered, and month or fiscal quarter. Choose a year and a first month; only months that can start a fiscal quarter are offered. Each new version needs a reason. Filter the list by active or retired status and by first month. The team target stays apart from the targets of each member; the difference shows as **Unallocated** or **Overallocated**.
 
-Use **Export CSV**, next to **Save report**, for the report's numbers of today, or export a fixed edition for the numbers it stored. An export follows the same permissions and the same limits as the screen. For a report you build yourself, open **Reports** → **New custom report** or ask your connected AI to report through Margince.
+Use **Export CSV**, next to **Save report**, for the report's numbers of today. Export a fixed edition for the numbers and question answers it stored. An export follows the same permissions and the same limits as the screen. For a report you build yourself, open **Reports** → **New custom report** or ask your connected AI to report through Margince.
 
 Any user who reads a report can see the definitions of its numbers. Admins open **Reporting setup** on its own to set up qualifying stages and the daily history of the pipeline.
 

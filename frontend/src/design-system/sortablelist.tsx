@@ -195,7 +195,8 @@ export function useSortableRows<T>(
     stopListening.current = null;
     setDraft(null);
     // A write that started mid-carry makes the carried order one drawn from a
-    // list the server has not answered yet, so it lands nowhere.
+    // list the server has not answered yet, so it lands nowhere. So does a row
+    // added or taken away while the row was carried.
     const current = latest.current;
     const moved = current.items.find(
       (each) => current.keyOf(each) === carried.key,
@@ -204,6 +205,10 @@ export function useSortableRows<T>(
       landed &&
       !current.sort?.busy &&
       moved &&
+      sameOrder(
+        [...current.items.map(current.keyOf)].sort(),
+        [...carried.start].sort(),
+      ) &&
       !sameOrder(carried.order, carried.start)
     ) {
       commit([...carried.order], moved);

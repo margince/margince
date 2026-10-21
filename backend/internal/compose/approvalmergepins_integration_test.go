@@ -29,7 +29,10 @@ func TestMergeRechecksBothApprovedRecordsInsideTheNativeWrite(t *testing.T) {
 				e := integration.Setup(t)
 				permissions := integration.AdminPerms
 				permissions.Objects = maps.Clone(permissions.Objects)
-				permissions.Objects["introduction"] = principal.ObjectGrant{Read: true}
+				// The seeded admin reads every record class a company merge moves; this fixture lacks these.
+				for _, object := range []string{"introduction", mergeReadOffer, mergeReadCommission, mergeReadFinance, mergeReadIntegrations} {
+					permissions.Objects[object] = principal.ObjectGrant{Read: true}
+				}
 				ctx := e.As(e.AdminUser, nil, permissions)
 				native := NewProvider(e.Pool)
 				field := "full_name"

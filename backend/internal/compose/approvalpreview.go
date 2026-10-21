@@ -17,6 +17,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -87,6 +88,9 @@ func (r approvalPreviewReader) read(ctx context.Context, approval crmcontracts.A
 	}
 	if approval.Kind == operationCommitImport {
 		return r.importPreview(ctx, approval, out)
+	}
+	if kind, registered := approvals.RegisteredExtensionKind(approval.Kind); registered {
+		return extensionPreview(approval, kind, out)
 	}
 	changes, covered, err := commercialChanges(approval)
 	if !covered {
@@ -167,6 +171,7 @@ func (r approvalPreviewReader) populateChanges(ctx context.Context, approval crm
 	if err != nil {
 		return nil, err
 	}
+	contextFields := maps.Clone(current)
 	out.State = previewIncompleteState
 	if err := r.stageChanges(ctx, approval, current, changes, out); err != nil {
 		if errors.Is(err, apperrors.ErrVersionSkew) {
@@ -190,6 +195,9 @@ func (r approvalPreviewReader) populateChanges(ctx context.Context, approval crm
 		return nil, err
 	}
 	markExecutionValues(approval.Kind, out.Changes)
+	if err := r.dealDecisionContext(ctx, approval, contextFields, changes, out); err != nil {
+		return nil, err
+	}
 	out.State = previewReadyState
 	if err := r.currentEvidence(ctx, approval, out); err != nil {
 		return nil, err

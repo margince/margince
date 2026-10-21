@@ -1,13 +1,14 @@
 import { useMutation } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, X } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { api } from "../../api/client";
 import { Button, Field, TextInput } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { IconAction } from "../../design-system/iconaction";
 import { Select } from "../../design-system/select";
-import { ordinalNumber } from "../../format/format";
-import { type Translator, useT } from "../../i18n";
+import { SortableList } from "../../design-system/sortablelist";
+import { formatNumber, ordinalNumber } from "../../format/format";
+import { type Translator, useLocale, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { entityLabel } from "./analytics.questions.vocab";
 import {
@@ -40,8 +41,9 @@ export function cardLabel(
 }
 
 /**
- * Sections of chart cards, edited with buttons and menus rather than by
- * dragging, so a keyboard and a screen reader can do every step.
+ * Sections of chart cards. A card is dragged by its handle or moved with the
+ * arrow keys on it. A menu moves it to another section, and buttons move a
+ * section. So a keyboard and a screen reader can do every step.
  */
 export function LayoutEditor({
   layout,
@@ -56,12 +58,21 @@ export function LayoutEditor({
   preview?: (choice: CardChoice) => ReactNode;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const hintId = useId();
+  const sections = useSectionKeys(layout.length);
+  const place = (position: number, count: number) => ({
+    position: formatNumber(position, locale),
+    total: formatNumber(count, locale),
+  });
   return (
     <div className="form-stack">
+      <span id={hintId} className="sr-only">
+        {t("reporting.cardOrderHint")}
+      </span>
       {layout.map((section, at) => (
         <fieldset
-          // biome-ignore lint/suspicious/noArrayIndexKey: a section has no id; its position is its name
-          key={at}
+          key={sections.keys[at]}
           className="form-stack reporting-layout-section"
         >
           <legend>
@@ -81,25 +92,46 @@ export function LayoutEditor({
               />
             )}
           </Field>
-          {section.cards.map((card, index) => (
-            <CardRow
-              key={card.id}
+          <SortableList
+            label={t("reporting.sectionN", { n: ordinalNumber(at + 1) })}
+            items={section.cards.map((card) => ({ key: card.id, card }))}
+            hintId={hintId}
+            onReorder={(keys) => onChange(edit.reorderCards(layout, at, keys))}
+            labels={{
+              handle: (item, position, count) =>
+                t("reporting.cardHandle", {
+                  chart: cardLabel(item.card, t),
+                  ...place(position, count),
+                }),
+              moved: (item, position, count) =>
+                t("reporting.cardMoved", {
+                  chart: cardLabel(item.card, t),
+                  ...place(position, count),
+                }),
+            }}
+            renderItem={(item) => (
+              <CardRow
+                layout={layout}
+                at={at}
+                index={section.cards.indexOf(item.card)}
+                card={item.card}
+                onChange={onChange}
+              />
+            )}
+          />
+          {layout.length > 1 && (
+            <SectionActions
               layout={layout}
               at={at}
-              index={index}
-              card={card}
-              onChange={onChange}
+              onMove={(step) => {
+                sections.move(at, step);
+                onChange(edit.moveSection(layout, at, step));
+              }}
+              onRemove={() => {
+                sections.remove(at);
+                onChange(edit.removeSection(layout, at));
+              }}
             />
-          ))}
-          {layout.length > 1 && (
-            <div>
-              <Button
-                variant="ghost"
-                onClick={() => onChange(edit.removeSection(layout, at))}
-              >
-                {t("reporting.removeSection", { n: ordinalNumber(at + 1) })}
-              </Button>
-            </div>
           )}
         </fieldset>
       ))}
@@ -114,11 +146,83 @@ export function LayoutEditor({
         <Button
           variant="ghost"
           disabled={layout.length >= MAX_SECTIONS}
-          onClick={() => onChange(edit.addSection(layout))}
+          onClick={() => {
+            sections.add();
+            onChange(edit.addSection(layout));
+          }}
         >
           {t("reporting.addSection")}
         </Button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * A key for each section while the editor is open. A section has no id, and a
+ * key by position would hand a moved section's focus and drag to the one that
+ * took its place. Keys move with their section; a layout of another length
+ * from outside gets fresh ones.
+ */
+function useSectionKeys(count: number) {
+  const fresh = (minted: number, length: number) => ({
+    keys: Array.from({ length }, (_, index) => `section-key-${minted + index}`),
+    minted: minted + length,
+  });
+  const [state, setState] = useState(() => fresh(0, count));
+  const current =
+    state.keys.length === count ? state : fresh(state.minted, count);
+  if (current !== state) setState(current);
+  const keep = (keys: string[]) => setState({ ...current, keys });
+  return {
+    keys: current.keys,
+    move: (at: number, step: -1 | 1) => {
+      const next = [...current.keys];
+      const [moving] = next.splice(at, 1);
+      if (moving) next.splice(at + step, 0, moving);
+      keep(next);
+    },
+    remove: (at: number) =>
+      keep(current.keys.filter((_, index) => index !== at)),
+    add: () =>
+      setState({
+        keys: [...current.keys, `section-key-${current.minted}`],
+        minted: current.minted + 1,
+      }),
+  };
+}
+
+// Moves a section up or down, or removes it and keeps its cards.
+function SectionActions({
+  layout,
+  at,
+  onMove,
+  onRemove,
+}: Readonly<{
+  layout: ReportingLayout;
+  at: number;
+  onMove: (step: -1 | 1) => void;
+  onRemove: () => void;
+}>) {
+  const t = useT();
+  const name = t("reporting.sectionN", { n: ordinalNumber(at + 1) });
+  return (
+    <div className="reporting-layout-buttons">
+      <IconAction
+        label={`${t("reporting.moveUp")}: ${name}`}
+        icon={<ArrowUp aria-hidden />}
+        disabled={at === 0}
+        onClick={() => onMove(-1)}
+      />
+      <IconAction
+        label={`${t("reporting.moveDown")}: ${name}`}
+        icon={<ArrowDown aria-hidden />}
+        disabled={at === layout.length - 1}
+        onClick={() => onMove(1)}
+      />
+      <Button variant="ghost" onClick={onRemove}>
+        {t("reporting.removeSection", { n: ordinalNumber(at + 1) })}
+      </Button>
     </div>
   );
 }
@@ -141,7 +245,6 @@ function CardRow({
 }>) {
   const t = useT();
   const name = cardLabel(card, t);
-  const count = layout[at]?.cards.length ?? 0;
   return (
     <div className="reporting-layout-card">
       <span className="reporting-layout-name">{name}</span>
@@ -177,18 +280,6 @@ function CardRow({
           }
         />
       )}
-      <IconAction
-        label={`${t("reporting.moveUp")}: ${name}`}
-        icon={<ArrowUp aria-hidden />}
-        disabled={index === 0}
-        onClick={() => onChange(edit.moveCard(layout, at, index, -1))}
-      />
-      <IconAction
-        label={`${t("reporting.moveDown")}: ${name}`}
-        icon={<ArrowDown aria-hidden />}
-        disabled={index === count - 1}
-        onClick={() => onChange(edit.moveCard(layout, at, index, 1))}
-      />
       <IconAction
         label={t("reporting.removeCard", { chart: name })}
         icon={<X aria-hidden />}

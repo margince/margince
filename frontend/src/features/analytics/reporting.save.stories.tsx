@@ -58,3 +58,22 @@ export const Customize: Story = {
     );
   },
 };
+
+/** Charts and order open: each card carries a handle to drag it or move it
+ *  with the arrow keys, and each section its own move buttons. */
+export const ChartsAndOrder: Story = {
+  ...Default,
+  play: async () => {
+    await screen.findByRole("dialog");
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Customize report" }),
+    );
+    await userEvent.click(
+      screen.getByText("Charts and order", { selector: ".disclosure-label" }),
+    );
+    await expect(
+      (await screen.findAllByRole("button", { name: /^Move .*, 1 of / }))
+        .length,
+    ).toBeGreaterThan(0);
+  },
+};

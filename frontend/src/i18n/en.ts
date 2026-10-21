@@ -808,6 +808,10 @@ export const en = {
   "reporting.restoreRevision": "Restore version {revision}",
   "reporting.restoreBlocked":
     "Publish or discard the draft before you restore an earlier version.",
+  "reporting.cardOrderHint":
+    "Drag a card by its handle, or focus the handle and press the up or down arrow.",
+  "reporting.cardHandle": "Move {chart}, {position} of {total}",
+  "reporting.cardMoved": "{chart} moved to {position} of {total}",
   "reporting.moveUp": "Move up",
   "reporting.moveDown": "Move down",
   "reporting.sectionN": "Section {n}",
@@ -1401,6 +1405,8 @@ export const en = {
   "brief.week.beforeHistory":
     "This week falls before the first records, so it has no figures to report.",
   "home.receipt.date": "Close date: {before} → {after}",
+  "home.receipt.dateUnconfirmed":
+    "Estimated close date: {before} → {after} (needs confirmation)",
   "home.receipt.undated": "No date",
   "home.receipt.confidence": "Updated forecast confidence",
   "home.receipt.forecast": "Forecast category changed",
@@ -1551,7 +1557,9 @@ export const en = {
   "magic.why.forecast_review":
     "The deal needs review after a period without progress.",
   "magic.why.forecast_date":
-    "The forecast date was estimated from pipeline progress.",
+    "Unconfirmed estimate; no usable recorded basis to show.",
+  "magic.why.forecast_date_basis":
+    "Unconfirmed estimate from {sample_count} won deals: median {median_days} days per stage, {remaining_stages} stages remaining.",
   "magic.undescribed": "Activity not described",
   "brief.readings.risk": "Flagged pipeline value",
   "theme.toDark": "Dark theme",
@@ -5141,6 +5149,9 @@ export const en = {
   "brief.glance.night": "Working late, {name}.",
   "brief.glance.nightAnon": "Working late.",
   "brief.glance.introWeekly": "Review results and plan your next steps.",
+  "brief.glance.attention_one": "1 item needs attention.",
+  "brief.glance.attention_other": "{count} items need attention.",
+  "worklist.source.failed_approval": "Approved but not run",
   "brief.glance.intro": "Your day at a glance.",
   "brief.panel.decisions": "Approvals",
   // The rail's own panel titles, after the rename that made each claim exactly
@@ -15849,6 +15860,7 @@ export const en = {
     "A commitment from a conversation is waiting for your word",
   "magic.action.approval_capture_counterparty":
     "{target} wrote to you. Keep them as a contact?",
+  "magic.action.approval_summary": "Proposed: {summary}",
   "magic.action.approval_pending": "A {kind} proposal is waiting for your word",
   "magic.action.capture_reauth_required":
     "{provider} needs to be connected again",
@@ -15867,7 +15879,6 @@ export const en = {
   "magic.consequence.lead_disqualified": "The lead has left the pipeline.",
   "magic.consequence.automation_did_nothing":
     "Nothing the rule promised has happened.",
-  "magic.consequence.awaits_your_decision": "Nothing happens until you decide.",
   "magic.consequence.capture_not_collecting":
     "Nothing is being collected from this source.",
   "magic.consequence.capture_may_be_incomplete":

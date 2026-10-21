@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/auditentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -98,7 +99,7 @@ func deleteModelRate(ctx context.Context, tx pgx.Tx, key ModelRateKey) error {
 	// One ledger row per price the entry held, in the writer's own image, so the
 	// history shows a removed price in the fields it was entered under.
 	for _, r := range removed {
-		if _, err := storekit.Audit(ctx, tx, "erase", "ai_model_rate", r.id, r.image, nil); err != nil {
+		if _, err := storekit.Audit(ctx, tx, "erase", auditentity.ModelRate, r.id, r.image, nil); err != nil {
 			return fmt.Errorf("audit ai_model_rate erase: %w", err)
 		}
 	}

@@ -141,3 +141,38 @@ it.each(LOCALES)(
     }
   },
 );
+
+it.each(LOCALES)(
+  "shows the unchanged commercial context beside a stage decision in %s",
+  (locale) => {
+    const rows = commercialPreviewDisplay(
+      {
+        version: 2,
+        state: "ready",
+        reviewer_reason: "requested_decider",
+        changes: [],
+        details: [
+          {
+            field: "company_id",
+            value: { kind: "reference", text: "Harbor account" },
+          },
+          { field: "owner_id", value: { kind: "owner", text: "Anna Weber" } },
+          {
+            field: "amount_minor",
+            value: { kind: "money", text: "12500000", currency: "EUR" },
+          },
+        ],
+      },
+      (key, params) => translate(locale, key, params),
+      locale,
+    );
+    expect(rows.some((row) => row.value === "Harbor account")).toBe(true);
+    expect(rows.some((row) => row.value === "Anna Weber")).toBe(true);
+    const amount = rows.find(
+      (row) => row.label === translate(locale, "history.field.amount_minor"),
+    );
+    expect(amount?.value).toMatch(/125[.,\s]?000/);
+    expect(amount?.value).toMatch(/€|EUR/);
+    expect(amount?.comparison).toBeNull();
+  },
+);
