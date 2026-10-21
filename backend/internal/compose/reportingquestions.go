@@ -118,11 +118,16 @@ func (q reportingQuestions) Capture(ctx context.Context, tx pgx.Tx, question crm
 	return out, nil
 }
 
+// maxFilteredGroups bounds the groups a capture filters its records to. Each
+// one adds a comparison per record read, so past it the listing reads the
+// whole population, which can only refuse to keep an answer.
+const maxFilteredGroups = 50
+
 // shownGroups narrows a capture to the records behind the rows the answer
 // shows. A record behind a row the floor withheld, or one past the question's
 // row limit, vouches for nothing the edition keeps.
 func shownGroups(query analyticsquery.Query, rows []map[string]any) analyticsquery.SourceFilter {
-	if len(query.GroupBy) == 0 {
+	if len(query.GroupBy) == 0 || len(rows) > maxFilteredGroups {
 		return analyticsquery.SourceFilter{}
 	}
 	groups := [][]any{}

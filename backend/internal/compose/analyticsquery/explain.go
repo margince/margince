@@ -148,7 +148,7 @@ func CompileExplain(in Explain, schema Schema, scope ScopeClauses) (ExplainPlan,
 // SourceFilter narrows a source listing. Only restricts it to those record
 // ids, so a kept answer's records can be judged again under a later reader.
 // Groups restricts it to the records of those groups, one key per GroupBy
-// field each: nil leaves every group in, and an empty list lists nothing.
+// field each. Nil leaves every group in. An empty list lists nothing.
 type SourceFilter struct {
 	Only   []string
 	Groups *[][]any
@@ -157,7 +157,7 @@ type SourceFilter struct {
 // CompileSources renders every record behind an answer, each with the group
 // keys that place it in a row. It reads the answer's own row set, as an
 // explanation does. The caller passes one past its bound as limit, to tell a
-// full list from a cut one; the order by id makes a cut list the same twice.
+// full list from a cut one. The order by id makes a cut list the same twice.
 func CompileSources(q Query, schema Schema, scope ScopeClauses, filter SourceFilter, limit int) (ExplainPlan, error) {
 	if scope == nil {
 		return ExplainPlan{}, &RefusalError{

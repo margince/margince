@@ -9,8 +9,8 @@ import (
 	"testing"
 )
 
-// A source listing is narrowed three ways, and they must not blur: no group
-// filter lists every group, the shown groups list theirs, and a grouped answer
+// A source listing is narrowed three ways, and they must not blur. No group
+// filter lists every group, and the shown groups list theirs. A grouped answer
 // that shows no row lists nothing.
 func TestASourceListingReadsOnlyTheGroupsItIsGiven(t *testing.T) {
 	t.Parallel()
