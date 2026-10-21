@@ -102,7 +102,7 @@ function MagicLineRow({
         {sentence
           ? t(sentence, readableValues(line.summary.values, t))
           : t("magic.undescribed")}{" "}
-        <LineSubject line={line} since={since} />
+        <LineSubject line={line} since={since} />{" "}
         {detail.length > 0 && (
           <span className="t-caption">
             {detail.map((part) => (
