@@ -9,8 +9,8 @@ import {
 import { INTRO_STATUS_LABELS } from "../../format/introstatus";
 import type { Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { historyFieldLabel } from "../../lib/historyfieldlabels";
 import { FACT_CATEGORY_LABELS, FACT_FIELD_LABELS } from "../../lib/factview";
+import { historyFieldLabel } from "../../lib/historyfieldlabels";
 
 type ProviderRun = components["schemas"]["ProviderRun"];
 const RUN_LABELS: Record<ProviderRun["state"], MessageKey> = {
