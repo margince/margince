@@ -268,8 +268,8 @@ Without permission you see "You do not have permission to log activities on this
 Also called: add a note, record a call, write a comment.
 
 ### How do I add a task on a record?
-To add a task in Margince, open the contact, company, lead or deal and choose **Add task** in its header. It opens the **Log activity** form set to the Task type.
-Enter a **Subject** (required), a **Due date** and an **Assignee** (or leave it **Unassigned**), then choose **Log**. Open tasks have **Done** and **Snooze 1 day**.
+To add a task in Margince, open the contact, company, lead or deal and choose **Add task** in its header.
+Enter a **Subject** (required), a **Due date** and an **Assignee** (or **Unassigned**), then choose **Log**. History labels tasks **Open** or **Completed**; the company's **Tasks** tab lists open tasks only. Choose **Open task** for **Done** and **Snooze 1 day**.
 Also called: create a to-do, follow-up, reminder.
 
 One activity can link to many records at once, such as a contact and a deal. Everyone can see one you log with no links. A *captured* message with nothing to link to stays held, because nothing has judged who it belongs to.

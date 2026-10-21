@@ -6038,6 +6038,7 @@ export const de = {
   "tasks.openSource": "Original öffnen",
   "tasks.detailLoading": "Aufgabe wird geladen…",
   "tasks.isDone": "Abgeschlossen",
+  "tasks.isOpen": "Offen",
   "tasks.logged": "Erfasst",
 
   "analytics.sub":

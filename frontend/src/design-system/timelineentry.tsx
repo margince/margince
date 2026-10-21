@@ -55,6 +55,7 @@ export type TimelineEntry = {
   // hold two orderings in their head.
   kind: "email" | "meeting" | "note" | "call" | "task" | "message" | "change";
   title: string;
+  isDone?: boolean;
   atIso: string;
   provenance: Provenance;
   commitmentReviewCount?: number;
@@ -334,4 +335,15 @@ export function CommitmentReviewFlag({
       })}
     </Badge>
   ) : null;
+}
+
+export function TaskStateFlag({ entry }: Readonly<{ entry: TimelineEntry }>) {
+  const t = useT();
+  if (entry.kind !== "task" || entry.withheld || entry.isDone === undefined)
+    return null;
+  return (
+    <Badge tone={entry.isDone ? "success" : "default"}>
+      {t(entry.isDone ? "tasks.isDone" : "tasks.isOpen")}
+    </Badge>
+  );
 }

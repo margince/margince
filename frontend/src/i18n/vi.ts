@@ -5893,6 +5893,7 @@ export const vi = {
   "tasks.openSource": "Mở bản gốc",
   "tasks.detailLoading": "Đang tải việc cần làm…",
   "tasks.isDone": "Đã hoàn tất",
+  "tasks.isOpen": "Chưa hoàn tất",
   "tasks.logged": "Đã ghi nhận",
 
   "analytics.sub":

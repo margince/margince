@@ -159,3 +159,16 @@ export const InvitationNeedsAttentionDark: Story = {
   ...InvitationNeedsAttention,
   globals: { theme: "dark" },
 };
+
+export const OpenTask: Story = {
+  args: { activity: { ...BASE, kind: "task", is_done: false } },
+};
+export const CompletedTask: Story = {
+  args: { activity: { ...BASE, kind: "task", is_done: true } },
+};
+export const OpenTaskDark: Story = { ...OpenTask, globals: { theme: "dark" } };
+
+export const CompletedTaskDark: Story = {
+  ...CompletedTask,
+  globals: { theme: "dark" },
+};

@@ -130,6 +130,7 @@ export function activityTimeline(
     return {
       id: activity.id,
       kind: timelineKind(activity.kind),
+      isDone: activity.is_done,
       commitmentReviewCount:
         activity.content_state === "withheld"
           ? 0

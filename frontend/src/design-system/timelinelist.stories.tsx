@@ -359,3 +359,25 @@ export const CommitmentsToReviewDark: Story = {
   ...CommitmentsToReview,
   globals: { theme: "dark" },
 };
+
+export const TaskStates: Story = {
+  args: {
+    zone: ZONE,
+    entries: [
+      entry("task-open", "2026-08-14T09:00:00Z", {
+        kind: "task",
+        title: "Send the revised quote",
+        isDone: false,
+      }),
+      entry("task-done", "2026-08-13T09:00:00Z", {
+        kind: "task",
+        title: "Confirm the meeting",
+        isDone: true,
+      }),
+    ],
+  },
+};
+export const TaskStatesDark: Story = {
+  ...TaskStates,
+  globals: { theme: "dark" },
+};

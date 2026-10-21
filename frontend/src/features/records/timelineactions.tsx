@@ -18,7 +18,7 @@ import { Button } from "../../design-system/atoms";
 import { ChoiceList } from "../../design-system/choicelist";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { useT } from "../../i18n";
-import { entityTimelineKeys } from "../../lib/activitykeys";
+import { entityTimelineKeys, taskWriteKeys } from "../../lib/activitykeys";
 import { useMessageAudience } from "../../lib/audienceservice";
 import { problemMessageOf } from "../../lib/problem";
 import { navigate } from "../../lib/router";
@@ -39,6 +39,7 @@ import {
   RelinkModal,
 } from "../mail/compose";
 import { ActivityFilesAction } from "./activityfiles";
+import { MoveButton } from "./movebutton";
 import { ProjectFilingAction } from "./projectfiling";
 
 type Activity = components["schemas"]["Activity"];
@@ -83,15 +84,27 @@ export function TimelineActions({
   const [relink, setRelink] = useState(false);
   return (
     <>
-      <ChannelReplyAction
-        activityId={activity.id}
-        kind={activity.kind}
-        channelProvider={activity.channel_provider ?? undefined}
-        entityType={entityType}
-        entityId={entityId}
-        contactId={contactId}
-        contentWithheld={activity.content_state === "withheld"}
-      />
+      {activity.kind === "task" ? (
+        activity.content_state !== "withheld" && (
+          <MoveButton
+            move={{
+              action: "open_task",
+              arguments: { activity_id: activity.id },
+            }}
+            taskRefreshKeys={taskWriteKeys(entityType, entityId)}
+          />
+        )
+      ) : (
+        <ChannelReplyAction
+          activityId={activity.id}
+          kind={activity.kind}
+          channelProvider={activity.channel_provider ?? undefined}
+          entityType={entityType}
+          entityId={entityId}
+          contactId={contactId}
+          contentWithheld={activity.content_state === "withheld"}
+        />
+      )}
       {activity.invitation_status && activity.content_state !== "withheld" && (
         <Button
           onClick={() =>

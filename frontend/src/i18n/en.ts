@@ -6073,6 +6073,7 @@ export const en = {
   "tasks.openSource": "Open original",
   "tasks.detailLoading": "Loading task…",
   "tasks.isDone": "Completed",
+  "tasks.isOpen": "Open",
   "tasks.logged": "Logged",
 
   "analytics.sub":

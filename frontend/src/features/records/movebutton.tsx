@@ -1,21 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Performing the next step a producer already decided.
-//
-// TWO surfaces draw the same move. The deal status card names it beside its
-// reason and evidence; the worklist row names it on a queue line. They differ
-// in what they say ABOUT the move and not in what pressing it does, so the
-// button lives here and both mount it — a second implementation would be two
-// answers to "what does Create task do", and they would drift until a rep
-// pressed the same words on two screens and got different results.
-//
-// Typed on the pair both wire shapes carry rather than on either of them.
-// DealStatusCardMove requires a reason and evidence, WorklistMove carries
-// neither, and nothing here reads either one: the verb needs its action and its
-// operand and nothing else.
+// The deal card, worklist and record history share task actions so completion
+// and Undo follow the same write path wherever a task is opened.
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  type QueryKey,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { ListChecks, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { api } from "../../api/client";
@@ -87,6 +80,7 @@ export function MoveButton({
   dealId,
   contactId,
   move,
+  taskRefreshKeys = [],
 }: Readonly<{
   // The deal whose card to refresh after the verb writes, where the caller has
   // one. OPTIONAL because the worklist does not: a queue row's move may belong
@@ -96,6 +90,7 @@ export function MoveButton({
   dealId?: string;
   contactId?: string;
   move: PerformableMove;
+  taskRefreshKeys?: readonly QueryKey[];
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
@@ -108,6 +103,7 @@ export function MoveButton({
   const [taskOpen, setTaskOpen] = useState(false);
   const canUpdateTask = useCan("activity", "update");
   const taskUpdate = useTaskUpdate([
+    ...taskRefreshKeys,
     ...(dealId ? [["deal-status", dealId]] : []),
     ...(contactId ? [["contact360", contactId]] : []),
     ["tasks"],
