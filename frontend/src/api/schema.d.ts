@@ -9094,8 +9094,8 @@ export interface paths {
          *     carries none, because "no tags" is a claim about the record and this caller cannot
          *     make it.
          *
-         *     An archived record answers 404, as its lists do: archiving takes the assignments off,
-         *     so an empty list would claim the record carried no tags.
+         *     An archived record answers 404, as its lists do: it is closed to reads of what hangs off
+         *     it, and its tags come back when it is restored.
          */
         get: operations["getRecordTags"];
         put?: never;
