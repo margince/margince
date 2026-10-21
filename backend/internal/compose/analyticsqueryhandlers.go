@@ -129,11 +129,15 @@ func (h analyticsQueryHandlers) ListReportRuns(
 		after = &cursor
 	}
 	var (
-		runs []ReportRunSummary
-		more bool
+		runs   []ReportRunSummary
+		more   bool
+		schema analyticsquery.Schema
 	)
 	if err := h.db.Tx(r.Context(), func(tx pgx.Tx) error {
 		var err error
+		if schema, _, err = AnalyticsSchemaIn(r.Context(), tx); err != nil {
+			return err
+		}
 		runs, more, err = ListReportRuns(r.Context(), tx, after, storekit.ClampLimit(params.Limit))
 		return err
 	}); err != nil {
@@ -142,12 +146,14 @@ func (h analyticsQueryHandlers) ListReportRuns(
 	}
 	out := crmcontracts.ReportRunList{Data: make([]crmcontracts.ReportRunSummary, 0, len(runs)), Page: crmcontracts.PageInfo{HasMore: more}}
 	for _, run := range runs {
-		asked, err := wireFromQuery(run.Query)
+		summary, askable, err := runSummary(run, schema)
 		if err != nil {
 			httperr.Write(w, r, err)
 			return
 		}
-		out.Data = append(out.Data, crmcontracts.ReportRunSummary{Id: openapi_types.UUID(run.ID), Query: asked, AskedAt: run.AskedAt})
+		if askable {
+			out.Data = append(out.Data, summary)
+		}
 	}
 	if more {
 		last := runs[len(runs)-1]
@@ -159,6 +165,25 @@ func (h analyticsQueryHandlers) ListReportRuns(
 		out.Page.NextCursor = &next
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// runSummary lists a saved question by its shape alone. Its filter values and
+// scope name records and teams, so they stay out. A question the caller's
+// vocabulary no longer admits is not listed; the page keeps its place by the
+// last row read, listed or not.
+func runSummary(run ReportRunSummary, schema analyticsquery.Schema) (crmcontracts.ReportRunSummary, bool, error) {
+	shape := analyticsquery.Query{Entity: run.Query.Entity, GroupBy: run.Query.GroupBy, Measures: run.Query.Measures, Limit: run.Query.Limit}
+	if shape.Validate(schema) != nil {
+		return crmcontracts.ReportRunSummary{}, false, nil
+	}
+	asked, err := wireFromQuery(shape)
+	if err != nil {
+		return crmcontracts.ReportRunSummary{}, false, err
+	}
+	return crmcontracts.ReportRunSummary{
+		Id: openapi_types.UUID(run.ID), Entity: asked.Entity, GroupBy: asked.GroupBy, Measures: asked.Measures,
+		Limit: asked.Limit, Filtered: len(run.Query.Filters) > 0, AskedAt: run.AskedAt,
+	}, true, nil
 }
 
 // GetReportRun implements GET /analytics/runs/{run_id}.

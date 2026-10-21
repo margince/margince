@@ -2,7 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useInfiniteQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { api } from "../../api/client";
+import type { components } from "../../api/schema";
 import { Button, EmptyState } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -43,10 +45,32 @@ export function useSavedQuestions() {
   });
 }
 
+export type SavedQuestion = components["schemas"]["ReportRunSummary"];
+
+/** The question a card copies from a saved one: its shape, never a filter. */
+export function savedQuestionShape(run: SavedQuestion): AnalyticsQuery {
+  return {
+    entity: run.entity,
+    group_by: run.group_by,
+    measures: run.measures,
+    limit: run.limit,
+  };
+}
+
+/** Every saved question of the reader's, for a picker that offers them all. */
+export function useAllSavedQuestions() {
+  const saved = useSavedQuestions();
+  const { hasNextPage, isFetchingNextPage, fetchNextPage } = saved;
+  useEffect(() => {
+    if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  return (saved.data?.pages ?? []).flatMap((page) => page.data);
+}
+
 /** A saved question named by what it asks, since it has no name of its own. */
 export function savedQuestionLabel(
   t: Translator,
-  query: AnalyticsQuery,
+  query: Pick<AnalyticsQuery, "entity" | "group_by" | "measures">,
   fields: CustomLabels,
 ): string {
   const parts = [entityLabel(t, query.entity)];
@@ -93,7 +117,7 @@ export function SavedQuestions() {
                           className="cell-link"
                           onClick={() => openSavedQuestion(run.id)}
                         >
-                          {savedQuestionLabel(t, run.query, fields)}
+                          {savedQuestionLabel(t, run, fields)}
                         </button>
                       ),
                     },

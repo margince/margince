@@ -46385,13 +46385,17 @@ type ReportRunList struct {
 	Page PageInfo           `json:"page"`
 }
 
-// ReportRunSummary One saved question of the caller's, without its answer.
+// ReportRunSummary One saved question of the caller's, without its answer, and without its filter values and scope: those name records and teams, and the list does not judge them again. Open the question to have it asked under the caller's current authority.
 type ReportRunSummary struct {
-	AskedAt time.Time          `json:"asked_at"`
-	Id      openapi_types.UUID `json:"id"`
+	AskedAt time.Time `json:"asked_at"`
+	Entity  string    `json:"entity"`
 
-	// Query One question, in the vocabulary the schema returned.
-	Query AnalyticsQuery `json:"query"`
+	// Filtered Whether the question narrows its population with filters.
+	Filtered bool               `json:"filtered"`
+	GroupBy  *[]string          `json:"group_by,omitempty"`
+	Id       openapi_types.UUID `json:"id"`
+	Limit    *int               `json:"limit,omitempty"`
+	Measures []AnalyticsMeasure `json:"measures"`
 }
 
 // ReportScope defines model for ReportScope.

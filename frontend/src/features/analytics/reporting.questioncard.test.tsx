@@ -262,7 +262,7 @@ it("adds one of the reader's own saved questions from the list, as from its link
   await pickOption(
     user,
     await screen.findByRole("combobox", { name: "Your saved questions" }),
-    /· Count$/,
+    /· Count · /,
   );
   await user.click(screen.getByRole("button", { name: "Save report" }));
   await waitFor(() => expect(write).toHaveBeenCalled());
@@ -275,8 +275,8 @@ it("adds one of the reader's own saved questions from the list, as from its link
               expect.objectContaining({
                 kind: "question",
                 question: {
-                  entity: saved?.query.entity,
-                  measures: saved?.query.measures,
+                  entity: saved?.entity,
+                  measures: saved?.measures,
                 },
               }),
             ]),
@@ -285,4 +285,36 @@ it("adds one of the reader's own saved questions from the list, as from its link
       }),
     }),
   );
+});
+
+it("offers no filtered saved question, and none the report already holds", async () => {
+  const user = userEvent.setup({ delay: null });
+  installFetchStub({
+    ...reportingStoryRoutes(),
+    "GET /analytics/runs": () => jsonResponse(SAVED_RUNS),
+  });
+  render(
+    <StoryProviders>
+      <SaveReportingDialog
+        selection={reportingStoryReport.selection}
+        report={reportingStoryReport}
+        onClose={() => {}}
+        onSaved={() => {}}
+      />
+    </StoryProviders>,
+  );
+  await user.click(
+    screen.getByText("Charts and order", { selector: ".disclosure-label" }),
+  );
+  const picker = await screen.findByRole("combobox", {
+    name: "Your saved questions",
+  });
+  await user.click(picker);
+  expect(screen.getAllByRole("option")).toHaveLength(2);
+  await user.keyboard("{Escape}");
+  await pickOption(user, picker, /· Count · /);
+  await user.click(
+    screen.getByRole("combobox", { name: "Your saved questions" }),
+  );
+  expect(screen.getAllByRole("option")).toHaveLength(1);
 });

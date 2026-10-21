@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -49,11 +50,13 @@ func listSavedQuestions(reader context.Context, t *testing.T, e *forecastEnv) []
 	return nil
 }
 
-// saveQuestions saves count questions as asker in one transaction, so they
+// openDeals is the question the tests save, counted over every open deal.
+var openDeals = analyticsquery.Query{Entity: "open-deals-per-company", Measures: []analyticsquery.Measure{{Fn: analyticsquery.CountAll}}}
+
+// saveQuestions saves count copies of q as asker in one transaction, so they
 // share one created_at.
-func saveQuestions(asker context.Context, t *testing.T, e *forecastEnv, count int) []string {
+func saveQuestions(asker context.Context, t *testing.T, e *forecastEnv, q analyticsquery.Query, count int) []string {
 	t.Helper()
-	q := analyticsquery.Query{Entity: "open-deals-per-company", Measures: []analyticsquery.Measure{{Fn: analyticsquery.CountAll}}}
 	saved := []string{}
 	if err := InstallationDB(e.Pool).Tx(asker, func(tx pgx.Tx) error {
 		for range count {
@@ -80,8 +83,8 @@ func TestASavedQuestionIsListedForItsAskerOnly(t *testing.T) {
 	e := setupForecast(t)
 	mine := e.ownLensRepCtx(e.Rep1)
 	theirs := e.ownLensRepCtx(e.Rep3)
-	saved := saveQuestions(mine, t, e, 3)
-	other := saveQuestions(theirs, t, e, 1)
+	saved := saveQuestions(mine, t, e, openDeals, 3)
+	other := saveQuestions(theirs, t, e, openDeals, 1)
 
 	listed := listSavedQuestions(mine, t, e)
 	if len(listed) != 3 {
@@ -100,5 +103,32 @@ func TestASavedQuestionIsListedForItsAskerOnly(t *testing.T) {
 	}
 	if got := listSavedQuestions(theirs, t, e); len(got) != 1 || got[0] != other[0] {
 		t.Fatalf("Rep3's list is %v, want only their own %v", got, other)
+	}
+}
+
+// The list gives a saved question's shape and says it was filtered, and never
+// the filter's value, which can name a record its asker no longer reads.
+func TestASavedQuestionsFilterValueIsNotListed(t *testing.T) {
+	e := setupForecast(t)
+	mine := e.ownLensRepCtx(e.Rep1)
+	filtered := openDeals
+	filtered.Filters = []analyticsquery.Filter{{Field: "currency", Op: analyticsquery.OpEq, Value: "CHF"}}
+	saveQuestions(mine, t, e, filtered, 1)
+
+	response := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodGet, "/v1/analytics/runs", nil).WithContext(mine)
+	analyticsQueryHandlers{db: InstallationDB(e.Pool)}.ListReportRuns(response, request, crmcontracts.ListReportRunsParams{})
+	if response.Code != http.StatusOK {
+		t.Fatalf("list: status %d: %s", response.Code, response.Body.String())
+	}
+	if strings.Contains(response.Body.String(), "CHF") {
+		t.Fatalf("the list carries the filter value: %s", response.Body.String())
+	}
+	var page crmcontracts.ReportRunList
+	if err := json.Unmarshal(response.Body.Bytes(), &page); err != nil {
+		t.Fatal(err)
+	}
+	if len(page.Data) != 1 || !page.Data[0].Filtered || page.Data[0].Entity != openDeals.Entity {
+		t.Fatalf("the list reads %+v, want the one question, marked filtered", page.Data)
 	}
 }

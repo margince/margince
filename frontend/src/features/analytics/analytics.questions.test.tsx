@@ -97,7 +97,7 @@ describe("the Questions section", () => {
       name: "Your saved questions",
     });
     const rows = within(list).getAllByRole("button");
-    expect(rows).toHaveLength(2);
+    expect(rows).toHaveLength(3);
     await user.click(rows[0] as HTMLElement);
     expect(globalThis.location.hash).toContain("run-1");
   });

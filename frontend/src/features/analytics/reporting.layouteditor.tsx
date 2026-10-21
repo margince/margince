@@ -8,11 +8,14 @@ import { IconAction } from "../../design-system/iconaction";
 import { Select } from "../../design-system/select";
 import { SortableList } from "../../design-system/sortablelist";
 import { formatNumber, ordinalNumber } from "../../format/format";
+import { formatDate } from "../../format/format.dates";
 import { type Translator, useLocale, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
+import { useRecordZone } from "../../lib/recordzone";
 import {
   savedQuestionLabel,
-  useSavedQuestions,
+  savedQuestionShape,
+  useAllSavedQuestions,
 } from "./analytics.questions.saved";
 import { customLabels, entityLabel } from "./analytics.questions.vocab";
 import { useAnalyticsSchema } from "./analytics.schema";
@@ -373,13 +376,23 @@ function AddQuestion({
   // question, and a filter value can name a record they may not open.
   const [filtered, setFiltered] = useState(false);
   const runId = runIdOf(link);
-  const saved = useSavedQuestions();
+  const saved = useAllSavedQuestions();
+  const { locale } = useLocale();
+  const zone = useRecordZone();
   const schema = useAnalyticsSchema();
   const fields = customLabels(t, schema.data?.entities ?? []);
-  // A filtered one is left out here for the reason it is refused by link.
-  const pickable = (saved.data?.pages ?? [])
-    .flatMap((page) => page.data)
-    .filter((run) => !run.query.filters?.length);
+  // A filtered one is left out for the reason it is refused by link, and one
+  // the report already holds so it is not placed twice.
+  const placed = new Set(
+    layout
+      .flatMap((section) => section.cards)
+      .flatMap((card) => (card.question ? [sameQuestion(card.question)] : [])),
+  );
+  const pickable = saved.filter(
+    (run) =>
+      !run.filtered &&
+      !placed.has(sameQuestion(cardQuestion(savedQuestionShape(run)))),
+  );
   const read = useMutation({
     mutationFn: async (id: string) =>
       unwrap(
@@ -407,12 +420,14 @@ function AddQuestion({
           placeholder={t("reporting.questionPickNone")}
           options={pickable.map((run) => ({
             value: run.id,
-            label: savedQuestionLabel(t, run.query, fields),
+            label: `${savedQuestionLabel(t, run, fields)} · ${formatDate(run.asked_at, locale, zone)}`,
           }))}
           onChange={(id) => {
             const run = pickable.find((candidate) => candidate.id === id);
             if (run)
-              onChange(edit.addQuestion(layout, cardQuestion(run.query)));
+              onChange(
+                edit.addQuestion(layout, cardQuestion(savedQuestionShape(run))),
+              );
           }}
         />
       )}
@@ -444,4 +459,14 @@ function AddQuestion({
       </div>
     </div>
   );
+}
+
+// A card's question as a key, so one already placed is not offered again.
+function sameQuestion(question: NonNullable<Card["question"]>): string {
+  return JSON.stringify([
+    question.entity,
+    question.group_by ?? [],
+    question.measures,
+    question.limit ?? null,
+  ]);
 }

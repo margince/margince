@@ -26554,8 +26554,9 @@ paths:
       security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: The caller's own saved questions, newest first.
       description: |
-        Each question the caller saved, with when they saved it. Only the question is listed:
-        the stored rows stay unserved, and opening one re-asks it through
+        Each question the caller saved and may still ask, with when they saved it. Only the
+        question's shape is listed: its population, groupings, measures and row limit. The
+        stored rows, filter values and scope stay unserved, and opening one re-asks it through
         `/analytics/runs/{run_id}` under the caller's authority.
       x-agent-access: human-only
       parameters:
@@ -52162,11 +52163,22 @@ components:
       additionalProperties: false
     ReportRunSummary:
       type: object
-      description: One saved question of the caller's, without its answer.
-      required: [id, query, asked_at]
+      description: >-
+        One saved question of the caller's, without its answer, and without its filter values
+        and scope: those name records and teams, and the list does not judge them again. Open
+        the question to have it asked under the caller's current authority.
+      required: [id, entity, measures, filtered, asked_at]
       properties:
         id: { type: string, format: uuid }
-        query: { $ref: '#/components/schemas/AnalyticsQuery' }
+        entity: { type: string }
+        group_by:
+          type: array
+          items: { type: string }
+        measures:
+          type: array
+          items: { $ref: '#/components/schemas/AnalyticsMeasure' }
+        limit: { type: integer }
+        filtered: { type: boolean, description: Whether the question narrows its population with filters. }
         asked_at: { type: string, format: date-time }
       additionalProperties: false
     ReportRunList:

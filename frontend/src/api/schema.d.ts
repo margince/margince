@@ -18118,8 +18118,9 @@ export interface paths {
         };
         /**
          * The caller's own saved questions, newest first.
-         * @description Each question the caller saved, with when they saved it. Only the question is listed:
-         *     the stored rows stay unserved, and opening one re-asks it through
+         * @description Each question the caller saved and may still ask, with when they saved it. Only the
+         *     question's shape is listed: its population, groupings, measures and row limit. The
+         *     stored rows, filter values and scope stay unserved, and opening one re-asks it through
          *     `/analytics/runs/{run_id}` under the caller's authority.
          */
         get: operations["listReportRuns"];
@@ -38239,11 +38240,16 @@ export interface components {
             /** @description The group floor that judged the ORIGINAL answer. Reported, never applied — this read is floored by the installation's current setting. Two runs served under different floors make different promises about what is missing. */
             stored_floor: number;
         };
-        /** @description One saved question of the caller's, without its answer. */
+        /** @description One saved question of the caller's, without its answer, and without its filter values and scope: those name records and teams, and the list does not judge them again. Open the question to have it asked under the caller's current authority. */
         ReportRunSummary: {
             /** Format: uuid */
             id: string;
-            query: components["schemas"]["AnalyticsQuery"];
+            entity: string;
+            group_by?: string[];
+            measures: components["schemas"]["AnalyticsMeasure"][];
+            limit?: number;
+            /** @description Whether the question narrows its population with filters. */
+            filtered: boolean;
             /** Format: date-time */
             asked_at: string;
         };
