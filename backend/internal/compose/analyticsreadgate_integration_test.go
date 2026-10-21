@@ -46,7 +46,7 @@ func TestEveryAnalyticsReaderRequiresThePopulationGrant(t *testing.T) {
 			return err
 		}},
 		{"kept answer sources", func(ctx context.Context, tx pgx.Tx) error {
-			_, _, err := analyticsSources(ctx, tx, query, nil)
+			_, _, err := analyticsSources(ctx, tx, query, analyticsquery.SourceFilter{})
 			return err
 		}},
 	} {
