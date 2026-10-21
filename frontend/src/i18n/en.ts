@@ -2683,8 +2683,7 @@ export const en = {
   "consent.sourceConfirmDetails":
     "confirmed by the contact on the details link",
   "consent.sourceConsentLink": "confirmed by the contact on the consent link",
-  "consent.sourcePreferenceCenter":
-    "set by the contact on the preference page",
+  "consent.sourcePreferenceCenter": "set by the contact on the preference page",
   "consent.sourcePublicBooking": "given on the booking page",
   "consent.sourceMerge": "carried over in a merge",
   "consent.sourcePromotion": "carried over from a lead",

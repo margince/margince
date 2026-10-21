@@ -2696,7 +2696,8 @@ export const de = {
   "consent.sourceConfirmDetails": "vom Kontakt über den Datenlink bestätigt",
   "consent.sourceConsentLink":
     "vom Kontakt über den Einwilligungslink bestätigt",
-  "consent.sourcePreferenceCenter": "vom Kontakt auf der Einstellungsseite gesetzt",
+  "consent.sourcePreferenceCenter":
+    "vom Kontakt auf der Einstellungsseite gesetzt",
   "consent.sourcePublicBooking": "auf der Buchungsseite erteilt",
   "consent.sourceMerge": "bei einer Zusammenführung übernommen",
   "consent.sourcePromotion": "von einem Lead übernommen",
