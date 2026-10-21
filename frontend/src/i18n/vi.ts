@@ -4417,7 +4417,7 @@ export const vi = {
   "deal.timeline.empty": "Chưa có hoạt động nào trên deal này.",
   "legalEntities.title": "Pháp nhân",
   "legalEntities.sub":
-    "Các công ty mà bạn giao dịch dưới tên đó. Đồng nghiệp chưa được gán sẽ làm việc cho pháp nhân mặc định, vốn lấy tên, địa chỉ và logo từ công ty ở trên.",
+    "Các pháp nhân mà công ty bạn dùng để giao dịch. Đồng nghiệp chưa được gán sẽ làm việc cho pháp nhân mặc định, vốn lấy tên, địa chỉ và logo từ công ty ở trên.",
   "legalEntities.loading": "Đang tải pháp nhân…",
   "legalEntities.addOpen": "Pháp nhân mới",
   "legalEntities.addTitle": "Pháp nhân mới",
