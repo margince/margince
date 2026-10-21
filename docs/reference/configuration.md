@@ -320,11 +320,11 @@ admin can also change under Settings.
 |---|---|---|---|---|---|---|
 | `email.enabled` | `MARGINCE_EMAIL_ENABLED` | — | `bool` | `false` | api, worker | Send the installation's own mail through the SMTP relay below; needs `--public-base-url`. |
 | `email.from_address` | `MARGINCE_EMAIL_FROM_ADDRESS` | — | `string` | — | api, worker | Sender address of the installation's own mail; required when email.enabled. |
-| `email.smtp.host` | `MARGINCE_EMAIL_SMTP_HOST` | — | `string` | — | api, worker | SMTP relay host; required when email.enabled. |
-| `email.smtp.password` | `MARGINCE_EMAIL_SMTP_PASSWORD` | — | `string`, secret | — | api, worker | SMTP relay password, sealed into the key vault at boot; `${none}` deletes the sealed copy and sends without one. |
-| `email.smtp.password_file` | `MARGINCE_EMAIL_SMTP_PASSWORD_FILE` | — | `string` | — | api, worker | Path to a file holding the SMTP relay password; a password set by reference wins over it. |
-| `email.smtp.port` | `MARGINCE_EMAIL_SMTP_PORT` | — | `int` | `0` | api, worker | SMTP relay port, 1 to 65535 when email.enabled. |
-| `email.smtp.username` | `MARGINCE_EMAIL_SMTP_USERNAME` | — | `string` | — | api, worker | SMTP relay user; unset sends without signing in. |
+| `email.smtp.host` | `MARGINCE_SMTP_HOST` | — | `string` | — | api, worker | SMTP relay host; required when email.enabled. |
+| `email.smtp.password` | `MARGINCE_SMTP_PASSWORD` | — | `string`, secret | — | api, worker | SMTP relay password, sealed into the key vault at boot; `${none}` deletes the sealed copy and sends without one. |
+| `email.smtp.password_file` | `MARGINCE_SMTP_PASSWORD_FILE` | — | `string` | — | api, worker | Path to a file holding the SMTP relay password; a password set by reference wins over it. |
+| `email.smtp.port` | `MARGINCE_SMTP_PORT` | — | `int` | `0` | api, worker | SMTP relay port, 1 to 65535 when email.enabled. |
+| `email.smtp.username` | `MARGINCE_SMTP_USERNAME` | — | `string` | — | api, worker | SMTP relay user; unset sends without signing in. |
 
 ### `identity`
 
@@ -1396,7 +1396,7 @@ without a password anyway, and tries again on the next boot.
 
 `${none}` is not a password. Each secret field refuses a literal value, so it cannot be one.
 `email.smtp.password` is the only field that takes it, in `margince.yaml` or as the value of
-`MARGINCE_EMAIL_SMTP_PASSWORD`. `license.token` and `bootstrap_admin.password` refuse it at boot,
+`MARGINCE_SMTP_PASSWORD`. `license.token` and `bootstrap_admin.password` refuse it at boot,
 and so does `email.smtp.password` next to `password_file`. A `${env:…}` or `${file:…}` reference
 whose target holds the text `${none}` is refused as well. A removal is always written where the
 setting is declared.

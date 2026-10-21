@@ -30,23 +30,23 @@ var (
 		Doc: "Sender address of the installation's own mail; required when email.enabled.",
 	})
 	SMTPHost = config.Define(config.Spec[string]{
-		Key: "email.smtp.host", Env: "MARGINCE_EMAIL_SMTP_HOST", Type: config.String, Roles: bothRoles,
+		Key: "email.smtp.host", Env: "MARGINCE_SMTP_HOST", Type: config.String, Roles: bothRoles,
 		Doc: "SMTP relay host; required when email.enabled.",
 	})
 	SMTPPort = config.Define(config.Spec[int]{
-		Key: "email.smtp.port", Env: "MARGINCE_EMAIL_SMTP_PORT", Type: config.Int, Default: config.Some(0), Roles: bothRoles,
+		Key: "email.smtp.port", Env: "MARGINCE_SMTP_PORT", Type: config.Int, Default: config.Some(0), Roles: bothRoles,
 		Doc: "SMTP relay port, 1 to 65535 when email.enabled.",
 	})
 	SMTPUsername = config.Define(config.Spec[string]{
-		Key: "email.smtp.username", Env: "MARGINCE_EMAIL_SMTP_USERNAME", Type: config.String, Roles: bothRoles,
+		Key: "email.smtp.username", Env: "MARGINCE_SMTP_USERNAME", Type: config.String, Roles: bothRoles,
 		Doc: "SMTP relay user; unset sends without signing in.",
 	})
 	SMTPPassword = config.Define(config.Spec[string]{
-		Key: "email.smtp.password", Env: "MARGINCE_EMAIL_SMTP_PASSWORD", Type: config.String, Secret: true, AllowNone: true, Roles: bothRoles,
+		Key: "email.smtp.password", Env: "MARGINCE_SMTP_PASSWORD", Type: config.String, Secret: true, AllowNone: true, Roles: bothRoles,
 		Doc: "SMTP relay password, sealed into the key vault at boot; ${none} deletes the sealed copy and sends without one.",
 	})
 	SMTPPasswordFile = config.Define(config.Spec[string]{
-		Key: "email.smtp.password_file", Env: "MARGINCE_EMAIL_SMTP_PASSWORD_FILE", Type: config.String, Roles: bothRoles,
+		Key: "email.smtp.password_file", Env: "MARGINCE_SMTP_PASSWORD_FILE", Type: config.String, Roles: bothRoles,
 		Doc: "Path to a file holding the SMTP relay password; a password set by reference wins over it.",
 	})
 )
