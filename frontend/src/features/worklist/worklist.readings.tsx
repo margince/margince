@@ -17,6 +17,7 @@
 import { StatCard } from "../../design-system/atoms";
 import { StatStrip } from "../../design-system/statstrip";
 import { formatMoneyCompact, formatNumber } from "../../format/format";
+import { pipelineValueDetail } from "../../format/pipelinevalue";
 import {
   type Locale,
   type Translator,
@@ -118,11 +119,6 @@ function RevenueStat({
   onOpen: () => void;
 }>) {
   const plural = usePlural();
-  const unpriced = readings.unpriced_deals
-    ? plural("brief.readings.unpricedCount", readings.unpriced_deals, {
-        count: formatNumber(readings.unpriced_deals, locale),
-      })
-    : undefined;
   const minor = readings.revenue_at_risk_minor;
   const currency = readings.revenue_currency;
   if (minor == null || !currency) {
@@ -133,9 +129,16 @@ function RevenueStat({
       <StatCard
         label={t("worklist.readings.revenue")}
         value={t("worklist.readings.revenue.noFigure")}
-        detail={[t("worklist.readings.revenue.unpriced"), unpriced]
-          .filter(Boolean)
-          .join(" · ")}
+        detail={pipelineValueDetail(
+          {
+            currency: undefined,
+            basis: t("worklist.readings.revenue.unpriced"),
+            unpriced: readings.unpriced_deals,
+            incomplete: readings.more_available,
+          },
+          locale,
+          plural,
+        )}
         onOpen={onOpen}
       />
     );
@@ -144,9 +147,16 @@ function RevenueStat({
     <StatCard
       label={t("worklist.readings.revenue")}
       value={formatMoneyCompact(minor, currency, locale)}
-      detail={[currency, t("brief.readings.riskBasis"), unpriced]
-        .filter(Boolean)
-        .join(" · ")}
+      detail={pipelineValueDetail(
+        {
+          currency,
+          basis: t("brief.readings.riskBasis"),
+          unpriced: readings.unpriced_deals,
+          incomplete: readings.more_available,
+        },
+        locale,
+        plural,
+      )}
       // The reading is bad news whenever there is any of it: money drifting is
       // the thing this strip exists to surface, and a rep who sees it in the
       // page's ordinary tone reads it as a status rather than as work.

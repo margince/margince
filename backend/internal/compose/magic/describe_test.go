@@ -267,3 +267,17 @@ func TestForecastCorrectionExplainsReviewWithoutRepeatingPrivateBasis(t *testing
 		t.Fatalf("forecast changes = %+v", changes)
 	}
 }
+
+func TestUnknownForecastEvidenceKeepsTheActualFieldChange(t *testing.T) {
+	for _, evidence := range []string{
+		`{"close_date_correction":true}`,
+		`{"close_date_correction":"unknown_action"}`,
+	} {
+		row := auditRow("system:close-date", `{"forecast_category":"commit"}`, `{"forecast_category":"best_case"}`, evidence, whenStaged)
+		row.EntityType = typeDeal
+		line, _, ok := lineOf(unmasked(t), row)
+		if !ok || line.Summary.Key != "magic.action.fields_changed" || line.Reason != nil {
+			t.Fatalf("evidence %s: summary=%+v reason=%+v admitted=%v", evidence, line.Summary, line.Reason, ok)
+		}
+	}
+}

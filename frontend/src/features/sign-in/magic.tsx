@@ -113,6 +113,9 @@ export function MagicPanel() {
           detail={{ onRetry: () => void magic.refetch() }}
         >
           <WithheldSources withheld={withheld} />
+          {shown?.not_shown_count_withheld && drawn.length > 0 && (
+            <p className="t-caption">{t("magic.visibleScope")}</p>
+          )}
           {coverageIncomplete && (
             <p className="t-caption">{t("magic.coverageIncomplete")}</p>
           )}
@@ -141,7 +144,6 @@ export function MagicPanel() {
 
 function doneCoverageIncomplete(receipt: MagicReceipt | undefined): boolean {
   return (
-    receipt?.not_shown_count_withheld === true ||
     receipt?.not_shown?.some(
       (item) => item.reason === "unknown_entity_type",
     ) === true

@@ -108,7 +108,11 @@ export const Pressed: Story = {
         name: /Follow up on customer commitment 3/,
       }),
     );
-    await expect(canvas.getByText("4 of 6")).toBeTruthy();
+    const chosen = within(canvas.getByRole("article"));
+    await expect(
+      await chosen.findByText("Follow up on customer commitment 3"),
+    ).toBeTruthy();
+    await expect(chosen.getByText("4")).toBeTruthy();
   },
 };
 

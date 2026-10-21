@@ -160,7 +160,8 @@ export const ASourceWithheld: Story = {
 };
 
 export const WithheldCoverage: Story = {
-  render: () => panel({ ...QUIET, not_shown_count_withheld: true }),
+  render: () =>
+    panel({ ...EVERY_LANE, not_shown: [], not_shown_count_withheld: true }),
 };
 
 export const UnknownReceiptKind: Story = {

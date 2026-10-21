@@ -91,7 +91,7 @@ function MagicLineRow({
   const sentence = magicSentenceKey(line.summary.key);
   const detail = lineDetail(line, t);
   return (
-    <li className="magic-line" title={detail.join(" · ") || undefined}>
+    <li className="magic-line">
       {/* A watching line is off the clock, so its mark is its lane's. */}
       <span
         className="magic-mark"

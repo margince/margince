@@ -177,3 +177,8 @@ describe("the worklist readings strip", () => {
     ).toBeTruthy();
   });
 });
+
+it("marks the unpriced deal count as a floor on an incomplete reading", () => {
+  draw({ unpriced_deals: 2, more_available: true });
+  expect(screen.getByText(/2\+ deals not priced/)).toBeTruthy();
+});

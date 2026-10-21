@@ -50,8 +50,8 @@ func TestTheUnplaceableCountReachesOnlyADiagnosticsSeat(t *testing.T) {
 	if diag.NotShownCountWithheld == nil || *diag.NotShownCountWithheld {
 		t.Fatal("diagnostics receipt must state its counts were read")
 	}
-	if count, ok := unknownEntityCount(diag); !ok || count < 3 {
-		t.Fatalf("a diagnostics seat was not told of the unplaceable action: %+v", diag.NotShown)
+	if count, ok := unknownEntityCount(diag); !ok || count != 1 {
+		t.Fatalf("a diagnostics seat must count only the update, excluding creation and archive bookkeeping: %+v", diag.NotShown)
 	}
 }
 

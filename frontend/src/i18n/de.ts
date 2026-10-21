@@ -4959,9 +4959,9 @@ export const de = {
   "brief.intro.waiting": "Wartet auf dich",
   "brief.intro.meetings": "Termine heute",
   "brief.intro.urgent": "Dringend",
-  "brief.intro.read_one": "Über Nacht hat Margince 1 E-Mail synchronisiert.",
+  "brief.intro.read_one": "Letzter Nachtlauf: 1 E-Mail synchronisiert.",
   "brief.intro.read_other":
-    "Über Nacht hat Margince {count} E-Mails synchronisiert.",
+    "Letzter Nachtlauf: {count} E-Mails synchronisiert.",
   "brief.intro.skip": "Beliebige Taste drücken oder klicken, um fortzufahren",
   "brief.order.withheld":
     "In dieser Reihenfolge nicht berücksichtigt: {factors}",
@@ -15803,6 +15803,8 @@ export const de = {
   "magic.notShown.unknownEntityType":
     "ein Datensatztyp, den diese Seite nicht einordnen kann",
   "magic.notShown.outOfScope": "außerhalb deiner eigenen Datensätze",
+  "magic.visibleScope":
+    "Hier siehst du nur Änderungen, auf die du zugreifen darfst.",
   "magic.coverageIncomplete":
     "Einige Aktivitäten konnten nicht gezählt werden.",
   "magic.done.all_one": "{count} Änderung im Einzelnen",

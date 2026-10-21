@@ -197,17 +197,36 @@ describe("the receipt draws every lane it promises", () => {
     expect(screen.queryByText("Nothing done for you")).toBeNull();
   });
 
-  it("does not claim an empty receipt is complete when unsupported counts are withheld", async () => {
+  it("keeps an ordinary seat's quiet window quiet without claiming global coverage", async () => {
     stub(receipt({ not_shown_count_withheld: true }));
-    renderMagic();
-    expect(
-      await screen.findByText("Some activity could not be counted."),
-    ).toBeTruthy();
+    const { container } = renderMagic();
+    await waitFor(() =>
+      expect(vi.mocked(fetch).mock.calls.length).toBeGreaterThan(0),
+    );
+    await waitFor(() =>
+      expect(container.querySelector("[aria-busy='true']")).toBeNull(),
+    );
+    expect(container.querySelector(".brief-section")).toBeNull();
     expect(screen.queryByText("Nothing done for you")).toBeNull();
   });
 
-  it("qualifies a nonempty summary when receipt coverage is withheld", async () => {
+  it("states a nonempty receipt's visible scope without inventing missing changes", async () => {
     stub(receipt({ done: [line()], not_shown_count_withheld: true }));
+    renderMagic();
+    expect(
+      await screen.findByText("Only changes visible to you are shown."),
+    ).toBeTruthy();
+    expect(await screen.findByText("1 change, in full")).toBeTruthy();
+    expect(screen.queryByText("1+ change, one by one")).toBeNull();
+  });
+
+  it("qualifies visible changes when unsupported rows were actually counted", async () => {
+    stub(
+      receipt({
+        done: [line()],
+        not_shown: [{ reason: "unknown_entity_type", count: 2 }],
+      }),
+    );
     renderMagic();
     expect(await screen.findByText("1+ change, one by one")).toBeTruthy();
   });

@@ -95,7 +95,7 @@ describe("BriefIntro", () => {
         }),
     });
     intro(todaysRead(readingsDay({}, undefined, undefined, { total: 1 })));
-    await screen.findByText("While you slept, Margince synced 42 emails.");
+    await screen.findByText("Last nightly run: 42 emails synced.");
     const shown = screen.getByRole("button", curtain);
     const figures = shown.querySelector(".brief-intro-figures");
     expect(figures?.textContent).toContain("1");
