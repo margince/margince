@@ -107,9 +107,9 @@ func RawFields(v any) (json.RawMessage, error) {
 // (compose), which matches audit keys case-sensitively in jsonb, would
 // have cleared that same patch as touching no human-owned field. The two
 // must agree on key identity or an agent smuggles a human-owned overwrite
-// through the 🟢 path under a differently-cased key. Types that carry an
-// AdditionalProperties catch-all own their own key policy (they route and
-// drop non-exact keys) and are left to it.
+// through the 🟢 path under a differently-cased key. A type that carries an
+// AdditionalProperties catch-all admits custom fields beside its own, so a key
+// there is a contract field or a cf_ key and nothing else.
 //
 //craft:ignore naked-any the deserialization seam: the decode target is whichever provider request struct the caller owns
 func StrictDecode(raw json.RawMessage, into any) error {
@@ -134,14 +134,14 @@ func StrictDecode(raw json.RawMessage, into any) error {
 	return nil
 }
 
-// RejectNonCanonicalKeys enforces byte-exact field-key identity for target
-// structs with no AdditionalProperties catch-all. A catch-all field
-// (json:"-" map) signals the type accepts arbitrary keys and drops the
-// non-exact ones itself, so exact-key enforcement is left to it. Both
-// transports validate through this ONE function — the provider seam
-// (StrictDecode) and the REST body decode (platform/httperr) — so a
-// case-variant key cannot be a field patch on one surface and a rejected
-// key on the other.
+// RejectNonCanonicalKeys enforces byte-exact field-key identity. A target
+// with an AdditionalProperties catch-all (json:"-" map) admits custom fields
+// beside its own, and they travel as cf_ keys: any other key outside the
+// contract is a misspelling, not a custom field, and is refused as a closed
+// target refuses it. Both transports validate through this ONE function — the
+// provider seam (StrictDecode) and the REST body decode (platform/httperr) —
+// so a case-variant or misspelt key cannot be a field patch on one surface and
+// a rejected key on the other.
 //
 //craft:ignore naked-any mirror of StrictDecode's seam target
 func RejectNonCanonicalKeys(raw json.RawMessage, into any) error {
@@ -153,10 +153,7 @@ func RejectNonCanonicalKeys(raw json.RawMessage, into any) error {
 		return nil
 	}
 	canonical := make(map[string]struct{})
-	if collectCanonicalKeys(t, canonical) {
-		// A catch-all map field: the type owns its own key policy.
-		return nil
-	}
+	hasCatchAll := collectCanonicalKeys(t, canonical)
 	var keys map[string]json.RawMessage
 	if err := json.Unmarshal(raw, &keys); err != nil {
 		// Not a JSON object — the decoder below reports the shape error.
@@ -164,9 +161,10 @@ func RejectNonCanonicalKeys(raw json.RawMessage, into any) error {
 	}
 	var unknown []string
 	for key := range keys {
-		if _, ok := canonical[key]; !ok {
-			unknown = append(unknown, key)
+		if _, ok := canonical[key]; ok || (hasCatchAll && IsCustomFieldKey(key)) {
+			continue
 		}
+		unknown = append(unknown, key)
 	}
 	if len(unknown) == 0 {
 		return nil
@@ -182,11 +180,10 @@ func RejectNonCanonicalKeys(raw json.RawMessage, into any) error {
 // into out, following encoding/json's own rules: an embedded struct
 // promotes its fields, so it is walked recursively. It returns true if the
 // type carries an AdditionalProperties catch-all — a `json:"-"` MAP field,
-// the shape oapi-codegen generates for `additionalProperties` — in which
-// case the type owns its key policy and exact-key enforcement is off. The
-// catch-all test is the field's kind, not just its tag: a plain `json:"-"`
-// (an internal ignored field, a common idiom) must NOT silently disable
-// the backstop for the whole request type.
+// the shape oapi-codegen generates for `additionalProperties`. The catch-all
+// test is the field's kind, not just its tag: a plain `json:"-"` (an internal
+// ignored field, a common idiom) must NOT be taken for one. The walk goes on
+// past a catch-all, because a field declared after it is still a contract key.
 func collectCanonicalKeys(t reflect.Type, out map[string]struct{}) (hasCatchAll bool) {
 	for field := range t.Fields() {
 		tag := field.Tag.Get("json")
@@ -195,9 +192,7 @@ func collectCanonicalKeys(t reflect.Type, out map[string]struct{}) (hasCatchAll 
 			name = before
 		}
 		if name == "-" {
-			if field.Type.Kind() == reflect.Map {
-				return true
-			}
+			hasCatchAll = hasCatchAll || field.Type.Kind() == reflect.Map
 			continue
 		}
 		if field.Anonymous && name == "" {
@@ -206,7 +201,7 @@ func collectCanonicalKeys(t reflect.Type, out map[string]struct{}) (hasCatchAll 
 				et = et.Elem()
 			}
 			if et.Kind() == reflect.Struct && collectCanonicalKeys(et, out) {
-				return true
+				hasCatchAll = true
 			}
 			continue
 		}
@@ -214,7 +209,7 @@ func collectCanonicalKeys(t reflect.Type, out map[string]struct{}) (hasCatchAll 
 			out[name] = struct{}{}
 		}
 	}
-	return false
+	return hasCatchAll
 }
 
 // NewRecord marshals a provider's typed fields into the seam's Record

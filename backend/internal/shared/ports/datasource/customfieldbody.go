@@ -22,6 +22,13 @@ import (
 // CustomFieldPrefix starts every key a custom-field value travels under.
 const CustomFieldPrefix = "cf_"
 
+// IsCustomFieldKey reports whether key is spelt as a custom field's: the prefix
+// and a name after it. It is the one test of "this key is not a typo of a core
+// field", for the REST decode and the tool seam alike.
+func IsCustomFieldKey(key string) bool {
+	return len(key) > len(CustomFieldPrefix) && strings.HasPrefix(key, CustomFieldPrefix)
+}
+
 // CustomFieldBody is one body split into its core half and its cf_ values.
 type CustomFieldBody struct {
 	rest   json.RawMessage
@@ -50,7 +57,7 @@ func SplitCustomFields(raw json.RawMessage, into any) (*CustomFieldBody, error) 
 		return body, nil
 	}
 	for key, value := range keys {
-		if len(key) <= len(CustomFieldPrefix) || !strings.HasPrefix(key, CustomFieldPrefix) {
+		if !IsCustomFieldKey(key) {
 			continue
 		}
 		var decoded any
