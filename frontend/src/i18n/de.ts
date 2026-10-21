@@ -864,6 +864,8 @@ export const de = {
     "Nicht gespeichert: Diese Antwort beruht auf mehr Datensätzen, als ein gesendeter Bericht speichert.",
   "reporting.questionNotKeptUnanswered":
     "Nicht gespeichert: Beim Senden konnte der Absender diese Frage nicht stellen.",
+  "reporting.questionNotKeptOtherRecords":
+    "Nicht gespeichert: Diese Frage zählt andere Arten von Datensätzen als die aufgelisteten, und diese speichert ein gesendeter Bericht nicht.",
   "reporting.questionExpired":
     "Nicht mehr verfügbar. Die Aufbewahrungsregel hat die Antworten dieses gesendeten Berichts gelöscht.",
   "reporting.questionRedacted":

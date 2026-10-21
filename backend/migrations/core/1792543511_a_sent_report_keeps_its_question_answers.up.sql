@@ -16,7 +16,7 @@ CREATE TABLE report_edition_question (
     reason text,
     PRIMARY KEY (edition_id, card_id),
     CONSTRAINT report_edition_question_kept_or_reasoned CHECK ((answer IS NULL) <> (reason IS NULL)),
-    CONSTRAINT report_edition_question_reason_known CHECK (reason IN ('retention_unconfigured', 'too_many_records', 'unanswered'))
+    CONSTRAINT report_edition_question_reason_known CHECK (reason IN ('retention_unconfigured', 'too_many_records', 'unanswered', 'counts_other_records'))
 );
 
 CREATE TABLE report_edition_question_source (

@@ -5,8 +5,10 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -68,6 +70,14 @@ func unanswerable(err error) bool {
 func (q reportingQuestions) Capture(ctx context.Context, tx pgx.Tx, question crmcontracts.ReportingCardQuestion, scope crmcontracts.ReportingScope) (reporting.CapturedQuestion, error) {
 	out := reporting.CapturedQuestion{Entity: question.Entity}
 	query := questionQuery(question, scope)
+	other, err := countsOtherRecords(ctx, tx, query)
+	if err != nil {
+		return out, err
+	}
+	if other {
+		out.Reason = crmcontracts.ReportingEditionQuestionReasonCountsOtherRecords
+		return out, nil
+	}
 	answer, err := RunAnalyticsQuery(ctx, tx, query, q.floor)
 	if unanswerable(err) {
 		out.Reason = crmcontracts.ReportingEditionQuestionReasonUnanswered
@@ -110,10 +120,11 @@ func (q reportingQuestions) Capture(ctx context.Context, tx pgx.Tx, question crm
 	return out, nil
 }
 
-// Reveal implements reporting.Questions. The reader must be able to ask the
-// question today. A row stays only while they may read every record behind it.
-// Any other row goes the way a floored row does: kept in place with every
-// value blanked, so the row count says nothing.
+// Reveal implements reporting.Questions. The reader is shown the kept answer
+// only when they could ask the question today, and every record behind every
+// served row is still in their population and still in that row's group.
+// Anything less withholds the whole answer: a part of it, read beside the
+// floor's complements, could describe the rows left out.
 func (q reportingQuestions) Reveal(ctx context.Context, tx pgx.Tx, question crmcontracts.ReportingCardQuestion, scope crmcontracts.ReportingScope, kept reporting.KeptQuestion) (crmcontracts.AnalyticsAnswer, bool, error) {
 	query := questionQuery(question, scope)
 	only := []string{}
@@ -129,50 +140,82 @@ func (q reportingQuestions) Reveal(ctx context.Context, tx pgx.Tx, question crmc
 	if err != nil {
 		return crmcontracts.AnalyticsAnswer{}, false, err
 	}
-	visible := make(map[string]bool, len(readable))
+	groupOf := make(map[string]string, len(readable))
 	for _, record := range readable {
-		visible[fmt.Sprint(record["id"])] = true
+		groupOf[fmt.Sprint(record["id"])] = groupKey(query, record)
 	}
-	out := kept.Answer
-	out.Rows = make([]map[string]any, len(kept.Answer.Rows))
 	for i, row := range kept.Answer.Rows {
-		out.Rows[i] = row
-		if row[withheldColumn] == true || everyRecordVisible(kept.Sources, i, visible) {
+		if row[withheldColumn] == true {
 			continue
 		}
-		blank := make(map[string]any, len(out.Columns)+1)
-		for _, column := range out.Columns {
-			blank[column] = nil
+		if !stillGrouped(query, row, sourcesOf(kept.Sources, i), groupOf) {
+			return crmcontracts.AnalyticsAnswer{}, false, nil
 		}
-		blank[withheldColumn] = true
-		out.Rows[i] = blank
-		out.Withheld = true
 	}
-	out.TotalSafe = analyticsquery.TotalIsSafe(out.Withheld)
+	out := kept.Answer
 	out.Labels = idLabelsWire(analyticsIDLabels(ctx, q.names, query, out.Rows))
 	return out, true, nil
 }
 
-func everyRecordVisible(sources [][]reporting.QuestionSource, row int, visible map[string]bool) bool {
+func sourcesOf(sources [][]reporting.QuestionSource, row int) []reporting.QuestionSource {
 	if row >= len(sources) {
-		return true
+		return nil
 	}
-	for _, record := range sources[row] {
-		if !visible[record.ID.String()] {
+	return sources[row]
+}
+
+// stillGrouped says every record behind a served row is readable and still
+// falls in the row's group. A grouped row with no records fails, since nothing
+// then vouches for its keys.
+func stillGrouped(query analyticsquery.Query, row map[string]any, records []reporting.QuestionSource, groupOf map[string]string) bool {
+	if len(records) == 0 {
+		return len(query.GroupBy) == 0
+	}
+	want := groupKey(query, row)
+	for _, record := range records {
+		if group, readable := groupOf[record.ID.String()]; !readable || group != want {
 			return false
 		}
 	}
 	return true
 }
 
-// groupKey places a record or an answer row in its group, compared as the
-// explanation compares a cell.
+// groupKey places a record or an answer row in its group. JSON keeps a null
+// apart from any text, which a plain rendering would not.
 func groupKey(q analyticsquery.Query, row map[string]any) string {
-	keys := make([]string, len(q.GroupBy))
+	keys := make([]any, len(q.GroupBy))
 	for i, name := range q.GroupBy {
-		keys[i] = fmt.Sprint(row[name])
+		keys[i] = row[name]
 	}
-	return strings.Join(keys, "\x1f")
+	raw, err := json.Marshal(keys)
+	if err != nil {
+		return fmt.Sprint(keys)
+	}
+	return string(raw)
+}
+
+// countsOtherRecords says a measure or grouping reads other records through a
+// subquery. Retention, holds and erasure reach a kept answer only through its
+// population's own records, so such an answer is not kept.
+func countsOtherRecords(ctx context.Context, tx pgx.Tx, query analyticsquery.Query) (bool, error) {
+	schema, _, err := AnalyticsSchemaIn(ctx, tx)
+	if err != nil {
+		return false, err
+	}
+	entity, ok := schema.Entities[query.Entity]
+	if !ok {
+		return false, nil
+	}
+	fields := slices.Clone(query.GroupBy)
+	for _, measure := range query.Measures {
+		fields = append(fields, measure.Field)
+	}
+	for _, name := range fields {
+		if strings.Contains(strings.ToUpper(entity.Fields[name].Expr), "SELECT") {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // analyticsSources lists the records behind a question under the caller's

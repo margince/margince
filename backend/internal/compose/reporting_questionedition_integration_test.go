@@ -44,6 +44,7 @@ func newQuestionEditions(t *testing.T) *questionEditions {
 	human := reportingActor(e)
 	question := crmcontracts.ReportingCardQuestion{
 		Entity:   "open-deals-per-company",
+		GroupBy:  &[]string{"company_id"},
 		Measures: []crmcontracts.AnalyticsMeasure{{Fn: "count", As: new("deals")}},
 	}
 	layout := []crmcontracts.ReportingSection{{Cards: []crmcontracts.ReportingCard{
@@ -249,10 +250,10 @@ func privacyController(e *forecastEnv) context.Context {
 	return principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalHuman, ID: "human:controller", UserID: e.Rep1, SeatType: principal.SeatFull, Permissions: principal.Permissions{RowScope: principal.RowScopeAll, Objects: grants}})
 }
 
-// A row stays only while the reader may read every record behind it. Here one
-// counted deal moves to another owner and leaves the report's scope. Even the
-// sender is then no longer shown the row it was counted in.
-func TestAKeptRowIsWithheldOnceOneOfItsRecordsLeavesTheReadersReach(t *testing.T) {
+// A kept answer stays only while every record behind it is still in the
+// reader's population. Here one counted deal moves to another owner and leaves
+// the report's scope. Even the sender is then shown nothing of the answer.
+func TestAKeptAnswerIsWithheldOnceOneOfItsRecordsLeavesTheReadersReach(t *testing.T) {
 	q := newQuestionEditions(t)
 	q.keepForAYear(t)
 	edition := q.send(t)
@@ -260,10 +261,26 @@ func TestAKeptRowIsWithheldOnceOneOfItsRecordsLeavesTheReadersReach(t *testing.T
 		t.Fatal(err)
 	}
 	seen := onlyQuestion(t, q.read(q.human, t, ids.UUID(edition.Id)))
-	if seen.Status != crmcontracts.ReportingEditionQuestionStatusKept || seen.Answer == nil || len(seen.Answer.Rows) != 1 {
-		t.Fatalf("the card reads %+v, want the kept answer with its one row", seen)
+	if seen.Status != crmcontracts.ReportingEditionQuestionStatusWithheld || seen.Answer != nil {
+		t.Fatalf("the card reads %+v after one of its deals left the scope, want it withheld", seen)
 	}
-	if row := seen.Answer.Rows[0]; row["_withheld"] != true || row["deals"] != nil || !seen.Answer.Withheld || seen.Answer.TotalSafe {
-		t.Fatalf("the row whose deal left the scope reads %v (withheld=%v total_safe=%v), want it blanked", row, seen.Answer.Withheld, seen.Answer.TotalSafe)
+}
+
+// A record that stays readable but moves to another group no longer vouches
+// for the row it was counted in, so the kept answer is withheld.
+func TestAKeptAnswerIsWithheldOnceOneOfItsRecordsChangesGroup(t *testing.T) {
+	q := newQuestionEditions(t)
+	q.keepForAYear(t)
+	edition := q.send(t)
+	if before := onlyQuestion(t, q.read(q.human, t, ids.UUID(edition.Id))); before.Status != crmcontracts.ReportingEditionQuestionStatusKept {
+		t.Fatalf("the sender's card reads %+v before anything moved, want the kept answer", before)
+	}
+	company := q.e.seedID(t, `INSERT INTO company(id,display_name,source,captured_by) VALUES($1,'Moved To GmbH','manual','human:x')`)
+	if _, err := q.e.owner.Exec(context.Background(), `UPDATE deal SET company_id=$1 WHERE id=(SELECT min(source_id::text)::uuid FROM report_edition_question_source WHERE edition_id=$2)`, company, edition.Id); err != nil {
+		t.Fatal(err)
+	}
+	seen := onlyQuestion(t, q.read(q.human, t, ids.UUID(edition.Id)))
+	if seen.Status != crmcontracts.ReportingEditionQuestionStatusWithheld {
+		t.Fatalf("the card reads %+v after a counted deal changed company, want it withheld", seen)
 	}
 }

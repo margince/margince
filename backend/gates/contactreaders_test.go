@@ -123,6 +123,7 @@ var predicateContactReads = gatekit.Waive(map[string]string{
 // records why asking was never the point.
 var lifecycleContactReads = gatekit.Waive(map[string]string{
 	"internal/modules/privacy/purge.go:anonymiseOneContact":                     "the purge's scrub locks the one contact it is about to anonymise, FOR UPDATE, so the recheck and the scrub see the same row. It selects a constant and nothing of the contact; the caller already holds the contact/delete grant AnonymiseContacts requires",
+	"internal/modules/privacy/reportingquestions.go:leadTwinOf":                 "Subject access and erasure follow a rights-case subject to the leads they were before promotion, merge or conversion, the same leads erasure wipes; the ids stay inside that export or erasure.",
 	"internal/modules/privacy/reportingquestions.go:heldQuestionSource":         "Retention lifecycle checks legal holds on every record behind a kept question answer before selecting an edition for expiry; it returns edition ids to the audited eraser, not source records to a reader.",
 	"internal/modules/privacy/reportingretention.go:reportingRetentionSelector": "Retention lifecycle checks legal holds across all linked subjects before selecting an edition for expiry; it returns edition ids to the audited eraser, not source records to a reader.",
 	// Deal Scout: its system-principal evidence read and the suggestion writer's own conditions.

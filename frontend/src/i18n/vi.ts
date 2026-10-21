@@ -851,6 +851,8 @@ export const vi = {
     "Không lưu: câu trả lời này dựa trên nhiều bản ghi hơn mức một báo cáo đã gửi lưu giữ.",
   "reporting.questionNotKeptUnanswered":
     "Không lưu: tài khoản gửi không thể đặt câu hỏi này khi báo cáo được gửi.",
+  "reporting.questionNotKeptOtherRecords":
+    "Không lưu: câu hỏi này đếm các loại bản ghi khác với loại được liệt kê, và báo cáo đã gửi không lưu các loại đó.",
   "reporting.questionExpired":
     "Không còn khả dụng. Quy tắc lưu giữ đã xóa các câu trả lời của báo cáo đã gửi này.",
   "reporting.questionRedacted":

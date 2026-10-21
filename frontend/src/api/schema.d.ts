@@ -37097,10 +37097,10 @@ export interface components {
              */
             status: "kept" | "withheld" | "not_kept";
             /**
-             * @description Why no answer was kept. `retention_unconfigured`: sent editions had no retention policy. `too_many_records`: the answer rested on more records than an edition keeps. `unanswered`: the sender could not ask the question when the edition was captured.
+             * @description Why no answer was kept. `retention_unconfigured`: sent editions had no retention policy. `too_many_records`: the answer rested on more records than an edition keeps. `unanswered`: the sender could not ask the question when the edition was captured. `counts_other_records`: the question measures or groups through records of other kinds than its population, which an edition does not keep.
              * @enum {string}
              */
-            reason?: "retention_unconfigured" | "too_many_records" | "unanswered";
+            reason?: "retention_unconfigured" | "too_many_records" | "unanswered" | "counts_other_records";
             answer?: components["schemas"]["AnalyticsAnswer"];
         };
         ReportingEvidenceRow: {

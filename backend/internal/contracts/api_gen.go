@@ -15420,6 +15420,7 @@ func (e ReportingCardKind) Valid() bool {
 
 // Defines values for ReportingEditionQuestionReason.
 const (
+	ReportingEditionQuestionReasonCountsOtherRecords    ReportingEditionQuestionReason = "counts_other_records"
 	ReportingEditionQuestionReasonRetentionUnconfigured ReportingEditionQuestionReason = "retention_unconfigured"
 	ReportingEditionQuestionReasonTooManyRecords        ReportingEditionQuestionReason = "too_many_records"
 	ReportingEditionQuestionReasonUnanswered            ReportingEditionQuestionReason = "unanswered"
@@ -15428,6 +15429,8 @@ const (
 // Valid indicates whether the value is a known member of the ReportingEditionQuestionReason enum.
 func (e ReportingEditionQuestionReason) Valid() bool {
 	switch e {
+	case ReportingEditionQuestionReasonCountsOtherRecords:
+		return true
 	case ReportingEditionQuestionReasonRetentionUnconfigured:
 		return true
 	case ReportingEditionQuestionReasonTooManyRecords:
@@ -46544,14 +46547,14 @@ type ReportingEditionQuestion struct {
 	Answer *AnalyticsAnswer `json:"answer,omitempty"`
 	CardId string           `json:"card_id"`
 
-	// Reason Why no answer was kept. `retention_unconfigured`: sent editions had no retention policy. `too_many_records`: the answer rested on more records than an edition keeps. `unanswered`: the sender could not ask the question when the edition was captured.
+	// Reason Why no answer was kept. `retention_unconfigured`: sent editions had no retention policy. `too_many_records`: the answer rested on more records than an edition keeps. `unanswered`: the sender could not ask the question when the edition was captured. `counts_other_records`: the question measures or groups through records of other kinds than its population, which an edition does not keep.
 	Reason *ReportingEditionQuestionReason `json:"reason,omitempty"`
 
 	// Status `kept`: the answer follows. `withheld`: this reader may not ask the question now, so nothing of the answer is shown. `not_kept`: the edition kept no answer, and `reason` says why.
 	Status ReportingEditionQuestionStatus `json:"status"`
 }
 
-// ReportingEditionQuestionReason Why no answer was kept. `retention_unconfigured`: sent editions had no retention policy. `too_many_records`: the answer rested on more records than an edition keeps. `unanswered`: the sender could not ask the question when the edition was captured.
+// ReportingEditionQuestionReason Why no answer was kept. `retention_unconfigured`: sent editions had no retention policy. `too_many_records`: the answer rested on more records than an edition keeps. `unanswered`: the sender could not ask the question when the edition was captured. `counts_other_records`: the question measures or groups through records of other kinds than its population, which an edition does not keep.
 type ReportingEditionQuestionReason string
 
 // ReportingEditionQuestionStatus `kept`: the answer follows. `withheld`: this reader may not ask the question now, so nothing of the answer is shown. `not_kept`: the edition kept no answer, and `reason` says why.

@@ -118,6 +118,8 @@ function notKeptMessage(
       return "reporting.questionNotKeptTooMany";
     case "unanswered":
       return "reporting.questionNotKeptUnanswered";
+    case "counts_other_records":
+      return "reporting.questionNotKeptOtherRecords";
   }
   if (edition?.expired) return "reporting.questionExpired";
   if (edition?.redacted) return "reporting.questionRedacted";

@@ -836,6 +836,8 @@ export const en = {
     "Not kept: this answer counted more records than a sent report keeps.",
   "reporting.questionNotKeptUnanswered":
     "Not kept: the sender could not ask this question when the report was sent.",
+  "reporting.questionNotKeptOtherRecords":
+    "Not kept: this question counts other kinds of records than the ones it lists, which a sent report does not keep.",
   "reporting.questionExpired":
     "No longer available. Retention erased this sent report’s answers.",
   "reporting.questionRedacted":

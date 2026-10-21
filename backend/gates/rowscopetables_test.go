@@ -538,5 +538,8 @@ const (
 	// deals and projects they are a stakeholder of. Subject access and erasure
 	// then reach every kept question answer those records were counted in.
 	// The operator's own seat must not narrow a subject's rights case.
-	modulesTierUnscopedCeiling = 123
+	//
+	// 124: privacy.leadTwinOf follows the same subject through merged contacts
+	// to the leads they were, for the same rights case.
+	modulesTierUnscopedCeiling = 124
 )

@@ -45,7 +45,7 @@ func redactSubjectReporting(ctx context.Context, tx pgx.Tx, subject ids.ContactI
 			return err
 		}
 	}
-	return redactSubjectQuestions(ctx, tx, subject)
+	return nil
 }
 
 //craft:ignore naked-any Bound SQL parameters carry pgx's heterogeneous value types.
