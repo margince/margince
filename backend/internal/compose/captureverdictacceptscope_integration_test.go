@@ -142,3 +142,20 @@ func TestAnEditThatRetargetsTheSenderIsRefused(t *testing.T) {
 		t.Errorf("the refused card is %q, want it still pending", status)
 	}
 }
+
+// The sender's domain belongs to a company private to a rep in another team.
+// Accepting would employ the sender there, so it is refused and no edge lands.
+func TestAcceptingASenderWhoseCompanyTheDeciderCannotSeeIsRefused(t *testing.T) {
+	s := stageSenderCard(t, func(e *integration.Env) ids.UUID { return e.Rep1 })
+	company := s.SeedCompany(t, "Brandt GmbH", &s.Rep3)
+	s.WsExec(t, `INSERT INTO company_domain (company_id, domain, is_primary, source, captured_by)
+		VALUES ($1, 'brandt.example', true, 'manual', 'human:x')`, company)
+	s.MakeCapturePrivate(t, "company", company, s.Rep3)
+
+	if _, err := s.svc.Decide(s.decider(), s.approval, true, nil); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("accepting a sender at a company the decider cannot see: err = %v, want not found", err)
+	}
+	if n := countIn(t, s.Env, `SELECT count(*) FROM relationship WHERE company_id = $1`, company); n != 0 {
+		t.Errorf("a refused accept planted %d employment edge(s) on the private company", n)
+	}
+}

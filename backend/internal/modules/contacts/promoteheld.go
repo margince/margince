@@ -128,6 +128,12 @@ func promotionRefused(err error) bool {
 		errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrVersionSkew)
 }
 
+// MayPromoteHeldLeads answers whether the caller holds both grants a lead
+// promotion needs, for a write that runs as the system on a human's behalf.
+func MayPromoteHeldLeads(ctx context.Context) (bool, error) {
+	return mayPromoteHeldLeads(ctx)
+}
+
 func mayPromoteHeldLeads(ctx context.Context) (bool, error) {
 	if err := auth.Require(ctx, "lead", principal.ActionUpdate); err != nil {
 		return false, unlessDenied(err)
