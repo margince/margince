@@ -1,5 +1,6 @@
 import type { components } from "../api/schema";
 import type { MessageKey } from "../i18n/en";
+
 type Contact = components["schemas"]["Contact"];
 type EmailType = NonNullable<
   NonNullable<Contact["emails"]>[number]["email_type"]

@@ -44,7 +44,7 @@ func TestTwoCorrectionReconcilersShareOneRiverJob(t *testing.T) {
 	if got := e.WsCount(t, `SELECT count(*) FROM river_job WHERE kind='data_task_run'`); got != 1 {
 		t.Fatalf("executor jobs=%d", got)
 	}
-	if got := e.WsCount(t, `SELECT count(*) FROM data_task_run`); got != registeredDataTaskSteps(dataTaskCatalog(e.Pool, time.Now)) {
+	if got := e.WsCount(t, `SELECT count(*) FROM data_task_run`); got != registeredDataTaskSteps(dataTaskCatalog(e.Pool, func() time.Time { return clocktest.Now(t) })) {
 		t.Fatalf("seeded steps=%d", got)
 	}
 	workers := []*dataTaskRunWorker{{pool: e.Pool, pace: time.Second}, {pool: e.Pool, pace: time.Second}}
@@ -117,7 +117,7 @@ func TestOwnerCorrectionCommandsEstimateAndEnqueueWithoutExecuting(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(after) != registeredDataTaskSteps(dataTaskCatalog(e.Pool, time.Now)) || len(before) != len(after) {
+	if len(after) != registeredDataTaskSteps(dataTaskCatalog(e.Pool, func() time.Time { return clocktest.Now(t) })) || len(before) != len(after) {
 		t.Fatalf("registered steps before=%d after=%d", len(before), len(after))
 	}
 	for i, p := range after {

@@ -2,11 +2,11 @@ import type { components } from "../../api/schema";
 import { RecordFields, rawRecord } from "../../components/recordfields";
 import { ContactLink } from "../../design-system/contactlink";
 import { FieldRow } from "../../design-system/fieldgrid";
-import { useT } from "../../i18n";
 import {
   EMAIL_TYPE_LABEL,
   PHONE_TYPE_LABEL,
 } from "../../format/contactchannels";
+import { useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
 import { ADDRESS_FIELDS, addressFrom } from "../companies/companyform";
 import { TagsPanel } from "../lists/tagspanel";
