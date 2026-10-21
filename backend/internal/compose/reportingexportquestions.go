@@ -16,8 +16,8 @@ import (
 
 // questionCSVRows writes each question card of an edition in page order. It
 // writes one row per kept answer row and measure, or one saying why not. A
-// question's text reaches the file only through formulacell.Guard. People
-// type a measure's alias and a group's name.
+// question's text reaches the file only through formulacell.Guard, because
+// a measure's alias and a group's name are typed by hand.
 func questionCSVRows(edition crmcontracts.ReportingEdition) [][]string {
 	// Retention and erasure remove every answer and leave no list. That is not
 	// the same as an answer never kept, so such an edition writes no question rows.
