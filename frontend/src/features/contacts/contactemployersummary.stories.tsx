@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { CompanyMark } from "../../components/contactemployersummary";
 import { StoryProviders } from "../../testing/story-utils";
-import { CompanyMark } from "./contactemployersummary";
 import "./contact360.css";
 
 // A company's mark in its two readings: the company's own logo, and the

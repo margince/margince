@@ -1,0 +1,3 @@
+{"type": "system", "subtype": "init", "tools": ["mcp__margince__query_workspace", "mcp__margince__read_record"]}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__query_workspace", "input": {"plan": {"version": "v1", "target": "company", "where": [{"field": "address.city", "op": "in", "values": ["Köln", "Cologne"]}]}}}]}}
+{"type": "result", "subtype": "success", "is_error": false, "result": "The CRM has three companies in Köln: Rheinufer AG, Vorort Systeme KG and Dom Digital GmbH. Sofia Meier owns all three. Rheinufer AG is the best pick, because it had a contract renewal this week."}

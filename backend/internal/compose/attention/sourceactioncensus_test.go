@@ -100,7 +100,7 @@ var performedBySource = map[string][]crmcontracts.AttentionItemActions{
 	// exclusion. Neither needs anything typed, which is what lets a domain
 	// question settle from a queue row — and there is no `open`, because the
 	// subject is a domain rather than a record with a page.
-	"domain_question": {"keep", "discard"},
+	"domain_question": {"keep", "discard", "reopen"},
 	// The privacy queue's own row. It is read here and answered there.
 	"dsr": {"open"},
 	// The disclosure duty, read here and discharged on the contact's own screen

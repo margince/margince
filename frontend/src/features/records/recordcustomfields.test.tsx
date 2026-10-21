@@ -8,13 +8,13 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it } from "vitest";
+import { CustomFieldsPanel } from "../../components/customfields.card";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { CustomFieldsPanel } from "./customfields.card";
 import { RecordCustomFields } from "./recordcustomfields";
 import { customFieldFixture } from "./recordcustomfields.stories";
 

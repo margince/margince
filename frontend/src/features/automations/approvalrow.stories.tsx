@@ -312,3 +312,99 @@ export const StaleCommercialDecision: Story = {
     />
   ),
 };
+
+export const AdditionalRecipient: Story = {
+  render: () => (
+    <Row
+      subject={approval({
+        kind: "commitment_task",
+        summary: "Send the recording",
+        proposed_change: {
+          summary: "Send the recording",
+          existing_task_id: "33333333-3333-4333-8333-333333333333",
+        },
+        preview: {
+          version: 1,
+          state: "ready",
+          reviewer_reason: "record_authority",
+          effects: ["attach_task_recipients"],
+          changes: [
+            {
+              field: "existing_task_id",
+              before: {
+                kind: "reference",
+                text: "Human wording for the recording",
+                entity_type: "activity",
+                entity_id: "33333333-3333-4333-8333-333333333333",
+              },
+              after: {
+                kind: "reference",
+                text: "Human wording for the recording",
+                entity_type: "activity",
+                entity_id: "33333333-3333-4333-8333-333333333333",
+              },
+            },
+            {
+              field: "recipients",
+              before: { kind: "empty", text: "" },
+              after: { kind: "text", text: "Pat Buyer" },
+            },
+          ],
+        },
+      })}
+    />
+  ),
+};
+export const AdditionalRecipientDark: Story = {
+  ...AdditionalRecipient,
+  globals: { theme: "dark" },
+};
+
+function lifecycleDecision(blocked: boolean): Approval {
+  return approval({
+    kind: "lifecycle_change",
+    target_entity_type: "company",
+    target_entity_id: "company-one",
+    target_label: "Cedar Labs",
+    summary: "Review the end of the account relationship",
+    proposed_change: {
+      company_id: "company-one",
+      proposed_lifecycle: "former_customer",
+    },
+    preview: {
+      version: 1,
+      state: blocked ? "stale" : "ready",
+      reviewer_reason: "requested_decider",
+      lifecycle_evidence: {
+        scope: "company",
+        occurred_at: "2026-07-31T12:00:00Z",
+      },
+      changes: [
+        {
+          field: "lifecycle",
+          before: { kind: "lifecycle", text: "customer" },
+          after: { kind: "lifecycle", text: "former_customer" },
+        },
+      ],
+      conflicts: blocked
+        ? [
+            {
+              kind: "active_contract",
+              summary: "An agreement remains active.",
+              blocks_approval: true,
+            },
+          ]
+        : [],
+    },
+  });
+}
+export const AccountTermination: Story = {
+  render: () => <Row subject={lifecycleDecision(false)} />,
+};
+export const ContinuingAgreement: Story = {
+  render: () => <Row subject={lifecycleDecision(true)} />,
+};
+export const ContinuingAgreementDark: Story = {
+  ...ContinuingAgreement,
+  globals: { theme: "dark" },
+};

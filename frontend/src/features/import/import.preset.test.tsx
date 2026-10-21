@@ -8,10 +8,10 @@ import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
+import { formatFixture } from "../../testing/import.fixtures";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { ContactActions } from "../contacts/contactactions";
 import { ImportCard } from "./import";
-import { formatFixture } from "./import.fixtures";
 import { jsonResponse, render, stubRoutes } from "./import.testkit";
 
 const CONTACT = "c-ada";

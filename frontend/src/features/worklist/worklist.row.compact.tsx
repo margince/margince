@@ -148,7 +148,7 @@ export function CompactRowLine({
         </span>
       )}
       {item.source === "notice" && readings.detail && (
-        <p className="t-caption worklist-row-notice">{readings.detail}</p>
+        <p className="t-caption">{readings.detail}</p>
       )}
       <VerdictLine verdict={item.verdict} zone={zone} />
       {rest.length > 0 && (

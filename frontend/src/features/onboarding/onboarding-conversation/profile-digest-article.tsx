@@ -4,10 +4,7 @@
 import { Eyebrow } from "../../../design-system/eyebrow";
 import { ordinalNumber } from "../../../format/format";
 import { useT } from "../../../i18n";
-import {
-  factCategoryLabelKey,
-  factFieldLabelKey,
-} from "../../records/factview";
+import { factCategoryLabelKey, factFieldLabelKey } from "../../../lib/factview";
 import type { CompanyFieldName } from "../onboarding";
 import type { ReviewRow } from "./company-review-state";
 import {

@@ -1,4 +1,4 @@
-import { REPORTING_FIXTURE_ZONE } from "./reporting.fixtures";
+import { REPORTING_FIXTURE_ZONE } from "../../testing/reporting.fixtures";
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import {
@@ -20,6 +20,7 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
+import { layoutOf } from "./reporting.layout";
 import { ReportingOverview } from "./reporting.overview";
 import { ReportingReportDetail } from "./reporting.report";
 import { SaveReportingDialog } from "./reporting.save";
@@ -58,6 +59,10 @@ it("saves the full selected graph layout and context", async () => {
     await screen.findByRole("textbox", { name: "Report name" }),
     "Friday review",
   );
+  await user.type(
+    screen.getByRole("textbox", { name: "Purpose" }),
+    "For the Friday call.",
+  );
   expect(
     screen.queryByRole("combobox", { name: "Metrics" }),
   ).not.toBeInTheDocument();
@@ -69,10 +74,159 @@ it("saves the full selected graph layout and context", async () => {
   expect(write).toHaveBeenCalledWith(
     expect.objectContaining({
       name: "Friday review",
+      description: "For the Friday call.",
       audience: "private",
-      selection: reportingStoryEvaluation.selection,
+      selection: {
+        ...reportingStoryEvaluation.selection,
+        layout: layoutOf(reportingStoryEvaluation.selection),
+      },
     }),
   );
+});
+it("draws a saved layout's sections under their titles", async () => {
+  const laidOutEvaluation = {
+    ...reportingStoryEvaluation,
+    selection: {
+      ...reportingStoryEvaluation.selection,
+      layout: [
+        {
+          title: "Where deals stand",
+          cards: [
+            {
+              id: "stages",
+              kind: "stage_distribution" as const,
+              width: "half" as const,
+            },
+          ],
+        },
+      ],
+    },
+  };
+  installFetchStub(reportingStoryRoutes(laidOutEvaluation, true));
+  render(
+    <StoryProviders>
+      <ReportingReportDetail reportId="report" />
+    </StoryProviders>,
+  );
+  expect(
+    await screen.findByRole("heading", { name: "Where deals stand" }),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole("heading", { name: "Sales won over time" }),
+  ).not.toBeInTheDocument();
+});
+it("previews one chart before it is added, saving nothing", async () => {
+  const user = userEvent.setup({ delay: null });
+  const write = vi.fn(() => jsonResponse(reportingStoryReport));
+  installFetchStub({
+    ...reportingStoryRoutes(),
+    "PATCH /analytics/reports/report": write,
+  });
+  const fetch = vi.spyOn(globalThis, "fetch");
+  render(
+    <StoryProviders>
+      <SaveReportingDialog
+        selection={reportingStoryReport.selection}
+        report={reportingStoryReport}
+        onClose={() => {}}
+        onSaved={() => {}}
+      />
+    </StoryProviders>,
+  );
+  await user.click(
+    screen.getByText("Charts and order", { selector: ".disclosure-label" }),
+  );
+  await user.click(
+    await screen.findByRole("button", { name: "Remove Time in current stage" }),
+  );
+  await pickOption(
+    user,
+    screen.getByRole("combobox", { name: "Chart to add" }),
+    "Time in current stage",
+  );
+  await user.click(screen.getByRole("button", { name: "Preview" }));
+  await waitFor(() =>
+    expect(
+      fetch.mock.calls.some(([input]) => {
+        const url = input instanceof Request ? input.url : String(input);
+        return (
+          url.includes("/analytics/evaluate") &&
+          url.includes("blocks=stage_age")
+        );
+      }),
+    ).toBe(true),
+  );
+  expect(write).not.toHaveBeenCalled();
+});
+it("previews the report as a role for a seat that may read roles", async () => {
+  const user = userEvent.setup({ delay: null });
+  const routes = reportingStoryRoutes(reportingStoryEvaluation, true);
+  routes["GET /me"] = meRoute(
+    {
+      report_definition: ["read", "update"],
+      deal: ["read"],
+      pipeline: ["read"],
+      role_admin: ["read"],
+    },
+    { roles: ["admin"], seat: "full" },
+  );
+  routes["GET /roles"] = () =>
+    jsonResponse({ roles: [{ key: "rep", name: "Rep" }] });
+  const preview = vi.fn(() => jsonResponse(reportingStoryEvaluation));
+  routes["GET /analytics/reports/report/reader-preview"] = preview;
+  installFetchStub(routes);
+  render(
+    <StoryProviders>
+      <ReportingReportDetail reportId="report" />
+    </StoryProviders>,
+  );
+  await pickOption(
+    user,
+    await screen.findByRole("combobox", { name: "Preview as" }),
+    "Rep",
+  );
+  expect(
+    await screen.findByText(/Preview as Rep: what a seat with this role/),
+  ).toBeInTheDocument();
+  expect(preview).toHaveBeenCalled();
+  expect(
+    screen.queryByRole("button", { name: /Export CSV/ }),
+  ).not.toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "End preview" }));
+  expect(
+    await screen.findByRole("button", { name: /Export CSV/ }),
+  ).toBeInTheDocument();
+  expect(screen.queryByText(/Preview as Rep/)).not.toBeInTheDocument();
+});
+it("offers no role preview to a seat that may not read roles", async () => {
+  installFetchStub(reportingStoryRoutes(reportingStoryEvaluation, true));
+  render(
+    <StoryProviders>
+      <ReportingReportDetail reportId="report" />
+    </StoryProviders>,
+  );
+  await screen.findByRole("heading", { name: "DACH operating review" });
+  expect(
+    screen.queryByRole("combobox", { name: "Preview as" }),
+  ).not.toBeInTheDocument();
+});
+it("shows the report's purpose under its name", async () => {
+  const routes = reportingStoryRoutes(reportingStoryEvaluation, true);
+  routes["GET /analytics/reports/report"] = () =>
+    jsonResponse({
+      ...reportingStoryReport,
+      description: "What the board reads on Mondays.",
+    });
+  installFetchStub(routes);
+  render(
+    <StoryProviders>
+      <ReportingReportDetail reportId="report" />
+    </StoryProviders>,
+  );
+  await screen.findByRole("heading", { name: "DACH operating review" });
+  expect(
+    screen.getByText("What the board reads on Mondays."),
+  ).toBeInTheDocument();
 });
 it("opens keyboard-selected evidence with its receipt and restores focus", async () => {
   const user = userEvent.setup({ delay: null });

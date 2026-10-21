@@ -6,11 +6,13 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
+import { useState } from "react";
 import { api } from "../../api/client";
 import { Button } from "../../design-system/atoms";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
+import { DomainReview } from "./worklist.domainreview";
 import { type WorklistItem, worklistKey } from "./worklist.queries";
 
 // Answering an undecided domain, from the row that asked.
@@ -95,6 +97,7 @@ export function DomainQuestionAnswer({
   item,
 }: Readonly<{ item: WorklistItem }>) {
   const t = useT();
+  const [review, setReview] = useState(false);
   const toast = useToast();
   const keep = useDomainQuestionKeep([worklistKey]);
   const discard = useDomainQuestionDiscard([worklistKey]);
@@ -103,7 +106,14 @@ export function DomainQuestionAnswer({
   const { actions } = item;
   return (
     <>
-      {actions.includes("keep") ? (
+      {actions.includes("reopen") && (
+        <Button onClick={() => setReview(true)}>
+          {t("worklist.domainReview.title")}
+        </Button>
+      )}
+      {review && <DomainReview onClose={() => setReview(false)} />}
+      {actions.includes("keep") &&
+      item.domain_reason_code !== "forwarded_identity" ? (
         <Button
           pending={keep.isPending}
           disabled={busy}

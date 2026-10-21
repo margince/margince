@@ -104,7 +104,7 @@ func TestTriageOnCaptureRespectsTheSettingBeforeSpendingAnything(t *testing.T) {
 	setAutoEnrich(t, e, false)
 	openQuestion(t, e, "switched-off.example")
 
-	trigger := newDomainTriageTrigger(e.Pool, slog.New(slog.DiscardHandler))
+	trigger := newDomainTriageTrigger(e.Pool, slog.New(slog.DiscardHandler), false)
 	trigger.domainPending(e.Admin(), "switched-off.example")
 
 	if n := budgetSpent(t, e); n != 0 {
@@ -144,7 +144,7 @@ func TestTriageOnCaptureLeavesTheCompanyToTheSweepAtTheDailyCap(t *testing.T) {
 	// START a read here rather than fail to and refund — the two outcomes this
 	// test has to tell apart would otherwise look the same.
 	ctx := rivertest.WorkContext(e.Admin(), workClient(t, e))
-	trigger := newDomainTriageTrigger(e.Pool, slog.New(slog.DiscardHandler))
+	trigger := newDomainTriageTrigger(e.Pool, slog.New(slog.DiscardHandler), false)
 	trigger.domainPending(ctx, "capped.example")
 
 	rivertest.RequireNotInserted(ctx, t, riverpgxv5.New(e.Pool), SiteDeepReadArgs{}, nil)
@@ -165,7 +165,7 @@ func TestTriageOnCaptureLeavesTheCompanyToTheSweepWhenTheReadCannotStart(t *test
 	setAutoEnrich(t, e, true)
 	openQuestion(t, e, "no-queue.example")
 
-	trigger := newDomainTriageTrigger(e.Pool, slog.New(slog.DiscardHandler))
+	trigger := newDomainTriageTrigger(e.Pool, slog.New(slog.DiscardHandler), false)
 	trigger.domainPending(e.Admin(), "no-queue.example")
 
 	if !stillDue(t, e, "no-queue.example") {
@@ -186,7 +186,7 @@ func TestTriageOnCaptureIgnoresAnEmptyDomain(t *testing.T) {
 	e := integration.Setup(t)
 	setAutoEnrich(t, e, true)
 
-	trigger := newDomainTriageTrigger(e.Pool, slog.New(slog.DiscardHandler))
+	trigger := newDomainTriageTrigger(e.Pool, slog.New(slog.DiscardHandler), false)
 	trigger.domainPending(e.Admin(), "")
 
 	if n := budgetSpent(t, e); n != 0 {
@@ -336,7 +336,7 @@ func TestAutoEnrichRefundSurvivesACancelledCaptureContext(t *testing.T) {
 	// client the read cannot start, so this is the refund path — on a context
 	// that is already dead.
 	openQuestion(t, e, "cancelled.example")
-	trigger := newDomainTriageTrigger(e.Pool, slog.New(slog.DiscardHandler))
+	trigger := newDomainTriageTrigger(e.Pool, slog.New(slog.DiscardHandler), false)
 	err = trigger.startOrRefund(cancelled, "cancelled.example", slot)
 	if err == nil {
 		t.Fatal("expected the start to fail on a cancelled context")
@@ -443,4 +443,47 @@ func pendingReasonOf(t *testing.T, e *integration.Env, domain string) string {
 		t.Fatalf("reading the pending reason of %s: %v", domain, err)
 	}
 	return reason
+}
+
+func TestReservedDomainTriageIsRecoverableMaintenance(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
+	domain := "reserved-company.test"
+	openTriageQuestion(t, e, domain, "sales@"+domain, "Example Sales")
+	trigger := newDomainTriageTrigger(e.Pool, slog.New(slog.DiscardHandler), true)
+	if err := trigger.queueTriage(ctx, domain); err != nil {
+		t.Fatal(err)
+	}
+	var reason string
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT pending_reason FROM company_domain_disposition WHERE domain = $1`, domain).Scan(&reason)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if reason != contacts.PendingReservedDomain {
+		t.Fatalf("reason=%s", reason)
+	}
+	questions, err := e.Contacts.OpenDomainQuestionsForOwner(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(questions) != 0 {
+		t.Fatal("reserved domain entered personal maintenance")
+	}
+	listed, _, err := e.Contacts.ListDomainAdmissions(ctx, 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, row := range listed {
+		if row.Domain == domain && row.Source == contacts.PendingReservedDomain {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("reserved quarantine is absent from operator maintenance")
+	}
+	if _, err := e.Contacts.ReopenWithheldDomain(ctx, domain); err != nil {
+		t.Fatal(err)
+	}
 }

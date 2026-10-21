@@ -36,10 +36,12 @@ import (
 // headers does.
 type owedMail struct {
 	from, to, cc, bcc, subject, messageID, inReplyTo string
+	body                                             string
 	at                                               time.Time
 	// spoofed leaves out the provider's word that the seat sent it: a message
 	// whose From merely names the seat's own address.
-	spoofed bool
+	spoofed       bool
+	authenticated bool
 	// html is an HTML body sent instead of the plain one.
 	html string
 	// deliveredTo is the receiving server's Delivered-To, which proves a Bcc
@@ -53,6 +55,10 @@ func (m owedMail) raw() []byte {
 		lines = append(lines, "Delivered-To: "+m.deliveredTo, "Received: by mx.ws.example")
 	}
 	lines = append(lines, "From: "+m.from, "To: "+m.to)
+	if m.authenticated {
+		_, domain, _ := strings.Cut(m.from, "@")
+		lines = append([]string{"Authentication-Results: mx.google.com; dmarc=pass header.from=" + domain}, lines...)
+	}
 	if m.cc != "" {
 		lines = append(lines, "Cc: "+m.cc)
 	}
@@ -68,7 +74,11 @@ func (m owedMail) raw() []byte {
 		lines = append(lines, "Content-Type: text/html; charset=utf-8", "", m.html, "")
 		return []byte(strings.Join(lines, "\r\n"))
 	}
-	lines = append(lines, "Content-Type: text/plain; charset=utf-8", "", "Text.", "")
+	body := m.body
+	if body == "" {
+		body = "Text."
+	}
+	lines = append(lines, "Content-Type: text/plain; charset=utf-8", "", body, "")
 	return []byte(strings.Join(lines, "\r\n"))
 }
 

@@ -5,20 +5,6 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { en } from "../../i18n/en";
 import {
-  installFetchStub,
-  jsonResponse,
-  meRoute,
-  type RouteMap,
-  StoryProviders,
-  stubWithSession,
-} from "../../testing/story-utils";
-import type { WorklistItem } from "../worklist/worklist.queries";
-import {
-  automaticDateReceipt,
-  automaticStageReceipt,
-} from "../worklist/worklist.receiptreview.fixtures";
-import { BriefScreen } from "./brief";
-import {
   type Approval,
   bundle,
   deals,
@@ -39,7 +25,21 @@ import {
   waitingEmailRow,
   wholeDecisions,
   wholeMeetings,
-} from "./brief.fixtures";
+} from "../../testing/brief.fixtures";
+import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+  type RouteMap,
+  StoryProviders,
+  stubWithSession,
+} from "../../testing/story-utils";
+import {
+  automaticDateReceipt,
+  automaticStageReceipt,
+} from "../../testing/worklist.receiptreview.fixtures";
+import type { WorklistItem } from "../worklist/worklist.queries";
+import { BriefScreen } from "./brief";
 import type { MorningDigest } from "./brief.queries";
 
 // Decisions share the ranked agenda. Their full proposal opens in the same
@@ -59,7 +59,7 @@ type Frame = {
   /** What the pipeline report answers. A refusal is a state of its own. */
   pipeline?: () => Response;
   /** The morning as the worklist answers it. Stated rather than left to the
-   *  stub's fallback, because the fallback is a list page, `{data, page}`,
+   *  stub's fallback, because the fallback is a LIST page — `{data, page}` —
    *  and `/worklist` answers a `Worklist`, whose `queue` the walk reads to
    *  decide whether to ask for a second page. A fallback of the wrong envelope
    *  therefore did not render an empty Brief, it crashed every frame in this
@@ -206,13 +206,12 @@ export const DecisionApproved: Story = {
         within(canvasElement).queryByRole("button", { name: "Decide" }),
       ).toBeNull(),
     );
-    // The refreshed agenda still stands, counted rather than named. The panel
-    // head lost its sub slot, so the sentence that said how many rows it holds
-    // is gone from every catalog. Asserting it would test nothing.
+    // The refreshed agenda still stands, counted rather than named: one row
+    // in hand on the card, and the one after it listed under it.
     await waitFor(() =>
       expect(
         canvasElement.querySelectorAll("#brief-today .brief-focus-list > li"),
-      ).toHaveLength(2),
+      ).toHaveLength(1),
     );
   },
 };
@@ -241,9 +240,8 @@ export const DigestAbsent: Story = {
   render: brief({ approvals: [...singles], digest: null }),
 };
 
-// The one place connector health reaches a reader without visiting Settings.
-// A degraded source is news, with the way to fix it. A healthy one stays
-// silent, since a permanent green row is noise.
+// Connector health outside Settings. A degraded source is said in Settings'
+// words with the way to fix it. A healthy one stays silent.
 export const ConnectorUnhealthy: Story = {
   render: brief({
     approvals: [...singles],
@@ -260,12 +258,10 @@ export const ConnectorUnhealthy: Story = {
   }),
 };
 
-// One read refused while the other four are healthy. This is why the page fans
-// out to five independent reads. The pipeline says the figure could not be
-// loaded, and the rest are untouched beside it.
-/** The honest degrade: the week was measured and nobody narrated it. The
- *  numbers are all there, and the panel says the sentence is missing rather
- *  than letting the reader conclude there was nothing to say. */
+// One read refused while the other four load. The pipeline says its figure
+// could not be loaded, and the rest of the page is untouched.
+/** The week was measured but has no narration. The panel says the sentence
+ *  is missing, so the reader does not conclude there was nothing to say. */
 export const WeeklyWithoutItsSentence: Story = {
   render: brief({
     approvals: [],
@@ -274,7 +270,7 @@ export const WeeklyWithoutItsSentence: Story = {
 };
 
 /** A pass that ran and found the week unremarkable. No sentence and no notice
- * The stamp is what makes this different from the state above. */
+ *  — the stamp is what makes this different from the state above. */
 export const WeeklyQuietlyNarrated: Story = {
   render: brief({
     approvals: [],
@@ -293,8 +289,8 @@ export const OnePanelRefused: Story = {
   }),
 };
 
-// The figures arrived, and a field mask kept rows out of them. Saying so is the
-// difference between a partial answer and a wrong one.
+// The figures arrived, but a field mask kept rows out of them. Saying so keeps
+// a partial answer from reading as a wrong one.
 export const PipelinePartial: Story = {
   render: brief({
     approvals: [],
@@ -313,9 +309,8 @@ const otherPromise = {
   ),
   due_at: "2026-09-11T21:59:59Z",
 };
-// The row in hand is a customer's message, drawn as the canonical email row.
-// It shows who wrote, when, the subject, their words and the verbs that answer it. The
-// queue beside it holds the rest of the day.
+// The row in hand is a customer's message: who wrote, when, the subject and
+// their words, with the verbs under them. A press on a queued row swaps it in.
 const SixPrioritiesDay = readingsDay({}, [
   waitingEmailRow(),
   promise,
@@ -343,18 +338,6 @@ export const RowDetailsOpen: Story = {
       name: en["brief.focus.context"],
     });
   },
-};
-// The same morning read by a seat whose row scope reaches a team. The
-// Mine/Team dial is drawn from `scope_options`, so a seat that reaches nobody
-// else never sees it, and the frame above cannot show it.
-export const TeamSeat: Story = {
-  render: brief({
-    approvals: [],
-    day: {
-      ...SixPrioritiesDay,
-      scope_options: ["mine", "team"],
-    },
-  }),
 };
 export const TaskEvidence: Story = {
   render: brief({

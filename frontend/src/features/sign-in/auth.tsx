@@ -7,6 +7,11 @@ import {
 } from "../../app/ui-preview";
 import wordmarkDark from "../../assets/wordmark-dark.png";
 import wordmarkWhite from "../../assets/wordmark-white.png";
+import {
+  AuthCardTitle,
+  AuthExperience,
+  type AuthPhase,
+} from "../../components/auth-core";
 import { Button } from "../../design-system/atoms";
 import { providerBrandName } from "../../design-system/provider-mark";
 import { LOCALES, localeNameKey, useLocale, useT } from "../../i18n";
@@ -14,7 +19,6 @@ import { useAuthCapabilities } from "../../lib/capabilities";
 import { useOutageRecovery } from "../../lib/connectivity";
 import { forgetHashCredential, takeHashCredential } from "../../lib/router";
 import { sessionAnswers } from "../../lib/session";
-import { AuthCardTitle, AuthExperience, type AuthPhase } from "./auth-core";
 import { FederatedOnlyCard } from "./auth-providers";
 import { MfaForm } from "./auth-signin";
 import "./auth.css";

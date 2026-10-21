@@ -8,6 +8,10 @@ import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
 import type { CreateField } from "../../components/create";
 import { useEntityName } from "../../components/entityref";
+import {
+  type ProjectOwnerPicker,
+  projectOwnerField,
+} from "../../components/projectownerfield";
 import { Button } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { FieldGuard } from "../../design-system/rbac";
@@ -18,10 +22,6 @@ import { dealRecordKeys } from "../../lib/activitykeys";
 import { ENTITY } from "../../lib/entity";
 import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
 import { navigate, routeHash } from "../../lib/router";
-import {
-  type ProjectOwnerPicker,
-  projectOwnerField,
-} from "../projects/projectownerfield";
 import type { Project } from "../projects/projects.form";
 
 // Where a deal meets its project: the picker on the deal form (with the

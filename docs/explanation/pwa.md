@@ -172,7 +172,7 @@ a proxy keeps the shared error line.
 
 ## Install on this device
 
-Settings → Account has a "This device" section with one row, `frontend/src/features/sign-in/thisdevice.tsx`,
+Settings → Account has a "This device" section with one row, `frontend/src/features/settings/thisdevice.tsx`,
 built from `useInstallState()` alone:
 
 - `available`: Install asks the browser, and waits while its install window is open.

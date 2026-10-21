@@ -14,15 +14,15 @@ import { isMailIcon, providerName } from "../../format/connectorprovider";
 import { formatDateTime } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
-import { BackfillPanel } from "../import/backfill";
-import { isLiveRun } from "../import/backfill-run";
+import { isLiveRun } from "../../lib/backfill-run";
 import {
   errorClassKey,
   missingCalendarWriteGrant,
   missingSendGrant,
   statusLabel,
   statusTone,
-} from "./connector-status";
+} from "../../lib/connector-status";
+import { BackfillPanel } from "../import/backfill";
 import { HistoryBaselineRow } from "./connectors.historybaseline";
 import { ConnectionDrawer } from "./connectors.settings";
 

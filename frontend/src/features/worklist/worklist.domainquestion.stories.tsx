@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import {
@@ -149,4 +149,24 @@ export const AnAnswerBeingWritten: Story = {
 export const TheCompanyCouldNotBeCreated: Story = {
   render: line(UNDECIDED, refused),
   play: pressKeep,
+};
+
+export const ForwardedDomainOpensReviewBeforeCreation: Story = {
+  render: line(
+    {
+      ...UNDECIDED,
+      domain_reason_code: "forwarded_identity",
+      actions: ["keep", "discard", "reopen"],
+    },
+    settleAtOnce,
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      canvas.getByRole("button", { name: "Domain review" }),
+    ).toBeVisible();
+    await expect(
+      canvas.queryByRole("button", { name: "Create company" }),
+    ).not.toBeInTheDocument();
+  },
 };

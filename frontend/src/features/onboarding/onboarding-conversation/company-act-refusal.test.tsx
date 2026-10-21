@@ -22,13 +22,13 @@ import { CompanyAct } from "./company-act";
 import type { ConversationState } from "./conversation-machine";
 import { initialConversationState } from "./conversation-machine";
 
-// WHERE a refused confirm says so. The board carries Continue, so the board is
-// where its refusal belongs: the sentence used to render in the conversation
-// rail, a scroller the reader who just pressed a button on the other pane is
-// not looking at, and a press that earned a 409 therefore had no on-screen life
-// at all. company-act.test.tsx pins which notice each server code produces and
-// when Continue re-arms; this file pins only the one thing those cases never
-// asked — that a reader can tell their press was rejected.
+// Where a refused confirm says so. The board carries Continue, so the board is
+// where its refusal belongs. A refusal in the conversation rail lands in a
+// scroller the reader is not watching, since they pressed on the other pane. A
+// press that earned a 409 then has no on-screen life at all.
+// company-act.recovery.test.tsx pins which notice each server code produces and
+// when Continue re-arms. This file pins only what those cases never asked: that
+// a reader can tell their press was rejected.
 
 afterEach(() => {
   cleanup();

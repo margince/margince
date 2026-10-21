@@ -11,7 +11,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { ToastProvider } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
-import { jsonResponse } from "../companies/company.fixtures";
+import { jsonResponse } from "../../testing/company.fixtures";
 import { ContactRecordActions } from "../contacts/contactrecordactions";
 
 // The merge picker names more than a contact's name, because two contacts may

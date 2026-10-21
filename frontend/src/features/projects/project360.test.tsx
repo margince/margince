@@ -13,13 +13,13 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { RecordShell } from "../../app/testing/recordshell.testkit";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { jsonResponse } from "../../testing/company.fixtures";
 import { meFixture } from "../../testing/mefixture";
-import { jsonResponse } from "../companies/company.fixtures";
+import { project, project360 } from "../../testing/projects.fixtures";
+import { RecordShell } from "../../testing/recordshell.testkit";
 import { ProjectScreen } from "./project360";
-import { project, project360 } from "./projects.fixtures";
 import { projectsBackend } from "./projects.testing";
 
 // The project page: every section drawn from one Project360, a withheld

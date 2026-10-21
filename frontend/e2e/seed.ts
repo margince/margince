@@ -21,6 +21,21 @@ export async function mockApi(
   // authority: the mocked /me is that.
   await target.addInitScript(() => {
     globalThis.localStorage.setItem("margince.workspaceSlug", "seed");
+    // Home's greeting has played today, so it covers no spec's first screen.
+    // The day is spelled the way `dayInZone` spells it.
+    const parts = Object.fromEntries(
+      new Intl.DateTimeFormat("en-US", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      })
+        .formatToParts(new Date())
+        .map((part) => [part.type, part.value]),
+    );
+    globalThis.localStorage.setItem(
+      "margince.brief.introShown",
+      `${parts.year}-${parts.month}-${parts.day}`,
+    );
   });
   // Hermetic runs: no external font fetches.
   await target.route("https://fonts.googleapis.com/**", (route) =>

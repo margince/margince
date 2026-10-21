@@ -50,8 +50,8 @@ func TestParseRetentionScopeResolvesEveryAuthorableScope(t *testing.T) {
 
 // TestParseRetentionScopeSplitsObjectTypeFromCategory pins the pair each wire
 // scope resolves to, including the bare `activity` scope whose category is the
-// SQL NULL the seeded DM-SEED-2 row carries — an empty string there would be a
-// second, silently different way to say "no finer scope".
+// SQL NULL the seeded ('activity', NULL) row carries. An empty string there
+// would be a second, silently different way to say "no finer scope".
 func TestParseRetentionScopeSplitsObjectTypeFromCategory(t *testing.T) {
 	cases := map[string]RetentionScope{
 		"lead/unconverted":           {ObjectType: "lead", Category: "unconverted"},

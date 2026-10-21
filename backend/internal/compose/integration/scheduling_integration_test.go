@@ -78,12 +78,13 @@ func TestAvailabilityAndBooking(t *testing.T) {
 		}
 	}
 
-	// A link target outside visibility refuses the booking (H1).
+	// A link target outside visibility refuses the booking (H1), naming links.
+	var refused problemBody
 	if status := e.Call(t, "POST", "/v1/bookings", AnyMap{
 		"start": first.Start.Add(3 * time.Hour), "end": first.End.Add(3 * time.Hour),
 		"links": []AnyMap{{"entity_type": "contact", "entity_id": "00000000-0000-7000-8000-00000000dead"}},
-	}, nil, nil); status != http.StatusNotFound {
-		t.Fatalf("booking with invisible link → %d, want 404", status)
+	}, nil, &refused); status != http.StatusUnprocessableEntity || !namesField(refused, "links") {
+		t.Fatalf("booking with invisible link → %d %+v, want 422 naming links", status, refused.Details.Errors)
 	}
 }
 

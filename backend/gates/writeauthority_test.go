@@ -100,6 +100,7 @@ const (
 // the probe is actually deciding, because that is always the answer: the probe
 // is not this mutation's own row gate.
 var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
+	"internal/modules/deals:suggestionVisibleClause":    "reads the company and cited evidence before deciding a suggestion; the company itself is unchanged, and existing-deal linking separately requires update authority on its locked target",
 	"internal/modules/collections:recordArm":            "the reader row scope over the record a tag suggestion names, which decides whether the caller may SEE the suggestion; it changes no record. Accepting or dismissing then asks auth.EnsureWritableLive on that record in the same transaction (openTagSuggestionForDecision) before anything is written",
 	"internal/modules/activities:hiddenProjects":        "decides which of the projects a filing names the caller may SEE, so a project out of their sight is shown unnamed and the undo refuses rather than leave a link it cannot remove. It changes no project; the undo's own row gate is the activity's writable probe taken under the lock",
 	"internal/modules/collections:recordScope":          "the reader row scope over member records, which counts and pages the Shortlist members THIS READER may see, for the list a list change answers with; it changes no member record. A membership change never changes the record it adds or removes either — it needs list authority over the list, and a read probe of the member (EnsureLinkTarget) so a list cannot name a record its curator cannot see",

@@ -43,6 +43,23 @@ func TestPersonalDecisionsRemainReachableBehindATeamBacklog(t *testing.T) {
 		team = stage("advance_deal", i+2)
 	}
 	reader := seatFor(e.ws, e.rep, tableDeal, objectActivity)
+	named := []ids.ApprovalID{ids.From[ids.ApprovalKind](team), ids.From[ids.ApprovalKind](ids.NewV7())}
+	for id := range personal {
+		named = append(named, ids.From[ids.ApprovalKind](id))
+	}
+	visible, err := e.svc.PendingInScope(reader, ListInput{RequestedForReader: true, Limit: 1}, named)
+	if err != nil || len(visible) != len(personal) {
+		t.Fatalf("named personal decisions were limited by the inbox page: %v, %v", visible, err)
+	}
+	for id := range visible {
+		if !personal[id.UUID] {
+			t.Fatalf("named lookup exposed an unrelated decision: %s", id)
+		}
+	}
+	visible, err = e.svc.PendingInScope(reader, ListInput{RequestedForOwners: []ids.UUID{}}, named)
+	if err != nil || len(visible) != 0 {
+		t.Fatalf("named lookup widened an empty team: %v, %v", visible, err)
+	}
 	all, _, err := e.svc.ListWire(reader, ListInput{Limit: 1})
 	if err != nil || len(all) != 1 || ids.UUID(all[0].Id) != team || all[0].RequestedDeciderId != nil {
 		t.Fatalf("team proposal is not reachable in the full inbox: %v", err)

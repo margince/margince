@@ -10,6 +10,8 @@ import { worklistKey } from "../worklist/worklist.queries";
 export type DealSuggestion = components["schemas"]["DealSuggestion"];
 export type AcceptDealSuggestionBody =
   components["schemas"]["AcceptDealSuggestionRequest"];
+export type DismissDealSuggestionBody =
+  components["schemas"]["DismissDealSuggestionRequest"];
 export type DealSuggestionAcceptance =
   components["schemas"]["DealSuggestionAcceptance"];
 
@@ -17,6 +19,18 @@ export type DealSuggestionAcceptance =
 export type SuggestionFilter = { company_id?: string; pipeline_id?: string };
 
 export const dealSuggestionsKey = ["deal-suggestions"] as const;
+
+export function useDealSuggestion(id: string) {
+  return useQuery({
+    queryKey: [...dealSuggestionsKey, "detail", id],
+    queryFn: async () =>
+      unwrap(
+        await api.GET("/deal-suggestions/{id}", {
+          params: { path: { id } },
+        }),
+      ),
+  });
+}
 
 // The server's page ceiling. A board or a company page shows every open
 // suggestion it is given; two hundred is well past what either holds.
@@ -50,6 +64,8 @@ function useDecided() {
     queryClient.invalidateQueries({ queryKey: ["deals"] });
     queryClient.invalidateQueries({ queryKey: dealSuggestionsKey });
     queryClient.invalidateQueries({ queryKey: worklistKey });
+    queryClient.invalidateQueries({ queryKey: ["input-checks"] });
+    queryClient.invalidateQueries({ queryKey: ["forecast-assurance"] });
   };
 }
 
@@ -84,9 +100,14 @@ export function useAcceptDealSuggestion() {
 export function useDismissDealSuggestion() {
   const decided = useDecided();
   return useMutation({
-    mutationFn: async (input: { id: string; idempotencyKey: string }) => {
+    mutationFn: async (input: {
+      id: string;
+      idempotencyKey: string;
+      body?: DismissDealSuggestionBody;
+    }) => {
       unwrap(
         await api.POST("/deal-suggestions/{id}/dismiss", {
+          body: input.body ?? {},
           params: {
             path: { id: input.id },
             header: { "Idempotency-Key": input.idempotencyKey },

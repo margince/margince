@@ -5,6 +5,7 @@ import {
 } from "@tanstack/react-query";
 import { type ReactNode, useCallback, useState } from "react";
 import { api } from "../../api/client";
+import { SendPermission } from "../../components/sendpermission";
 import { Button, Card } from "../../design-system/atoms";
 import {
   DecisionCard,
@@ -20,6 +21,7 @@ import { formatCountdown, useNow } from "../../format/now";
 import { viewerZone } from "../../format/timezone";
 import type { Locale, Translator } from "../../i18n";
 import { useLocale, usePlural, useT } from "../../i18n";
+import type { Approval } from "../../lib/approvals.queries";
 import { approvalDotTier, useAgentTierMap } from "../../lib/autonomy";
 import { recordRoute } from "../../lib/entity";
 import {
@@ -30,8 +32,7 @@ import {
 } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
-import { SendPermission } from "../mail/sendpermission";
-import { useSendPermission } from "../mail/usesendpermission";
+import { useSendPermission } from "../../lib/usesendpermission";
 import { resolveDisplay, stagedDayFormatter } from "./approvaldisplay";
 import {
   ApprovalDetailModal,
@@ -49,7 +50,6 @@ import {
 } from "./approvalkind";
 import { editedCommercialPreview } from "./approvalpreview";
 import { approvalAcceptable, useApprovalNames } from "./approvalresponsibility";
-import type { Approval } from "./approvals.queries";
 import { stagedSendOf } from "./approvalsend";
 import "./approvalrow.css";
 
@@ -351,6 +351,8 @@ export function ApprovalRow({
               : "brief.approval.approve",
           ),
           locale,
+          1,
+          typeof approval.proposed_change?.existing_task_id === "string",
         ),
       }}
       decided={decided}
@@ -392,6 +394,8 @@ export function ApprovalRow({
               plural,
               t("decision.approveEdited"),
               locale,
+              1,
+              typeof approval.proposed_change?.existing_task_id === "string",
             )}
             fields={strings}
             draft={draft}

@@ -21,6 +21,7 @@ const (
 	ReasonPipelineUnknown        ReasonCode = "pipeline_unknown"
 	ReasonStageUnknown           ReasonCode = "stage_unknown"
 	ReasonCurrencyNotACode       ReasonCode = "currency_not_a_code"
+	ReasonAmountNegative         ReasonCode = "amount_negative"
 	ReasonCloseDatePast          ReasonCode = "close_date_past"
 	ReasonCloseDateFuture        ReasonCode = "close_date_future"
 	ReasonLostReasonMissing      ReasonCode = "lost_reason_missing"
@@ -71,6 +72,11 @@ var dealReasons = map[ReasonCode]reasonEntry{
 		textlang.English:    "“{value}” is not a currency code. Write its three letters, like EUR.",
 		textlang.German:     "{value:q} ist kein Währungscode. Schreiben Sie die drei Buchstaben, etwa EUR.",
 		textlang.Vietnamese: "{value:q} không phải mã tiền tệ. Hãy viết ba chữ cái, ví dụ EUR.",
+	}},
+	ReasonAmountNegative: {params: []string{paramValue}, text: map[textlang.Lang]string{
+		textlang.English:    "“{value}” is below zero, and a deal’s amount cannot be.",
+		textlang.German:     "{value:q} liegt unter null, und der Betrag eines Deals darf das nicht sein.",
+		textlang.Vietnamese: "{value:q} nhỏ hơn 0, mà số tiền của deal thì không được âm.",
 	}},
 	ReasonCloseDatePast: {params: []string{paramValue}, text: map[textlang.Lang]string{
 		textlang.English:    "“{value}” is in the past, and an open deal’s close date cannot be.",

@@ -46,6 +46,7 @@ export const SETTINGS_SECTIONS = {
     "tools.title",
     "settings.autonomy",
     "autonomy.title",
+    "approvalPreferences.title",
     "settings.passportUseAi",
     "settings.tierRead",
     "settings.tierSend",
@@ -207,6 +208,7 @@ export const SETTINGS_SECTIONS = {
   ],
   audit: [],
   "system-health": [
+    "dataTasks.title",
     "settings.jobs",
     "settings.extIngest",
     "settings.providerHealth",

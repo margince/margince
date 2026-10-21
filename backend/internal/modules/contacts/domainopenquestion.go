@@ -106,7 +106,7 @@ func (s *Store) ReopenWithheldDomain(ctx context.Context, domain string) (Blocke
 		// new message. Passing a date here would claim mail arrived that did
 		// not, and GREATEST would then hold that claim against the next real
 		// message's.
-		if err := reopenWithheldDispositionTx(ctx, tx, base, *owner, nil); err != nil {
+		if err := reopenWithheldDispositionTx(ctx, tx, base, *owner, nil, true); err != nil {
 			return err
 		}
 		// The answer is the row as it STOOD, not as it is now. Re-opening

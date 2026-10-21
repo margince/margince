@@ -23,11 +23,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { findRowMenu, jsonResponse, row } from "../../testing/worklist.testkit";
 import { CoachControl, OwnerPicker } from "./worklist.manager";
 import type { WorklistItem } from "./worklist.queries";
 import { WorklistRow } from "./worklist.row";
 import { RowActs } from "./worklist.rowverbs";
-import { findRowMenu, jsonResponse, row } from "./worklist.testkit";
 
 afterEach(() => {
   cleanup();

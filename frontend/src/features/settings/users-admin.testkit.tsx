@@ -10,7 +10,7 @@ import type { ReactNode } from "react";
 import { vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
-import { SEEDED_ASSIGNABLE_ROLES } from "./roles.testkit";
+import { SEEDED_ASSIGNABLE_ROLES } from "../../testing/roles.testkit";
 
 // The roster fixture, the routed backend and the row helpers the member card's
 // suites share: users-admin.test.tsx for the roster and its verbs,

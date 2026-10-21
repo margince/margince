@@ -5,6 +5,7 @@
 // so nobody briefs legal by hand. A document is listed only when this reader
 // can open it, and opens through the file's own gate.
 
+import { LegalReviewStatusBadge } from "../../components/legalreviewstatus";
 import { EmptyState } from "../../design-system/atoms";
 import { FieldGrid, FieldRow } from "../../design-system/fieldgrid";
 import { FileChip } from "../../design-system/filechip";
@@ -28,8 +29,7 @@ import {
   useT,
 } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import type { LegalReview } from "./legalreviews.queries";
-import { LegalReviewStatusBadge } from "./legalreviewstatus";
+import type { LegalReview } from "../../lib/legalreviews.queries";
 
 type Packet = LegalReview["packet"];
 type PacketDocument = Packet["documents"][number];

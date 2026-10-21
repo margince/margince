@@ -6,8 +6,8 @@ import { currencyOptions } from "../../format/currencychoices";
 import { toMinorUnits } from "../../format/minorunits";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
+import { currencyBeside } from "../../lib/dealcurrency";
 import { unwrap } from "../../lib/problem";
-import { currencyBeside } from "../deals/dealcurrency";
 import { useProjectCreateForm } from "../projects/projects.create";
 
 // What a rep can START from the company page.
@@ -58,6 +58,7 @@ export function NewDealAction({
   companyId,
   companyName,
   projectId,
+  onCreated,
 }: Readonly<{
   companyId: string;
   companyName: string;
@@ -65,6 +66,7 @@ export function NewDealAction({
   // project page. The deal then names the project at birth, which is the only
   // moment the deal and the project are guaranteed to share a company.
   projectId?: string;
+  onCreated?: (deal: components["schemas"]["Deal"]) => void;
 }>) {
   const t = useT();
   const target = useDealTarget();
@@ -78,7 +80,14 @@ export function NewDealAction({
 
   const fields: CreateField[] = [
     { key: "name", label: "create.dealName", required: true },
-    { key: "amount", label: "create.amount", type: "number", step: "0.01" },
+    {
+      key: "amount",
+      label: "create.amount",
+      type: "number",
+      step: "0.01",
+      min: "0",
+      wireField: "amount_minor",
+    },
     {
       key: "currency",
       label: "create.currency",
@@ -132,6 +141,8 @@ export function NewDealAction({
       create={createDeal}
       fields={fields}
       aboutId={companyId}
+      stay={onCreated !== undefined}
+      onCreated={onCreated}
     />
   );
 }

@@ -4,13 +4,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Panel } from "../../design-system/panel";
 import { SettingList } from "../../design-system/settingrow";
+import { readingsDay } from "../../testing/brief.fixtures";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { readingsDay } from "./brief.fixtures";
 import { RoutineDeliveryRows } from "./routinedelivery";
 
 const meta = {

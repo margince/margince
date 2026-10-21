@@ -15,7 +15,7 @@ import { Button } from "../../design-system/atoms";
 import { useT } from "../../i18n";
 import { isEntityKind } from "../../lib/entity";
 import { problemMessageOf } from "../../lib/problem";
-import { useRecordRestore } from "../records/recordrestore";
+import { useRecordRestore } from "../../lib/recordrestore";
 import { magicUndoReasonKey } from "./magic.keys";
 import { magicKey } from "./magic.queries";
 

@@ -34,6 +34,12 @@ const maxExtractQuote = 300
 // word: the quote is what a reader checks the promise against, and a quote the
 // message does not contain is a promise nobody can check.
 func validateEventEvidence(event extractedEvent, thread settledThread) string {
+	if reason := validateLifecycleEvidence(event, thread); reason != "" {
+		return reason
+	}
+	if reason := validateOpportunityBuyer(event, thread); reason != "" {
+		return reason
+	}
 	if reason := validateRestatedEvidence(event, thread); reason != "" {
 		return reason
 	}
@@ -54,6 +60,9 @@ func validateEventEvidence(event extractedEvent, thread settledThread) string {
 	for _, message := range thread.Messages {
 		if message.ID.String() != event.MessageID {
 			continue
+		}
+		if msg := validateCommitmentRecipients(event.RecipientRefs, message.Parties); msg != "" {
+			return msg
 		}
 		if event.PromiserRef != "" {
 			if _, found := referencedPromiser(event.PromiserRef, message.Parties); !found {
@@ -201,6 +210,9 @@ func (x *SignalExtractor) emailCommitment(
 	}
 	verified := verifiedCommitmentParties(parties)
 	kind, party := attributeCommitment(&c, event.PromiserRef, verified)
+	if err := attributeCommitmentRecipients(&c, event.RecipientRefs, verified); err != nil {
+		return Commitment{}, false, err
+	}
 	c.NeedsConfirmation = message.Direction != connector.DirectionOutbound || !commitmentPartyHasRole(verified, event.PromiserRef, commitmentSenderRole)
 	c.Body = fmt.Sprintf("Promiser: %s. Commitment in the email %q, sent %s.", c.Party, message.Subject, message.At.Format(time.DateOnly))
 	c.Span = span

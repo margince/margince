@@ -7,7 +7,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { GrantSpec } from "../../testing/mefixture";
 import { meFixture } from "../../testing/mefixture";
-import { jsonResponse, render } from "../settings/settings.testkit";
+import { jsonResponse, render } from "../../testing/settings.testkit";
 import type { ReviewTemplate } from "./outcomereview.queries";
 import { ReviewTemplatesCard } from "./reviewtemplates";
 

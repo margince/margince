@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { formatFixture } from "../../testing/import.fixtures";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { formatFixture } from "./import.fixtures";
 import { PartProgressList } from "./import.result";
 import { ImportWizardPage } from "./import.wizard";
 import type { ImportRun, ImportRunPart } from "./importtypes";

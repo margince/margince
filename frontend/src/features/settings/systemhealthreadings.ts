@@ -8,7 +8,7 @@ import type { Translator, Words } from "../../i18n";
 import {
   answersFromStandIn,
   answersOnlyFromStandIn,
-} from "../ai/ai-provider-health";
+} from "../../lib/ai-provider-health";
 
 // Each System health report read down to one answer. It says what the slot in
 // the page's row shows, and whether the full card stands under the row.

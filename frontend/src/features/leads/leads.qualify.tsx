@@ -18,9 +18,9 @@ import { toMinorUnits } from "../../format/minorunits";
 import { viewerZone } from "../../format/timezone";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { leadPromotePreviewKey, leadWriteKeys } from "../../lib/leadkeys";
+import { usePipelines } from "../../lib/pipelines.queries";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useInstallationSettings } from "../../lib/uploadlimit";
-import { usePipelines } from "../deals/pipelines.queries";
 import "./leads.css";
 
 type Lead = components["schemas"]["Lead"];

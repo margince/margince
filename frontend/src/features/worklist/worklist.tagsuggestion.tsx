@@ -7,6 +7,7 @@
 // contacts.
 
 import { useState } from "react";
+import { ContactsTagOffer, EmployerTagOffer } from "../../components/tagfollow";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Row, Stack } from "../../design-system/stack";
@@ -16,14 +17,13 @@ import { ProvenanceTag, StagingCard } from "../../design-system/trust";
 import { formatDate } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
-import { ContactsTagOffer, EmployerTagOffer } from "../lists/tagfollow";
 import {
   type TagSuggestion,
   useContactEmployer,
   useDecideTagSuggestion,
   useTagSuggestion,
   useTagSuggestionSettled,
-} from "../lists/tagsuggestion.queries";
+} from "./tagsuggestion.queries";
 import type { WorklistItem } from "./worklist.queries";
 
 export function TagSuggestionDecision({

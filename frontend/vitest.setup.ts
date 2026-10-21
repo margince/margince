@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, vi } from "vitest";
 import { restoreClipboardStubs } from "./src/design-system/clipboard-testing";
 import { disarmHoverIntent } from "./src/design-system/hoverintent-testing";
+import { fetchTheNetwork } from "./src/testing/no-network";
 import { takeUnroutedSessionProbes } from "./src/testing/unrouted-session";
 import { ASYNC_UTIL_TIMEOUT_MS } from "./vitest.budget";
 
@@ -204,6 +205,32 @@ if (typeof window !== "undefined") {
     window.location.hash = "";
   });
 }
+
+// The real `fetch` is never reachable from a unit test, so a query that
+// outlives its stub cannot dial the dev port.
+//
+// Assigned at module scope, so a case's own `vi.stubGlobal("fetch", …)`
+// captures this guard as the value `vi.unstubAllGlobals()` puts back.
+//
+// `no-network` is imported above for its capture, which reads
+// `globalThis.fetch` before the line below replaces it. Loaded any later it
+// captures the guard, and the cases that want a server get it back.
+if (typeof fetchTheNetwork !== "function") {
+  throw new Error(
+    "no-network captured no fetch: this setup file imports it too late",
+  );
+}
+
+globalThis.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+  const request = input instanceof Request ? input : null;
+  const method = request?.method ?? init?.method ?? "GET";
+  const url = request ? request.url : String(input);
+  // Refused rather than resolved: an answer this file invented would let a
+  // case assert against a shape its own stub never described.
+  return Promise.reject(
+    new Error(`no fetch stub answered ${method} ${url} in this test`),
+  );
+};
 
 // A case that left `GET /me` unrouted FAILS, rather than warning into the log.
 //

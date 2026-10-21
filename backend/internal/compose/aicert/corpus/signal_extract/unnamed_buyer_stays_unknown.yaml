@@ -1,0 +1,11 @@
+name: unnamed_buyer_stays_unknown
+task: signal_extract
+site: thread_events
+source: hand_authored
+sanitized_by: hand_authored/codex
+fixture: [{"direction": "inbound", "subject": "A migration project", "sent": "2026-09-07", "body": "A company needs a migration platform for its team. I cannot identify the client yet.", "participants": [{"key": "seller", "kind": "seat", "role": "to", "name": "Linh Nguyen", "address": "linh@seller.test"}, {"key": "counterparty", "kind": "contact", "role": "from", "name": "Cedar Contact", "address": "cedar@contact.test"}]}]
+expect:
+  outcome: accepted
+  answer: [{"kind": "new_opportunity", "message": 1, "commercial_role": "unknown"}]
+  rubric: "The project is stated, but this counterparty is not a verified buyer. Preserve the commercial role so automatic proposals cannot treat the intermediary as the customer."
+  bands: {certified_min: 70, degraded_min: 50, floor: 40}

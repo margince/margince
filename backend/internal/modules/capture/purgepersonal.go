@@ -99,7 +99,7 @@ func PersonalPurgeScope(seatCol string) string {
 		   AND NOT EXISTS (
 		     SELECT 1 FROM capture_sender_override o
 		      WHERE o.user_id = ` + seatCol + ` AND o.address = a.counterparty_email
-		        AND o.decision = 'business')`
+		        AND o.decision = 'business')` + googleMeetingMailSpared("NOT p.resolved_by_owner")
 }
 
 // personalPurgeDue is which personal mail has run out its window, written ONCE

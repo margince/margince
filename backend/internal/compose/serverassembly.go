@@ -194,6 +194,7 @@ func newCollectionsHandlers(pool *pgxpool.Pool) collectionsHandlers {
 // wireSurfaces binds the handler sets built after the literal, each over a
 // dependency the literal had to build first.
 func (s *Server) wireSurfaces(pool *pgxpool.Pool, log *slog.Logger) {
+	s.dataTaskHandlers = dataTaskHandlers{pool: pool}
 	s.wireStagedSurfaces(pool)
 	s.wireAnalyticsSurface(pool)
 	s.wireCaptureSettingsSurface(pool, log)
@@ -229,6 +230,9 @@ func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
 	reportingService := newReportingService(pool, time.Now)
 	s.reportingHandlers = reporting.NewHandlers(reportingService)
 	s.reportingExportHandlers = reportingExportHandlers{service: reportingService}
+	s.reportingReaderPreviewHandlers = reportingReaderPreviewHandlers{
+		reports: reportingService, roles: identity.NewServiceFor(InstallationDB(pool)),
+	}
 	s.forecastHandlers = forecasting.NewHandlers(
 		newForecastStoreFor(pool),
 		ForecastDeals, ForecastPeriodAt, ForecastWritableScope,

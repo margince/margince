@@ -4,7 +4,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
-import { ConnectionOutcomesCard } from "../../screens/connection-outcomes";
 import { linkedInReachFixture } from "../../testing/reachfixture";
 import {
   installFetchStub,
@@ -12,6 +11,7 @@ import {
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
+import { ConnectionOutcomesCard } from "./connection-outcomes";
 
 // What a mailbox is holding back from the team. The states worth a picture are
 // the two a reader must tell apart at a glance: a thread a classifier JUDGED,

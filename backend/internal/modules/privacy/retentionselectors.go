@@ -78,23 +78,20 @@ var retentionSelectors = map[string]string{
 		WHERE status = 'lost' AND archived_at IS NULL AND NOT legal_hold
 		  AND closed_at < now() - make_interval(days => $1)
 		  AND entered_at < now() - make_interval(days => $1) LIMIT $2`,
-	// deal/won is authorable but NOT seeded: no DM-SEED row plants it, because
-	// a won deal is the commercial record of the relationship and the product
-	// takes no view on when a workspace stops keeping it. It exists because
-	// UC-GDPR-09's main success scenario authors exactly this policy ("archive
-	// deal/won after a shorter period than the default") — without a selector
-	// the use case's own worked example could not be performed.
+	// deal/won is authorable and unseeded. A won deal is the commercial record
+	// of the relationship, and the product takes no view on when a workspace
+	// stops keeping it. UC-GDPR-09's main success scenario authors this policy
+	// ("archive deal/won after a shorter period than the default"). Without a
+	// selector that worked example could not run.
 	"deal/won": `SELECT id FROM deal
 		WHERE status = 'won' AND archived_at IS NULL AND NOT legal_hold
 		  AND closed_at < now() - make_interval(days => $1)
 		  AND entered_at < now() - make_interval(days => $1) LIMIT $2`,
 	"ai_call_payload/content": `SELECT id FROM ai_call_payload
 		WHERE occurred_at < now() - make_interval(days => $1) LIMIT $2`,
-	// The verbatim provider original, aged on ITS own clock rather than on the
-	// activity's. Until this, raw_capture was reached only by the activity
-	// retention sweep joined on the natural key and by Art. 17 erasure, so on
-	// an installation whose activity policies are 1095d it grew for three years
-	// — 92% of one measured database — with nothing keyed on its own age.
+	// The verbatim provider original, aged on its own clock rather than on the
+	// activity's. Without this stage only the activity sweep and Art. 17 erasure
+	// reach raw_capture, so it grows for as long as the activity policy keeps.
 	//
 	// JOINED to the activity, and that join is the whole safety of the stage.
 	// It carries the statutory floor and the legal-hold test, so an original is

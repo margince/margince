@@ -69,7 +69,7 @@ const ACROSS_PAGE_STORIES = new Set([
 ]);
 
 // Every story file Storybook loads: a settings card's story can sit beside a
-// component outside screens/, as mail-history's does.
+// component outside features/, as mail-history's does.
 const settingsStories = (await titledStories(storyCensus(frontendRoot).files))
   .map(({ path, title }) => ({ path: relative(srcDir, path), title }))
   .filter(
@@ -81,7 +81,7 @@ describe("the settings stories are filed where the product files them", () => {
   // Pinned by hand rather than floored: a story retitled away from `Settings/`
   // drops out of the corpus above, and only an exact count notices it go.
   it("reads every settings story, and says how many that is", () => {
-    expect(settingsStories.length).toBe(190);
+    expect(settingsStories.length).toBe(194);
   });
 
   // A file whose title does not resolve drops out of the filter above;

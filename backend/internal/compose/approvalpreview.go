@@ -43,6 +43,7 @@ const (
 )
 
 type approvalPreviewReader struct {
+	now        func() time.Time
 	db         *database.DB
 	records    datasource.SystemOfRecordProvider
 	deals      *deals.Store
@@ -53,12 +54,15 @@ type approvalPreviewReader struct {
 }
 
 func newApprovalPreviewReader(db *database.DB) approvalPreviewReader {
-	return approvalPreviewReader{db: db, names: newAttentionNames(db), records: NewProviderFor(db), deals: deals.NewStore(db, DealsInstallation()), signals: signals.NewStore(db, nil), activities: activities.NewStore(db)}
+	return approvalPreviewReader{db: db, now: time.Now, names: newAttentionNames(db), records: NewProviderFor(db), deals: deals.NewStore(db, DealsInstallation()), signals: signals.NewStore(db, nil), activities: activities.NewStore(db)}
 }
 
 func (r approvalPreviewReader) read(ctx context.Context, approval crmcontracts.Approval) (*crmcontracts.ApprovalPreview, error) {
 	if approval.Status != crmcontracts.ApprovalStatusPending {
 		return nil, nil //nolint:nilnil // Terminal and uncovered kinds have no preview; their existing decision gates apply.
+	}
+	if approval.Kind == CommitmentTaskKind {
+		return r.commitmentPreview(ctx, approval)
 	}
 	changes, covered, err := commercialChanges(approval)
 	if !covered {

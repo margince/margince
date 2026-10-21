@@ -18,6 +18,11 @@ import { api } from "../../../api/client";
 import type { components } from "../../../api/schema";
 import { ifMatch, requireVersion } from "../../../api/version";
 import {
+  FINISHED_STATES,
+  refusalFor,
+  useDealRoom,
+} from "../../../components/dealroom";
+import {
   Button,
   EmptyState,
   Field,
@@ -33,7 +38,6 @@ import { useLocale, useT } from "../../../i18n";
 import { useCanWrite } from "../../../lib/capability";
 import { problemMessageOf, unwrap } from "../../../lib/problem";
 import { navigate } from "../../../lib/router";
-import { FINISHED_STATES, refusalFor, useDealRoom } from "../dealroom";
 import {
   buyerLink,
   DealRoomAccess,

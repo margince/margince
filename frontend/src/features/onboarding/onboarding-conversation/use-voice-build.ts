@@ -6,7 +6,7 @@ import type { components } from "../../../api/schema";
 import { useT } from "../../../i18n";
 import { deferralDetail } from "../../../lib/deferral-detail";
 import { unwrap } from "../../../lib/problem";
-import { ensureProfileId } from "../../voice-knowledge/voice-profile";
+import { ensureProfileId } from "../../../lib/voice-profile";
 import { pickBuiltVersion } from "../onboarding";
 import type {
   BuildStage,

@@ -13,6 +13,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -194,6 +195,74 @@ type PoolBudget struct {
 	BalanceReadAt     *time.Time
 }
 
+// presentConnection adds what the card shows beside a stored connection row, so
+// a list and the answer to a write carry the same fields.
+//
+// Spend and backlog are read in the caller's transaction, so the card shows one
+// moment rather than three.
+//
+// A backlog this read cannot produce is absent, not fatal. It is one line on a
+// card whose other rows matter more, and the contract makes it optional.
+// A cancelled request still aborts, because nobody is left to render the card.
+func (s *Store) presentConnection(
+	ctx context.Context, tx pgx.Tx, c Connection, d provider.Descriptor,
+) (Connection, error) {
+	spend, err := s.readSpendHistory(ctx, tx, c.Provider)
+	if err != nil {
+		return Connection{}, err
+	}
+	c.Spend = spend
+	c.Catalog = catalogOf(d)
+	backlog, found, err := s.optionalBacklog(ctx, tx, c.Provider)
+	if err != nil {
+		return Connection{}, err
+	}
+	if found {
+		c.Backlog = &backlog
+	}
+	return c, nil
+}
+
+// optionalBacklog reads the backlog in its own savepoint. A failed statement
+// aborts the whole transaction unless it is rolled back to a savepoint. Ignoring
+// the error without one would break every later read and the commit.
+func (s *Store) optionalBacklog(ctx context.Context, tx pgx.Tx, name string) (BacklogCount, bool, error) {
+	var backlog BacklogCount
+	found, err := storekit.Savepoint(ctx, tx, func(nested pgx.Tx) (bool, error) {
+		var readErr error
+		if backlog, readErr = s.backlogInTx(ctx, nested, name); readErr != nil && ctx.Err() != nil {
+			return false, readErr
+		}
+		return readErr == nil, nil
+	})
+	return backlog, found, err
+}
+
+// presentAfterWrite is presentConnection for the answer to a write. The write
+// has landed in this transaction, so a failed spend read must not roll it back.
+// The read runs in a savepoint. On failure the answer carries the stored row and
+// the catalog without spend. A cancelled request still aborts.
+func (s *Store) presentAfterWrite(
+	ctx context.Context, tx pgx.Tx, c Connection, d provider.Descriptor,
+) (Connection, error) {
+	shown := c
+	read, err := storekit.Savepoint(ctx, tx, func(nested pgx.Tx) (bool, error) {
+		var readErr error
+		if shown, readErr = s.presentConnection(ctx, nested, c, d); readErr != nil && ctx.Err() != nil {
+			return false, readErr
+		}
+		return readErr == nil, nil
+	})
+	if err != nil {
+		return Connection{}, err
+	}
+	if !read {
+		c.Catalog = catalogOf(d)
+		return c, nil
+	}
+	return shown, nil
+}
+
 // List returns every registered provider's connection state, including the
 // providers that have no row yet — a card that only appeared after connecting
 // would give the admin nowhere to connect FROM.
@@ -213,37 +282,9 @@ func (s *Store) List(ctx context.Context) ([]Connection, error) {
 				return err
 			}
 			if c, ok := rows[name]; ok {
-				// The card shows what the provider says is LEFT and what this
-				// installation SPENT side by side, so both arrive in one read
-				// — two round trips could show a balance and a history from
-				// different moments.
-				spend, err := s.readSpendHistory(ctx, tx, name)
+				c, err := s.presentConnection(ctx, tx, c, d)
 				if err != nil {
 					return err
-				}
-				c.Spend = spend
-				c.Catalog = catalogOf(d)
-				// Read inside this transaction, beside the spend, so the card
-				// shows a balance, a history and a backlog from one moment
-				// rather than three.
-				//
-				// A backlog this read cannot produce is ABSENT, not fatal. It
-				// is one line on a card whose other rows — the key, the
-				// posture, the balance, the spend — are what an operator came
-				// for, and a secondary count taking the whole settings page
-				// down with it is the wrong trade. The contract makes it
-				// optional for exactly this.
-				//
-				// A cancelled request is the exception and still aborts: the
-				// caller has gone, so there is nobody to render a degraded card
-				// for, and swallowing it would turn a disconnect into a
-				// pointless read of every remaining provider.
-				backlog, err := s.backlogInTx(ctx, tx, name)
-				if err != nil && ctx.Err() != nil {
-					return err
-				}
-				if err == nil {
-					c.Backlog = &backlog
 				}
 				out = append(out, c)
 				continue

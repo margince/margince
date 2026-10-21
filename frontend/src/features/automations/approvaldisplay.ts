@@ -10,38 +10,7 @@ import { humanizeKind } from "./approvalkind";
 import { commercialPreviewDisplay } from "./approvalpreview";
 import { commitmentResponsibility } from "./approvalresponsibility";
 
-// What a reader SEES of a staged proposal, per kind.
-//
-// Split from approvalkind.ts, which keeps the WRITE half (what a reader may
-// change before accepting) and the kind vocabulary itself. The two halves share
-// only the kind as a key: this one is a catalogue that grows with every kind the
-// server learns to stage, and it had grown to two thirds of a file whose name
-// promises something smaller.
-
-// Without this a card falls back to printing the payload's own JSON keys and
-// values: `deal_id  01a03781-9083-…`, `flags  ["unrealistic_stale"]`,
-// `target_version  —`. That is the database row, shown to somebody who was
-// asked to make a business decision. The information they actually need is
-// usually in there — `basis` on a close-date correction is written by the
-// server expressly as the plain-language reason — but it arrives as row four
-// of eight, in the same grey type as a uuid.
-//
-// So a kind may declare what each field IS. Three consequences follow from the
-// declaration, and they are the whole point:
-//
-//   - a field nobody declares is NOT SHOWN. Identifiers, versions and
-//     dedupe keys are how the software finds a record, not why a contact should
-//     agree to something. They stay reachable under the detail dialog's
-//     technical disclosure for whoever genuinely needs them.
-//   - `lead` is the sentence the card leads with, under the headline. At most
-//     one per kind.
-//   - everything else declared renders as a labelled fact, in the order
-//     declared rather than in JSON key order.
-//
-// A kind that declares nothing keeps the old behaviour, so the raw-args kinds
-// (an agent tool's arguments, an automation rule's action) are unchanged. They
-// carry no typed payload to describe, and labels for unknown keys would be
-// guesses. The declaration's shape is `DisplayField` in approvaldisplay.types.ts.
+// Typed proposals expose declared business facts; raw-argument kinds retain their fields.
 export type {
   DisplayField,
   ResolvedDisplayField,
@@ -405,6 +374,19 @@ export function resolveDisplay(
       ),
       ...commercialPreviewDisplay(preview, t, locale, formatDay),
     ];
+  if (
+    kind === "commitment_task" &&
+    typeof change.existing_task_id === "string"
+  ) {
+    return [
+      ...resolved.filter((entry) => entry.lead && entry.value),
+      {
+        field: "recipient_effect",
+        label: t("approval.preview.effects"),
+        value: t("approval.preview.attachRecipients"),
+      },
+    ];
+  }
   if (kind === "commitment_task") {
     const due = resolved.find((entry) => entry.field === "due_date");
     if (due && due.value === null)

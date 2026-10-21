@@ -18,7 +18,6 @@ import {
 } from "../design-system/hoverintent-testing";
 import { en } from "../i18n/en";
 import { navigate, parseHash, type Route } from "../lib/router";
-import { Shell, WorkspaceRail } from "./shell";
 import {
   fixtureSection,
   ignoreSearch,
@@ -30,7 +29,8 @@ import {
   repSeeing,
   stubPhoneViewport,
   TWO_MARKS,
-} from "./testing/shellharness";
+} from "../testing/shellharness";
+import { Shell, WorkspaceRail } from "./shell";
 
 // A composed installation, because the vanilla registry is empty by
 // construction: the case below that stands on a composed unit's screen is

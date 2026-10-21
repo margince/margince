@@ -83,6 +83,10 @@ func checkDealMoney(fields map[string]string, typed map[string]any) *cellProblem
 		return problemOf(dealTargetAmount, fields[dealTargetAmount],
 			migration.Why(migration.ReasonNotAnAmount, "value", amount, "currency", currency))
 	}
+	if minor < 0 {
+		return problemOf(dealTargetAmount, fields[dealTargetAmount],
+			migration.Why(migration.ReasonAmountNegative, "value", amount))
+	}
 	typed[dealTargetAmount] = minor
 	return nil
 }

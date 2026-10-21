@@ -88,6 +88,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [add-an-rbac-object.md](how-to/add-an-rbac-object.md): add a new kind of record to RBAC.
 - [create-a-workflow.md](how-to/create-a-workflow.md): add a new starter workflow.
 - [apply-migrations.md](how-to/apply-migrations.md): write and run a database migration.
+- [add-a-data-task.md](how-to/add-a-data-task.md): add a data task.
+- [data-tasks.md](explanation/data-tasks.md): how a data task keeps its place.
 - [claim-a-red-main.md](how-to/claim-a-red-main.md): say that you fix a red `main` before you start.
 - [work-on-an-issue.md](how-to/work-on-an-issue.md): check that an issue is free, claim it, and release
   it when you stop.
@@ -98,7 +100,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [improve-mcp-quality.md](how-to/improve-mcp-quality.md): find why a model fails an MCP test, and fix
   the right part.
 - [run-the-frontend.md](how-to/run-the-frontend.md): run the web app while you develop.
-- [move-a-frontend-feature.md](how-to/move-a-frontend-feature.md): put one feature from `screens/` in a folder of its own.
+- [move-frontend-code.md](how-to/move-frontend-code.md): put a frontend file in the folder that owns it.
 - [connect-a-mailbox.md](how-to/connect-a-mailbox.md): set up the provider apps and settings that mailbox
   and calendar capture need.
 - [enrich-with-a-local-llm.md](how-to/enrich-with-a-local-llm.md): use a local model on Ollama or

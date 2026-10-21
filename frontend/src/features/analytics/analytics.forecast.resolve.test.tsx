@@ -14,8 +14,12 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { components } from "../../api/schema";
+import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
-import { jsonResponse } from "../companies/company.fixtures";
+import { jsonResponse } from "../../testing/company.fixtures";
+import { suggestion } from "../../testing/dealsuggestion.fixture";
+import { meFixture } from "../../testing/mefixture";
+import { ReviewActionsProvider } from "../../testing/reviewactions";
 import { ForecastReview } from "./analytics.forecast.review";
 
 // Answering a finding from the forecast review.
@@ -53,9 +57,17 @@ type Posted = { url: string; body: unknown };
 function show({
   refuse,
   hold,
+  findings = [FIRST, SECOND],
+  dealActions = ["read", "update"],
+  covered = false,
+  signalActions = ["read", "update"],
 }: {
   refuse?: { status: number; detail: string };
   hold?: Promise<void>;
+  findings?: InputCheck[];
+  dealActions?: ("read" | "update" | "create")[];
+  covered?: boolean;
+  signalActions?: ("read" | "update")[];
 } = {}) {
   const posted: Posted[] = [];
   const reads = { assurance: 0 };
@@ -78,11 +90,50 @@ function show({
         if (id) {
           resolved.add(id);
         }
-        return jsonResponse({});
+        return jsonResponse(
+          url.endsWith("/deals")
+            ? { id: "new-support", name: "New support" }
+            : {},
+        );
       }
+      if (url.endsWith("/me"))
+        return jsonResponse(
+          meFixture({
+            allow: {
+              deal: dealActions,
+              signal: signalActions,
+              forecast: ["read", "update"],
+            },
+          }),
+        );
+      if (url.includes("/deal-suggestions"))
+        return jsonResponse({ data: covered ? [suggestion] : [] });
+      if (url.includes("/signals/"))
+        return jsonResponse({
+          summary: "Annual support request",
+          evidence: [],
+        });
+      if (url.endsWith("/pipelines"))
+        return jsonResponse({
+          data: [
+            {
+              id: "pipeline",
+              name: "Sales",
+              is_default: true,
+              stages: [
+                { id: "qualified", name: "Qualified", semantic: "open" },
+              ],
+            },
+          ],
+        });
+      if (url.includes("/deals?"))
+        return jsonResponse({
+          data: [{ id: "support", name: "Annual support" }],
+          page: { has_more: false },
+        });
       if (url.includes("/forecast/assurance/exceptions")) {
         return jsonResponse({
-          data: [FIRST, SECOND].filter((item) => !resolved.has(item.id)),
+          data: findings.filter((item) => !resolved.has(item.id)),
         });
       }
       if (url.includes("/forecast/assurance")) {
@@ -104,7 +155,9 @@ function show({
       }
     >
       <LocaleProvider initial="en">
-        <ForecastReview />
+        <ReviewActionsProvider>
+          <ForecastReview />
+        </ReviewActionsProvider>
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -232,4 +285,199 @@ describe("answering a forecast finding", () => {
     );
     expect(screen.getByRole("dialog")).toBe(second);
   });
+});
+
+it("requires a chosen deal before filing buying evidence and sends that exact deal", async () => {
+  const user = userEvent.setup();
+  const finding: InputCheck = {
+    ...FIRST,
+    type: "unlinked_signal",
+    subject_kind: "signal",
+    subject_id: "signal-one",
+    subject: { type: "company", id: "company-one", label: "Acme" },
+    claim: { company_id: "company-one" },
+    observed: { occurred_at: "2026-07-01T10:00:00Z", historical: true },
+  };
+  const { posted } = show({ findings: [finding] });
+  await user.click(await answerButton("Acme"));
+  const sheet = await screen.findByRole("dialog");
+  await user.click(
+    await within(sheet).findByRole("radio", { name: "Link to existing deal" }),
+  );
+  const save = within(sheet).getByRole("button", { name: "Save answer" });
+  expect(save.hasAttribute("disabled")).toBe(true);
+  const picker = await within(sheet).findByRole("combobox", {
+    name: /Existing deal/,
+  });
+  await waitFor(() => expect(picker.hasAttribute("disabled")).toBe(false));
+  await pickOption(user, picker, "Annual support");
+  await waitFor(() => expect(save.hasAttribute("disabled")).toBe(false));
+  await user.click(save);
+  await waitFor(() => expect(posted).toHaveLength(1));
+  expect(posted[0]?.body).toEqual({
+    outcome: "fixed_record",
+    deal_id: "support",
+  });
+});
+
+it("opens the canonical proposal when a buying finding is already covered", async () => {
+  const user = userEvent.setup();
+  show({
+    covered: true,
+    dealActions: ["read", "update", "create"],
+    findings: [
+      {
+        ...FIRST,
+        type: "unlinked_signal",
+        subject_kind: "signal",
+        subject_id: "signal-one",
+        subject: { type: "company", id: suggestion.company_id, label: "Acme" },
+        claim: { company_id: suggestion.company_id },
+        observed: { suggestion_id: suggestion.id },
+      },
+    ],
+  });
+  await user.click(await answerButton("Acme"));
+  const sheet = await screen.findByRole("dialog");
+  expect(
+    await within(sheet).findByRole("button", { name: "Link to existing deal" }),
+  ).toBeTruthy();
+  expect(
+    within(sheet).queryByRole("button", { name: "Save answer" }),
+  ).toBeNull();
+  expect(within(sheet).queryByRole("radio")).toBeNull();
+});
+
+it("shows an unavailable proposal when its finding has lost the company claim", async () => {
+  const user = userEvent.setup();
+  show({
+    covered: true,
+    findings: [
+      {
+        ...FIRST,
+        type: "unlinked_signal",
+        subject_kind: "signal",
+        subject_id: "signal-one",
+        subject: { type: "company", id: suggestion.company_id, label: "Acme" },
+        observed: { suggestion_id: suggestion.id },
+      },
+    ],
+  });
+  await user.click(await answerButton("Acme"));
+  const sheet = await screen.findByRole("dialog");
+  expect(
+    await within(sheet).findByText(
+      "This suggestion is no longer available. Refresh the findings to see its current state.",
+    ),
+  ).toBeTruthy();
+  expect(
+    vi
+      .mocked(fetch)
+      .mock.calls.some(([input]) =>
+        String(input instanceof Request ? input.url : input).includes(
+          "/deal-suggestions",
+        ),
+      ),
+  ).toBe(false);
+});
+
+it("does not offer deal linking to a reader without deal update permission", async () => {
+  const user = userEvent.setup();
+  show({
+    dealActions: ["read"],
+    findings: [
+      {
+        ...FIRST,
+        type: "unlinked_signal",
+        subject_kind: "signal",
+        subject_id: "signal-one",
+        subject: { type: "company", id: "company-one", label: "Acme" },
+        claim: { company_id: "company-one" },
+      },
+    ],
+  });
+  await user.click(await answerButton("Acme"));
+  const sheet = await screen.findByRole("dialog");
+  expect(
+    await within(sheet).findByRole("radio", { name: /Not relevant/ }),
+  ).toBeTruthy();
+  expect(
+    within(sheet).queryByRole("radio", { name: "Link to existing deal" }),
+  ).toBeNull();
+  expect(
+    within(sheet).queryByRole("combobox", { name: /Existing deal/ }),
+  ).toBeNull();
+});
+
+it("keeps a newly qualified deal in the answer and files the signal only after confirmation", async () => {
+  const user = userEvent.setup();
+  const { posted } = show({
+    dealActions: ["read", "create", "update"],
+    findings: [
+      {
+        ...FIRST,
+        type: "unlinked_signal",
+        subject_kind: "signal",
+        subject_id: "signal-one",
+        subject: { type: "company", id: "company-one", label: "Acme" },
+        claim: { company_id: "company-one" },
+      },
+    ],
+  });
+  await user.click(await answerButton("Acme"));
+  const answer = await screen.findByRole("dialog");
+  await user.click(
+    within(answer).getByRole("radio", { name: "Link to existing deal" }),
+  );
+  await user.click(
+    await within(answer).findByRole("button", { name: "New deal" }),
+  );
+  await user.type(
+    await screen.findByRole("textbox", { name: "Deal name" }),
+    "New support",
+  );
+  await user.click(screen.getByRole("button", { name: "Create" }));
+  await waitFor(() => expect(posted).toHaveLength(1));
+  expect(posted[0]?.url).toMatch(/\/deals$/);
+  expect(posted[0]?.body).toMatchObject({
+    company_id: "company-one",
+    name: "New support",
+  });
+  const save = within(answer).getByRole("button", {
+    name: "Save answer",
+  });
+  await waitFor(() => expect(save.hasAttribute("disabled")).toBe(false));
+  await user.click(save);
+  await waitFor(() => expect(posted).toHaveLength(2));
+  expect(posted[1]?.body).toEqual({
+    outcome: "fixed_record",
+    deal_id: "new-support",
+  });
+});
+
+it("explains when a signal reader cannot answer the finding", async () => {
+  const user = userEvent.setup();
+  show({
+    signalActions: ["read"],
+    findings: [
+      {
+        ...FIRST,
+        type: "unlinked_signal",
+        subject_kind: "signal",
+        subject_id: "signal-one",
+        subject: { type: "company", id: "company-one", label: "Acme" },
+        claim: { company_id: "company-one" },
+      },
+    ],
+  });
+  await user.click(await answerButton("Acme"));
+  const sheet = await screen.findByRole("dialog");
+  expect(
+    await within(sheet).findByText(
+      /You do not have permission for this action/,
+    ),
+  ).toBeTruthy();
+  expect(
+    within(sheet).queryByRole("button", { name: "Save answer" }),
+  ).toBeNull();
 });

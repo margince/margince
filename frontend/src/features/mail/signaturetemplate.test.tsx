@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useToast } from "../../design-system/toast";
 import { meFixture } from "../../testing/mefixture";
-import { jsonResponse, render } from "../settings/settings.testkit";
+import { jsonResponse, render } from "../../testing/settings.testkit";
 import { SignatureSettingRow } from "../settings/settingssignaturerow";
 import { SignatureHtml } from "./signaturehtml";
 import { SignatureTemplateCard } from "./signaturetemplatecard";

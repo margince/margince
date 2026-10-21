@@ -105,10 +105,21 @@ func (s *Store) updateContactInTx(
 		return out, err
 	}
 	storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties)
+	// The If-Match check comes first: the replace-sets write child rows before
+	// the contact row's own guarded write can refuse a stale version.
+	if err := storekit.EnsureIfMatch(ctx, tx, "contact", id.UUID, in.IfVersion); err != nil {
+		return out, err
+	}
+	setsChanged, err := applyContactReplaceSets(ctx, tx, id, current, in, active)
+	if err != nil {
+		return out, err
+	}
+	if setsChanged {
+		// A replace-set changes no column on the row, so this bump carries the
+		// version guard and the audit row.
+		p.Set("updated_at", current.UpdatedAt, time.Now().UTC())
+	}
 	if p.Empty() {
-		if err := storekit.EnsureIfMatch(ctx, tx, "contact", id.UUID, in.IfVersion); err != nil {
-			return out, err
-		}
 		return current, nil
 	}
 
@@ -120,24 +131,6 @@ func (s *Store) updateContactInTx(
 			return out, &RequiredFieldError{Field: filterOwnerID}
 		}
 		return out, fmt.Errorf("apply contact patch: %w", err)
-	}
-	if in.Social != nil {
-		if err := replaceContactSocial(ctx, tx, workspaceID(ctx), id, in.Social); err != nil {
-			return out, err
-		}
-	}
-
-	if in.Emails != nil || in.Phones != nil {
-		by, err := storekit.CapturedBy(ctx)
-		if err != nil {
-			return out, err
-		}
-		if err := replaceContactEmails(ctx, tx, workspaceID(ctx), id, in.Source, by, in.Emails); err != nil {
-			return out, err
-		}
-		if err := replaceContactPhones(ctx, tx, id, in.Source, by, in.Phones); err != nil {
-			return out, err
-		}
 	}
 	// AFTER the addresses are replaced, never before: the cohort pass
 	// selects the correspondence to attach by reading this contact's live
@@ -213,18 +206,6 @@ func buildContactPatch(current crmcontracts.Contact, in UpdateContactInput) (*st
 	}
 	if err := setAddress(p, current.Address, in.Address, in.Trail); err != nil {
 		return nil, err
-	}
-	if in.Social != nil || in.Emails != nil || in.Phones != nil {
-		// The relation replacement rides the contact row's version
-		// bump (updated_at below), so If-Match still guards it and
-		// the audit row still records the transition.
-		//
-		// Emails and Phones are in this condition for a second reason:
-		// without it a row whose ONLY change is an address or a number
-		// hits p.Empty() below and returns having written nothing, so a
-		// corrected export would report success and drop every such edit
-		// in the file.
-		p.Set("updated_at", current.UpdatedAt, time.Now().UTC())
 	}
 	return p, nil
 }

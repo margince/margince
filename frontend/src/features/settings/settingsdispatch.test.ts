@@ -90,11 +90,11 @@ const CARDS_THE_REGISTER_REACHED = [
 
 describe("the split lost no card", () => {
   function renderedComponents(): Set<string> {
-    // settings.tsx AND every `settings.<page>.tsx` companion, because a page
-    // whose cards outgrew settings.tsx's frozen length moves them into one —
-    // the privacy lanes did, and a scan reading only settings.tsx called four
-    // surviving cards lost. Found by name rather than listed, so the next
-    // companion is read without anybody remembering to add it here.
+    // settings.tsx and every `settings.<page>.tsx` companion, because a page's
+    // cards can live in a companion (the privacy lanes do). A scan reading only
+    // settings.tsx would call those cards lost. Found by name rather than
+    // listed, so the next companion is read without anybody remembering to add
+    // it here.
     const source = readdirSync(here)
       .filter(
         (file) =>

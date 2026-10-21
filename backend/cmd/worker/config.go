@@ -26,6 +26,7 @@ import (
 
 // workerConfig is the parsed boot configuration of the worker process.
 type workerConfig struct {
+	dataTasksPace time.Duration
 	dsn           string
 	publicBaseURL string
 	listsEnabled  bool
@@ -137,7 +138,7 @@ func fromRegistry(loaded *config.Config, posture runtimeenv.Environment) workerC
 		graphTenant: config.Val(loaded, ps.GraphTenant), gmailPubsubTopic: config.Val(loaded, ps.GmailPubsubTopic),
 		graphNotifyURL: config.Val(loaded, ps.GraphNotificationURL), webhookKey: config.Val(loaded, ps.WebhookKey),
 		geocodeBaseURL: config.Val(loaded, ps.GeocodeBaseURL), vatCheckBaseURL: config.Val(loaded, ps.VATCheckBaseURL),
-		certLogBaseURL: config.Val(loaded, ps.CertLogBaseURL), jobDrainWindow: config.Val(loaded, ps.JobDrainWindow),
+		certLogBaseURL: config.Val(loaded, ps.CertLogBaseURL), jobDrainWindow: config.Val(loaded, ps.JobDrainWindow), dataTasksPace: config.Val(loaded, ps.DataTasksPace),
 		logLevel: config.Val(loaded, ps.LogLevel), logFormat: config.Val(loaded, ps.LogFormat),
 		observeAddr: config.Val(loaded, ps.ObserveAddr), observePprof: config.Val(loaded, ps.ObservePprof),
 		listsEnabled:    config.Val(loaded, ps.ListsEnabled),

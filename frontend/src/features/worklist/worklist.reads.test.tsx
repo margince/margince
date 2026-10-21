@@ -6,8 +6,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
+import { day, row } from "../../testing/worklist.testkit";
 import { accumulatedDay, loadedQueue, useWorklist } from "./worklist.reads";
-import { day, row } from "./worklist.testkit";
 
 afterEach(() => {
   cleanup();

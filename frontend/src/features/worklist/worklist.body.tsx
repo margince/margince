@@ -5,7 +5,6 @@ import { PageZones } from "../../design-system/pagezones";
 import { Panel } from "../../design-system/panel";
 import { useT } from "../../i18n";
 import { useMemberNames } from "../../lib/membernames";
-import { represented } from "../../lib/worklistunits";
 import {
   bandSections,
   canReportEmptyBands,
@@ -44,6 +43,7 @@ import { WorklistReadings } from "./worklist.readings";
 import { rowIdentity } from "./worklist.rowidentity";
 import { DayUnread, dayPartlyRead } from "./worklist.unread";
 import { LoadMoreOfTheDay, WalkNotice } from "./worklist.walknotice";
+import { represented } from "./worklistunits";
 
 export function WorklistBody({
   embedded = false,

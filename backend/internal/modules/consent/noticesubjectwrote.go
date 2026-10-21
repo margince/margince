@@ -45,6 +45,10 @@ var settleableOwedStates = []string{
 //
 // Returns how many cases it closed.
 func SettleWhenSubjectWroteTx(ctx context.Context, tx pgx.Tx, acquisitions []ids.UUID, now time.Time) (int, error) {
+	return settleAcquisitionCasesTx(ctx, tx, acquisitions, subjectWroteNote, now)
+}
+
+func settleAcquisitionCasesTx(ctx context.Context, tx pgx.Tx, acquisitions []ids.UUID, note string, now time.Time) (int, error) {
 	if len(acquisitions) == 0 {
 		return 0, nil
 	}
@@ -59,7 +63,7 @@ func SettleWhenSubjectWroteTx(ctx context.Context, tx pgx.Tx, acquisitions []ids
 	if err != nil {
 		return 0, fmt.Errorf("read the duties owed for these acquisitions: %w", err)
 	}
-	return closeOwedCasesTx(ctx, tx, caseIDs, subjectWroteNote, now)
+	return closeOwedCasesTx(ctx, tx, caseIDs, note, now)
 }
 
 // closeOwedCasesTx ends each named case as exempt_with_reason on one ground,

@@ -11,9 +11,9 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { company360, companyBackstop } from "../../testing/company.fixtures";
+import { stubFetch } from "../../testing/company.testkit";
 import { CompanyScreen } from "./companies";
-import { company360, companyBackstop } from "./company.fixtures";
-import { stubFetch } from "./company.testkit";
 
 // What an account is under contract for reads on the Deals tab, which is
 // where the pipeline and the account's other work in flight already live.

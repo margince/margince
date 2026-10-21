@@ -44,7 +44,6 @@ const RECORD_TYPE_NAME_KEYS = [
   "backfill.statContacts",
   "ob.digest.contacts",
   "ob.conv.triage.contactsLabel",
-  "brief.digestContacts",
   "unit.contacts",
   "create.contact",
   "merge.contact",
@@ -159,6 +158,8 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "privacy.inboxAdminOnly",
   ],
   de: [
+    // Reviewed work names its human author, never a contact record.
+    "homeRepair.reason.adopted",
     // These name the human making a promise or decision, not a contact record.
     "approval.commitment.unresolved",
     "approval.commitment.assignDecider",
@@ -244,6 +245,10 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "sendPermission.reason.withdrawn",
   ],
   vi: [
+    // Reviewed work names its human author, never a contact record.
+    "homeRepair.reason.classificationAdopted",
+    "homeRepair.reason.adopted",
+    "homeRepair.explain",
     // These name the human making a promise or decision, not a contact record.
     "approval.responsibility.requestedFrom",
     "approval.commitment.promiser",

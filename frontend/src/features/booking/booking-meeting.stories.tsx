@@ -1,10 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
+import { DeliveryCard } from "../../components/booking-meeting-parts";
+import { bookingInvitation } from "../../testing/book.testkit";
 import { jsonResponse } from "../../testing/story-utils";
 import { bookingFrame } from "./book.storykit";
-import { bookingInvitation } from "./book.testkit";
 import { BookingMeetingScreen } from "./booking-meeting";
-import { DeliveryCard } from "./booking-meeting-parts";
 
 import "./book.css";
 import "./booking-meeting.css";

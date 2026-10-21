@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -55,6 +54,9 @@ type UpdateActivityInput struct {
 	customColumns []fieldcatalog.Column
 }
 
+const archiveReasonKey = "reason"
+
+// UpdateActivity keeps an authorized edit and its audit in one transaction.
 func (s *Store) UpdateActivity(ctx context.Context, id ids.ActivityID, in UpdateActivityInput) (crmcontracts.Activity, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
 		return crmcontracts.Activity{}, err
@@ -178,13 +180,44 @@ func updateActivityInTx(
 	return out, nil
 }
 
-// changesNothing is true when the patch names no field to set, and no clear of
-// a field that holds a value. That is a form saved untouched: writing it would
-// bump the version and audit an empty change set.
+// changesNothing is true when every field the patch names already holds the
+// sent value, and no clear names a field that holds one. That is a form saved
+// untouched: writing it would bump the version and audit an empty change set.
 func (in UpdateActivityInput) changesNothing(current crmcontracts.Activity) bool {
-	return in.Subject == nil && in.Body == nil && in.OccurredAt == nil && in.DurationSeconds == nil &&
-		in.DueAt == nil && in.RemindAt == nil && in.AssigneeID == nil && in.IsDone == nil &&
-		in.MeetingStatus == nil && !in.clearsAValue(current) && !in.changesCustom(current)
+	return !in.movesAField(current) && !in.clearsAValue(current) && !in.changesCustom(current)
+}
+
+// movesAField compares each sent field with the row, the way a patch does.
+func (in UpdateActivityInput) movesAField(current crmcontracts.Activity) bool {
+	p := storekit.NewPatch()
+	if in.Subject != nil {
+		p.Set("subject", current.Subject, *in.Subject)
+	}
+	if in.Body != nil {
+		p.Set("body", current.Body, *in.Body)
+	}
+	if in.OccurredAt != nil {
+		p.Set("occurred_at", current.OccurredAt, *in.OccurredAt)
+	}
+	if in.DurationSeconds != nil {
+		p.Set("duration_seconds", current.DurationSeconds, *in.DurationSeconds)
+	}
+	if in.DueAt != nil {
+		p.Set("due_at", current.DueAt, *in.DueAt)
+	}
+	if in.RemindAt != nil {
+		p.Set("remind_at", current.RemindAt, *in.RemindAt)
+	}
+	if in.AssigneeID != nil {
+		p.Set("assignee_id", current.AssigneeId, *in.AssigneeID)
+	}
+	if in.IsDone != nil {
+		p.Set("is_done", current.IsDone, *in.IsDone)
+	}
+	if in.MeetingStatus != nil {
+		p.Set("meeting_status", current.MeetingStatus, *in.MeetingStatus)
+	}
+	return !p.Empty()
 }
 
 // clearsAValue is true when a null names a field that currently holds one.
@@ -414,7 +447,11 @@ func archiveActivityInTx(
 	if err := p.ApplyGuardedIn(ctx, tx, "activity", id.UUID, pin, activityArchivedFilter(held)); err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	auditID, err := storekit.Audit(ctx, tx, "archive", "activity", id.UUID, nil, nil)
+	var evidence map[string]any
+	if o.reason != "" {
+		evidence = map[string]any{archiveReasonKey: o.reason, "rule_version": o.ruleVersion}
+	}
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, "archive", "activity", id.UUID, p.Before(), p.After(), evidence)
 	if err != nil {
 		return crmcontracts.Activity{}, err
 	}
@@ -424,44 +461,4 @@ func archiveActivityInTx(
 		return crmcontracts.Activity{}, err
 	}
 	return readActivity(ctx, tx, id, storekit.IncludeArchived)
-}
-
-// activityUpdatedChangedFields projects the patch's touched/untouched decisions
-// onto activity.updated's BOUNDED changed_fields struct. body carries a presence
-// flag, never the content — bodies can be large and are never echoed onto the
-// wire.
-//
-// It reads the REQUEST while the audit image reads the row, and the two are not
-// interchangeable: an event announces which fields a caller asked to change, an
-// audit image records what the row then held.
-func activityUpdatedChangedFields(in UpdateActivityInput) crmcontracts.PublicEventActivityChangedFields {
-	var fields crmcontracts.PublicEventActivityChangedFields
-	if in.Subject != nil {
-		fields.Subject = in.Subject
-	}
-	if in.Body != nil {
-		bodyTouched := true
-		fields.Body = &bodyTouched
-	}
-	if in.OccurredAt != nil {
-		fields.OccurredAt = in.OccurredAt
-	}
-	if in.DueAt != nil {
-		fields.DueAt = in.DueAt
-	}
-	if in.RemindAt != nil {
-		fields.RemindAt = in.RemindAt
-	}
-	if in.AssigneeID != nil {
-		assignee := openapi_types.UUID(in.AssigneeID.UUID)
-		fields.AssigneeId = &assignee
-	}
-	if in.IsDone != nil {
-		fields.IsDone = in.IsDone
-	}
-	if in.MeetingStatus != nil {
-		status := crmcontracts.PublicEventActivityChangedFieldsMeetingStatus(*in.MeetingStatus)
-		fields.MeetingStatus = &status
-	}
-	return fields
 }

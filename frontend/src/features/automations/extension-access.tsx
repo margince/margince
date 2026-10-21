@@ -34,22 +34,22 @@ import { routeHash } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import "./extension-access.css";
 import {
-  GrantMatrix,
-  type GrantMatrixRow,
-  type GrantMatrixSection,
-  grantOf,
-} from "../settings/grantmatrix";
+  EXTENSIONS_KEY,
+  type ExtensionUnit,
+  useExtensions,
+} from "../../lib/extensions.queries";
 import {
   ROLES_KEY,
   type Role,
   useRoles,
   useSetRoleGrant,
-} from "../settings/roles.queries";
+} from "../../lib/roles.queries";
 import {
-  EXTENSIONS_KEY,
-  type ExtensionUnit,
-  useExtensions,
-} from "./extensions.queries";
+  GrantMatrix,
+  type GrantMatrixRow,
+  type GrantMatrixSection,
+  grantOf,
+} from "../settings/grantmatrix";
 
 // Extension access (settings → Extensions): what the composed extension tier
 // brought into this installation, and who may use it.

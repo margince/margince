@@ -5,8 +5,8 @@ import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { SurfaceState, sectionState } from "../../design-system/surfacestate";
 import { formatMoneyOrAbsent, formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import { dealsFilteredBy } from "../../lib/dealsaddress";
 import { navigate } from "../../lib/router";
-import { dealsFilteredBy } from "../deals/dealsaddress";
 import type { Company360 } from "./company360";
 import "./company360.css";
 

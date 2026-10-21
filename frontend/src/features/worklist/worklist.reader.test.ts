@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import { translate } from "../../i18n";
-import { taskRow } from "../brief/brief.fixtures";
+import { taskRow } from "../../testing/brief.fixtures";
 import { whenText } from "./worklist.copy";
 import { noticeDetail, readerTask } from "./worklist.reader";
 
@@ -117,4 +117,20 @@ it("dates the original change, not its later delivery", () => {
       new Date("2026-09-14T10:00:00Z"),
     ),
   ).toBe("07/09/2026, 12:00");
+});
+
+it("renders domain maintenance reasons in the reader's language", () => {
+  const question = {
+    ...task,
+    source: "domain_question" as const,
+    domain_reason_code: "forwarded_identity",
+    detail: "Stored fallback prose",
+  };
+  for (const language of ["en", "de", "vi"] as const) {
+    expect(
+      noticeDetail(question, viewer, (key, values) =>
+        translate(language, key, values),
+      ),
+    ).toBe(translate(language, "blockedDomains.source.forwardedIdentity"));
+  }
 });

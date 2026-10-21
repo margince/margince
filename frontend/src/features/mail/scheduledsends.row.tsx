@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { SendPermission } from "../../components/sendpermission";
 import { Badge, Button, Card, TextInput } from "../../design-system/atoms";
 import { Row } from "../../design-system/stack";
 import { localDateTimeValue } from "../../format/calendarday";
@@ -10,10 +11,9 @@ import {
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { logUnexpectedError } from "../../lib/problem";
+import { useSendPermission } from "../../lib/usesendpermission";
 import { scheduleFields } from "./composesend";
 import type { Move, ScheduledSend, Status } from "./scheduledsends";
-import { SendPermission } from "./sendpermission";
-import { useSendPermission } from "./usesendpermission";
 
 // What each status says, in the five-state vocabulary. `scheduled` is work
 // still in flight, `sent` is the favourable outcome, `held` needs a human

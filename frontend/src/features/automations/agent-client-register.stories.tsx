@@ -3,6 +3,10 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import {
+  AGENT_CLIENT_SCOPES,
+  GEMINI_CLIENT,
+} from "../../testing/agent-clients.fixtures";
+import {
   installFetchStub,
   jsonResponse,
   meRoute,
@@ -12,7 +16,6 @@ import {
   AgentClientValuesDialog,
   RegisterAgentClientDialog,
 } from "./agent-client-register";
-import { AGENT_CLIENT_SCOPES, GEMINI_CLIENT } from "./agent-clients.fixtures";
 
 // Registering a client by hand, then what to paste into the tool. The secret
 // shows once, in the result, and nowhere after the dialog closes.

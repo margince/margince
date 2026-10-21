@@ -4,13 +4,16 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import {
+  formatFixture,
+  recentRunsFixture,
+} from "../../testing/import.fixtures";
+import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import { ImportCard } from "./import";
-import { formatFixture, recentRunsFixture } from "./import.fixtures";
 
 // Bringing a customer's data in. The settings page is the hub: the drop zone,
 // the template with its import order, and the recent runs. The wizard that performs

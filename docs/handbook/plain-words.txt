@@ -1038,7 +1038,6 @@ routine
 row
 rule
 run
-s
 said
 sale
 salesperson

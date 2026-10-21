@@ -3,6 +3,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { en } from "../../i18n/en";
+import { view as liveView } from "../../testing/contactpage.testkit";
 import {
   installFetchStub,
   jsonResponse,
@@ -16,7 +17,6 @@ import {
   refusedRead,
 } from "./contactarchived.fixtures";
 import { ContactPageV2 } from "./contactpage";
-import { view as liveView } from "./contactpage.testkit";
 
 afterEach(cleanup);
 

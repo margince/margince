@@ -5,7 +5,6 @@ import { House } from "lucide-react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
 import { parseHash, type Route } from "../lib/router";
-import { PageTitle, Shell } from "./shell";
 import {
   fixtureSection,
   ignoreSearch,
@@ -13,7 +12,8 @@ import {
   render,
   renderWith,
   stubPhoneViewport,
-} from "./testing/shellharness";
+} from "../testing/shellharness";
+import { PageTitle, Shell } from "./shell";
 
 // A composed installation, because the vanilla registry is empty by
 // construction — the two branches that YIELD to a surface naming itself (a

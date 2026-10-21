@@ -133,7 +133,7 @@ internal/compose/integration/daily_seed_bench_test.go 2
 internal/compose/integration/dealfigures_integration_test.go 2
 internal/compose/integration/dealforecasthistory_integration_test.go 1
 internal/compose/integration/dealstatus_facts_integration_test.go 1
-internal/compose/integration/dealsuggestion_http_integration_test.go 2
+internal/compose/integration/dealsuggestion_http_integration_test.go 1
 internal/compose/integration/decaylane_integration_test.go 4
 internal/compose/integration/deploymentsecretunseal_integration_test.go 2
 internal/compose/integration/dossier_e2e_integration_test.go 1
@@ -436,7 +436,6 @@ internal/shared/kernel/relstrength/relstrength_test.go 4
 migrations/capturedmailanswersnotice_integration_test.go 2
 migrations/coreversions_test.go 1
 migrations/enginebackfill_integration_test.go 1
-migrations/mailalreadyheldnotice_integration_test.go 4
 migrations/mailboxhistorynotice_integration_test.go 2
 migrations/sentfromformeraddressnotice_integration_test.go 2
 pkg/extension/messaging/messaging_test.go 1

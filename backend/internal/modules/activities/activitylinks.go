@@ -101,7 +101,7 @@ func (e *TooManyLinksError) FieldFault() (field, code, message string) {
 // (capture/sinkproject.go: "a principal that may create captured mail but not
 // change it attributes nothing"). Two doors onto one act must not disagree
 // about who may perform it; before this the create door was the cheaper way in.
-func insertActivityLinks(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, kind string, links []ActivityLinkInput) error {
+func insertActivityLinks(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, kind string, links []ActivityLinkInput, fromRequest bool) error {
 	if len(links) > maxActivityLinks {
 		return &TooManyLinksError{Count: len(links)}
 	}
@@ -136,7 +136,7 @@ func insertActivityLinks(ctx context.Context, tx pgx.Tx, activityID ids.Activity
 		}
 		seen[link] = struct{}{}
 		if err := mayAttach(ctx, tx, link); err != nil {
-			return err
+			return linkRefusal(fromRequest, err)
 		}
 		column := linkColumn(link.EntityType)
 		// AFTER the target probe, not before it. A caller naming a company they
@@ -178,6 +178,16 @@ func mayAttach(ctx context.Context, tx pgx.Tx, link ActivityLinkInput) error {
 	// ATTACH: the named record gains an activity that every reader of it
 	// will see, so a share marked read-only does not confer this.
 	return auth.EnsureAttachTarget(ctx, tx, link.EntityType, link.EntityID)
+}
+
+// linkRefusal names the body field when the caller typed the links. Links a
+// system derived (a stored proposal, an anchor's own) keep the bare
+// not-found, because the caller never sent that field.
+func linkRefusal(fromRequest bool, err error) error {
+	if fromRequest {
+		return auth.NameMissingReference("links", err)
+	}
+	return err
 }
 
 // ProbeLinkWrites asks every question a write's link inserts will ask of the

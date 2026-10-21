@@ -131,6 +131,6 @@ func Settings() []config.Any {
 		SchemaDSN, Addr, InlineRelay, MCPAppsBaseURL, APIBaseURL, ConnectorStateKey, MetricsToken, MetricsAccess,
 		TrustedProxies, GmailPushToken, GmailPushAudience, GmailPushServiceAccount, GmailJWKSURL, GraphPushToken,
 		MicrosoftSignInTenant,
-		GmailPubsubTopic, GraphNotificationURL, JobDrainWindow, CertLogBaseURL, ObserveAddr, ObservePprof, AITaskDir,
+		DataTasksPace, GmailPubsubTopic, GraphNotificationURL, JobDrainWindow, CertLogBaseURL, ObserveAddr, ObservePprof, AITaskDir,
 	}
 }

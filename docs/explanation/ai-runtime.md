@@ -68,8 +68,7 @@ tasks:
 
 - **A tier** is a *class of model*, not a model. `local_small` and `local_large` run on the same box,
   so no data leaves. `cheap_cloud` is fast and cheap and hosted. `premium` is strong hosted reasoning.
-  `frontier` is the strongest a deployment will pay for; no task ladder names it, so it costs nothing
-  until one does.
+  `frontier` is the strongest a deployment will pay for; `signal_extract` uses it.
 - A task's ladder is its **order to fall back**. The Router starts at the first tier, and walks to the
   next on a provider error or a failed schema check. So a short failure moves down a step, and does not
   drop the call.

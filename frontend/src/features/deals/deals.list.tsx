@@ -7,25 +7,27 @@ import {
   type ObjectCustomFields,
   useObjectCustomFields,
 } from "../../components/customfields.form";
+import { useAppliedCompanyName } from "../../components/dealdials";
 import {
   type ListState,
   ListTable,
   useTagChips,
 } from "../../components/listquery";
 import { useOwnerChips } from "../../components/ownerdials";
+import { mineEmptyNote, standardViews } from "../../components/recordlist";
 import { ErrorLine } from "../../design-system/errorline";
 import { currencyOptions } from "../../format/currencychoices";
 import { formatNumber } from "../../format/format";
 import { translatePlural, useLocale, useT } from "../../i18n";
+import { useAcquisitionSources } from "../../lib/acquisitionsources.queries";
+import { usePipelines } from "../../lib/pipelines.queries";
 import { throwProblem, unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { useViewerId } from "../../lib/session";
 import { searchCompanyTargets } from "../companies/companyform";
 import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
 import { LegalReviewQueueLink } from "../privacy/legalreviews";
-import { mineEmptyNote, standardViews } from "../records/recordlist";
 import { useOwnerPicker } from "../records/recordreferences";
-import { useAcquisitionSources } from "../settings/acquisitionsources.queries";
 import {
   type ClosedDeal,
   CloseReviewOffer,
@@ -37,7 +39,6 @@ import {
   type PendingAdvance,
 } from "./deal360/confirmadvance";
 import { dealSurfaceChips } from "./deal360/dealfilterchips";
-import { useAppliedCompanyName } from "./dealdials";
 import {
   dealProjectFields,
   resolveDealProject,
@@ -65,7 +66,6 @@ import {
   useStageTotals,
 } from "./deals.queries";
 import { mapDealCreate } from "./deals.write";
-import { usePipelines } from "./pipelines.queries";
 
 // The create form, with the one question it has to ask the server: which
 // projects the company named in the OPEN FORM is on.
@@ -137,7 +137,14 @@ function DealCreateAction({
       onValuesChange={(values) => setFormCompany(values.company_id ?? "")}
       fields={[
         { key: "name", label: "create.dealName", required: true },
-        { key: "amount", label: "create.amount", type: "number", step: "any" },
+        {
+          key: "amount",
+          label: "create.amount",
+          type: "number",
+          step: "any",
+          min: "0",
+          wireField: "amount_minor",
+        },
         {
           key: "currency",
           label: "create.currency",

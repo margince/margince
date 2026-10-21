@@ -155,8 +155,24 @@ func (stubs) GetCaptureHealth(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetCaptureHealth")
 }
 
+func (stubs) ListDataTasks(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListDataTasks")
+}
+
+func (stubs) ControlDataTask(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ControlDataTask")
+}
+
 func (stubs) GetExtensionIngestHealth(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetExtensionIngestHealth")
+}
+
+func (stubs) ActivateHomeRepair(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ActivateHomeRepair")
+}
+
+func (stubs) PreviewHomeRepair(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "PreviewHomeRepair")
 }
 
 func (stubs) GetJobHealth(w nethttp.ResponseWriter, r *nethttp.Request) {
@@ -445,6 +461,10 @@ func (stubs) EvaluateReportingReport(w nethttp.ResponseWriter, r *nethttp.Reques
 
 func (stubs) ListReportingExecutions(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ListReportingExecutionsParams) {
 	httperr.NotImplemented(w, r, "ListReportingExecutions")
+}
+
+func (stubs) PreviewReportingReportAsRole(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.PreviewReportingReportAsRoleParams) {
+	httperr.NotImplemented(w, r, "PreviewReportingReportAsRole")
 }
 
 func (stubs) ListReportingReportRevisions(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
@@ -777,6 +797,10 @@ func (stubs) ShareCaptureCounterpartyHoldHistory(w nethttp.ResponseWriter, r *ne
 
 func (stubs) DeleteCaptureCounterpartyHold(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "DeleteCaptureCounterpartyHold")
+}
+
+func (stubs) ListDomainQuestions(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListDomainQuestionsParams) {
+	httperr.NotImplemented(w, r, "ListDomainQuestions")
 }
 
 func (stubs) DiscardDomainQuestion(w nethttp.ResponseWriter, r *nethttp.Request, domain string) {
@@ -1627,6 +1651,10 @@ func (stubs) ListDealSuggestions(w nethttp.ResponseWriter, r *nethttp.Request, p
 	httperr.NotImplemented(w, r, "ListDealSuggestions")
 }
 
+func (stubs) GetDealSuggestion(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetDealSuggestion")
+}
+
 func (stubs) AcceptDealSuggestion(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.AcceptDealSuggestionParams) {
 	httperr.NotImplemented(w, r, "AcceptDealSuggestion")
 }
@@ -2333,6 +2361,14 @@ func (stubs) SetMyAgentGrant(w nethttp.ResponseWriter, r *nethttp.Request, spec 
 
 func (stubs) GetMyAiActivity(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetMyAiActivityParams) {
 	httperr.NotImplemented(w, r, "GetMyAiActivity")
+}
+
+func (stubs) ListApprovalPreferences(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListApprovalPreferences")
+}
+
+func (stubs) UpdateApprovalPreference(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "UpdateApprovalPreference")
 }
 
 func (stubs) GetMyBriefDelivery(w nethttp.ResponseWriter, r *nethttp.Request) {

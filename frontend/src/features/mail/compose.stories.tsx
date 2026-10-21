@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import type { Transport } from "../../lib/contacttransports";
 import {
   installFetchStub,
   jsonResponse,
@@ -11,7 +12,6 @@ import {
   type RouteMap,
   StoryProviders,
 } from "../../testing/story-utils";
-import type { Transport } from "../contacts/contacttransports";
 import { ComposeModal } from "./compose";
 import { RelinkModal } from "./composerelink";
 

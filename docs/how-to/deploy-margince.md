@@ -154,9 +154,15 @@ mail's window closes. A change needs both the installation-settings and the rete
 
 ### Keep everything, if you must
 
-By default the shipped storage-limitation ladder runs. A meeting transcript and an AI payload are
-erased after a year, which supports the storage-limitation obligation of `Art. 5(1)(e)`. Whether a
-year is the right period is each installation's call, and the rules are editable.
+By default the shipped storage-limitation ladder runs, which supports the storage-limitation
+obligation of `Art. 5(1)(e)`. No policy in it deletes a record because it is old. Each one archives,
+and you can restore an archived record. Or it erases a second copy, or data built from a record. The
+stored copy of each message goes after 90 days, AI call payloads after 365 days and the daily
+deal-risk rows after 90 days.
+
+Transcripts and contacts with no consent and no deal start with no rule; an admin authors one where
+the installation needs it. Whether a period is right is each installation's call, and the rules are editable. The
+full list is in the [retention handbook page](../handbook/retention-exports-and-deletion.md).
 
 An unconverted lead is archived after a year (taken off every list, kept restorable). Author
 `anonymize` for that policy where the lead's identity must not be kept. The [compliance
@@ -291,3 +297,10 @@ DSN and a shell, though, so prefer the set-password link for that.
 **Restart the api after a missed MCP view.** If the api booted while the web tier was down, it logs
 the views it is without. Restart it once the web tier is up. The setting that removes this dependency,
 and its cost, is in [MCP App views read at boot](../explanation/self-hosting.md#mcp-app-views-read-at-boot).
+
+## Data tasks
+
+After an upgrade, the worker seeds and runs the release's data tasks. Watch Settings → System health
+or run `margince-migrate data-tasks status --dsn "$DSN"`. A paused or failed correction holds later
+tasks; review its status before resuming or retrying. Data tasks do not run on API
+startup. See [Background data corrections](../explanation/data-tasks.md).

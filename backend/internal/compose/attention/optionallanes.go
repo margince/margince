@@ -241,10 +241,10 @@ func (s *Service) operationalLanes(
 		{
 			name: "domain_questions", bound: s.domainQuestions != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {
-				// No window and no page cut: an open question waits until
-				// somebody answers it, and a bound would hide the oldest —
-				// which are exactly the reader's real backlog.
 				questions, err := s.domainQuestions.OpenDomainQuestions(ctx)
+				if err == nil {
+					out.DomainQuestionsMoreAvailable = new(len(questions) >= DomainQuestionLimit)
+				}
 				return renderEach(questions, domainQuestionItem), err
 			},
 			into: &out.DomainQuestions, count: &out.Counts.DomainQuestions,
@@ -266,7 +266,14 @@ func (s *Service) operationalLanes(
 				// it — aging out unseen would undo the transport's one
 				// promise.
 				unread, err := s.notices.Unread(ctx, doneCap)
-				return renderEach(unread, noticeItem), err
+				if err != nil {
+					return nil, err
+				}
+				kept, err := s.noticesWithoutDecisions(ctx, unread)
+				if err == nil {
+					out.NoticesMoreAvailable = new(len(unread) >= doneCap)
+				}
+				return renderEach(kept, noticeItem), err
 			},
 			into: &out.Notices, count: &out.Counts.Notices,
 		},

@@ -359,6 +359,21 @@ func TestAReopenedReminderOutranksASettledVerdict(t *testing.T) {
 		t.Error("a request whose reminder somebody reopened does not read as outstanding — " +
 			"the machine's settled verdict is overruling whoever took the work back")
 	}
+	for index, verdict := range []string{RequestUnsure, RequestSettled} {
+		replyTo(t, e, request, "The delivery is complete.", requestInstant.Add(time.Duration(index+3)*time.Hour))
+		candidate, found := repliedIDs(t, e, asOf)[request]
+		if !found || !candidate.TaskHumanReopened {
+			t.Fatal("later evidence lost the human reopening")
+		}
+		if err := store.SettleRequest(asClassifier(e), RequestSettlementInput{
+			Request: candidate, Verdict: verdict, Confidence: 0.95, DecidedBy: "test-model",
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if _, _, done, _ := taskFor(t, e, request); done {
+			t.Fatal("a later verdict completed work a human reopened")
+		}
+	}
 }
 
 // A stranger cannot make our reply to somebody else answer their message.

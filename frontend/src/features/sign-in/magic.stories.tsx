@@ -7,10 +7,8 @@ import {
   StoryProviders,
   stubWithSession,
 } from "../../testing/story-utils";
+import { automaticStageReceipt } from "../../testing/worklist.receiptreview.fixtures";
 import { BriefChanges } from "../brief/brief.changes";
-import { digest } from "../brief/brief.fixtures";
-import { OvernightDigest } from "../brief/brief.rail.overnight";
-import { automaticStageReceipt } from "../worklist/worklist.receiptreview.fixtures";
 import { MagicPanel } from "./magic";
 import { BUSY_NIGHT } from "./magic.fixtures";
 import type { MagicReceipt } from "./magic.queries";
@@ -111,7 +109,7 @@ const EVERY_LANE: MagicReceipt = {
 
 export const EveryLane: Story = { render: () => panel(EVERY_LANE) };
 
-/** On Home: the changes still waiting for a word lead, the night's digest closes. */
+/** On Home: the receipt in the work column, the changes waiting for a word in the rail. */
 export const OnHome: Story = {
   render: () => {
     // Accept and Undo answer as the server would: the change reads as
@@ -137,29 +135,19 @@ export const OnHome: Story = {
         [`POST /deals/${deal}/stage-progressions/${change.id}/revert`]: () =>
           answer({ reversed: true }),
         [`GET /deals/${deal}`]: () => jsonResponse({ name: "PIM Rollout" }),
-        "GET /digest": () => jsonResponse(digest),
-        "GET /projects/01a00000-0000-7000-8000-000000000001": () =>
-          jsonResponse({
-            id: "01a00000-0000-7000-8000-000000000001",
-            name: "ERP replacement",
-          }),
-        "GET /projects/01a00000-0000-7000-8000-000000000002": () =>
-          jsonResponse({
-            id: "01a00000-0000-7000-8000-000000000002",
-            name: "Depot rollout",
-          }),
       },
       { deal: ["read", "update"] },
     );
     return (
       <StoryProviders>
-        <MagicPanel lead={<BriefChanges />} foot={<OvernightDigest />} />
+        <MagicPanel />
+        <BriefChanges />
       </StoryProviders>
     );
   },
 };
 
-/** Nothing ran, and the page may honestly say so. */
+/** Nothing ran: the panel stays away rather than drawing four empty lanes. */
 export const QuietNight: Story = { render: () => panel(QUIET) };
 
 /** A lane the reader may not see: no lane below it may claim to be clear. */

@@ -6,7 +6,7 @@ import type { Evidence } from "../../../design-system/trust";
 import { confidenceLevel } from "../../../design-system/trust";
 import type { useT } from "../../../i18n";
 import type { MessageKey } from "../../../i18n/en";
-import { coldFieldLabel } from "../../settings/coldfieldlabels";
+import { coldFieldLabel } from "../../../lib/coldfieldlabels";
 import type { CompanyDraft, CompanyFieldName } from "../onboarding";
 import {
   CUSTOMER_FIELDS,
@@ -21,10 +21,11 @@ import type { LegalFieldGap } from "./company-proposal";
 import { legalFieldGap } from "./company-proposal";
 
 // Where a field on the review board stands, and the ONE place that derives
-// it. Four surfaces read this and must never disagree: the review board's
-// own section nav and row marks (confirm-card.tsx), the rail's to-do list,
-// and the narration that counts open decisions — all of them ask `isWork`
-// and `rowFor` here rather than keeping their own idea of "outstanding".
+// it. Four surfaces read this and must never disagree. They are the review
+// board's section nav and row marks (confirm-card.nav.tsx, confirm-card.row.tsx),
+// the rail's to-do list, and the narration that counts open decisions. All of
+// them ask `isWork` and `rowFor` here rather than keeping their own idea of
+// "outstanding".
 // Change the rule once, in this file, and every surface ticks over together.
 //
 // No module-level code below touches `../onboarding`'s exports directly —

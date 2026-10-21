@@ -74,7 +74,6 @@ anywhere
 apart
 app
 appear
-application
 apply
 approval
 approve
@@ -124,7 +123,6 @@ axis
 b
 back
 backdrop
-backfill
 backspace
 bad
 badge
@@ -1310,7 +1308,6 @@ return
 reuse
 reversal
 reverse
-revert
 review
 revoke
 rewrite
@@ -1322,7 +1319,6 @@ rise
 risk
 role
 roll
-rollback
 rollout
 room
 root

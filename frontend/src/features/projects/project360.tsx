@@ -2,9 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQuery } from "@tanstack/react-query";
-import { type ReactNode, useId, useState } from "react";
+import { useId, useState } from "react";
 import { api } from "../../api/client";
 import { ifMatch, requireVersion } from "../../api/version";
+import { ArchiveAction } from "../../components/archive";
+import { CustomFieldsPanel } from "../../components/customfields.card";
 import {
   type ObjectCustomFields,
   useObjectCustomFields,
@@ -13,38 +15,18 @@ import { EditAction } from "../../components/edit";
 import { usePageAside } from "../../components/pageaside";
 import { OverflowMenu } from "../../design-system/atoms";
 import { QueryGate } from "../../design-system/querystates";
-import {
-  hasTimelineFilters,
-  useRecordTimeline,
-  useTimelineFilters,
-} from "../../design-system/recordtimeline";
 import { RecordView } from "../../design-system/recordview";
-import { SurfaceState, sectionState } from "../../design-system/surfacestate";
-import { TimelineFilterBar } from "../../design-system/timelinefilterbar";
-import { groupChronology } from "../../design-system/timelinegroups";
 import { useLocale, useT } from "../../i18n";
 import { taskWriteKeys } from "../../lib/activitykeys";
 import { useCan } from "../../lib/capability";
-import { useOpenEmail } from "../../lib/openemail";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { NewDealAction } from "../companies/companyactions";
-import { OpenEmailDrawer } from "../mail/openemaildrawer";
-import { ArchiveAction } from "../records/archive";
-import { CustomFieldsPanel } from "../records/customfields.card";
-import {
-  ChronologyFilter,
-  ChronologyFooter,
-  chronologyNotice,
-  useChronologyFilter,
-  useRecordChronology,
-} from "../records/recordchronology";
 import { RecordEmailVerb } from "../records/recordemail";
 import { useOwnerPicker } from "../records/recordreferences";
 import { RecordTeam } from "../records/recordteam";
 import { ShareAction } from "../records/share";
-import { TimelineActions } from "../records/timelineactions";
 import { useTaskUpdate } from "../worklist/taskactions";
 import { TaskDetailModal } from "../worklist/taskdetailmodal";
 import { useProjectVerbRefusal } from "./project360.refusal";
@@ -80,6 +62,7 @@ import {
 } from "./projectsections";
 import { ProjectTabs } from "./projecttabs";
 import "./projects.css";
+import { useProjectChronology } from "./project360.chronology";
 
 // The project page: one composite read (GET /projects/{id}/360) drawn in the
 // company page's three zones — what the project IS on the left (its phase
@@ -436,115 +419,4 @@ function ProjectActions({
       </OverflowMenu>
     </>
   );
-}
-
-type ChronologySlots = Readonly<{
-  timeline?: ReturnType<typeof useRecordChronology>["entries"];
-  timelineGroups?: ReturnType<typeof groupChronology>;
-  timelineHeader?: ReactNode;
-  timelineFooter?: ReactNode;
-  timelineNotice?: ReactNode;
-}>;
-
-/**
- * The chronology zone, with the same filter the company page offers. All draws
- * the activities the 360 already carries (capped, with `has_more` beside
- * them), and Changes the field-history feed. Drawing the 360's own page keeps
- * the list in step with the rollup figures read in the same transaction.
- */
-function useProjectChronology(view: Project360): ChronologySlots {
-  const t = useT();
-  const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  const [filter, setFilter] = useChronologyFilter(view.project.id);
-  const activities = view.activities;
-  const activitiesState = sectionState(
-    view,
-    "activities",
-    Boolean(activities),
-    activities?.data.length ?? 0,
-  );
-  const [filters, setFilters] = useTimelineFilters(view.project.id);
-  // The 360's own page seeds the list; older pages and every narrowed read
-  // come from the activity list itself.
-  const timeline = useRecordTimeline("project", view.project.id, {
-    filters,
-    firstPage: activities,
-  });
-  const [openEmail, setOpenEmail] = useOpenEmail();
-  const history = useRecordChronology({
-    onOpenEmail: setOpenEmail,
-    kind: "project",
-    recordId: view.project.id,
-    filter,
-    activities: timeline.activities,
-    activitiesHaveMore: timeline.hasNextPage,
-    loadMore: timeline,
-    // What a stored value needs to be read as what it MEANS: this record holds
-    // no money of its own, so the currency is absent and a minor-unit column
-    // says so rather than printing a bare integer.
-    values: { currency: null, locale, zone: recordZone },
-    renderActions: (activity) => (
-      <TimelineActions
-        activity={activity}
-        entityType="project"
-        entityId={view.project.id}
-      />
-    ),
-  });
-  // A withheld activities section is not an empty timeline, and the change
-  // feed is a separate grant: All says withheld, Changes still reads.
-  if (activitiesState === "withheld" && filter !== "changes") {
-    return {
-      timeline: [],
-      timelineHeader: <ChronologyFilter filter={filter} onFilter={setFilter} />,
-      timelineNotice: (
-        <SurfaceState
-          state="withheld"
-          emptyLabel=""
-          loadingLabel={t("nav.projects")}
-        >
-          {null}
-        </SurfaceState>
-      ),
-    };
-  }
-  return {
-    timeline: history.entries,
-    timelineGroups: groupChronology(history.entries, timeline.hasNextPage),
-    timelineHeader: (
-      <>
-        <ChronologyFilter filter={filter} onFilter={setFilter} />
-        {filter !== "changes" && (
-          <TimelineFilterBar value={filters} onChange={setFilters} />
-        )}
-      </>
-    ),
-    timelineFooter: (
-      <>
-        <ChronologyFooter filter={filter} chronology={history} />
-        {/* One drawer over the project, beside the chronology it opens from. */}
-        <OpenEmailDrawer
-          activityId={openEmail}
-          zone={recordZone}
-          onClose={() => setOpenEmail(null)}
-        />
-      </>
-    ),
-    timelineNotice: chronologyNotice(
-      "project.timeline.empty",
-      filter,
-      history,
-      {
-        // A narrowed read is the list's own and has its own wait; the
-        // unfiltered one is the 360's section, already on screen.
-        loading: timeline.isPending,
-        failed: timeline.isError,
-        assembled: hasTimelineFilters(filters)
-          ? timeline.isSuccess
-          : Boolean(activities),
-      },
-      t,
-    ),
-  };
 }

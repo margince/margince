@@ -6,9 +6,8 @@ import "@testing-library/jest-dom/vitest";
 
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-
+import { tagsColumn } from "../../components/recordlist";
 import { LocaleProvider, useT } from "../../i18n";
-import { tagsColumn } from "./recordlist";
 
 // The column three lists share. It lives in recordlist.tsx rather than in each
 // screen for the reason that file was written: three lists once carried three

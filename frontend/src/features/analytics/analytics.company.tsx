@@ -9,7 +9,7 @@ import {
   MONEY_ABSENT,
 } from "../../format/format";
 import { type Locale, useT } from "../../i18n";
-import { dealsFilteredBy } from "../deals/dealsaddress";
+import { dealsFilteredBy } from "../../lib/dealsaddress";
 import {
   BarFigure,
   CountLink,

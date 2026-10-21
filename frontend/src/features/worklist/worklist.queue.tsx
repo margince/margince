@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { Panel } from "../../design-system/panel";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { pickFor, type WorklistPicks } from "./worklist.bulkdone";
 import { type ReviewShortfall, reviewFilter } from "./worklist.destinations";
+import { DomainReview, DomainReviewLauncher } from "./worklist.domainreview";
 import { hasPane } from "./worklist.pane";
 import type { WorklistFilter, WorklistItem } from "./worklist.queries";
 import { WorklistRow } from "./worklist.row";
@@ -91,36 +93,44 @@ export function QueueRows({
   onFilter,
   picks,
 }: RowContext & Readonly<{ items: readonly WorklistItem[] }>) {
+  const [domainReview, setDomainReview] = useState(false);
   return (
-    <ol className="worklist-list">
-      {items.map((item) => (
-        <li key={rowIdentity(item)}>
-          <WorklistRow
-            item={item}
-            position={(positions.get(rowIdentity(item)) ?? 0) + 1}
-            owner={owner}
-            selected={selectedId === rowIdentity(item)}
-            // Only where pressing it opens something. WorklistRow draws a plain
-            // number without this, and the Brief relies on that. A rank that
-            // toggles a pressed state and opens nothing teaches the reader that
-            // the page lies about what is pressable.
-            onSelect={
-              hasPane(item)
-                ? () =>
-                    onSelect(
-                      selectedId === rowIdentity(item)
-                        ? NOTHING_IN_HAND
-                        : rowIdentity(item),
-                    )
-                : undefined
-            }
-            onOpenEmail={onOpenEmail}
-            pick={pickFor(item, picks)}
-            onReview={() => onFilter(reviewFilter(item))}
-          />
-        </li>
-      ))}
-    </ol>
+    <>
+      <ol className="worklist-list">
+        {items.map((item) => (
+          <li key={rowIdentity(item)}>
+            <WorklistRow
+              item={item}
+              position={(positions.get(rowIdentity(item)) ?? 0) + 1}
+              owner={owner}
+              selected={selectedId === rowIdentity(item)}
+              // Only where pressing it opens something. WorklistRow draws a plain
+              // number without this, and the Brief relies on that. A rank that
+              // toggles a pressed state and opens nothing teaches the reader that
+              // the page lies about what is pressable.
+              onSelect={
+                hasPane(item)
+                  ? () =>
+                      onSelect(
+                        selectedId === rowIdentity(item)
+                          ? NOTHING_IN_HAND
+                          : rowIdentity(item),
+                      )
+                  : undefined
+              }
+              onOpenEmail={onOpenEmail}
+              pick={pickFor(item, picks)}
+              onReview={() =>
+                item.batch?.key === "domain_questions"
+                  ? setDomainReview(true)
+                  : onFilter(reviewFilter(item))
+              }
+            />
+          </li>
+        ))}
+      </ol>
+      {domainReview && <DomainReview onClose={() => setDomainReview(false)} />}
+    </>
   );
 }
 
@@ -145,11 +155,12 @@ export function ReviewPanel({
   const t = useT();
   const { locale } = useLocale();
   if (items.length === 0) {
-    return null;
+    return <DomainReviewLauncher />;
   }
   return (
     <Panel
       title={t("worklist.review")}
+      actions={<DomainReviewLauncher />}
       // What this panel is not showing, in the footer band, which is where a
       // figure about the whole panel goes. A direct child of `Panel` sits in no
       // padding, while the rows are `PanelRow`s with the panel's own inset. A

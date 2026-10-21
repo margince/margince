@@ -21,9 +21,9 @@ import {
 import { SettingRow } from "../../design-system/settingrow";
 import { useT } from "../../i18n";
 import { problemMessageOf, unwrap } from "../../lib/problem";
+import { connectionLabel, connectionTone } from "../../lib/provider-status";
 import { recordWriteKeys } from "../../lib/recordwritekeys";
 import type { ProviderConnection } from "./integrations-provider";
-import { connectionLabel, connectionTone } from "./provider-status";
 
 /** The provider's display name: its brand where this frontend knows one. */
 function providerName(connection: ProviderConnection): string {

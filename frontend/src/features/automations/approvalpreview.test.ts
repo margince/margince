@@ -23,6 +23,24 @@ const preview: Preview = {
 };
 
 describe("commercial approval preview", () => {
+  it.each(LOCALES)(
+    "explains an unknown conflict without a summary in %s",
+    (locale) => {
+      const unknown: Preview = {
+        ...preview,
+        conflicts: [
+          { kind: "future_reason", summary: " ", blocks_approval: true },
+        ],
+      };
+      const rows = commercialPreviewDisplay(unknown, (key, params) =>
+        translate(locale, key, params),
+      );
+      expect(
+        rows.find((row) => row.field === "preview_conflict_0")?.value,
+      ).toBe(translate(locale, "approval.preview.incompleteEvidence"));
+      expect(approvalAcceptable({ preview: unknown })).toBe(false);
+    },
+  );
   it.each(LOCALES)("labels a structured companion value in %s", (locale) => {
     const value = '{"city":"Berlin"}';
     const rows = commercialPreviewDisplay(
@@ -311,4 +329,107 @@ it("shows edited words and lifecycle choices without changing reference labels",
   expect(edited?.changes[1].after.text).toBe("Corrected reason");
   expect(edited?.changes[2].after.text).toBe("prospect");
   expect(original.changes[1].after.text).toBe("Old reason");
+});
+
+it.each(LOCALES)("names a commitment's recipients in %s", (locale) => {
+  const rows = commercialPreviewDisplay(
+    {
+      ...preview,
+      changes: [
+        {
+          field: "summary",
+          before: { kind: "empty", text: "" },
+          after: { kind: "text", text: "Send the recording" },
+        },
+        {
+          field: "recipients",
+          before: { kind: "empty", text: "" },
+          after: { kind: "text", text: "Ines Huber, Morgan Recipient" },
+        },
+      ],
+    },
+    (key, params) => translate(locale, key, params),
+  );
+  expect(rows.find((row) => row.field === "recipients")).toMatchObject({
+    label: translate(locale, "worklist.recipients.label"),
+    comparison: { to: "Ines Huber, Morgan Recipient" },
+  });
+  expect(rows.find((row) => row.field === "summary")?.label).toBe(
+    translate(locale, "approval.field.step"),
+  );
+});
+
+it.each([true, false])(
+  "compares task reference identities (same=%s)",
+  (same) => {
+    const rows = commercialPreviewDisplay(
+      {
+        ...preview,
+        changes: [
+          {
+            field: "existing_task_id",
+            before: {
+              kind: "reference",
+              text: "Send the recording",
+              entity_type: "activity",
+              entity_id: "33333333-3333-4333-8333-333333333333",
+            },
+            after: {
+              kind: "reference",
+              text: "Send the recording",
+              entity_type: "activity",
+              entity_id: same
+                ? "33333333-3333-4333-8333-333333333333"
+                : "44444444-4444-4444-8444-444444444444",
+            },
+          },
+        ],
+      },
+      (key, params) => translate("en", key, params),
+    );
+    expect(
+      rows.find((row) => row.field === "existing_task_id")?.comparison,
+    ).toEqual(
+      same ? null : { from: "Send the recording", to: "Send the recording" },
+    );
+  },
+);
+
+it("keeps source date and scope visible while an active agreement blocks termination", () => {
+  const rows = commercialPreviewDisplay(
+    {
+      ...preview,
+      state: "stale",
+      lifecycle_evidence: {
+        scope: "workstream",
+        occurred_at: "2026-07-31T12:00:00Z",
+        workstream: "Atlas pilot",
+      },
+      conflicts: [
+        {
+          kind: "active_contract",
+          summary: "Server fallback",
+          blocks_approval: true,
+        },
+      ],
+    },
+    (key) => key,
+    "en",
+    () => "31 July 2026",
+  );
+  expect(rows).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        field: "lifecycle_scope",
+        value: "approval.preview.scopeWorkstream",
+      }),
+      expect.objectContaining({ field: "source_date", value: "31 July 2026" }),
+      expect.objectContaining({ field: "workstream", value: "Atlas pilot" }),
+      expect.objectContaining({
+        field: "preview_conflict_0",
+        value: "approval.preview.activeContract",
+      }),
+    ]),
+  );
+  expect(rows.some((row) => row.field === "owner_id")).toBe(false);
 });

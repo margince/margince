@@ -4,7 +4,10 @@
 package approvals
 
 import (
+	"context"
 	"slices"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -40,4 +43,25 @@ func requestedInScope(a row, reader ids.UUID, in ListInput) bool {
 		return false
 	}
 	return in.RequestedForOwners == nil || slices.Contains(in.RequestedForOwners, owner)
+}
+
+// PendingInScope resolves named decisions independently of the inbox page boundary.
+func (s *Service) PendingInScope(ctx context.Context, scope ListInput, named []ids.ApprovalID) (map[ids.ApprovalID]bool, error) {
+	if err := actingForAHuman(ctx); err != nil {
+		return nil, err
+	}
+	visible := make(map[ids.ApprovalID]bool, len(named))
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		for _, id := range named {
+			could, err := s.pendingDecidableInScope(ctx, tx, id, scope)
+			if err != nil {
+				return err
+			}
+			if could {
+				visible[id] = true
+			}
+		}
+		return nil
+	})
+	return visible, err
 }

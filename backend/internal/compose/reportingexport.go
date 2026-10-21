@@ -18,6 +18,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// reportingHandlers names the module's handler set for the Server embed, since
+// briefs.Handlers already holds the unqualified name.
+type reportingHandlers = reporting.Handlers
+
 type reportingExportHandlers struct{ service *reporting.Service }
 
 func (s reportingExportHandlers) ExportReportingEvaluation(w http.ResponseWriter, r *http.Request, params crmcontracts.ExportReportingEvaluationParams) {

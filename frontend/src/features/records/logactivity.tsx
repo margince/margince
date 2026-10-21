@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useId, useState } from "react";
 import { api } from "../../api/client";
 import { useIdempotencyKey } from "../../api/idempotencykey";
+import { ActivityBodyField } from "../../components/activitybodyfield";
 import { TaskAssigneeField } from "../../components/assigneepicker";
 import { LogActivityEntries } from "../../components/extensionentries";
 import {
@@ -23,6 +24,16 @@ import { useSinglePress } from "../../design-system/presslatch";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import {
+  type ActivityDraft,
+  activityRequestBody,
+  freshDraft,
+  isActivityKind,
+  KINDS_WITH_A_CONTACT,
+  type MeetingAttendees,
+  NO_ATTENDEES,
+  todayDay,
+} from "../../lib/activitybody";
+import {
   activityFileStaleKeys,
   activityFollowUpsKey,
   loggedActivityKeys,
@@ -34,19 +45,9 @@ import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { useMe } from "../../lib/session";
 import { worklistKey } from "../worklist/worklist.queries";
-import {
-  type ActivityDraft,
-  activityRequestBody,
-  freshDraft,
-  isActivityKind,
-  KINDS_WITH_A_CONTACT,
-  type MeetingAttendees,
-  NO_ATTENDEES,
-  todayDay,
-} from "./activitybody";
-import { ActivityBodyField } from "./activitybodyfield";
 import "./logactivity.css";
-import { FollowUpTaskFields } from "../../screens/followuptaskfields";
+import { MeetingAttendeeFields } from "../../components/meetingattendees";
+import { FollowUpTaskFields } from "./followuptaskfields";
 import { useActivityCustomFields } from "./logactivity.custom";
 import {
   attachLoggedFiles,
@@ -55,7 +56,6 @@ import {
   TranscriptUploadField,
   useReportUnattached,
 } from "./logactivityfiles";
-import { MeetingAttendeeFields } from "./meetingattendees";
 
 // Meetings arrive through the calendar rather than a preselected form address.
 type OpeningKind = "note" | "task" | "call";

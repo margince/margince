@@ -5,13 +5,13 @@
 
 package integration
 
-// The staff-mediated GDPR surface end-to-end: workspace bootstrap
-// seeds the §3.4 default retention policies exactly, and fulfilling an
-// erasure DSR EXECUTES the erasure — the status flip and the deletion
-// cannot drift apart.
+// The staff-mediated GDPR surface end-to-end. Workspace bootstrap seeds the
+// default retention policies and no others. Fulfilling an erasure DSR runs the
+// erasure, so the status flip and the deletion cannot drift apart.
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"testing"
 )
@@ -33,28 +33,27 @@ func TestBootstrapSeedsDefaultRetentionPolicies(t *testing.T) {
 		if err := rows.Scan(&object, &category, &days, &action); err != nil {
 			t.Fatal(err)
 		}
-		got = append(got, object+"/"+category+"/"+action)
-		_ = days
+		got = append(got, fmt.Sprintf("%s/%s/%d/%s", object, category, days, action))
 	}
-	// The query below orders by object, so the list follows the alphabet and
-	// not the order the seed writes them in.
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	// The query orders by object, so the list follows the alphabet and not the
+	// order the seed writes them in. No row erases a transcript or anonymizes a
+	// contact: the seed destroys no record just because it is old.
 	want := []string{
-		"activity/transcript/erase", "activity//archive",
-		"ai_call_payload/content/erase",
-		"contact/no_consent_no_deal/anonymize",
-		"deal/lost/archive",
+		"activity//1095/archive",
+		"ai_call_payload/content/365/erase",
+		"deal/lost/1825/archive",
 		// The queue's recorded verdicts, aged with the widest window the
 		// same-day next-step figure reads.
-		"deal_risk_day//erase",
-		"lead/unconverted/archive",
-		// The provider original, aged on its own clock. Seeded because a scope
-		// shipping with no row reads on the settings page exactly like one whose
-		// number an admin chose, and nothing visits it — which is how this table
-		// reached 92% of a measured database.
-		"raw_capture//erase",
+		"deal_risk_day//90/erase",
+		"lead/unconverted/365/archive",
+		// The provider original, aged on its own import clock.
+		"raw_capture//90/erase",
 	}
 	if len(got) != len(want) {
-		t.Fatalf("seeded %d policies %v, want the §3.4 five plus ai_call_payload/content/erase, deal_risk_day//erase and raw_capture//erase", len(got), got)
+		t.Fatalf("seeded %d policies %v, want the %d defaults %v", len(got), got, len(want), want)
 	}
 	for i := range want {
 		if got[i] != want[i] {

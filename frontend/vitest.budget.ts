@@ -14,7 +14,7 @@
 // What is actually wrong is arithmetic between two budgets that were never
 // compared. A test built from N sequential waits may legitimately spend N times
 // the per-waiter budget (ASYNC_UTIL_TIMEOUT_MS below) without any single wait
-// failing. `company-act.test.tsx`'s "re-arms Continue once a skew refetch
+// failing. `company-act.recovery.test.tsx`'s "re-arms Continue once a skew refetch
 // actually lands a NEW hash" chains six of them. Against a five-second ceiling
 // that test can fail while every assertion in it is passing, and the failure
 // names the test rather than the wait that was slow.

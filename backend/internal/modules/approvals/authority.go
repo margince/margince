@@ -272,7 +272,7 @@ var decisionGrants = map[string][]grantRequirement{
 	// Accepting a company_name_promotion proposal (PO-F-2a: one employee's
 	// signature naming their company, with nothing corroborating it) renames
 	// the company — the same update authority the name editor needs.
-	"company_name_promotion": {{tableCompany, principal.ActionUpdate}},
+	kindCompanyNamePromotion: {{tableCompany, principal.ActionUpdate}},
 	// Accepting a lifecycle_change proposal (the account-intelligence arc: the
 	// correspondence says the contract ended while the record still reads as
 	// live) moves the account's stage — the same update authority the header's
@@ -283,7 +283,7 @@ var decisionGrants = map[string][]grantRequirement{
 	// company editor could read model-derived correspondence and close a
 	// signal they have no standing to see — the ordinary triage path takes
 	// signal:update and EnsureSignalVisible for exactly that reason.
-	"lifecycle_change": {{tableCompany, principal.ActionUpdate}, {targetSignal, principal.ActionUpdate}},
+	kindLifecycleChange: {{tableCompany, principal.ActionUpdate}, {targetSignal, principal.ActionUpdate}},
 	// Confirming a nightly close-date correction (formulas §11 🟡 tier)
 	// releases an expected_close_date write onto the deal.
 	closeDateCorrectionKind: {{tableDeal, principal.ActionUpdate}},
@@ -385,26 +385,8 @@ func decidable(ctx context.Context, tx pgx.Tx, p principal.Principal, a row) (bo
 	return targetDecidable(ctx, tx, a.TargetType, a.TargetID)
 }
 
-// PendingDecidableBy answers whether the ACTING principal could decide the
-// named approval RIGHT NOW: the row is still pending, it has not lapsed, and
-// decidable answers yes. It is the same three-conjunct predicate the inbox
-// filters by, asked about one row instead of a page.
-//
-// Exported for the notification fan-out, which has to ask it once per seat and
-// would otherwise grow a third copy of the decision-authority rule — the
-// webhooks module's partial copy is the cautionary precedent, not the pattern.
-// The fan-out must never tell a colleague about a card their own inbox would
-// then hide from them.
-//
-// THE ROW IS RE-READ HERE, which is the whole reason this is not a question the
-// caller can answer from an event. Supersession and withdrawal both write
-// `expired` with no event of their own, so an envelope that says "pending" can
-// be describing a row that has not been pending for hours.
-//
-// An approval that is GONE answers false rather than ErrNotFound, matching what
-// Get already does in the other direction: the inbox deliberately conflates
-// absent with invisible, and a predicate that raised for the one and answered
-// for the other would leak which it was.
+// PendingDecidableBy rechecks current state and authority because a notification event may be stale.
+// Missing and inaccessible decisions both return false, so fan-out reveals neither.
 func (s *Service) PendingDecidableBy(ctx context.Context, id ids.ApprovalID) (bool, error) {
 	var could bool
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -416,6 +398,10 @@ func (s *Service) PendingDecidableBy(ctx context.Context, id ids.ApprovalID) (bo
 }
 
 func (s *Service) pendingDecidable(ctx context.Context, tx pgx.Tx, id ids.ApprovalID) (bool, error) {
+	return s.pendingDecidableInScope(ctx, tx, id, ListInput{})
+}
+
+func (s *Service) pendingDecidableInScope(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, scope ListInput) (bool, error) {
 	if err := actingForAHuman(ctx); err != nil {
 		return false, err
 	}
@@ -427,7 +413,7 @@ func (s *Service) pendingDecidable(ctx context.Context, tx pgx.Tx, id ids.Approv
 	if err != nil {
 		return false, err
 	}
-	if !a.PendingAt(s.now()) {
+	if !a.PendingAt(s.now()) || !requestedInScope(a, p.UserID, scope) {
 		return false, nil
 	}
 	return decidable(ctx, tx, p, a)

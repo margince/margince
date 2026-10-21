@@ -8,8 +8,6 @@ import { viewerZone } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { RecordZoneProvider } from "../../lib/recordzone";
-import { WORKLIST_FILTER_PARAM } from "../worklist/worklist";
-import type { Worklist } from "../worklist/worklist.queries";
 import {
   boundedDecisions,
   boundedLeads,
@@ -21,7 +19,9 @@ import {
   wholeDecisions,
   wholeLeads,
   wholeMeetings,
-} from "./brief.fixtures";
+} from "../../testing/brief.fixtures";
+import { WORKLIST_FILTER_PARAM } from "../worklist/worklist";
+import type { Worklist } from "../worklist/worklist.queries";
 import { BriefReadingsStrip } from "./brief.readings";
 
 // The Brief's readings strip, and the one claim it makes that the Worklist's

@@ -148,6 +148,7 @@ export const CORE_OBJECTS: Readonly<Record<CoreRbacObject, CoreObjectName>> = {
     label: "roles.object.retention_policy",
   },
   audit_log: { area: "governance", label: "roles.object.audit_log" },
+  data_task: { area: "governance", label: "roles.object.data_task" },
   job_health: { area: "governance", label: "roles.object.job_health" },
   extension_access: {
     area: "governance",

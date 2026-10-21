@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useId } from "react";
 import { EntityRef } from "../../components/entityref";
 import { Badge } from "../../design-system/atoms";
-import { Panel, PanelRow } from "../../design-system/panel";
+import { Eyebrow } from "../../design-system/eyebrow";
+import { PanelRow } from "../../design-system/panel";
 import {
   type SectionState,
   SurfaceState,
@@ -77,46 +79,48 @@ export function SchedulePanel({
   const t = useT();
   const { locale } = useLocale();
   const zone = viewerZone();
+  const titleId = useId();
   if (scheduleIsEmpty(day, state)) {
     return null;
   }
   const meetings = rowsFrom(day, MEETING);
   return (
-    <section id="brief-schedule">
-      <Panel title={t("brief.panel.schedule")}>
-        {/* The rows are `PanelRow`s and carry the panel's own gutter, so they
-            sit in the Panel directly — inside a `PanelBody` they would be
-            padded twice and read as an indented block against every other
-            panel in the rail. `SurfaceState` draws its sentence either way. */}
-        <SurfaceState
-          loadingLabel={t("brief.panel.schedule")}
-          state={state}
-          // The words the rail prints for this absence, so the panel and the
-          // quiet line cannot report one morning in two vocabularies.
-          emptyLabel={t("brief.rail.quietSchedule")}
-        >
-          {meetings.length === 0 && answered(state) && day && (
-            <NoMeetingRows calendar={calendarDay(day)} />
-          )}
-          {meetings.map((item) => (
-            <PanelRow key={item.id} className="rail-schedule-row">
-              <span className="t-caption rail-schedule-when">
-                {whenOf(item, locale, zone)}
-              </span>
-              {/* The stop on the day's line. Decorative: the time beside it is
+    <section
+      id="brief-schedule"
+      className="brief-section"
+      aria-labelledby={titleId}
+    >
+      <Eyebrow as="h2" id={titleId} className="brief-section-label">
+        {t("brief.panel.schedule")}
+      </Eyebrow>
+      <SurfaceState
+        loadingLabel={t("brief.panel.schedule")}
+        state={state}
+        // The words the rail prints for this absence, so the panel and the
+        // quiet line cannot report one morning in two vocabularies.
+        emptyLabel={t("brief.rail.quietSchedule")}
+      >
+        {meetings.length === 0 && answered(state) && day && (
+          <NoMeetingRows calendar={calendarDay(day)} />
+        )}
+        {meetings.map((item) => (
+          <PanelRow key={item.id} className="rail-schedule-row">
+            <span className="t-caption rail-schedule-when">
+              {whenOf(item, locale, zone)}
+            </span>
+            {/* The stop on the day's line. Decorative: the time beside it is
                   the fact, and the line the dots hang on is the panel's way of
                   reading as a schedule rather than as a list of sentences. */}
-              <span className="rail-schedule-dot" aria-hidden="true" />
-              <span className="rail-schedule-what">
-                <Title item={item} />
-                {isUnprepared(item) && (
-                  <Badge tone="warning">{t("worklist.needsPrep")}</Badge>
-                )}
-              </span>
-            </PanelRow>
-          ))}
-        </SurfaceState>
-      </Panel>
+            <span className="rail-schedule-dot" aria-hidden="true" />
+            <span className="rail-schedule-what">
+              <Title item={item} />
+              {isUnprepared(item) && (
+                <Badge tone="warning">{t("worklist.needsPrep")}</Badge>
+              )}
+            </span>
+          </PanelRow>
+        ))}
+      </SurfaceState>
     </section>
   );
 }

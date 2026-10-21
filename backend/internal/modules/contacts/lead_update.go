@@ -261,7 +261,7 @@ func (s *Store) updateLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in U
 	// Deliberately no same-company check: a lead has no company to compare
 	// (Note PROJ-DDL-N-4).
 	if in.ProjectID != nil {
-		if err := auth.EnsureLinkTarget(ctx, tx, "project", in.ProjectID.UUID); err != nil {
+		if err := auth.EnsureReferenceTarget(ctx, tx, "project_id", "project", in.ProjectID.UUID); err != nil {
 			return crmcontracts.Lead{}, err
 		}
 	}

@@ -1,16 +1,13 @@
 <!-- prose:plain -->
 # Your day
 
-**Home** is where a day starts in Margince. It has two views, **Morning** and
-**Weekly**, and two scopes, **Mine** and **Team**. The team scope appears only
-if you can see records past your own. The week, its review and its plan are in
-[Your week](your-week.md).
+**Home** is where a day starts in Margince. It has two views, **Morning** and **Weekly**. The week,
+its review and its plan are in [Your week](your-week.md).
 
-The Worklist is the ranked to-do list in Margince: one list of everything
-waiting on you, in the order Margince ranks them. That is buyers to answer,
-tasks due, promises made, deals at risk and items to check. It lives on **Home**.
-Press **Show Worklist** to open it as a panel over the page; **Hide Worklist** closes it.
-It has no sidebar row of its own.
+The Worklist is the ranked to-do list in Margince: one list of everything waiting on you, in the
+order Margince ranks them. That is buyers to answer, tasks due, promises made, deals at risk and
+items to check. It lives on **Home**. Press **Show Worklist** to open it as a panel over the page;
+**Hide Worklist** closes it. It has no sidebar row of its own.
 
 ## Daily tasks
 
@@ -122,8 +119,8 @@ list of next steps.
 it fails: "Task was not completed. Retry." Also called: tick off, mark done, close a task.
 
 ### How do I plan my week?
-To plan your week in Margince, open **Home**, switch the view to **Weekly** (scope **Mine**) and add
-items under **This week’s commitments**.
+To plan your week in Margince, open **Home**, switch the view to **Weekly** and add items under
+**This week’s commitments**.
 1. Click **Home**, then **Weekly**.
 2. Under **This week’s commitments**, press **Add commitment** and fill in **Commitment**.
 3. If you like, add a **Due date** and a linked deal, lead, contact, company or project, then press
@@ -139,23 +136,27 @@ of your last closed week sits above your plan.
 
 Margince writes the review on the Monday after the week, and then it is **Frozen**; you cannot make
 it again. Before your first full week it says "No weekly review yet. The first one is created on the
-Monday after your first full week." A team lead switches the scope to **Team** for the team's week.
+Monday after your first full week."
 Also called: weekly report, week in review, weekly summary.
 
 ## Morning
 
 ### What is on Morning?
-**Morning**, on **Home**, shows what to do first today, in four parts. The time under it says when
-the brief was made, and the agenda time says when the list was last read.
-- **Focus**: at most 6 cards, in the Worklist's own order. Proposals to answer, commitments due
-  today and meetings to prepare in the next 24 hours sit here. Tasks due later never fill a card. A
-  quiet day says "No immediate priorities. The full Worklist is available."
-- **Updates**: notices that only tell you something. A stage change notice names the deal, the stage
-  before and after, and who moved it. You get none for a move you made yourself.
-- **Context**: the column with **Upcoming meetings**. A task opens in the task dialog and a contact
-  in a side panel, so the page keeps its place.
-- **Show Worklist**: the whole list, with its own filters and pages, and work that is not due yet.
-Also called: morning brief, daily brief, today, priorities, top cards.
+**Morning**, on **Home**, opens with a sentence naming what to do first, its contact and your next
+meeting. Press a name to see where it comes from. A badge says when Margince made the brief.
+- **First**: the first thing to do on one card, the rest as **Then**; at most 6 in all, in Worklist
+  order. Press a row to bring it onto the card; **Why first?** says why it ranks there.
+  Proposals to answer, commitments due today and meetings to prepare in the next 24 hours sit here;
+  tasks due later never do. A quiet day says "No immediate priorities. The full Worklist is available."
+- **Show Worklist**, under the list: the whole list, with its own filters and pages, and work that
+  is not due yet. Notices that only tell you something, such as a stage change, are read there.
+- **Since your last brief**: what Margince did since your last brief, what waits on you, what it
+  could not finish and what needs restoring.
+- Beside them: **Numbers**, **Upcoming meetings**, **Waiting for your word**.
+A greeting covers the page on the day's first visit, once per browser, unless your settings turn
+motion off. It shows the date, the emails synced overnight, and how many items wait, how many are
+urgent and how many meetings you have. Press any key or click to go on.
+Also called: morning brief, daily brief, today, priorities, top cards, welcome screen.
 
 ### What comes first on Morning?
 A customer who waits for your reply, and a reply deadline that comes close, come first on Morning
@@ -164,8 +165,8 @@ and in the Worklist.
   keeps the rank of a deal at real risk.
 - A privacy duty joins the day 7 days before its deadline; the legal deadline does not move.
 - A privacy duty recorded more than a day after its deadline came from imported history. It reads
-  "recorded after its deadline, from imported history", ranks as normal work and never takes a
-  **Focus** card.
+  "recorded after its deadline, from imported history", ranks as normal work and never sits under
+  **First**.
 - A task due today or late is urgent, unless it is prospecting work.
 - A deal at risk is urgent when its value is high next to the risk on all deals. It is also urgent
   when its expected close is past or within 14 days.
@@ -181,9 +182,12 @@ Morning names each source it could not read, with **Refresh brief**, and never s
 - Meetings count calendar entries still to come. Margince does not say you are prepared unless the
   source says so.
 
-The work counts come from the current Worklist read. **Overnight** shows capture totals and connection health as of the nightly run. Its stored counts do not replace today's decisions. Each part of Home can refresh at a different time. Another Worklist page keeps the same members but reads their current state; pages do not share one fixed time.
-### Changes made for you
-**Changes made for you**, on **Morning**, lists the changes Margince made to your deals that you can
+The work counts come from the current Worklist read. The greeting's email count comes from the nightly run; it does not count today's decisions. Each part of Home can refresh at a different time. Another Worklist page keeps the same members but reads their current state; pages do not share one fixed time.
+
+**Since your last brief** says when some activity could not be counted. Its count then shows a minimum, and an empty list does not mean nothing happened.
+
+### Waiting for your word
+**Waiting for your word**, on **Morning**, lists the changes Margince made to your deals that you can
 still accept or undo. Each names the deal, what changed, why and when. A close date fix names the
 old and new date; a change in confidence alone is not called a date change. **Accept** records that
 you reviewed the change and keeps what it set. It does not run the change again, or turn a guessed

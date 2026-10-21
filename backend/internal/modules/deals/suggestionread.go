@@ -113,10 +113,12 @@ func requireSuggestionRead(ctx context.Context) error {
 // Suggestion is one open suggestion as a reader sees it.
 type Suggestion struct {
 	ID          ids.UUID
+	Version     int64
 	Kind        string
 	State       string
 	CompanyID   ids.UUID
 	CompanyName string
+	OwnerID     *ids.UUID
 	PipelineID  ids.UUID
 	StageID     ids.UUID
 	NameHint    string
@@ -159,12 +161,12 @@ type suggestionCursor struct {
 
 const suggestionColumns = `s.id, s.kind, s.state, s.company_id, c.display_name, s.pipeline_id,
 	       s.proposed_stage_id, s.name_hint, s.proposed_amount_minor, s.currency,
-	       s.proposed_close_date, s.confidence::float8, s.created_at`
+	       s.proposed_close_date, s.confidence::float8, s.created_at, c.owner_id, s.version`
 
 func scanSuggestion(row pgx.Row) (Suggestion, error) {
 	var s Suggestion
 	err := row.Scan(&s.ID, &s.Kind, &s.State, &s.CompanyID, &s.CompanyName, &s.PipelineID,
-		&s.StageID, &s.NameHint, &s.AmountMinor, &s.Currency, &s.CloseDate, &s.Confidence, &s.CreatedAt)
+		&s.StageID, &s.NameHint, &s.AmountMinor, &s.Currency, &s.CloseDate, &s.Confidence, &s.CreatedAt, &s.OwnerID, &s.Version)
 	return s, err
 }
 
@@ -342,4 +344,12 @@ func attachEvidence(ctx context.Context, tx pgx.Tx, list []Suggestion) error {
 		list[index[owner]].Evidence = append(list[index[owner]].Evidence, item)
 	}
 	return rows.Err()
+}
+
+// ReadableSuggestionClause shares the suggestion reader's evidence authorization with projections.
+func ReadableSuggestionClause(ctx context.Context, arg func(any) int) (string, error) {
+	if !auth.ReadGranted(ctx, "deal") || !auth.ReadGranted(ctx, "company") {
+		return "false", nil
+	}
+	return suggestionVisibleClause(ctx, arg)
 }

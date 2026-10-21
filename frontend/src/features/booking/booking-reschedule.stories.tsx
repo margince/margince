@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { bookingSlots } from "../../testing/book.testkit";
 import { jsonResponse } from "../../testing/story-utils";
 import { bookingFrame } from "./book.storykit";
-import { bookingSlots } from "./book.testkit";
 import { BookingReschedule } from "./booking-reschedule";
 
 import "./book.css";

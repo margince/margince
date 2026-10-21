@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 func TestLifecyclePreviewResolvesItsActualSourceForTheReader(t *testing.T) {
@@ -43,8 +44,12 @@ func TestLifecyclePreviewResolvesItsActualSourceForTheReader(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	proof, ok := values.ProveQuote(*activity.Body, "The buyer ended the agreement.")
+	if !ok {
+		t.Fatal("source quote did not match")
+	}
 	if err := e.DB().Tx(ctx, func(tx pgx.Tx) error {
-		_, err := signals.RecordDerived(ctx, tx, signals.DerivedSignal{Kind: signalKindContractEnded, CompanyID: id.UUID, Summary: "The buyer ended the agreement.", Severity: "warn", Fingerprint: "harbor-ended", Evidence: []signals.DerivedEvidence{{ActivityID: ids.UUID(activity.Id), Snippet: "The buyer ended the agreement."}}}, time.Date(2026, 9, 15, 8, 0, 0, 0, time.UTC))
+		_, err := signals.RecordDerived(ctx, tx, signals.DerivedSignal{Kind: signalKindContractEnded, CompanyID: id.UUID, Summary: "The buyer ended the agreement.", Severity: "warn", Fingerprint: "harbor-ended", Evidence: []signals.DerivedEvidence{{ActivityID: ids.UUID(activity.Id), Snippet: "The buyer ended the agreement.", SourceQuote: &proof, LifecycleScope: "company"}}}, time.Date(2026, 9, 15, 8, 0, 0, 0, time.UTC))
 		return err
 	}); err != nil {
 		t.Fatal(err)
