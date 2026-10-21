@@ -4,10 +4,9 @@
 package compose
 
 // How far behind the confidentiality pass is, read from the thread ledger at
-// scrape time beside the job gauges. The job gauges cannot say it: the pass is
-// one kind among dozens in the default queue, and a pass that runs on time and
-// judges its cap each run looks healthy there while mail piles up behind it.
-// Every api replica answers the same numbers, so a dashboard reads them with
+// scrape time beside the job gauges. The job gauges cannot show it. A pass that
+// runs on time and judges its cap each run looks healthy there while mail piles
+// up behind it. Every api replica answers the same numbers, so read them with
 // max, never sum.
 
 import (

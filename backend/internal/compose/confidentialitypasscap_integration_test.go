@@ -5,11 +5,10 @@
 
 package compose
 
-// The confidentiality pass's cap is a setting an admin changes while the
-// product runs, and the backlog gauge reads the same ledger the pass works.
-// These tests drive the real engine and the real store, so a cap that is only
-// declared, or a gauge that counts a different set than the pass claims, fails
-// here.
+// The pass cap is a setting an admin changes while the product runs, and the
+// backlog gauge reads the ledger the pass works. These tests drive the real
+// engine and store. A cap that is only declared, or a gauge that counts a
+// different set than the pass claims, fails here.
 
 import (
 	"context"
@@ -74,9 +73,9 @@ func runPass(t *testing.T, e *integration.Env, brain *answerEveryThreadBrain) {
 	}
 }
 
-// The cap is a hard bound whatever the admin chose, including a number that is
-// not a multiple of the claim size, and each pass reads the value saved before
-// it started rather than the one in force when the engine was built.
+// The cap is a hard bound, also when it is not a multiple of the claim size.
+// Each pass reads the value saved before it started, not the one in force when
+// the engine was built.
 func TestThePassJudgesNoMoreThanTheSavedCapAndReadsItEveryRun(t *testing.T) {
 	e := integration.Setup(t)
 	seedHeldThreads(t, e, 12)
@@ -110,8 +109,8 @@ func TestAnUntunedInstallationRunsTheDeclaredPassCap(t *testing.T) {
 	}
 }
 
-// The gauge counts exactly the threads the pass can still claim, and ages the
-// oldest from the capture of the message that opened it.
+// The gauge counts the threads the pass can still claim, and ages the oldest
+// from the capture of the message that opened it.
 func TestTheBacklogCountsWhatThePassStillOwesAndAgesTheOldest(t *testing.T) {
 	e := integration.Setup(t)
 	db := InstallationDB(e.Pool)
@@ -152,9 +151,9 @@ func TestTheBacklogCountsWhatThePassStillOwesAndAgesTheOldest(t *testing.T) {
 	}
 }
 
-// A thread the pass will not claim is not a thread it owes: a seat that left
-// the classified posture is judged by nobody, and a gauge that kept counting it
-// would alarm on mail no amount of capacity could clear.
+// A thread the pass will not claim is not a thread it owes. A seat that left
+// the classified posture is judged by nobody, and counting it would alarm on
+// mail no capacity could clear.
 func TestTheBacklogLeavesOutThreadsThePassWillNotClaim(t *testing.T) {
 	e := integration.Setup(t)
 	db := InstallationDB(e.Pool)

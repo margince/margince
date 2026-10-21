@@ -182,9 +182,9 @@ func TestTheWebsiteReadingLimitsAreSettingsOnlyTheUpdateGrantChanges(t *testing.
 	}
 }
 
-// The confidentiality pass cap rides the same store and the same gate: every
-// role reads it, only the update grant changes it, a change is one audit row,
-// and a value outside its range is refused whole.
+// The pass cap rides the same store and gate. Every role reads it and only the
+// update grant changes it. A change is one audit row, and a value outside its
+// range is refused.
 func TestTheConfidentialityPassCapIsASettingOnlyTheUpdateGrantChanges(t *testing.T) {
 	e := integration.SetupSearch(t)
 	store := capturemod.NewSettings(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))

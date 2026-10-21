@@ -13,18 +13,14 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 )
 
-// threadOwedAnswerSQL selects the thread questions a confidentiality pass can
-// still answer, whether or not their next attempt has come round. ClaimDue adds
-// the clock and the lease; ReadThreadBacklog adds nothing, because a thread
-// backing off or leased to a worker is still mail its owner's colleagues
-// cannot read.
+// threadOwedAnswerSQL selects the thread questions a pass can still answer,
+// whether or not their next attempt is due. ClaimDue adds the clock and the
+// lease. The gauge adds neither: a thread backing off is still hidden mail.
 //
-// One text for both, so the backlog the gauge reports is the backlog the pass
-// works. A second copy would let the gauge stay green over threads the pass
-// refuses to claim, which is the one reading it exists to prevent.
+// One text for both, so the gauge counts what the pass works. A second copy
+// could stay green over threads the pass refuses to claim.
 //
-// Names are unqualified so the text reads the same inside ClaimDue's subquery
-// and in the backlog scan, which both select from capture_thread_verdict alone.
+// Names are unqualified because both queries select from the ledger alone.
 const threadOwedAnswerSQL = `status = 'pending'
 	AND next_attempt_at IS NOT NULL
 	AND EXISTS (SELECT 1 FROM activity a

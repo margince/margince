@@ -115,9 +115,9 @@ func (e *ConfidentialityVerdictEngine) RunWorkspace(ctx context.Context, maxVerd
 	}
 	resolved := 0
 	for resolved < maxVerdicts {
-		// A claim never takes more than the pass has left: the cap is a number
-		// an admin chooses, so it is not always a multiple of the claim size, and
-		// a whole batch judged past it would be a cap that is only a suggestion.
+		// A claim never takes more than the pass has left. An admin's cap need
+		// not be a multiple of the claim size, and a batch judged past it would
+		// make the cap a suggestion.
 		batch, err := e.threads.ClaimDue(wsCtx, min(confidentialityClaimSize, maxVerdicts-resolved))
 		if err != nil {
 			return fmt.Errorf("confidentiality: claiming the thread backlog: %w", err)

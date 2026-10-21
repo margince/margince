@@ -73,7 +73,7 @@ func TestABootSetSyncIntervalPacesTheSyncAndRefusesAChange(t *testing.T) {
 }
 
 // A pass cap the environment sets is the cap the pass reads, and the settings
-// store refuses a different one; with no boot source the pass reads what an
+// store refuses a different one. With no boot source the pass reads what an
 // admin saved. Not parallel: the binding is the process's own.
 func TestTheConfidentialityPassReadsTheBootSetCapBeforeASavedOne(t *testing.T) {
 	ctx, _, _, ws := newCaptureRegistryFixture(t)
