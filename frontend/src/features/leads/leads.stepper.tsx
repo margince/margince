@@ -44,15 +44,16 @@ function rungOf(status: Lead["status"]): number {
 export function LeadStepper({
   lead,
   pending,
-  readOnlyReason,
+  refusedReasonId,
   onStep,
   onQualify,
   onDisqualify,
 }: Readonly<{
   lead: Lead;
   pending: boolean;
-  // Why no step may be taken — a terminal lead, say.
-  readOnlyReason?: string;
+  // The page's one sentence saying why no step may be taken — a terminal lead,
+  // somebody else's. Every step points at it rather than printing its own.
+  refusedReasonId?: string;
   onStep: (status: LadderOpenStep) => void;
   onQualify: () => void;
   onDisqualify: () => void;
@@ -102,9 +103,7 @@ export function LeadStepper({
         // its last two rungs — they share a rung and only one is ever taken.
         terminal: step.rung === 3,
         disabled: pending,
-        // A lead that takes no step — terminal, or a mirror — says why on
-        // every step it refuses.
-        reason: readOnlyReason,
+        reasonId: refusedReasonId,
         testId: `lead-step-${step.key}`,
         onPick: step.onPick,
       }))}

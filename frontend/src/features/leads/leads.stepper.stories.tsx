@@ -45,11 +45,15 @@ function ladder(props: {
         <LeadStepper
           lead={lead(props.lead)}
           pending={props.pending ?? false}
-          readOnlyReason={props.readOnlyReason}
+          refusedReasonId={props.readOnlyReason ? "lead-refused" : undefined}
           onStep={() => undefined}
           onQualify={() => undefined}
           onDisqualify={() => undefined}
         />
+        {/* The page draws this sentence once; the ladder only points at it. */}
+        {props.readOnlyReason && (
+          <p id="lead-refused">{props.readOnlyReason}</p>
+        )}
       </StoryProviders>
     );
   };
@@ -86,7 +90,7 @@ export const MovedByTheSystem: Story = {
 };
 
 /** Qualified: the ladder is finished, every step is a fact, and the reason
- *  the moves are refused is stated on each one rather than once elsewhere. */
+ *  the moves are refused is stated once under the ladder, not on each step. */
 export const Qualified: Story = {
   render: ladder({
     lead: { status: "promoted", archived_at: "2026-08-25T10:00:00Z" },

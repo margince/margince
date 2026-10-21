@@ -214,7 +214,7 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
           <LeadStepper
             lead={lead}
             pending={writer.patch.isPending}
-            readOnlyReason={writer.readOnlyReason}
+            refusedReasonId={writer.readOnly ? terminalReasonId : undefined}
             onStep={(status) => {
               // Same one-write-at-a-time rule as the inline rows: a status
               // sent while another save is in flight races it for If-Match.
