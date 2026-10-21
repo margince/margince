@@ -26,9 +26,13 @@ import (
 )
 
 type AdvanceDealInput struct {
-	ToStageID  ids.StageID
-	LostReason *string
-	IfVersion  *int64
+	ToStageID ids.StageID
+	// ReferencesFromRequest says the caller typed ToStageID, so a stage that
+	// is gone is refused naming `to_stage_id`. A move that came from a decided
+	// card leaves it false.
+	ReferencesFromRequest bool
+	LostReason            *string
+	IfVersion             *int64
 	// WonWithoutContractReason says why this win has no agreement behind it
 	// (ADR-0109 §6). Absent means the deal claims one, and the store looks for
 	// it — a win that claims nothing and offers no reason is what gets refused.
@@ -183,6 +187,9 @@ func (s *Store) advanceOnTx(
 		}
 		semantic, winProbability, err := resolveAdvanceTarget(ctx, tx, in.ToStageID, current)
 		if err != nil {
+			if in.ReferencesFromRequest {
+				err = auth.NameMissingReference("to_stage_id", err)
+			}
 			return err
 		}
 		// Under the lock resolveAdvanceTarget just took on the target row, and

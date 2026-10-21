@@ -216,7 +216,7 @@ func (s *Store) probeLinkTargets(ctx context.Context, links []ActivityLinkInput)
 			// is staged, asked here so the refusal arrives before the work
 			// rather than after it — two doors onto one act must not disagree.
 			if err := auth.EnsureAttachTarget(ctx, tx, link.EntityType, link.EntityID); err != nil {
-				return err
+				return linkRefusal(true, err)
 			}
 		}
 		return nil

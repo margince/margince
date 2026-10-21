@@ -28,6 +28,7 @@ import {
   usePublishedValues,
 } from "./create.fields";
 import { RecordFormBody } from "./create.form";
+import { fieldRefusals } from "./create.refusals";
 
 export { fieldControl } from "./create.controls";
 export {
@@ -193,6 +194,7 @@ export function CreateAction<Created extends { id: string }>({
     mutation.error instanceof ProblemError
       ? problemExistingId(mutation.error.problem)
       : null;
+  const refused = fieldRefusals(mutation.error, fields, t);
   return (
     <>
       <NewRecordButton
@@ -213,7 +215,12 @@ export function CreateAction<Created extends { id: string }>({
         title={label}
         fields={fields}
         pending={mutation.isPending}
-        error={mutation.isError ? problemMessageOf(mutation.error, t) : null}
+        error={
+          mutation.isError && !refused.allPlaced
+            ? problemMessageOf(mutation.error, t)
+            : null
+        }
+        fieldRefusals={refused.byField}
         existing={existing}
         resolveExisting={resolveExisting}
         resetToken={saved}
@@ -260,6 +267,7 @@ export function CreateRecordModal({
   fields,
   pending,
   error,
+  fieldRefusals,
   existing,
   resolveExisting,
   onSubmit,
@@ -272,6 +280,7 @@ export function CreateRecordModal({
   fields: CreateField[];
   pending: boolean;
   error: string | null;
+  fieldRefusals?: ReadonlyMap<string, string>;
   existing?: { id: string; code: string } | null;
   resolveExisting?: (code: string, id: string) => Route;
   onSubmit: (values: Record<string, string>, rows?: FormRows) => void;
@@ -325,6 +334,7 @@ export function CreateRecordModal({
       setRows={setRows}
       pending={pending}
       error={error}
+      fieldRefusals={fieldRefusals}
       existing={existing}
       resolveExisting={resolveExisting}
       onSubmit={(sent, sentRows) => {

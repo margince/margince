@@ -20,7 +20,7 @@ func admitProjectCreation(ctx context.Context, tx pgx.Tx, in CreateProjectInput,
 		return CreateProjectInput{}, err
 	}
 	in.OwnerID = owner
-	if err := auth.EnsureLinkTarget(ctx, tx, "company", in.CompanyID.UUID); err != nil {
+	if err := auth.EnsureReferenceTarget(ctx, tx, "company_id", "company", in.CompanyID.UUID); err != nil {
 		return CreateProjectInput{}, err
 	}
 	if err := storekit.RefuseUnknownSeat(ctx, tx, in.Author); err != nil {

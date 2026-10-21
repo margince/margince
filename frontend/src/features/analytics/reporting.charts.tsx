@@ -5,13 +5,18 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { useT } from "../../i18n";
 import { ChartBody, chartTitle } from "./reporting.chartbody";
 import { ChartContext } from "./reporting.chartcontext";
-import { type LaidOutSection, laidOut } from "./reporting.layout";
+import {
+  type LaidOutItem,
+  type LaidOutSection,
+  laidOut,
+} from "./reporting.layout";
 import { MetricsTable } from "./reporting.metricstable";
 import type {
   ReportingChart,
   ReportingEvaluation,
   ReportingEvidenceRef,
 } from "./reporting.model";
+import { QuestionCard } from "./reporting.questioncard";
 import { ResultsSummary } from "./reporting.summary";
 import { WrittenSummary } from "./reporting.written";
 import "./reporting.css";
@@ -23,6 +28,7 @@ export function ReportingCharts({
   editionId,
   afterSummary,
   onEvidence,
+  rolePreview,
 }: Readonly<{
   evaluation: ReportingEvaluation;
   editionId?: string;
@@ -30,11 +36,13 @@ export function ReportingCharts({
   // act on before reading further.
   afterSummary?: ReactNode;
   onEvidence: EvidenceAction;
+  // Set while the page shows the report as a role reads it.
+  rolePreview?: boolean;
 }>) {
   const charts = pageCharts(evaluation);
   const sections: readonly LaidOutSection[] = evaluation.selection.layout
     ? laidOut(evaluation.selection.layout, charts)
-    : [{ charts, full: [] }];
+    : [{ items: charts.map((chart) => ({ chart, full: false })) }];
   return (
     <div className="reporting-results">
       <WrittenSummary evaluation={evaluation} />
@@ -42,12 +50,13 @@ export function ReportingCharts({
       {afterSummary}
       {sections.map((section) => (
         <ChartSection
-          // A chart is placed once, so a section's first chart names it.
-          key={`${section.charts[0]?.kind}:${section.charts[0]?.metric}`}
+          // A card is placed once, so a section's first item names it.
+          key={section.items[0] ? itemKey(section.items[0]) : "empty"}
           section={section}
           evaluation={evaluation}
           editionId={editionId}
           onEvidence={onEvidence}
+          questions={questionMode(editionId, rolePreview)}
         />
       ))}
       <MetricsTable evaluation={evaluation} onEvidence={onEvidence} />
@@ -87,13 +96,20 @@ function ChartSection({
   evaluation,
   editionId,
   onEvidence,
+  questions,
 }: Readonly<{
   section: LaidOutSection;
   evaluation: ReportingEvaluation;
   editionId?: string;
   onEvidence: EvidenceAction;
+  questions: "live" | "frozen" | "preview";
 }>) {
-  const wide = wideCharts(section.charts, section.full);
+  const wide = pairWidths(
+    section.items.map(
+      (item) =>
+        item.full || ("chart" in item && WIDE_KINDS.has(item.chart.kind)),
+    ),
+  );
   return (
     <section className="reporting-section">
       {section.title && (
@@ -102,19 +118,43 @@ function ChartSection({
         </Heading>
       )}
       <div className="reporting-grid">
-        {section.charts.map((chart, index) => (
-          <ChartPanel
-            key={`${chart.kind}:${chart.metric}`}
-            chart={chart}
-            wide={wide[index] === true}
-            evaluation={evaluation}
-            editionId={editionId}
-            onEvidence={onEvidence}
-          />
-        ))}
+        {section.items.map((item, index) =>
+          "chart" in item ? (
+            <ChartPanel
+              key={itemKey(item)}
+              chart={item.chart}
+              wide={wide[index] === true}
+              evaluation={evaluation}
+              editionId={editionId}
+              onEvidence={onEvidence}
+            />
+          ) : (
+            <QuestionCard
+              key={itemKey(item)}
+              card={item.question}
+              wide={wide[index] === true}
+              evaluation={evaluation}
+              mode={questions}
+            />
+          ),
+        )}
       </div>
     </section>
   );
+}
+
+function questionMode(
+  editionId: string | undefined,
+  rolePreview: boolean | undefined,
+): "live" | "frozen" | "preview" {
+  if (editionId !== undefined) return "frozen";
+  return rolePreview ? "preview" : "live";
+}
+
+function itemKey(item: LaidOutItem): string {
+  return "chart" in item
+    ? `${item.chart.kind}:${item.chart.metric}`
+    : `question:${item.question.id}`;
 }
 
 // One chart in its panel, with the door to the records behind it.
@@ -191,9 +231,16 @@ export function wideCharts(
   charts: readonly ReportingChart[],
   full: readonly boolean[] = [],
 ): boolean[] {
-  const wide = charts.map(
-    (chart, index) => WIDE_KINDS.has(chart.kind) || full[index] === true,
+  return pairWidths(
+    charts.map(
+      (chart, index) => WIDE_KINDS.has(chart.kind) || full[index] === true,
+    ),
   );
+}
+
+// Spans an unpaired half item across its row, given which items span already.
+function pairWidths(spans: readonly boolean[]): boolean[] {
+  const wide = [...spans];
   let unpaired: number | null = null;
   for (const [index, isWide] of wide.entries()) {
     if (!isWide && unpaired == null) {

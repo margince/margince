@@ -63,7 +63,7 @@ func (r approvalPreviewReader) dealCreationDetails(ctx context.Context, in deals
 		previewFieldName: in.Name, acceptFieldAmountMinor: in.AmountMinor, previewFieldExpectedArrMinor: in.ExpectedArrMinor, dealTargetCurrency: in.Currency,
 		fieldPipelineID: in.PipelineID, fieldStageID: in.StageID, refColCompany: in.CompanyID,
 		refColPartnerCompany: in.PartnerCompanyID, previewFieldPartnerAttribution: in.PartnerAttribution,
-		"project_id": in.ProjectID, bulkParamOwner: in.OwnerID, acceptFieldExpectedClose: in.ExpectedClose,
+		refColProject: in.ProjectID, bulkParamOwner: in.OwnerID, acceptFieldExpectedClose: in.ExpectedClose,
 		fieldSource: in.Source, previewFieldSourceSystem: in.SourceSystem,
 		previewFieldSourceAuthorID: in.Author.AuthorID, previewFieldSourceAuthorName: in.Author.AuthorName,
 		descriptionField: in.Description, previewFieldCommercialMotion: in.CommercialMotion,

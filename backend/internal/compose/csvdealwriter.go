@@ -127,6 +127,9 @@ func dealRefusalOf(err error, fields map[string]string, stages dealStages) (migr
 	if _, ok := errors.AsType[*deals.StageGoneError](err); ok {
 		return stages.goneStage(fields[dealTargetPipeline], fields[dealTargetStage]), true
 	}
+	if _, ok := errors.AsType[*deals.NegativeAmountError](err); ok {
+		return migration.Why(migration.ReasonAmountNegative, "value", strings.TrimSpace(fields[dealTargetAmount])), true
+	}
 	if _, ok := errors.AsType[*deals.PastCloseDateError](err); ok {
 		return migration.Why(migration.ReasonCloseDatePast, "value", strings.TrimSpace(fields[dealTargetCloseDate])), true
 	}

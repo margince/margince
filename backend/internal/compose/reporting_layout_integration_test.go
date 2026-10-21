@@ -55,3 +55,38 @@ func TestASavedReportKeepsItsLayout(t *testing.T) {
 		}
 	}
 }
+
+// A question card is kept with its question and adds no chart to the
+// evaluation. It reaches the reader in the evaluation's layout, for the page
+// to ask.
+func TestASavedReportKeepsItsQuestionCard(t *testing.T) {
+	f := reportingBusiness(t)
+	question := crmcontracts.ReportingCardQuestion{
+		Entity:   "deals-by-stage",
+		GroupBy:  &[]string{"owner_id"},
+		Measures: []crmcontracts.AnalyticsMeasure{{Fn: "count"}},
+	}
+	layout := []crmcontracts.ReportingSection{{Cards: []crmcontracts.ReportingCard{
+		{Id: "stages", Kind: "stage_distribution", Width: crmcontracts.ReportingCardWidthHalf},
+		{Id: "by-owner", Kind: "question", Question: &question, Width: crmcontracts.ReportingCardWidthHalf},
+	}}}
+	selection := f.selection()
+	selection.Layout = &layout
+	created, err := f.service.CreateReport(f.human, crmcontracts.ReportingReportInput{
+		Name: "With a question", Audience: "private", Selection: selection,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []crmcontracts.ReportingBlockKind{"stage_distribution"}; !slices.Equal(created.Selection.Blocks, want) {
+		t.Errorf("blocks %v, want %v: a question is not a chart", created.Selection.Blocks, want)
+	}
+	evaluation, err := f.service.EvaluateReport(f.human, ids.UUID(created.Id), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cards := (*evaluation.Selection.Layout)[0].Cards
+	if cards[1].Question == nil || cards[1].Question.Entity != "deals-by-stage" {
+		t.Fatalf("the evaluation's layout carries %+v, want the question card as saved", cards[1])
+	}
+}

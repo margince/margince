@@ -143,7 +143,7 @@ func createOfferTx(ctx context.Context, tx pgx.Tx, dealID ids.DealID, in CreateO
 // inherits the deal's company.
 func resolveBuyerCompany(ctx context.Context, tx pgx.Tx, dealID ids.DealID, buyerCompanyID *ids.CompanyID) (*ids.CompanyID, error) {
 	if buyerCompanyID != nil {
-		if err := auth.EnsureLinkTarget(ctx, tx, "company", buyerCompanyID.UUID); err != nil {
+		if err := auth.EnsureReferenceTarget(ctx, tx, "buyer_company_id", "company", buyerCompanyID.UUID); err != nil {
 			return nil, err
 		}
 		return buyerCompanyID, nil
@@ -177,7 +177,7 @@ func resolveOfferTemplateRef(ctx context.Context, tx pgx.Tx, templateID *ids.Off
 		return fmt.Errorf("check offer_template reference: %w", err)
 	}
 	if !exists {
-		return apperrors.ErrNotFound
+		return auth.NameMissingReference("template_id", apperrors.ErrNotFound)
 	}
 	return nil
 }
@@ -432,7 +432,7 @@ func offerHeaderPatch(ctx context.Context, tx pgx.Tx, current crmcontracts.Offer
 		p.Set("currency", current.Currency, *in.Currency)
 	}
 	if in.BuyerCompanyID != nil {
-		if err := auth.EnsureLinkTarget(ctx, tx, "company", in.BuyerCompanyID.UUID); err != nil {
+		if err := auth.EnsureReferenceTarget(ctx, tx, "buyer_company_id", "company", in.BuyerCompanyID.UUID); err != nil {
 			return nil, nil, err
 		}
 		p.Set("buyer_company_id", current.BuyerCompanyId, *in.BuyerCompanyID)

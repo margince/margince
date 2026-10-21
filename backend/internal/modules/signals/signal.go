@@ -80,7 +80,7 @@ func (s *Store) CreateSignal(ctx context.Context, in CreateSignalInput) (crmcont
 			// The subject must exist AND be visible to the caller: the
 			// polymorphic ref has no FK, so an unchecked id would persist
 			// a cross-tenant (or out-of-scope) link.
-			if err := auth.EnsureLinkTarget(ctx, tx, *in.EntityType, *in.EntityID); err != nil {
+			if err := auth.EnsureReferenceTarget(ctx, tx, "entity_id", *in.EntityType, *in.EntityID); err != nil {
 				return err
 			}
 		}

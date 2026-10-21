@@ -47,7 +47,7 @@ func (r approvalPreviewReader) companyCreationDetails(ctx context.Context, plan 
 	in := plan.Input
 	fields := map[string]any{
 		"display_name": in.DisplayName, fieldLegalName: in.LegalName, descriptionField: in.Description,
-		fieldIndustry: in.Industry, "size_band": in.SizeBand, bulkParamOwner: in.OwnerID, refColParentCompany: in.ParentCompanyID,
+		fieldIndustry: in.Industry, fieldSizeBand: in.SizeBand, bulkParamOwner: in.OwnerID, refColParentCompany: in.ParentCompanyID,
 		fieldLinkedIn: in.LinkedInURL, fieldSource: in.Source, previewFieldSourceSystem: in.SourceSystem,
 		previewFieldSourceAuthorName: in.Author.AuthorName, previewFieldSourceAuthorID: in.Author.AuthorID,
 		previewLifecycle: previewLifecycleUnknown,

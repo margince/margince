@@ -68,7 +68,7 @@ func (r approvalPreviewReader) capturedLeadChanges(ctx context.Context, plan con
 	for _, field := range []struct {
 		name  string
 		value *string
-	}{{fieldFullName, plan.Patch.FullName}, {companyNameField, plan.Patch.CompanyName}, {"title", plan.Patch.Title}} {
+	}{{fieldFullName, plan.Patch.FullName}, {companyNameField, plan.Patch.CompanyName}, {fieldTitle, plan.Patch.Title}} {
 		if field.value == nil {
 			continue
 		}

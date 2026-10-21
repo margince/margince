@@ -457,7 +457,7 @@ func admitLeadCreate(ctx context.Context, tx pgx.Tx, in CreateLeadInput) error {
 	}
 
 	if in.ProjectID != nil {
-		if err := auth.EnsureLinkTarget(ctx, tx, "project", in.ProjectID.UUID); err != nil {
+		if err := auth.EnsureReferenceTarget(ctx, tx, "project_id", "project", in.ProjectID.UUID); err != nil {
 			return err
 		}
 	}

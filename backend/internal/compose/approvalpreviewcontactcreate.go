@@ -64,7 +64,7 @@ func (r approvalPreviewReader) contactCreationPreview(ctx context.Context, appro
 
 func (r approvalPreviewReader) contactCreationDetails(ctx context.Context, plan contacts.ContactCreationPreview) ([]crmcontracts.ApprovalPreviewDetail, []string, error) {
 	in := plan.Input
-	fields := map[string]any{fieldFullName: in.FullName, previewFieldFirstName: in.FirstName, "last_name": in.LastName, "title": in.Title, bulkParamOwner: in.OwnerID, fieldSource: in.Source, previewFieldSourceSystem: in.SourceSystem, previewFieldSourceAuthorName: in.Author.AuthorName, previewFieldSourceAuthorID: in.Author.AuthorID, "creation_acquisition": plan.Acquisition.Kind}
+	fields := map[string]any{fieldFullName: in.FullName, previewFieldFirstName: in.FirstName, previewFieldLastName: in.LastName, fieldTitle: in.Title, bulkParamOwner: in.OwnerID, fieldSource: in.Source, previewFieldSourceSystem: in.SourceSystem, previewFieldSourceAuthorName: in.Author.AuthorName, previewFieldSourceAuthorID: in.Author.AuthorID, "creation_acquisition": plan.Acquisition.Kind}
 	maps.Copy(fields, plan.CustomFields)
 	maps.Copy(fields, creationAddressFields(in.Address))
 	if err := creationFieldsVisible(ctx, string(recordTypeContact), map[string]any{addressField: in.Address, previewFieldSocial: in.Social, previewFieldEmails: in.Emails, "phones": in.Phones, "acquisition": plan.Acquisition}); err != nil {
@@ -120,7 +120,7 @@ func (r approvalPreviewReader) contactCreationDetails(ctx context.Context, plan 
 func (r approvalPreviewReader) contactCreationChannels(ctx context.Context, plan contacts.ContactCreationPreview) ([]crmcontracts.ApprovalPreviewDetail, error) {
 	var details []crmcontracts.ApprovalPreviewDetail
 	for _, email := range plan.Input.Emails {
-		fields := map[string]any{"email": email.Email, "creation_email_type": email.EmailType, previewFieldCreationPrimary: email.IsPrimary, previewCreationPosition: email.Position, "creation_email_correspondence": !email.VouchedNotCorresponded}
+		fields := map[string]any{fieldEmail: email.Email, "creation_email_type": email.EmailType, previewFieldCreationPrimary: email.IsPrimary, previewCreationPosition: email.Position, "creation_email_correspondence": !email.VouchedNotCorresponded}
 		rows, err := r.creationChannelDetails(ctx, fields)
 		if err != nil {
 			return nil, err
@@ -142,7 +142,7 @@ func (r approvalPreviewReader) contactCreationChannels(ctx context.Context, plan
 
 func (r approvalPreviewReader) creationChannelDetails(ctx context.Context, fields map[string]any) ([]crmcontracts.ApprovalPreviewDetail, error) {
 	var details []crmcontracts.ApprovalPreviewDetail
-	for _, field := range []string{"email", fieldPhone, "creation_email_type", "creation_phone_type", previewFieldCreationPrimary, previewCreationPosition, "creation_email_correspondence"} {
+	for _, field := range []string{fieldEmail, fieldPhone, "creation_email_type", "creation_phone_type", previewFieldCreationPrimary, previewCreationPosition, "creation_email_correspondence"} {
 		scalar, ok := fields[field]
 		if !ok {
 			continue

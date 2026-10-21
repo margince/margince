@@ -80,7 +80,14 @@ export function NewDealAction({
 
   const fields: CreateField[] = [
     { key: "name", label: "create.dealName", required: true },
-    { key: "amount", label: "create.amount", type: "number", step: "0.01" },
+    {
+      key: "amount",
+      label: "create.amount",
+      type: "number",
+      step: "0.01",
+      min: "0",
+      wireField: "amount_minor",
+    },
     {
       key: "currency",
       label: "create.currency",

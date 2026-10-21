@@ -234,7 +234,7 @@ func admitAndDedupeCompanyCreate(ctx context.Context, tx pgx.Tx, in CreateCompan
 	}
 
 	if in.ParentCompanyID != nil {
-		if err := auth.EnsureLinkTarget(ctx, tx, "company", in.ParentCompanyID.UUID); err != nil {
+		if err := auth.EnsureReferenceTarget(ctx, tx, "parent_company_id", "company", in.ParentCompanyID.UUID); err != nil {
 			return CompanyMatch{}, err
 		}
 	}

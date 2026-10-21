@@ -53,7 +53,7 @@ func (r approvalPreviewReader) invitationPreview(ctx context.Context, approval c
 		return nil, err
 	}
 	details := []crmcontracts.ApprovalPreviewDetail{
-		previewDetail("subject", appointment.Subject),
+		previewDetail(activityTargetSubject, appointment.Subject),
 		previewDetail("invitation_description", appointment.Description),
 		previewDetail("meeting_location", appointment.Location),
 		previewDetail("meeting_start", appointment.Start.Format(time.RFC3339Nano)),

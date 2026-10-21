@@ -10,16 +10,16 @@
   "totals": {
     "tools": 37,
     "resources": 9,
-    "tool_catalog_bytes": 126059,
+    "tool_catalog_bytes": 126747,
     "resource_catalog_bytes": 3588,
-    "approx_wire_tokens_total": 32411,
+    "approx_wire_tokens_total": 32583,
     "largest_tool_bytes": 8748,
     "largest_tool": "preview_import",
     "tool_catalog_composition": {
       "description_bytes": 32375,
-      "input_schema_bytes": 59583,
+      "input_schema_bytes": 60271,
       "output_schema_bytes": 25189,
-      "description_plus_input_schema_bytes": 91958
+      "description_plus_input_schema_bytes": 92646
     }
   },
   "tools": {
@@ -3982,6 +3982,47 @@
                                             "metric": {
                                               "type": "string"
                                             },
+                                            "question": {
+                                              "properties": {
+                                                "entity": {
+                                                  "type": "string"
+                                                },
+                                                "group_by": {
+                                                  "items": {
+                                                    "type": "string"
+                                                  },
+                                                  "type": "array"
+                                                },
+                                                "limit": {
+                                                  "type": "integer"
+                                                },
+                                                "measures": {
+                                                  "items": {
+                                                    "properties": {
+                                                      "as": {
+                                                        "type": "string"
+                                                      },
+                                                      "field": {
+                                                        "type": "string"
+                                                      },
+                                                      "fn": {
+                                                        "type": "string"
+                                                      }
+                                                    },
+                                                    "required": [
+                                                      "fn"
+                                                    ],
+                                                    "type": "object"
+                                                  },
+                                                  "type": "array"
+                                                }
+                                              },
+                                              "required": [
+                                                "entity",
+                                                "measures"
+                                              ],
+                                              "type": "object"
+                                            },
                                             "width": {
                                               "type": "string"
                                             }
@@ -5384,6 +5425,47 @@
                             },
                             "metric": {
                               "type": "string"
+                            },
+                            "question": {
+                              "properties": {
+                                "entity": {
+                                  "type": "string"
+                                },
+                                "group_by": {
+                                  "items": {
+                                    "type": "string"
+                                  },
+                                  "type": "array"
+                                },
+                                "limit": {
+                                  "type": "integer"
+                                },
+                                "measures": {
+                                  "items": {
+                                    "properties": {
+                                      "as": {
+                                        "type": "string"
+                                      },
+                                      "field": {
+                                        "type": "string"
+                                      },
+                                      "fn": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "fn"
+                                    ],
+                                    "type": "object"
+                                  },
+                                  "type": "array"
+                                }
+                              },
+                              "required": [
+                                "entity",
+                                "measures"
+                              ],
+                              "type": "object"
                             },
                             "width": {
                               "type": "string"

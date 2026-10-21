@@ -719,6 +719,13 @@ export const vi = {
   "reporting.draftPreviewing":
     "Bạn đang xem bản nháp. Ai đọc báo cáo vẫn thấy bản đã công bố.",
   "reporting.previewDraft": "Xem trước bản nháp",
+  "reporting.previewAs": "Xem trước với vai trò",
+  "reporting.previewAsSelf": "Góc nhìn của bạn",
+  "reporting.previewAsBanner":
+    "Xem trước với vai trò {role}: những gì một tài khoản có vai trò này và cùng các nhóm đọc được trong báo cáo này. Bản ghi riêng tư của tài khoản khác vẫn bị ẩn ở đây.",
+  "reporting.endPreview": "Kết thúc xem trước",
+  "reporting.previewNoRecords":
+    "Bản xem trước không mở bản ghi. Kết thúc xem trước để mở chúng với quyền truy cập của bạn.",
   "reporting.showPublished": "Hiện bản đã công bố",
   "reporting.publishDraft": "Công bố bản nháp",
   "reporting.discardDraft": "Bỏ bản nháp",
@@ -743,6 +750,18 @@ export const vi = {
   "reporting.cardSection": "Phần của {chart}",
   "reporting.removeCard": "Xóa {chart}",
   "reporting.addChart": "Thêm biểu đồ",
+  "reporting.questionCard": "Câu hỏi: {population}",
+  "reporting.questionLoading": "Đang hỏi…",
+  "reporting.questionNotKept":
+    "Không lưu trong báo cáo đã gửi. Mở báo cáo trực tiếp để xem câu trả lời cho câu hỏi này.",
+  "reporting.questionLink": "Liên kết tới báo cáo tùy chỉnh đã lưu",
+  "reporting.questionLinkInvalid":
+    "Dán liên kết mà Sao chép liên kết đưa ra trên báo cáo tùy chỉnh đã lưu.",
+  "reporting.addQuestion": "Thêm câu hỏi",
+  "reporting.questionNotPreviewed":
+    "Không hiển thị trong bản xem trước theo vai trò. Quyền truy cập của mỗi tài khoản đọc sẽ trả lời câu hỏi này khi mở báo cáo.",
+  "reporting.questionFiltered":
+    "Báo cáo tùy chỉnh này có bộ lọc, thẻ báo cáo không thể giữ bộ lọc. Lưu một bản sao không có bộ lọc; phạm vi của báo cáo sẽ thu hẹp thẻ.",
   "reporting.previewChart": "Xem trước",
   "reporting.previewLoading": "Đang tải bản xem trước…",
   "reporting.previewEmpty":
@@ -5076,6 +5095,9 @@ export const vi = {
     "Tạo công ty mới nếu không chọn công ty có sẵn trong danh sách.",
   "create.dealName": "Tên deal",
   "create.amount": "Giá trị",
+  "create.amountNegative": "Nhập số tiền từ 0 trở lên.",
+  "create.referenceNotFound":
+    "Bản ghi này không còn tồn tại hoặc bạn không thể xem.",
   "create.currency": "Loại tiền",
   "create.stage": "Giai đoạn",
   "create.relatedCompany": "Công ty",
@@ -6964,6 +6986,8 @@ export const vi = {
   "import.reason.run_in_flight":
     "Lần nhập này đang chạy. Nó tự hoàn tất và trang này tự cập nhật.",
   "import.reason.undo_failed": "Không thể hoàn tác bản ghi này.",
+  "import.reason.amount_negative":
+    "“{value}” nhỏ hơn 0, mà số tiền của deal thì không được âm.",
   "import.reason.author_too_long": "Tác giả dài hơn {max} ký tự.",
   "import.reason.cannot_create":
     "Bạn không có quyền tạo {plural} nên tệp {plural} bị bỏ qua.",

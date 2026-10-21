@@ -55,7 +55,7 @@ func (r approvalPreviewReader) mergeRelationship(ctx context.Context, relation c
 	for _, ref := range []struct {
 		field string
 		id    *openapi_types.UUID
-	}{{companionContactField, relation.ContactId}, {refColCompany, relation.CompanyId}, {companionContactField, relation.CounterpartyContactId}, {refColCompany, relation.CounterpartyCompanyId}, {dealIDField, relation.DealId}, {"project_id", relation.ProjectId}} {
+	}{{companionContactField, relation.ContactId}, {refColCompany, relation.CompanyId}, {companionContactField, relation.CounterpartyContactId}, {refColCompany, relation.CounterpartyCompanyId}, {dealIDField, relation.DealId}, {refColProject, relation.ProjectId}} {
 		if ref.id == nil {
 			continue
 		}

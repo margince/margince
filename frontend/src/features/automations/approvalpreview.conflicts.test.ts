@@ -74,7 +74,13 @@ it("keeps source date and scope visible while an active agreement blocks termina
   const rows = commercialPreviewDisplay(
     {
       version: 1,
-      changes: [],
+      changes: [
+        {
+          field: "owner_id",
+          before: { kind: "owner", text: "Ada" },
+          after: { kind: "owner", text: "Ben" },
+        },
+      ],
       reviewer_reason: "record_authority",
       state: "stale",
       lifecycle_evidence: {

@@ -1958,7 +1958,7 @@
     },
     {
       "name": "read_reports",
-      "tokens": 1726,
+      "tokens": 1812,
       "agents": [],
       "required_by_cases": [
         "case49_who_can_introduce_us"
@@ -2146,7 +2146,7 @@
     },
     {
       "name": "read_analytics",
-      "tokens": 912,
+      "tokens": 998,
       "agents": [],
       "required_by_cases": [
         "case20_put_it_in_the_board_pack"

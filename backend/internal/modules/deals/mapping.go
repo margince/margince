@@ -75,6 +75,7 @@ func advanceDealInput(req crmcontracts.AdvanceDealRequest, ifVersion *int64) (Ad
 		return AdvanceDealInput{}, err
 	}
 	in := AdvanceDealInput{
+		ReferencesFromRequest:    true,
 		ToStageID:                pathID[ids.StageKind](req.ToStageId),
 		LostReason:               req.LostReason,
 		IfVersion:                ifVersion,
@@ -152,20 +153,21 @@ func dealCreateInputAdmitting(req crmcontracts.CreateDealRequest, importer bool)
 		return CreateDealInput{}, err
 	}
 	in := CreateDealInput{
-		Name:             req.Name,
-		AmountMinor:      req.AmountMinor,
-		ExpectedArrMinor: req.ExpectedArrMinor,
-		Currency:         req.Currency,
-		PipelineID:       pathID[ids.PipelineKind](req.PipelineId),
-		StageID:          pathID[ids.StageKind](req.StageId),
-		Source:           req.Source,
-		SourceSystem:     req.SourceSystem,
-		Author:           author,
-		CompanyID:        idArg[ids.CompanyKind](req.CompanyId),
-		PartnerCompanyID: idArg[ids.CompanyKind](req.PartnerCompanyId),
-		ProjectID:        idArg[ids.ProjectKind](req.ProjectId),
-		OwnerID:          idArg[ids.UserKind](req.OwnerId),
-		CustomFields:     req.AdditionalProperties,
+		ReferencesFromRequest: true,
+		Name:                  req.Name,
+		AmountMinor:           req.AmountMinor,
+		ExpectedArrMinor:      req.ExpectedArrMinor,
+		Currency:              req.Currency,
+		PipelineID:            pathID[ids.PipelineKind](req.PipelineId),
+		StageID:               pathID[ids.StageKind](req.StageId),
+		Source:                req.Source,
+		SourceSystem:          req.SourceSystem,
+		Author:                author,
+		CompanyID:             idArg[ids.CompanyKind](req.CompanyId),
+		PartnerCompanyID:      idArg[ids.CompanyKind](req.PartnerCompanyId),
+		ProjectID:             idArg[ids.ProjectKind](req.ProjectId),
+		OwnerID:               idArg[ids.UserKind](req.OwnerId),
+		CustomFields:          req.AdditionalProperties,
 	}
 	if req.PartnerAttribution != nil {
 		attribution := string(*req.PartnerAttribution)

@@ -11,6 +11,7 @@ package principal
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -239,6 +240,28 @@ func (p Permissions) Allows(object string, a Action) bool {
 func (p Permissions) Rule(object string, a Action) string {
 	return fmt.Sprintf("role[%s] %s.%s row_scope=%s",
 		strings.Join(p.RoleKeys, ","), object, a, p.RowScope)
+}
+
+// Within is the reach two policies share: a verb only where both allow it, the
+// narrower row scope, and every field mask either one carries. A preview of how
+// a role reads a page runs under the caller's policy Within the role's. It then
+// never shows the caller anything their own policy withholds.
+func (p Permissions) Within(other Permissions) Permissions {
+	out := Permissions{RoleKeys: other.RoleKeys, RowScope: p.RowScope, Objects: map[string]ObjectGrant{}}
+	if p.RowScope.Wider(other.RowScope) {
+		out.RowScope = other.RowScope
+	}
+	for object, mine := range p.Objects {
+		theirs := other.Objects[object]
+		out.Objects[object] = ObjectGrant{
+			Create: mine.Create && theirs.Create,
+			Read:   mine.Read && theirs.Read,
+			Update: mine.Update && theirs.Update,
+			Delete: mine.Delete && theirs.Delete,
+		}
+	}
+	out.FieldMasks = append(slices.Clone(p.FieldMasks), other.FieldMasks...)
+	return out
 }
 
 type contextKey int

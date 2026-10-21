@@ -2917,8 +2917,8 @@ paths:
       summary: Create a company.
       description: |
         Domains are normalized/lowercased and unique per workspace (409 on collision).
-        A `parent_company_id` that names no company the caller can read answers `404`, the same
-        for a missing company and for one hidden by row scope.
+        A `parent_company_id` that names no company the caller can read answers 422 naming
+        `parent_company_id`, the same for a missing company and for one hidden by row scope.
       x-mcp-tool: { verb: create_record, record_type: company, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -2943,7 +2943,6 @@ paths:
               schema: { $ref: '#/components/schemas/Company' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
         '409':
           description: A domain already maps to another company.
           content:
@@ -2975,6 +2974,8 @@ paths:
         transaction, so only an administrator may: another human gets `403`, an agent `422
         anchor_protected`. Its name is refused with `422` on `display_name` when blank (`required`) or
         past 200 characters (`too_long`); other companies' names have no length cap.
+        A `parent_company_id` that names a company the caller cannot read answers 422 naming
+        `parent_company_id`, the same for a missing record and for one hidden by row scope.
       x-mcp-tool: { verb: update_record, record_type: company, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -5438,9 +5439,9 @@ paths:
         Amount is integer minor-units + ISO-4217 currency (no float money). The stage
         must belong to the deal's pipeline (422 otherwise). Deals attach to contact/company,
         never to a raw lead (ADR-0008 §5). An id in the body that names nothing the caller can
-        read (`company_id`, `partner_company_id`, `project_id`, `stage_id`, among others) answers
-        `404`, the same for a missing record and for one hidden by row scope, so the answer does
-        not say which exists.
+        read (`company_id`, `partner_company_id`, `project_id`, `stage_id`) answers 422 naming
+        that field, the same for a missing record and for one hidden by row scope, so the answer
+        does not say which exists. An `amount_minor` below zero answers 422 `amount_negative`.
       x-mcp-tool: { verb: create_record, record_type: deal, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -5469,7 +5470,6 @@ paths:
               schema: { $ref: '#/components/schemas/Deal' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
         '422':
           description: Validation error (e.g. stage not in pipeline, lost without lost_reason).
           content:
@@ -5598,6 +5598,11 @@ paths:
       tags: [Deals]
       operationId: updateDeal
       summary: Update a deal (partial). Closing is `POST /deals/{id}/advance`'s; a patch naming a closing field is refused 422 `set_by_advance`.
+      description: |
+        A `company_id`, `partner_company_id` or `project_id` that names a record the caller cannot
+        read answers 422 naming that field, the same for a missing record and for one hidden by row
+        scope. An `amount_minor` below zero answers 422 `amount_negative`; a deal that already holds
+        one stays editable on its other fields.
       x-mcp-tool: { verb: update_record, record_type: deal, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -5652,6 +5657,7 @@ paths:
         A move to the stage the deal already holds changes nothing and answers 200 with the
         deal as it stands: a retried call must not close a closed deal again and move its
         close day. A `lost_reason` is trimmed and must not be blank (422 `lost_reason_required`).
+        A `to_stage_id` that names a stage nobody has answers 422 naming `to_stage_id`.
       # advance_deal is the one TierDynamic tool (ADR-0026): the gate resolves the tier from the
       # stage semantics at BOTH ENDS of the move, not statically. open→open = 🟢 (no token); a
       # terminal won/lost stage at either end = 🟡 (approval token required), so closing a deal and
@@ -5828,6 +5834,8 @@ paths:
         a caller can get wrong. A collision is resolved by taking the next number, never
         reported.
         The project starts in `initiative` and its creation row is appended to the phase history.
+        A `company_id` that names a company the caller cannot read answers 422 naming `company_id`,
+        the same for a missing record and for one hidden by row scope.
       x-mcp-tool: { verb: create_record, record_type: project, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -7398,8 +7406,8 @@ paths:
         own send, may claim a mail identity. A `note` or a `call` needs a non-blank `subject` or
         `body`, on create and on an edit that would leave it with neither (422 naming `subject`);
         a task needs its `subject`. An activity may link to >1 entity
-        (contact and deal). A link that names a record the caller cannot read answers `404`,
-        the same for a missing record and for one hidden by row scope. `log_activity` is 🟢
+        (contact and deal). A link that names a record the caller cannot read answers 422
+        naming `links`, the same for a missing record and for one hidden by row scope. `log_activity` is 🟢
         (reversible).
       x-mcp-tool: { verb: log_activity, record_type: activity, tier: auto_execute, scope: write }
       parameters:
@@ -7469,7 +7477,6 @@ paths:
               schema: { $ref: '#/components/schemas/Activity' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /activities/{id}:
@@ -8347,6 +8354,8 @@ paths:
         the call arrives at, every entry in `links` is row-scope probed before the message is
         sent; over MCP that probe also runs at staging, so an agent naming a record it cannot
         see is refused before a human is asked about it at all.
+        A link that names a record the caller cannot read answers 422 naming `links`, the same for a
+        missing record and for one hidden by row scope.
       x-mcp-tool: { verb: send_company_email, record_type: activity, tier: auto_execute, scope: send }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -9138,6 +9147,8 @@ paths:
         tier floor on `book_meeting`. On success a
         `meeting` `activity` is logged and linked to the supplied entities. Idempotent on
         `Idempotency-Key`.
+        A link that names a record the caller cannot read answers 422 naming `links`, the same for a
+        missing record and for one hidden by row scope.
       x-mcp-tool: { verb: book_meeting, record_type: activity, tier: auto_execute, scope: send }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -10174,7 +10185,7 @@ paths:
         `company_name` is FREE TEXT — a lead has NO company FK. Lead-internal exact-email
         dedupe → 409 with existing lead id. Bulk/connector sourcing uses (source_system, source_id)
         for idempotent re-import. A `project_id` that names no project the caller can read
-        answers `404`, the same for a missing project and for one hidden by row scope.
+        answers 422 naming `project_id`, the same for a missing project and for one hidden by row scope.
       x-mcp-tool: { verb: create_record, record_type: lead, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -10203,7 +10214,6 @@ paths:
               schema: { $ref: '#/components/schemas/Lead' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
         '409':
           description: A live lead already owns this email.
           content:
@@ -10405,6 +10415,9 @@ paths:
       tags: [Leads]
       operationId: updateLead
       summary: Update a lead (partial).
+      description: |
+        A `project_id` that names a project the caller cannot read answers 422 naming `project_id`,
+        the same for a missing record and for one hidden by row scope.
       x-mcp-tool: { verb: update_record, record_type: lead, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -11333,6 +11346,10 @@ paths:
         — and an employment that has already ended never takes the flag. Send the
         field to decide it yourself. A later PATCH can change it on the same terms,
         the ended-employment rule included: see `updateRelationship`.
+        An endpoint id (`contact_id`, `counterparty_contact_id`, `company_id`,
+        `counterparty_company_id`, `deal_id`, `project_id`) that names a record the caller cannot
+        read answers 422 naming that field, the same for a missing record and for one hidden by row
+        scope.
       requestBody:
         required: true
         content:
@@ -12622,6 +12639,54 @@ paths:
       x-agent-access: human-only
       security:
       - cookieAuth: []
+  /analytics/reports/{id}/reader-preview:
+    parameters: *id016
+    get:
+      tags:
+      - Reports
+      operationId: previewReportingReportAsRole
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Evaluate a saved report as a seat holding one role would read it. Human-only.
+      description: |
+        The report evaluated under the caller's own permissions narrowed to the role's: an
+        object only where both grant it, the narrower row scope, and every field mask either
+        carries. So the preview never shows the caller anything their own access withholds.
+        It runs as the caller, so records private to another seat stay hidden here too.
+
+        Gated on `role_admin.read`, as the role matrix is: a preview under a role discloses
+        what that role may read. A refusal under the role (for example, a role that may not
+        read saved reports, or measure the report's scope) answers as it would for that seat.
+      parameters:
+      - name: role
+        in: query
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 64
+      - name: revision
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+          minimum: 1
+      responses:
+        '200':
+          description: The report as the role reads it.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportingEvaluation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
   /analytics/reports/{id}/evaluation:
     parameters: *id016
     get:
@@ -24789,6 +24854,8 @@ paths:
         Line items may ride the create; each snapshots description/price from its optional
         `product_id` unless given explicitly. Totals are DERIVED — a body carrying
         `net_minor`/`gross_minor`/`line_total` (any spelling) is rejected 422.
+        A `buyer_company_id` or `template_id` that names a record the caller cannot read answers 422
+        naming that field, the same for a missing record and for one hidden by row scope.
       x-mcp-tool: { verb: create_record, record_type: offer, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -24827,6 +24894,9 @@ paths:
       tags: [Offers]
       operationId: updateOffer
       summary: Update offer header fields — allowed only while status=draft.
+      description: |
+        A `buyer_company_id` or `template_id` that names a record the caller cannot read answers 422
+        naming that field, the same for a missing record and for one hidden by row scope.
       x-mcp-tool: { verb: update_record, record_type: offer, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IfMatch'
@@ -25188,6 +25258,8 @@ paths:
         company or drops it. Signals are COMPANY-LEVEL: there is no mandatory contact
         link, and `resolved_contact_id` is only ever set by the resolver under recorded
         consent (P12).
+        An `entity_id` that names a record the caller cannot read answers 422 naming `entity_id`, the
+        same for a missing record and for one hidden by row scope.
       # The warm room proposes; the rep sends (features/07 §9). Recording,
       # triaging, resolving and archiving a consent-gated (P12) company-level
       # signal is a human act through the governed surface — never an agent tool.
@@ -28465,6 +28537,8 @@ paths:
 
         `signed_on` is never defaulted from a deal's close time: that timestamp records
         when somebody moved a stage, which is not evidence that anything was signed.
+        A `company_id`, `deal_id` or `project_id` that names a record the caller cannot read answers
+        422 naming that field, the same for a missing record and for one hidden by row scope.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -28511,6 +28585,8 @@ paths:
         Status is NOT patchable here. A status moves through its own transitions so the
         proposal and event that belong to it are written from the same transaction, and
         so a correction to a term can never silently activate an agreement.
+        A `deal_id` or `project_id` that names a record the caller cannot read answers 422 naming
+        that field, the same for a missing record and for one hidden by row scope.
       parameters:
         - $ref: '#/components/parameters/Id'
         - $ref: '#/components/parameters/IfMatch'
@@ -35482,7 +35558,7 @@ components:
 
     ImportReasonCode:
       type: string
-      enum: [activity_empty, activity_held, activity_link_ambiguous, activity_link_ambiguous_dropped, activity_type_unknown, activity_type_unnamed, activity_unlinked, author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_link_stakeholders, cannot_read_pipelines, cannot_read_tags, cannot_write_type, close_date_future, close_date_past, company_duplicate_found, company_duplicate_skipped, company_link_on_meeting, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_not_found, contact_not_found_dropped, contact_unnamed, currency_not_a_code, currency_unset, deal_already_closed, deal_legal_gate, deal_not_found, deal_not_found_dropped, deal_pipeline_fixed, description_too_long, direction_unknown, domain_held, duplicate_email, duration_not_valid_for_kind, duration_out_of_range, employer_column_empty, employer_column_empty_dropped, employer_not_found, employer_not_found_dropped, empty_payload, field_inactive, fx_rate_missing, id_not_a_company_id, id_not_visible, id_on_non_company, lead_not_found, lead_not_found_dropped, lead_status_not_importable, lead_status_unknown, link_ambiguous, link_ambiguous_dropped, link_contact_not_imported, link_edge_unsupported, link_malformed, link_not_attachable, link_not_found, link_not_found_dropped, link_row_not_imported, link_row_skipped, link_row_skipped_dropped, link_type_unknown, linkedin_held, lost_reason_missing, meeting_status_not_valid_for_kind, meeting_status_unknown, message_not_importable, natural_key_taken, not_a_date, not_a_domain, not_a_number, not_an_amount, not_an_email, not_yes_no, occurred_at_future, occurred_at_unnamed, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, pipeline_no_open_stage, pipeline_unknown, pipeline_unnamed, record_archived, ref_taken_by_another_company, row_key_empty, row_key_repeated, run_in_flight, size_band_invalid, stage_unknown, stage_unnamed, tag_created, tag_name_invalid, tag_new, task_not_importable, timestamp_needs_zone, too_many_links, undo_edited, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, undo_still_referenced, value_refused, value_unreadable]
+      enum: [activity_empty, activity_held, activity_link_ambiguous, activity_link_ambiguous_dropped, activity_type_unknown, activity_type_unnamed, activity_unlinked, amount_negative, author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_link_stakeholders, cannot_read_pipelines, cannot_read_tags, cannot_write_type, close_date_future, close_date_past, company_duplicate_found, company_duplicate_skipped, company_link_on_meeting, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_not_found, contact_not_found_dropped, contact_unnamed, currency_not_a_code, currency_unset, deal_already_closed, deal_legal_gate, deal_not_found, deal_not_found_dropped, deal_pipeline_fixed, description_too_long, direction_unknown, domain_held, duplicate_email, duration_not_valid_for_kind, duration_out_of_range, employer_column_empty, employer_column_empty_dropped, employer_not_found, employer_not_found_dropped, empty_payload, field_inactive, fx_rate_missing, id_not_a_company_id, id_not_visible, id_on_non_company, lead_not_found, lead_not_found_dropped, lead_status_not_importable, lead_status_unknown, link_ambiguous, link_ambiguous_dropped, link_contact_not_imported, link_edge_unsupported, link_malformed, link_not_attachable, link_not_found, link_not_found_dropped, link_row_not_imported, link_row_skipped, link_row_skipped_dropped, link_type_unknown, linkedin_held, lost_reason_missing, meeting_status_not_valid_for_kind, meeting_status_unknown, message_not_importable, natural_key_taken, not_a_date, not_a_domain, not_a_number, not_an_amount, not_an_email, not_yes_no, occurred_at_future, occurred_at_unnamed, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, pipeline_no_open_stage, pipeline_unknown, pipeline_unnamed, record_archived, ref_taken_by_another_company, row_key_empty, row_key_repeated, run_in_flight, size_band_invalid, stage_unknown, stage_unnamed, tag_created, tag_name_invalid, tag_new, task_not_importable, timestamp_needs_zone, too_many_links, undo_edited, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, undo_still_referenced, value_refused, value_unreadable]
       description: 'Why a row was skipped or warned about, so a screen can say it in the reader''s language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.'
 
     CreateImportRunRequest:
@@ -43395,7 +43471,7 @@ components:
       required: [name, pipeline_id, stage_id, source]
       properties:
         name: { type: string }
-        amount_minor: { type: [integer, 'null'], format: int64 }
+        amount_minor: { type: [integer, 'null'], format: int64, minimum: 0, description: 'The deal''s one-off price in minor units of `currency`. Below zero is refused with 422 `amount_negative`.' }
         currency: { type: [string, 'null'], pattern: '^[A-Z]{3}$' }
         expected_arr_minor: { type: [integer, 'null'], format: int64, description: 'Expected annual recurring revenue in minor units of `currency`. Null means no recurring component, which is not zero.' }
         pipeline_id: { type: string, format: uuid }
@@ -43458,7 +43534,7 @@ components:
       type: object
       properties:
         name: { type: string }
-        amount_minor: { type: [integer, 'null'], format: int64 }
+        amount_minor: { type: [integer, 'null'], format: int64, minimum: 0, description: 'The deal''s one-off price in minor units of `currency`. Below zero is refused with 422 `amount_negative`.' }
         currency: { type: [string, 'null'], pattern: '^[A-Z]{3}$' }
         expected_arr_minor: { type: [integer, 'null'], format: int64, description: 'Expected annual recurring revenue in minor units of `currency`. Null means no recurring component, which is not zero.' }
         company_id: { type: [string, 'null'], format: uuid }
@@ -49500,6 +49576,43 @@ components:
           maxItems: 20
           items:
             $ref: '#/components/schemas/ReportingCard'
+    ReportingCardKind:
+      type: string
+      description: A chart kind, or `question`, a custom analytics question the card asks for each reader.
+      enum:
+      - bookings_trend
+      - stage_distribution
+      - owner_attainment
+      - stage_age
+      - sdr_outcomes
+      - target_progress
+      - forecast_support
+      - pipeline_movement
+      - metric_reading
+      - question
+    ReportingCardQuestion:
+      type: object
+      additionalProperties: false
+      required: [entity, measures]
+      description: |
+        A custom analytics question a card asks. Present exactly when the card's `kind` is
+        `question`. The page asks it through `/analytics/query` for each reader, under their
+        own grants and over the report's scope. Every reader of the report receives it, so it
+        carries no filters (a filter value can name a record a reader may not open), no scope
+        and no save. A sent edition does not keep its answer.
+      properties:
+        entity: { type: string, minLength: 1, maxLength: 64, description: "The population, by name." }
+        group_by:
+          type: array
+          maxItems: 4
+          items: { type: string, minLength: 1, maxLength: 64 }
+        measures:
+          type: array
+          minItems: 1
+          maxItems: 8
+          items:
+            $ref: '#/components/schemas/AnalyticsMeasure'
+        limit: { type: integer, minimum: 1, maximum: 1000, description: "The rows the card shows; 100 when absent." }
     ReportingCard:
       type: object
       additionalProperties: false
@@ -49510,7 +49623,9 @@ components:
           pattern: '^[a-z0-9-]{1,32}$'
           description: A short id the client mints. Unique within the report, so one chart kind can be placed twice.
         kind:
-          $ref: '#/components/schemas/ReportingBlockKind'
+          $ref: '#/components/schemas/ReportingCardKind'
+        question:
+          $ref: '#/components/schemas/ReportingCardQuestion'
         metric:
           $ref: '#/components/schemas/ReportingMetricID'
           description: The one metric this card draws. Absent draws the kind for every selected metric that has it.

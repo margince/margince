@@ -135,7 +135,7 @@ func (r approvalPreviewReader) recordPreview(ctx context.Context, approval crmco
 	if approval.Kind == toolArchiveRecord {
 		return r.archivePreview(ctx, approval, record.Fields, out)
 	}
-	if approval.Kind == singleRelinkTool || approval.Kind == operationRelinkActivities || approval.Kind == "relink_thread" {
+	if approval.Kind == singleRelinkTool || approval.Kind == operationRelinkActivities || approval.Kind == operationRelinkThread {
 		return r.relinkPreview(ctx, approval, out)
 	}
 	if approval.Kind == operationPromoteLead {
@@ -285,7 +285,7 @@ func (r approvalPreviewReader) value(ctx context.Context, field string, raw json
 	switch field {
 	case previewLifecycle:
 		value.Kind = previewLifecycle
-	case "valid_until", previewFieldClosedAt, previewFieldStartedAt, "target_end_date", previewFXRateDate, acceptFieldExpectedClose:
+	case previewFieldValidUntil, previewFieldClosedAt, previewFieldStartedAt, previewFieldTargetEndDate, previewFXRateDate, acceptFieldExpectedClose:
 		if _, err := time.Parse(time.RFC3339, text); err != nil {
 			if _, err := time.Parse(time.DateOnly, text); err != nil {
 				return value, apperrors.ErrInvalidArgument

@@ -53,7 +53,7 @@ func previewReferenceType(field string) string {
 	case bulkParamOwner:
 		return entityUser
 	case previewFieldBuyerCompanyID, refColParentCompany, refColPartnerCompany:
-		return string(string(recordTypeCompany))
+		return string(recordTypeCompany)
 	default:
 		return strings.TrimSuffix(field, "_id")
 	}

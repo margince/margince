@@ -4,7 +4,7 @@ type Section = components["schemas"]["ReportingSection"];
 type Card = components["schemas"]["ReportingCard"];
 type Selection = components["schemas"]["ReportingSelection"];
 type Chart = components["schemas"]["ReportingChart"];
-type BlockKind = Card["kind"];
+type BlockKind = components["schemas"]["ReportingBlockKind"];
 type MetricId = components["schemas"]["ReportingMetricID"];
 export type ReportingLayout = Section[];
 
@@ -37,10 +37,37 @@ export function layoutOf(selection: Selection): ReportingLayout {
   ];
 }
 
+/**
+ * The question a saved custom report asked, as a card keeps it: its population,
+ * groupings, measures and row limit. The report's scope replaces the run's own,
+ * and a card never saves a run or carries a filter.
+ */
+export function cardQuestion(
+  asked: components["schemas"]["AnalyticsQuery"],
+): NonNullable<Card["question"]> {
+  return {
+    entity: asked.entity,
+    group_by: asked.group_by,
+    measures: asked.measures,
+    limit: asked.limit,
+  };
+}
+
+/** A saved question's run id, read from its link or typed alone. */
+export function runIdOf(link: string): string | undefined {
+  return /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i.exec(
+    link,
+  )?.[0];
+}
+
 /** Each kind once, where the layout first names it; the server derives the same. */
 export function blocksOf(layout: ReportingLayout): BlockKind[] {
   return [
-    ...new Set(layout.flatMap((section) => section.cards.map((c) => c.kind))),
+    ...new Set(
+      layout.flatMap((section) =>
+        section.cards.flatMap((c) => (c.kind === "question" ? [] : [c.kind])),
+      ),
+    ),
   ];
 }
 
@@ -100,36 +127,38 @@ export function cardChoices(
   return choices;
 }
 
-/** One section as the page draws it: its title and the charts its cards place. */
+/** One card as the page draws it: a chart of the evaluation, or a question. */
+export type LaidOutItem = Readonly<
+  { chart: Chart; full: boolean } | { question: Card; full: boolean }
+>;
+
+/** One section as the page draws it: its title and what its cards place. */
 export type LaidOutSection = Readonly<{
   title?: string;
-  charts: readonly Chart[];
-  full: readonly boolean[];
+  items: readonly LaidOutItem[];
 }>;
 
-/** The evaluation's charts, grouped and sized by the layout's cards. */
+/** The evaluation's charts and the questions, grouped and sized by the cards. */
 export function laidOut(
   layout: ReportingLayout,
   charts: readonly Chart[],
 ): LaidOutSection[] {
   return layout
-    .map((section) => {
-      const placed = section.cards.flatMap((card) =>
-        charts
+    .map((section) => ({
+      title: section.title?.trim() || undefined,
+      items: section.cards.flatMap((card): LaidOutItem[] => {
+        const full = card.width === "full";
+        if (card.kind === "question") return [{ question: card, full }];
+        return charts
           .filter(
             (chart) =>
               chart.kind === card.kind &&
               (!card.metric || chart.metric === card.metric),
           )
-          .map((chart) => ({ chart, full: card.width === "full" })),
-      );
-      return {
-        title: section.title?.trim() || undefined,
-        charts: placed.map((item) => item.chart),
-        full: placed.map((item) => item.full),
-      };
-    })
-    .filter((section) => section.charts.length > 0);
+          .map((chart) => ({ chart, full }));
+      }),
+    }))
+    .filter((section) => section.items.length > 0);
 }
 
 const withSection = (
@@ -207,6 +236,23 @@ export const layoutEdits = {
       ...section,
       cards: section.cards.filter((_, index) => index !== card),
     })),
+  /** A question card goes at the end of the last section, full width. */
+  addQuestion(
+    layout: ReportingLayout,
+    question: NonNullable<Card["question"]>,
+  ): ReportingLayout {
+    const sections = layout.length > 0 ? layout : [{ cards: [] }];
+    const card: Card = {
+      id: newCardId(sections),
+      kind: "question",
+      question,
+      width: "full",
+    };
+    return withSection(sections, sections.length - 1, (section) => ({
+      ...section,
+      cards: [...section.cards, card],
+    }));
+  },
   /** A new card goes at the end of the last section, full width. */
   addCard(layout: ReportingLayout, choice: CardChoice): ReportingLayout {
     const sections = layout.length > 0 ? layout : [{ cards: [] }];

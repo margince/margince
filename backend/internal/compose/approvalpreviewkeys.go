@@ -56,3 +56,10 @@ const (
 	previewLifecycleUnknown      = "unknown"
 	previewOfferDraft            = "draft"
 )
+
+const (
+	operationRelinkThread     = "relink_thread"
+	previewFieldLastName      = "last_name"
+	previewFieldTargetEndDate = "target_end_date"
+	previewFieldValidUntil    = "valid_until"
+)

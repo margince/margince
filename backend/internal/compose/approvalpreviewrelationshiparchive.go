@@ -62,7 +62,7 @@ func (r approvalPreviewReader) relationshipArchiveDetails(ctx context.Context, e
 		{companionContactField, string(recordTypeContact), edge.ContactId},
 		{refColCompany, string(recordTypeCompany), edge.CompanyId},
 		{dealIDField, string(recordTypeDeal), edge.DealId},
-		{"project_id", string(recordTypeProject), edge.ProjectId},
+		{refColProject, string(recordTypeProject), edge.ProjectId},
 		{"counterparty_contact_id", string(recordTypeContact), edge.CounterpartyContactId},
 		{"counterparty_company_id", string(recordTypeCompany), edge.CounterpartyCompanyId},
 	} {

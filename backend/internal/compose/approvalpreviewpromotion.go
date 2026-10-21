@@ -128,7 +128,7 @@ func (r approvalPreviewReader) promotionDetails(ctx context.Context, in contacts
 }
 
 func (r approvalPreviewReader) promotionContactDetails(ctx context.Context, plan contacts.LeadContactChange) ([]crmcontracts.ApprovalPreviewDetail, error) {
-	details := []crmcontracts.ApprovalPreviewDetail{}
+	var details []crmcontracts.ApprovalPreviewDetail
 	if plan.Create != nil {
 		var err error
 		details, err = r.promotionNewContactDetails(ctx, plan)
@@ -263,12 +263,12 @@ func (r approvalPreviewReader) promotionExistingContactDetails(ctx context.Conte
 	}
 	details = append(details, crmcontracts.ApprovalPreviewDetail{Field: "promotion_existing_contact", Value: contact})
 	after := plan.Patch.After()
-	if title, ok := after["title"]; ok {
+	if title, ok := after[fieldTitle]; ok {
 		raw, err := json.Marshal(title)
 		if err != nil {
 			return nil, err
 		}
-		value, err := r.value(ctx, "title", raw)
+		value, err := r.value(ctx, fieldTitle, raw)
 		if err != nil {
 			return nil, err
 		}

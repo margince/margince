@@ -726,6 +726,13 @@ export const de = {
   "reporting.draftPreviewing":
     "Hier steht der Entwurf. Wer den Bericht liest, sieht weiter die veröffentlichte Fassung.",
   "reporting.previewDraft": "Entwurf ansehen",
+  "reporting.previewAs": "Vorschau als",
+  "reporting.previewAsSelf": "Eigene Ansicht",
+  "reporting.previewAsBanner":
+    "Vorschau als {role}: was ein Platz mit dieser Rolle und denselben Teams von diesem Bericht liest. Private Datensätze anderer bleiben auch hier verborgen.",
+  "reporting.endPreview": "Vorschau beenden",
+  "reporting.previewNoRecords":
+    "In der Vorschau öffnen sich keine Datensätze. Nach dem Ende der Vorschau öffnen sie sich mit dem eigenen Zugriff.",
   "reporting.showPublished": "Veröffentlichte Fassung zeigen",
   "reporting.publishDraft": "Entwurf veröffentlichen",
   "reporting.discardDraft": "Entwurf verwerfen",
@@ -750,6 +757,18 @@ export const de = {
   "reporting.cardSection": "Abschnitt für {chart}",
   "reporting.removeCard": "{chart} entfernen",
   "reporting.addChart": "Diagramm hinzufügen",
+  "reporting.questionCard": "Frage: {population}",
+  "reporting.questionLoading": "Frage wird gestellt…",
+  "reporting.questionNotKept":
+    "In gesendeten Berichten nicht enthalten. Der Live-Bericht zeigt die Antwort auf diese Frage.",
+  "reporting.questionLink": "Link zu einem gespeicherten eigenen Bericht",
+  "reporting.questionLinkInvalid":
+    "Den Link einfügen, den Link kopieren bei einem gespeicherten eigenen Bericht liefert.",
+  "reporting.addQuestion": "Frage hinzufügen",
+  "reporting.questionNotPreviewed":
+    "In der Rollenvorschau nicht angezeigt. Diese Frage beantwortet beim Öffnen des Berichts der Zugriff des jeweiligen Kontos.",
+  "reporting.questionFiltered":
+    "Dieser eigene Bericht hat Filter, die eine Berichtskarte nicht behalten kann. Eine Kopie ohne Filter speichern; der Umfang des Berichts grenzt die Karte ein.",
   "reporting.previewChart": "Vorschau",
   "reporting.previewLoading": "Vorschau wird geladen…",
   "reporting.previewEmpty":
@@ -5190,6 +5209,9 @@ export const de = {
     "Erstellt ein neues Unternehmen, sofern keines aus der Liste ausgewählt wird.",
   "create.dealName": "Deal-Name",
   "create.amount": "Wert",
+  "create.amountNegative": "Gib einen Betrag von null oder mehr ein.",
+  "create.referenceNotFound":
+    "Dieser Datensatz existiert nicht mehr, oder du kannst ihn nicht sehen.",
   "create.currency": "Währung",
   "create.stage": "Phase",
   "create.relatedCompany": "Unternehmen",
@@ -7154,6 +7176,8 @@ export const de = {
     "Dieser Import läuft bereits. Er endet von selbst und diese Seite aktualisiert sich.",
   "import.reason.undo_failed":
     "Der Datensatz konnte nicht zurückgenommen werden.",
+  "import.reason.amount_negative":
+    "„{value}“ liegt unter null, und der Betrag eines Deals darf das nicht sein.",
   "import.reason.author_too_long":
     "Die Angabe, wer den Eintrag erstellt hat, ist länger als {max} Zeichen.",
   "import.reason.cannot_create":

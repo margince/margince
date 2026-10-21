@@ -82,7 +82,7 @@ func mailPreviewDetails(message crmcontracts.SendCompanyEmailRequest, input acti
 		previewDetail("to", strings.Join(to, "\n")),
 		previewDetail("cc", strings.Join(input.Cc, "\n")),
 		previewDetail("bcc", strings.Join(input.Bcc, "\n")),
-		previewDetail("subject", input.Subject),
+		previewDetail(activityTargetSubject, input.Subject),
 		previewDetail("body", input.Body),
 	}
 	if message.ScheduledAt != nil {

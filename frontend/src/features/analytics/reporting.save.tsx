@@ -72,13 +72,13 @@ export function SaveReportingDialog({
       .filter((metric) => metrics.includes(metric.id))
       .map((metric) => [metric.id, metric.blocks] as const),
   );
-  const drawable = (card: ReportingLayout[number]["cards"][number]) =>
-    catalog.data === undefined ||
-    (card.metric
-      ? (metricBlocks.get(card.metric)?.includes(card.kind) ?? false)
-      : [...metricBlocks.values()].some((blocks) =>
-          blocks.includes(card.kind),
-        ));
+  const drawable = (card: ReportingLayout[number]["cards"][number]) => {
+    const kind = card.kind;
+    if (kind === "question" || catalog.data === undefined) return true;
+    return card.metric
+      ? (metricBlocks.get(card.metric)?.includes(kind) ?? false)
+      : [...metricBlocks.values()].some((blocks) => blocks.includes(kind));
+  };
   const kept = keptCards(layout, drawable);
   const write = useMutation({
     mutationFn: async ({

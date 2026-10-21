@@ -90,11 +90,7 @@ func (w *csvWriters) lockReviewedTarget(ctx context.Context, row migration.Row) 
 	// The ambient row transaction also holds tag and relationship writes.
 	replayed := false
 	err = database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
-		var locked ids.UUID
-		if err := tx.QueryRow(ctx, storekit.SQLf(`SELECT id FROM %s WHERE id = $1 AND archived_at IS NULL FOR UPDATE`, table), id).Scan(&locked); err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				return apperrors.ErrNotFound
-			}
+		if _, err := lockReviewedImportRow(ctx, tx, table, id); err != nil {
 			return err
 		}
 		err := storekit.EnsureIfMatch(ctx, tx, table, id, &expected.TargetVersion)
@@ -343,4 +339,21 @@ func (w *csvWriters) reviewCheckedSource(ctx context.Context, row migration.Row,
 		return apperrors.ErrVersionSkew
 	}
 	return nil
+}
+
+func lockReviewedImportRow(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) (storekit.RowLock, error) {
+	switch table {
+	case tableCompany:
+		return storekit.LockRow(ctx, tx, tableCompany, id, storekit.LiveOnly)
+	case tableContact:
+		return storekit.LockRow(ctx, tx, tableContact, id, storekit.LiveOnly)
+	case tableLead:
+		return storekit.LockRow(ctx, tx, tableLead, id, storekit.LiveOnly)
+	case tableDeal:
+		return storekit.LockRow(ctx, tx, tableDeal, id, storekit.LiveOnly)
+	case tableActivity:
+		return storekit.LockRow(ctx, tx, tableActivity, id, storekit.LiveOnly)
+	default:
+		return storekit.RowLock{}, apperrors.ErrVersionSkew
+	}
 }

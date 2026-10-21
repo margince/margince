@@ -104,7 +104,7 @@ func (r approvalPreviewReader) bookingPreviewLinks(ctx context.Context, requeste
 
 func bookingDetails(in crmcontracts.BookMeetingJSONRequestBody, command agents.BookMeetingCommand, hostValue crmcontracts.ApprovalPreviewValue, linked []crmcontracts.ApprovalPreviewDetail) []crmcontracts.ApprovalPreviewDetail {
 	details := []crmcontracts.ApprovalPreviewDetail{
-		previewDetail("subject", command.Subject),
+		previewDetail(activityTargetSubject, command.Subject),
 		previewDetail("meeting_start", in.Start.Format(time.RFC3339Nano)),
 		previewDetail("meeting_end", in.End.Format(time.RFC3339Nano)),
 		{Field: "meeting_host", Value: hostValue},

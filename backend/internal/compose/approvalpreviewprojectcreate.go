@@ -59,7 +59,7 @@ func (r approvalPreviewReader) projectCreationPreview(ctx context.Context, appro
 func (r approvalPreviewReader) projectCreationDetails(ctx context.Context, in projects.CreateProjectInput) ([]crmcontracts.ApprovalPreviewDetail, error) {
 	fields := map[string]any{
 		previewFieldName: in.Name, refColCompany: in.CompanyID, bulkParamOwner: in.OwnerID,
-		descriptionField: in.Description, previewFieldStartedAt: in.StartedAt, "target_end_date": in.TargetEndDate,
+		descriptionField: in.Description, previewFieldStartedAt: in.StartedAt, previewFieldTargetEndDate: in.TargetEndDate,
 		fieldPhase: projects.PhaseInitiative, fieldSource: in.Source, previewFieldSourceSystem: in.SourceSystem,
 		previewFieldSourceAuthorID: in.Author.AuthorID, previewFieldSourceAuthorName: in.Author.AuthorName,
 	}

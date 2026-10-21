@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 37 |
 | Resources | 9 |
-| Tool catalog | 123.1 KB |
+| Tool catalog | 123.8 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 32411 |
+| Approx. wire tokens | 32583 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 24.6 KB | 19% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 31.6 KB | 25% | Yes, every step |
-| Input schemas | 58.2 KB | 47% | Yes, every step |
+| Input schemas | 58.9 KB | 47% | Yes, every step |
 | _Names, annotations, punctuation_ | 8.7 KB | 7% | Partly |
-| **Description + input schema** | **89.8 KB** | **72%** | **the recurring cost** |
+| **Description + input schema** | **90.5 KB** | **73%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -77,7 +77,7 @@ descriptions and input schemas are what each step pays for.
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 401 |
 | [`list_documents`](#list_documents) | List a record's documents | yes |  | 216 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1001 |
-| [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 912 |
+| [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 998 |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_attention`](#read_attention) | See what needs attention | yes |  | 326 |
 | [`read_context`](#read_context) | Get the story so far | yes |  | 395 |
@@ -87,7 +87,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 292 |
 | [`read_record`](#read_record) | Read a record | yes |  | 307 |
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
-| [`read_reports`](#read_reports) | Read sales reports | yes |  | 1726 |
+| [`read_reports`](#read_reports) | Read sales reports | yes |  | 1812 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 351 |
 | [`read_view`](#read_view) | Read a view | yes |  | 989 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 488 |
@@ -4448,6 +4448,47 @@ read_reports for the standard metrics and named reports. Keep a saved query's id
                                     "metric": {
                                       "type": "string"
                                     },
+                                    "question": {
+                                      "properties": {
+                                        "entity": {
+                                          "type": "string"
+                                        },
+                                        "group_by": {
+                                          "items": {
+                                            "type": "string"
+                                          },
+                                          "type": "array"
+                                        },
+                                        "limit": {
+                                          "type": "integer"
+                                        },
+                                        "measures": {
+                                          "items": {
+                                            "properties": {
+                                              "as": {
+                                                "type": "string"
+                                              },
+                                              "field": {
+                                                "type": "string"
+                                              },
+                                              "fn": {
+                                                "type": "string"
+                                              }
+                                            },
+                                            "required": [
+                                              "fn"
+                                            ],
+                                            "type": "object"
+                                          },
+                                          "type": "array"
+                                        }
+                                      },
+                                      "required": [
+                                        "entity",
+                                        "measures"
+                                      ],
+                                      "type": "object"
+                                    },
                                     "width": {
                                       "type": "string"
                                     }
@@ -5931,6 +5972,47 @@ search its evidence, and quote coverage with each number.
                     },
                     "metric": {
                       "type": "string"
+                    },
+                    "question": {
+                      "properties": {
+                        "entity": {
+                          "type": "string"
+                        },
+                        "group_by": {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "limit": {
+                          "type": "integer"
+                        },
+                        "measures": {
+                          "items": {
+                            "properties": {
+                              "as": {
+                                "type": "string"
+                              },
+                              "field": {
+                                "type": "string"
+                              },
+                              "fn": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "fn"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "entity",
+                        "measures"
+                      ],
+                      "type": "object"
                     },
                     "width": {
                       "type": "string"

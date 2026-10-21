@@ -136,9 +136,9 @@ func (r approvalPreviewReader) leadCreationDetails(ctx context.Context, plan con
 	}
 	in := plan.Input
 	fields := map[string]any{
-		fieldFullName: in.FullName, fieldEmail: in.Email, "phone": in.Phone, "title": in.Title,
+		fieldFullName: in.FullName, fieldEmail: in.Email, fieldPhone: in.Phone, fieldTitle: in.Title,
 		companyNameField: in.CompanyName, "candidate_company_key": in.CandidateCompanyKey, "linkedin_url": in.LinkedInURL,
-		previewFieldStatus: in.Status, bulkParamOwner: in.OwnerID, "project_id": in.ProjectID, companionContactField: in.FromContactID,
+		previewFieldStatus: in.Status, bulkParamOwner: in.OwnerID, refColProject: in.ProjectID, companionContactField: in.FromContactID,
 		previewFieldSourceSystem: in.SourceSystem, "source_id": in.SourceID, fieldSource: in.Source, "score": plan.Score,
 		previewFieldSourceAuthorName: in.Author.AuthorName, previewFieldSourceAuthorID: in.Author.AuthorID,
 	}
@@ -256,7 +256,7 @@ func creationAddressFields(address *crmcontracts.Address) map[string]any {
 func creationValueField(field string) string {
 	valueField := ""
 	switch field {
-	case dealIDField, previewFieldBuyerCompanyID, previewFieldTemplateID, "product_id", "valid_until", bulkParamOwner, "project_id", companionContactField, refColCompany, refColParentCompany, refColPartnerCompany, fieldPipelineID, fieldStageID, "expected_close_date", previewFieldStartedAt, "target_end_date", "lifecycle":
+	case dealIDField, previewFieldBuyerCompanyID, previewFieldTemplateID, "product_id", previewFieldValidUntil, bulkParamOwner, refColProject, companionContactField, refColCompany, refColParentCompany, refColPartnerCompany, fieldPipelineID, fieldStageID, acceptFieldExpectedClose, previewFieldStartedAt, previewFieldTargetEndDate, previewLifecycle:
 		valueField = field
 	case previewFieldSourceAuthorID:
 		valueField = "user_id"

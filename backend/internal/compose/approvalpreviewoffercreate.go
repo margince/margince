@@ -76,7 +76,7 @@ func (r approvalPreviewReader) offerCreationDetails(ctx context.Context, dealID 
 	in := plan.Input
 	fields := map[string]any{
 		dealIDField: dealID, previewFieldBuyerCompanyID: in.BuyerCompanyID, previewFieldTemplateID: in.TemplateID,
-		dealTargetCurrency: in.Currency, "offer_status": previewOfferDraft, "valid_until": in.ValidUntil,
+		dealTargetCurrency: in.Currency, "offer_status": previewOfferDraft, previewFieldValidUntil: in.ValidUntil,
 		"intro_text": in.IntroText, "terms_text": in.TermsText, fieldSource: in.Source,
 		previewFieldNetMinor: plan.Totals.NetMinor, "tax_minor": plan.Totals.TaxMinor, previewFieldGrossMinor: plan.Totals.GrossMinor,
 		"arr_minor": plan.Recurring.ArrMinor, "net_tcv_minor": plan.Recurring.NetTcvMinor,

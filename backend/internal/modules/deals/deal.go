@@ -23,9 +23,12 @@ import (
 // closed_at/lost_reason/FX invariants. Creating straight onto a terminal
 // stage would put an string(DealOpen) deal on a won column — silent forecast
 // corruption, no CHECK trips.
-func ensureOpenBirthStage(ctx context.Context, tx pgx.Tx, stageID ids.StageID, pipelineID ids.PipelineID) error {
+func ensureOpenBirthStage(ctx context.Context, tx pgx.Tx, stageID ids.StageID, pipelineID ids.PipelineID, fromRequest bool) error {
 	stage, err := resolveLiveStage(ctx, tx, stageID, pipelineID, "stage_id")
 	if err != nil {
+		if fromRequest {
+			err = auth.NameMissingReference("stage_id", err)
+		}
 		return err
 	}
 	if StageSemantic(stage.semantic).Terminal() {
@@ -238,7 +241,7 @@ func applyPartnerAttributionPatch(ctx context.Context, tx pgx.Tx,
 		p.Set("partner_attribution", current.PartnerAttribution, *in.PartnerAttribution)
 		return nil
 	}
-	if err := auth.EnsureLinkTarget(ctx, tx, "company", in.PartnerCompanyID.UUID); err != nil {
+	if err := auth.EnsureReferenceTarget(ctx, tx, "partner_company_id", "company", in.PartnerCompanyID.UUID); err != nil {
 		return err
 	}
 	// Visible is not enough: it must actually BE a partner, or the deal reads
@@ -314,6 +317,11 @@ func (s *Store) applyMoneyInvariants(ctx context.Context, tx pgx.Tx,
 	}
 	if err := moneyPairError(resultingAmount, resultingArr, resultingCurrency); err != nil {
 		return err
+	}
+	if _, amountSet := after[amountField]; amountSet {
+		if err := amountSetError(resultingAmount); err != nil {
+			return err
+		}
 	}
 
 	// Keyed on what the PATCH carries for the MONEY, not on what the request

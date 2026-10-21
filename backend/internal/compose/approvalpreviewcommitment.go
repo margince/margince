@@ -155,6 +155,6 @@ func (r approvalPreviewReader) commitmentRecipientAttachment(ctx context.Context
 
 func commitmentPreviewIdentityMatches(approval crmcontracts.Approval, proposal CommitmentTaskProposal) bool {
 	return !proposal.SourceActivityID.IsZero() && proposal.Locator != "" && strings.TrimSpace(proposal.Summary) != "" && proposal.Quote != "" &&
-		approval.TargetEntityType != nil && *approval.TargetEntityType == string(string(recordTypeActivity)) &&
+		approval.TargetEntityType != nil && *approval.TargetEntityType == string(recordTypeActivity) &&
 		approval.TargetEntityId != nil && ids.UUID(*approval.TargetEntityId) == proposal.SourceActivityID
 }

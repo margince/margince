@@ -69,7 +69,7 @@ func (r approvalPreviewReader) importActivityDetails(ctx, execCtx context.Contex
 		in.Author.AuthorID = owner
 	}
 	fields := map[string]any{
-		previewFieldKind: in.Kind, "subject": in.Subject, activityTargetBody: in.Body, "occurred_at": in.OccurredAt,
+		previewFieldKind: in.Kind, activityTargetSubject: in.Subject, activityTargetBody: in.Body, activityTargetOccurredAt: in.OccurredAt,
 		"direction": in.Direction, "duration_seconds": in.DurationSeconds, activityTargetMeetingStatus: in.MeetingStatus,
 		fieldSource: in.Source, previewFieldSourceSystem: in.SourceSystem,
 		previewFieldSourceAuthorID: in.Author.AuthorID, previewFieldSourceAuthorName: in.Author.AuthorName,

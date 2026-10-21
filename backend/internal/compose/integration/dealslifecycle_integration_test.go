@@ -136,15 +136,17 @@ func TestADealCannotBeBornInAnotherPipelinesStage(t *testing.T) {
 	}
 }
 
-func TestADealBornInAStageThatDoesNotExistIsNotFound(t *testing.T) {
+func TestADealBornInAStageThatDoesNotExistIsA422NamingTheStage(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	stages := apptest.DiscoverSeededPipeline(t, e)
-	if status := e.Call(t, "POST", "/v1/deals", AnyMap{
+	var problem problemBody
+	status := e.Call(t, "POST", "/v1/deals", AnyMap{
 		"name": "Nowhere", "source": "manual",
 		"pipeline_id": stages.PipelineID, "stage_id": ids.NewV7().String(),
-	}, nil, nil); status != http.StatusNotFound {
-		t.Errorf("a stage nobody has → %d, want 404", status)
+	}, nil, &problem)
+	if status != http.StatusUnprocessableEntity || !namesField(problem, "stage_id") {
+		t.Errorf("a stage nobody has → %d %+v, want 422 naming stage_id", status, problem.Details.Errors)
 	}
 }
 
