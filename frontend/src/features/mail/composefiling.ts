@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { useRoster } from "../../components/entityref";
 import {
   liveProjects,
   type PickableProject,
@@ -200,6 +201,7 @@ export function useComposeRecords({
     recipientContact ?? "",
     open && recipientContact != null,
   );
+  const colleagues = useRoster("user", open && !isChannelReply);
   const anchorProject = useAnchorProject(entityType, entityId);
   // A project page's message is about that project, read as a record so the
   // picker names it the way the page does.
@@ -233,9 +235,14 @@ export function useComposeRecords({
     projectFiling,
     // Addresses known not to arrive, warned under the fields.
     deadRecipients: deadRecipientsAmong(contact.data, [...addressed]),
-    // The contact first, then the account's roster. Both reads already run, so
-    // the offer costs no request and agrees with the page behind it.
-    recipients: recipientSuggestions(contact.data, anchorCompany.data),
+    // The contact first, then the account's roster, then the workspace's
+    // members. The reads already run (the members' cache entry is shared with
+    // the anchor lookup), so the offer costs no request of its own.
+    recipients: recipientSuggestions(
+      contact.data,
+      anchorCompany.data,
+      colleagues.data,
+    ),
   };
 }
 

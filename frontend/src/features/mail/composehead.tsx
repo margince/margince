@@ -23,6 +23,12 @@ import "./composehead.css";
 
 type Contact360 = components["schemas"]["Contact360"];
 type Company360 = components["schemas"]["Company360"];
+type User = components["schemas"]["User"];
+
+const MAILABLE_STATUS: ReadonlySet<User["status"]> = new Set([
+  "active",
+  "invited",
+]);
 
 /** What a pressed Send is still waiting for, under the field it waits on. */
 export function FieldNeed({
@@ -48,12 +54,15 @@ export function FieldNeed({
  *
  * The record's own contact leads, because a message written from a contact's page
  * is overwhelmingly to that contact; the account's roster follows in the order
- * the 360 already put it in. A contact with no address on file is not offered —
- * a row that commits an empty recipient is help that refuses at the send.
+ * the 360 already put it in, and the workspace's own members come last, since a
+ * colleague is copied or consulted more often than first addressed. A contact
+ * with no address on file is not offered — a row that commits an empty
+ * recipient is help that refuses at the send.
  */
 export function recipientSuggestions(
   contact: Contact360 | undefined,
   company: Company360 | undefined,
+  colleagues: readonly User[] = [],
 ): readonly TokenSuggestion[] {
   const seen = new Set<string>();
   const out: TokenSuggestion[] = [];
@@ -71,6 +80,14 @@ export function recipientSuggestions(
   }
   for (const contact of company?.contacts?.data ?? []) {
     offer(contact.primary_email, contact.full_name);
+  }
+  for (const member of colleagues) {
+    // An agent seat has no mailbox a person writes to, and a suspended or
+    // deactivated member no longer reads one.
+    if (member.is_agent || !MAILABLE_STATUS.has(member.status)) {
+      continue;
+    }
+    offer(member.email, member.display_name);
   }
   return out;
 }
