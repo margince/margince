@@ -45608,7 +45608,7 @@ export interface components {
          *     undrawable on this source and would have shown a rep an internal token.
          */
         AttentionStagedFacts: {
-            /** @description A current account termination intervention verified by the lifecycle approval preview for its requested decision owner. */
+            /** @description A current account termination intervention with a ready lifecycle approval preview and a named decision owner. */
             account_termination?: boolean;
             /** @description The address is a sending system rather than a contact. */
             machine_sender?: boolean;

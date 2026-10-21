@@ -27790,7 +27790,7 @@ type AttentionRelationshipFactsStrength string
 // a reader doing a substring match to get them back — which made the supporting line
 // undrawable on this source and would have shown a rep an internal token.
 type AttentionStagedFacts struct {
-	// AccountTermination A current account termination intervention verified by the lifecycle approval preview for its requested decision owner.
+	// AccountTermination A current account termination intervention with a ready lifecycle approval preview and a named decision owner.
 	AccountTermination *bool `json:"account_termination,omitempty"`
 
 	// KnownCompany The address's domain already names a company in this workspace.
