@@ -81,9 +81,8 @@ func TestAnOfferPatchBodyClaimsATotalBeforeItIsNamedUnknown(t *testing.T) {
 
 func TestAnOfferCreateNamingNoFieldIsRefusedByName(t *testing.T) {
 	_, err := OfferCreationInput([]byte(`{"currency":"EUR","source":"manual","valid_unti":"2099-12-31"}`))
-	var refusal *datasource.FieldDecodeError
-	if !errors.As(err, &refusal) || !strings.Contains(err.Error(), "valid_unti") {
-		t.Fatalf("a create naming valid_unti was refused as %v, want a field-decode refusal naming it", err)
+	if field, code := refusedOn(t, err); field != "body" || code != "unknown_field" || !strings.Contains(err.Error(), "valid_unti") {
+		t.Fatalf("a create naming valid_unti was refused on %s/%s (%v), want body/unknown_field naming it", field, code, err)
 	}
 }
 

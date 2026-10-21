@@ -240,6 +240,11 @@ func PresentField(r *http.Request, name string) (value json.RawMessage, present 
 //
 //craft:ignore naked-any mirror of Decode's seam target
 func bodyDecodeRefusal(r *http.Request, raw json.RawMessage, into any, err error) error {
+	// A target's own unmarshaler may refuse a key (the lead patch does), and the
+	// refusal names the key where the generic message could not.
+	if unknown, ok := errors.AsType[*datasource.UnknownFieldError](err); ok {
+		return Validation("body", "unknown_field", unknown.Error())
+	}
 	if refusal := datasource.LocalizeFieldFault(raw, into, err, bodyProbe); refusal != nil {
 		detail, withheld := fieldShapeDetail(refusal)
 		if withheld {

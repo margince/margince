@@ -59,7 +59,7 @@ func OfferCreationInput(raw []byte) (CreateOfferInput, error) {
 		return CreateOfferInput{}, err
 	}
 	if err := datasource.RejectNonCanonicalKeys(raw, &req); err != nil {
-		return CreateOfferInput{}, &datasource.FieldDecodeError{Cause: err}
+		return CreateOfferInput{}, httperr.Validation("body", "unknown_field", err.Error())
 	}
 	var probe struct {
 		LineItems []clientSuppliedTotals `json:"line_items"`
