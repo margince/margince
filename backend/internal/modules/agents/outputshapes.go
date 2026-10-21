@@ -51,6 +51,7 @@ const (
 	schemaBoolean = "boolean"
 	schemaInteger = "integer"
 	schemaNumber  = "number"
+	schemaNull    = "null"
 )
 
 // rawMessageType is the one self-marshalling type the walk looks THROUGH rather
