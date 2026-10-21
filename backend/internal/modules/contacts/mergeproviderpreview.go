@@ -8,6 +8,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
@@ -86,6 +87,11 @@ type mergeProviderEffect struct {
 }
 
 func readMergeProviderEffects(ctx context.Context, tx pgx.Tx, subject, other, source ids.UUID) ([]mergeProviderEffect, error) {
+	for _, contactID := range []ids.UUID{subject, other} {
+		if err := auth.EnsureVisible(ctx, tx, "contact", contactID); err != nil {
+			return nil, err
+		}
+	}
 	rows, err := tx.Query(ctx, `SELECT s.id, s.contact_id,
  `+mergePaidProviderTwin+` AS paid_twin,
  s.state IN `+mergePaidProviderStates+` AS paid_state

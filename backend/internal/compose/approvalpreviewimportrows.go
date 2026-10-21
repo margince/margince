@@ -285,8 +285,5 @@ func (r approvalPreviewReader) importMoneyValues(ctx context.Context, displayFie
 		}
 		currency = encoded
 	}
-	if err := r.moneyValue(ctx, displayField, after, map[string]json.RawMessage{dealTargetCurrency: currency}); err != nil {
-		return err
-	}
-	return nil
+	return r.moneyValue(ctx, displayField, after, map[string]json.RawMessage{dealTargetCurrency: currency})
 }
