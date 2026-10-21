@@ -108,7 +108,7 @@ type Authority interface {
 	// malformed id answers ErrInvalid; an agent seat or a user who cannot sign
 	// in, false.
 	//
-	// On a call a human makes, it answers only about that human, so a route
+	// On a call a human makes, it answers only about that human. So a route
 	// can check its own caller before serving what the unit stored. An agent's
 	// or a connector's call, or a question about anyone else, answers
 	// ErrAttendedRead.

@@ -53,8 +53,8 @@ func (r *callRuntime) systemRead(ctx context.Context, read extension.SystemRead)
 	return r.gatedRead(ctx, read, r.systemReads)
 }
 
-// authorityRead is systemRead for CanRead, which also answers a signed-in human
-// asking about themselves: the answer is what their own grants already show
+// authorityRead is systemRead for CanRead. CanRead also answers a signed-in
+// human about themselves. That answer is what their own grants already show
 // them, so it hands the caller nothing they could not open.
 func (r *callRuntime) authorityRead(ctx context.Context, user extension.UserID) (context.Context, error) {
 	return r.gatedRead(ctx, extension.SystemReadAuthority, r.systemReads || r.callerIs(user))
