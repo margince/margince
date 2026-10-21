@@ -15,7 +15,9 @@ package datasource
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"reflect"
+	"slices"
 	"strings"
 )
 
@@ -78,6 +80,23 @@ func SplitCustomFields(raw json.RawMessage, into any) (*CustomFieldBody, error) 
 		body.rest = rest
 	}
 	return body, nil
+}
+
+// ClaimKeys offers each top-level key of raw to claim, in key order, and answers
+// the first refusal. It is for a body some of whose keys a layer judges in its
+// own words, such as a smuggled money total: the claim runs before the strict
+// decode names the key unknown. A body that is not a JSON object has none.
+func ClaimKeys(raw json.RawMessage, claim func(key string) error) error {
+	keys, isObject := topLevelKeys(raw)
+	if !isObject {
+		return nil
+	}
+	for _, key := range slices.Sorted(maps.Keys(keys)) {
+		if err := claim(key); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Rest is the body without its cf_ keys.

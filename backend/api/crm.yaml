@@ -37303,12 +37303,14 @@ components:
       x-extension-note: |
         additionalProperties:true admits client custom fields (data-model §9 — custom fields
         are real columns added by migration, surfaced additively through this same contract).
-        Because these extra keys carry no per-key schema, writes are drop-on-mismatch: a key
-        that names no ACTIVE custom column (unknown or retired), or whose value shape does
-        not match the column's declared type, is silently excluded from the write — the
-        request still succeeds. A picklist value outside the declared options is the one
-        typed refusal (422, the column's CHECK constraint). Reads surface only ACTIVE
-        columns; a retired field's stored values are preserved but leave the payload.
+        Because these extra keys carry no per-key schema, a write admits only the standard
+        fields of its route and `cf_` keys, and refuses everything else: a key that is
+        neither (a misspelt or non-writable standard field) is a 422 `unknown_field`, and so
+        is a `cf_` key that names no ACTIVE custom column (unknown or retired) or whose value
+        shape does not match the column's declared type (`invalid_value`). The refusal names
+        the key and nothing is written. A picklist value outside the declared options is a
+        422 too (the column's CHECK constraint). Reads surface only ACTIVE columns; a
+        retired field's stored values are preserved but leave the payload.
 
     BoughtField:
       type: object
@@ -37797,12 +37799,14 @@ components:
       x-extension-note: |
         additionalProperties:true admits client custom fields (data-model §9 — custom fields
         are real columns added by migration, surfaced additively through this same contract).
-        Because these extra keys carry no per-key schema, writes are drop-on-mismatch: a key
-        that names no ACTIVE custom column (unknown or retired), or whose value shape does
-        not match the column's declared type, is silently excluded from the write — the
-        request still succeeds. A picklist value outside the declared options is the one
-        typed refusal (422, the column's CHECK constraint). Reads surface only ACTIVE
-        columns; a retired field's stored values are preserved but leave the payload.
+        Because these extra keys carry no per-key schema, a write admits only the standard
+        fields of its route and `cf_` keys, and refuses everything else: a key that is
+        neither (a misspelt or non-writable standard field) is a 422 `unknown_field`, and so
+        is a `cf_` key that names no ACTIVE custom column (unknown or retired) or whose value
+        shape does not match the column's declared type (`invalid_value`). The refusal names
+        the key and nothing is written. A picklist value outside the declared options is a
+        422 too (the column's CHECK constraint). Reads surface only ACTIVE columns; a
+        retired field's stored values are preserved but leave the payload.
 
     CompanyDomainInput:
       type: object
@@ -43566,12 +43570,14 @@ components:
       x-extension-note: |
         additionalProperties:true admits client custom fields (data-model §9 — custom fields
         are real columns added by migration, surfaced additively through this same contract).
-        Because these extra keys carry no per-key schema, writes are drop-on-mismatch: a key
-        that names no ACTIVE custom column (unknown or retired), or whose value shape does
-        not match the column's declared type, is silently excluded from the write — the
-        request still succeeds. A picklist value outside the declared options is the one
-        typed refusal (422, the column's CHECK constraint). Reads surface only ACTIVE
-        columns; a retired field's stored values are preserved but leave the payload.
+        Because these extra keys carry no per-key schema, a write admits only the standard
+        fields of its route and `cf_` keys, and refuses everything else: a key that is
+        neither (a misspelt or non-writable standard field) is a 422 `unknown_field`, and so
+        is a `cf_` key that names no ACTIVE custom column (unknown or retired) or whose value
+        shape does not match the column's declared type (`invalid_value`). The refusal names
+        the key and nothing is written. A picklist value outside the declared options is a
+        422 too (the column's CHECK constraint). Reads surface only ACTIVE columns; a
+        retired field's stored values are preserved but leave the payload.
 
     CreateDealRequest:
       type: object
@@ -47691,12 +47697,14 @@ components:
       x-extension-note: |
         additionalProperties:true admits client custom fields (data-model §9 — custom fields
         are real columns added by migration, surfaced additively through this same contract).
-        Because these extra keys carry no per-key schema, writes are drop-on-mismatch: a key
-        that names no ACTIVE custom column (unknown or retired), or whose value shape does
-        not match the column's declared type, is silently excluded from the write — the
-        request still succeeds. A picklist value outside the declared options is the one
-        typed refusal (422, the column's CHECK constraint). Reads surface only ACTIVE
-        columns; a retired field's stored values are preserved but leave the payload.
+        Because these extra keys carry no per-key schema, a write admits only the standard
+        fields of its route and `cf_` keys, and refuses everything else: a key that is
+        neither (a misspelt or non-writable standard field) is a 422 `unknown_field`, and so
+        is a `cf_` key that names no ACTIVE custom column (unknown or retired) or whose value
+        shape does not match the column's declared type (`invalid_value`). The refusal names
+        the key and nothing is written. A picklist value outside the declared options is a
+        422 too (the column's CHECK constraint). Reads surface only ACTIVE columns; a
+        retired field's stored values are preserved but leave the payload.
 
     CreateLeadRequest:
       type: object

@@ -5,6 +5,8 @@ package datasource
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -42,6 +44,25 @@ func TestACustomFieldBodyCarriesItsCfKeysAndRefusesEveryOtherStranger(t *testing
 		err := StrictCustomFieldDecode(json.RawMessage(body), &into)
 		if err == nil || !strings.Contains(err.Error(), want) {
 			t.Errorf("%s decoded with %v, want a refusal naming %s", body, err, want)
+		}
+	}
+}
+
+func TestClaimKeysAnswersTheFirstClaimedKeyInKeyOrder(t *testing.T) {
+	errTotal := errors.New("a total")
+	claim := func(key string) error {
+		if strings.HasSuffix(key, "_minor") {
+			return fmt.Errorf("%s: %w", key, errTotal)
+		}
+		return nil
+	}
+	err := ClaimKeys(json.RawMessage(`{"z_minor":1,"name":"x","a_minor":2}`), claim)
+	if !errors.Is(err, errTotal) || !strings.HasPrefix(err.Error(), "a_minor") {
+		t.Fatalf("got %v, want the refusal of a_minor, first in key order", err)
+	}
+	for _, body := range []string{`{"name":"x"}`, `[1]`, `null`, `not json`} {
+		if err := ClaimKeys(json.RawMessage(body), claim); err != nil {
+			t.Errorf("%s was claimed: %v", body, err)
 		}
 	}
 }

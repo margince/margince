@@ -172,9 +172,11 @@ needs DDL authority.
 may see (the same thing the admin list already answers). It exposes no row data. The store's row-level
 gate guards the values.
 
-One rule catches developers out: a custom field value is **dropped when it does not match**. A request body's
-`additionalProperties` carries no shape contract per key. So a value whose shape does not match its
-column's type is dropped without an error, instead of answered with a 422.
+One rule catches developers out: a record write refuses what it cannot store. A request body's
+`additionalProperties` carries no shape contract per key, so the write checks each extra key itself
+(`storekit.CheckCustomValues`). A key that is not a `cf_` key, a `cf_` key that names no active field,
+and a value whose shape does not match its column's type each answer a 422 that names the key
+(`unknown_field` or `invalid_value`). Nothing is written, so a success always means every key was stored.
 
 ## No `cf_*` column is indexed
 

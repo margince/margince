@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"slices"
+	"strings"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -68,25 +69,31 @@ func TestAnOfferCreateMapsItsDateAndLinesOneWay(t *testing.T) {
 	}
 }
 
-func TestAnOfferPatchRefusesATotalAndCarriesItsClears(t *testing.T) {
-	var smuggled crmcontracts.UpdateOfferRequest
-	if err := json.Unmarshal([]byte(`{"gross_minor":1}`), &smuggled); err != nil {
-		t.Fatal(err)
-	}
-	_, err := offerUpdateInput(smuggled, nil, nil)
+func TestAnOfferPatchBodyClaimsATotalBeforeItIsNamedUnknown(t *testing.T) {
+	err := datasource.ClaimKeys([]byte(`{"intro_text":"Hello","gross_minor":1}`), claimClientTotal)
 	if field, code := refusedOn(t, err); field != "gross_minor" || code != "totals_derived" {
 		t.Fatalf("a patch naming gross_minor was refused on %s/%s, want gross_minor/totals_derived", field, code)
 	}
+	if err := datasource.ClaimKeys([]byte(`{"intro_text":"Hello"}`), claimClientTotal); err != nil {
+		t.Fatalf("a body naming no total was claimed: %v", err)
+	}
+}
 
+func TestAnOfferCreateNamingNoFieldIsRefusedByName(t *testing.T) {
+	_, err := OfferCreationInput([]byte(`{"currency":"EUR","source":"manual","valid_unti":"2099-12-31"}`))
+	var refusal *datasource.FieldDecodeError
+	if !errors.As(err, &refusal) || !strings.Contains(err.Error(), "valid_unti") {
+		t.Fatalf("a create naming valid_unti was refused as %v, want a field-decode refusal naming it", err)
+	}
+}
+
+func TestAnOfferPatchCarriesItsClears(t *testing.T) {
 	var req crmcontracts.UpdateOfferRequest
 	if err := json.Unmarshal([]byte(`{"valid_until":"2099-06-30","intro_text":"Hello"}`), &req); err != nil {
 		t.Fatal(err)
 	}
 	version := int64(4)
-	in, err := offerUpdateInput(req, []string{"terms_text"}, &version)
-	if err != nil {
-		t.Fatalf("a clean patch was refused: %v", err)
-	}
+	in := offerUpdateInput(req, []string{"terms_text"}, &version)
 	if in.ValidUntil == nil || *in.ValidUntil != "2099-06-30" || *in.IntroText != "Hello" {
 		t.Errorf("the patch mapped to %+v", in)
 	}

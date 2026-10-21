@@ -5,6 +5,7 @@ package deals
 
 import (
 	"encoding/json"
+	"slices"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -22,12 +23,11 @@ func totalsDerived(key string) error {
 		"money totals are computed server-side from the line items and cannot be supplied")
 }
 
-// refuseClientTotals refuses an extension-carrying body that names a total.
-func refuseClientTotals(extra map[string]any) error {
-	for _, key := range clientTotalKeys {
-		if _, found := extra[key]; found {
-			return totalsDerived(key)
-		}
+// claimClientTotal is the claim every offer body door makes on its keys: a
+// money total is refused in these words, not named unknown.
+func claimClientTotal(key string) error {
+	if slices.Contains(clientTotalKeys, key) {
+		return totalsDerived(key)
 	}
 	return nil
 }
@@ -55,8 +55,11 @@ func OfferCreationInput(raw []byte) (CreateOfferInput, error) {
 	if err := json.Unmarshal(raw, &req); err != nil {
 		return CreateOfferInput{}, httperr.Validation("body", "malformed_json", err.Error())
 	}
-	if err := refuseClientTotals(req.AdditionalProperties); err != nil {
+	if err := datasource.ClaimKeys(raw, claimClientTotal); err != nil {
 		return CreateOfferInput{}, err
+	}
+	if err := datasource.RejectNonCanonicalKeys(raw, &req); err != nil {
+		return CreateOfferInput{}, &datasource.FieldDecodeError{Cause: err}
 	}
 	var probe struct {
 		LineItems []clientSuppliedTotals `json:"line_items"`
@@ -94,10 +97,7 @@ func OfferCreationInput(raw []byte) (CreateOfferInput, error) {
 }
 
 // offerUpdateInput maps a patch; cleared names the fields sent as null.
-func offerUpdateInput(req crmcontracts.UpdateOfferRequest, cleared []string, ifVersion *int64) (UpdateOfferInput, error) {
-	if err := refuseClientTotals(req.AdditionalProperties); err != nil {
-		return UpdateOfferInput{}, err
-	}
+func offerUpdateInput(req crmcontracts.UpdateOfferRequest, cleared []string, ifVersion *int64) UpdateOfferInput {
 	in := UpdateOfferInput{
 		Currency:       req.Currency,
 		BuyerCompanyID: idArg[ids.CompanyKind](req.BuyerCompanyId),
@@ -111,7 +111,7 @@ func offerUpdateInput(req crmcontracts.UpdateOfferRequest, cleared []string, ifV
 		v := req.ValidUntil.Format("2006-01-02")
 		in.ValidUntil = &v
 	}
-	return in, nil
+	return in
 }
 
 // addLineInput maps one line item to add.

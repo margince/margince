@@ -89,13 +89,13 @@ func (p *Provider) createOffer(ctx context.Context, raw json.RawMessage, source 
 
 func (p *Provider) updateOffer(ctx context.Context, in datasource.UpdateInput, raw json.RawMessage) (datasource.EntityRef, error) {
 	var req crmcontracts.UpdateOfferRequest
+	if err := datasource.ClaimKeys(raw, claimClientTotal); err != nil {
+		return datasource.EntityRef{}, err
+	}
 	if err := datasource.StrictDecode(raw, &req); err != nil {
 		return datasource.EntityRef{}, err
 	}
-	update, err := offerUpdateInput(req, in.Clear, in.IfVersion)
-	if err != nil {
-		return datasource.EntityRef{}, err
-	}
+	update := offerUpdateInput(req, in.Clear, in.IfVersion)
 	offerID := ids.From[ids.OfferKind](in.Ref.ID)
 	v, retired, err := p.store.UpdateOffer(ctx, offerID, update)
 	if err != nil {

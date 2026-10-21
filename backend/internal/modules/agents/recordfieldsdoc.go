@@ -270,18 +270,13 @@ func activityReachNotes(shapes map[datasource.EntityType]reflect.Type) []string 
 // customFieldNotes says how an extra key is read, which of the two fates it
 // meets, and which record types carry no custom fields at all.
 func customFieldNotes(shapes map[datasource.EntityType]reflect.Type) []string {
-	// Two different fates, and the sentence used to describe neither. It said
-	// every extra key is "silently discarded", which is wrong in both directions:
-	// a key that is not cf_-prefixed is REFUSED by name (rejectUnknownFields), so
-	// an agent was told to distrust a success it would never receive — while the
-	// one case that IS silently dropped, a cf_ key whose custom field is not
-	// active, was the half the sentence glossed over. A UAT run found exactly
-	// that: cf_employee_count answered 200 with a full record body and the value
-	// nowhere in it.
+	// Every write refuses a key it cannot store, by name: a key that is not
+	// cf_-prefixed, and a cf_ key whose custom field is not active in this
+	// workspace or whose value the column cannot hold. An agent is told so, to
+	// trust a success it receives.
 	notes := []string{"Extra keys must be named cf_<slug> and are read as custom-field values; any other " +
-		"key is REFUSED by name, so an unknown field is never a silent loss. A cf_ key whose custom " +
-		"field is not ACTIVE in this workspace is the one that is: the write reports success and drops " +
-		"the value, so re-read the record if you are unsure a cf_ value landed."}
+		"key is REFUSED by name, and so is a cf_ key whose custom field is not ACTIVE in this workspace " +
+		"or whose value its type cannot hold, so a success means every key you sent was stored."}
 	// …but not for every record type. A type takes custom fields only if its
 	// contract shape carries the additionalProperties bag a cf_ value travels in.
 	// Promising carriage elsewhere sends an agent to write a key the decoder refuses.

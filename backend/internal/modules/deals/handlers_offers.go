@@ -123,14 +123,10 @@ func (h Handlers) UpdateOffer(w http.ResponseWriter, r *http.Request, id crmcont
 		return
 	}
 	var req crmcontracts.UpdateOfferRequest
-	if !httperr.Decode(w, r, &req) {
+	if !httperr.DecodeClaiming(w, r, &req, claimClientTotal) {
 		return
 	}
-	in, err := offerUpdateInput(req, httperr.ClearedFields(r), ifVersion)
-	if err != nil {
-		httperr.Write(w, r, err)
-		return
-	}
+	in := offerUpdateInput(req, httperr.ClearedFields(r), ifVersion)
 
 	offerID := pathID[ids.OfferKind](id)
 	offer, retired, err := h.store.UpdateOffer(r.Context(), offerID, in)
