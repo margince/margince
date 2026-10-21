@@ -125,7 +125,7 @@ The company's name is the **Company name** row under **Business context**. Savin
 
 **Legal entities** lists the companies you work under. Every installation starts with one, marked **Default**. It takes its name, address, VAT ID and logo from the company above, so you change those on the company form. A colleague nobody has assigned works for the default.
 
-To add another, an Admin chooses **New legal entity** and types its name, its legal name and a two-letter code such as AT. The Admin role is the only seeded role that may change legal entities, and a custom role can be given that permission too. Every other role sees the list and cannot change it. Nothing else in Margince uses the second one yet: offers, booking pages and signatures still show the default.
+To add another, an Admin chooses **New legal entity** and types its name, its legal name and a two-letter code such as AT. Of the roles Margince ships, only Admin may change them, and a custom role can be given that permission too. Every other role sees the list and cannot change it. Nothing else in Margince uses the second one yet: offers, booking pages and signatures still show the default.
 
 ## Sign-in and apps
 
