@@ -6,14 +6,14 @@ import { CardBoundary } from "../../design-system/cardboundary";
 import { grants } from "../../lib/capability";
 import type { EntityKind } from "../../lib/entity";
 import {
-  type ExtensionPanelSlot,
-  panelsForSlot,
-} from "../../lib/extensionpanels";
-import {
   type ExtensionPanelRegistry,
   isExtensionRbacObject,
 } from "../../lib/extensions";
 import { useMe } from "../../lib/session";
+import {
+  type ExtensionPanelSlot,
+  panelsForSlot,
+} from "./extensionpanels.slots";
 
 /**
  * The composed units' panels for one slot, each drawn with the record the page

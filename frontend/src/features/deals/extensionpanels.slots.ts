@@ -7,7 +7,7 @@ import {
   composedPanels,
   type ExtensionPanelProps,
   type ExtensionPanelRegistry,
-} from "./extensions";
+} from "../../lib/extensions";
 
 // A unit's panels: its own components, drawn inline where a core page offers a
 // slot. The unit declares the slot and the RBAC object; the page decides where

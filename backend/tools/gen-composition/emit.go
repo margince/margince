@@ -140,7 +140,7 @@ export type ExtensionEntryDescriptor = {
 
 /**
  * One component a unit draws inline on a core page. The slot is a plain string
- * here; lib/extensionpanels.ts narrows it to the slots the core draws.
+ * here; features/deals/extensionpanels.slots.ts narrows it to the slots the core draws.
  */
 export type ExtensionPanelDescriptor = {
   readonly slot: string;
