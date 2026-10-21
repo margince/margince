@@ -154,3 +154,16 @@ func TestALinePatchNamingNoClassificationLeavesItAlone(t *testing.T) {
 		t.Errorf("a description patch touched more than the description: %+v", in)
 	}
 }
+
+func TestALinePatchClearsWhatItSendsAsNull(t *testing.T) {
+	in, err := updateLineInput([]byte(`{"billing_model":null,"billing_interval_months":null,"interval_count":null}`))
+	if err != nil {
+		t.Fatalf("a clearing line patch was refused: %v", err)
+	}
+	if !in.Classified || in.BillingModel != nil || in.BillingIntervalMonths != nil {
+		t.Errorf("a null classification mapped to %+v, want it written as no classification", in)
+	}
+	if !in.IntervalCountSet || in.IntervalCount != nil {
+		t.Errorf("a null interval_count mapped to set=%v value=%v, want it written as none", in.IntervalCountSet, in.IntervalCount)
+	}
+}

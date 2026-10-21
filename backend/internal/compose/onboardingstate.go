@@ -46,6 +46,12 @@ func (h onboardingStateHandlers) PutOnboardingState(
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
+	// The state is replaced whole, so a null source_mode clears the choice; a
+	// body that omits it is a mistake, not a clear.
+	if err := httperr.RequireSent(r, "source_mode", "send source_mode: website, manual, or null before one is chosen"); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	in := identity.PutOnboardingStateInput{
 		ExpectedVersion:  int64(req.ExpectedVersion),
 		Step:             string(req.Step),

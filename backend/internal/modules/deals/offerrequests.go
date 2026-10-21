@@ -131,6 +131,7 @@ func addLineInput(raw []byte) (OfferLineInputRow, error) {
 
 // updateLineInput maps a line item patch. The billing classification is
 // written whenever either half is named, so one cannot be left half-stated.
+// A null names a field as much as a value does, and clears it.
 func updateLineInput(raw []byte) (UpdateOfferLineInput, error) {
 	var req struct {
 		crmcontracts.UpdateOfferLineItemRequest
@@ -142,6 +143,11 @@ func updateLineInput(raw []byte) (UpdateOfferLineInput, error) {
 	if err := req.refuse(); err != nil {
 		return UpdateOfferLineInput{}, err
 	}
+	nulls, err := httperr.NullKeysOf(raw)
+	if err != nil {
+		return UpdateOfferLineInput{}, err
+	}
+	sentNull := func(field string) bool { return slices.Contains(nulls, field) }
 	in := UpdateOfferLineInput{
 		Position:       req.Position,
 		Description:    req.Description,
@@ -160,11 +166,12 @@ func updateLineInput(raw []byte) (UpdateOfferLineInput, error) {
 		v := wireDecimal(*req.TaxRate)
 		in.TaxRate = &v
 	}
-	if req.BillingModel != nil || req.BillingIntervalMonths != nil {
+	if req.BillingModel != nil || req.BillingIntervalMonths != nil ||
+		sentNull("billing_model") || sentNull("billing_interval_months") {
 		in.Classified = true
 		in.BillingModel, in.BillingIntervalMonths = billingClassificationOf(req.BillingModel, req.BillingIntervalMonths)
 	}
-	if req.IntervalCount != nil {
+	if req.IntervalCount != nil || sentNull("interval_count") {
 		in.IntervalCountSet = true
 		in.IntervalCount = req.IntervalCount
 	}
