@@ -78,7 +78,7 @@ func writeEvents(t *testing.T, w http.ResponseWriter, next string, events ...sch
 	t.Helper()
 	if err := json.NewEncoder(w).Encode(struct {
 		Events []scheduledEvent `json:"value"`
-		Next   string           `json:"@odata.nextLink,omitempty"`
+		Next   string           `json:"@odata.nextLink,omitempty"` //nolint:tagliatelle // Microsoft's OData wire format; must match to decode
 	}{events, next}); err != nil {
 		t.Error(err)
 	}
