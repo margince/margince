@@ -81,10 +81,10 @@ func (q *questionEditions) send(t *testing.T) crmcontracts.ReportingEdition {
 	if err != nil || done.EditionId == nil {
 		t.Fatalf("the edition was not published: %+v %v", done, err)
 	}
-	return q.read(t, q.human, ids.UUID(*done.EditionId))
+	return q.read(q.human, t, ids.UUID(*done.EditionId))
 }
 
-func (q *questionEditions) read(t *testing.T, reader context.Context, edition ids.UUID) crmcontracts.ReportingEdition {
+func (q *questionEditions) read(reader context.Context, t *testing.T, edition ids.UUID) crmcontracts.ReportingEdition {
 	t.Helper()
 	out, err := q.service.GetEdition(reader, edition)
 	if err != nil {
@@ -152,7 +152,7 @@ func TestAKeptAnswerShowsNothingToAReaderWhoMayNotAskIt(t *testing.T) {
 	}
 	reader = principal.WithActor(reader, actor)
 
-	seen := onlyQuestion(t, q.read(t, reader, ids.UUID(edition.Id)))
+	seen := onlyQuestion(t, q.read(reader, t, ids.UUID(edition.Id)))
 	if seen.Status == crmcontracts.ReportingEditionQuestionStatusKept && seen.Answer != nil {
 		for _, row := range seen.Answer.Rows {
 			if row["_withheld"] != true {
@@ -191,7 +191,7 @@ func TestALegalHoldBehindAKeptAnswerHoldsItsEdition(t *testing.T) {
 	if err := retention.EvaluateInstallation(system); err != nil {
 		t.Fatal(err)
 	}
-	held := q.read(t, q.human, ids.UUID(edition.Id))
+	held := q.read(q.human, t, ids.UUID(edition.Id))
 	if held.Expired != nil && *held.Expired || onlyQuestion(t, held).Status != crmcontracts.ReportingEditionQuestionStatusKept {
 		t.Fatalf("a held record behind the answer did not hold the edition: %+v", held)
 	}
@@ -202,7 +202,7 @@ func TestALegalHoldBehindAKeptAnswerHoldsItsEdition(t *testing.T) {
 	if err := retention.EvaluateInstallation(system); err != nil {
 		t.Fatal(err)
 	}
-	expired := q.read(t, q.human, ids.UUID(edition.Id))
+	expired := q.read(q.human, t, ids.UUID(edition.Id))
 	if expired.Expired == nil || !*expired.Expired || (expired.Questions != nil && len(*expired.Questions) != 0) {
 		t.Fatalf("expiry left the kept answer: %+v", expired.Questions)
 	}
@@ -232,7 +232,7 @@ func TestASubjectsKeptAnswersAreHandedOverAndErased(t *testing.T) {
 	if err := privacy.NewEraser(InstallationDB(q.e.Pool)).EraseContact(controller, subject, "subject request"); err != nil {
 		t.Fatal(err)
 	}
-	erased := q.read(t, q.human, ids.UUID(edition.Id))
+	erased := q.read(q.human, t, ids.UUID(edition.Id))
 	if !erased.Redacted || (erased.Questions != nil && len(*erased.Questions) != 0) {
 		t.Fatalf("erasure left the kept answer or did not mark the edition: redacted=%v %+v", erased.Redacted, erased.Questions)
 	}
@@ -259,7 +259,7 @@ func TestAKeptRowIsWithheldOnceOneOfItsRecordsLeavesTheReadersReach(t *testing.T
 	if _, err := q.e.owner.Exec(context.Background(), `UPDATE deal SET owner_id=$1 WHERE id=(SELECT min(source_id::text)::uuid FROM report_edition_question_source WHERE edition_id=$2)`, q.e.Rep3, edition.Id); err != nil {
 		t.Fatal(err)
 	}
-	seen := onlyQuestion(t, q.read(t, q.human, ids.UUID(edition.Id)))
+	seen := onlyQuestion(t, q.read(q.human, t, ids.UUID(edition.Id)))
 	if seen.Status != crmcontracts.ReportingEditionQuestionStatusKept || seen.Answer == nil || len(seen.Answer.Rows) != 1 {
 		t.Fatalf("the card reads %+v, want the kept answer with its one row", seen)
 	}
