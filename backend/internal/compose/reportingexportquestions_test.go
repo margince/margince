@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
@@ -61,5 +62,44 @@ func TestAnEditionExportGuardsAQuestionsAlias(t *testing.T) {
 	rows := questionCSVRows(questionEdition("=HYPERLINK(1)"))
 	if context := rows[0][9]; context != "'=HYPERLINK(1)" {
 		t.Fatalf("the alias reached the file as %q, want it guarded", context)
+	}
+}
+
+// A kept money measure is written with its unit and the one currency it is
+// in, or with no value and the reason no single currency applies.
+func TestAKeptMoneyMeasureStatesItsUnitAndCurrency(t *testing.T) {
+	native := answerMoney{spec: reportSpec{nativeMeasures: nativeMoney(fieldAmountMinor)}, base: "EUR"}
+	noBase := answerMoney{spec: native.spec}
+	sum := func(field string) analyticsquery.Measure {
+		return analyticsquery.Measure{Fn: analyticsquery.Sum, Field: field}
+	}
+	for name, tc := range map[string]struct {
+		money   answerMoney
+		measure analyticsquery.Measure
+		row     map[string]any
+		want    [3]string
+	}{
+		"a native amount in its row's currency":    {native, sum(fieldAmountMinor), map[string]any{fieldCurrency: "USD"}, [3]string{"minor_units", "USD", "ok"}},
+		"a native amount over several currencies":  {native, sum(fieldAmountMinor), map[string]any{}, [3]string{"", "", "mixed_currency"}},
+		"a converted amount in the base currency":  {native, sum(fieldAmountBaseMinor), map[string]any{}, [3]string{"minor_units", "EUR", "ok"}},
+		"a converted amount with no base currency": {noBase, sum(fieldAmountBaseMinor), map[string]any{}, [3]string{"", "", "no_base_currency"}},
+		"a count of a money field":                 {native, analyticsquery.Measure{Fn: analyticsquery.CountAll, Field: fieldAmountMinor}, map[string]any{}, [3]string{"", "", "ok"}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			unit, currency, coverage := tc.money.of(tc.measure, tc.row)
+			if got := [3]string{unit, currency, coverage}; got != tc.want {
+				t.Fatalf("got %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+// Retention and erasure leave an edition with no answers at all, which is not
+// the same as answers never kept, so the file says nothing about its cards.
+func TestAnEditionWhoseAnswersWereRemovedWritesNoQuestionRows(t *testing.T) {
+	edition := questionEdition("deals")
+	edition.Questions = nil
+	if rows := questionCSVRows(edition); len(rows) != 0 {
+		t.Fatalf("an edition with its answers removed wrote %q", rows)
 	}
 }

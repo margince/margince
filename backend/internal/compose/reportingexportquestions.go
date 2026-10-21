@@ -5,10 +5,10 @@ package compose
 
 import (
 	"fmt"
-	"slices"
 	"strings"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/shared/kernel/formulacell"
@@ -19,26 +19,30 @@ import (
 // question's text reaches the file only through formulacell.Guard, since a
 // measure's alias and a group's name are typed by people.
 func questionCSVRows(edition crmcontracts.ReportingEdition) [][]string {
+	// Retention and erasure remove every answer and leave no list. That is not
+	// the same as an answer never kept, so such an edition writes no question rows.
+	if edition.Questions == nil {
+		return nil
+	}
 	kept := map[string]crmcontracts.ReportingEditionQuestion{}
-	if edition.Questions != nil {
-		for _, question := range *edition.Questions {
-			kept[question.CardId] = question
-		}
+	for _, question := range *edition.Questions {
+		kept[question.CardId] = question
 	}
 	captured := edition.Evaluation.Context.EvaluatedAt.Format(time.RFC3339Nano)
 	rows := [][]string{}
 	for _, card := range reporting.QuestionCards(edition.Evaluation.Selection) {
-		cell := func(label, value, context, coverage string) []string {
-			return []string{formulacell.Guard(card.Question.Entity), "question:" + card.Id, formulacell.Guard(label), value, "", "", "", "", "", formulacell.Guard(context), coverage, captured}
+		cell := func(c questionCell) []string {
+			return []string{formulacell.Guard(card.Question.Entity), "question:" + card.Id, formulacell.Guard(c.label), c.value, "", "", "", c.unit, c.currency, formulacell.Guard(c.context), c.coverage, captured}
 		}
 		question, found := kept[card.Id]
 		switch {
 		case !found:
-			rows = append(rows, cell("", "", "", "not_kept"))
+			rows = append(rows, cell(questionCell{coverage: "not_kept"}))
 		case question.Status != crmcontracts.ReportingEditionQuestionStatusKept || question.Answer == nil:
-			rows = append(rows, cell("", "", "", questionCoverage(question)))
+			rows = append(rows, cell(questionCell{coverage: questionCoverage(question)}))
 		default:
-			rows = append(rows, keptAnswerRows(*card.Question, *question.Answer, cell)...)
+			money := answerMoney{spec: prebuiltReports[card.Question.Entity], base: edition.Evaluation.Context.Currency}
+			rows = append(rows, keptAnswerRows(*card.Question, *question.Answer, money, cell)...)
 		}
 	}
 	return rows
@@ -51,26 +55,64 @@ func questionCoverage(question crmcontracts.ReportingEditionQuestion) string {
 	return string(question.Status)
 }
 
-func keptAnswerRows(question crmcontracts.ReportingCardQuestion, answer crmcontracts.AnalyticsAnswer, cell func(label, value, context, coverage string) []string) [][]string {
-	groupBy := []string{}
-	if question.GroupBy != nil {
-		groupBy = *question.GroupBy
+// questionCell is one row of a question card in the file.
+type questionCell struct {
+	label, value, unit, currency, context, coverage string
+}
+
+func keptAnswerRows(question crmcontracts.ReportingCardQuestion, answer crmcontracts.AnalyticsAnswer, money answerMoney, cell func(questionCell) []string) [][]string {
+	asked := queryFromWire(crmcontracts.AnalyticsQuery{Entity: question.Entity, GroupBy: question.GroupBy, Measures: question.Measures})
+	measures := map[string]analyticsquery.Measure{}
+	for _, measure := range asked.Measures {
+		measures[measure.Column()] = measure
 	}
 	rows := [][]string{}
 	for _, row := range answer.Rows {
 		if row[withheldColumn] == true {
-			rows = append(rows, cell("", "", "", "withheld"))
+			rows = append(rows, cell(questionCell{coverage: "withheld"}))
 			continue
 		}
-		label := groupLabel(groupBy, row, answer.Labels)
+		label := groupLabel(asked.GroupBy, row, answer.Labels)
 		for _, column := range answer.Columns {
-			if slices.Contains(groupBy, column) {
+			measure, isMeasure := measures[column]
+			if !isMeasure {
 				continue
 			}
-			rows = append(rows, cell(label, csvAnswerNumber(row[column]), column, "ok"))
+			unit, currency, coverage := money.of(measure, row)
+			value := csvAnswerNumber(row[column])
+			if coverage != "ok" {
+				value = ""
+			}
+			rows = append(rows, cell(questionCell{label: label, value: value, unit: unit, currency: currency, context: column, coverage: coverage}))
 		}
 	}
 	return rows
+}
+
+// answerMoney reads a money measure the way the screen does: a converted
+// amount is in the base currency, a native one in its row's own currency.
+type answerMoney struct {
+	spec reportSpec
+	base string
+}
+
+// of gives a measure's unit and currency, or a coverage saying why no single
+// currency applies. A count of a money field is a count, not money.
+func (m answerMoney) of(measure analyticsquery.Measure, row map[string]any) (unit, currency, coverage string) {
+	if !strings.HasSuffix(measure.Field, "_minor") || measure.Fn == analyticsquery.CountAll || measure.Fn == analyticsquery.CountDistinct {
+		return "", "", "ok"
+	}
+	if m.spec.nativeMeasures[measure.Field] {
+		own, _ := row[fieldCurrency].(string)
+		if own == "" {
+			return "", "", "mixed_currency"
+		}
+		return "minor_units", own, "ok"
+	}
+	if m.base == "" {
+		return "", "", "no_base_currency"
+	}
+	return "minor_units", m.base, "ok"
 }
 
 // groupLabel names a row by its group keys, a company or project by the name
