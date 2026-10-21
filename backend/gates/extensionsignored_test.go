@@ -35,6 +35,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -128,10 +129,24 @@ func declaredModulePath(t *testing.T, goMod string) string {
 	if err != nil {
 		return ""
 	}
-	for line := range strings.SplitSeq(string(raw), "\n") {
-		if path, ok := strings.CutPrefix(strings.TrimSpace(line), "module "); ok {
-			return strings.TrimSpace(path)
+	return modulePathIn(string(raw))
+}
+
+// modulePathIn reads the module directive as the go command does: a trailing
+// comment is not part of it, and a quoted path is unquoted. A raw quote left on
+// the path would read as another owner's and exempt the unit.
+func modulePathIn(goMod string) string {
+	for line := range strings.SplitSeq(goMod, "\n") {
+		path, ok := strings.CutPrefix(strings.TrimSpace(line), "module ")
+		if !ok {
+			continue
 		}
+		path, _, _ = strings.Cut(path, "//")
+		path = strings.TrimSpace(path)
+		if unquoted, err := strconv.Unquote(path); err == nil {
+			return unquoted
+		}
+		return path
 	}
 	return ""
 }
@@ -175,6 +190,22 @@ func TestAUnitNamesItsOwnerByItsModulePath(t *testing.T) {
 	} {
 		if got := installationModule(module, namespace); got != installation {
 			t.Errorf("installationModule(%q) = %v, want %v", module, got, installation)
+		}
+	}
+}
+
+func TestTheModuleDirectiveIsReadAsTheGoCommandReadsIt(t *testing.T) {
+	t.Parallel()
+	for goMod, want := range map[string]string{
+		"module github.com/margince/margince/extensions/de\n\ngo 1.27.3\n":   "github.com/margince/margince/extensions/de",
+		"module \"github.com/margince/margince/extensions/de\"\n":            "github.com/margince/margince/extensions/de",
+		"module `github.com/margince/margince/extensions/de`\n":              "github.com/margince/margince/extensions/de",
+		"module github.com/margince/margince/extensions/de // first-party\n": "github.com/margince/margince/extensions/de",
+		"// A comment first.\nmodule example.com/acme/billing\n":             "example.com/acme/billing",
+		"go 1.27.3\n": "",
+	} {
+		if got := modulePathIn(goMod); got != want {
+			t.Errorf("modulePathIn(%q) = %q, want %q", goMod, got, want)
 		}
 	}
 }
