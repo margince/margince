@@ -119,6 +119,8 @@ var predicateDealReads = gatekit.Waive(map[string]string{
 // gate would admit them anyway and the entry records why asking was never the
 // point.
 var lifecycleDealReads = gatekit.Waive(map[string]string{
+	"internal/compose/extsystemread.go:readDealSummary":                         "an extension unit's system read of one deal (Runtime.Deals().Get). It runs as the delivery's or tick's PrincipalSystem and answers only on an unattended Runtime: systemRead refuses it with ErrAttendedRead on any invocation a caller could receive the answer from. A unit that shows the deal to a colleague asks Authority().CanRead, which is auth.VisibleTo under that colleague's own grants",
+	"internal/compose/extsystemread.go:readDealResponsible":                     "the same unattended system read for the colleagues a deal names (Runtime.Deals().Responsible): the deal is read for its existence and its owner_id, and only user ids leave the statement. Refused on an attended Runtime by systemRead",
 	"internal/modules/privacy/reportingquestions.go:heldQuestionSource":         "Retention lifecycle checks legal holds on every record behind a kept question answer before selecting an edition for expiry; it returns edition ids to the audited eraser, not source records to a reader.",
 	"internal/modules/privacy/reportingretention.go:reportingRetentionSelector": "Retention lifecycle checks legal holds across all linked subjects before selecting an edition for expiry; it returns edition ids to the audited eraser, not source records to a reader.",
 	// Deal Scout: its system-principal evidence read and the suggestion writer's own conditions.

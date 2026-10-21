@@ -438,17 +438,11 @@ func (r *unitReader) readExtensionField(elt ast.Expr, file *ast.File, m *unitMan
 	case "Entries":
 		m.Entries, err = r.readEntries(kv.Value, file)
 	case "Inbound":
-		var endpoints []inboundEndpoint
-		endpoints, err = r.readInbound(kv.Value, file)
-		if err == nil {
-			m.Inbound = append(m.Inbound, endpoints...)
-		}
+		m.Inbound, err = r.readInbound(kv.Value, file)
+	case "SystemReads":
+		m.SystemReads, err = r.readSystemReads(kv.Value, file)
 	case "OAuthApps":
-		var apps []declaredOAuthApp
-		apps, err = r.readOAuthApps(kv.Value, file)
-		if err == nil {
-			m.OAuthApps = append(m.OAuthApps, apps...)
-		}
+		m.OAuthApps, err = r.readOAuthApps(kv.Value, file)
 	default:
 		// Fail closed: a field this generator does not recognize could be a
 		// future governed capability, and a manifest that silently omitted

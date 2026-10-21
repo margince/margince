@@ -12,6 +12,16 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
 
 ### Added
 
+- An extension unit's job tick or bus delivery can read one deal (`rt.Deals().Get`) and the
+  colleagues it names (`rt.Deals().Responsible`). It can ask whether a colleague may read named fields of the deal under their own grants and masks
+  (`rt.Authority().CanRead`), and read colleagues' addresses (`rt.Directory().Emails`). Each refuses
+  with `extension.ErrAttendedRead` anywhere else. A unit declares the reads it makes in
+  `Extension.SystemReads`; an undeclared one answers `extension.ErrUndeclaredRead`, and the list is
+  published in the unit's `manifest.generated.json`. Under `MARGINCE_ENV=dev`,
+  `extension.OutboundClient` also reaches loopback, so a unit can talk to a provider stand-in on
+  the developer's machine; every other posture is unchanged. A unit builds its provider requests
+  with `extension.NewRequest`, which names the installation as `margince-extension/1.0`, and
+  `DealSummary.AmountDisplay` prints the amount with the currency's own decimals.
 - Background data corrections run in bounded worker batches, with durable progress, pause,
   resume and retry in System health. The first correction recognizes provable older mailbox
   history and closes the related outstanding privacy notices. Schema upgrades do not wait for

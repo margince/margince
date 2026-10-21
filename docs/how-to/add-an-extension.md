@@ -174,7 +174,9 @@ func open(ctx context.Context, rt extension.Runtime, in json.RawMessage) (json.R
 
 `rt` is the **only** way a unit reaches the core. The core makes a new one for each call, and it stops
 working the moment the handler returns (`extension.ErrRuntimeExpired`). Today it gives `rt.Secrets()`,
-`rt.Tx()`, `rt.Caller()`, `rt.Ingest()` and `rt.SyncNow()`.
+`rt.Tx()`, `rt.Caller()`, `rt.Ingest()` and `rt.SyncNow()`. A handler with nobody behind it also gets four system
+reads: `rt.Deals().Get()`, `rt.Deals().Responsible()`, `rt.Authority().CanRead()` and `rt.Directory().Emails()`
+(see [Read deals and colleagues from a handler](#read-deals-and-colleagues-from-a-handler)).
 
 What the surface will serve, and what it will not:
 
@@ -647,6 +649,57 @@ plan for:
 - **The list is public.** It is written into `manifest.generated.json`. So a reader can see which facts of the
   installation your unit uses, without opening its source.
 
+### Read deals and colleagues from a handler
+
+Your SQL may touch only your own tables. So a handler reads a core deal, and the colleagues on it, through
+four system reads. No user's rights limit what they read. That is why they answer only on a job tick or a bus
+delivery, where no user gets the answer. In all other places each one answers `extension.ErrAttendedRead`: a
+tool call, a route, the inbound edge, a finance source's read and a transport's send. There the answer, or an
+error that quotes it, could reach a user whose own rights hide it.
+
+The refusal guards the call, not your own tables. If you save what a read returned and show it later, ask
+`CanRead` first.
+
+Declare each group of reads your unit makes:
+
+```go
+SystemReads: []extension.SystemRead{
+	extension.SystemReadDeals,     // Deals().Get and Deals().Responsible
+	extension.SystemReadAuthority, // Authority().CanRead
+	extension.SystemReadDirectory, // Directory().Emails
+},
+```
+
+A read you did not declare answers `extension.ErrUndeclaredRead`. The list goes into
+`manifest.generated.json` as `system_reads`, so an admin can see which deals and colleagues' details your
+unit reads without opening its source. `fixtures/extensions/crm-hello` is the smallest example: a
+subscription that reads the deal its event names.
+
+```go
+deal, err := rt.Deals().Get(ctx, d.Entity.ID)            // extension.ErrNotFound once the deal is gone
+team, err := rt.Deals().Responsible(ctx, d.Entity.ID)    // owner first, then by email
+ok, err := rt.Authority().CanRead(ctx, member.UserID, d.Entity, []string{"name", "amount_minor"})
+emails, err := rt.Directory().Emails(ctx, ids)           // active human members only
+```
+
+- **`Get` reads a `DealSummary`.** It holds the name, the stage's name, the status, the value and currency,
+  and the expected close date. It also holds the owner, and whether the deal is archived.
+- **Show the value as `AmountDisplay`** (`12,500.00 EUR`, `120,000 JPY`). Each currency shows its own number of
+  digits after the point, and the core holds that table, not your unit.
+- **`Responsible` names who works the deal.** That is the owner, the users on the deal, and the members of the
+  teams on it. It leaves out agents, members who cannot sign in, users taken off the deal, and archived teams. It stops at
+  `extension.MaxResponsible` colleagues.
+- **Ask `CanRead` first.** Before you show a colleague what you read, ask about them. It answers under their
+  own rights: they must be allowed to open the deal, and no field mask may hide a field you name. A mask that
+  does not hide a field from a user who may change the deal still counts as hiding it. An agent seat is never
+  let in.
+- **Name fields the way the contract's `Deal` does** (`amount_minor`, `expected_close_date`, `owner_id`).
+  `CanRead` answers only for a deal.
+- **Ask about the whole list, then cut it.** Say your provider takes some number of members at most. Ask
+  `CanRead` about each colleague in order, and keep the first ones it lets in. If you cut the list first,
+  colleagues it refuses can take the place of one it would let in.
+- **`Emails` takes at most `extension.MaxResponsible` users**, so the list `Responsible` gave always fits.
+
 ## Capture records from your own provider
 
 Declare the providers you take records from. `System` is the unit's own key for the provider, and it does
@@ -840,6 +893,23 @@ The rules:
 - **`Provider` is `snake_case`**, at most 32 characters, unique in the build, and never a core name such as
   `google` or `microsoft`. `AuthURL` and `TokenURL` must use `https`.
 - `rt.OAuthDisconnect(ctx, "books")` drops the tokens. It does not end the grant at the vendor.
+
+## Call your provider
+
+Build each request with `extension.NewRequest`. It names the installation to your provider in the
+`User-Agent` header, with the one name the core declares for units. A gate fails a unit that builds a bare
+`net/http` request, or writes its own `User-Agent`.
+
+Build the HTTP client you call your provider with from `extension.OutboundClient()`. It checks each address
+after the name resolves. It refuses one that is not public, so a host a member typed cannot reach the
+installation's own network. If you need your own client settings, set `extension.RefuseNonPublic` as the
+`Control` of your `net.Dialer` instead. Never write your own list of ranges or your own `Control`: a gate
+fails a unit that does.
+
+Under `MARGINCE_ENV=dev`, a client from `OutboundClient()` or `OutboundTransport()` also reaches loopback
+(`127.0.0.0/8` and `::1`). So a stand-in for your provider on your own machine answers. Private ranges stay
+refused under every value, and so does loopback under any value but `dev`. The core sets this once at
+start. Never call `extension.BindEgress` from a unit; the same gate fails that too.
 
 ## Write the unit's own test
 

@@ -457,6 +457,12 @@ func (*fakeRuntime) OAuthDisconnect(context.Context, extension.OAuthProvider) er
 	return extension.ErrNoSuchOAuthApp
 }
 
+// This unit makes no system read. A handler that starts making one fails here
+// on a nil port, never against an answer nothing scripted.
+func (*fakeRuntime) Deals() extension.Deals         { return nil }
+func (*fakeRuntime) Authority() extension.Authority { return nil }
+func (*fakeRuntime) Directory() extension.Directory { return nil }
+
 // declaredJob is the job named in api/jobs.yaml, spelled here so the fake
 // refuses exactly what the core refuses.
 const declaredJob = extension.JobName("poll_inbox")

@@ -82,58 +82,12 @@ func TestNoOutboundIdentityIsWrittenAtItsCallSite(t *testing.T) {
 		consts := stringConstants(files)
 		for _, file := range files {
 			path := paths[file]
-			ast.Inspect(file, func(node ast.Node) bool {
-				switch written := node.(type) {
-				case *ast.CallExpr:
-					// Header().Set(name, value) and Header().Add(name, value).
-					if len(written.Args) != 2 || !writesAHeader(written) {
-						return true
-					}
-					name, isString := gatekit.StringExpr(written.Args[0], consts, gatekit.FoldStrict)
-					if !isString || !strings.EqualFold(name, "User-Agent") {
-						return true
-					}
-					headerWrites++
-					if _, literal := gatekit.StringExpr(written.Args[1], consts, gatekit.FoldStrict); literal {
-						findings = append(findings, path)
-					}
-				case *ast.CompositeLit:
-					// http.Header{"User-Agent": {"x"}} — the whole map written
-					// at once, which no assignment to an index appears on.
-					for _, element := range written.Elts {
-						pair, isPair := element.(*ast.KeyValueExpr)
-						if !isPair {
-							continue
-						}
-						name, isString := gatekit.StringExpr(pair.Key, consts, gatekit.FoldStrict)
-						if !isString || !strings.EqualFold(name, "User-Agent") {
-							continue
-						}
-						headerWrites++
-						if holdsALiteral(pair.Value, consts) {
-							findings = append(findings, path)
-						}
-					}
-				case *ast.AssignStmt:
-					// req.Header["User-Agent"] = []string{...}, which reaches the
-					// same map by a route no method call appears on.
-					for i, target := range written.Lhs {
-						index, isIndex := target.(*ast.IndexExpr)
-						if !isIndex {
-							continue
-						}
-						name, isString := gatekit.StringExpr(index.Index, consts, gatekit.FoldStrict)
-						if !isString || !strings.EqualFold(name, "User-Agent") {
-							continue
-						}
-						headerWrites++
-						if i < len(written.Rhs) && holdsALiteral(written.Rhs[i], consts) {
-							findings = append(findings, path)
-						}
-					}
+			for _, value := range userAgentWrites(file, consts) {
+				headerWrites++
+				if holdsALiteral(value, consts) {
+					findings = append(findings, path)
 				}
-				return true
-			})
+			}
 		}
 	}
 	// A census that finds no outbound identity at all is judging nothing.
@@ -175,4 +129,37 @@ func holdsALiteral(value ast.Expr, consts map[string]string) bool {
 		}
 	}
 	return false
+}
+
+// userAgentWrites answers the value of every User-Agent header write in file.
+// It reads Set and Add, an index into the map, and a key of a whole header map.
+func userAgentWrites(file *ast.File, consts map[string]string) []ast.Expr {
+	var values []ast.Expr
+	isUserAgent := func(name ast.Expr) bool {
+		named, isString := gatekit.StringExpr(name, consts, gatekit.FoldStrict)
+		return isString && strings.EqualFold(named, "User-Agent")
+	}
+	ast.Inspect(file, func(node ast.Node) bool {
+		switch written := node.(type) {
+		case *ast.CallExpr:
+			if len(written.Args) == 2 && writesAHeader(written) && isUserAgent(written.Args[0]) {
+				values = append(values, written.Args[1])
+			}
+		case *ast.CompositeLit:
+			for _, element := range written.Elts {
+				if pair, isPair := element.(*ast.KeyValueExpr); isPair && isUserAgent(pair.Key) {
+					values = append(values, pair.Value)
+				}
+			}
+		case *ast.AssignStmt:
+			for i, target := range written.Lhs {
+				index, isIndex := target.(*ast.IndexExpr)
+				if isIndex && isUserAgent(index.Index) && i < len(written.Rhs) {
+					values = append(values, written.Rhs[i])
+				}
+			}
+		}
+		return true
+	})
+	return values
 }

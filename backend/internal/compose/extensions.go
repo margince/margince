@@ -257,6 +257,9 @@ func validateExtensionSet(exts []extension.Extension) error {
 		if err := preflightSubscriptions(e); err != nil {
 			return err
 		}
+		if err := preflightSystemReads(e); err != nil {
+			return err
+		}
 		if err := preflightIngress(e); err != nil {
 			return err
 		}

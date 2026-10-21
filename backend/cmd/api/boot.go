@@ -164,6 +164,7 @@ func bindInstallation(ctx context.Context, cfg apiConfig, pool *pgxpool.Pool, va
 			return deployconfig.Bootstrap{}, nil, fmt.Errorf("api: %w", err)
 		}
 	}
+	compose.BindExtensionEgress(cfg.posture)
 	if err := compose.EnsureInstallation(ctx, pool, logger, bootstrap); err != nil {
 		return deployconfig.Bootstrap{}, nil, err
 	}

@@ -55,10 +55,7 @@ type unitManifest struct {
 
 	// Secrets are the secret keys the unit declares (see
 	// extension.SecretsRequest) — inert data an operator resolves, never a
-	// live capability. omitempty rather than mirroring RiskTiers' bare "[]":
-	// nothing declares Secrets yet, and every manifest already committed to
-	// the tree predates this field, so an unconditional key would rewrite
-	// every one of them for a field they do not use.
+	// live capability. omitempty, so a unit declaring none gains no key.
 	Secrets []secretsRequest `json:"secrets,omitempty"`
 
 	// Subscriptions are the events the unit listens for (see
@@ -106,6 +103,9 @@ type unitManifest struct {
 	// consent asks for, and the endpoint that receives the client secret.
 	// omitempty for the reason the fields above have it.
 	OAuthApps []declaredOAuthApp `json:"oauth_apps,omitempty"`
+
+	// SystemReads are the deals and colleagues' details the unit reads.
+	SystemReads []string `json:"system_reads,omitempty"`
 }
 
 // inboundEndpoint is one declared anonymous edge (see

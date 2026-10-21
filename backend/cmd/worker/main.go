@@ -270,6 +270,7 @@ func configureWorker(args []string, stdout io.Writer) (workerBoot, error) {
 	if err != nil {
 		return workerBoot{}, err
 	}
+	compose.BindExtensionEgress(cfg.posture)
 	bootstrap, err := loadBootstrap(cfg)
 	if err != nil {
 		return workerBoot{}, err

@@ -33,6 +33,7 @@ package gates
 
 import (
 	"go/ast"
+	"go/parser"
 	"go/token"
 	"io/fs"
 	"path/filepath"
@@ -129,6 +130,11 @@ func unitEgressOffences(path string, file *ast.File) []string {
 			}
 			return true
 		}
+		if postureSwitch(node, surface) {
+			offences = append(offences, path+": calls extension.BindEgress — the posture and the name are the "+
+				"core's to bind once at boot, and a unit that binds them itself can reach the installation's own "+
+				"host in production or call under a name no operator was told about")
+		}
 		if dialerControl(node, surface) {
 			offences = append(offences, path+": wires its own net.Dialer.Control — the guarded dialer is "+
 				"published as extension.OutboundClient (and extension.RefuseNonPublic for a unit that "+
@@ -137,6 +143,17 @@ func unitEgressOffences(path string, file *ast.File) []string {
 		return true
 	})
 	return offences
+}
+
+// postureSwitch reports a reach for the core's egress binding through the
+// published package.
+func postureSwitch(node ast.Node, surface string) bool {
+	selector, isSelector := node.(*ast.SelectorExpr)
+	if !isSelector || surface == "" || selector.Sel.Name != "BindEgress" {
+		return false
+	}
+	pkg, isIdent := selector.X.(*ast.Ident)
+	return isIdent && pkg.Name == surface
 }
 
 // dialerControl reports a net.Dialer composite literal that sets Control to
@@ -202,4 +219,23 @@ func namesPublishedEgress(expr ast.Expr, surface string) bool {
 		return !found
 	})
 	return found
+}
+
+// The binding is refused where a unit would write it, and only there: the same
+// name on some other package is not the core's.
+func TestAUnitThatBindsTheEgressItselfIsReported(t *testing.T) {
+	t.Parallel()
+	for src, reported := range map[string]bool{
+		`package u; import "github.com/margince/margince/backend/pkg/extension"; func init() { extension.BindEgress(extension.Egress{}) }`: true,
+		`package u; import ext "github.com/margince/margince/backend/pkg/extension"; var f = ext.BindEgress`:                               true,
+		`package u; import "example.test/other"; func init() { other.BindEgress(true) }`:                                                   false,
+	} {
+		file, err := parser.ParseFile(token.NewFileSet(), "unit.go", src, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := len(unitEgressOffences("unit.go", file)) > 0; got != reported {
+			t.Errorf("reported = %v, want %v for:\n%s", got, reported, src)
+		}
+	}
 }

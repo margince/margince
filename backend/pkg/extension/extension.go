@@ -364,6 +364,12 @@ type Extension struct {
 	// connect and callback routes are core routes, not the unit's own.
 	OAuthApps []OAuthApp
 
+	// SystemReads are the system reads the unit's jobs and subscriptions make
+	// (see systemread.go). A read not listed answers ErrUndeclaredRead. The list
+	// is published in manifest.generated.json, so an operator sees what the unit
+	// reads without opening its source.
+	SystemReads []SystemRead
+
 	// Migrations is the unit's SQL schema layer: a read-only filesystem
 	// holding the MigrationsDir directory of NNNN_name.up.sql/.down.sql
 	// pairs, which a unit supplies with `//go:embed migrations`. A unit

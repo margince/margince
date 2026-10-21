@@ -30,6 +30,10 @@ package gates
 // jurisdiction packs and failure classes never reach it — so a census reading
 // only manifests would report a clean sweep over capabilities it cannot see.
 // The declaration the manifest is generated FROM carries all of them.
+//
+// A staged fixture counts as a declarer. CI copies it into the tier and runs the
+// composed build, the unit lane and its self-tests over it. The workflow's own
+// staging step names it; a fixture nothing stages is walked by nobody.
 
 import (
 	"go/ast"
@@ -57,7 +61,12 @@ const (
 	// tierDir is the enabled set. Presence under it IS the enablement, so
 	// what it holds is what "live" means here.
 	tierDir = "../extensions"
+	// ciWorkflow is the workflow whose extension lane stages fixtures.
+	ciWorkflow = "../.github/workflows/ci.yml"
 )
+
+// stagingStep matches a workflow step copying one fixture unit into the tier.
+var stagingStep = regexp.MustCompile(`cp -R fixtures/extensions/([\w-]+) extensions/`)
 
 // identityFields are the two fields of extension.Extension that name the unit
 // rather than granting it anything. They are excluded by NAME, and their
@@ -78,14 +87,37 @@ type unit struct {
 // either to declare it in a unit or to delete the field.
 func TestEveryPublishedCapabilityHasALiveDeclaringUnit(t *testing.T) {
 	t.Parallel()
-	units := liveUnits(t)
-	for _, capability := range publishedCapabilities(t) {
-		declarers := unitsWhere(units, func(u unit) bool { return slices.Contains(u.capabilities, capability) })
-		if len(declarers) == 0 {
-			t.Errorf("no live unit declares extension.Extension.%s — the composed path from that "+
-				"declaration to the running process is walked by nothing, so it breaks silently. "+
-				"Declare it in a unit under extensions/, or delete the field.", capability)
+	units := append(liveUnits(t), stagedFixtures(t)...)
+	for _, capability := range undeclared(publishedCapabilities(t), units) {
+		t.Errorf("no live unit or staged fixture declares extension.Extension.%s — the composed path "+
+			"from that declaration to the running process is walked by nothing, so it breaks silently. "+
+			"Declare it in a unit under extensions/ or a fixture CI stages, or delete the field.", capability)
+	}
+}
+
+// undeclared is the capabilities no unit among declarers sets.
+func undeclared(capabilities []string, declarers []unit) []string {
+	var missing []string
+	for _, capability := range capabilities {
+		if len(unitsWhere(declarers, func(u unit) bool { return slices.Contains(u.capabilities, capability) })) == 0 {
+			missing = append(missing, capability)
 		}
+	}
+	return missing
+}
+
+// A field only a staged fixture declares is walked; a field nobody declares is
+// reported, whichever kind of unit is missing.
+func TestTheCensusCountsAStagedFixtureAndStillReportsAFieldNobodyDeclares(t *testing.T) {
+	t.Parallel()
+	tier := unit{name: "tracked", capabilities: []string{"Tools"}}
+	fixture := unit{name: "staged", capabilities: []string{"SystemReads"}}
+	got := undeclared([]string{"Tools", "SystemReads", "Inbound"}, []unit{tier, fixture})
+	if !slices.Equal(got, []string{"Inbound"}) {
+		t.Errorf("undeclared = %v, want only the field nobody declares, Inbound", got)
+	}
+	if got := undeclared([]string{"SystemReads"}, []unit{tier}); !slices.Equal(got, []string{"SystemReads"}) {
+		t.Errorf("without the fixture, undeclared = %v, want SystemReads reported", got)
 	}
 }
 
@@ -128,7 +160,12 @@ func TestTheCapabilityCensusReadsTheWholeTier(t *testing.T) {
 		t.Fatalf("%s holds no live unit — with an empty tier every capability is undeclared and "+
 			"this census would report the tier clean", tierDir)
 	}
-	for _, u := range units {
+	fixtures := stagedFixtures(t)
+	if len(fixtures) == 0 {
+		t.Errorf("%s stages no fixture unit, or this census no longer reads its step — a field only "+
+			"a fixture declares would then be reported, or one it stopped declaring missed", ciWorkflow)
+	}
+	for _, u := range append(units, fixtures...) {
 		if len(u.capabilities) == 0 {
 			t.Errorf("extensions/%s declares no capability at all — a unit exists to declare "+
 				"something, so this is a reading that failed rather than a unit that asks for "+
@@ -235,16 +272,40 @@ func liveUnits(t *testing.T) []unit {
 		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err != nil {
 			continue // not a Go unit
 		}
-		if _, err := os.Stat(filepath.Join(dir, "manifest.generated.json")); err != nil {
-			t.Errorf("extensions/%s is a Go unit with no manifest.generated.json — the composer has "+
-				"not reached it, so nothing here can say what it declares (run `make gen`)", e.Name())
+		if u, ok := readUnit(t, dir, e.Name()); ok {
+			units = append(units, u)
+		}
+	}
+	return units
+}
+
+// readUnit reads one unit directory. The generated manifest beside it is what
+// says the composer reached it, and a unit without one is reported rather than
+// dropped.
+func readUnit(t *testing.T, dir, name string) (unit, bool) {
+	t.Helper()
+	if _, err := os.Stat(filepath.Join(dir, "manifest.generated.json")); err != nil {
+		t.Errorf("%s is a Go unit with no manifest.generated.json — the composer has not reached "+
+			"it, so nothing here can say what it declares (run `make gen`)", dir)
+		return unit{}, false
+	}
+	return unit{name: name, capabilities: declaredCapabilities(t, dir), layers: shippedLayers(t, dir)}, true
+}
+
+// stagedFixtures reads every fixture unit the CI workflow copies into the tier.
+// A staged name with no unit behind it fails: the step would copy nothing.
+func stagedFixtures(t *testing.T) []unit {
+	t.Helper()
+	var units []unit
+	for _, step := range stagingStep.FindAllStringSubmatch(readFile(t, ciWorkflow), -1) {
+		dir := filepath.Join("..", "fixtures", "extensions", step[1])
+		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err != nil {
+			t.Errorf("%s stages fixtures/extensions/%s, which is not a Go unit", ciWorkflow, step[1])
 			continue
 		}
-		units = append(units, unit{
-			name:         e.Name(),
-			capabilities: declaredCapabilities(t, dir),
-			layers:       shippedLayers(t, dir),
-		})
+		if u, ok := readUnit(t, dir, step[1]); ok {
+			units = append(units, u)
+		}
 	}
 	return units
 }
