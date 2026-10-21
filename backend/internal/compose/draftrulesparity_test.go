@@ -31,6 +31,7 @@ import (
 	"go/parser"
 	"go/token"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -74,6 +75,16 @@ func draftingSurfaces(fence promptfence.Fence) map[string][]string {
 			accountdraft.VoicedSystemPromptFor(fence),
 		},
 	}
+}
+
+// exemptFromSharedRules names the files that assemble a drafting call and are
+// kept out of draftingSurfaces on purpose, each with the reason. A row is an
+// assertion rather than an absence: TestAnExemptWriterStillWritesWithoutTheSharedRules
+// fails when the file starts reading the block or stops existing.
+var exemptFromSharedRules = map[string]string{
+	"voicebuildeval.go": "the voice evaluator scores voice only, and the shared block adds variance the judge ignores " +
+		"and names inputs the call never gets (a recipient, a conversation state); it becomes a drafting surface " +
+		"once it scores correspondence or supplies those inputs",
 }
 
 // Every surface's assembled system turn carries the shared block verbatim.
@@ -144,6 +155,28 @@ func TestTheParityTableCoversEveryFileThatComposesTheSharedRules(t *testing.T) {
 				"describing code that is gone is a gate holding nothing: remove it, or restore the block",
 				where)
 		}
+	}
+}
+
+// An exemption holds only while its file really writes without the block. One
+// that has since adopted the block is a surface the table must assemble, and
+// one whose file is gone is a row describing nothing.
+func TestAnExemptWriterStillWritesWithoutTheSharedRules(t *testing.T) {
+	swept := filesComposingTheSharedRules(t)
+	for file, reason := range exemptFromSharedRules {
+		if reason == "" {
+			t.Errorf("the exemption for %s gives no reason", file)
+		}
+		if _, err := os.Stat(file); err != nil {
+			t.Errorf("exempt file %s is gone (%v): remove its row", file, err)
+		}
+		if slicesContains(swept, file) {
+			t.Errorf("%s now composes draftrules.Shared, so its exemption has lapsed: move it into "+
+				"draftingSurfaces with its assembled system turn", file)
+		}
+	}
+	if strings.Contains(voiceEvalDraftSystemFor(promptfence.New()), draftrules.Shared) {
+		t.Error("the voice evaluator's prompt carries the shared block but voicebuildeval.go is still exempt")
 	}
 }
 
