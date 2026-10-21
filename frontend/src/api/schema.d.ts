@@ -8100,7 +8100,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Export this edition's permitted frozen metrics and chart readings. */
+        /** Export this edition's permitted frozen metrics, chart readings and kept question answers. */
         get: operations["exportReportingEdition"];
         put?: never;
         post?: never;

@@ -35,7 +35,8 @@ func (s reportingExportHandlers) ExportReportingEvaluation(w http.ResponseWriter
 		httperr.Write(w, r, err)
 		return
 	}
-	writeReportingCSV(w, r, evaluation)
+	raw, err := reportingCSV(evaluation)
+	writeReportingCSV(w, r, raw, err)
 }
 
 func (s reportingExportHandlers) ExportReportingEdition(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
@@ -44,10 +45,21 @@ func (s reportingExportHandlers) ExportReportingEdition(w http.ResponseWriter, r
 		httperr.Write(w, r, err)
 		return
 	}
-	writeReportingCSV(w, r, edition.Evaluation)
+	raw, err := editionCSV(edition)
+	writeReportingCSV(w, r, raw, err)
 }
 
 func reportingCSV(evaluation crmcontracts.ReportingEvaluation) ([]byte, error) {
+	return encodeReportingCSV(reportingCSVRows(evaluation))
+}
+
+// editionCSV is the edition's readings, then each question card's kept
+// answer in page order, as GetEdition judged it for this reader.
+func editionCSV(edition crmcontracts.ReportingEdition) ([]byte, error) {
+	return encodeReportingCSV(append(reportingCSVRows(edition.Evaluation), questionCSVRows(edition)...))
+}
+
+func reportingCSVRows(evaluation crmcontracts.ReportingEvaluation) [][]string {
 	rows := [][]string{{"metric", "block", "label", extractionValueKey, reportingTarget, "comparison", "upper", "unit", reportingCurrency, "context", "coverage", "captured_at"}}
 	appendRow := func(metric, block, label string, value, target, comparison, upper *float64, unit, context, status string) {
 		if unit == reportingMoney || unit == evaluation.Context.Currency {
@@ -69,6 +81,10 @@ func reportingCSV(evaluation crmcontracts.ReportingEvaluation) ([]byte, error) {
 			appendRow(string(chart.Metric), string(chart.Kind), "closing", chart.Closing, nil, nil, nil, chart.Unit, chart.ContextId, string(chart.Coverage.Status))
 		}
 	}
+	return rows
+}
+
+func encodeReportingCSV(rows [][]string) ([]byte, error) {
 	var buffer bytes.Buffer
 	writer := csv.NewWriter(&buffer)
 	if err := writer.WriteAll(rows); err != nil {
@@ -84,8 +100,7 @@ func reportingCSVNumber(value *float64) string {
 	return strconv.FormatFloat(*value, 'f', -1, 64)
 }
 
-func writeReportingCSV(w http.ResponseWriter, r *http.Request, evaluation crmcontracts.ReportingEvaluation) {
-	raw, err := reportingCSV(evaluation)
+func writeReportingCSV(w http.ResponseWriter, r *http.Request, raw []byte, err error) {
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

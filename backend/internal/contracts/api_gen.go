@@ -73427,7 +73427,7 @@ type ServerInterface interface {
 	// Get reporting edition evidence
 	// (GET /analytics/editions/{id}/evidence)
 	GetReportingEditionEvidence(w http.ResponseWriter, r *http.Request, id Id, params GetReportingEditionEvidenceParams)
-	// Export this edition's permitted frozen metrics and chart readings.
+	// Export this edition's permitted frozen metrics, chart readings and kept question answers.
 	// (GET /analytics/editions/{id}/export.csv)
 	ExportReportingEdition(w http.ResponseWriter, r *http.Request, id Id)
 	// Evaluate reporting
@@ -76307,7 +76307,7 @@ func (_ Unimplemented) GetReportingEditionEvidence(w http.ResponseWriter, r *htt
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Export this edition's permitted frozen metrics and chart readings.
+// Export this edition's permitted frozen metrics, chart readings and kept question answers.
 // (GET /analytics/editions/{id}/export.csv)
 func (_ Unimplemented) ExportReportingEdition(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)

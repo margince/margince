@@ -226,7 +226,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | --- | --- | --- | --- | --- |
 | `GET /analytics/metrics` | getReportingMetrics | Get reporting metrics | Read records | at once |
 | `GET /analytics/evaluate.csv` | exportReportingEvaluation | Evaluate reporting | Read records | at once |
-| `GET /analytics/editions/{id}/export.csv` | exportReportingEdition | Export this edition's permitted frozen metrics and chart readings. | Read records | at once |
+| `GET /analytics/editions/{id}/export.csv` | exportReportingEdition | Export this edition's permitted frozen metrics, chart readings and kept question answers. | Read records | at once |
 | `GET /analytics/evaluate` | evaluateReporting | Evaluate reporting | Read records | at once |
 | `GET /analytics/evidence` | getReportingEvidence | Get reporting evidence | Read records | at once |
 | `GET /analytics/reports` | listReportingReports | List reporting reports | Read records | at once |
