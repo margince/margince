@@ -836,6 +836,10 @@ export const de = {
   "reporting.restoreRevision": "Version {revision} wiederherstellen",
   "reporting.restoreBlocked":
     "Vor dem Wiederherstellen einer früheren Version den Entwurf veröffentlichen oder verwerfen.",
+  "reporting.cardOrderHint":
+    "Ziehe eine Karte am Griff, oder fokussiere den Griff und drücke die Pfeiltaste nach oben oder unten.",
+  "reporting.cardHandle": "{chart} verschieben, {position} von {total}",
+  "reporting.cardMoved": "{chart} auf {position} von {total} verschoben",
   "reporting.moveUp": "Nach oben",
   "reporting.moveDown": "Nach unten",
   "reporting.sectionN": "Abschnitt {n}",

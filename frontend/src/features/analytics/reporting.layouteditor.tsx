@@ -1,13 +1,14 @@
 import { useMutation } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, X } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { api } from "../../api/client";
 import { Button, Field, TextInput } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { IconAction } from "../../design-system/iconaction";
 import { Select } from "../../design-system/select";
-import { ordinalNumber } from "../../format/format";
-import { type Translator, useT } from "../../i18n";
+import { SortableList } from "../../design-system/sortablelist";
+import { formatNumber, ordinalNumber } from "../../format/format";
+import { type Translator, useLocale, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { entityLabel } from "./analytics.questions.vocab";
 import {
@@ -40,8 +41,9 @@ export function cardLabel(
 }
 
 /**
- * Sections of chart cards, edited with buttons and menus rather than by
- * dragging, so a keyboard and a screen reader can do every step.
+ * Sections of chart cards. A card is dragged by its handle, or moved with the
+ * arrow keys on it; a menu moves it to another section, and buttons move a
+ * section, so a keyboard and a screen reader can do every step.
  */
 export function LayoutEditor({
   layout,
@@ -56,8 +58,17 @@ export function LayoutEditor({
   preview?: (choice: CardChoice) => ReactNode;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const hintId = useId();
+  const place = (position: number, count: number) => ({
+    position: formatNumber(position, locale),
+    total: formatNumber(count, locale),
+  });
   return (
     <div className="form-stack">
+      <span id={hintId} className="sr-only">
+        {t("reporting.cardOrderHint")}
+      </span>
       {layout.map((section, at) => (
         <fieldset
           // biome-ignore lint/suspicious/noArrayIndexKey: a section has no id; its position is its name
@@ -81,25 +92,35 @@ export function LayoutEditor({
               />
             )}
           </Field>
-          {section.cards.map((card, index) => (
-            <CardRow
-              key={card.id}
-              layout={layout}
-              at={at}
-              index={index}
-              card={card}
-              onChange={onChange}
-            />
-          ))}
+          <SortableList
+            label={t("reporting.sectionN", { n: ordinalNumber(at + 1) })}
+            items={section.cards.map((card) => ({ key: card.id, card }))}
+            hintId={hintId}
+            onReorder={(keys) => onChange(edit.reorderCards(layout, at, keys))}
+            labels={{
+              handle: (item, position, count) =>
+                t("reporting.cardHandle", {
+                  chart: cardLabel(item.card, t),
+                  ...place(position, count),
+                }),
+              moved: (item, position, count) =>
+                t("reporting.cardMoved", {
+                  chart: cardLabel(item.card, t),
+                  ...place(position, count),
+                }),
+            }}
+            renderItem={(item) => (
+              <CardRow
+                layout={layout}
+                at={at}
+                index={section.cards.indexOf(item.card)}
+                card={item.card}
+                onChange={onChange}
+              />
+            )}
+          />
           {layout.length > 1 && (
-            <div>
-              <Button
-                variant="ghost"
-                onClick={() => onChange(edit.removeSection(layout, at))}
-              >
-                {t("reporting.removeSection", { n: ordinalNumber(at + 1) })}
-              </Button>
-            </div>
+            <SectionActions layout={layout} at={at} onChange={onChange} />
           )}
         </fieldset>
       ))}
@@ -123,6 +144,42 @@ export function LayoutEditor({
   );
 }
 
+// Moves a section up or down, or removes it and keeps its cards.
+function SectionActions({
+  layout,
+  at,
+  onChange,
+}: Readonly<{
+  layout: ReportingLayout;
+  at: number;
+  onChange: (next: ReportingLayout) => void;
+}>) {
+  const t = useT();
+  const name = t("reporting.sectionN", { n: ordinalNumber(at + 1) });
+  return (
+    <div className="reporting-layout-buttons">
+      <IconAction
+        label={`${t("reporting.moveUp")}: ${name}`}
+        icon={<ArrowUp aria-hidden />}
+        disabled={at === 0}
+        onClick={() => onChange(edit.moveSection(layout, at, -1))}
+      />
+      <IconAction
+        label={`${t("reporting.moveDown")}: ${name}`}
+        icon={<ArrowDown aria-hidden />}
+        disabled={at === layout.length - 1}
+        onClick={() => onChange(edit.moveSection(layout, at, 1))}
+      />
+      <Button
+        variant="ghost"
+        onClick={() => onChange(edit.removeSection(layout, at))}
+      >
+        {t("reporting.removeSection", { n: ordinalNumber(at + 1) })}
+      </Button>
+    </div>
+  );
+}
+
 // A section option's value names the section to the menu and is never shown.
 const sectionKey = (at: number) => `section-${at}`;
 
@@ -141,7 +198,6 @@ function CardRow({
 }>) {
   const t = useT();
   const name = cardLabel(card, t);
-  const count = layout[at]?.cards.length ?? 0;
   return (
     <div className="reporting-layout-card">
       <span className="reporting-layout-name">{name}</span>
@@ -177,18 +233,6 @@ function CardRow({
           }
         />
       )}
-      <IconAction
-        label={`${t("reporting.moveUp")}: ${name}`}
-        icon={<ArrowUp aria-hidden />}
-        disabled={index === 0}
-        onClick={() => onChange(edit.moveCard(layout, at, index, -1))}
-      />
-      <IconAction
-        label={`${t("reporting.moveDown")}: ${name}`}
-        icon={<ArrowDown aria-hidden />}
-        disabled={index === count - 1}
-        onClick={() => onChange(edit.moveCard(layout, at, index, 1))}
-      />
       <IconAction
         label={t("reporting.removeCard", { chart: name })}
         icon={<X aria-hidden />}

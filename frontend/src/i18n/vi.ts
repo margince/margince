@@ -823,6 +823,10 @@ export const vi = {
   "reporting.restoreRevision": "Khôi phục phiên bản {revision}",
   "reporting.restoreBlocked":
     "Hãy công bố hoặc bỏ bản nháp trước khi khôi phục một phiên bản trước.",
+  "reporting.cardOrderHint":
+    "Kéo thẻ bằng tay nắm, hoặc chọn tay nắm rồi nhấn phím mũi tên lên hoặc xuống.",
+  "reporting.cardHandle": "Di chuyển {chart}, vị trí {position} trên {total}",
+  "reporting.cardMoved": "Đã chuyển {chart} đến vị trí {position} trên {total}",
   "reporting.moveUp": "Chuyển lên",
   "reporting.moveDown": "Chuyển xuống",
   "reporting.sectionN": "Phần {n}",

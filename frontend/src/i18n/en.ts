@@ -808,6 +808,10 @@ export const en = {
   "reporting.restoreRevision": "Restore version {revision}",
   "reporting.restoreBlocked":
     "Publish or discard the draft before you restore an earlier version.",
+  "reporting.cardOrderHint":
+    "Drag a card by its handle, or focus the handle and press the up or down arrow.",
+  "reporting.cardHandle": "Move {chart}, {position} of {total}",
+  "reporting.cardMoved": "{chart} moved to {position} of {total}",
   "reporting.moveUp": "Move up",
   "reporting.moveDown": "Move down",
   "reporting.sectionN": "Section {n}",

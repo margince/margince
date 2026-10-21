@@ -177,9 +177,26 @@ describe("a report's layout", () => {
     ).toEqual(["a", "b", "c"]);
   });
 
-  it("moves a card within its section and into another", () => {
-    const swapped = layoutEdits.moveCard(twoSections, 0, 0, 1);
+  it("reorders a section's cards only by a full order of its own cards", () => {
+    const swapped = layoutEdits.reorderCards(twoSections, 0, ["b", "a"]);
     expect(swapped[0]?.cards.map((c) => c.id)).toEqual(["b", "a"]);
+    for (const keys of [["b"], ["b", "c"], ["a", "a"]]) {
+      expect(layoutEdits.reorderCards(twoSections, 0, keys)).toEqual(
+        twoSections,
+      );
+    }
+  });
+
+  it("moves a section up or down, and not past either end", () => {
+    expect(layoutEdits.moveSection(twoSections, 1, -1)).toEqual([
+      twoSections[1],
+      twoSections[0],
+    ]);
+    expect(layoutEdits.moveSection(twoSections, 0, -1)).toEqual(twoSections);
+    expect(layoutEdits.moveSection(twoSections, 1, 1)).toEqual(twoSections);
+  });
+
+  it("moves a card into another section", () => {
     const moved = layoutEdits.moveCardTo(twoSections, 0, 1, 1);
     expect(moved.map((s) => s.cards.map((c) => c.id))).toEqual([
       ["a"],
