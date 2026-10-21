@@ -9,12 +9,14 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// InvoiceReference keeps invoice labels behind the finance and company read gates.
 func (s *Store) InvoiceReference(ctx context.Context, id ids.UUID) (ids.CompanyID, string, error) {
 	if err := auth.Require(ctx, "finance", principal.ActionRead); err != nil {
 		return ids.CompanyID{}, "", err

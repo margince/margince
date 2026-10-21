@@ -26,7 +26,7 @@ func (e *PreviewContextError) Error() string {
 // MessageFault gives clients a recoverable context refusal without internal details.
 func (e *PreviewContextError) MessageFault() (code, message string) {
 	switch e.State {
-	case "incomplete":
+	case previewIncomplete:
 		return "approval_preview_incomplete", "The full change cannot be shown. Resolve the missing context before approving."
 	case "conflict":
 		return "approval_preview_conflict", "Resolve the conflicting context before approving this change."
@@ -113,7 +113,7 @@ func (s *Service) proposalPreview(ctx context.Context, subject row, proposal crm
 		}
 	}()
 	if !previewCoTargetPinned(subject, proposal) {
-		preview.State = "incomplete"
+		preview.State = previewIncomplete
 		return preview, nil
 	}
 	if subject.CoTargetVersion == nil {
@@ -130,12 +130,12 @@ func (s *Service) proposalPreview(ctx context.Context, subject row, proposal crm
 }
 
 func previewCoTargetPinned(subject row, proposal crmcontracts.Approval) bool {
-	if subject.Kind == "merge_records" && subject.TargetType != nil && (*subject.TargetType == "contact" || *subject.TargetType == "company") {
+	if subject.Kind == previewMergeRecords && subject.TargetType != nil && (*subject.TargetType == "contact" || *subject.TargetType == tableCompany) {
 		return previewMergePinsMatch(subject, proposal)
 	}
 	var entityType, field string
 	switch subject.Kind {
-	case "advance_deal", "progress_deal", "stage_progression":
+	case "advance_deal", "progress_deal", previewStageProgression:
 		entityType, field = "stage", "to_stage_id"
 	case "merge_tags":
 		entityType, field = "tag", "into_tag_id"
@@ -145,24 +145,35 @@ func previewCoTargetPinned(subject row, proposal crmcontracts.Approval) bool {
 	if subject.CoTargetVersion == nil || subject.CoTargetType == nil || *subject.CoTargetType != entityType || subject.CoTargetID == nil || proposal.ProposedChange == nil {
 		return false
 	}
+	return proposalDestination(proposal, field) == *subject.CoTargetID && !subject.CoTargetID.IsZero()
+}
+
+func proposalDestination(proposal crmcontracts.Approval, field string) ids.UUID {
 	raw, err := json.Marshal(proposal.ProposedChange)
 	if err != nil {
-		return false
+		return ids.Nil
 	}
 	var payload map[string]json.RawMessage
 	if err := json.Unmarshal(raw, &payload); err != nil {
-		return false
+		return ids.Nil
 	}
 	if _, rest := payload["operation"]; rest {
 		body := payload["body"]
 		payload = nil
 		if err := json.Unmarshal(body, &payload); err != nil {
-			return false
+			return ids.Nil
 		}
 	}
 	var destination ids.UUID
 	if err := json.Unmarshal(payload[field], &destination); err != nil {
-		return false
+		return ids.Nil
 	}
-	return !destination.IsZero() && destination == *subject.CoTargetID
+	return destination
 }
+
+const (
+	previewIncomplete       = "incomplete"
+	previewStageProgression = "stage_progression"
+)
+
+const previewMergeRecords = "merge_records"

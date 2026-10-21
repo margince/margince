@@ -8,11 +8,13 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// PreviewCommitmentCarryTx reads commitments through each plan's normal visibility gate.
 func (s *Store) PreviewCommitmentCarryTx(ctx context.Context, tx pgx.Tx, kind string, source ids.UUID) ([]crmcontracts.WeeklyPlanCommitment, error) {
 	rows, err := tx.Query(ctx, `SELECT DISTINCT p.owner_id, p.local_week_start FROM weekly_plan p
  JOIN weekly_plan_commitment c ON c.plan_id=p.id

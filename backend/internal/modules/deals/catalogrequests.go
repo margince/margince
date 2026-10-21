@@ -5,11 +5,11 @@ package deals
 
 import (
 	"encoding/json"
-	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"slices"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // The catalog's request rules, read once by both doors: the REST handlers and
@@ -84,6 +84,7 @@ func productUpdateInput(req crmcontracts.UpdateProductRequest, cleared []string,
 	}, nil
 }
 
+// OfferTemplateCreationInput keeps layout presence checks shared by creation and review.
 func OfferTemplateCreationInput(req crmcontracts.CreateOfferTemplateRequest) (CreateOfferTemplateInput, error) {
 	name, err := httperr.RequireNonBlank(offerTemplateNameField, req.Name)
 	if err != nil {
@@ -117,7 +118,7 @@ func offerTemplateUpdateInput(req crmcontracts.UpdateOfferTemplateRequest, ifVer
 	}, nil
 }
 
-// Preserve price presence: an omitted price must never become a free product.
+// ProductCreationFromJSON preserves price presence so omission cannot become a free product.
 func ProductCreationFromJSON(raw json.RawMessage, sourceOverride *string) (CreateProductInput, error) {
 	var req crmcontracts.CreateProductRequest
 	if err := datasource.StrictDecode(raw, &req); err != nil {

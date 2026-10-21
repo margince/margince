@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -15,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// MergeObservation keeps observation provenance available when relationships move.
 type MergeObservation struct {
 	Relationship crmcontracts.Relationship
 	Before       *time.Time
@@ -23,10 +25,10 @@ type MergeObservation struct {
 
 func (s *Store) previewMergeObservations(ctx context.Context, tx pgx.Tx, kind string, source, target ids.UUID) ([]MergeObservation, error) {
 	column := contactFK
-	if kind == "company" {
+	if kind == companyEntity {
 		column = companyFK
 	}
-	rows, err := tx.Query(ctx, "SELECT f.id, f.was, f.earliest FROM ("+mergeObservationCandidates(column)+") f WHERE "+mergeObservationChanges+" ORDER BY f.id LIMIT 501", pgx.StrictNamedArgs{"source": source, "target": target})
+	rows, err := tx.Query(ctx, "SELECT f.id, f.was, f.earliest FROM ("+mergeObservationCandidates(column)+") f WHERE "+mergeObservationChanges+" ORDER BY f.id LIMIT 501", pgx.StrictNamedArgs{mergeSourceKey: source, mergeTargetKey: target})
 	if err != nil {
 		return nil, err
 	}

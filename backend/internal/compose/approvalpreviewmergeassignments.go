@@ -6,11 +6,12 @@ package compose
 import (
 	"context"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/assignments"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 func (r approvalPreviewReader) companyMergeAssignmentDetails(ctx context.Context, source, target ids.UUID) ([]crmcontracts.ApprovalPreviewDetail, error) {
@@ -44,7 +45,7 @@ func (r approvalPreviewReader) companyMergeAssignmentDetails(ctx context.Context
 			field = "merge_assignment_collapsed"
 		}
 		detail := mergeIdentityDetail(field, *assignment.SubjectName, ids.UUID(assignment.SubjectId))
-		detail.Value.Kind, detail.Value.EntityType = "reference", new(string(assignment.SubjectKind))
+		detail.Value.Kind, detail.Value.EntityType = previewValueReference, new(string(assignment.SubjectKind))
 		details = append(details, detail, mergeIdentityDetail("merge_assignment_role", *assignment.RoleLabel, ids.UUID(assignment.RoleId)))
 	}
 	return details, nil

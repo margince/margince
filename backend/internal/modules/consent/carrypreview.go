@@ -17,6 +17,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
+const carryFromContactArg = "from_contact"
+
+const carryFromLeadArg = "from_lead"
+
 const stopCarryCandidates = `SELECT DISTINCT ON (live.kind, live.purpose_id)
  live.id, live.address, live.kind, live.source, live.decided_by_level, live.purpose_id
  FROM communication_suppression live
@@ -35,8 +39,10 @@ const stopCarryCandidates = `SELECT DISTINCT ON (live.kind, live.purpose_id)
  live.recorded_at DESC, live.id`
 
 func carryAuthorityArgs(from, to commsauthz.StopSubject, by string) pgx.NamedArgs {
-	return pgx.NamedArgs{"from_contact": zeroAsNull(from.ContactID.UUID), "from_lead": zeroAsNull(from.LeadID.UUID),
-		"to_contact": zeroAsNull(to.ContactID.UUID), "to_lead": zeroAsNull(to.LeadID.UUID), "by": by, "ladder": authorityLadder()}
+	return pgx.NamedArgs{
+		carryFromContactArg: zeroAsNull(from.ContactID.UUID), carryFromLeadArg: zeroAsNull(from.LeadID.UUID),
+		"to_contact": zeroAsNull(to.ContactID.UUID), "to_lead": zeroAsNull(to.LeadID.UUID), "by": by, "ladder": authorityLadder(),
+	}
 }
 
 // A new contact has no row yet. Existing targets retain the carry's write scope;
@@ -63,6 +69,7 @@ func admitLeadCarryPreview(ctx context.Context, tx pgx.Tx, lead ids.LeadID, cont
 	return nil
 }
 
+// PreviewStopsTx uses the carry writer's candidates so review cannot omit a retained restriction.
 func (s *Store) PreviewStopsTx(ctx context.Context, tx pgx.Tx, from, to commsauthz.StopSubject) ([]commsauthz.CarriedStop, error) {
 	if err := admitCarryPreview(ctx, tx, from, to); err != nil {
 		return nil, err
@@ -89,6 +96,7 @@ func (s *Store) PreviewStopsTx(ctx context.Context, tx pgx.Tx, from, to commsaut
 const carrySubjectPredicate = `(@from_contact::uuid IS NOT NULL AND contact_id = @from_contact)
  OR (@from_lead::uuid IS NOT NULL AND lead_id = @from_lead)`
 
+// PreviewConsentLinksTx checks email visibility before exposing consent records that follow a merge.
 func (s *Store) PreviewConsentLinksTx(ctx context.Context, tx pgx.Tx, from, to commsauthz.StopSubject) (commsauthz.CarriedConsentLinks, error) {
 	if err := admitCarryPreview(ctx, tx, from, to); err != nil {
 		return commsauthz.CarriedConsentLinks{}, err
@@ -96,7 +104,7 @@ func (s *Store) PreviewConsentLinksTx(ctx context.Context, tx pgx.Tx, from, to c
 	if err := requireCarryEmailRead(ctx, from); err != nil {
 		return commsauthz.CarriedConsentLinks{}, err
 	}
-	args := pgx.NamedArgs{"from_contact": zeroAsNull(from.ContactID.UUID), "from_lead": zeroAsNull(from.LeadID.UUID)}
+	args := pgx.NamedArgs{carryFromContactArg: zeroAsNull(from.ContactID.UUID), carryFromLeadArg: zeroAsNull(from.LeadID.UUID)}
 	withdrawals, err := previewCarriedWithdrawals(ctx, tx, args)
 	if err != nil {
 		return commsauthz.CarriedConsentLinks{}, err

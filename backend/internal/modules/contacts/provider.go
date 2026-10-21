@@ -413,6 +413,7 @@ func (p *Provider) PromoteLead(
 	return ref(datasource.EntityContact, contact.Id), merged, err
 }
 
+// WithParticipantRosterReader uses the owning module’s authorized reader so preview and execution share its policy.
 func (p *Provider) WithParticipantRosterReader(read ParticipantRosterReader) *Provider {
 	p.store = p.store.WithParticipantRosterReader(read)
 	return p

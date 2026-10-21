@@ -7,11 +7,13 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// MergeCompanySingleton makes competing company settings visible before a merge.
 type MergeCompanySingleton struct {
 	Kind     string
 	Retained bool
@@ -24,7 +26,7 @@ func previewCompanySingletons(ctx context.Context, tx pgx.Tx, source, target ids
  EXISTS (SELECT 1 FROM partner WHERE company_id=@target),
  EXISTS (SELECT 1 FROM company_vat_check WHERE company_id=@source),
  EXISTS (SELECT 1 FROM company_vat_check WHERE company_id=@target)`,
-		pgx.StrictNamedArgs{"source": source, "target": target}).Scan(&sourcePartner, &targetPartner, &sourceVAT, &targetVAT); err != nil {
+		pgx.StrictNamedArgs{mergeSourceKey: source, mergeTargetKey: target}).Scan(&sourcePartner, &targetPartner, &sourceVAT, &targetVAT); err != nil {
 		return nil, err
 	}
 	var out []MergeCompanySingleton
@@ -35,7 +37,7 @@ func previewCompanySingletons(ctx context.Context, tx pgx.Tx, source, target ids
 		out = append(out, MergeCompanySingleton{Kind: "partner", Retained: targetPartner})
 	}
 	if sourceVAT {
-		if err := previewFieldsVisible(ctx, "company", "vat_number"); err != nil {
+		if err := previewFieldsVisible(ctx, companyEntity, "vat_number"); err != nil {
 			return nil, err
 		}
 		out = append(out, MergeCompanySingleton{Kind: "vat_check", Retained: targetVAT})

@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/finance"
@@ -17,7 +19,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 func (r approvalPreviewReader) companyMergeBusinessDetails(ctx context.Context, source, target ids.UUID) ([]crmcontracts.ApprovalPreviewDetail, error) {
@@ -32,7 +33,7 @@ func (r approvalPreviewReader) companyMergeBusinessDetails(ctx context.Context, 
 			return nil, err
 		}
 		details = append(details, value...)
-		if ref.Type == "company" {
+		if ref.Type == datasource.EntityType(recordTypeCompany) {
 			parent, err := r.companyMergeParent(ctx, source, target, ref.ID)
 			if err != nil {
 				return nil, err
@@ -48,7 +49,7 @@ func (r approvalPreviewReader) companyMergeBusinessDetails(ctx context.Context, 
 		return nil, apperrors.ErrInvalidArgument
 	}
 	for _, domain := range domains {
-		if err := creationFieldsVisible(ctx, "company", map[string]any{"domains": domain.Domain}); err != nil {
+		if err := creationFieldsVisible(ctx, string(recordTypeCompany), map[string]any{previewFieldDomains: domain.Domain}); err != nil {
 			return nil, err
 		}
 		details = append(details, previewDetail("merge_company_triaged_domain", domain.Domain))
@@ -57,7 +58,7 @@ func (r approvalPreviewReader) companyMergeBusinessDetails(ctx context.Context, 
 }
 
 func (r approvalPreviewReader) companyMergeParent(ctx context.Context, source, target, child ids.UUID) (crmcontracts.ApprovalPreviewValue, error) {
-	if err := creationFieldsVisible(ctx, "company", map[string]any{"parent_company_id": source}); err != nil {
+	if err := creationFieldsVisible(ctx, string(recordTypeCompany), map[string]any{refColParentCompany: source}); err != nil {
 		return crmcontracts.ApprovalPreviewValue{}, err
 	}
 	parent := target
@@ -71,13 +72,16 @@ func (r approvalPreviewReader) companyMergeParent(ctx context.Context, source, t
 		}
 		parent = ids.UUID(*company.ParentCompanyId)
 	}
-	return r.referenceValue(ctx, "company_id", parent.String())
+	return r.referenceValue(ctx, refColCompany, parent.String())
 }
 
 func (r approvalPreviewReader) companyMergeReferences(ctx context.Context, source ids.UUID) ([]datasource.EntityRef, error) {
+	if err := requireCompanyMergeReads(ctx); err != nil {
+		return nil, err
+	}
 	var refs []datasource.EntityRef
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureVisible(ctx, tx, "company", source); err != nil {
+		if err := auth.EnsureVisible(ctx, tx, mergeReadCompany, source); err != nil {
 			return err
 		}
 		rows, err := tx.Query(ctx, `SELECT kind,id FROM (
@@ -90,7 +94,7 @@ func (r approvalPreviewReader) companyMergeReferences(ctx context.Context, sourc
  UNION ALL SELECT 'project',id FROM project WHERE company_id=@source
  UNION ALL SELECT 'deal',id FROM deal WHERE company_id=@source OR partner_company_id=@source
  UNION ALL SELECT 'company',id FROM company WHERE parent_company_id=@source
- ) affected ORDER BY kind,id LIMIT 501`, pgx.StrictNamedArgs{"source": source})
+ ) affected ORDER BY kind,id LIMIT 501`, pgx.StrictNamedArgs{fieldSource: source})
 		if err != nil {
 			return err
 		}
@@ -123,7 +127,7 @@ func (r approvalPreviewReader) companyMergeReference(ctx context.Context, ref da
 	var value crmcontracts.ApprovalPreviewValue
 	var err error
 	switch ref.Type {
-	case "offer":
+	case datasource.EntityType(recordTypeOffer):
 		offer, readErr := r.deals.GetOffer(ctx, ids.From[ids.OfferKind](ref.ID), storekit.IncludeArchived)
 		if readErr != nil {
 			return nil, readErr
@@ -131,8 +135,8 @@ func (r approvalPreviewReader) companyMergeReference(ctx context.Context, ref da
 		if offer.OfferNumber == nil || *offer.OfferNumber == "" {
 			return nil, apperrors.ErrInvalidArgument
 		}
-		value = crmcontracts.ApprovalPreviewValue{Kind: "reference", Text: *offer.OfferNumber, EntityType: new("offer"), EntityId: new(openapi_types.UUID(ref.ID))}
-	case "commission":
+		value = crmcontracts.ApprovalPreviewValue{Kind: previewValueReference, Text: *offer.OfferNumber, EntityType: new(string(recordTypeOffer)), EntityId: new(openapi_types.UUID(ref.ID))}
+	case datasource.EntityType(recordTypeCommission):
 		record, readErr := r.records.Read(ctx, ref)
 		if readErr != nil {
 			return nil, readErr
@@ -141,8 +145,8 @@ func (r approvalPreviewReader) companyMergeReference(ctx context.Context, ref da
 		if err := json.Unmarshal(record.Fields, &entry); err != nil {
 			return nil, err
 		}
-		value, err = r.referenceValue(ctx, "deal_id", entry.DealId.String())
-		value.EntityType, value.EntityId = new("commission"), new(openapi_types.UUID(ref.ID))
+		value, err = r.referenceValue(ctx, dealIDField, entry.DealId.String())
+		value.EntityType, value.EntityId = new(string(recordTypeCommission)), new(openapi_types.UUID(ref.ID))
 	default:
 		value, err = r.communicationEvidence(ctx, string(ref.Type)+"_id", ref.ID)
 	}
@@ -157,7 +161,7 @@ func (r approvalPreviewReader) mergeFinanceReference(ctx context.Context, ref da
 	if err != nil {
 		return nil, err
 	}
-	account, err := r.referenceValue(ctx, "company_id", entry.CompanyID.String())
+	account, err := r.referenceValue(ctx, refColCompany, entry.CompanyID.String())
 	if err != nil {
 		return nil, err
 	}

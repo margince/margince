@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -17,11 +18,11 @@ import (
 // The same candidate scope serves an existing eligible contact and the emails
 // of a contact being proposed. Actual promotion still checks each lead's guards.
 func heldLeadIDs(ctx context.Context, tx pgx.Tx, contact ids.ContactID, emails []string) ([]ids.UUID, error) {
+	if contact.IsZero() && len(emails) == 0 {
+		return []ids.UUID{}, nil
+	}
 	if contact.IsZero() {
-		if len(emails) == 0 {
-			return []ids.UUID{}, nil
-		}
-		if err := auth.Require(ctx, "lead", principal.ActionRead); err != nil {
+		if err := auth.Require(ctx, leadEntity, principal.ActionRead); err != nil {
 			return nil, err
 		}
 	} else {
@@ -35,13 +36,13 @@ func heldLeadIDs(ctx context.Context, tx pgx.Tx, contact ids.ContactID, emails [
 		}
 	}
 	addresses := `SELECT unnest(@emails::text[]) AS email`
-	args := pgx.NamedArgs{"emails": emails}
+	args := pgx.NamedArgs{contactEmailsField: emails}
 	if !contact.IsZero() {
 		addresses = `SELECT ce.email FROM contact c
    JOIN contact_email ce ON ce.contact_id = c.id AND ce.archived_at IS NULL
    WHERE c.id = @contact AND c.archived_at IS NULL AND c.merged_into_id IS NULL
    AND c.visibility = 'workspace' AND c.quarantined_at IS NULL`
-		args = pgx.NamedArgs{"contact": contact}
+		args = pgx.NamedArgs{contactEntity: contact}
 	}
 	rows, err := tx.Query(ctx, `WITH addresses AS (`+addresses+`)
   SELECT l.id FROM lead l WHERE l.email IN (SELECT email FROM addresses)
@@ -67,7 +68,7 @@ func previewContactHeldLeads(ctx context.Context, tx pgx.Tx, emails []ContactEma
 	}
 	out := make([]ids.LeadID, 0, len(matches))
 	for _, id := range matches {
-		if err := auth.EnsureVisible(ctx, tx, "lead", id); err != nil {
+		if err := auth.EnsureVisible(ctx, tx, leadEntity, id); err != nil {
 			return nil, err
 		}
 		out = append(out, ids.From[ids.LeadKind](id))

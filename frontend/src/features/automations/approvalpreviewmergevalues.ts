@@ -1,5 +1,6 @@
 import type { components } from "../../api/schema";
 import { providerBrandName } from "../../design-system/provider-mark";
+import { profileFieldLabel } from "../../format/companyprofilelabels";
 import { providerName } from "../../format/connectorprovider";
 import {
   EMAIL_TYPE_LABEL,
@@ -9,8 +10,7 @@ import { INTRO_STATUS_LABELS } from "../../format/introstatus";
 import type { Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { historyFieldLabel } from "../../lib/historyfieldlabels";
-import { profileFieldLabel } from "../companies/companyprofilelabels";
-import { FACT_CATEGORY_LABELS, FACT_FIELD_LABELS } from "../records/factview";
+import { FACT_CATEGORY_LABELS, FACT_FIELD_LABELS } from "../../lib/factview";
 
 type ProviderRun = components["schemas"]["ProviderRun"];
 const RUN_LABELS: Record<ProviderRun["state"], MessageKey> = {

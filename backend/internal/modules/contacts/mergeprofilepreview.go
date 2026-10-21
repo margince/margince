@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -18,6 +19,7 @@ import (
 const mergeProfileColumns = `field, value_key, value, evidence_snippet, source_ref, confidence, source,
  captured_by, observed_at, superseded_value, superseded_captured_by, superseded_observed_at`
 
+// MergeProfileAssertion retains provenance and version for a profile value under review.
 type MergeProfileAssertion struct {
 	ID                   ids.UUID
 	Field                string
@@ -36,34 +38,41 @@ type MergeProfileAssertion struct {
 	Version              int64
 }
 
+// MergeProfileVerdict keeps human judgment attached to the value it evaluated.
 type MergeProfileVerdict struct {
 	Verdict        string
 	Note           *string
 	CorrectedValue *string
 }
 
+// MergeProfileValue couples profile evidence with its applicable human verdict.
 type MergeProfileValue struct {
 	MergeProfileAssertion
 	Verdict *MergeProfileVerdict
 }
 
+// ProfileVerdictReader keeps preview reads under the owning module’s authorization policy.
 type ProfileVerdictReader func(context.Context, pgx.Tx, ids.UUID, []MergeProfileAssertion) ([]MergeProfileValue, error)
 
+// WithProfileVerdictReader uses the owning module’s authorized reader so preview and execution share its policy.
 func (s *Store) WithProfileVerdictReader(read ProfileVerdictReader) *Store {
 	s.profileVerdictReader = read
 	return s
 }
 
+// WithProfileVerdictReader uses the owning module’s authorized reader so preview and execution share its policy.
 func (p *Provider) WithProfileVerdictReader(read ProfileVerdictReader) *Provider {
 	p.store.WithProfileVerdictReader(read)
 	return p
 }
 
+// WithProfileVerdictReader uses the owning module’s authorized reader so preview and execution share its policy.
 func (h Handlers) WithProfileVerdictReader(read ProfileVerdictReader) Handlers {
 	h.store.WithProfileVerdictReader(read)
 	return h
 }
 
+// MergeProfileField pairs source profile evidence with the survivor’s competing value.
 type MergeProfileField struct {
 	Source MergeProfileValue
 	Target *MergeProfileValue
@@ -101,7 +110,7 @@ func (s *Store) readMergeProfileValues(ctx context.Context, tx pgx.Tx, contact i
 	rows, err := tx.Query(ctx, `SELECT id, `+mergeProfileColumns+`, updated_at, version FROM contact_profile_field f
  WHERE contact_id = @contact AND (@source::uuid IS NULL OR EXISTS (SELECT 1 FROM contact_profile_field origin
  WHERE origin.contact_id = @source AND origin.field = f.field AND origin.value_key = f.value_key))
- ORDER BY field, value_key LIMIT 501`, pgx.StrictNamedArgs{"contact": contact, "source": source})
+ ORDER BY field, value_key LIMIT 501`, pgx.StrictNamedArgs{contactEntity: contact, mergeSourceKey: source})
 	if err != nil {
 		return nil, err
 	}
@@ -113,34 +122,8 @@ func (s *Store) readMergeProfileValues(ctx context.Context, tx pgx.Tx, contact i
 		return nil, apperrors.ErrInvalidArgument
 	}
 	for _, value := range values {
-		if raw, activity := strings.CutPrefix(value.SourceRef, "activity:"); activity {
-			sourceID, err := ids.Parse(raw)
-			if err != nil {
-				return nil, apperrors.ErrInvalidArgument
-			}
-			if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
-				return nil, err
-			}
-			if err := auth.EnsureActivityContentVisible(ctx, tx, sourceID); err != nil {
-				return nil, err
-			}
-		}
-		if err := previewFieldsVisible(ctx, "contact", value.Field); err != nil {
+		if err := mergeProfileValueVisible(ctx, tx, value); err != nil {
 			return nil, err
-		}
-		switch value.Field {
-		case "phone":
-			if err := previewFieldsVisible(ctx, "contact", "phones"); err != nil {
-				return nil, err
-			}
-		case "linkedin":
-			if err := previewFieldsVisible(ctx, "contact", "social"); err != nil {
-				return nil, err
-			}
-		case "first_name", "last_name":
-			if err := previewFieldsVisible(ctx, "contact", "full_name"); err != nil {
-				return nil, err
-			}
 		}
 	}
 	if len(values) == 0 {
@@ -150,4 +133,38 @@ func (s *Store) readMergeProfileValues(ctx context.Context, tx pgx.Tx, contact i
 		return nil, apperrors.ErrInvalidArgument
 	}
 	return s.profileVerdictReader(ctx, tx, contact, values)
+}
+
+func mergeProfileValueVisible(ctx context.Context, tx pgx.Tx, value MergeProfileAssertion) error {
+	if raw, activity := strings.CutPrefix(value.SourceRef, "activity:"); activity {
+		sourceID, err := ids.Parse(raw)
+		if err != nil {
+			return apperrors.ErrInvalidArgument
+		}
+		if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+			return err
+		}
+		if err := auth.EnsureActivityContentVisible(ctx, tx, sourceID); err != nil {
+			return err
+		}
+	}
+	if err := previewFieldsVisible(ctx, contactEntity, value.Field); err != nil {
+		return err
+	}
+	switch value.Field {
+	case fieldPhone:
+		if err := previewFieldsVisible(ctx, contactEntity, contactPhonesField); err != nil {
+			return err
+		}
+	case "linkedin":
+		if err := previewFieldsVisible(ctx, contactEntity, "social"); err != nil {
+			return err
+		}
+	case columnFirstName, columnLastName:
+		if err := previewFieldsVisible(ctx, contactEntity, contactNameColumn); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

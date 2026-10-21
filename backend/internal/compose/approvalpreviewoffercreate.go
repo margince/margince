@@ -29,7 +29,7 @@ func offerCreationRequest(approval crmcontracts.Approval) (ids.DealID, deals.Cre
 	path, pathOK := (*approval.ProposedChange)["path"].(string)
 	parent, prefix := strings.CutPrefix(path, "/v1/deals/")
 	parent, suffix := strings.CutSuffix(parent, "/offers")
-	if !opOK || operation != "createOffer" || !pathOK || !prefix || !suffix {
+	if !opOK || operation != operationCreateOffer || !pathOK || !prefix || !suffix {
 		return ids.DealID{}, deals.CreateOfferInput{}, apperrors.ErrInvalidArgument
 	}
 	id, err := ids.Parse(parent)
@@ -75,10 +75,10 @@ func (r approvalPreviewReader) offerCreationPreview(ctx context.Context, approva
 func (r approvalPreviewReader) offerCreationDetails(ctx context.Context, dealID ids.DealID, plan deals.OfferCreationPreview) ([]crmcontracts.ApprovalPreviewDetail, error) {
 	in := plan.Input
 	fields := map[string]any{
-		"deal_id": dealID, "buyer_company_id": in.BuyerCompanyID, "template_id": in.TemplateID,
-		"currency": in.Currency, "offer_status": "draft", "valid_until": in.ValidUntil,
-		"intro_text": in.IntroText, "terms_text": in.TermsText, "source": in.Source,
-		"net_minor": plan.Totals.NetMinor, "tax_minor": plan.Totals.TaxMinor, "gross_minor": plan.Totals.GrossMinor,
+		dealIDField: dealID, previewFieldBuyerCompanyID: in.BuyerCompanyID, previewFieldTemplateID: in.TemplateID,
+		dealTargetCurrency: in.Currency, "offer_status": previewOfferDraft, "valid_until": in.ValidUntil,
+		"intro_text": in.IntroText, "terms_text": in.TermsText, fieldSource: in.Source,
+		previewFieldNetMinor: plan.Totals.NetMinor, "tax_minor": plan.Totals.TaxMinor, previewFieldGrossMinor: plan.Totals.GrossMinor,
 		"arr_minor": plan.Recurring.ArrMinor, "net_tcv_minor": plan.Recurring.NetTcvMinor,
 	}
 	if err := creationFieldsVisible(ctx, "offer", map[string]any{"line_items": in.LineItems}); err != nil {
@@ -103,8 +103,8 @@ func (r approvalPreviewReader) offerCreationDetails(ctx context.Context, dealID 
 func (r approvalPreviewReader) offerCreationLineDetails(ctx context.Context, currency string, line deals.OfferCreationLine) ([]crmcontracts.ApprovalPreviewDetail, error) {
 	in := line.Input
 	fields := map[string]any{
-		"product_id": in.ProductID, "description": in.Description, "unit": in.Unit,
-		"quantity": json.Number(in.Quantity), "unit_price_minor": in.UnitPriceMinor, "currency": currency,
+		"product_id": in.ProductID, descriptionField: in.Description, previewFieldUnit: in.Unit,
+		"quantity": json.Number(in.Quantity), previewFieldUnitPriceMinor: in.UnitPriceMinor, dealTargetCurrency: currency,
 		"discount_pct": json.Number(*in.DiscountPct), "tax_rate": json.Number(*in.TaxRate),
 		"billing_model": in.BillingModel, "billing_interval_months": in.BillingIntervalMonths, "interval_count": in.IntervalCount,
 		"line_net_minor": line.Figures.NetMinor, "line_tax_minor": line.Figures.TaxMinor, "line_total_minor": line.Figures.TotalMinor,

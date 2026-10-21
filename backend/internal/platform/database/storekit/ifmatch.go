@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// EnsureReleasedVersion applies an approval pin at the native writer's version check.
 func EnsureReleasedVersion(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) error {
 	version, pinned := auth.ReleasedRecordVersion(ctx, table, id)
 	if !pinned {

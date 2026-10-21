@@ -15,9 +15,9 @@
  * anchor to derive from, which is the only case a human has to answer.
  */
 
-import type { components } from "../../api/schema";
-import type { SelectOption } from "../../design-system/select";
-import type { Translator } from "../../i18n";
+import type { components } from "../api/schema";
+import type { SelectOption } from "../design-system/select";
+import type { Translator } from "../i18n";
 
 export type CommunicationContext =
   components["schemas"]["CommunicationContext"];

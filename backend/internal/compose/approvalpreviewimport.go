@@ -16,7 +16,7 @@ import (
 
 func (r approvalPreviewReader) importPreview(ctx context.Context, approval crmcontracts.Approval, out *crmcontracts.ApprovalPreview) (*crmcontracts.ApprovalPreview, error) {
 	out.Version = 2
-	if approval.TargetEntityId == nil || approval.TargetEntityType == nil || *approval.TargetEntityType != "import_run" {
+	if approval.TargetEntityId == nil || approval.TargetEntityType == nil || *approval.TargetEntityType != string(recordTypeImportRun) {
 		return out, nil
 	}
 	run, err := (importHandlers{db: r.db}).stagedFor(ctx, *approval.TargetEntityId)
@@ -27,32 +27,17 @@ func (r approvalPreviewReader) importPreview(ctx context.Context, approval crmco
 		return nil, err
 	}
 	out.State = previewIncompleteState
-	if run.Mapping == nil || run.Report == nil || run.Report.ReviewPlan == nil || !run.Report.ReviewPlan.Complete {
+	if !completeImportReview(run) {
 		out.Conflicts = &[]crmcontracts.ApprovalPreviewConflict{{Kind: "import_scope_unavailable", BlocksApproval: true, Summary: "The complete row plan is unavailable. Review this import in Data import, split larger files or resolve overlapping rows, and run a new test before requesting approval."}}
 		return out, nil
 	}
 	if run.Report.ReviewPlan.Version != 1 || len(run.Report.ReviewPlan.Rows) > migration.ReviewRowLimit {
 		return out, nil
 	}
-	request, err := commercialRequest[struct {
-		RunID   ids.UUID `json:"run_id"`
-		Version *int     `json:"version"`
-	}](approval)
-	if err != nil || approval.ProposedChange == nil {
-		return out, nil
-	}
-	if _, rest := (*approval.ProposedChange)["operation"]; rest {
-		if !previewRouteMatches(*approval.ProposedChange, "commit_import", "import_run", ids.UUID(run.ID), "POST") {
-			return out, nil
+	if err := importApprovalRequest(approval, run); err != nil {
+		if errors.Is(err, apperrors.ErrVersionSkew) {
+			out.State = previewStaleState
 		}
-		request.RunID = ids.UUID(run.ID)
-	}
-	if request.RunID != ids.UUID(run.ID) {
-		return out, nil
-	}
-	if run.Status != migration.StatusAwaitingApproval || approval.TargetVersion == nil || *approval.TargetVersion != run.Version ||
-		request.Version != nil && *request.Version != run.Version {
-		out.State = previewStaleState
 		return out, nil
 	}
 	err = database.WithWorkspaceSnapshot(ctx, r.db.Pool(), func(ctx context.Context) error {
@@ -74,4 +59,32 @@ func (r approvalPreviewReader) importPreview(ctx context.Context, approval crmco
 		return nil, err
 	}
 	return out, nil
+}
+
+func importApprovalRequest(approval crmcontracts.Approval, run migration.Run) error {
+	request, err := commercialRequest[struct {
+		RunID   ids.UUID `json:"run_id"`
+		Version *int     `json:"version"`
+	}](approval)
+	if err != nil || approval.ProposedChange == nil {
+		return apperrors.ErrInvalidArgument
+	}
+	if _, rest := (*approval.ProposedChange)["operation"]; rest {
+		if !previewRouteMatches(*approval.ProposedChange, operationCommitImport, string(recordTypeImportRun), ids.UUID(run.ID), "POST") {
+			return apperrors.ErrInvalidArgument
+		}
+		request.RunID = ids.UUID(run.ID)
+	}
+	if request.RunID != ids.UUID(run.ID) {
+		return apperrors.ErrInvalidArgument
+	}
+	if run.Status != migration.StatusAwaitingApproval || approval.TargetVersion == nil || *approval.TargetVersion != run.Version ||
+		request.Version != nil && *request.Version != run.Version {
+		return apperrors.ErrVersionSkew
+	}
+	return nil
+}
+
+func completeImportReview(run migration.Run) bool {
+	return run.Mapping != nil && run.Report != nil && run.Report.ReviewPlan != nil && run.Report.ReviewPlan.Complete
 }

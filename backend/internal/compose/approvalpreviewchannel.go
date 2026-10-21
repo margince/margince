@@ -9,6 +9,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -19,25 +20,12 @@ type channelPreviewRequest struct {
 
 func (r approvalPreviewReader) channelPreview(ctx context.Context, approval crmcontracts.Approval, out *crmcontracts.ApprovalPreview) (*crmcontracts.ApprovalPreview, error) {
 	out.Version, out.State = 2, previewIncompleteState
-	request, err := commercialRequest[channelPreviewRequest](approval)
+	request, in, err := channelMessageRequest(approval)
 	if previewUnavailable(err) {
 		return out, nil
 	}
 	if err != nil {
 		return nil, err
-	}
-	in, err := activities.DecodeSendMessageRequest(request.SendMessageRequest)
-	if previewUnavailable(err) {
-		return out, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	if strings.TrimSpace(in.Body) == "" || approval.TargetEntityType == nil || *approval.TargetEntityType != "activity" || approval.TargetEntityId == nil {
-		return out, nil
-	}
-	if request.ActivityID != nil && *request.ActivityID != ids.UUID(*approval.TargetEntityId) {
-		return out, nil
 	}
 	anchorID := ids.From[ids.ActivityKind](ids.UUID(*approval.TargetEntityId))
 	reply, err := r.activities.PreviewChannelReply(ctx, anchorID)
@@ -80,8 +68,29 @@ func (r approvalPreviewReader) channelPreview(ctx context.Context, approval crmc
 	details = append(details, contextDetails...)
 	out.Details, out.Files, out.Effects = &details, &files, &[]string{"authorize_channel_reply"}
 	out.State = previewReadyState
-	if err := r.currentEvidence(ctx, approval, out); err != nil {
-		return nil, err
+	return out, r.currentEvidence(ctx, approval, out)
+}
+
+func channelMessageRequest(approval crmcontracts.Approval) (channelPreviewRequest, activities.SendMessageInput, error) {
+	request, err := commercialRequest[channelPreviewRequest](approval)
+	if previewUnavailable(err) {
+		return request, activities.SendMessageInput{}, apperrors.ErrInvalidArgument
 	}
-	return out, nil
+	if err != nil {
+		return request, activities.SendMessageInput{}, err
+	}
+	in, err := activities.DecodeSendMessageRequest(request.SendMessageRequest)
+	if previewUnavailable(err) {
+		return request, activities.SendMessageInput{}, apperrors.ErrInvalidArgument
+	}
+	if err != nil {
+		return request, activities.SendMessageInput{}, err
+	}
+	if strings.TrimSpace(in.Body) == "" || approval.TargetEntityType == nil || *approval.TargetEntityType != string(recordTypeActivity) || approval.TargetEntityId == nil {
+		return request, activities.SendMessageInput{}, apperrors.ErrInvalidArgument
+	}
+	if request.ActivityID != nil && *request.ActivityID != ids.UUID(*approval.TargetEntityId) {
+		return request, activities.SendMessageInput{}, apperrors.ErrInvalidArgument
+	}
+	return request, in, nil
 }

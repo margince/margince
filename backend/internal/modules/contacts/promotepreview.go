@@ -28,16 +28,16 @@ import (
 // still says `merge`, because the outcome is a fact about the lead. A caller
 // must never read an absent contact as `create`.
 func (s *Store) PreviewLeadPromotion(ctx context.Context, id ids.LeadID) (crmcontracts.PromoteLeadPreview, error) {
-	if err := auth.Require(ctx, "lead", principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, leadEntity, principal.ActionRead); err != nil {
 		return crmcontracts.PromoteLeadPreview{}, err
 	}
-	active, err := s.activeColumns(ctx, "contact")
+	active, err := s.activeColumns(ctx, contactEntity)
 	if err != nil {
 		return crmcontracts.PromoteLeadPreview{}, err
 	}
 	out := crmcontracts.PromoteLeadPreview{Outcome: crmcontracts.PromoteLeadPreviewOutcomePromoteLeadPreviewOutcomeCreate}
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureVisible(ctx, tx, "lead", id.UUID); err != nil {
+		if err := auth.EnsureVisible(ctx, tx, leadEntity, id.UUID); err != nil {
 			return err
 		}
 		// A decision read: the lead's core columns are what the ladder
@@ -78,11 +78,11 @@ func (s *Store) PreviewLeadPromotion(ctx context.Context, id ids.LeadID) (crmcon
 		// matched contact. A readable contact the caller may not change is
 		// withheld here exactly as promotion will refuse it, so the preview
 		// never promises a merge the act then declines.
-		grantErr := auth.Require(ctx, "contact", principal.ActionRead)
+		grantErr := auth.Require(ctx, contactEntity, principal.ActionRead)
 		if grantErr != nil && !errors.Is(grantErr, apperrors.ErrPermissionDenied) {
 			return grantErr
 		}
-		writable, err := auth.WritableBy(ctx, tx, "contact", match.ContactID.UUID)
+		writable, err := auth.WritableBy(ctx, tx, contactEntity, match.ContactID.UUID)
 		if err != nil {
 			return err
 		}

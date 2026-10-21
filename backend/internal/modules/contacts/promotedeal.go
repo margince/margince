@@ -76,7 +76,7 @@ type PromoteOutcome struct {
 // fails the whole promotion.
 func (s *Store) openQualifiedDeal(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, lead crmcontracts.Lead, contactID ids.ContactID, in *QualifyDealInput) (*ids.UUID, error) {
 	if in == nil {
-		return nil, nil
+		return nil, nil //nolint:nilnil // Deal creation is optional during lead promotion.
 	}
 	if s.dealOpener == nil {
 		return nil, &DealOpenerNotWiredError{}
@@ -135,7 +135,7 @@ type LeadDealPreviewer interface {
 
 func (s *Store) previewQualifiedDeal(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead, in *QualifyDealInput) (*QualifyDealInput, error) {
 	if in == nil {
-		return nil, nil
+		return nil, nil //nolint:nilnil // Deal creation is optional during lead promotion.
 	}
 	if err := requireRelationshipCreate(ctx, anchorDeal); err != nil {
 		return nil, err

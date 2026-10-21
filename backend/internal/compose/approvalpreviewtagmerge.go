@@ -24,12 +24,12 @@ func tagMergeRequest(approval crmcontracts.Approval) (tagMergePreviewRequest, er
 	if err != nil {
 		return request, err
 	}
-	if approval.TargetEntityId == nil || approval.TargetEntityType == nil || *approval.TargetEntityType != "tag" || approval.TargetVersion == nil || approval.ProposedChange == nil {
+	if approval.TargetEntityId == nil || approval.TargetEntityType == nil || *approval.TargetEntityType != string(recordTypeTag) || approval.TargetVersion == nil || approval.ProposedChange == nil {
 		return request, apperrors.ErrInvalidArgument
 	}
 	id := ids.UUID(*approval.TargetEntityId)
 	if _, rest := (*approval.ProposedChange)["operation"]; rest {
-		if !previewRouteMatches(*approval.ProposedChange, "merge_tags", "tag", id, "POST") {
+		if !previewRouteMatches(*approval.ProposedChange, operationMergeTags, string(recordTypeTag), id, "POST") {
 			return request, apperrors.ErrInvalidArgument
 		}
 		if !request.SourceID.IsZero() && request.SourceID != id {

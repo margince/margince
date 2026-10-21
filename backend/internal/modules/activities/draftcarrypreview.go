@@ -6,7 +6,9 @@ package activities
 import (
 	"context"
 	"errors"
+
 	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -14,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// PreviewDraftCarryTx exposes only the acting author's drafts and never discards lost grounding.
 func (s *Store) PreviewDraftCarryTx(ctx context.Context, tx pgx.Tx, kind string, source, target ids.UUID) (*crmcontracts.MailDraft, *crmcontracts.MailDraft, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, nil, err
@@ -32,7 +35,7 @@ func (s *Store) PreviewDraftCarryTx(ctx context.Context, tx pgx.Tx, kind string,
 		}
 	}
 	var private bool
-	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM mail_draft WHERE anchor_type=@kind AND anchor_id=@source AND author_id<>@author)`, pgx.StrictNamedArgs{"kind": kind, "source": source, "author": author}).Scan(&private); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM mail_draft WHERE anchor_type=@kind AND anchor_id=@source AND author_id<>@author)`, pgx.StrictNamedArgs{fieldKind: kind, ledgerSourceKey: source, "author": author}).Scan(&private); err != nil {
 		return nil, nil, err
 	}
 	if private {
@@ -51,10 +54,10 @@ func (s *Store) PreviewDraftCarryTx(ctx context.Context, tx pgx.Tx, kind string,
 
 func readCarriedDraft(ctx context.Context, tx pgx.Tx, kind string, anchor, author ids.UUID) (*crmcontracts.MailDraft, error) {
 	draft, err := scanMailDraft(tx.QueryRow(ctx, `SELECT `+mailDraftColumns+` FROM mail_draft
- WHERE anchor_type=@kind AND anchor_id=@anchor AND author_id=@author`, pgx.StrictNamedArgs{"kind": kind, "anchor": anchor, "author": author}))
+ WHERE anchor_type=@kind AND anchor_id=@anchor AND author_id=@author`, pgx.StrictNamedArgs{fieldKind: kind, "anchor": anchor, "author": author}))
 	if errors.Is(err, apperrors.ErrNotFound) {
-		return nil, nil
-	} //nolint:nilnil // No draft means no effect for this author.
+		return nil, nil //nolint:nilnil // No draft means no effect for this author.
+	}
 	if err != nil {
 		return nil, err
 	}

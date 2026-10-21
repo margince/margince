@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -17,6 +18,7 @@ const promotionExistingContactLink = `EXISTS (
 	SELECT 1 FROM activity_link b WHERE b.activity_id = a.activity_id
 	AND b.entity_type = 'contact' AND b.contact_id = @contact)`
 
+// LeadPromotionActivity preserves activity lineage when a lead becomes a contact.
 type LeadPromotionActivity struct {
 	ID               ids.UUID
 	AlreadyOnContact bool
@@ -25,7 +27,7 @@ type LeadPromotionActivity struct {
 func previewPromotionActivities(ctx context.Context, tx pgx.Tx, lead ids.LeadID, contact ids.ContactID) ([]LeadPromotionActivity, error) {
 	rows, err := tx.Query(ctx, `SELECT a.activity_id, `+promotionExistingContactLink+`
 		FROM activity_link a WHERE a.lead_id = @lead ORDER BY a.activity_id`,
-		pgx.NamedArgs{"lead": lead, "contact": contact})
+		pgx.NamedArgs{leadEntity: lead, contactEntity: contact})
 	if err != nil {
 		return nil, fmt.Errorf("read promotion activity links: %w", err)
 	}
@@ -50,7 +52,7 @@ func previewPromotionActivities(ctx context.Context, tx pgx.Tx, lead ids.LeadID,
 // Only moved links belong in lead.promoted; a duplicate already belonged to
 // the contact and must not trigger downstream work a second time.
 func carryLeadActivities(ctx context.Context, tx pgx.Tx, lead ids.LeadID, contact ids.ContactID) ([]ids.UUID, error) {
-	args := pgx.NamedArgs{"lead": lead, "contact": contact}
+	args := pgx.NamedArgs{leadEntity: lead, contactEntity: contact}
 	if _, err := tx.Exec(ctx, `DELETE FROM activity_link a
 		WHERE a.lead_id = @lead AND `+promotionExistingContactLink, args); err != nil {
 		return nil, fmt.Errorf("drop already-linked lead activities: %w", err)

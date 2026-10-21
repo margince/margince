@@ -11,11 +11,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
+// ConfirmationRequest keeps the question separate from the reason the action needs a human.
 type ConfirmationRequest struct {
 	Question string `json:"question"`
 	Reason   string `json:"reason,omitempty"`
 }
 
+// ReadConfirmationRequest admits the legacy note field without allowing two competing questions.
 func ReadConfirmationRequest(raw json.RawMessage) (ConfirmationRequest, error) {
 	var input struct {
 		ConfirmationRequest

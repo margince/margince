@@ -47,7 +47,7 @@ func TestDemotionApprovalDescribesTheContactItWillArchive(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			assertDemotionSubjects(t, e, ctx, leadID.UUID)
+			assertDemotionSubjects(ctx, t, e, leadID.UUID)
 			payload := fmt.Sprintf(`{"lead_id":%q,"reason":"Wrong prospect"}`, lead.Id)
 			if rest {
 				payload = `{"operation":"DemoteLead","body":{"reason":"Wrong prospect"}}`
@@ -64,7 +64,7 @@ func TestDemotionApprovalDescribesTheContactItWillArchive(t *testing.T) {
 			if _, err := svc.Stage(ctx, approvals.StageInput{Kind: "update_record", TargetType: "lead", TargetID: leadID.UUID, ProposedChange: []byte(`{"fields":{"full_name":"Changed"}}`), DiffHash: "hidden-archived-update"}); err != nil {
 				t.Fatal(err)
 			}
-			assertDemotionListed(t, e, ctx, svc, leadID.UUID, id)
+			assertDemotionListed(ctx, t, e, svc, leadID.UUID, id)
 			assertDemotionWithheld(t, e, svc, leadID.UUID, id, perms)
 			proposal, err := svc.GetWire(ctx, id)
 			if err != nil {
@@ -86,7 +86,7 @@ func TestDemotionApprovalDescribesTheContactItWillArchive(t *testing.T) {
 	}
 }
 
-func assertDemotionListed(t *testing.T, e *integration.Env, ctx context.Context, svc *approvals.Service, lead ids.UUID, id ids.ApprovalID) {
+func assertDemotionListed(ctx context.Context, t *testing.T, e *integration.Env, svc *approvals.Service, lead ids.UUID, id ids.ApprovalID) {
 	t.Helper()
 	for _, filter := range []approvals.ListInput{{}, {TargetType: new("lead"), TargetID: &lead}} {
 		rows, _, err := svc.ListWire(ctx, filter)
@@ -108,7 +108,7 @@ func assertDemotionListed(t *testing.T, e *integration.Env, ctx context.Context,
 	}
 }
 
-func assertDemotionSubjects(t *testing.T, e *integration.Env, ctx context.Context, lead ids.UUID) {
+func assertDemotionSubjects(ctx context.Context, t *testing.T, e *integration.Env, lead ids.UUID) {
 	t.Helper()
 	req, body := doorRequest(http.MethodPost, "/v1/leads/"+lead.String()+"/demote", lead, `{"reason":"Wrong prospect"}`)
 	call, err := demoteLeadCommand(agentPolicy{}, restCommandDeps{records: NewProviderFor(e.DB())}, req, body)

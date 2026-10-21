@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/integrations"
@@ -144,13 +145,13 @@ func providerMergeFixture(t *testing.T) (*Env, *integrations.Store, ids.UUID, id
 	if _, err := store.Connect(e.As(e.AdminUser, nil, permissions), integrations.ConnectInput{Provider: "surfe", APIKey: "synthetic-test-key", Config: &integrations.ConfigInput{Mode: "on_demand", Preset: "full", Categories: []string{"professional_email", "mobile"}}}); err != nil {
 		t.Fatal(err)
 	}
-	var people []ids.UUID
+	var contactIDs []ids.UUID
 	for range 2 {
-		person, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Merge Person", Source: "manual", Social: map[string]any{"linkedin": "https://www.linkedin.com/in/merge-person"}})
+		contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Merge Contact", Source: "manual", Social: map[string]any{"linkedin": "https://www.linkedin.com/in/merge-contact"}})
 		if err != nil {
 			t.Fatal(err)
 		}
-		people = append(people, ids.UUID(person.Id))
+		contactIDs = append(contactIDs, ids.UUID(contact.Id))
 	}
-	return e, store, people[0], people[1]
+	return e, store, contactIDs[0], contactIDs[1]
 }

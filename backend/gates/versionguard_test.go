@@ -14,7 +14,7 @@ package gates
 // changes gives a pin that re-checks a constant — three steps that all appear
 // to work while binding the human's approval to nothing.
 //
-// The version moves by DATABASE TRIGGER: set_updated_at_bump_version(), the one
+// Record versions move by DATABASE TRIGGER: set_updated_at_bump_version(), the one
 // house function that assigns version = OLD.version + 1, attached BEFORE UPDATE
 // per table. So the obligation is derived from the migrations, which are the
 // authority on what the database does, and not from any module's write shape —
@@ -43,8 +43,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// bumpFunction is the sole mechanism that moves a version column: the only
-// inline `version + 1` in the whole migration tree is this function's body.
+// Record versions advance at the database boundary, including bare updates.
 const bumpFunction = "set_updated_at_bump_version"
 
 // approvalsDir holds both halves of the derivation's Go side — the map and the
@@ -97,8 +96,13 @@ type triggerBody struct {
 	beforeUpdate bool
 }
 
+var sessionVersionPins = gatekit.Waive(map[string]string{
+	"import_run": "this pin names the reviewed input revision, not worker progress: migration.redraft increments version and clears the report when choices change; leases, checkpoints and step-only edits retain it. TestImportApprovalPinsReviewedChoicesAcrossNativeDraftEdits proves native draft edits invalidate redemption; TestImportApprovalReleasesTheDisplayedRowsThroughTheQueuedWriter proves progress preserves the approved plan",
+})
+
 func TestEveryVersionPinnedTableBumpsItsVersion(t *testing.T) {
 	t.Parallel()
+	defer sessionVersionPins.AssertAllMatched(t)
 	pinned := versionPinnedTables(t)
 	if len(pinned) < versionPinnedTableFloor {
 		t.Fatalf("resolved only %d keys of approvals.versionTables, expected at least %d: the AST derivation broke, not the subject — every key is a constant identifier declared elsewhere in package %s, so this gate is currently certifying nothing",
@@ -113,7 +117,7 @@ func TestEveryVersionPinnedTableBumpsItsVersion(t *testing.T) {
 	versioned := versionedTables(t) // reused from updateguard_test.go
 
 	for _, table := range sortedKeys(pinned) {
-		if bumped[table] {
+		if bumped[table] || sessionVersionPins.Waived(t, table) {
 			continue
 		}
 		column := "the table has no version column at all"

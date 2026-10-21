@@ -20,6 +20,7 @@ const (
 	mergeDomainPrimary        = `a.is_primary AND NOT EXISTS (SELECT 1 FROM company_domain b WHERE b.company_id = @target AND b.is_primary AND b.archived_at IS NULL)`
 )
 
+// MergeAddress pairs a moving address with its destination so collisions remain visible.
 type MergeAddress struct {
 	ID            ids.UUID
 	Kind          string
@@ -30,23 +31,23 @@ type MergeAddress struct {
 }
 
 func previewMergeAddresses(ctx context.Context, tx pgx.Tx, kind string, source, target ids.UUID) ([]MergeAddress, error) {
-	fields := []string{"email", "emails", "phone", "phones"}
-	if kind == "company" {
+	fields := []string{fieldEmail, contactEmailsField, fieldPhone, contactPhonesField}
+	if kind == companyEntity {
 		fields = []string{"domains"}
 	}
 	if err := previewFieldsVisible(ctx, kind, fields...); err != nil {
 		return nil, err
 	}
 	queries := []struct{ kind, sql string }{
-		{"email", `SELECT a.id, a.email, a.email_type, a.is_primary, ` + mergeEmailPrimary + ` FROM contact_email a WHERE ` + mergeContactAddressSource + ` ORDER BY a.id LIMIT 501`},
-		{"phone", `SELECT a.id, a.phone, a.phone_type, a.is_primary, ` + mergePhonePrimary + ` FROM contact_phone a WHERE ` + mergeContactAddressSource + ` ORDER BY a.id LIMIT 501`},
+		{fieldEmail, `SELECT a.id, a.email, a.email_type, a.is_primary, ` + mergeEmailPrimary + ` FROM contact_email a WHERE ` + mergeContactAddressSource + ` ORDER BY a.id LIMIT 501`},
+		{fieldPhone, `SELECT a.id, a.phone, a.phone_type, a.is_primary, ` + mergePhonePrimary + ` FROM contact_phone a WHERE ` + mergeContactAddressSource + ` ORDER BY a.id LIMIT 501`},
 	}
-	if kind == "company" {
-		queries = []struct{ kind, sql string }{{"domain", `SELECT a.id, a.domain, '', a.is_primary, ` + mergeDomainPrimary + ` FROM company_domain a WHERE ` + mergeCompanyDomainSource + ` ORDER BY a.id LIMIT 501`}}
+	if kind == companyEntity {
+		queries = []struct{ kind, sql string }{{addressKindDomain, `SELECT a.id, a.domain, '', a.is_primary, ` + mergeDomainPrimary + ` FROM company_domain a WHERE ` + mergeCompanyDomainSource + ` ORDER BY a.id LIMIT 501`}}
 	}
 	var out []MergeAddress
 	for _, query := range queries {
-		rows, err := tx.Query(ctx, query.sql, pgx.StrictNamedArgs{"source": source, "target": target})
+		rows, err := tx.Query(ctx, query.sql, pgx.StrictNamedArgs{mergeSourceKey: source, mergeTargetKey: target})
 		if err != nil {
 			return nil, err
 		}

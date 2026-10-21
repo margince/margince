@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -28,7 +29,7 @@ func admitProjectCreation(ctx context.Context, tx pgx.Tx, in CreateProjectInput,
 	return in, nil
 }
 
-// The generated key is allocated by the writer, never reserved by a preview.
+// PreviewProjectCreationForActor leaves key allocation to the writer rather than reserving it in review.
 func (s *Store) PreviewProjectCreationForActor(ctx context.Context, in CreateProjectInput, creator principal.Principal) (CreateProjectInput, error) {
 	if err := auth.Require(ctx, projectObject, principal.ActionCreate); err != nil {
 		return CreateProjectInput{}, err

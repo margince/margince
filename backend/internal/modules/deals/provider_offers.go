@@ -144,6 +144,7 @@ func (p *Provider) RemoveOfferLine(ctx context.Context, offerID, lineID ids.UUID
 	return p.store.RemoveOfferLineItem(ctx, ids.From[ids.OfferKind](offerID), lineID)
 }
 
+// OfferCreationFromFields requires the parent deal before applying the shared offer request mapper.
 func OfferCreationFromFields(raw json.RawMessage, source string) (ids.DealID, CreateOfferInput, error) {
 	var fields map[string]json.RawMessage
 	if err := json.Unmarshal(raw, &fields); err != nil {

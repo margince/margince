@@ -42,7 +42,7 @@ func PrepareBookingConsent(ctx context.Context, in crmcontracts.CaptureConsent, 
 func prepareBookingMarketing(ctx context.Context, in crmcontracts.CaptureConsent, tickedFrom string, capturer ConsentCapturer) (*BookingMarketing, error) {
 	m := in.Marketing
 	if m == nil {
-		return nil, nil
+		return nil, nil //nolint:nilnil // Marketing consent is optional for the booking.
 	}
 	if strings.TrimSpace(m.PolicyVersion) == "" {
 		return nil, httperr.Validation("consent.marketing.policy_version", codeRequired, "the marketing wording version shown to the subject is required")

@@ -69,10 +69,10 @@ func (r approvalPreviewReader) importActivityDetails(ctx, execCtx context.Contex
 		in.Author.AuthorID = owner
 	}
 	fields := map[string]any{
-		"kind": in.Kind, "subject": in.Subject, "body": in.Body, "occurred_at": in.OccurredAt,
-		"direction": in.Direction, "duration_seconds": in.DurationSeconds, "meeting_status": in.MeetingStatus,
-		"source": in.Source, "source_system": in.SourceSystem,
-		"source_author_id": in.Author.AuthorID, "source_author_name": in.Author.AuthorName,
+		previewFieldKind: in.Kind, "subject": in.Subject, activityTargetBody: in.Body, "occurred_at": in.OccurredAt,
+		"direction": in.Direction, "duration_seconds": in.DurationSeconds, activityTargetMeetingStatus: in.MeetingStatus,
+		fieldSource: in.Source, previewFieldSourceSystem: in.SourceSystem,
+		previewFieldSourceAuthorID: in.Author.AuthorID, previewFieldSourceAuthorName: in.Author.AuthorName,
 	}
 	details, err := r.creationFieldDetails(ctx, "activity", fields)
 	if err != nil {
@@ -100,7 +100,7 @@ func (r approvalPreviewReader) importDealDetails(ctx context.Context, writer *cs
 	}
 	effects := []string{"create_deal_record"}
 	if terminal != nil {
-		fields := map[string]any{"closed_at": terminal.ClosedAt, "lost_reason": terminal.LostReason}
+		fields := map[string]any{previewFieldClosedAt: terminal.ClosedAt, "lost_reason": terminal.LostReason}
 		choice, problem := writer.dealStages.resolve(textFields(row.Fields)[dealTargetPipeline], textFields(row.Fields)[dealTargetStage])
 		if problem == nil && choice.semantic == crmcontracts.StageSemanticWon {
 			fields["won_without_contract_reason"] = importedWinReason

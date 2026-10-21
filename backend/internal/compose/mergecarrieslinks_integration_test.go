@@ -362,8 +362,10 @@ func TestAMergeCarriesQualifyingEventsWithoutDoublingOne(t *testing.T) {
 		t.Fatalf("recording the hand-written event: %v", err)
 	}
 	makeInquiry := func(subject string) ids.UUID {
-		activity, _, err := c.e.Activities.LogActivity(c.admin, activities.LogActivityInput{Kind: "note", Subject: &subject, Source: "manual",
-			Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: retired.UUID}}})
+		activity, _, err := c.e.Activities.LogActivity(c.admin, activities.LogActivityInput{
+			Kind: "note", Subject: &subject, Source: "manual",
+			Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: retired.UUID}},
+		})
 		if err != nil {
 			t.Fatal(err)
 		}

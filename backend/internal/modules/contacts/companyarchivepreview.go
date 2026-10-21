@@ -5,7 +5,9 @@ package contacts
 
 import (
 	"context"
+
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -24,22 +26,23 @@ func companyArchiveAllowed(ctx context.Context, tx pgx.Tx, id ids.CompanyID) err
 	return refuseIfSoleCompanyOnALiveProject(ctx, tx, id)
 }
 
+// PreviewCompanyArchive resolves authorized effects without applying the proposed change.
 func (s *Store) PreviewCompanyArchive(ctx context.Context, id ids.CompanyID, version *int64) (storekit.ArchiveScope, error) {
 	var out storekit.ArchiveScope
-	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, companyEntity, principal.ActionRead); err != nil {
 		return out, err
 	}
-	if err := auth.Require(ctx, "company", principal.ActionDelete); err != nil {
+	if err := auth.Require(ctx, companyEntity, principal.ActionDelete); err != nil {
 		return out, err
 	}
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureWritableLive(ctx, tx, "company", id.UUID); err != nil {
+		if err := auth.EnsureWritableLive(ctx, tx, companyEntity, id.UUID); err != nil {
 			return err
 		}
-		if err := previewFieldsVisible(ctx, "company", "domains", "relationship_types"); err != nil {
+		if err := previewFieldsVisible(ctx, companyEntity, "domains", "relationship_types"); err != nil {
 			return err
 		}
-		if err := storekit.EnsureIfMatch(ctx, tx, "company", id.UUID, version); err != nil {
+		if err := storekit.EnsureIfMatch(ctx, tx, companyEntity, id.UUID, version); err != nil {
 			return err
 		}
 		if err := companyArchiveAllowed(ctx, tx, id); err != nil {

@@ -11,8 +11,8 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"

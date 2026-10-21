@@ -9,12 +9,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// ReleasedRecordPin binds approval release to one reviewed record version.
 type ReleasedRecordPin struct {
 	EntityType string
 	EntityID   ids.UUID
 	Version    int64
 }
 
+// ReleasedRecordPins keeps target and co-target versions together across redemption.
 type ReleasedRecordPins struct {
 	Target   *ReleasedRecordPin
 	CoTarget *ReleasedRecordPin
@@ -22,7 +24,7 @@ type ReleasedRecordPins struct {
 
 type releasedRecordPinsKey struct{}
 
-// Pins cross the redemption transaction so each native writer can check them under its row locks.
+// WithReleasedRecordPins carries copied pins to native writers so they can check under their row locks.
 func WithReleasedRecordPins(ctx context.Context, pins ReleasedRecordPins) context.Context {
 	if pins.Target != nil {
 		pin := *pins.Target
@@ -35,6 +37,7 @@ func WithReleasedRecordPins(ctx context.Context, pins ReleasedRecordPins) contex
 	return context.WithValue(ctx, releasedRecordPinsKey{}, pins)
 }
 
+// ReleasedRecordVersion matches both kind and ID so one pin cannot authorize another record.
 func ReleasedRecordVersion(ctx context.Context, entityType string, entityID ids.UUID) (int64, bool) {
 	pins, ok := ctx.Value(releasedRecordPinsKey{}).(ReleasedRecordPins)
 	if !ok {

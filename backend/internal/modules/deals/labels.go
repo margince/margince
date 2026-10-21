@@ -80,6 +80,7 @@ func (s *Store) ProductLabels(ctx context.Context, want []ids.UUID) (map[ids.UUI
 	return s.catalogLabels(ctx, "product", "product", want)
 }
 
+// OfferTemplateLabels uses the same catalog grant as a template read.
 func (s *Store) OfferTemplateLabels(ctx context.Context, want []ids.UUID) (map[ids.UUID]string, error) {
 	return s.catalogLabels(ctx, "offer_template", "offer_template", want)
 }

@@ -8,7 +8,11 @@ package compose
 import (
 	"errors"
 	"fmt"
+	"maps"
+	"testing"
+
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -17,8 +21,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"maps"
-	"testing"
 )
 
 func TestCompanyArchivePreviewNamesItsRetiredScope(t *testing.T) {

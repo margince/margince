@@ -8,6 +8,7 @@ import (
 	"slices"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -15,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// RelinkParticipantChange distinguishes a moved participant from one already present on the target.
 type RelinkParticipantChange struct {
 	ID            ids.UUID
 	ContactID     ids.UUID
@@ -76,6 +78,7 @@ func previewRelinkParticipants(ctx context.Context, tx pgx.Tx, id ids.ActivityID
 	return changes, nil
 }
 
+// EnsureParticipantRosterVisibleTx keeps BCC membership behind the sender-seat check.
 func EnsureParticipantRosterVisibleTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, hasBCC bool) error {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return err

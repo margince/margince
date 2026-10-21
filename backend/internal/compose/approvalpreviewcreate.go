@@ -29,21 +29,21 @@ func creationActor(approval crmcontracts.Approval) (principal.Principal, error) 
 	}
 	actor := principal.Principal{ID: approval.ProposedBy}
 	switch kind {
-	case "human":
+	case previewActorHuman:
 		id, err := ids.Parse(key)
 		if err != nil || id.IsZero() {
 			return actor, apperrors.ErrInvalidArgument
 		}
 		actor.Type, actor.UserID = principal.PrincipalHuman, id
-	case "agent":
+	case previewActorAgent:
 		if approval.OnBehalfOf == nil || ids.UUID(*approval.OnBehalfOf).IsZero() {
 			return actor, apperrors.ErrInvalidArgument
 		}
 		actor.Type, actor.UserID = principal.PrincipalAgent, ids.UUID(*approval.OnBehalfOf)
 		actor.OnBehalfOf = actor.UserID
-	case "system":
+	case systemActor:
 		actor.Type = principal.PrincipalSystem
-	case "connector":
+	case previewActorConnector:
 		actor.Type = principal.PrincipalConnector
 	default:
 		return actor, apperrors.ErrInvalidArgument
@@ -78,7 +78,7 @@ func creationRequest[T any](approval crmcontracts.Approval, recordType string) (
 }
 
 func leadCreationRequest(approval crmcontracts.Approval) (contacts.CreateLeadInput, error) {
-	req, tool, err := creationRequest[crmcontracts.CreateLeadRequest](approval, "lead")
+	req, tool, err := creationRequest[crmcontracts.CreateLeadRequest](approval, string(recordTypeLead))
 	if err != nil {
 		return contacts.CreateLeadInput{}, err
 	}
@@ -90,27 +90,28 @@ func leadCreationRequest(approval crmcontracts.Approval) (contacts.CreateLeadInp
 
 func (r approvalPreviewReader) creationPreview(ctx context.Context, approval crmcontracts.Approval, out *crmcontracts.ApprovalPreview) (*crmcontracts.ApprovalPreview, error) {
 	out.Version, out.State = 2, previewIncompleteState
-	if approval.TargetEntityType != nil && *approval.TargetEntityType == "offer" {
-		return r.offerCreationPreview(ctx, approval, out)
+	if approval.TargetEntityType != nil {
+		switch *approval.TargetEntityType {
+		case string(recordTypeOffer):
+			return r.offerCreationPreview(ctx, approval, out)
+		case string(recordTypeOfferTemplate):
+			return r.templateCreationPreview(ctx, approval, out)
+		case string(recordTypeProduct):
+			return r.productCreationPreview(ctx, approval, out)
+		case string(recordTypeProject):
+			return r.projectCreationPreview(ctx, approval, out)
+		case string(recordTypeDeal):
+			return r.dealCreationPreview(ctx, approval, out)
+		case string(recordTypeContact):
+			return r.contactCreationPreview(ctx, approval, out)
+		case string(recordTypeCompany):
+			return r.companyCreationPreview(ctx, approval, out)
+		}
 	}
-	if approval.TargetEntityType != nil && *approval.TargetEntityType == "offer_template" {
-		return r.templateCreationPreview(ctx, approval, out)
-	}
-	if approval.TargetEntityType != nil && *approval.TargetEntityType == "product" {
-		return r.productCreationPreview(ctx, approval, out)
-	}
-	if approval.TargetEntityType != nil && *approval.TargetEntityType == "project" {
-		return r.projectCreationPreview(ctx, approval, out)
-	}
-	if approval.TargetEntityType != nil && *approval.TargetEntityType == "deal" {
-		return r.dealCreationPreview(ctx, approval, out)
-	}
-	if approval.TargetEntityType != nil && *approval.TargetEntityType == "contact" {
-		return r.contactCreationPreview(ctx, approval, out)
-	}
-	if approval.TargetEntityType != nil && *approval.TargetEntityType == "company" {
-		return r.companyCreationPreview(ctx, approval, out)
-	}
+	return r.leadCreationPreview(ctx, approval, out)
+}
+
+func (r approvalPreviewReader) leadCreationPreview(ctx context.Context, approval crmcontracts.Approval, out *crmcontracts.ApprovalPreview) (*crmcontracts.ApprovalPreview, error) {
 	in, err := leadCreationRequest(approval)
 	if previewUnavailable(err) {
 		return out, nil
@@ -118,30 +119,14 @@ func (r approvalPreviewReader) creationPreview(ctx context.Context, approval crm
 	if err != nil {
 		return nil, err
 	}
-	creator, err := r.creationAuthority(ctx, approval)
-	if previewUnavailable(err) {
-		return out, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	store := contacts.NewStore(r.db).WithFieldCatalog(customfields.NewService(r.db.Pool(), nil))
-	plan, err := store.PreviewLeadCreationForActor(ctx, in, creator)
-	if previewUnavailable(err) {
-		return out, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	details, effects, err := r.leadCreationDetails(ctx, plan)
-	if previewUnavailable(err) {
-		return out, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	out.Details, out.Effects, out.State = &details, &effects, previewReadyState
-	return out, r.currentEvidence(ctx, approval, out)
+	return r.creationPreviewDetails(ctx, approval, out, func(creator principal.Principal) ([]crmcontracts.ApprovalPreviewDetail, []string, error) {
+		store := contacts.NewStore(r.db).WithFieldCatalog(customfields.NewService(r.db.Pool(), nil))
+		plan, err := store.PreviewLeadCreationForActor(ctx, in, creator)
+		if err != nil {
+			return nil, nil, err
+		}
+		return r.leadCreationDetails(ctx, plan)
+	})
 }
 
 func (r approvalPreviewReader) leadCreationDetails(ctx context.Context, plan contacts.LeadCreationPreview) ([]crmcontracts.ApprovalPreviewDetail, []string, error) {
@@ -151,14 +136,14 @@ func (r approvalPreviewReader) leadCreationDetails(ctx context.Context, plan con
 	}
 	in := plan.Input
 	fields := map[string]any{
-		"full_name": in.FullName, "email": in.Email, "phone": in.Phone, "title": in.Title,
-		"company_name": in.CompanyName, "candidate_company_key": in.CandidateCompanyKey, "linkedin_url": in.LinkedInURL,
-		"status": in.Status, "owner_id": in.OwnerID, "project_id": in.ProjectID, "contact_id": in.FromContactID,
-		"source_system": in.SourceSystem, "source_id": in.SourceID, "source": in.Source, "score": plan.Score,
-		"source_author_name": in.Author.AuthorName, "source_author_id": in.Author.AuthorID,
+		fieldFullName: in.FullName, fieldEmail: in.Email, "phone": in.Phone, "title": in.Title,
+		companyNameField: in.CompanyName, "candidate_company_key": in.CandidateCompanyKey, "linkedin_url": in.LinkedInURL,
+		previewFieldStatus: in.Status, bulkParamOwner: in.OwnerID, "project_id": in.ProjectID, companionContactField: in.FromContactID,
+		previewFieldSourceSystem: in.SourceSystem, "source_id": in.SourceID, fieldSource: in.Source, "score": plan.Score,
+		previewFieldSourceAuthorName: in.Author.AuthorName, previewFieldSourceAuthorID: in.Author.AuthorID,
 	}
 	maps.Copy(fields, plan.CustomFields)
-	details, err := r.creationFieldDetails(ctx, "lead", fields)
+	details, err := r.creationFieldDetails(ctx, string(recordTypeLead), fields)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -168,7 +153,7 @@ func (r approvalPreviewReader) leadCreationDetails(ctx context.Context, plan con
 		if err != nil {
 			return nil, nil, err
 		}
-		details = append(details, crmcontracts.ApprovalPreviewDetail{Field: "creation_duplicate", Value: value})
+		details = append(details, crmcontracts.ApprovalPreviewDetail{Field: previewCreationDuplicate, Value: value})
 		effects = append(effects, "queue_duplicate_review")
 	}
 	return details, effects, nil
@@ -194,18 +179,10 @@ func (r approvalPreviewReader) creationFieldDetails(ctx context.Context, recordT
 	var details []crmcontracts.ApprovalPreviewDetail
 	for _, field := range keys {
 		raw := rawFields[field]
-		if string(raw) == "null" && field != "owner_id" {
+		if string(raw) == jsonNull && field != bulkParamOwner {
 			continue
 		}
-		valueField := ""
-		switch field {
-		case "deal_id", "buyer_company_id", "template_id", "product_id", "valid_until", "owner_id", "project_id", "contact_id", "company_id", "parent_company_id", "partner_company_id", "pipeline_id", "stage_id", "expected_close_date", "started_at", "target_end_date", "lifecycle":
-			valueField = field
-		case "source_author_id":
-			valueField = "user_id"
-		case "converted_from_lead_id":
-			valueField = "lead_id"
-		}
+		valueField := creationValueField(field)
 		value, err := r.value(ctx, valueField, raw)
 		if err != nil {
 			return nil, err
@@ -217,7 +194,7 @@ func (r approvalPreviewReader) creationFieldDetails(ctx context.Context, recordT
 			value.Kind = previewValueEmpty
 		}
 		displayField := field
-		if recordType == "lead" && field == "status" {
+		if recordType == string(recordTypeLead) && field == previewFieldStatus {
 			displayField = "lead_status"
 		}
 		details = append(details, crmcontracts.ApprovalPreviewDetail{Field: displayField, Value: value})
@@ -274,4 +251,36 @@ func creationAddressFields(address *crmcontracts.Address) map[string]any {
 		return map[string]any{}
 	}
 	return map[string]any{"address_line1": address.Line1, "address_line2": address.Line2, "address_city": address.City, "address_region": address.Region, "address_postal_code": address.PostalCode, "address_country": address.Country}
+}
+
+func creationValueField(field string) string {
+	valueField := ""
+	switch field {
+	case dealIDField, previewFieldBuyerCompanyID, previewFieldTemplateID, "product_id", "valid_until", bulkParamOwner, "project_id", companionContactField, refColCompany, refColParentCompany, refColPartnerCompany, fieldPipelineID, fieldStageID, "expected_close_date", previewFieldStartedAt, "target_end_date", "lifecycle":
+		valueField = field
+	case previewFieldSourceAuthorID:
+		valueField = "user_id"
+	case "converted_from_lead_id":
+		valueField = "lead_id"
+	}
+	return valueField
+}
+
+func (r approvalPreviewReader) creationPreviewDetails(ctx context.Context, approval crmcontracts.Approval, out *crmcontracts.ApprovalPreview, build func(principal.Principal) ([]crmcontracts.ApprovalPreviewDetail, []string, error)) (*crmcontracts.ApprovalPreview, error) {
+	creator, err := r.creationAuthority(ctx, approval)
+	if previewUnavailable(err) {
+		return out, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	details, effects, err := build(creator)
+	if previewUnavailable(err) {
+		return out, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	out.Details, out.Effects, out.State = &details, &effects, previewReadyState
+	return out, r.currentEvidence(ctx, approval, out)
 }

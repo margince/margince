@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/projects"
@@ -28,15 +29,15 @@ func TestContactMergeKeepsStakeholdersOnDifferentProjects(t *testing.T) {
 	source := ids.From[ids.ContactKind](e.SeedContact(t, "Source stakeholder", &e.AdminUser))
 	target := ids.From[ids.ContactKind](e.SeedContact(t, "Surviving stakeholder", &e.AdminUser))
 	projectIDs := []ids.UUID{}
-	for i, people := range [][]ids.ContactID{{source}, {target}, {source, target}} {
+	for i, contactIDs := range [][]ids.ContactID{{source}, {target}, {source, target}} {
 		project, err := e.Projects.CreateProject(ctx, projects.CreateProjectInput{Name: fmt.Sprintf("Project %d", i), CompanyID: ids.From[ids.CompanyKind](company), Source: "manual"})
 		if err != nil {
 			t.Fatal(err)
 		}
 		projectID := ids.From[ids.ProjectKind](ids.UUID(project.Id))
 		projectIDs = append(projectIDs, projectID.UUID)
-		for _, person := range people {
-			if _, err := e.Contacts.SetProjectStakeholder(ctx, contacts.SetProjectStakeholderInput{ProjectID: projectID, ContactID: person, Role: "sponsor"}); err != nil {
+		for _, contact := range contactIDs {
+			if _, err := e.Contacts.SetProjectStakeholder(ctx, contacts.SetProjectStakeholderInput{ProjectID: projectID, ContactID: contact, Role: "sponsor"}); err != nil {
 				t.Fatal(err)
 			}
 		}

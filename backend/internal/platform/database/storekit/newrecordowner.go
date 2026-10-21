@@ -27,7 +27,7 @@ func NewRecordOwner(ctx context.Context, tx pgx.Tx, owner *ids.UserID) (*ids.Use
 	return NewRecordOwnerWithDefault(ctx, tx, owner, OwnerOrActor(ctx))
 }
 
-// The supplied default carries identity only; named assignments use caller authority.
+// NewRecordOwnerWithDefault takes identity from the fallback but checks named assignments as the caller.
 func NewRecordOwnerWithDefault(ctx context.Context, tx pgx.Tx, owner, fallback *ids.UserID) (*ids.UserID, error) {
 	if owner == nil {
 		return fallback, nil

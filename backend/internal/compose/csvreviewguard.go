@@ -75,22 +75,26 @@ func (w *csvWriters) lockReviewedTarget(ctx context.Context, row migration.Row) 
 	var table string
 	switch w.object {
 	case migration.ObjectCompany:
-		table = "company"
+		table = string(recordTypeCompany)
 	case migration.ObjectContact:
-		table = "contact"
+		table = string(recordTypeContact)
 	case migration.ObjectLead:
-		table = "lead"
+		table = string(recordTypeLead)
 	case migration.ObjectDeal:
-		table = "deal"
+		table = string(recordTypeDeal)
 	case migration.ObjectActivity:
-		table = "activity"
+		table = string(recordTypeActivity)
 	default:
 		return false, apperrors.ErrVersionSkew
 	}
 	// The ambient row transaction also holds tag and relationship writes.
 	replayed := false
 	err = database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
-		if _, err := storekit.LockRow(ctx, tx, table, id, storekit.LiveOnly); err != nil {
+		var locked ids.UUID
+		if err := tx.QueryRow(ctx, storekit.SQLf(`SELECT id FROM %s WHERE id = $1 AND archived_at IS NULL FOR UPDATE`, table), id).Scan(&locked); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return apperrors.ErrNotFound
+			}
 			return err
 		}
 		err := storekit.EnsureIfMatch(ctx, tx, table, id, &expected.TargetVersion)
@@ -116,7 +120,7 @@ func (w *csvWriters) reviewedRowWasApplied(ctx context.Context, tx pgx.Tx, row m
 			SELECT batch_id = @run_id FROM audit_log
 			WHERE entity_type = @object AND entity_id = @id
 			ORDER BY occurred_at DESC, id DESC LIMIT 1
-		), false)`, pgx.StrictNamedArgs{"run_id": w.runID, "object": w.object, "id": id}).Scan(&ownLastWrite)
+		), false)`, pgx.StrictNamedArgs{importRunArgument: w.runID, objectSourceField: w.object, "id": id}).Scan(&ownLastWrite)
 	if err != nil || !ownLastWrite {
 		return false, err
 	}
@@ -170,24 +174,10 @@ func (w *csvWriters) reviewSource(ctx context.Context, row migration.Row) error 
 	if !bytes.Equal(current, reviewed) || row.OwnerExternalID != expected.OwnerExternalID || !row.LastSyncedAt.Equal(expected.LastSyncedAt) {
 		return apperrors.ErrVersionSkew
 	}
-	if expected.Outcome != "skip" {
-		typed, err := w.reviewCheckedCells(ctx, row)
-		if err != nil {
-			return err
-		}
-		current, err := json.Marshal(typed)
-		if err != nil {
-			return err
-		}
-		reviewed, err := json.Marshal(expected.CheckedValues)
-		if err != nil {
-			return err
-		}
-		if !bytes.Equal(current, reviewed) {
-			return apperrors.ErrVersionSkew
-		}
+	if expected.Outcome != importRowSkip {
+		return w.reviewCheckedSource(ctx, row, expected)
 	}
-	if expected.Outcome == "skip" {
+	if expected.Outcome == importRowSkip {
 		outcome, err := w.Predict(ctx, row)
 		if err != nil {
 			return err
@@ -220,27 +210,8 @@ func (b *bundleWriters) validateReviewSource(ctx context.Context, source migrati
 		if part.reviewRows == nil {
 			continue
 		}
-		seen := map[string]bool{}
-		for offset := 0; ; offset += importPredictPage {
-			rows, err := source.Rows(ctx, object, offset, importPredictPage)
-			if err != nil {
-				return err
-			}
-			for _, row := range rows {
-				if seen[row.ExternalID] {
-					return apperrors.ErrVersionSkew
-				}
-				seen[row.ExternalID] = true
-				if err := part.reviewSource(ctx, row); err != nil {
-					return err
-				}
-			}
-			if len(rows) < importPredictPage {
-				break
-			}
-		}
-		if len(seen) != len(part.reviewRows) {
-			return apperrors.ErrVersionSkew
+		if err := part.validateReviewRows(ctx, source, object); err != nil {
+			return err
 		}
 	}
 	associations, err := source.Associations(ctx)
@@ -327,4 +298,49 @@ func (w *csvWriters) validateReviewedDisposition(ctx context.Context, row migrat
 		}
 	}
 	return apperrors.ErrVersionSkew
+}
+
+func (w *csvWriters) validateReviewRows(ctx context.Context, source migration.Source, object string) error {
+	seen := map[string]bool{}
+	for offset := 0; ; offset += importPredictPage {
+		rows, err := source.Rows(ctx, object, offset, importPredictPage)
+		if err != nil {
+			return err
+		}
+		for _, row := range rows {
+			if seen[row.ExternalID] {
+				return apperrors.ErrVersionSkew
+			}
+			seen[row.ExternalID] = true
+			if err := w.reviewSource(ctx, row); err != nil {
+				return err
+			}
+		}
+		if len(rows) < importPredictPage {
+			break
+		}
+	}
+	if len(seen) != len(w.reviewRows) {
+		return apperrors.ErrVersionSkew
+	}
+	return nil
+}
+
+func (w *csvWriters) reviewCheckedSource(ctx context.Context, row migration.Row, expected migration.ReviewRow) error {
+	typed, err := w.reviewCheckedCells(ctx, row)
+	if err != nil {
+		return err
+	}
+	current, err := json.Marshal(typed)
+	if err != nil {
+		return err
+	}
+	reviewed, err := json.Marshal(expected.CheckedValues)
+	if err != nil {
+		return err
+	}
+	if !bytes.Equal(current, reviewed) {
+		return apperrors.ErrVersionSkew
+	}
+	return nil
 }

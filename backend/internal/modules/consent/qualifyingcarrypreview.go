@@ -21,7 +21,7 @@ const qualifyingCarryDuplicate = `a.source_entity_id IS NOT NULL AND EXISTS (
 
 func previewCarriedQualifyingEvents(ctx context.Context, tx pgx.Tx, source, target ids.ContactID) ([]commsauthz.CarriedQualifyingEvent, error) {
 	rows, err := tx.Query(ctx, `SELECT a.id,a.kind,a.source_entity_type,a.source_entity_id,a.note,a.occurred_at,
- `+qualifyingCarryDuplicate+` FROM consent_qualifying_event a WHERE a.contact_id=@source ORDER BY a.id LIMIT 501`, pgx.NamedArgs{"source": source, "target": target})
+ `+qualifyingCarryDuplicate+` FROM consent_qualifying_event a WHERE a.contact_id=@source ORDER BY a.id LIMIT 501`, pgx.NamedArgs{carrySourceArg: source, carryTargetArg: target})
 	if err != nil {
 		return nil, err
 	}
@@ -51,11 +51,11 @@ func previewCarriedQualifyingEvents(ctx context.Context, tx pgx.Tx, source, targ
 }
 
 func authorizeCarryEvidence(ctx context.Context, tx pgx.Tx, kind string, id ids.UUID) error {
-	if kind != "activity" && kind != "deal" {
+	if kind != entityActivity && kind != "deal" {
 		return apperrors.ErrInvalidArgument
 	}
-	if kind == "activity" {
-		if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+	if kind == entityActivity {
+		if err := auth.Require(ctx, entityActivity, principal.ActionRead); err != nil {
 			return err
 		}
 		return auth.EnsureActivityContentVisible(ctx, tx, id)

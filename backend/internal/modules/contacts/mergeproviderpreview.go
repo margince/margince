@@ -5,12 +5,15 @@ package contacts
 
 import (
 	"context"
+
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
 )
 
+// MergeProviderRun keeps enrichment provenance visible before contact identities collapse.
 type MergeProviderRun struct {
 	Before             provider.Run
 	AfterState         provider.RunState
@@ -19,16 +22,22 @@ type MergeProviderRun struct {
 	FingerprintChanges bool
 }
 
+// ProviderRunReader keeps preview reads under the owning module’s authorization policy.
 type ProviderRunReader func(context.Context, pgx.Tx, string, string) (provider.Run, error)
 
+// WithProviderRunReader uses the owning module’s authorized reader so preview and execution share its policy.
 func (s *Store) WithProviderRunReader(read ProviderRunReader) *Store {
 	s.providerRunReader = read
 	return s
 }
+
+// WithProviderRunReader uses the owning module’s authorized reader so preview and execution share its policy.
 func (p *Provider) WithProviderRunReader(read ProviderRunReader) *Provider {
 	p.store.WithProviderRunReader(read)
 	return p
 }
+
+// WithProviderRunReader uses the owning module’s authorized reader so preview and execution share its policy.
 func (h Handlers) WithProviderRunReader(read ProviderRunReader) Handlers {
 	h.store.WithProviderRunReader(read)
 	return h
@@ -83,7 +92,7 @@ func readMergeProviderEffects(ctx context.Context, tx pgx.Tx, subject, other, so
  FROM provider_run s WHERE s.contact_id = @subject
  AND (@moves OR (s.state = 'queued' AND (`+mergePaidProviderTwin+`
  OR EXISTS (SELECT 1 FROM provider_run q WHERE q.id = s.id AND `+mergeProviderCategoryTwin+`))))
- ORDER BY s.id LIMIT 501`, pgx.StrictNamedArgs{"source": source, "subject": subject, "other": other, "moves": subject == source})
+ ORDER BY s.id LIMIT 501`, pgx.StrictNamedArgs{mergeSourceKey: source, mergeSubjectKey: subject, mergeOtherKey: other, "moves": subject == source})
 	if err != nil {
 		return nil, err
 	}

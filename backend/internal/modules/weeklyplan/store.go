@@ -178,8 +178,7 @@ func (s *Store) Current(ctx context.Context, now time.Time) (Plan, error) {
 	return s.planForOwner(ctx, owner, now)
 }
 
-// Another reader's plan is visible only through the shared teammate gate.
-// A refusal hides whether that reader has started a plan.
+// PlanFor hides whether another reader has a plan unless the shared teammate gate allows access.
 func (s *Store) PlanFor(ctx context.Context, owner ids.UUID, now time.Time) (Plan, error) {
 	if err := s.requirePlanReader(ctx, owner); err != nil {
 		return Plan{}, err

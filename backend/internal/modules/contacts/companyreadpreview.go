@@ -7,9 +7,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
+// CompanyReadValue distinguishes proposed evidence from the value the writer would retain.
 type CompanyReadValue struct {
 	Field     string
 	Category  string
@@ -30,6 +31,7 @@ type CompanyReadValue struct {
 	Retained  bool
 }
 
+// CompanyReadPreview groups authorized enrichment effects with the current company.
 type CompanyReadPreview struct {
 	Company  crmcontracts.Company
 	Columns  []CompanyReadValue
@@ -37,12 +39,13 @@ type CompanyReadPreview struct {
 	Facts    []CompanyReadValue
 }
 
+// PreviewCompanyRead resolves authorized effects without applying the proposed change.
 func (s *Store) PreviewCompanyRead(ctx context.Context, in DeepReadProposal) (CompanyReadPreview, error) {
 	var out CompanyReadPreview
-	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, companyEntity, principal.ActionRead); err != nil {
 		return out, err
 	}
-	if err := auth.Require(ctx, "company", principal.ActionUpdate); err != nil {
+	if err := auth.Require(ctx, companyEntity, principal.ActionUpdate); err != nil {
 		return out, err
 	}
 	fields, err := validatedDeepReadFields(in)
@@ -52,7 +55,7 @@ func (s *Store) PreviewCompanyRead(ctx context.Context, in DeepReadProposal) (Co
 	if len(fields)+len(in.Facts) > 500 {
 		return out, apperrors.ErrInvalidArgument
 	}
-	active, err := s.activeColumns(ctx, "company")
+	active, err := s.activeColumns(ctx, companyEntity)
 	if err != nil {
 		return out, err
 	}
@@ -68,6 +71,9 @@ func (s *Store) PreviewCompanyRead(ctx context.Context, in DeepReadProposal) (Co
 }
 
 func previewReadColumns(ctx context.Context, tx pgx.Tx, id ids.CompanyID, current crmcontracts.Company, fields []ColdStartFieldInput) ([]CompanyReadValue, error) {
+	if err := auth.Require(ctx, companyEntity, principal.ActionRead); err != nil {
+		return nil, err
+	}
 	raw, err := json.Marshal(current)
 	if err != nil {
 		return nil, err
@@ -84,9 +90,9 @@ func previewReadColumns(ctx context.Context, tx pgx.Tx, id ids.CompanyID, curren
 		}
 		stored := column
 		if column == columnAddress {
-			stored = "address_line1"
+			stored = columnAddressLine1
 		}
-		if err := previewFieldsVisible(ctx, "company", stored); err != nil {
+		if err := previewFieldsVisible(ctx, companyEntity, stored); err != nil {
 			return nil, err
 		}
 		authority, value, err := unclaimedCompanyColumn(ctx, tx, id, column, field.Value)
@@ -96,8 +102,7 @@ func previewReadColumns(ctx context.Context, tx pgx.Tx, id ids.CompanyID, curren
 		if value == "" {
 			continue
 		}
-		statement := companyColumnWrites[column].statementFor(authority)
-		_, predicate, found := strings.Cut(statement, " WHERE ")
+		predicate, found := companyColumnReadPredicates[column][authority]
 		if !found {
 			return nil, apperrors.ErrInvalidArgument
 		}
@@ -109,11 +114,9 @@ func previewReadColumns(ctx context.Context, tx pgx.Tx, id ids.CompanyID, curren
 		if err != nil {
 			return nil, err
 		}
-		var before string
-		if len(values[stored]) > 0 && string(values[stored]) != "null" {
-			if err := json.Unmarshal(values[stored], &before); err != nil {
-				return nil, err
-			}
+		before, err := companyReadColumnValue(values[stored])
+		if err != nil {
+			return nil, err
 		}
 		after := before
 		if applies {
@@ -136,10 +139,10 @@ func appendReadSizeBand(ctx context.Context, out *CompanyReadPreview) error {
 		if !ok {
 			return nil
 		}
-		if err := previewFieldsVisible(ctx, "company", "size_band"); err != nil {
+		if err := previewFieldsVisible(ctx, companyEntity, filterSizeBand); err != nil {
 			return err
 		}
-		out.Columns = append(out.Columns, CompanyReadValue{Field: "size_band", After: band, Proposed: band, Quote: fact.Quote, SourceURL: fact.SourceURL})
+		out.Columns = append(out.Columns, CompanyReadValue{Field: filterSizeBand, After: band, Proposed: band, Quote: fact.Quote, SourceURL: fact.SourceURL})
 		return nil
 	}
 	return nil
@@ -147,10 +150,10 @@ func appendReadSizeBand(ctx context.Context, out *CompanyReadPreview) error {
 
 func previewCompanyReadTx(ctx context.Context, tx pgx.Tx, in DeepReadProposal, fields []ColdStartFieldInput, active []fieldcatalog.Column) (CompanyReadPreview, error) {
 	var out CompanyReadPreview
-	if err := previewFieldsVisible(ctx, "company", "display_name"); err != nil {
+	if err := previewFieldsVisible(ctx, companyEntity, "display_name"); err != nil {
 		return out, err
 	}
-	if err := auth.EnsureWritableLive(ctx, tx, "company", in.CompanyID.UUID); err != nil {
+	if err := auth.EnsureWritableLive(ctx, tx, companyEntity, in.CompanyID.UUID); err != nil {
 		return out, err
 	}
 	current, err := readCompany(ctx, tx, in.CompanyID, storekit.LiveOnly, active)
@@ -174,4 +177,13 @@ func previewCompanyReadTx(ctx context.Context, tx pgx.Tx, in DeepReadProposal, f
 		return out, err
 	}
 	return out, nil
+}
+
+func companyReadColumnValue(raw json.RawMessage) (string, error) {
+	if len(raw) == 0 || string(raw) == "null" {
+		return "", nil
+	}
+	var value string
+	err := json.Unmarshal(raw, &value)
+	return value, err
 }

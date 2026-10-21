@@ -78,7 +78,7 @@ func (r approvalPreviewReader) populateMerge(ctx context.Context, request record
 		details = append(details, carried...)
 	}
 	details = append(details, mergeContentDetails(scope)...)
-	if request.RecordType == "company" {
+	if request.RecordType == string(recordTypeCompany) {
 		company, err := r.companyMergeBusinessDetails(ctx, request.SourceID, request.TargetID)
 		if err != nil {
 			return err
@@ -101,7 +101,7 @@ func (r approvalPreviewReader) populateMerge(ctx context.Context, request record
 	}
 	out.Details, out.Changes, out.CurrentVersion = &details, changes, new(int(scope.TargetVersion))
 	effects := []string{"merge_records_release_source"}
-	if request.RecordType == "company" {
+	if request.RecordType == string(recordTypeCompany) {
 		effects = append(effects, "merge_company_private_readings", "merge_company_preserve_receipts", "merge_company_reconcile_lookups")
 	}
 	out.Effects = &effects

@@ -13,10 +13,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
+const carrySourceArg = "source"
+
+const carryTargetArg = "target"
+
 const contactCarrySource = "contact_id = @source"
 
 func previewCarriedConfirmations(ctx context.Context, tx pgx.Tx, source ids.ContactID) ([]commsauthz.CarriedConfirmation, error) {
-	rows, err := tx.Query(ctx, `SELECT id,delivered_to,issued_at,expires_at,opened_at,consumed_at FROM confirm_token WHERE `+contactCarrySource+` ORDER BY id LIMIT 501`, pgx.NamedArgs{"source": source})
+	rows, err := tx.Query(ctx, `SELECT id,delivered_to,issued_at,expires_at,opened_at,consumed_at FROM confirm_token WHERE `+contactCarrySource+` ORDER BY id LIMIT 501`, pgx.NamedArgs{carrySourceArg: source})
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +40,7 @@ func previewCarriedConfirmations(ctx context.Context, tx pgx.Tx, source ids.Cont
 
 func previewCarriedDoubleOptIns(ctx context.Context, tx pgx.Tx, source ids.ContactID) ([]commsauthz.CarriedDoubleOptIn, error) {
 	rows, err := tx.Query(ctx, `SELECT d.id,d.purpose_id,p.label,d.issued_at,d.expires_at,d.consumed_at
- FROM consent_doi_token d JOIN consent_purpose p ON p.id=d.purpose_id WHERE `+contactCarrySource+` ORDER BY d.id LIMIT 501`, pgx.NamedArgs{"source": source})
+ FROM consent_doi_token d JOIN consent_purpose p ON p.id=d.purpose_id WHERE `+contactCarrySource+` ORDER BY d.id LIMIT 501`, pgx.NamedArgs{carrySourceArg: source})
 	if err != nil {
 		return nil, err
 	}

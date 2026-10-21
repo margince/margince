@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -73,7 +74,7 @@ func TestCompanyCreationPreviewCanNameAReadOnlyReviewCandidate(t *testing.T) {
 	ctx = principal.WithActor(ctx, actor)
 	id := ids.From[ids.CompanyKind](ids.UUID(existing.Id))
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		return auth.EnsureWritable(ctx, tx, "company", id.UUID)
+		return auth.EnsureWritable(ctx, tx, companyEntity, id.UUID)
 	}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("candidate unexpectedly writable: %v", err)
 	}

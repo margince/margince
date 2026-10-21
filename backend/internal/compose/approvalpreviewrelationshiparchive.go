@@ -37,7 +37,7 @@ func (r approvalPreviewReader) relationshipArchivePreview(ctx context.Context, a
 		if scope.Successor.CompanyId == nil {
 			return out, nil
 		}
-		company, err := r.referenceValue(ctx, "company_id", scope.Successor.CompanyId.String())
+		company, err := r.referenceValue(ctx, refColCompany, scope.Successor.CompanyId.String())
 		if previewUnavailable(err) {
 			return out, nil
 		}
@@ -59,9 +59,12 @@ func (r approvalPreviewReader) relationshipArchiveDetails(ctx context.Context, e
 		field, kind string
 		id          *crmcontracts.Id
 	}{
-		{"contact_id", "contact", edge.ContactId}, {"company_id", "company", edge.CompanyId},
-		{"deal_id", "deal", edge.DealId}, {"project_id", "project", edge.ProjectId},
-		{"counterparty_contact_id", "contact", edge.CounterpartyContactId}, {"counterparty_company_id", "company", edge.CounterpartyCompanyId},
+		{companionContactField, string(recordTypeContact), edge.ContactId},
+		{refColCompany, string(recordTypeCompany), edge.CompanyId},
+		{dealIDField, string(recordTypeDeal), edge.DealId},
+		{"project_id", string(recordTypeProject), edge.ProjectId},
+		{"counterparty_contact_id", string(recordTypeContact), edge.CounterpartyContactId},
+		{"counterparty_company_id", string(recordTypeCompany), edge.CounterpartyCompanyId},
 	} {
 		if endpoint.id == nil {
 			continue

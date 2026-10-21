@@ -27,18 +27,10 @@ func (w *csvWriters) reviewLinks(ctx context.Context, row migration.Row) ([]migr
 			}
 		}
 	case migration.ObjectActivity:
-		if _, exists, err := w.lookup(ctx, w.object, row.ExternalID); exists || err != nil {
+		var err error
+		links, err = w.reviewActivityLinks(ctx, row, fields)
+		if err != nil {
 			return nil, err
-		}
-		keys, why := parseLinks(fields[activityTargetLinks])
-		if why != nil {
-			return nil, nil
-		}
-		for _, key := range keys {
-			links = append(links, migration.ReviewLink{Object: key.Object, Key: key.Key})
-		}
-		for _, preset := range w.preset.links {
-			links = append(links, migration.ReviewLink{Object: preset.Type, Key: preset.ID})
 		}
 	}
 	for i := range links {
@@ -74,4 +66,22 @@ func (w *csvWriters) resolveReviewLink(ctx context.Context, link migration.Revie
 		link.TargetID = answer.ID.String()
 	}
 	return link, nil
+}
+
+func (w *csvWriters) reviewActivityLinks(ctx context.Context, row migration.Row, fields map[string]string) ([]migration.ReviewLink, error) {
+	links := []migration.ReviewLink{}
+	if _, exists, err := w.lookup(ctx, w.object, row.ExternalID); exists || err != nil {
+		return nil, err
+	}
+	keys, why := parseLinks(fields[activityTargetLinks])
+	if why != nil {
+		return links, nil
+	}
+	for _, key := range keys {
+		links = append(links, migration.ReviewLink{Object: key.Object, Key: key.Key})
+	}
+	for _, preset := range w.preset.links {
+		links = append(links, migration.ReviewLink{Object: preset.Type, Key: preset.ID})
+	}
+	return links, nil
 }

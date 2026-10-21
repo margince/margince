@@ -54,7 +54,7 @@ func (s *Service) CarryGrantsTx(ctx context.Context, tx pgx.Tx, recordType strin
 // merges touching the same rows lock them in the same order.
 func grantsOnRecord(ctx context.Context, tx pgx.Tx, recordType string, recordID ids.UUID) ([]grantRow, error) {
 	rows, err := tx.Query(ctx, "SELECT "+grantColumns+` FROM record_grant
-		WHERE `+grantRecordScope+` ORDER BY id FOR UPDATE`, pgx.NamedArgs{"record_type": recordType, "record_id": recordID})
+		WHERE `+grantRecordScope+` ORDER BY id FOR UPDATE`, pgx.NamedArgs{grantRecordTypeArg: recordType, grantRecordIDArg: recordID})
 	if err != nil {
 		return nil, fmt.Errorf("read the grants on the retired %s: %w", recordType, err)
 	}

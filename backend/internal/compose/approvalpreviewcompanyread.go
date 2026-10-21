@@ -20,7 +20,7 @@ func directCompanyRead(approval crmcontracts.Approval) bool {
 		return false
 	}
 	_, fields := (*approval.ProposedChange)["fields"]
-	_, target := (*approval.ProposedChange)["company_id"]
+	_, target := (*approval.ProposedChange)[refColCompany]
 	return fields && target
 }
 
@@ -32,9 +32,9 @@ func (r approvalPreviewReader) companyReadPreview(ctx context.Context, approval 
 	}
 	proposal, err := contacts.UnmarshalDeepRead(raw)
 	if err != nil || proposal.CompanyID.IsZero() {
-		return out, nil
+		return out, nil //nolint:nilerr // Malformed stored proposals are displayed as incomplete.
 	}
-	if approval.TargetEntityType == nil || *approval.TargetEntityType != "company" || approval.TargetEntityId == nil || ids.UUID(*approval.TargetEntityId) != proposal.CompanyID.UUID {
+	if !companyReadTargetMatches(approval, proposal.CompanyID.UUID) {
 		return out, nil
 	}
 	plan, err := contacts.NewStore(r.db).PreviewCompanyRead(ctx, proposal)
@@ -51,14 +51,14 @@ func (r approvalPreviewReader) companyReadPreview(ctx context.Context, approval 
 		out.State = previewStaleState
 		return out, nil
 	}
-	target, err := r.referenceValue(ctx, "company_id", proposal.CompanyID.String())
+	target, err := r.referenceValue(ctx, refColCompany, proposal.CompanyID.String())
 	if previewUnavailable(err) {
 		return out, nil
 	}
 	if err != nil {
 		return nil, err
 	}
-	details := []crmcontracts.ApprovalPreviewDetail{{Field: "company_id", Value: target}, previewLinkDetail("read_source_url", proposal.SourceURL)}
+	details := []crmcontracts.ApprovalPreviewDetail{{Field: refColCompany, Value: target}, previewLinkDetail("read_source_url", proposal.SourceURL)}
 	for _, column := range plan.Columns {
 		out.Changes = append(out.Changes, crmcontracts.ApprovalPreviewChange{Field: column.Field, Before: readPreviewText(column.Before), After: readPreviewText(column.After)})
 	}
@@ -82,4 +82,8 @@ func readPreviewText(value string) crmcontracts.ApprovalPreviewValue {
 		return crmcontracts.ApprovalPreviewValue{Kind: previewValueEmpty, Text: ""}
 	}
 	return crmcontracts.ApprovalPreviewValue{Kind: previewValueText, Text: value}
+}
+
+func companyReadTargetMatches(approval crmcontracts.Approval, company ids.UUID) bool {
+	return approval.TargetEntityType != nil && *approval.TargetEntityType == string(recordTypeCompany) && approval.TargetEntityId != nil && ids.UUID(*approval.TargetEntityId) == company
 }

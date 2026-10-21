@@ -103,7 +103,7 @@ func resolveOfferLine(ctx context.Context, tx pgx.Tx, offerCurrency string, in O
 		return resolvedOfferLine{}, err
 	}
 	if defaults.Description == nil || !values.HasVisibleText(*defaults.Description) {
-		return resolvedOfferLine{}, &RequiredFieldError{Field: "description"}
+		return resolvedOfferLine{}, &RequiredFieldError{Field: descriptionColumn}
 	}
 	if defaults.Price == nil {
 		return resolvedOfferLine{}, &RequiredFieldError{Field: "unit_price_minor"}

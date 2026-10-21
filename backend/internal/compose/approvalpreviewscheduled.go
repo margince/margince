@@ -24,20 +24,7 @@ func (r approvalPreviewReader) scheduledApprovalMessage(ctx context.Context, app
 		return activities.ScheduledSend{}, "", err
 	}
 	if approval.Kind == heldScheduledSendKind {
-		id, err := heldMessageID(raw)
-		if err != nil {
-			return activities.ScheduledSend{}, "", apperrors.ErrInvalidArgument
-		}
-		message, err := r.activities.GetScheduledSend(ctx, id)
-		if err != nil {
-			return activities.ScheduledSend{}, "", err
-		}
-		var staged heldProposal
-		if json.Unmarshal(raw, &staged) != nil || staged.Reason != message.HeldReason {
-			return activities.ScheduledSend{}, "", apperrors.ErrVersionSkew
-		}
-		sender := message.PrincipalKind + ":" + message.ScheduledBy.String()
-		return message, sender, nil
+		return r.heldApprovalMessage(ctx, raw)
 	}
 	decision, err := decodeReviewDecision(raw)
 	if err != nil {
@@ -87,7 +74,7 @@ func (r approvalPreviewReader) scheduledApprovalPreview(ctx context.Context, app
 	}
 	input, additional, err := message.PreviewMessage()
 	if err != nil {
-		return out, nil
+		return out, nil //nolint:nilerr // Invalid persisted mail input leaves the held decision incomplete.
 	}
 	links := message.Links
 	if !message.Anchor.IsZero() {
@@ -106,19 +93,8 @@ func (r approvalPreviewReader) scheduledApprovalPreview(ctx context.Context, app
 		}
 		return nil, err
 	}
-	effect := "rearm_held_message"
-	if approval.Kind == approvals.KindCommunicationReview {
-		effect = "direct_refused_message"
-	}
-	out.Effects = &[]string{effect}
-	if approval.Kind == heldScheduledSendKind {
-		*out.Details = append(*out.Details, previewDetail("retry_delay_minutes", strconv.FormatFloat(heldRetryDelay.Minutes(), 'f', -1, 64)))
-	} else {
-		decision, err := commercialRequest[reviewDecision](approval)
-		if err != nil {
-			return out, nil
-		}
-		*out.Details = append(*out.Details, previewDetail("operator_reason", decision.recordedExplanation()), previewDetail("promotion_restriction", decision.ReasonCode))
+	if err := scheduledDecisionDetails(approval, out); err != nil {
+		return out, nil //nolint:nilerr // Malformed stored decisions cannot produce an actionable preview.
 	}
 	senderApproval := approval
 	senderApproval.ProposedBy = sender
@@ -130,4 +106,39 @@ func (r approvalPreviewReader) scheduledApprovalPreview(ctx context.Context, app
 	}
 	out.State = previewReadyState
 	return out, nil
+}
+
+func (r approvalPreviewReader) heldApprovalMessage(ctx context.Context, raw json.RawMessage) (activities.ScheduledSend, string, error) {
+	id, err := heldMessageID(raw)
+	if err != nil {
+		return activities.ScheduledSend{}, "", apperrors.ErrInvalidArgument
+	}
+	message, err := r.activities.GetScheduledSend(ctx, id)
+	if err != nil {
+		return activities.ScheduledSend{}, "", err
+	}
+	var staged heldProposal
+	if json.Unmarshal(raw, &staged) != nil || staged.Reason != message.HeldReason {
+		return activities.ScheduledSend{}, "", apperrors.ErrVersionSkew
+	}
+	sender := message.PrincipalKind + ":" + message.ScheduledBy.String()
+	return message, sender, nil
+}
+
+func scheduledDecisionDetails(approval crmcontracts.Approval, out *crmcontracts.ApprovalPreview) error {
+	effect := "rearm_held_message"
+	if approval.Kind == approvals.KindCommunicationReview {
+		effect = "direct_refused_message"
+	}
+	out.Effects = &[]string{effect}
+	if approval.Kind == heldScheduledSendKind {
+		*out.Details = append(*out.Details, previewDetail("retry_delay_minutes", strconv.FormatFloat(heldRetryDelay.Minutes(), 'f', -1, 64)))
+	} else {
+		decision, err := commercialRequest[reviewDecision](approval)
+		if err != nil {
+			return err
+		}
+		*out.Details = append(*out.Details, previewDetail("operator_reason", decision.recordedExplanation()), previewDetail("promotion_restriction", decision.ReasonCode))
+	}
+	return nil
 }

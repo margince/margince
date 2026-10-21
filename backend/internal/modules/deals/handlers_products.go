@@ -80,6 +80,7 @@ func (h Handlers) UpdateProduct(w http.ResponseWriter, r *http.Request, id crmco
 	httperr.WriteJSON(w, http.StatusOK, product)
 }
 
+// ArchiveProduct preserves the request version through the native archive writer.
 func (h Handlers) ArchiveProduct(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.ArchiveProductParams) {
 	ifVersion, ok := httperr.IfMatchVersion(w, r)
 	if !ok {

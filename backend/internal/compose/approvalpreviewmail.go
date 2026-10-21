@@ -51,12 +51,7 @@ func (r approvalPreviewReader) mailPreview(ctx context.Context, approval crmcont
 		}
 		return nil, err
 	}
-	if message.ScheduledAt != nil {
-		*out.Details = append(*out.Details, previewDetail("scheduled_at", message.ScheduledAt.Format(time.RFC3339)))
-	}
-	if message.ScheduledTz != nil {
-		*out.Details = append(*out.Details, previewDetail("scheduled_tz", *message.ScheduledTz))
-	}
+	appendMailSchedule(message, out)
 	out.Effects = &[]string{"authorize_message_send"}
 	if err := r.appendMailPresentation(ctx, approval, input, out); err != nil {
 		if previewUnavailable(err) {
@@ -65,15 +60,12 @@ func (r approvalPreviewReader) mailPreview(ctx context.Context, approval crmcont
 		return nil, err
 	}
 	out.State = previewReadyState
-	if err := r.currentEvidence(ctx, approval, out); err != nil {
-		return nil, err
-	}
-	return out, nil
+	return out, r.currentEvidence(ctx, approval, out)
 }
 
 func (r approvalPreviewReader) mailPreviewLinks(ctx context.Context, approval crmcontracts.Approval, message crmcontracts.SendCompanyEmailRequest) ([]activities.ActivityLinkInput, error) {
 	if approval.Kind == previewSendEmail {
-		if approval.TargetEntityType == nil || *approval.TargetEntityType != "activity" || approval.TargetEntityId == nil {
+		if approval.TargetEntityType == nil || *approval.TargetEntityType != string(recordTypeActivity) || approval.TargetEntityId == nil {
 			return nil, apperrors.ErrInvalidArgument
 		}
 		return activities.FromActivity(ids.From[ids.ActivityKind](ids.UUID(*approval.TargetEntityId))).Resolve(ctx, r.activities)
@@ -114,4 +106,13 @@ func (r approvalPreviewReader) appendMailFooter(ctx context.Context, in activiti
 		*out.Effects = append(*out.Effects, "append_recipient_unsubscribe")
 	}
 	return nil
+}
+
+func appendMailSchedule(message crmcontracts.SendCompanyEmailRequest, out *crmcontracts.ApprovalPreview) {
+	if message.ScheduledAt != nil {
+		*out.Details = append(*out.Details, previewDetail("scheduled_at", message.ScheduledAt.Format(time.RFC3339)))
+	}
+	if message.ScheduledTz != nil {
+		*out.Details = append(*out.Details, previewDetail("scheduled_tz", *message.ScheduledTz))
+	}
 }

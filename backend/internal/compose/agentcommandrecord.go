@@ -100,9 +100,9 @@ func mergeTagsCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, body
 }
 
 var enrichOperationDepth = map[string]agents.EnrichDepth{
-	"scrapeCompany":          agents.EnrichDepthPage,
-	"deepReadCompany":        agents.EnrichDepthSite,
-	"technicalEnrichCompany": agents.EnrichDepthTechnical,
+	opScrapeCompany:          agents.EnrichDepthPage,
+	opDeepReadCompany:        agents.EnrichDepthSite,
+	opTechnicalEnrichCompany: agents.EnrichDepthTechnical,
 }
 
 //nolint:ireturn // The routing table returns the shared governed command interface.

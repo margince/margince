@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -74,7 +75,7 @@ func TestContactCreationPreviewNamesDuplicateReviewWithoutCreatingIt(t *testing.
 	actor.Permissions.RowScope = principal.RowScopeOwn
 	ctx = principal.WithActor(ctx, actor)
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		return auth.EnsureWritable(ctx, tx, "contact", ids.UUID(first.Id))
+		return auth.EnsureWritable(ctx, tx, contactEntity, ids.UUID(first.Id))
 	}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("review candidate unexpectedly writable: %v", err)
 	}
@@ -139,7 +140,7 @@ func TestContactCreationPreviewFindsTheLeadTheWriterPromotes(t *testing.T) {
 	}
 	hidden := actor
 	hidden.Permissions.Objects = maps.Clone(actor.Permissions.Objects)
-	hidden.Permissions.Objects["lead"] = principal.ObjectGrant{Create: true, Update: true}
+	hidden.Permissions.Objects[leadEntity] = principal.ObjectGrant{Create: true, Update: true}
 	result, err := e.store.PreviewContactCreationForActor(principal.WithActor(ctx, hidden), in, actor)
 	if !errors.Is(err, apperrors.ErrPermissionDenied) || len(result.MatchingLeadIDs) != 0 {
 		t.Fatalf("withheld lead disclosed: %+v, %v", result, err)
@@ -231,7 +232,7 @@ func TestContactCreationDoesNotPromisePromotionsOutsideCallerAuthority(t *testin
 		t.Fatal("missing actor")
 	}
 	creator.Permissions.Objects = maps.Clone(creator.Permissions.Objects)
-	creator.Permissions.Objects["lead"] = principal.ObjectGrant{}
+	creator.Permissions.Objects[leadEntity] = principal.ObjectGrant{}
 	in := CreateContactInput{FullName: "Confirmed Buyer", Source: "manual", Emails: []ContactEmailInput{{Email: "no-promotion@example.test", EmailType: "work"}}}
 	preview, err := e.store.PreviewContactCreationForActor(ctx, in, creator)
 	if err != nil || len(preview.MatchingLeadIDs) != 0 || len(preview.Promotions) != 0 {
@@ -254,9 +255,9 @@ func TestContactPreviewDoesNotRevealWhetherAnUnreadableLeadMatches(t *testing.T)
 		t.Fatal("missing actor")
 	}
 	actor.Permissions.Objects = maps.Clone(actor.Permissions.Objects)
-	grant := actor.Permissions.Objects["lead"]
+	grant := actor.Permissions.Objects[leadEntity]
 	grant.Read = false
-	actor.Permissions.Objects["lead"] = grant
+	actor.Permissions.Objects[leadEntity] = grant
 	limited := principal.WithActor(ctx, actor)
 	lead, inserted, err := e.store.CreateLead(ctx, CreateLeadInput{FullName: new("Held Buyer"), Email: new("hidden-held@example.test"), Source: "manual"})
 	if err != nil || !inserted {

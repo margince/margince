@@ -61,7 +61,7 @@ func (r approvalPreviewReader) templateCreationDetails(ctx context.Context, in d
 	if err := creationFieldsVisible(ctx, "offer_template", map[string]any{"layout": in.Layout}); err != nil {
 		return nil, err
 	}
-	fields := map[string]any{"name": in.Name, "locale": in.Locale, "is_default": in.IsDefault}
+	fields := map[string]any{previewFieldName: in.Name, previewFieldLocale: in.Locale, "is_default": in.IsDefault}
 	keys := deals.OfferTemplateLayoutTextKeys()
 	for key, value := range in.Layout {
 		// Unknown layout content needs review through a surface that understands it.

@@ -10,6 +10,11 @@ import { viewerZone } from "../../format/timezone";
 import { useT } from "../../i18n";
 import { entityTimelineKeys } from "../../lib/activitykeys";
 import {
+  asksWhy,
+  type CommunicationContext,
+  contextFor,
+} from "../../lib/compose-context";
+import {
   isConsentNotGranted,
   ProblemError,
   problemFieldErrorsOf,
@@ -18,11 +23,6 @@ import {
 } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { useSendPermission } from "../../lib/usesendpermission";
-import {
-  asksWhy,
-  type CommunicationContext,
-  contextFor,
-} from "./compose-context";
 import type { ChosenFile } from "./composeattachments";
 import type { Grounding } from "./composedraftcall";
 import type { ComposeFields } from "./composefields";

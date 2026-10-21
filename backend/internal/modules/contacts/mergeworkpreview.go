@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -17,7 +18,7 @@ import (
 
 func (s *Store) previewMergeClaims(ctx context.Context, tx pgx.Tx, source ids.UUID) ([]crmcontracts.ConversationClaim, error) {
 	var total int
-	if err := tx.QueryRow(ctx, `SELECT count(*) FROM (SELECT id FROM conversation_claim WHERE contact_id=@source LIMIT 501) affected`, pgx.StrictNamedArgs{"source": source}).Scan(&total); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT count(*) FROM (SELECT id FROM conversation_claim WHERE contact_id=@source LIMIT 501) affected`, pgx.StrictNamedArgs{mergeSourceKey: source}).Scan(&total); err != nil {
 		return nil, err
 	}
 	if total == 0 {
@@ -38,12 +39,16 @@ func (s *Store) previewMergeClaims(ctx context.Context, tx pgx.Tx, source ids.UU
 }
 
 func previewMergeHandoffs(ctx context.Context, tx pgx.Tx, kind string, source ids.UUID) ([]SDRHandoff, error) {
-	column := "contact_id"
-	if kind == "company" {
-		column = "company_id"
+	if err := auth.Require(ctx, rbacHandoff, principal.ActionRead); err != nil {
+		return nil, err
+	}
+
+	column := columnContactID
+	if kind == companyEntity {
+		column = columnCompanyID
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`SELECT id, lead_id, contact_id, company_id, submitted_by, assigned_to, status, reason_id, coalesce(note,''), deal_id, submitted_at::text, decided_at::text, version
- FROM sdr_handoff WHERE %s=@source ORDER BY id LIMIT 501`, column), pgx.StrictNamedArgs{"source": source})
+ FROM sdr_handoff WHERE %s=@source ORDER BY id LIMIT 501`, column), pgx.StrictNamedArgs{mergeSourceKey: source})
 	if err != nil {
 		return nil, err
 	}
@@ -53,9 +58,6 @@ func previewMergeHandoffs(ctx context.Context, tx pgx.Tx, kind string, source id
 	}
 	if len(handoffs) == 0 {
 		return handoffs, nil
-	}
-	if err := auth.Require(ctx, rbacHandoff, principal.ActionRead); err != nil {
-		return nil, err
 	}
 	if len(handoffs) > 500 {
 		return nil, apperrors.ErrInvalidArgument

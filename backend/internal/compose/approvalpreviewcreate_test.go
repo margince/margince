@@ -6,13 +6,13 @@ package compose
 import (
 	"context"
 	"errors"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestCreationActorRequiresAnIdentifiableOwner(t *testing.T) {

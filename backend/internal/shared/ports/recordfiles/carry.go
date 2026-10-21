@@ -5,10 +5,12 @@
 package recordfiles
 
 import (
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// CarriedFile exposes content identity for merge review without granting file access.
 type CarriedFile struct {
 	ID          ids.UUID
 	Filename    string

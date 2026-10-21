@@ -23,7 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 )
 
-const frontendUnitTable = "../frontend/src/features/deals/productunit.tsx"
+const frontendUnitTable = "../frontend/src/format/productunit.ts"
 
 var (
 	// One `spelling: "key",` entry, bare or quoted, on its own line.

@@ -24,6 +24,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+const tagMergeSourceArg = "source"
+
+const tagMergeTargetArg = "target"
+
 const tagMergeOverlap = `EXISTS (SELECT 1 FROM taggable t
  WHERE t.tag_id = @target AND t.entity_type = s.entity_type AND t.entity_id = s.entity_id)`
 
@@ -100,7 +104,7 @@ func (s *Store) MergeTags(ctx context.Context, source, target ids.TagID, expecte
 		// Count the overlap BEFORE moving anything: once the update runs, a
 		// record that carried both is indistinguishable from one that carried
 		// only the source.
-		args := pgx.StrictNamedArgs{"source": source, "target": target}
+		args := pgx.StrictNamedArgs{tagMergeSourceArg: source, tagMergeTargetArg: target}
 		if err := tx.QueryRow(ctx, `SELECT count(*) FROM taggable s WHERE s.tag_id = @source AND `+tagMergeOverlap, args).Scan(&out.Collapsed); err != nil {
 			return err
 		}

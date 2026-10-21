@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -24,16 +25,16 @@ import (
 func TestContactMergePreviewMatchesProfileEvidenceSurvivorship(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.As(e.AdminUser, nil, integration.AdminPerms)
-	var people []ids.UUID
+	var contactIDs []ids.UUID
 	for _, name := range []string{"Original contact", "Surviving contact"} {
 		contact, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{FullName: name, Source: "manual"})
 		if err != nil {
 			t.Fatal(err)
 		}
-		people = append(people, ids.UUID(contact.Id))
+		contactIDs = append(contactIDs, ids.UUID(contact.Id))
 	}
 	for _, claim := range []struct {
-		person                   int
+		contact                  int
 		field, value, quote, url string
 	}{
 		{0, "title", "Director", "Director of engineering", "https://source.example.test/team"},
@@ -42,12 +43,12 @@ func TestContactMergePreviewMatchesProfileEvidenceSurvivorship(t *testing.T) {
 		{1, "title", "Founder", "Founder of the company", "https://survivor.example.test/team"},
 		{1, "phone", "+12025550101", "Current phone evidence", "https://survivor.example.test/contact"},
 	} {
-		count, err := e.Contacts.SaveResearchClaims(ctx, ids.From[ids.ContactKind](people[claim.person]), []contacts.ResearchClaimInput{{Field: claim.field, Value: claim.value, Quote: claim.quote, SourceURL: claim.url}})
+		count, err := e.Contacts.SaveResearchClaims(ctx, ids.From[ids.ContactKind](contactIDs[claim.contact]), []contacts.ResearchClaimInput{{Field: claim.field, Value: claim.value, Quote: claim.quote, SourceURL: claim.url}})
 		if err != nil || count != 1 {
 			t.Fatalf("save claim: %d, %v", count, err)
 		}
 	}
-	preview, err := e.Contacts.PreviewMergeSurvivorship(ctx, "contact", people[0], people[1], nil, nil)
+	preview, err := e.Contacts.PreviewMergeSurvivorship(ctx, "contact", contactIDs[0], contactIDs[1], nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,12 +73,12 @@ func TestContactMergePreviewMatchesProfileEvidenceSurvivorship(t *testing.T) {
 		}
 		kept[value.Field+":"+value.ValueKey] = value
 	}
-	checkMergePreviewRefusals(t, e, "contact", people[0], people[1], preview, "phone")
-	if _, err := e.Contacts.MergeContact(ctx, ids.From[ids.ContactKind](people[0]), ids.From[ids.ContactKind](people[1]), &preview.SourceVersion); err != nil {
+	checkMergePreviewRefusals(t, e, "contact", contactIDs[0], contactIDs[1], preview, "phone")
+	if _, err := e.Contacts.MergeContact(ctx, ids.From[ids.ContactKind](contactIDs[0]), ids.From[ids.ContactKind](contactIDs[1]), &preview.SourceVersion); err != nil {
 		t.Fatal(err)
 	}
 	if err := e.DB().Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `SELECT field, value_key, value, evidence_snippet, source_ref, observed_at FROM contact_profile_field WHERE contact_id = @contact`, pgx.StrictNamedArgs{"contact": people[1]})
+		rows, err := tx.Query(ctx, `SELECT field, value_key, value, evidence_snippet, source_ref, observed_at FROM contact_profile_field WHERE contact_id = @contact`, pgx.StrictNamedArgs{"contact": contactIDs[1]})
 		if err != nil {
 			return err
 		}
@@ -103,7 +104,7 @@ func TestContactMergePreviewMatchesProfileEvidenceSurvivorship(t *testing.T) {
 		t.Fatal(err)
 	}
 	var retired int
-	if err := integration.OwnerConn(t).QueryRow(context.Background(), `SELECT count(*) FROM contact_profile_field WHERE contact_id = @contact`, pgx.StrictNamedArgs{"contact": people[0]}).Scan(&retired); err != nil {
+	if err := integration.OwnerConn(t).QueryRow(context.Background(), `SELECT count(*) FROM contact_profile_field WHERE contact_id = @contact`, pgx.StrictNamedArgs{"contact": contactIDs[0]}).Scan(&retired); err != nil {
 		t.Fatal(err)
 	}
 	if retired != 0 {
@@ -114,13 +115,13 @@ func TestContactMergePreviewMatchesProfileEvidenceSurvivorship(t *testing.T) {
 func TestContactMergePreviewProtectsAndPreservesSignatureEvidence(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.As(e.AdminUser, nil, integration.AdminPerms)
-	var people []ids.UUID
+	var contactIDs []ids.UUID
 	for _, name := range []string{"Signature contact", "Surviving contact"} {
 		contact, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{FullName: name, Source: "manual"})
 		if err != nil {
 			t.Fatal(err)
 		}
-		people = append(people, ids.UUID(contact.Id))
+		contactIDs = append(contactIDs, ids.UUID(contact.Id))
 	}
 	first := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
 	second := first.Add(24 * time.Hour)
@@ -135,19 +136,19 @@ func TestContactMergePreviewProtectsAndPreservesSignatureEvidence(t *testing.T) 
 		body := "Regards, Dana, " + statement.title
 		message, _, err := e.Activities.LogActivity(ctx, activities.LogActivityInput{
 			Kind: "email", Subject: new("Contact details"), Body: &body, Direction: new("inbound"), OccurredAt: &statement.at, Source: "manual",
-			Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: people[0]}},
+			Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contactIDs[0]}},
 		})
 		if err != nil {
 			t.Fatal(err)
 		}
 		latest = ids.UUID(message.Id)
-		result, err := e.Contacts.ApplySignatureFields(ctx, ids.From[ids.ContactKind](people[0]), latest,
+		result, err := e.Contacts.ApplySignatureFields(ctx, ids.From[ids.ContactKind](contactIDs[0]), latest,
 			[]contacts.SignatureField{{Name: "title", Value: statement.title, Evidence: body, Confidence: statement.confidence}})
 		if err != nil || result.Applied != 1 {
 			t.Fatalf("signature: %+v, %v", result, err)
 		}
 	}
-	preview, err := e.Contacts.PreviewMergeSurvivorship(ctx, "contact", people[0], people[1], nil, nil)
+	preview, err := e.Contacts.PreviewMergeSurvivorship(ctx, "contact", contactIDs[0], contactIDs[1], nil, nil)
 	if err != nil || len(preview.ProfileFields) != 1 {
 		t.Fatalf("signature preview: %+v, %v", preview.ProfileFields, err)
 	}
@@ -158,11 +159,11 @@ func TestContactMergePreviewProtectsAndPreservesSignatureEvidence(t *testing.T) 
 	if _, err := e.Activities.SetAudience(ctx, ids.From[ids.ActivityKind](latest), activities.SetAudienceInput{Audience: "selected", Members: []activities.AudienceMember{{SubjectType: "user", SubjectID: e.AdminUser}}}); err != nil {
 		t.Fatal(err)
 	}
-	hidden, err := e.Contacts.PreviewMergeSurvivorship(e.As(e.Rep1, nil, integration.AdminPerms), "contact", people[0], people[1], nil, nil)
+	hidden, err := e.Contacts.PreviewMergeSurvivorship(e.As(e.Rep1, nil, integration.AdminPerms), "contact", contactIDs[0], contactIDs[1], nil, nil)
 	if !errors.Is(err, apperrors.ErrNotFound) || len(hidden.ProfileFields) != 0 {
 		t.Fatalf("hidden signature: %+v, %v", hidden.ProfileFields, err)
 	}
-	if _, err := e.Contacts.MergeContact(ctx, ids.From[ids.ContactKind](people[0]), ids.From[ids.ContactKind](people[1]), &preview.SourceVersion); err != nil {
+	if _, err := e.Contacts.MergeContact(ctx, ids.From[ids.ContactKind](contactIDs[0]), ids.From[ids.ContactKind](contactIDs[1]), &preview.SourceVersion); err != nil {
 		t.Fatal(err)
 	}
 	var value, superseded, ref string
@@ -170,7 +171,7 @@ func TestContactMergePreviewProtectsAndPreservesSignatureEvidence(t *testing.T) 
 	var observed, previous time.Time
 	if err := integration.OwnerConn(t).QueryRow(context.Background(),
 		`SELECT value, confidence, observed_at, superseded_value, superseded_observed_at, source_ref FROM contact_profile_field WHERE contact_id = @contact AND field = 'title'`,
-		pgx.StrictNamedArgs{"contact": people[1]}).Scan(&value, &confidence, &observed, &superseded, &previous, &ref); err != nil {
+		pgx.StrictNamedArgs{"contact": contactIDs[1]}).Scan(&value, &confidence, &observed, &superseded, &previous, &ref); err != nil {
 		t.Fatal(err)
 	}
 	if value != "CFO" || confidence != 0.9 || !observed.Equal(second) || superseded != "VP Finance" || !previous.Equal(first) || ref != "activity:"+latest.String() {
@@ -183,20 +184,20 @@ func TestContactMergePreviewDoesNotReadUnchangedTargetProfileEvidence(t *testing
 		t.Run(map[bool]string{false: "empty source", true: "different source field"}[withSource], func(t *testing.T) {
 			e := integration.Setup(t)
 			ctx := e.As(e.AdminUser, nil, integration.AdminPerms)
-			var people []ids.UUID
+			var contactIDs []ids.UUID
 			for _, name := range []string{"Original contact", "Surviving contact"} {
 				contact, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{FullName: name, Source: "manual"})
 				if err != nil {
 					t.Fatal(err)
 				}
-				people = append(people, ids.UUID(contact.Id))
+				contactIDs = append(contactIDs, ids.UUID(contact.Id))
 			}
-			if _, err := e.Contacts.SaveResearchClaims(ctx, ids.From[ids.ContactKind](people[1]), []contacts.ResearchClaimInput{{Field: "title", Value: "Director", Quote: "Director of engineering", SourceURL: "https://survivor.example.test/team"}}); err != nil {
+			if _, err := e.Contacts.SaveResearchClaims(ctx, ids.From[ids.ContactKind](contactIDs[1]), []contacts.ResearchClaimInput{{Field: "title", Value: "Director", Quote: "Director of engineering", SourceURL: "https://survivor.example.test/team"}}); err != nil {
 				t.Fatal(err)
 			}
 			expected := 0
 			if withSource {
-				if _, err := e.Contacts.SaveResearchClaims(ctx, ids.From[ids.ContactKind](people[0]), []contacts.ResearchClaimInput{{Field: "phone", Value: "+12025550103", Quote: "Contact number", SourceURL: "https://source.example.test/contact"}}); err != nil {
+				if _, err := e.Contacts.SaveResearchClaims(ctx, ids.From[ids.ContactKind](contactIDs[0]), []contacts.ResearchClaimInput{{Field: "phone", Value: "+12025550103", Quote: "Contact number", SourceURL: "https://source.example.test/contact"}}); err != nil {
 					t.Fatal(err)
 				}
 				expected = 1
@@ -205,7 +206,7 @@ func TestContactMergePreviewDoesNotReadUnchangedTargetProfileEvidence(t *testing
 			perms.RoleKeys = []string{"rep"}
 			perms.RowScope = principal.RowScopeOwn
 			perms.FieldMasks = []principal.FieldMask{{Object: "contact", Field: "title", Condition: principal.MaskAlways}}
-			preview, err := e.Contacts.PreviewMergeSurvivorship(e.As(e.AdminUser, nil, perms), "contact", people[0], people[1], nil, nil)
+			preview, err := e.Contacts.PreviewMergeSurvivorship(e.As(e.AdminUser, nil, perms), "contact", contactIDs[0], contactIDs[1], nil, nil)
 			if err != nil || len(preview.ProfileFields) != expected {
 				t.Fatalf("unaffected target evidence: %+v, %v", preview.ProfileFields, err)
 			}
@@ -223,11 +224,11 @@ func TestContactMergePreviewHonorsProfileVerdicts(t *testing.T) {
 		t.Run(verdict, func(t *testing.T) {
 			e := integration.Setup(t)
 			ctx := e.Admin()
-			source, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{FullName: "Original person", Source: "manual"})
+			source, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{FullName: "Original contact", Source: "manual"})
 			if err != nil {
 				t.Fatal(err)
 			}
-			target, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{FullName: "Surviving person", Source: "manual"})
+			target, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{FullName: "Surviving contact", Source: "manual"})
 			if err != nil {
 				t.Fatal(err)
 			}

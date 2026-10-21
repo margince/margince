@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -22,6 +23,7 @@ const mergeParticipantTwin = `SELECT 1 FROM activity_participant twin
 		          AND twin.address IS NOT DISTINCT FROM ap.address
 		          AND twin.channel_user_id IS NOT DISTINCT FROM ap.channel_user_id`
 
+// MergeParticipant makes roster effects visible before contact identities collapse.
 type MergeParticipant struct {
 	ID            ids.UUID
 	ActivityID    ids.UUID
@@ -32,8 +34,10 @@ type MergeParticipant struct {
 	Collapses     bool
 }
 
+// ParticipantRosterReader keeps preview reads under the owning module’s authorization policy.
 type ParticipantRosterReader func(context.Context, pgx.Tx, ids.ActivityID, bool) error
 
+// WithParticipantRosterReader uses the owning module’s authorized reader so preview and execution share its policy.
 func (s *Store) WithParticipantRosterReader(read ParticipantRosterReader) *Store {
 	s.participantRosterReader = read
 	return s
@@ -46,7 +50,7 @@ func (s *Store) previewMergeParticipants(ctx context.Context, tx pgx.Tx, source,
 	}
 	rows, err := tx.Query(ctx, `SELECT ap.id, ap.activity_id, ap.role, ap.user_id, ap.address,
  ap.channel_user_id, EXISTS (`+mergeParticipantTwin+`)
- FROM activity_participant ap WHERE ap.contact_id = @source ORDER BY ap.activity_id, ap.id LIMIT 501`, pgx.StrictNamedArgs{"source": source, "target": target})
+ FROM activity_participant ap WHERE ap.contact_id = @source ORDER BY ap.activity_id, ap.id LIMIT 501`, pgx.StrictNamedArgs{mergeSourceKey: source, mergeTargetKey: target})
 	if err != nil {
 		return nil, err
 	}
@@ -75,6 +79,7 @@ func (s *Store) previewMergeParticipants(ctx context.Context, tx pgx.Tx, source,
 	return participants, nil
 }
 
+// WithParticipantRosterReader uses the owning module’s authorized reader so preview and execution share its policy.
 func (h Handlers) WithParticipantRosterReader(read ParticipantRosterReader) Handlers {
 	h.store = h.store.WithParticipantRosterReader(read)
 	return h

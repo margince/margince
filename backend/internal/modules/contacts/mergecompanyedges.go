@@ -27,7 +27,7 @@ func relinkCompanyEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.C
 	if _, err := tx.Exec(ctx, storekit.SQLf(`UPDATE provider_employment_resolution SET company_id=$%d WHERE company_id=$%d`, len(args), sourcePos), args...); err != nil {
 		return err
 	}
-	mergeArgs := pgx.NamedArgs{"source": sourceID, "target": targetID, "archived": time.Now().UTC()}
+	mergeArgs := pgx.NamedArgs{mergeSourceKey: sourceID, mergeTargetKey: targetID, archiveStateKey: time.Now().UTC()}
 	if _, err := tx.Exec(ctx, `UPDATE relationship a SET archived_at=@archived WHERE `+mergeCompanyEdgeSource+` AND `+mergeCompanyEdgeSelf, mergeArgs); err != nil {
 		return err
 	}

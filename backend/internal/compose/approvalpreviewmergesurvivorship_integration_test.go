@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -23,11 +24,11 @@ import (
 func TestContactMergePreviewMatchesTheSurvivorFields(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.As(e.AdminUser, nil, integration.AdminPerms)
-	source, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{FullName: "Source Person", Title: new("Director"), Address: &crmcontracts.Address{City: new("Berlin")}, Source: "manual"})
+	source, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{FullName: "Source Contact", Title: new("Director"), Address: &crmcontracts.Address{City: new("Berlin")}, Source: "manual"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	target, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{FullName: "Surviving Person", Source: "manual"})
+	target, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{FullName: "Surviving Contact", Source: "manual"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +49,7 @@ func TestContactMergePreviewMatchesTheSurvivorFields(t *testing.T) {
 	if merged.Title == nil || *merged.Title != "Director" || merged.Address == nil || merged.Address.City == nil || *merged.Address.City != "Berlin" || merged.FullName != target.FullName {
 		t.Fatalf("survivor=%+v", merged)
 	}
-	checkMergeAuditFields(t, e, ctx, "contact", targetID, fields)
+	checkMergeAuditFields(ctx, t, e, "contact", targetID, fields)
 }
 
 func TestCompanyMergePreviewKeepsExistingFieldsAndWholeAddresses(t *testing.T) {
@@ -79,7 +80,7 @@ func TestCompanyMergePreviewKeepsExistingFieldsAndWholeAddresses(t *testing.T) {
 	if merged.LegalName == nil || *merged.LegalName != "Source legal name" || merged.Description == nil || *merged.Description != "Keep this description" || merged.Address == nil || merged.Address.City == nil || *merged.Address.City != "Hamburg" || merged.Address.PostalCode != nil {
 		t.Fatalf("survivor=%+v", merged)
 	}
-	checkMergeAuditFields(t, e, ctx, "company", targetID, fields)
+	checkMergeAuditFields(ctx, t, e, "company", targetID, fields)
 }
 
 func normalizedMergeFields(t *testing.T, fields map[string]any) map[string]any {
@@ -114,7 +115,7 @@ func checkMergePreviewRefusals(t *testing.T, e *integration.Env, kind string, so
 	}
 }
 
-func checkMergeAuditFields(t *testing.T, e *integration.Env, ctx context.Context, kind string, target ids.UUID, fields map[string]any) {
+func checkMergeAuditFields(ctx context.Context, t *testing.T, e *integration.Env, kind string, target ids.UUID, fields map[string]any) {
 	t.Helper()
 	if err := e.DB().Tx(ctx, func(tx pgx.Tx) error {
 		var raw []byte

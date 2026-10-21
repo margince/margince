@@ -76,23 +76,23 @@ func (r approvalPreviewReader) read(ctx context.Context, approval crmcontracts.A
 	if directCompanyRead(approval) {
 		return r.companyReadPreview(ctx, approval, out)
 	}
-	if approval.Kind == "merge_records" {
+	if approval.Kind == toolMergeRecords {
 		if approval.TargetEntityType != nil && *approval.TargetEntityType == captureCollisionTarget {
 			return r.capturedLeadPreview(ctx, approval, out)
 		}
 		return r.recordMergePreview(ctx, approval, out)
 	}
-	if approval.Kind == "merge_tags" {
+	if approval.Kind == operationMergeTags {
 		return r.tagMergePreview(ctx, approval, out)
 	}
-	if approval.Kind == "commit_import" {
+	if approval.Kind == operationCommitImport {
 		return r.importPreview(ctx, approval, out)
 	}
 	changes, covered, err := commercialChanges(approval)
 	if !covered {
 		if hasTypedProposalDisplay(approval.Kind) {
-			return nil, nil
-		} //nolint:nilnil // These typed proposals retain their existing display and native decision guards.
+			return nil, nil //nolint:nilnil // These typed proposals retain their existing display and native decision guards.
+		}
 		return unsupportedApprovalPreview(out), nil
 	}
 	if previewUnavailable(err) {
@@ -102,13 +102,16 @@ func (r approvalPreviewReader) read(ctx context.Context, approval crmcontracts.A
 	if err != nil {
 		return nil, err
 	}
-	if approval.Kind == "create_record" {
+	if approval.Kind == toolCreateRecord {
 		return r.creationPreview(ctx, approval, out)
+	}
+	if approval.Kind == previewSendCompanyEmail {
+		return r.mailPreview(ctx, approval, out)
 	}
 	if approval.TargetEntityId == nil || approval.TargetEntityType == nil || approval.TargetVersion == nil {
 		return out, nil
 	}
-	if approval.Kind == "demote_lead" {
+	if approval.Kind == operationDemoteLead {
 		return r.demotionPreview(ctx, approval, out)
 	}
 	record, err := r.records.Read(ctx, datasource.EntityRef{Type: datasource.EntityType(*approval.TargetEntityType), ID: ids.UUID(*approval.TargetEntityId)})
@@ -129,31 +132,31 @@ func (r approvalPreviewReader) read(ctx context.Context, approval crmcontracts.A
 }
 
 func (r approvalPreviewReader) recordPreview(ctx context.Context, approval crmcontracts.Approval, record datasource.Record, changes map[string]json.RawMessage, out *crmcontracts.ApprovalPreview) (*crmcontracts.ApprovalPreview, error) {
-	if approval.Kind == "archive_record" {
+	if approval.Kind == toolArchiveRecord {
 		return r.archivePreview(ctx, approval, record.Fields, out)
 	}
-	if approval.Kind == "relink_activity" || approval.Kind == "relink_activities" || approval.Kind == "relink_thread" {
+	if approval.Kind == singleRelinkTool || approval.Kind == operationRelinkActivities || approval.Kind == "relink_thread" {
 		return r.relinkPreview(ctx, approval, out)
 	}
-	if approval.Kind == "promote_lead" {
+	if approval.Kind == operationPromoteLead {
 		return r.promotionPreview(ctx, approval, out)
 	}
-	if approval.Kind == "send_message" {
+	if approval.Kind == operationSendMessage {
 		return r.channelPreview(ctx, approval, out)
 	}
-	if approval.Kind == "invite_meeting" {
+	if approval.Kind == operationInviteMeeting {
 		return r.invitationPreview(ctx, approval, out)
 	}
-	if approval.Kind == "book_meeting" {
+	if approval.Kind == operationBookMeeting {
 		return r.bookingPreview(ctx, approval, out)
 	}
-	if approval.Kind == "enrich" {
+	if approval.Kind == enrichProposalKind {
 		return r.enrichmentPreview(ctx, approval, out)
 	}
-	if approval.Kind == previewSendEmail || approval.Kind == previewSendCompanyEmail {
+	if approval.Kind == previewSendEmail {
 		return r.mailPreview(ctx, approval, out)
 	}
-	if approval.Kind == "emit_flow_event" {
+	if approval.Kind == operationEmitFlowEvent {
 		return r.confirmationPreview(ctx, approval, out)
 	}
 	return r.populateChanges(ctx, approval, record.Fields, changes, out)
@@ -282,7 +285,7 @@ func (r approvalPreviewReader) value(ctx context.Context, field string, raw json
 	switch field {
 	case previewLifecycle:
 		value.Kind = previewLifecycle
-	case "valid_until", "closed_at", "started_at", "target_end_date", previewFXRateDate, acceptFieldExpectedClose:
+	case "valid_until", previewFieldClosedAt, previewFieldStartedAt, "target_end_date", previewFXRateDate, acceptFieldExpectedClose:
 		if _, err := time.Parse(time.RFC3339, text); err != nil {
 			if _, err := time.Parse(time.DateOnly, text); err != nil {
 				return value, apperrors.ErrInvalidArgument
@@ -344,10 +347,10 @@ func previewCurrentFields(raw json.RawMessage, changes map[string]json.RawMessag
 }
 
 func (r approvalPreviewReader) stageChanges(ctx context.Context, approval crmcontracts.Approval, current, changes map[string]json.RawMessage, out *crmcontracts.ApprovalPreview) error {
-	if approval.Kind == "disqualify_lead" {
+	if approval.Kind == operationDisqualifyLead {
 		return r.disqualifyLeadChanges(ctx, approval, current, changes, out)
 	}
-	if approval.Kind == "advance_project_phase" {
+	if approval.Kind == operationAdvanceProjectPhase {
 		return r.projectPhaseChanges(ctx, approval, current, changes)
 	}
 	if !stagePreviewKind(approval.Kind) {
@@ -414,7 +417,7 @@ func markExecutionValues(kind string, changes []crmcontracts.ApprovalPreviewChan
 			continue
 		}
 		switch changes[i].Field {
-		case "closed_at", "fx_rate_to_base", previewFXRateDate, "amount_minor_base":
+		case previewFieldClosedAt, "fx_rate_to_base", previewFXRateDate, "amount_minor_base":
 			changes[i].After = crmcontracts.ApprovalPreviewValue{Kind: "execution", Text: ""}
 		}
 	}

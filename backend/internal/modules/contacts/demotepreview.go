@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -15,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// LeadDemotionPreview makes promotion unwinding reviewable under the writer’s row locks.
 type LeadDemotionPreview struct {
 	ContactID ids.ContactID
 	Unwind    crmcontracts.DemoteLeadResponseUnwind
@@ -22,23 +24,17 @@ type LeadDemotionPreview struct {
 
 // PreviewLeadDemotion takes the writer's locks so both sides describe one current promotion.
 func (s *Store) PreviewLeadDemotion(ctx context.Context, id ids.LeadID, opts ...WriteOption) (LeadDemotionPreview, error) {
-	if err := auth.Require(ctx, "lead", principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, leadEntity, principal.ActionRead); err != nil {
 		return LeadDemotionPreview{}, err
 	}
-	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, contactEntity, principal.ActionRead); err != nil {
 		return LeadDemotionPreview{}, err
 	}
-	if err := auth.Require(ctx, "lead", principal.ActionUpdate); err != nil {
+	if err := auth.Require(ctx, leadEntity, principal.ActionUpdate); err != nil {
 		return LeadDemotionPreview{}, err
 	}
-	actor, ok := principal.Actor(ctx)
-	if !ok {
-		return LeadDemotionPreview{}, apperrors.ErrPermissionDenied
-	}
-	for _, field := range auth.MaskedFields(actor, "lead", true) {
-		if field == fieldKeyPromotedContact || field == leadStatusColumn {
-			return LeadDemotionPreview{}, apperrors.ErrPermissionDenied
-		}
+	if err := demotionFieldsWritable(ctx); err != nil {
+		return LeadDemotionPreview{}, err
 	}
 	options := collectWriteOptions(opts)
 	var out LeadDemotionPreview
@@ -94,4 +90,17 @@ func demotionUnwind(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, contactID
 		}
 	}
 	return crmcontracts.DemoteLeadResponseUnwindDemoteUnwindMergeLineageOnly, nil
+}
+
+func demotionFieldsWritable(ctx context.Context) error {
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		return apperrors.ErrPermissionDenied
+	}
+	for _, field := range auth.MaskedFields(actor, leadEntity, true) {
+		if field == fieldKeyPromotedContact || field == leadStatusColumn {
+			return apperrors.ErrPermissionDenied
+		}
+	}
+	return nil
 }

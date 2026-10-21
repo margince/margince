@@ -7,12 +7,14 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// ReadScheduledSendForDecision confines review to a human allowed to inspect the initiating seat's send.
 func (s *Store) ReadScheduledSendForDecision(ctx context.Context, id, initiatingSeat ids.UUID) (ScheduledSend, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman {
@@ -33,6 +35,7 @@ func (s *Store) ReadScheduledSendForDecision(ctx context.Context, id, initiating
 	return out, err
 }
 
+// PreviewMessage uses the frozen payload rather than rebuilding a send from current settings.
 func (message ScheduledSend) PreviewMessage() (SendEmailInput, []ActivityLinkInput, error) {
 	if message.PayloadVersion != payloadVersionCurrent {
 		return SendEmailInput{}, nil, apperrors.ErrInvalidArgument

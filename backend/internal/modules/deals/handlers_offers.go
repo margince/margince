@@ -150,6 +150,7 @@ func (h Handlers) UpdateOffer(w http.ResponseWriter, r *http.Request, id crmcont
 	httperr.WriteJSON(w, http.StatusOK, offer)
 }
 
+// ArchiveOffer preserves the request version through the native archive writer.
 func (h Handlers) ArchiveOffer(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.ArchiveOfferParams) {
 	ifVersion, ok := httperr.IfMatchVersion(w, r)
 	if !ok {

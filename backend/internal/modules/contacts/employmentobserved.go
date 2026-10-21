@@ -135,7 +135,7 @@ func foldFirstObservations(ctx context.Context, tx pgx.Tx, mergedColumn string, 
  FROM (`+mergeObservationCandidates(mergedColumn)+`) f
  WHERE s.id = f.id AND `+mergeObservationChanges+`
  RETURNING s.id, s.contact_id, s.company_id, f.was, s.first_observed_at`,
-		pgx.StrictNamedArgs{"source": source, "target": target})
+		pgx.StrictNamedArgs{mergeSourceKey: source, mergeTargetKey: target})
 	if err != nil {
 		return fmt.Errorf("contacts: folding the merged employment edges' first observations: %w", err)
 	}

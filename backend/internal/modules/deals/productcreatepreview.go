@@ -8,12 +8,14 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// ProductCreationPreview keeps the admitted tax spelling with the normalized creation input.
 type ProductCreationPreview struct {
 	Input   CreateProductInput
 	TaxRate string
@@ -48,6 +50,7 @@ func prepareProductCreation(in CreateProductInput) (ProductCreationPreview, erro
 	return ProductCreationPreview{Input: in, TaxRate: tax}, nil
 }
 
+// PreviewProductCreation applies catalog admission without reserving a product row.
 func (s *Store) PreviewProductCreation(ctx context.Context, in CreateProductInput) (ProductCreationPreview, error) {
 	if err := auth.Require(ctx, "product", principal.ActionCreate); err != nil {
 		return ProductCreationPreview{}, err
@@ -68,7 +71,7 @@ func refuseClaimedProductSKU(ctx context.Context, tx pgx.Tx, sku *string) error 
 		return nil
 	}
 	var claimed bool
-	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM product WHERE sku=@sku AND archived_at IS NULL)`, pgx.NamedArgs{"sku": *sku}).Scan(&claimed); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM product WHERE sku=@sku AND archived_at IS NULL)`, pgx.NamedArgs{productSkuColumn: *sku}).Scan(&claimed); err != nil {
 		return err
 	}
 	if claimed {

@@ -50,7 +50,7 @@ func promotionContactChange(lead crmcontracts.Lead, current crmcontracts.Contact
 		current.ConvertedFromLeadId = new(lead.Id)
 	}
 	if current.Title == nil && lead.Title != nil {
-		p.Set("title", nil, *lead.Title)
+		p.Set(fieldTitle, nil, *lead.Title)
 		current.Title = lead.Title
 	}
 	return current, p
@@ -77,6 +77,7 @@ func promotionPhones(lead crmcontracts.Lead, held map[string][]heldPhone) []Cont
 	return []ContactPhoneInput{{Phone: *lead.Phone, PhoneType: phoneTypeWork, Position: len(held) + 1}}
 }
 
+// LeadContactChange binds contact changes to the lead and contact versions reviewed.
 type LeadContactChange struct {
 	LeadPromotionCarry
 	LeadVersion    int64
@@ -92,73 +93,25 @@ type LeadContactChange struct {
 // PreviewLeadContactChange holds the writer's row locks while resolving the
 // contact and its field changes; it does not perform the promotion.
 func (s *Store) PreviewLeadContactChange(ctx context.Context, id ids.LeadID, in PromoteLeadInput) (LeadContactChange, error) {
-	if err := auth.Require(ctx, "lead", principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, leadEntity, principal.ActionRead); err != nil {
 		return LeadContactChange{}, err
 	}
-	if err := auth.Require(ctx, "lead", principal.ActionUpdate); err != nil {
+	if err := auth.Require(ctx, leadEntity, principal.ActionUpdate); err != nil {
 		return LeadContactChange{}, err
 	}
-	if err := auth.Require(ctx, "contact", principal.ActionCreate); err != nil {
+	if err := auth.Require(ctx, contactEntity, principal.ActionCreate); err != nil {
 		return LeadContactChange{}, err
 	}
 	if _, err := ParsePromoteTrigger(in.Trigger); err != nil {
 		return LeadContactChange{}, err
 	}
-	if err := promotionFieldsVisible(ctx, "lead"); err != nil {
+	if err := promotionFieldsVisible(ctx, leadEntity); err != nil {
 		return LeadContactChange{}, err
 	}
 	var out LeadContactChange
 	err := s.txSnapshot(ctx, func(tx pgx.Tx) error {
-		candidate, err := s.promoteCandidate(ctx, tx, id)
-		if err != nil {
-			return err
-		}
-		if !candidate.IsZero() {
-			if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
-				return err
-			}
-			if err := auth.EnsureWritable(ctx, tx, "contact", candidate.UUID); err != nil {
-				return err
-			}
-			if err := promotionFieldsVisible(ctx, "contact"); err != nil {
-				return err
-			}
-		}
-		if err := lockContactThenLead(ctx, tx, candidate, storekit.IncludeArchived, id); err != nil {
-			return err
-		}
-		lead, err := promotableLead(ctx, tx, id, in)
-		if err != nil {
-			return err
-		}
-		if err := refuseIfVersionMoved("lead", lead.Version, writeOptions{atVersion: in.IfVersion}); err != nil {
-			return err
-		}
-		match, err := s.previewTarget(ctx, tx, lead)
-		if err != nil {
-			return err
-		}
-		matched := match.Decision == DecisionExactCollision
-		if (matched && match.ContactID != candidate) || (!matched && !candidate.IsZero()) {
-			return apperrors.ErrConflict
-		}
-		out, err = previewPromotionContact(ctx, tx, lead, candidate)
-		if err != nil {
-			return err
-		}
-		if match.Decision == DecisionFuzzyReview || match.Decision == DecisionNameCollisionReview {
-			if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
-				return err
-			}
-			if err := auth.EnsureVisible(ctx, tx, "contact", match.ContactID.UUID); err != nil {
-				return err
-			}
-			out.ReviewContact = &match.ContactID
-		}
-		if err := s.previewPromotionCarry(ctx, tx, id, candidate, &out.LeadPromotionCarry); err != nil {
-			return err
-		}
-		out.Deal, err = s.previewQualifiedDeal(ctx, tx, lead, in.Deal)
+		var err error
+		out, err = s.previewLeadContactChangeTx(ctx, tx, id, in)
 		return err
 	})
 	if err != nil {
@@ -174,7 +127,7 @@ func promotionFieldsVisible(ctx context.Context, object string) error {
 	}
 	for _, field := range auth.MaskedFields(actor, object, true) {
 		switch field {
-		case "full_name", "email", "phone", "phones", "title", "owner_id", "source", "converted_from_lead_id", "version", "company_name":
+		case contactNameColumn, fieldEmail, fieldPhone, contactPhonesField, fieldTitle, filterOwnerID, fieldSource, "converted_from_lead_id", "version", "company_name":
 			return apperrors.ErrPermissionDenied
 		}
 	}
@@ -204,5 +157,72 @@ func previewPromotionContact(ctx context.Context, tx pgx.Tx, lead crmcontracts.L
 	out.ContactVersion = int64(*current.Version)
 	_, out.Patch = promotionContactChange(lead, current)
 	out.Phones, err = leadPhonesToCarry(ctx, tx, lead, candidate)
+	return out, err
+}
+
+func promotionCandidateVisible(ctx context.Context, tx pgx.Tx, candidate ids.ContactID) error {
+	if candidate.IsZero() {
+		return nil
+	}
+	if err := auth.Require(ctx, contactEntity, principal.ActionRead); err != nil {
+		return err
+	}
+	if err := auth.EnsureWritable(ctx, tx, contactEntity, candidate.UUID); err != nil {
+		return err
+	}
+	return promotionFieldsVisible(ctx, contactEntity)
+}
+
+func previewPromotionReview(ctx context.Context, tx pgx.Tx, match ContactResolution, out *LeadContactChange) error {
+	if match.Decision != DecisionFuzzyReview && match.Decision != DecisionNameCollisionReview {
+		return nil
+	}
+	if err := auth.Require(ctx, contactEntity, principal.ActionRead); err != nil {
+		return err
+	}
+	if err := auth.EnsureVisible(ctx, tx, contactEntity, match.ContactID.UUID); err != nil {
+		return err
+	}
+	out.ReviewContact = &match.ContactID
+	return nil
+}
+
+func (s *Store) previewLeadContactChangeTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in PromoteLeadInput) (LeadContactChange, error) {
+	candidate, err := s.promoteCandidate(ctx, tx, id)
+	if err != nil {
+		return LeadContactChange{}, err
+	}
+	if err := promotionCandidateVisible(ctx, tx, candidate); err != nil {
+		return LeadContactChange{}, err
+	}
+	if err := lockContactThenLead(ctx, tx, candidate, storekit.IncludeArchived, id); err != nil {
+		return LeadContactChange{}, err
+	}
+	lead, err := promotableLead(ctx, tx, id, in)
+	if err != nil {
+		return LeadContactChange{}, err
+	}
+	if err := refuseIfVersionMoved(leadEntity, lead.Version, writeOptions{atVersion: in.IfVersion}); err != nil {
+		return LeadContactChange{}, err
+	}
+	match, err := s.previewTarget(ctx, tx, lead)
+	if err != nil {
+		return LeadContactChange{}, err
+	}
+	matched := match.Decision == DecisionExactCollision
+	if (matched && match.ContactID != candidate) || (!matched && !candidate.IsZero()) {
+		return LeadContactChange{}, apperrors.ErrConflict
+	}
+	out, err := previewPromotionContact(ctx, tx, lead, candidate)
+	if err != nil {
+		return LeadContactChange{}, err
+	}
+	if err := previewPromotionReview(ctx, tx, match, &out); err != nil {
+		return LeadContactChange{}, err
+	}
+	if err := s.previewPromotionCarry(ctx, tx, id, candidate, &out.LeadPromotionCarry); err != nil {
+		return LeadContactChange{}, err
+	}
+	out.Deal, err = s.previewQualifiedDeal(ctx, tx, lead, in.Deal)
 	return out, err
 }

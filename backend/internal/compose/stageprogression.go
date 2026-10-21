@@ -195,7 +195,7 @@ func (p *StageProgressionProposer) stageCard(
 		DiffHash:       diffHash,
 		TargetType:     approvalTargetDeal,
 		TargetID:       facts.DealID.UUID,
-		CoTargetType:   "stage",
+		CoTargetType:   dealTargetStage,
 		CoTargetID:     facts.ToStageID.UUID,
 		// No TargetVersion: staging takes the pin ITSELF, in this same
 		// transaction (approvals/stagingpins.go), and never from what a caller

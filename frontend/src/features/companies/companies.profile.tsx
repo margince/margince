@@ -7,7 +7,7 @@ import { DeepReadPanel } from "./companydeepread";
 import { CompanyProfileForm } from "./companyprofiletab";
 import { TechnicalProfilePanel } from "./companytechnical";
 
-export { profileFieldLabel } from "./companyprofilelabels";
+export { profileFieldLabel } from "../../format/companyprofilelabels";
 
 // CompanyProfileTab: the account's own reference material, opened when the
 // summary is not enough. It holds the account in its own words and ours, its

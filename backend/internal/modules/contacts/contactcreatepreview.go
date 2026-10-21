@@ -8,12 +8,14 @@ import (
 	"slices"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// ContactCreationPreview resolves creation defaults and identity before approval.
 type ContactCreationPreview struct {
 	Input           CreateContactInput
 	CustomFields    map[string]any
@@ -24,9 +26,10 @@ type ContactCreationPreview struct {
 	Social          []ContactSocialInput
 }
 
+// PreviewContactCreationForActor resolves authorized effects without applying the proposed change.
 func (s *Store) PreviewContactCreationForActor(ctx context.Context, in CreateContactInput, creator principal.Principal) (ContactCreationPreview, error) {
 	var out ContactCreationPreview
-	if err := auth.Require(ctx, "contact", principal.ActionCreate); err != nil {
+	if err := auth.Require(ctx, contactEntity, principal.ActionCreate); err != nil {
 		return out, err
 	}
 	in.Emails, in.Phones = slices.Clone(in.Emails), slices.Clone(in.Phones)
@@ -34,7 +37,7 @@ func (s *Store) PreviewContactCreationForActor(ctx context.Context, in CreateCon
 	if _, err := s.readyContactCreate(creatorCtx, &in); err != nil {
 		return out, err
 	}
-	active, err := s.activeColumns(ctx, "contact")
+	active, err := s.activeColumns(ctx, contactEntity)
 	if err != nil {
 		return out, err
 	}
@@ -54,15 +57,9 @@ func (s *Store) PreviewContactCreationForActor(ctx context.Context, in CreateCon
 		if err := storekit.RefuseUnknownSeat(ctx, tx, in.Author); err != nil {
 			return err
 		}
-		switch match.Decision {
-		case DecisionFuzzyReview, DecisionNameCollisionReview, DecisionExactCollision:
-			if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
-				return err
-			}
-			if err := auth.EnsureVisible(ctx, tx, "contact", match.ContactID.UUID); err != nil {
-				return err
-			}
-			out.ReviewContactID = &match.ContactID
+		out.ReviewContactID, err = contactCreationReviewTarget(ctx, tx, match)
+		if err != nil {
+			return err
 		}
 		out.Input, out.CustomFields = in, storekit.CreateFieldValues(active, in.CustomFields)
 		out.Social = contactSocialInputs(in.Social)
@@ -89,4 +86,18 @@ func admitAndDedupeContactCreate(ctx context.Context, tx pgx.Tx, in CreateContac
 		return ContactResolution{}, err
 	}
 	return manualDedupeContact(ctx, tx, in)
+}
+
+func contactCreationReviewTarget(ctx context.Context, tx pgx.Tx, match ContactResolution) (*ids.ContactID, error) {
+	switch match.Decision {
+	case DecisionFuzzyReview, DecisionNameCollisionReview, DecisionExactCollision:
+		if err := auth.Require(ctx, contactEntity, principal.ActionRead); err != nil {
+			return nil, err
+		}
+		if err := auth.EnsureVisible(ctx, tx, contactEntity, match.ContactID.UUID); err != nil {
+			return nil, err
+		}
+		return &match.ContactID, nil
+	}
+	return nil, nil //nolint:nilnil // A unique identity has no review target.
 }

@@ -28,6 +28,7 @@ const overrideCarryCandidates = `SELECT DISTINCT ON (live.category)
  coalesce(array_position(@ladder::text[],live.decided_by_level),array_length(@ladder::text[],1)+1) DESC,
  live.recorded_at DESC, live.id`
 
+// PreviewOverridesTx shares carry candidates with the writer so review preserves authority precedence.
 func (s *Store) PreviewOverridesTx(ctx context.Context, tx pgx.Tx, from, to commsauthz.StopSubject) ([]commsauthz.CarriedOverride, error) {
 	if err := admitCarryPreview(ctx, tx, from, to); err != nil {
 		return nil, err

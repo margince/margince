@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -79,12 +80,12 @@ func TestMergePreviewMatchesHumanDecisionSurvivorship(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			checkCarriedFeedback(t, e, ctx, kind, source, target, expected)
+			checkCarriedFeedback(ctx, t, e, kind, source, target, expected)
 		})
 	}
 }
 
-func checkCarriedFeedback(t *testing.T, e *integration.Env, ctx context.Context, kind string, source, target ids.UUID, expected map[ids.UUID]feedback.StoredDecision) {
+func checkCarriedFeedback(ctx context.Context, t *testing.T, e *integration.Env, kind string, source, target ids.UUID, expected map[ids.UUID]feedback.StoredDecision) {
 	t.Helper()
 	if err := e.DB().Tx(ctx, func(tx pgx.Tx) error {
 		var retired, kept int

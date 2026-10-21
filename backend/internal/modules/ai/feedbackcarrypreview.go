@@ -5,7 +5,9 @@ package ai
 
 import (
 	"context"
+
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -13,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/feedback"
 )
 
+// PreviewFeedbackCarryTx checks both subject records before exposing decisions that follow a merge.
 func (s *FeedbackStore) PreviewFeedbackCarryTx(ctx context.Context, tx pgx.Tx, kind string, source, target ids.UUID) ([]feedback.CarriedDecision, error) {
 	if err := admitSubject(kind); err != nil {
 		return nil, err
@@ -63,7 +66,7 @@ func readCarriedDecisions(ctx context.Context, tx pgx.Tx, kind string, subject i
  WHERE subject_type = @kind AND subject_id = @subject AND (@source::uuid IS NULL OR EXISTS (
  SELECT 1 FROM ai_feedback origin WHERE origin.subject_type = @kind AND origin.subject_id = @source
  AND origin.claim_kind = f.claim_kind AND origin.claim_key = f.claim_key))
- ORDER BY claim_kind, claim_key LIMIT 501`, pgx.StrictNamedArgs{"kind": kind, "subject": subject, "source": source})
+ ORDER BY claim_kind, claim_key LIMIT 501`, pgx.StrictNamedArgs{"kind": kind, "subject": subject, rateSourceField: source})
 	if err != nil {
 		return nil, err
 	}

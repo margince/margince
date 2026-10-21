@@ -7,6 +7,8 @@ import (
 	"context"
 	"strings"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contracts"
 	"github.com/margince/margince/backend/internal/modules/finance"
@@ -14,7 +16,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 type communicationPreviewClaim struct {
@@ -38,7 +39,7 @@ func (r approvalPreviewReader) communicationDetails(ctx context.Context, claim c
 		field string
 		id    ids.UUID
 	}{
-		{"deal_id", claim.evidence.DealID}, {"contract_id", claim.evidence.ContractID}, {"invoice_id", claim.evidence.InvoiceID},
+		{dealIDField, claim.evidence.DealID}, {previewFieldContractID, claim.evidence.ContractID}, {"invoice_id", claim.evidence.InvoiceID},
 	} {
 		if source.id == ids.Nil {
 			continue
@@ -56,7 +57,7 @@ func (r approvalPreviewReader) communicationEvidence(ctx context.Context, field 
 	kind := previewReferenceType(field)
 	var label string
 	switch field {
-	case "contract_id":
+	case previewFieldContractID:
 		agreement, err := contracts.NewStore(r.db, r.deals.FreezeRateAt, ContractTimezone()).GetContract(ctx, ids.From[ids.ContractKind](id))
 		if err != nil {
 			return crmcontracts.ApprovalPreviewValue{}, err
@@ -67,7 +68,7 @@ func (r approvalPreviewReader) communicationEvidence(ctx context.Context, field 
 		if err != nil {
 			return crmcontracts.ApprovalPreviewValue{}, err
 		}
-		account, err := r.referenceValue(ctx, "company_id", company.String())
+		account, err := r.referenceValue(ctx, refColCompany, company.String())
 		if err != nil {
 			return crmcontracts.ApprovalPreviewValue{}, err
 		}
@@ -81,5 +82,5 @@ func (r approvalPreviewReader) communicationEvidence(ctx context.Context, field 
 	if strings.TrimSpace(label) == "" {
 		return crmcontracts.ApprovalPreviewValue{}, apperrors.ErrPermissionDenied
 	}
-	return crmcontracts.ApprovalPreviewValue{Kind: "reference", Text: label, EntityType: &kind, EntityId: new(openapi_types.UUID(id))}, nil
+	return crmcontracts.ApprovalPreviewValue{Kind: previewValueReference, Text: label, EntityType: &kind, EntityId: new(openapi_types.UUID(id))}, nil
 }

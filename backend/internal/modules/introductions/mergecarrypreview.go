@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/introduction"
 )
 
+// PreviewIntroCarryTx shares duplicate and self-route closure rules with the merge writer.
 func (s *Store) PreviewIntroCarryTx(ctx context.Context, tx pgx.Tx, from, to ids.ContactID) ([]introduction.CarriedRequest, error) {
 	if err := admitIntroCarry(ctx, tx, from, to); err != nil {
 		return nil, err

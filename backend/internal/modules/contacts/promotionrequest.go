@@ -8,6 +8,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// PromotionRequestInput keeps request conversion shared by creation and its approval preview.
 func PromotionRequestInput(req crmcontracts.PromoteLeadRequest) PromoteLeadInput {
 	in := PromoteLeadInput{Trigger: string(req.Trigger)}
 	if req.Evidence != nil {

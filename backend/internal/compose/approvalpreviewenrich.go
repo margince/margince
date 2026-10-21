@@ -20,7 +20,7 @@ func enrichmentCommand(approval crmcontracts.Approval) (agents.EnrichCommand, er
 	if err != nil {
 		return agents.EnrichCommand{}, err
 	}
-	if approval.ProposedChange == nil || approval.TargetEntityId == nil || approval.TargetEntityType == nil || *approval.TargetEntityType != "company" {
+	if approval.ProposedChange == nil || approval.TargetEntityId == nil || approval.TargetEntityType == nil || *approval.TargetEntityType != string(recordTypeCompany) {
 		return agents.EnrichCommand{}, apperrors.ErrInvalidArgument
 	}
 	if args == nil {

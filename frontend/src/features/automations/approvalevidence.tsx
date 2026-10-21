@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { SignatureHtml } from "../../components/signaturehtml";
 import type { DecisionApproval } from "../../design-system/decisioncard";
 import { EmailAttachments } from "../../design-system/emaildetail";
 import { EmailText } from "../../design-system/emailtext";
@@ -6,7 +7,6 @@ import { SourceEvidence } from "../../design-system/sourceevidence";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
-import { SignatureHtml } from "../mail/signaturehtml";
 import { OpenActivityDrawer } from "../voice-knowledge/activitydrawer";
 
 export function ApprovalEvidence({

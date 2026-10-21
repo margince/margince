@@ -18,6 +18,7 @@ import (
 // Callers must authorize each referenced record before displaying any scope.
 type DealArchiveScope = storekit.ArchiveScope
 
+// PreviewDealArchive checks the version before reporting the edges the archive would retire.
 func (s *Store) PreviewDealArchive(ctx context.Context, id ids.DealID, version *int64) (DealArchiveScope, error) {
 	var out DealArchiveScope
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {

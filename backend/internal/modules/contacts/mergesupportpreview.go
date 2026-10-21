@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// MergeEmploymentSupport keeps employment evidence visible before a contact merge.
 type MergeEmploymentSupport struct {
 	Source          crmcontracts.Relationship
 	Target          crmcontracts.Relationship
@@ -26,7 +27,7 @@ func (s *Store) previewMergeEmploymentSupport(ctx context.Context, tx pgx.Tx, ki
  (SELECT count(*) FROM provider_employment_resolution e WHERE e.relationship_id=d.old_id),
  (SELECT count(*) FROM provider_applied_field f WHERE f.target_table='relationship' AND f.target_row_id=d.old_id),
  (SELECT count(*) FROM provider_applied_field f WHERE f.target_table='relationship' AND f.target_row_id=d.old_id AND `+mergeSupportAlreadyKept+`)
- FROM (`+mergeEmploymentDuplicates(kind == "contact")+`) d ORDER BY d.old_id LIMIT 501`, pgx.StrictNamedArgs{"source": source, "target": target})
+ FROM (`+mergeEmploymentDuplicates(kind == contactEntity)+`) d ORDER BY d.old_id LIMIT 501`, pgx.StrictNamedArgs{mergeSourceKey: source, mergeTargetKey: target})
 	if err != nil {
 		return nil, err
 	}

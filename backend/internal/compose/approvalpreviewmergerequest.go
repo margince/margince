@@ -26,29 +26,37 @@ func recordMergeRequest(approval crmcontracts.Approval) (recordMergePreviewReque
 		return request, apperrors.ErrInvalidArgument
 	}
 	kind := *approval.TargetEntityType
-	if kind != "contact" && kind != "company" {
+	if kind != string(recordTypeContact) && kind != string(recordTypeCompany) {
 		return request, apperrors.ErrInvalidArgument
 	}
 	if _, rest := (*approval.ProposedChange)["operation"]; rest {
-		path, ok := (*approval.ProposedChange)["path"].(string)
-		if !ok {
-			return request, apperrors.ErrInvalidArgument
+		request, err = mergeRouteRequest(approval, request, kind)
+		if err != nil {
+			return request, err
 		}
-		parts := strings.Split(path, "/")
-		if len(parts) != 5 {
-			return request, apperrors.ErrInvalidArgument
-		}
-		source, err := ids.Parse(parts[3])
-		if err != nil || !previewRouteMatches(*approval.ProposedChange, "merge_records", kind, source, "POST") {
-			return request, apperrors.ErrInvalidArgument
-		}
-		if (!request.SourceID.IsZero() && request.SourceID != source) || (request.RecordType != "" && request.RecordType != kind) {
-			return request, apperrors.ErrInvalidArgument
-		}
-		request.SourceID, request.RecordType = source, kind
 	}
 	if request.RecordType != kind || request.TargetID != ids.UUID(*approval.TargetEntityId) || request.SourceID.IsZero() || request.SourceID == request.TargetID {
 		return request, apperrors.ErrInvalidArgument
 	}
+	return request, nil
+}
+
+func mergeRouteRequest(approval crmcontracts.Approval, request recordMergePreviewRequest, kind string) (recordMergePreviewRequest, error) {
+	path, ok := (*approval.ProposedChange)["path"].(string)
+	if !ok {
+		return request, apperrors.ErrInvalidArgument
+	}
+	parts := strings.Split(path, "/")
+	if len(parts) != 5 {
+		return request, apperrors.ErrInvalidArgument
+	}
+	source, err := ids.Parse(parts[3])
+	if err != nil || !previewRouteMatches(*approval.ProposedChange, "merge_records", kind, source, "POST") {
+		return request, apperrors.ErrInvalidArgument
+	}
+	if (!request.SourceID.IsZero() && request.SourceID != source) || (request.RecordType != "" && request.RecordType != kind) {
+		return request, apperrors.ErrInvalidArgument
+	}
+	request.SourceID, request.RecordType = source, kind
 	return request, nil
 }

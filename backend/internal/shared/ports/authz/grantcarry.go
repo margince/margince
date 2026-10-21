@@ -4,10 +4,12 @@
 package authz
 
 import (
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// RecordGrantState keeps grant provenance alongside access and expiry for review.
 type RecordGrantState struct {
 	Access    string
 	ExpiresAt *time.Time
@@ -15,6 +17,7 @@ type RecordGrantState struct {
 	Reason    *string
 }
 
+// CarriedRecordGrant compares source authority with the grant that would survive a merge.
 type CarriedRecordGrant struct {
 	SourceID      ids.UUID
 	SourceVersion int64

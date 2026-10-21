@@ -21,11 +21,11 @@ Request a new proposal with current context, or reject the old one.
 
 An import proposal shows each source row, its planned result, and the values to create or change.
 Links name an existing record or the source row that will create it. Review skipped rows and new tags too.
-Approval starts the queued import. It rechecks the reviewed source and existing record versions before writing.
+Approval starts the queued import. It checks again the reviewed source and existing record versions before writing.
 
 The queue requires a complete plan of at most 500 rows. Older test runs, larger files, or rows that update
 the same record twice need a new plan. Open **Settings → Data import**, split larger files or resolve
-overlapping rows, and run another test. You can reject the queued proposal without starting the import.
+rows that change the same record, and run another test. You can reject the queued proposal without starting the import.
 
 ## Reading a confirmation request
 

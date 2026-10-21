@@ -9,10 +9,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-const introCarrySource = "contact_id=@source OR through_contact_id=@source"
-const introCarryContact = "CASE WHEN contact_id=@source THEN @target ELSE contact_id END"
-const introCarryThrough = "CASE WHEN through_contact_id=@source THEN @target ELSE through_contact_id END"
-const introCarryClosures = `WITH mapped AS (
+const (
+	introCarrySource   = "contact_id=@source OR through_contact_id=@source"
+	introCarryContact  = "CASE WHEN contact_id=@source THEN @target ELSE contact_id END"
+	introCarryThrough  = "CASE WHEN through_contact_id=@source THEN @target ELSE through_contact_id END"
+	introCarryClosures = `WITH mapped AS (
  SELECT id, status, version, requested_at, introducer_user_id AS colleague,
  ` + introCarryContact + ` AS about, ` + introCarryThrough + ` AS via
  FROM intro_request WHERE (` + introCarrySource + `) AND status=ANY(@open) AND archived_at IS NULL
@@ -30,6 +31,7 @@ const introCarryClosures = `WITH mapped AS (
  SELECT m.id,m.status,m.version,m.about,m.about=m.via AS self_route FROM mapped m
  WHERE m.about=m.via OR EXISTS (SELECT 1 FROM collisions c WHERE c.id=m.id)
 )`
+)
 
 func introCarryArgs(from, to ids.ContactID) pgx.NamedArgs {
 	return pgx.NamedArgs{

@@ -12,8 +12,6 @@ package compose
 import (
 	"context"
 	"errors"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/ports/introduction"
 	"maps"
 	"reflect"
 	"slices"
@@ -23,8 +21,10 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/introductions"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/introduction"
 )
 
 // asker is the admin seat with the introduction grant the admin fixture does

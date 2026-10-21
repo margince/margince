@@ -7,10 +7,11 @@ import (
 	"context"
 	"strconv"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 func (r approvalPreviewReader) mergeRelationshipDetails(ctx context.Context, scope contacts.MergeSurvivorship) ([]crmcontracts.ApprovalPreviewDetail, error) {
@@ -54,7 +55,7 @@ func (r approvalPreviewReader) mergeRelationship(ctx context.Context, relation c
 	for _, ref := range []struct {
 		field string
 		id    *openapi_types.UUID
-	}{{"contact_id", relation.ContactId}, {"company_id", relation.CompanyId}, {"contact_id", relation.CounterpartyContactId}, {"company_id", relation.CounterpartyCompanyId}, {"deal_id", relation.DealId}, {"project_id", relation.ProjectId}} {
+	}{{companionContactField, relation.ContactId}, {refColCompany, relation.CompanyId}, {companionContactField, relation.CounterpartyContactId}, {refColCompany, relation.CounterpartyCompanyId}, {dealIDField, relation.DealId}, {"project_id", relation.ProjectId}} {
 		if ref.id == nil {
 			continue
 		}
@@ -91,7 +92,7 @@ func (r approvalPreviewReader) mergeParticipantDetails(ctx context.Context, scop
 			if ref.id == nil {
 				continue
 			}
-			value, err := r.referenceValue(ctx, "contact_id", ref.id.String())
+			value, err := r.referenceValue(ctx, companionContactField, ref.id.String())
 			if err != nil {
 				return nil, err
 			}

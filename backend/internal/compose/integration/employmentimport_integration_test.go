@@ -204,7 +204,7 @@ func TestEmploymentImportHumanCorrectionSurvivesReplayAndRevert(t *testing.T) {
 
 func TestEmploymentImportMergeKeepsRolesAndMovesSupport(t *testing.T) {
 	e := Setup(t)
-	store := contacts.NewStore(e.DB())
+	store := e.Contacts
 	source := seedMergeSubject(t, e, "Merge source")
 	target := seedMergeSubject(t, e, "Merge target")
 	claims := []provider.Claim{{Key: provider.ClaimCurrentEmployment, Value: []byte(`{"company_name":"Merged Employer","company_domain":"merged-employer.example","job_title":"Lead"}`)}}
@@ -221,7 +221,7 @@ func TestEmploymentImportMergeKeepsRolesAndMovesSupport(t *testing.T) {
 	if *first.Items[0].RelationshipId == *second.Items[0].RelationshipId {
 		t.Fatal("different contacts shared an edge before merge")
 	}
-	preview, err := store.PreviewMergeSurvivorship(e.Admin(), "contact", source, target, nil, nil)
+	preview, err := store.PreviewMergeSurvivorship(providerAdmin(e), "contact", source, target, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -232,13 +232,13 @@ func TestEmploymentImportMergeKeepsRolesAndMovesSupport(t *testing.T) {
 	if support.Source.Id != *first.Items[0].RelationshipId || support.Target.Id != *second.Items[0].RelationshipId || support.Resolutions != 1 || support.AppliedFields == 0 || support.CollapsedFields != 0 {
 		t.Fatalf("incorrect support transfer: %+v", support)
 	}
-	actor, ok := principal.Actor(e.Admin())
+	actor, ok := principal.Actor(providerAdmin(e))
 	if !ok {
 		t.Fatal("missing actor")
 	}
 	actor.Permissions.Objects = maps.Clone(actor.Permissions.Objects)
 	actor.Permissions.Objects["company"] = principal.ObjectGrant{}
-	denied, err := store.PreviewMergeSurvivorship(principal.WithActor(e.Admin(), actor), "contact", source, target, nil, nil)
+	denied, err := store.PreviewMergeSurvivorship(principal.WithActor(providerAdmin(e), actor), "contact", source, target, nil, nil)
 	if !errors.Is(err, apperrors.ErrPermissionDenied) || len(denied.EmploymentSupport) != 0 || len(denied.Fields) != 0 {
 		t.Fatalf("missing company read returned preview=%+v error=%v", denied, err)
 	}

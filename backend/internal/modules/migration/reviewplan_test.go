@@ -39,5 +39,4 @@ func TestReviewPlanRefusesAHiddenTailOrOverlappingTarget(t *testing.T) {
 			t.Fatal("duplicate source identity remained approvable")
 		}
 	})
-
 }

@@ -45,7 +45,7 @@ func lockContactForEmployment(ctx context.Context, tx pgx.Tx, id ids.UUID) error
 // Retiring an employment fills an empty primary slot only when no choice remains.
 // Explicitly clearing the primary flag does not invoke this succession rule.
 func promoteLoneSurvivingEmployment(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) error {
-	if _, err := tx.Exec(ctx, `UPDATE relationship SET is_current_primary = true WHERE id = (`+employmentSuccessorSQL()+`)`, pgx.StrictNamedArgs{"contact": contactID, "excluded": nil}); err != nil {
+	if _, err := tx.Exec(ctx, `UPDATE relationship SET is_current_primary = true WHERE id = (`+employmentSuccessorSQL()+`)`, pgx.StrictNamedArgs{contactEntity: contactID, "excluded": nil}); err != nil {
 		return fmt.Errorf("contacts: promoting the surviving employment for contact %s: %w", contactID, err)
 	}
 	return nil

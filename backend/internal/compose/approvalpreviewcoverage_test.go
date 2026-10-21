@@ -100,7 +100,6 @@ func TestCommercialPreviewAccountsForEveryGovernedKind(t *testing.T) {
 			t.Errorf("preview kind %s is not governed", kind)
 		}
 	}
-
 }
 
 func TestBulkOwnerChangesUseTheirOwnConversationConfirmation(t *testing.T) {

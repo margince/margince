@@ -23,7 +23,7 @@ export const vi = {
   "approval.read.factField": "Thông tin công ty",
   "approval.read.before": "Giá trị hiện tại",
   "approval.read.after": "Giá trị sau phê duyệt",
-  "approval.read.proposed": "Thông tin đọc từ website",
+  "approval.read.proposed": "Thông tin đọc từ trang web",
   "approval.read.source": "Trang nguồn",
   "approval.read.quote": "Trích dẫn nguồn",
   "approval.read.retained": "Giữ giá trị do người dùng nhập",
@@ -150,12 +150,12 @@ export const vi = {
   "approval.merge.introduction_before": "Trạng thái giới thiệu trước khi gộp",
   "approval.merge.introduction_cancellation": "Lý do hủy giới thiệu",
   "approval.merge.introduction_contact_after":
-    "Người được giới thiệu sau khi gộp",
+    "Liên hệ được giới thiệu sau khi gộp",
   "approval.merge.introduction_contact_before":
-    "Người được giới thiệu trước khi gộp",
-  "approval.merge.introduction_through_after": "Người giới thiệu sau khi gộp",
+    "Liên hệ được giới thiệu trước khi gộp",
+  "approval.merge.introduction_through_after": "Liên hệ giới thiệu sau khi gộp",
   "approval.merge.introduction_through_before":
-    "Người giới thiệu trước khi gộp",
+    "Liên hệ giới thiệu trước khi gộp",
   "approval.merge.link_consumed": "Ngày sử dụng liên kết",
   "approval.merge.link_note": "Ghi chú liên kết",
   "approval.merge.link_opened": "Ngày mở liên kết",

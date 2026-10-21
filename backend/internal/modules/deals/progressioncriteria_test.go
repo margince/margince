@@ -5,10 +5,11 @@ package deals
 
 import (
 	"errors"
+	"testing"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"testing"
 )
 
 func TestProgressionChecklistRequiresEveryOriginalCriterionVersion(t *testing.T) {

@@ -17,7 +17,7 @@ import (
 // duplicate as a human dismissal.
 func relinkEmploymentSupport(ctx context.Context, tx pgx.Tx, source, target ids.UUID, mergingContact bool) error {
 	duplicates := mergeEmploymentDuplicates(mergingContact)
-	args := pgx.StrictNamedArgs{"source": source, "target": target}
+	args := pgx.StrictNamedArgs{mergeSourceKey: source, mergeTargetKey: target}
 	if _, err := tx.Exec(ctx, `WITH duplicates AS (`+duplicates+`)
  UPDATE provider_employment_resolution e SET relationship_id=d.new_id FROM duplicates d WHERE e.relationship_id=d.old_id`, args); err != nil {
 		return err

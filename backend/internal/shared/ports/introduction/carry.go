@@ -6,6 +6,7 @@ package introduction
 
 import "github.com/margince/margince/backend/internal/shared/kernel/ids"
 
+// CarriedRequest makes participant changes and cancellation effects reviewable before a merge.
 type CarriedRequest struct {
 	ID                          ids.UUID
 	Version                     int

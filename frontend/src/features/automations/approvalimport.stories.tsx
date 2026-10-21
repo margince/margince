@@ -6,7 +6,7 @@ import {
 } from "../../testing/approval-row-story";
 
 const meta: Meta = {
-  title: "Patterns/Decision row",
+  title: "Patterns/Import approval",
   parameters: { layout: "padded" },
 };
 export default meta;

@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -15,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// ContactCreationPromotion keeps lead conversion effects attached to contact creation review.
 type ContactCreationPromotion struct {
 	LeadID      ids.LeadID
 	LeadVersion int64
@@ -38,13 +40,13 @@ func (s *Store) previewContactPromotions(ctx, caller context.Context, tx pgx.Tx,
 		if err != nil {
 			return nil, err
 		}
-		if err := auth.Require(ctx, "lead", principal.ActionUpdate); err != nil {
+		if err := auth.Require(ctx, leadEntity, principal.ActionUpdate); err != nil {
 			return nil, err
 		}
-		if err := auth.EnsureWritable(ctx, tx, "lead", id.UUID); err != nil {
+		if err := auth.EnsureWritable(ctx, tx, leadEntity, id.UUID); err != nil {
 			return nil, err
 		}
-		if err := promotionFieldsVisible(ctx, "lead"); err != nil {
+		if err := promotionFieldsVisible(ctx, leadEntity); err != nil {
 			return nil, err
 		}
 		if lead.Version == nil {

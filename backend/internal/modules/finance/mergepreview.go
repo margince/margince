@@ -10,12 +10,14 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// MergeReference preserves company scope when a merge review names a finance record.
 type MergeReference struct {
 	CompanyID  ids.UUID
 	Number     string
@@ -23,6 +25,7 @@ type MergeReference struct {
 	ArchivedAt *time.Time
 }
 
+// MergeReference preserves company scope when a merge review names a finance record.
 func (s *Store) MergeReference(ctx context.Context, kind string, id ids.UUID) (MergeReference, error) {
 	var out MergeReference
 	if err := auth.Require(ctx, "finance", principal.ActionRead); err != nil {

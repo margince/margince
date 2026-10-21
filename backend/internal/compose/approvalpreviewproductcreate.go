@@ -61,10 +61,10 @@ func (r approvalPreviewReader) productCreationPreview(ctx context.Context, appro
 func (r approvalPreviewReader) productCreationDetails(ctx context.Context, plan deals.ProductCreationPreview) ([]crmcontracts.ApprovalPreviewDetail, error) {
 	in := plan.Input
 	fields := map[string]any{
-		"name": in.Name, "sku": in.SKU, "description": in.Description, "unit": in.Unit,
-		"unit_price_minor": in.UnitPriceMinor, "currency": in.Currency,
-		"default_tax_rate": json.Number(plan.TaxRate), "active": in.Active,
-		"billing_model": in.BillingModel, "billing_interval_months": in.BillingIntervalMonths, "source": in.Source,
+		previewFieldName: in.Name, "sku": in.SKU, descriptionField: in.Description, previewFieldUnit: in.Unit,
+		previewFieldUnitPriceMinor: in.UnitPriceMinor, dealTargetCurrency: in.Currency,
+		"default_tax_rate": json.Number(plan.TaxRate), previewProductActive: in.Active,
+		"billing_model": in.BillingModel, "billing_interval_months": in.BillingIntervalMonths, fieldSource: in.Source,
 	}
 	if in.BillingModel == nil {
 		fields["billing_model"] = "not_specified"

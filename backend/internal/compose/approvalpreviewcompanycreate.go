@@ -11,10 +11,11 @@ import (
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func companyCreationRequest(approval crmcontracts.Approval) (contacts.CreateCompanyInput, error) {
-	req, tool, err := creationRequest[crmcontracts.CreateCompanyRequest](approval, "company")
+	req, tool, err := creationRequest[crmcontracts.CreateCompanyRequest](approval, string(recordTypeCompany))
 	if err != nil {
 		return contacts.CreateCompanyInput{}, err
 	}
@@ -32,47 +33,31 @@ func (r approvalPreviewReader) companyCreationPreview(ctx context.Context, appro
 	if err != nil {
 		return nil, err
 	}
-	creator, err := r.creationAuthority(ctx, approval)
-	if previewUnavailable(err) {
-		return out, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	store := contacts.NewStore(r.db).WithFieldCatalog(customfields.NewService(r.db.Pool(), nil))
-	plan, err := store.PreviewCompanyCreationForActor(ctx, in, creator)
-	if previewUnavailable(err) {
-		return out, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	details, effects, err := r.companyCreationDetails(ctx, plan)
-	if previewUnavailable(err) {
-		return out, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	out.Details, out.Effects, out.State = &details, &effects, previewReadyState
-	return out, r.currentEvidence(ctx, approval, out)
+	return r.creationPreviewDetails(ctx, approval, out, func(creator principal.Principal) ([]crmcontracts.ApprovalPreviewDetail, []string, error) {
+		store := contacts.NewStore(r.db).WithFieldCatalog(customfields.NewService(r.db.Pool(), nil))
+		plan, err := store.PreviewCompanyCreationForActor(ctx, in, creator)
+		if err != nil {
+			return nil, nil, err
+		}
+		return r.companyCreationDetails(ctx, plan)
+	})
 }
 
 func (r approvalPreviewReader) companyCreationDetails(ctx context.Context, plan contacts.CompanyCreationPreview) ([]crmcontracts.ApprovalPreviewDetail, []string, error) {
 	in := plan.Input
 	fields := map[string]any{
-		"display_name": in.DisplayName, "legal_name": in.LegalName, "description": in.Description,
-		"industry": in.Industry, "size_band": in.SizeBand, "owner_id": in.OwnerID, "parent_company_id": in.ParentCompanyID,
-		"linkedin_url": in.LinkedInURL, "source": in.Source, "source_system": in.SourceSystem,
-		"source_author_name": in.Author.AuthorName, "source_author_id": in.Author.AuthorID,
-		"lifecycle": "unknown",
+		"display_name": in.DisplayName, fieldLegalName: in.LegalName, descriptionField: in.Description,
+		fieldIndustry: in.Industry, "size_band": in.SizeBand, bulkParamOwner: in.OwnerID, refColParentCompany: in.ParentCompanyID,
+		fieldLinkedIn: in.LinkedInURL, fieldSource: in.Source, previewFieldSourceSystem: in.SourceSystem,
+		previewFieldSourceAuthorName: in.Author.AuthorName, previewFieldSourceAuthorID: in.Author.AuthorID,
+		previewLifecycle: previewLifecycleUnknown,
 	}
 	maps.Copy(fields, plan.CustomFields)
-	if err := creationFieldsVisible(ctx, "company", map[string]any{"domains": in.Domains, "address": in.Address}); err != nil {
+	if err := creationFieldsVisible(ctx, string(recordTypeCompany), map[string]any{previewFieldDomains: in.Domains, addressField: in.Address}); err != nil {
 		return nil, nil, err
 	}
 	maps.Copy(fields, creationAddressFields(in.Address))
-	details, err := r.creationFieldDetails(ctx, "company", fields)
+	details, err := r.creationFieldDetails(ctx, string(recordTypeCompany), fields)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -88,11 +73,11 @@ func (r approvalPreviewReader) companyCreationDetails(ctx context.Context, plan 
 		effects = append(effects, "geocode_if_enabled")
 	}
 	if plan.ReviewCompanyID != nil {
-		value, err := r.referenceValue(ctx, "company_id", plan.ReviewCompanyID.String())
+		value, err := r.referenceValue(ctx, refColCompany, plan.ReviewCompanyID.String())
 		if err != nil {
 			return nil, nil, err
 		}
-		details = append(details, crmcontracts.ApprovalPreviewDetail{Field: "creation_duplicate", Value: value})
+		details = append(details, crmcontracts.ApprovalPreviewDetail{Field: previewCreationDuplicate, Value: value})
 		effects = append(effects, "queue_duplicate_review")
 	}
 	return details, effects, nil

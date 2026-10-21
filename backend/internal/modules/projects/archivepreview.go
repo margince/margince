@@ -5,7 +5,9 @@ package projects
 
 import (
 	"context"
+
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -17,6 +19,7 @@ const (
 	projectArchiveMemberships   = "entity_type = 'project' AND entity_id = @record"
 )
 
+// PreviewProjectArchive checks the version before reporting edges the archive would retire.
 func (s *Store) PreviewProjectArchive(ctx context.Context, id ids.ProjectID, version *int64) (storekit.ArchiveScope, error) {
 	var out storekit.ArchiveScope
 	if err := auth.Require(ctx, projectObject, principal.ActionRead); err != nil {

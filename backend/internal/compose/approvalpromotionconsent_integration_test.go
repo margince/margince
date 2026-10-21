@@ -121,6 +121,13 @@ func testConsentCarryPreview(t *testing.T, operation string) {
 			if !found {
 				t.Fatal("carried consent missing")
 			}
+			expected := 1
+			if example.contact != "" {
+				expected++
+			}
+			if example.lead == "withdrawn" && example.contact == "granted" {
+				expected++
+			}
 			if operation == "promotion" {
 				_, proof, err := consents.LeadConsent(ctx, leadID)
 				if err != nil || len(proof) != 1 {
@@ -128,13 +135,6 @@ func testConsentCarryPreview(t *testing.T, operation string) {
 				}
 			} else {
 				_, proof, err := consents.ContactConsent(ctx, contactID)
-				expected := 1
-				if example.contact != "" {
-					expected++
-				}
-				if example.lead == "withdrawn" && example.contact == "granted" {
-					expected++
-				}
 				if err != nil || len(proof) != expected {
 					t.Fatalf("merged proof = %+v, %v; want %d", proof, err, expected)
 				}

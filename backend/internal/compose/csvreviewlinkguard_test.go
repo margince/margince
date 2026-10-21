@@ -26,7 +26,7 @@ func TestReviewedImportLinksNameTheEarlierRowTheyWillUse(t *testing.T) {
 				{Object: migration.ObjectCompany, ExternalID: "company-one", Outcome: "create", TargetID: tc.target, Values: map[string]json.RawMessage{
 					fieldDisplayName: json.RawMessage(`"Example Company"`), fieldDomain: json.RawMessage(`"https://example.test"`),
 				}},
-				{Object: migration.ObjectContact, ExternalID: "person-one", Outcome: "create", Links: []migration.ReviewLink{tc.link}},
+				{Object: migration.ObjectContact, ExternalID: "contact-one", Outcome: "create", Links: []migration.ReviewLink{tc.link}},
 			}}
 			settleReviewLinks(&plan)
 			if !plan.Complete {
@@ -44,7 +44,7 @@ func TestReviewedImportRefusesAnAmbiguousPendingLink(t *testing.T) {
 	plan := migration.ReviewPlan{Complete: true, Rows: []migration.ReviewRow{
 		{Object: migration.ObjectCompany, ExternalID: "company-one", Outcome: "create", Values: map[string]json.RawMessage{fieldDisplayName: json.RawMessage(`"Example Company"`)}},
 		{Object: migration.ObjectCompany, ExternalID: "company-two", Outcome: "create", Values: map[string]json.RawMessage{fieldDisplayName: json.RawMessage(`"Example Company"`)}},
-		{Object: migration.ObjectContact, ExternalID: "person", Outcome: "create", Links: []migration.ReviewLink{{Object: migration.ObjectCompany, Key: "Example Company", ByName: true, Pending: true}}},
+		{Object: migration.ObjectContact, ExternalID: "contact", Outcome: "create", Links: []migration.ReviewLink{{Object: migration.ObjectCompany, Key: "Example Company", ByName: true, Pending: true}}},
 	}}
 	settleReviewLinks(&plan)
 	if plan.Complete {

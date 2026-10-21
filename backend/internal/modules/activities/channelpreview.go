@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
+// DecodeSendMessageRequest keeps preview consent claims subject to the send path's parser.
 func DecodeSendMessageRequest(req crmcontracts.SendMessageRequest) (SendMessageInput, error) {
 	claimed, err := sendContextFrom((*string)(req.CommunicationContext), req.MarketingPurpose, req.OperatorReason, req.Evidence)
 	if err != nil {
@@ -25,12 +26,14 @@ func DecodeSendMessageRequest(req crmcontracts.SendMessageRequest) (SendMessageI
 	}, nil
 }
 
+// ChannelReplyPreview binds the reply destination to the readable anchor, not caller-supplied routing.
 type ChannelReplyPreview struct {
 	Provider  string
 	Recipient connector.ChannelIdentity
 	Links     []ActivityLinkInput
 }
 
+// PreviewChannelReply checks the destination and authority without sending a message.
 func (s *Store) PreviewChannelReply(ctx context.Context, anchorID ids.ActivityID) (ChannelReplyPreview, error) {
 	anchor, err := s.GetActivity(ctx, anchorID, storekit.LiveOnly)
 	if err != nil {

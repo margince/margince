@@ -255,6 +255,7 @@ func (s *Store) ArchiveProduct(ctx context.Context, id ids.ProductID) (crmcontra
 	return s.ArchiveProductAt(ctx, id, nil)
 }
 
+// ArchiveProductAt keeps a stale review from retiring a changed product.
 func (s *Store) ArchiveProductAt(ctx context.Context, id ids.ProductID, ifVersion *int64) (crmcontracts.Product, error) {
 	if err := auth.Require(ctx, "product", principal.ActionDelete); err != nil {
 		return crmcontracts.Product{}, err

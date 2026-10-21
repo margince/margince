@@ -33,7 +33,7 @@ func (r approvalPreviewReader) commitmentPreview(ctx context.Context, approval c
 	if !commitmentPreviewIdentityMatches(approval, proposal) {
 		return out, nil
 	}
-	sourceType := crmcontracts.ApprovalEvidenceSourceType(recordTypeActivity)
+	sourceType := crmcontracts.ApprovalEvidenceSourceType(string(recordTypeActivity))
 	citation, err := r.currentCitation(ctx, crmcontracts.ApprovalEvidence{SourceType: &sourceType, SourceId: new(openapi_types.UUID(proposal.SourceActivityID)), EvidenceSnippet: proposal.Quote})
 	if state := evidenceFailureState(err); state != "" {
 		out.State = state
@@ -155,6 +155,6 @@ func (r approvalPreviewReader) commitmentRecipientAttachment(ctx context.Context
 
 func commitmentPreviewIdentityMatches(approval crmcontracts.Approval, proposal CommitmentTaskProposal) bool {
 	return !proposal.SourceActivityID.IsZero() && proposal.Locator != "" && strings.TrimSpace(proposal.Summary) != "" && proposal.Quote != "" &&
-		approval.TargetEntityType != nil && *approval.TargetEntityType == string(recordTypeActivity) &&
+		approval.TargetEntityType != nil && *approval.TargetEntityType == string(string(recordTypeActivity)) &&
 		approval.TargetEntityId != nil && ids.UUID(*approval.TargetEntityId) == proposal.SourceActivityID
 }

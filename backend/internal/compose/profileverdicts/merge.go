@@ -6,13 +6,16 @@ package profileverdicts
 
 import (
 	"context"
+
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// MergeReader keeps native merge previews under the same verdict visibility as profile reads.
 func MergeReader(db *database.DB) contacts.ProfileVerdictReader {
 	store := ai.NewFeedbackStore(db)
 	return func(ctx context.Context, tx pgx.Tx, contact ids.UUID, assertions []contacts.MergeProfileAssertion) ([]contacts.MergeProfileValue, error) {

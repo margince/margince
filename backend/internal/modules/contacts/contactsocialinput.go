@@ -9,6 +9,7 @@ import (
 	"strings"
 )
 
+// ContactSocialInput preserves social identity inputs across creation and preview.
 type ContactSocialInput struct {
 	Platform string
 	Handle   string

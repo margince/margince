@@ -8,11 +8,13 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// ArchiveScope names affected IDs; callers must authorize referenced records before disclosure.
 type ArchiveScope struct {
 	Relationships []ids.UUID
 	Lists         []ids.UUID

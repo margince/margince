@@ -5,6 +5,7 @@ package compose
 
 import (
 	"encoding/json"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -16,7 +17,7 @@ func stagePreviewKind(kind string) bool {
 }
 
 func validateProgressionPreview(approval crmcontracts.Approval, current map[string]json.RawMessage) error {
-	if approval.TargetEntityType == nil || *approval.TargetEntityType != "deal" || approval.TargetEntityId == nil {
+	if approval.TargetEntityType == nil || *approval.TargetEntityType != string(recordTypeDeal) || approval.TargetEntityId == nil {
 		return apperrors.ErrInvalidArgument
 	}
 	raw, err := json.Marshal(approval.ProposedChange)
@@ -28,7 +29,7 @@ func validateProgressionPreview(approval crmcontracts.Approval, current map[stri
 		return apperrors.ErrInvalidArgument
 	}
 	var stage ids.StageID
-	if err := json.Unmarshal(current["stage_id"], &stage); err != nil {
+	if err := json.Unmarshal(current[fieldStageID], &stage); err != nil {
 		return apperrors.ErrInvalidArgument
 	}
 	if stage != change.FromStageID {

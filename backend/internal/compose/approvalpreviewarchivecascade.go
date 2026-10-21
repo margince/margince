@@ -33,42 +33,16 @@ func (r approvalPreviewReader) recordArchiveDetails(ctx context.Context, approva
 		if err := json.Unmarshal(record.Fields, &edge); err != nil {
 			return nil, err
 		}
-		if *approval.TargetEntityType == "contact" || *approval.TargetEntityType == "company" {
-			target, counterparty := edge.ContactId, edge.CounterpartyContactId
-			if *approval.TargetEntityType == "company" {
-				target, counterparty = edge.CompanyId, edge.CounterpartyCompanyId
-			}
-			if (target == nil || *target != *approval.TargetEntityId) && (counterparty == nil || *counterparty != *approval.TargetEntityId) {
-				return nil, apperrors.ErrInvalidArgument
-			}
-			details, err := r.relationshipArchiveDetails(ctx, edge)
-			if err != nil {
-				return nil, err
-			}
-			out = append(out, details...)
-			continue
-		}
-		target := edge.DealId
-		var kind crmcontracts.RelationshipKind = "deal_stakeholder"
-		if *approval.TargetEntityType == "project" {
-			target, kind = edge.ProjectId, "project_stakeholder"
-		}
-		if edge.ContactId == nil || target == nil || *target != *approval.TargetEntityId || edge.Kind != kind {
-			return nil, apperrors.ErrInvalidArgument
-		}
-		contact, err := r.referenceValue(ctx, "contact_id", edge.ContactId.String())
+		details, err := r.archiveRelationshipDetails(ctx, approval, edge)
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, crmcontracts.ApprovalPreviewDetail{Field: "archive_stakeholder", Value: contact})
-		if edge.Role != nil {
-			out = append(out, crmcontracts.ApprovalPreviewDetail{Field: "archive_role", Value: crmcontracts.ApprovalPreviewValue{Kind: "text", Text: *edge.Role}})
-		}
+		out = append(out, details...)
 	}
 	for _, group := range []struct {
 		kind string
 		ids  []ids.UUID
-	}{{"list", scope.Lists}, {"tag", scope.Tags}} {
+	}{{string(recordTypeList), scope.Lists}, {string(recordTypeTag), scope.Tags}} {
 		for _, id := range group.ids {
 			value, err := r.referenceValue(ctx, group.kind+"_id", id.String())
 			if err != nil {
@@ -86,15 +60,54 @@ func (r approvalPreviewReader) recordArchiveScope(ctx context.Context, approval 
 	}
 	id, version := ids.UUID(*approval.TargetEntityId), int64(*approval.TargetVersion)
 	switch *approval.TargetEntityType {
-	case "company":
+	case string(recordTypeCompany):
 		return contacts.NewStore(r.db).PreviewCompanyArchive(ctx, ids.From[ids.CompanyKind](id), &version)
-	case "contact":
+	case string(recordTypeContact):
 		return contacts.NewStore(r.db).PreviewContactArchive(ctx, ids.From[ids.ContactKind](id), &version)
-	case "deal":
+	case string(recordTypeDeal):
 		return r.deals.PreviewDealArchive(ctx, ids.From[ids.DealKind](id), &version)
-	case "project":
+	case string(recordTypeProject):
 		return ProjectsStoreOver(r.db).PreviewProjectArchive(ctx, ids.From[ids.ProjectKind](id), &version)
 	default:
 		return storekit.ArchiveScope{}, apperrors.ErrInvalidArgument
 	}
+}
+
+func (r approvalPreviewReader) archiveRelationshipDetails(ctx context.Context, approval crmcontracts.Approval, edge crmcontracts.Relationship) ([]crmcontracts.ApprovalPreviewDetail, error) {
+	var out []crmcontracts.ApprovalPreviewDetail
+	if *approval.TargetEntityType == string(recordTypeContact) || *approval.TargetEntityType == string(recordTypeCompany) {
+		target, counterparty := edge.ContactId, edge.CounterpartyContactId
+		if *approval.TargetEntityType == string(recordTypeCompany) {
+			target, counterparty = edge.CompanyId, edge.CounterpartyCompanyId
+		}
+		if !archiveRelationshipTargets(approval, target, counterparty) {
+			return nil, apperrors.ErrInvalidArgument
+		}
+		details, err := r.relationshipArchiveDetails(ctx, edge)
+		if err != nil {
+			return nil, err
+		}
+		return details, nil
+	}
+	target := edge.DealId
+	var kind crmcontracts.RelationshipKind = "deal_stakeholder"
+	if *approval.TargetEntityType == string(recordTypeProject) {
+		target, kind = edge.ProjectId, "project_stakeholder"
+	}
+	if edge.ContactId == nil || target == nil || *target != *approval.TargetEntityId || edge.Kind != kind {
+		return nil, apperrors.ErrInvalidArgument
+	}
+	contact, err := r.referenceValue(ctx, companionContactField, edge.ContactId.String())
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, crmcontracts.ApprovalPreviewDetail{Field: "archive_stakeholder", Value: contact})
+	if edge.Role != nil {
+		out = append(out, crmcontracts.ApprovalPreviewDetail{Field: "archive_role", Value: crmcontracts.ApprovalPreviewValue{Kind: previewValueText, Text: *edge.Role}})
+	}
+	return out, nil
+}
+
+func archiveRelationshipTargets(approval crmcontracts.Approval, target, counterparty *crmcontracts.Id) bool {
+	return (target != nil && *target == *approval.TargetEntityId) || (counterparty != nil && *counterparty == *approval.TargetEntityId)
 }

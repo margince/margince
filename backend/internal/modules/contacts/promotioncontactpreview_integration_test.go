@@ -7,9 +7,9 @@ package contacts
 
 import (
 	"fmt"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 

@@ -8,8 +8,10 @@ import (
 	"time"
 )
 
+// ReviewRowLimit bounds the complete set a human can authorize in one import review.
 const ReviewRowLimit = 500
 
+// ReviewRow retains checked values and source identity so release can compare the same import row.
 type ReviewRow struct {
 	Object          string                     `json:"object"`
 	ExternalID      string                     `json:"external_id"`
@@ -24,6 +26,7 @@ type ReviewRow struct {
 	LastSyncedAt    time.Time                  `json:"last_synced_at"`
 }
 
+// ReviewLink distinguishes resolved references from links waiting on another imported row.
 type ReviewLink struct {
 	Object     string `json:"object"`
 	Key        string `json:"key"`
@@ -34,6 +37,7 @@ type ReviewLink struct {
 	ByName     bool   `json:"by_name"`
 }
 
+// ReviewPlan binds an import decision set to its actor and completeness verdict.
 type ReviewPlan struct {
 	ActorID      string      `json:"actor_id"`
 	Version      int         `json:"version"`
@@ -43,6 +47,7 @@ type ReviewPlan struct {
 	Associations []Assoc     `json:"associations"`
 }
 
+// Add invalidates the whole review when its row set is too large or ambiguous.
 func (p *ReviewPlan) Add(row ReviewRow) {
 	if !p.Complete {
 		return

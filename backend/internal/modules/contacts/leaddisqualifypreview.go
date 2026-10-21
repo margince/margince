@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -44,7 +45,7 @@ func (s *Store) PreviewDisqualifyLead(ctx context.Context, id ids.LeadID, in Dis
 	}
 	for _, field := range auth.MaskedFields(actor, entityLead, current.Writable != nil && *current.Writable) {
 		switch field {
-		case "status", "disqualify_reason_id", "disqualify_note":
+		case leadStatusColumn, "disqualify_reason_id", "disqualify_note":
 			return nil, apperrors.ErrPermissionDenied
 		}
 	}

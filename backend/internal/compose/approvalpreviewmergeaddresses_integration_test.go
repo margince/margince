@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -22,14 +23,15 @@ func TestContactMergePreviewShowsPrimaryAddressDemotions(t *testing.T) {
 		t.Run(fmt.Sprintf("occupied=%t", occupied), func(t *testing.T) {
 			e := integration.Setup(t)
 			ctx := e.As(e.AdminUser, nil, integration.AdminPerms)
-			source, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{FullName: "Source person", Source: "manual",
+			source, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{
+				FullName: "Source contact", Source: "manual",
 				Emails: []contacts.ContactEmailInput{{Email: "source-work@example.test", EmailType: "work", IsPrimary: true}, {Email: "source-personal@example.test", EmailType: "personal", IsPrimary: true}},
 				Phones: []contacts.ContactPhoneInput{{Phone: "+49301234001", PhoneType: "work", IsPrimary: true}, {Phone: "+49301234002", PhoneType: "home", IsPrimary: true}},
 			})
 			if err != nil {
 				t.Fatal(err)
 			}
-			targetInput := contacts.CreateContactInput{FullName: "Surviving person", Source: "manual"}
+			targetInput := contacts.CreateContactInput{FullName: "Surviving contact", Source: "manual"}
 			if occupied {
 				targetInput.Emails = []contacts.ContactEmailInput{{Email: "survivor@example.test", EmailType: "work", IsPrimary: true}}
 				targetInput.Phones = []contacts.ContactPhoneInput{{Phone: "+49301234003", PhoneType: "work", IsPrimary: true}}
@@ -56,7 +58,7 @@ func TestContactMergePreviewShowsPrimaryAddressDemotions(t *testing.T) {
 			if _, err := e.Contacts.MergeContact(ctx, ids.From[ids.ContactKind](sourceID), ids.From[ids.ContactKind](targetID), &preview.SourceVersion); err != nil {
 				t.Fatal(err)
 			}
-			checkMergedAddresses(t, e, ctx, targetID, preview.Addresses)
+			checkMergedAddresses(ctx, t, e, targetID, preview.Addresses)
 		})
 	}
 }
@@ -96,7 +98,7 @@ func TestCompanyMergePreviewShowsDomainDemotions(t *testing.T) {
 			if _, err := e.Contacts.MergeCompany(ctx, ids.From[ids.CompanyKind](sourceID), ids.From[ids.CompanyKind](targetID), &preview.SourceVersion); err != nil {
 				t.Fatal(err)
 			}
-			checkMergedAddresses(t, e, ctx, targetID, preview.Addresses)
+			checkMergedAddresses(ctx, t, e, targetID, preview.Addresses)
 		})
 	}
 }
@@ -115,7 +117,7 @@ func checkMergeAddressMasks(t *testing.T, e *integration.Env, kind string, sourc
 	}
 }
 
-func checkMergedAddresses(t *testing.T, e *integration.Env, ctx context.Context, target ids.UUID, addresses []contacts.MergeAddress) {
+func checkMergedAddresses(ctx context.Context, t *testing.T, e *integration.Env, target ids.UUID, addresses []contacts.MergeAddress) {
 	t.Helper()
 	if err := e.DB().Tx(ctx, func(tx pgx.Tx) error {
 		for _, address := range addresses {

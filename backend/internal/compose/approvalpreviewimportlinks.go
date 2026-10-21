@@ -58,11 +58,11 @@ func (r approvalPreviewReader) importPendingCompanyChange(ctx context.Context, o
 		if err := json.Unmarshal(current, &stored); err != nil {
 			return err
 		}
-		beforeRaw := stored["company_id"]
+		beforeRaw := stored[refColCompany]
 		if len(beforeRaw) == 0 {
 			beforeRaw = json.RawMessage("null")
 		}
-		before, err := r.value(ctx, "company_id", beforeRaw)
+		before, err := r.value(ctx, refColCompany, beforeRaw)
 		if err != nil {
 			return err
 		}

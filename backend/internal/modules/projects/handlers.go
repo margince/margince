@@ -187,6 +187,7 @@ func (h Handlers) ArchiveProject(w http.ResponseWriter, r *http.Request, id crmc
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// ProjectCreationInput keeps ordinary requests from claiming reserved importer source namespaces.
 func ProjectCreationInput(req crmcontracts.CreateProjectRequest) (CreateProjectInput, error) {
 	return projectCreateInputAdmitting(req, false)
 }

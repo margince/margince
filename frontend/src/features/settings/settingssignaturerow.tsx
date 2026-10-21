@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
+import { SignatureHtml } from "../../components/signaturehtml";
 import { useUnsavedGuard } from "../../components/unsaved";
 import {
   Button,
@@ -16,7 +17,6 @@ import type { Toast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { useSignOff } from "../mail/composesignoff";
-import { SignatureHtml } from "../mail/signaturehtml";
 import { useSaveSignature } from "./settingssignature";
 
 type Draft = { body: string; title: string; phone: string };

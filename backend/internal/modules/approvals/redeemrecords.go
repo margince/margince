@@ -12,6 +12,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// RedeemRecords carries the approved versions into native multi-record writers.
 func (s *Service) RedeemRecords(ctx context.Context, id ids.ApprovalID, tool, diffHash string) (auth.ReleasedRecordPins, error) {
 	var pins auth.ReleasedRecordPins
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -21,8 +22,8 @@ func (s *Service) RedeemRecords(ctx context.Context, id ids.ApprovalID, tool, di
 		}
 		pins.Target = releasedRecordPin(a.TargetType, a.TargetID, a.TargetVersion)
 		pins.CoTarget = releasedRecordPin(a.CoTargetType, a.CoTargetID, a.CoTargetVersion)
-		if a.Kind == "merge_records" && a.TargetType != nil && (*a.TargetType == "contact" || *a.TargetType == "company") && (pins.Target == nil || pins.CoTarget == nil) {
-			return &PreviewContextError{State: "incomplete"}
+		if a.Kind == previewMergeRecords && a.TargetType != nil && (*a.TargetType == "contact" || *a.TargetType == tableCompany) && (pins.Target == nil || pins.CoTarget == nil) {
+			return &PreviewContextError{State: previewIncomplete}
 		}
 		return nil
 	})

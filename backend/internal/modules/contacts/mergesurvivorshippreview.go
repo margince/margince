@@ -5,24 +5,25 @@ package contacts
 
 import (
 	"context"
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/shared/ports/feedback"
-	"github.com/margince/margince/backend/internal/shared/ports/recordfiles"
 	"maps"
 	"slices"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
+	"github.com/margince/margince/backend/internal/shared/ports/feedback"
 	"github.com/margince/margince/backend/internal/shared/ports/introduction"
+	"github.com/margince/margince/backend/internal/shared/ports/recordfiles"
 )
 
+// MergeSurvivorship collects authorized effects and record versions for one merge decision.
 type MergeSurvivorship struct {
 	CompanySingletons        []MergeCompanySingleton
 	CompanyRelationshipTypes []string
@@ -58,9 +59,10 @@ type MergeSurvivorship struct {
 	TargetVersion            int64
 }
 
+// PreviewMergeSurvivorship resolves authorized effects without applying the proposed change.
 func (s *Store) PreviewMergeSurvivorship(ctx context.Context, kind string, source, target ids.UUID, sourceVersion, targetVersion *int64) (MergeSurvivorship, error) {
 	var out MergeSurvivorship
-	if kind != "contact" && kind != "company" {
+	if kind != contactEntity && kind != companyEntity {
 		return out, apperrors.ErrInvalidArgument
 	}
 	if source.IsZero() || target.IsZero() || source == target {
@@ -98,7 +100,7 @@ func (s *Store) PreviewMergeSurvivorship(ctx context.Context, kind string, sourc
 }
 
 func readMergeSurvivorship(ctx context.Context, tx pgx.Tx, kind string, source, target ids.UUID) (MergeSurvivorship, error) {
-	if kind == "contact" {
+	if kind == contactEntity {
 		src, tgt, err := mergePair(ctx, tx, kind, ids.From[ids.ContactKind](source), ids.From[ids.ContactKind](target), nil, readContactMergeState)
 		if err != nil {
 			return MergeSurvivorship{}, err
@@ -143,16 +145,7 @@ func (s *Store) previewMergeScope(ctx context.Context, tx pgx.Tx, kind string, s
 	if err := previewFieldsVisible(ctx, kind, fields...); err != nil {
 		return err
 	}
-	out.Commitments, err = s.previewMergeCommitments(ctx, tx, kind, source)
-	if err != nil {
-		return err
-	}
-	out.Notices, err = s.previewMergeNotices(ctx, tx, kind, source)
-	if err != nil {
-		return err
-	}
-	out.Signals, err = s.previewMergeSignals(ctx, tx, kind, source)
-	if err != nil {
+	if err := s.previewMergeWork(ctx, tx, kind, source, out); err != nil {
 		return err
 	}
 	if err := s.previewMergeContent(ctx, tx, kind, source, target, out); err != nil {
@@ -190,7 +183,7 @@ func (s *Store) previewMergeScope(ctx context.Context, tx pgx.Tx, kind string, s
 	if err != nil {
 		return err
 	}
-	if kind == "contact" {
+	if kind == contactEntity {
 		return s.previewContactMergeScope(ctx, tx, source, target, out)
 	}
 	return previewCompanyMergeEvidence(ctx, tx, source, target, out)
@@ -245,4 +238,21 @@ func (s *Store) previewContactMergeScope(ctx context.Context, tx pgx.Tx, source,
 	}
 	out.PreferenceLinks, err = s.previewMergePreferenceLinks(ctx, tx, source, target, out.Addresses)
 	return err
+}
+
+func (s *Store) previewMergeWork(ctx context.Context, tx pgx.Tx, kind string, source ids.UUID, out *MergeSurvivorship) error {
+	var err error
+	out.Commitments, err = s.previewMergeCommitments(ctx, tx, kind, source)
+	if err != nil {
+		return err
+	}
+	out.Notices, err = s.previewMergeNotices(ctx, tx, kind, source)
+	if err != nil {
+		return err
+	}
+	out.Signals, err = s.previewMergeSignals(ctx, tx, kind, source)
+	if err != nil {
+		return err
+	}
+	return nil
 }

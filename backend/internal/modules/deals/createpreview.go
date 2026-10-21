@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -33,16 +34,17 @@ func (s *Store) PreviewCreateDealTx(ctx context.Context, tx pgx.Tx, in CreateDea
 	return out, nil
 }
 
-// Creator identity supplies defaults; referenced records remain reviewer-scoped.
+// PreviewDealCreationForActor takes defaults from the creator but reads references as the reviewer.
 func (s *Store) PreviewDealCreationForActor(ctx context.Context, in CreateDealInput, creator principal.Principal) (CreateDealInput, error) {
-	return s.previewDealCreationForActor(ctx, in, creator, nil)
+	return s.previewActorDealCreation(ctx, in, creator, nil)
 }
 
+// PreviewImportDealCreationForActor applies import terminal-state rules without creating the deal.
 func (s *Store) PreviewImportDealCreationForActor(ctx context.Context, in CreateDealInput, creator principal.Principal, terminal *ImportTerminal) (CreateDealInput, error) {
-	return s.previewDealCreationForActor(ctx, in, creator, terminal)
+	return s.previewActorDealCreation(ctx, in, creator, terminal)
 }
 
-func (s *Store) previewDealCreationForActor(ctx context.Context, in CreateDealInput, creator principal.Principal, terminal *ImportTerminal) (CreateDealInput, error) {
+func (s *Store) previewActorDealCreation(ctx context.Context, in CreateDealInput, creator principal.Principal, terminal *ImportTerminal) (CreateDealInput, error) {
 	if err := auth.Require(ctx, "deal", principal.ActionCreate); err != nil {
 		return CreateDealInput{}, err
 	}

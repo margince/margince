@@ -41,6 +41,9 @@ var emptinessQuestions = map[string]bool{"Empty": true, "Moved": true}
 // whether the patch is empty, keyed by `path:function`. Each states why the
 // write it makes cannot be a repeat of the stored values.
 var writesThatAlwaysMove = gatekit.Waive(map[string]string{
+	"internal/modules/deals/product.go:ArchiveProductAt":                        "the archive stamps archived_at after reading the row as live; a repeated archive cannot reach the patch",
+	"internal/modules/deals/offerarchive.go:ArchiveOfferAt":                     "the archive stamps archived_at after reading the row as live; a repeated archive cannot reach the patch",
+	"internal/modules/deals/offer_template.go:ArchiveOfferTemplateAt":           "an already archived template returns after its version check; only a live template reaches the archive stamp",
 	"internal/modules/commissions/decide.go:decideTx":                           "a decision moves the entry from pending to approved or void, and a repeat of the decision is refused by the status guard before the patch is built",
 	"internal/modules/activities/lifecycle.go:archiveActivityInTx":              "the archive stamps archived_at on a row the caller has just read as live, so the stamp is a value the row did not hold",
 	"internal/modules/contacts/companyarchive.go:archiveCompanyTx":              "the archive stamps archived_at on a row the caller has just read as live, so the stamp is a value the row did not hold",

@@ -9,11 +9,12 @@ import (
 	"maps"
 	"testing"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 func TestRecordMergePreviewUsesTheNativeSurvivorshipPlan(t *testing.T) {

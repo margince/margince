@@ -10,6 +10,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// PreviewMergeSurvivorship includes the sibling-owned records wired into the contact store.
 func (p *Provider) PreviewMergeSurvivorship(ctx context.Context, kind string, source, target ids.UUID, sourceVersion, targetVersion *int64) (contacts.MergeSurvivorship, error) {
 	return p.contacts.PreviewMergeSurvivorship(ctx, kind, source, target, sourceVersion, targetVersion)
 }

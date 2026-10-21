@@ -24,7 +24,7 @@ func (r approvalPreviewReader) invitationPreview(ctx context.Context, approval c
 		return nil, err
 	}
 	host, err := bookingPreviewHost(approval, crmcontracts.BookMeetingJSONRequestBody{})
-	if err != nil {
+	if previewUnavailable(err) {
 		return out, nil
 	}
 	call := agents.NewMeetingInvitationCall(r.records, nil, in)
@@ -35,7 +35,7 @@ func (r approvalPreviewReader) invitationPreview(ctx context.Context, approval c
 		}
 		return nil, err
 	}
-	if approval.TargetEntityId == nil || approval.TargetEntityType == nil || *approval.TargetEntityType != "contact" || *approval.TargetEntityId != in.ContactId {
+	if approval.TargetEntityId == nil || approval.TargetEntityType == nil || *approval.TargetEntityType != string(recordTypeContact) || *approval.TargetEntityId != in.ContactId {
 		return out, nil
 	}
 	appointment, err := r.activities.PreviewInvitation(ctx, ids.From[ids.UserKind](host), in)
@@ -45,14 +45,7 @@ func (r approvalPreviewReader) invitationPreview(ctx context.Context, approval c
 	if err != nil {
 		return nil, err
 	}
-	hostValue, err := r.referenceValue(ctx, bulkParamOwner, host.String())
-	if previewUnavailable(err) {
-		return out, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	contact, err := r.referenceValue(ctx, "contact_id", ids.UUID(in.ContactId).String())
+	hostValue, contact, err := r.invitationParticipants(ctx, host, in)
 	if previewUnavailable(err) {
 		return out, nil
 	}
@@ -68,12 +61,27 @@ func (r approvalPreviewReader) invitationPreview(ctx context.Context, approval c
 		previewDetail("to", string(in.AttendeeEmail)),
 		{Field: "meeting_host", Value: hostValue},
 		{Field: "filed_under", Value: contact},
-		{Field: "video_call", Value: crmcontracts.ApprovalPreviewValue{Kind: "boolean", Text: strconv.FormatBool(appointment.VideoCall)}},
-		{Field: "email_reminder", Value: crmcontracts.ApprovalPreviewValue{Kind: "boolean", Text: strconv.FormatBool(appointment.EmailReminder)}},
+		{Field: "video_call", Value: crmcontracts.ApprovalPreviewValue{Kind: previewValueBoolean, Text: strconv.FormatBool(appointment.VideoCall)}},
+		{Field: "email_reminder", Value: crmcontracts.ApprovalPreviewValue{Kind: previewValueBoolean, Text: strconv.FormatBool(appointment.EmailReminder)}},
 	}
 	out.Details, out.Effects, out.State = &details, &[]string{"authorize_calendar_invitation"}, previewReadyState
-	if err := r.currentEvidence(ctx, approval, out); err != nil {
-		return nil, err
+	return out, r.currentEvidence(ctx, approval, out)
+}
+
+func (r approvalPreviewReader) invitationParticipants(ctx context.Context, host ids.UUID, in crmcontracts.MeetingInvitationRequest) (crmcontracts.ApprovalPreviewValue, crmcontracts.ApprovalPreviewValue, error) {
+	hostValue, err := r.referenceValue(ctx, bulkParamOwner, host.String())
+	if previewUnavailable(err) {
+		return hostValue, crmcontracts.ApprovalPreviewValue{}, err
 	}
-	return out, nil
+	if err != nil {
+		return hostValue, crmcontracts.ApprovalPreviewValue{}, err
+	}
+	contact, err := r.referenceValue(ctx, companionContactField, ids.UUID(in.ContactId).String())
+	if previewUnavailable(err) {
+		return hostValue, crmcontracts.ApprovalPreviewValue{}, err
+	}
+	if err != nil {
+		return hostValue, crmcontracts.ApprovalPreviewValue{}, err
+	}
+	return hostValue, contact, nil
 }

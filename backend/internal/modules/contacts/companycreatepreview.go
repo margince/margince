@@ -8,12 +8,14 @@ import (
 	"slices"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// CompanyCreationPreview resolves creation defaults and identity before approval.
 type CompanyCreationPreview struct {
 	Input           CreateCompanyInput
 	CustomFields    map[string]any
@@ -22,9 +24,10 @@ type CompanyCreationPreview struct {
 	AddressLookup   bool
 }
 
+// PreviewCompanyCreationForActor resolves authorized effects without applying the proposed change.
 func (s *Store) PreviewCompanyCreationForActor(ctx context.Context, in CreateCompanyInput, creator principal.Principal) (CompanyCreationPreview, error) {
 	var out CompanyCreationPreview
-	if err := auth.Require(ctx, "company", principal.ActionCreate); err != nil {
+	if err := auth.Require(ctx, companyEntity, principal.ActionCreate); err != nil {
 		return out, err
 	}
 	// Domain normalization mutates its slice; a preview does not edit stored arguments.
@@ -33,7 +36,7 @@ func (s *Store) PreviewCompanyCreationForActor(ctx context.Context, in CreateCom
 	if _, err := s.readyCompanyCreate(creatorCtx, &in); err != nil {
 		return out, err
 	}
-	active, err := s.activeColumns(ctx, "company")
+	active, err := s.activeColumns(ctx, companyEntity)
 	if err != nil {
 		return out, err
 	}
@@ -54,10 +57,10 @@ func (s *Store) PreviewCompanyCreationForActor(ctx context.Context, in CreateCom
 			return err
 		}
 		if match.Decision == DecisionFuzzyReview {
-			if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
+			if err := auth.Require(ctx, companyEntity, principal.ActionRead); err != nil {
 				return err
 			}
-			if err := auth.EnsureVisible(ctx, tx, "company", match.CompanyID.UUID); err != nil {
+			if err := auth.EnsureVisible(ctx, tx, companyEntity, match.CompanyID.UUID); err != nil {
 				return err
 			}
 			out.ReviewCompanyID = &match.CompanyID

@@ -16,6 +16,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
 
+const grantRecordIDArg = "record_id"
+
+const grantRecordTypeArg = "record_type"
+
 const grantRecordScope = "record_type=@record_type AND record_id=@record_id"
 
 func admitGrantCarry(ctx context.Context, tx pgx.Tx, kind string, source, target ids.UUID) error {
@@ -33,6 +37,7 @@ func admitGrantCarry(ctx context.Context, tx pgx.Tx, kind string, source, target
 	return nil
 }
 
+// PreviewGrantCarryTx checks both records before exposing grants that a merge would transfer.
 func (s *Service) PreviewGrantCarryTx(ctx context.Context, tx pgx.Tx, kind string, source, target ids.UUID) ([]authz.CarriedRecordGrant, error) {
 	if err := auth.Require(ctx, kind, principal.ActionRead); err != nil {
 		return nil, err
@@ -73,7 +78,7 @@ func (s *Service) PreviewGrantCarryTx(ctx context.Context, tx pgx.Tx, kind strin
 }
 
 func previewGrantRows(ctx context.Context, tx pgx.Tx, kind string, id ids.UUID) ([]grantRow, error) {
-	rows, err := tx.Query(ctx, "SELECT "+grantColumns+" FROM record_grant WHERE "+grantRecordScope+" ORDER BY id LIMIT 501", pgx.NamedArgs{"record_type": kind, "record_id": id})
+	rows, err := tx.Query(ctx, "SELECT "+grantColumns+" FROM record_grant WHERE "+grantRecordScope+" ORDER BY id LIMIT 501", pgx.NamedArgs{grantRecordTypeArg: kind, grantRecordIDArg: id})
 	if err != nil {
 		return nil, err
 	}

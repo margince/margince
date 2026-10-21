@@ -7,10 +7,11 @@ import (
 	"context"
 	"strconv"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 func mergeIdentityDetail(field, label string, id ids.UUID) crmcontracts.ApprovalPreviewDetail {
@@ -81,7 +82,7 @@ func (r approvalPreviewReader) mergeConversationDetails(ctx context.Context, sco
 			if actor.id == nil {
 				continue
 			}
-			value, err := r.referenceValue(ctx, "owner_id", actor.id.String())
+			value, err := r.referenceValue(ctx, bulkParamOwner, actor.id.String())
 			if err != nil {
 				return nil, err
 			}

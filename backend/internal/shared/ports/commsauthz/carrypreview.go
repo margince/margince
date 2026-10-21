@@ -4,10 +4,12 @@
 package commsauthz
 
 import (
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// CarriedStop preserves communication restrictions when their subject changes.
 type CarriedStop struct {
 	ID           ids.UUID
 	Kind         string
@@ -16,6 +18,7 @@ type CarriedStop struct {
 	PurposeLabel string
 }
 
+// CarriedConsentLinks keeps consent evidence attached to the surviving subject.
 type CarriedConsentLinks struct {
 	WithdrawalCredentials []CarriedWithdrawalLink
 	CommunicationBases    []CarriedCommunicationBasis
@@ -24,6 +27,7 @@ type CarriedConsentLinks struct {
 	QualifyingEvents      []CarriedQualifyingEvent
 }
 
+// CarriedWithdrawalLink exposes withdrawal-link status without its redeemable credential.
 type CarriedWithdrawalLink struct {
 	ID           ids.UUID
 	Address      string
@@ -34,6 +38,7 @@ type CarriedWithdrawalLink struct {
 	RevokedAt    *time.Time
 }
 
+// CarriedCommunicationBasis preserves the evidence and validity period behind permission to communicate.
 type CarriedCommunicationBasis struct {
 	ID               ids.UUID
 	Kind             string
@@ -43,6 +48,7 @@ type CarriedCommunicationBasis struct {
 	RevokedAt        *time.Time
 }
 
+// CarriedOverride preserves the authority behind an exception when its subject changes.
 type CarriedOverride struct {
 	ID        ids.UUID
 	Category  string
@@ -50,6 +56,7 @@ type CarriedOverride struct {
 	Authority string
 }
 
+// CarriedPreferenceLink makes link retirement visible before addresses move.
 type CarriedPreferenceLink struct {
 	ID            ids.UUID
 	EmailID       *ids.UUID
@@ -60,6 +67,7 @@ type CarriedPreferenceLink struct {
 	WillRetire    bool
 }
 
+// CarriedConfirmation exposes confirmation status without its redeemable credential.
 type CarriedConfirmation struct {
 	ID         ids.UUID
 	Address    string
@@ -69,6 +77,7 @@ type CarriedConfirmation struct {
 	ConsumedAt *time.Time
 }
 
+// CarriedDoubleOptIn keeps purpose and consumption status available for merge review.
 type CarriedDoubleOptIn struct {
 	ID           ids.UUID
 	PurposeID    ids.UUID
@@ -78,6 +87,7 @@ type CarriedDoubleOptIn struct {
 	ConsumedAt   *time.Time
 }
 
+// CarriedQualifyingEvent shows whether consent evidence survives or collapses into an existing event.
 type CarriedQualifyingEvent struct {
 	ID         ids.UUID
 	Kind       string

@@ -217,7 +217,6 @@ func TestASendFreezesTheRealBuyerEvenWhenTheSenderCannotSeeIt(t *testing.T) {
 	if _, err := e.Deals.UpdateDeal(admin, deal, deals.UpdateDealInput{CompanyID: &hiddenID}); err != nil {
 		t.Fatalf("linking the deal to its company: %v", err)
 	}
-	e.MakeCapturePrivate(t, "company", hidden, e.Rep2)
 
 	desk := e.As(e.Rep3, []ids.UUID{e.Team1}, offerDeskCompanyPerms)
 	description, price := "Retainer", int64(10000)
@@ -230,6 +229,7 @@ func TestASendFreezesTheRealBuyerEvenWhenTheSenderCannotSeeIt(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create offer: %v", err)
 	}
+	e.MakeCapturePrivate(t, "company", hidden, e.Rep2)
 	offer := ids.From[ids.OfferKind](ids.UUID(created.Id))
 	sent, err := e.Deals.SendOffer(desk, offer, nil)
 	if err != nil {

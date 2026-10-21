@@ -45,7 +45,7 @@ func TestMailApprovalDoesNotPresentAnIncompleteMessageAsReady(t *testing.T) {
 			}
 			svc := NewApprovalsService(e.DB())
 			id, err := svc.Stage(e.Admin(), approvals.StageInput{
-				Kind: "send_company_email", TargetType: "company", TargetID: company,
+				Kind: "send_company_email", TargetType: "activity",
 				ProposedChange: canonical, DiffHash: hash,
 			})
 			if err != nil {

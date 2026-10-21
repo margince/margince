@@ -9,12 +9,14 @@ import (
 	"slices"
 
 	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// ActivityRelinkPreview keeps participant changes tied to the exact activity the reviewer can read.
 type ActivityRelinkPreview struct {
 	Activity             crmcontracts.Activity
 	Removed              []ids.UUID
@@ -23,7 +25,7 @@ type ActivityRelinkPreview struct {
 	StampsCorrespondence bool
 }
 
-// The set is explicit: a growing thread cannot describe a fixed approval scope.
+// PreviewRelink requires an explicit activity set; a growing thread cannot define a fixed approval scope.
 func (s *Store) PreviewRelink(ctx context.Context, activityIDs []ids.UUID, in RelinkActivityInput) ([]ActivityRelinkPreview, error) {
 	if err := validateRelinkCount(len(activityIDs)); err != nil {
 		return nil, err

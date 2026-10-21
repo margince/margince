@@ -158,6 +158,9 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "privacy.inboxAdminOnly",
   ],
   de: [
+    // These name users, recipients and participants, not contact records.
+    "approval.preview.companyPrivateReadings",
+    "approval.merge.handoff_sender",
     // Approval details name senders, recipients, participants and deciding colleagues.
     "approval.preview.authorizeInvitation",
     "approval.preview.operatorReason",
@@ -257,6 +260,20 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "sendPermission.reason.withdrawn",
   ],
   vi: [
+    // These name users, recipients and participants, not contact records.
+    "approval.scheduled.rearm",
+    "approval.read.retained",
+    "approval.read.effect",
+    "approval.preview.companyPrivateReadings",
+    "approval.merge.draft_bcc",
+    "approval.merge.draft_cc",
+    "approval.merge.draft_to",
+    "approval.merge.grant_subject",
+    "approval.merge.handoff_recipient",
+    "approval.merge.handoff_sender",
+    "approval.merge.participant_address",
+    "approval.merge.participant_collapsed",
+    "approval.merge.participant_role",
     // Approval details name senders, recipients, participants and deciding colleagues.
     "approval.preview.authorizeInvitation",
     "approval.preview.authorizeChannelReply",

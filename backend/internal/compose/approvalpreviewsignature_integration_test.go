@@ -35,7 +35,7 @@ func TestMailApprovalSignsOnlyAsItsActualHumanSender(t *testing.T) {
 				t.Fatal(err)
 			}
 			svc := NewApprovalsService(e.DB())
-			id, err := svc.Stage(proposer, approvals.StageInput{Kind: "send_company_email", TargetType: "company", TargetID: company, ProposedChange: raw, DiffHash: hash})
+			id, err := svc.Stage(proposer, approvals.StageInput{Kind: "send_company_email", TargetType: "activity", ProposedChange: raw, DiffHash: hash})
 			if err != nil {
 				t.Fatal(err)
 			}

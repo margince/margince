@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// DefaultMeetingSubject keeps booking previews and saved meetings aligned when no title is supplied.
 const DefaultMeetingSubject = "Meeting"
 
 // BookMeetingInput is one slot a caller is committing: whose calendar it lands

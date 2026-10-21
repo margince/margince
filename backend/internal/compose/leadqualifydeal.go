@@ -41,8 +41,10 @@ func qualifiedDealCreate(ctx context.Context, tx pgx.Tx, in contacts.QualifyDeal
 	if err != nil {
 		return deals.CreateDealInput{}, err
 	}
-	return deals.CreateDealInput{Name: in.Name, AmountMinor: in.AmountMinor, Currency: in.Currency,
-		PipelineID: pipelineID, StageID: stageID, Source: in.Source, OwnerID: in.OwnerID, OwnerExact: true}, nil
+	return deals.CreateDealInput{
+		Name: in.Name, AmountMinor: in.AmountMinor, Currency: in.Currency,
+		PipelineID: pipelineID, StageID: stageID, Source: in.Source, OwnerID: in.OwnerID, OwnerExact: true,
+	}, nil
 }
 
 func (o leadDealOpener) PreviewDealForLead(ctx context.Context, tx pgx.Tx, in contacts.QualifyDealInput) (contacts.QualifyDealInput, error) {
@@ -54,6 +56,8 @@ func (o leadDealOpener) PreviewDealForLead(ctx context.Context, tx pgx.Tx, in co
 	if err != nil {
 		return contacts.QualifyDealInput{}, err
 	}
-	return contacts.QualifyDealInput{Name: ready.Name, AmountMinor: ready.AmountMinor, Currency: ready.Currency,
-		PipelineID: new(ready.PipelineID.UUID), StageID: new(ready.StageID.UUID), OwnerID: ready.OwnerID, Source: ready.Source}, nil
+	return contacts.QualifyDealInput{
+		Name: ready.Name, AmountMinor: ready.AmountMinor, Currency: ready.Currency,
+		PipelineID: new(ready.PipelineID.UUID), StageID: new(ready.StageID.UUID), OwnerID: ready.OwnerID, Source: ready.Source,
+	}, nil
 }

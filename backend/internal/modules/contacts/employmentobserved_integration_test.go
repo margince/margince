@@ -215,7 +215,7 @@ func TestAContactMergeKeepsTheEarliestFirstObservation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ensure the merged contact: %v", err)
 	}
-	e.requireMergeObservation(t, ctx, "contact", merged.ContactID.UUID, kept.ContactID.UUID,
+	e.requireMergeObservation(ctx, t, contactEntity, merged.ContactID.UUID, kept.ContactID.UUID,
 		e.employmentEdgeOf(ctx, t, kept.ContactID, company), mailDay(2026, time.March, 2), mailDay(2025, time.January, 10))
 	if _, err := e.store.MergeContact(ctx, merged.ContactID, kept.ContactID, nil); err != nil {
 		t.Fatalf("merge: %v", err)
@@ -241,7 +241,7 @@ func TestACompanyMergeKeepsTheEarliestFirstObservation(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("recording the second employment: %v", err)
 	}
-	e.requireMergeObservation(t, ctx, "company", source.UUID, target.UUID,
+	e.requireMergeObservation(ctx, t, companyEntity, source.UUID, target.UUID,
 		e.employmentEdgeOf(ctx, t, res.ContactID, target), time.Time{}, mailDay(2025, time.January, 10))
 	if _, err := e.store.MergeCompany(ctx, source, target, nil); err != nil {
 		t.Fatalf("merge: %v", err)
@@ -265,7 +265,7 @@ func (e *dedupeEnv) employmentEdgeOf(ctx context.Context, t *testing.T, contact 
 	return id
 }
 
-func (e *dedupeEnv) requireMergeObservation(t *testing.T, ctx context.Context, kind string, source, target, edge ids.UUID, before, after time.Time) {
+func (e *dedupeEnv) requireMergeObservation(ctx context.Context, t *testing.T, kind string, source, target, edge ids.UUID, before, after time.Time) {
 	t.Helper()
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		changes, err := e.store.previewMergeObservations(ctx, tx, kind, source, target)

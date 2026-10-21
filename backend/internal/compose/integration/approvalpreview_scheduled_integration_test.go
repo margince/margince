@@ -13,14 +13,16 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 )
 
 func TestHeldMessagePreviewShowsFrozenContentAndRefusesAnUnknownPayload(t *testing.T) {
 	p := setupPreflight(t)
 	p.connect(t, gmailReadonlyScope, gmailSendScope)
-	id := p.scheduleFor(t, time.Now().Add(2*time.Hour))
+	id := p.scheduleFor(t, clocktest.Now(t).Add(2*time.Hour))
 	p.withdrawConsent(t)
 	p.makeDue(t, id)
 	p.fire(t, id)

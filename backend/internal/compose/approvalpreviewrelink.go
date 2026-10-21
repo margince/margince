@@ -31,8 +31,8 @@ func relinkApprovalInput(approval crmcontracts.Approval) ([]ids.UUID, activities
 		return nil, in, apperrors.ErrInvalidArgument
 	}
 	in = activities.RelinkActivityInput{EntityType: req.EntityType, EntityID: req.EntityID, ReplaceExistingOfType: req.Replace}
-	if approval.Kind == "relink_activity" {
-		if *approval.TargetEntityType != "activity" {
+	if approval.Kind == singleRelinkTool {
+		if *approval.TargetEntityType != string(recordTypeActivity) {
 			return nil, in, apperrors.ErrInvalidArgument
 		}
 		id := ids.UUID(*approval.TargetEntityId)
@@ -43,7 +43,7 @@ func relinkApprovalInput(approval crmcontracts.Approval) ([]ids.UUID, activities
 		in.IfVersion = new(int64(*approval.TargetVersion))
 		return []ids.UUID{id}, in, nil
 	}
-	if approval.Kind != "relink_activities" || req.EntityType != *approval.TargetEntityType || req.EntityID != ids.UUID(*approval.TargetEntityId) {
+	if approval.Kind != operationRelinkActivities || req.EntityType != *approval.TargetEntityType || req.EntityID != ids.UUID(*approval.TargetEntityId) {
 		return nil, in, apperrors.ErrInvalidArgument
 	}
 	return req.ActivityIDs, in, nil
@@ -100,7 +100,7 @@ func (r approvalPreviewReader) relinkDetails(ctx context.Context, in activities.
 		}
 		field := "relink_unchanged_activity"
 		if plan.AddsLink {
-			field = "relink_activity"
+			field = singleRelinkTool
 		}
 		details = append(details, crmcontracts.ApprovalPreviewDetail{Field: field, Value: activity})
 		for _, removed := range plan.Removed {
@@ -122,7 +122,7 @@ func (r approvalPreviewReader) relinkDetails(ctx context.Context, in activities.
 func (r approvalPreviewReader) relinkParticipantDetails(ctx context.Context, participants []activities.RelinkParticipantChange) ([]crmcontracts.ApprovalPreviewDetail, error) {
 	var details []crmcontracts.ApprovalPreviewDetail
 	for _, participant := range participants {
-		contact, err := r.referenceValue(ctx, "contact_id", participant.ContactID.String())
+		contact, err := r.referenceValue(ctx, companionContactField, participant.ContactID.String())
 		if err != nil {
 			return nil, err
 		}

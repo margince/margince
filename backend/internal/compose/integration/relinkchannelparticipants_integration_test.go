@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -22,8 +23,8 @@ import (
 )
 
 func TestRelinkPreservesDistinctChatAccountsInTheSameRole(t *testing.T) {
-	e, ctx, people, accounts, id := setupChannelParticipantRelink(t)
-	in := activities.RelinkActivityInput{EntityType: "contact", EntityID: people[1], ReplaceExistingOfType: true}
+	e, ctx, contactIDs, accounts, id := setupChannelParticipantRelink(t)
+	in := activities.RelinkActivityInput{EntityType: "contact", EntityID: contactIDs[1], ReplaceExistingOfType: true}
 	preview, err := e.Activities.PreviewRelink(ctx, []ids.UUID{id.UUID}, in)
 	if err != nil {
 		t.Fatal(err)
@@ -36,12 +37,12 @@ func TestRelinkPreservesDistinctChatAccountsInTheSameRole(t *testing.T) {
 	}
 	moved := map[string]bool{}
 	for _, participant := range preview[0].Participants {
-		if participant.ChannelUserID == nil && (participant.Role != "from" || !participant.Move || participant.ContactID != people[0]) {
+		if participant.ChannelUserID == nil && (participant.Role != "from" || !participant.Move || participant.ContactID != contactIDs[0]) {
 			t.Fatalf("sender effect: %+v", participant)
 		}
 		if participant.ChannelUserID != nil {
 			moved[*participant.ChannelUserID] = participant.Move
-			if participant.ContactID != people[0] {
+			if participant.ContactID != contactIDs[0] {
 				t.Fatalf("unexpected source: %+v", participant)
 			}
 		}
@@ -62,7 +63,7 @@ func TestRelinkPreservesDistinctChatAccountsInTheSameRole(t *testing.T) {
 	}
 	for account := range accounts {
 		_, contact, _, found := rosterRow(t, id, account)
-		if !found || contact == nil || *contact != people[1] {
+		if !found || contact == nil || *contact != contactIDs[1] {
 			t.Fatalf("account %s lost or not relinked: %v", account, contact)
 		}
 	}
@@ -75,22 +76,22 @@ func setupChannelParticipantRelink(t *testing.T) (*Env, context.Context, []ids.U
 	perms.Objects = maps.Clone(perms.Objects)
 	perms.Objects["custom_field"] = principal.ObjectGrant{Read: true}
 	ctx := e.As(e.AdminUser, nil, perms)
-	var people []ids.UUID
+	var contactIDs []ids.UUID
 	for _, name := range []string{"Original contact", "Correct contact"} {
-		person, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{FullName: name, Source: "manual"})
+		contact, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{FullName: name, Source: "manual"})
 		if err != nil {
 			t.Fatal(err)
 		}
-		people = append(people, ids.UUID(person.Id))
+		contactIDs = append(contactIDs, ids.UUID(contact.Id))
 	}
-	accounts := map[string]ids.UUID{"acct-a": people[0], "acct-b": people[0], "acct-c": people[1]}
+	accounts := map[string]ids.UUID{"acct-a": contactIDs[0], "acct-b": contactIDs[0], "acct-c": contactIDs[1]}
 	if err := e.DB().Tx(ctx, func(tx pgx.Tx) error {
-		for account, person := range accounts {
-			bound, err := contacts.ResolveOrCreateChannelIdentity(ctx, tx, ids.From[ids.ContactKind](person), connector.ChannelIdentity{Provider: rosterProvider, ChannelUserID: account})
+		for account, contact := range accounts {
+			bound, err := contacts.ResolveOrCreateChannelIdentity(ctx, tx, ids.From[ids.ContactKind](contact), connector.ChannelIdentity{Provider: rosterProvider, ChannelUserID: account})
 			if err != nil {
 				return err
 			}
-			if bound.UUID != person {
+			if bound.UUID != contact {
 				return fmt.Errorf("account %s bound to %s", account, bound)
 			}
 		}
@@ -100,7 +101,7 @@ func setupChannelParticipantRelink(t *testing.T) (*Env, context.Context, []ids.U
 	}
 	activity, _, err := e.Activities.LogActivity(ctx, activities.LogActivityInput{
 		Kind: activities.KindMessage, ChannelProvider: rosterProvider, Subject: new("Support group"), Direction: new("inbound"), Source: "manual",
-		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: people[0]}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contactIDs[0]}},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -110,14 +111,14 @@ func setupChannelParticipantRelink(t *testing.T) (*Env, context.Context, []ids.U
 		connector.MessageParticipant{ChannelUserID: "acct-a", Role: connector.ParticipantRoleAttendee},
 		connector.MessageParticipant{ChannelUserID: "acct-b", Role: connector.ParticipantRoleAttendee},
 		connector.MessageParticipant{ChannelUserID: "acct-c", Role: connector.ParticipantRoleAttendee})
-	return e, ctx, people, accounts, id
+	return e, ctx, contactIDs, accounts, id
 }
 
 func TestContactMergeParticipantPreviewMatchesDistinctChatAccounts(t *testing.T) {
-	e, ctx, people, accounts, id := setupChannelParticipantRelink(t)
+	e, ctx, contactIDs, accounts, id := setupChannelParticipantRelink(t)
 	shared, _, err := e.Activities.LogActivity(ctx, activities.LogActivityInput{
 		Kind: activities.KindMessage, ChannelProvider: rosterProvider, Subject: new("Shared conversation"), Direction: new("inbound"), Source: "manual",
-		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: people[0]}, {EntityType: "contact", EntityID: people[1]}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contactIDs[0]}, {EntityType: "contact", EntityID: contactIDs[1]}},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -127,7 +128,7 @@ func TestContactMergeParticipantPreviewMatchesDistinctChatAccounts(t *testing.T)
 	}); err != nil {
 		t.Fatal(err)
 	}
-	preview, err := e.Contacts.PreviewMergeSurvivorship(ctx, "contact", people[0], people[1], nil, nil)
+	preview, err := e.Contacts.PreviewMergeSurvivorship(ctx, "contact", contactIDs[0], contactIDs[1], nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -160,12 +161,12 @@ func TestContactMergeParticipantPreviewMatchesDistinctChatAccounts(t *testing.T)
 	if !maps.Equal(moved, map[string]bool{"acct-a": true, "acct-b": true}) {
 		t.Fatalf("accounts: %v", moved)
 	}
-	if _, err := e.Contacts.MergeContact(ctx, ids.From[ids.ContactKind](people[0]), ids.From[ids.ContactKind](people[1]), &preview.SourceVersion); err != nil {
+	if _, err := e.Contacts.MergeContact(ctx, ids.From[ids.ContactKind](contactIDs[0]), ids.From[ids.ContactKind](contactIDs[1]), &preview.SourceVersion); err != nil {
 		t.Fatal(err)
 	}
 	reachable := map[string]bool{}
 	if err := e.DB().Tx(ctx, func(tx pgx.Tx) error {
-		identities, err := contacts.ReachableChannelIdentities(ctx, tx, ids.From[ids.ContactKind](people[1]), rosterProvider)
+		identities, err := contacts.ReachableChannelIdentities(ctx, tx, ids.From[ids.ContactKind](contactIDs[1]), rosterProvider)
 		if err != nil {
 			return err
 		}
@@ -182,7 +183,7 @@ func TestContactMergeParticipantPreviewMatchesDistinctChatAccounts(t *testing.T)
 	var survivorSeats int
 	if err := OwnerConn(t).QueryRow(context.Background(),
 		`SELECT count(*) FROM activity_participant WHERE activity_id = @activity AND contact_id = @target`,
-		pgx.StrictNamedArgs{"activity": ids.UUID(shared.Id), "target": people[1]}).Scan(&survivorSeats); err != nil {
+		pgx.StrictNamedArgs{"activity": ids.UUID(shared.Id), "target": contactIDs[1]}).Scan(&survivorSeats); err != nil {
 		t.Fatal(err)
 	}
 	if survivorSeats != 1 {
@@ -190,7 +191,7 @@ func TestContactMergeParticipantPreviewMatchesDistinctChatAccounts(t *testing.T)
 	}
 	var retiredSeats int
 	if err := OwnerConn(t).QueryRow(context.Background(),
-		`SELECT count(*) FROM activity_participant WHERE contact_id = @source`, pgx.StrictNamedArgs{"source": people[0]}).Scan(&retiredSeats); err != nil {
+		`SELECT count(*) FROM activity_participant WHERE contact_id = @source`, pgx.StrictNamedArgs{"source": contactIDs[0]}).Scan(&retiredSeats); err != nil {
 		t.Fatal(err)
 	}
 	if retiredSeats != 0 {
@@ -198,55 +199,55 @@ func TestContactMergeParticipantPreviewMatchesDistinctChatAccounts(t *testing.T)
 	}
 	for account := range accounts {
 		_, contact, _, found := rosterRow(t, id, account)
-		if !found || contact == nil || *contact != people[1] {
+		if !found || contact == nil || *contact != contactIDs[1] {
 			t.Fatalf("account %s: %v", account, contact)
 		}
 	}
 }
 
 func TestContactMergeParticipantPreviewRefusesAnUnreadableRoster(t *testing.T) {
-	e, _, people, _, id := setupChannelParticipantRelink(t)
+	e, _, contactIDs, _, id := setupChannelParticipantRelink(t)
 	perms := AdminPerms
 	perms.Objects = maps.Clone(perms.Objects)
 	perms.Objects["custom_field"] = principal.ObjectGrant{Read: true}
 	ctx := e.As(e.Rep1, nil, perms)
 	stampRoster(t, e, id, false, connector.MessageParticipant{ChannelUserID: "acct-a", Role: connector.ParticipantRoleBCC})
-	if _, err := e.Contacts.PreviewMergeSurvivorship(ctx, "contact", people[0], people[1], nil, nil); err != apperrors.ErrNotFound {
+	if _, err := e.Contacts.PreviewMergeSurvivorship(ctx, "contact", contactIDs[0], contactIDs[1], nil, nil); err != apperrors.ErrNotFound {
 		t.Fatalf("hidden BCC roster: %v", err)
 	}
 }
 
 func TestContactMergeParticipantPreviewRefusesATruncatedRoster(t *testing.T) {
-	e, ctx, people, _, _ := setupChannelParticipantRelink(t)
+	e, ctx, contactIDs, _, _ := setupChannelParticipantRelink(t)
 	for i := range 498 {
 		if _, _, err := e.Activities.LogActivity(ctx, activities.LogActivityInput{
 			Kind: activities.KindMessage, ChannelProvider: rosterProvider, Subject: new(fmt.Sprintf("Conversation %d", i)), Direction: new("inbound"), Source: "manual",
-			Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: people[0]}},
+			Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contactIDs[0]}},
 		}); err != nil {
 			t.Fatal(err)
 		}
 		if i == 496 {
-			preview, err := e.Contacts.PreviewMergeSurvivorship(ctx, "contact", people[0], people[1], nil, nil)
+			preview, err := e.Contacts.PreviewMergeSurvivorship(ctx, "contact", contactIDs[0], contactIDs[1], nil, nil)
 			if err != nil || len(preview.Participants) != 500 {
 				t.Fatalf("complete roster: %d, %v", len(preview.Participants), err)
 			}
 		}
 	}
-	if _, err := e.Contacts.PreviewMergeSurvivorship(ctx, "contact", people[0], people[1], nil, nil); !errors.Is(err, apperrors.ErrInvalidArgument) {
+	if _, err := e.Contacts.PreviewMergeSurvivorship(ctx, "contact", contactIDs[0], contactIDs[1], nil, nil); !errors.Is(err, apperrors.ErrInvalidArgument) {
 		t.Fatalf("oversized roster: %v", err)
 	}
 }
 
 func TestContactMergeParticipantPreviewRefusesAnUnwiredReader(t *testing.T) {
-	e, ctx, people, _, _ := setupChannelParticipantRelink(t)
+	e, ctx, contactIDs, _, _ := setupChannelParticipantRelink(t)
 	e.Contacts.WithParticipantRosterReader(nil)
-	if _, err := e.Contacts.PreviewMergeSurvivorship(ctx, "contact", people[0], people[1], nil, nil); !errors.Is(err, apperrors.ErrInvalidArgument) {
+	if _, err := e.Contacts.PreviewMergeSurvivorship(ctx, "contact", contactIDs[0], contactIDs[1], nil, nil); !errors.Is(err, apperrors.ErrInvalidArgument) {
 		t.Fatalf("unwired reader: %v", err)
 	}
 }
 
 func TestContactMergeParticipantReadGrantDoesNotDependOnRosterPresence(t *testing.T) {
-	e, ctx, people, _, _ := setupChannelParticipantRelink(t)
+	e, ctx, contactIDs, _, _ := setupChannelParticipantRelink(t)
 	empty, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{FullName: "No conversations", Source: "manual"})
 	if err != nil {
 		t.Fatal(err)
@@ -256,22 +257,22 @@ func TestContactMergeParticipantReadGrantDoesNotDependOnRosterPresence(t *testin
 	perms.Objects["custom_field"] = principal.ObjectGrant{Read: true}
 	perms.Objects["activity"] = principal.ObjectGrant{}
 	restricted := e.As(e.Rep1, nil, perms)
-	for _, source := range []ids.UUID{people[0], ids.UUID(empty.Id)} {
-		if _, err := e.Contacts.PreviewMergeSurvivorship(restricted, "contact", source, people[1], nil, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	for _, source := range []ids.UUID{contactIDs[0], ids.UUID(empty.Id)} {
+		if _, err := e.Contacts.PreviewMergeSurvivorship(restricted, "contact", source, contactIDs[1], nil, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
 			t.Fatalf("roster-dependent admission: %v", err)
 		}
 	}
 }
 
 func TestContactMergePreviewRefusesMaskedChannelBindings(t *testing.T) {
-	e, _, people, _, _ := setupChannelParticipantRelink(t)
+	e, _, contactIDs, _, _ := setupChannelParticipantRelink(t)
 	perms := AdminPerms
 	perms.Objects = maps.Clone(perms.Objects)
 	perms.Objects["custom_field"] = principal.ObjectGrant{Read: true}
 	perms.RoleKeys = []string{"rep"}
 	perms.RowScope = principal.RowScopeOwn
 	perms.FieldMasks = []principal.FieldMask{{Object: "contact", Field: "reachability", Condition: principal.MaskAlways}}
-	preview, err := e.Contacts.PreviewMergeSurvivorship(e.As(e.AdminUser, nil, perms), "contact", people[0], people[1], nil, nil)
+	preview, err := e.Contacts.PreviewMergeSurvivorship(e.As(e.AdminUser, nil, perms), "contact", contactIDs[0], contactIDs[1], nil, nil)
 	if !errors.Is(err, apperrors.ErrPermissionDenied) || len(preview.ChannelIdentities) != 0 {
 		t.Fatalf("masked channel bindings: %+v, %v", preview.ChannelIdentities, err)
 	}

@@ -20,9 +20,7 @@ type mergePinRequest struct {
 }
 
 func previewMergePinsMatch(subject row, proposal crmcontracts.Approval) bool {
-	if subject.TargetType == nil || subject.TargetID == nil || subject.TargetVersion == nil ||
-		subject.CoTargetType == nil || subject.CoTargetID == nil || subject.CoTargetVersion == nil ||
-		*subject.CoTargetType != *subject.TargetType || subject.TargetID.IsZero() || subject.CoTargetID.IsZero() || *subject.TargetID == *subject.CoTargetID {
+	if !mergePinsPresent(subject) {
 		return false
 	}
 	raw, err := json.Marshal(proposal.ProposedChange)
@@ -35,7 +33,7 @@ func previewMergePinsMatch(subject row, proposal crmcontracts.Approval) bool {
 	}
 	if request.Operation != "" {
 		operation, collection := "mergeContact", "contacts"
-		if *subject.TargetType == "company" {
+		if *subject.TargetType == tableCompany {
 			operation, collection = "mergeCompany", "companies"
 		}
 		if request.Operation != operation || request.Path != "/v1/"+collection+"/"+subject.CoTargetID.String()+"/merge" {
@@ -50,4 +48,13 @@ func previewMergePinsMatch(subject row, proposal crmcontracts.Approval) bool {
 	}
 	return request.RecordType == *subject.TargetType &&
 		request.SourceID == *subject.CoTargetID && request.TargetID == *subject.TargetID
+}
+
+func mergePinsPresent(subject row) bool {
+	if subject.TargetType == nil || subject.TargetID == nil || subject.TargetVersion == nil ||
+		subject.CoTargetType == nil || subject.CoTargetID == nil || subject.CoTargetVersion == nil ||
+		*subject.CoTargetType != *subject.TargetType || subject.TargetID.IsZero() || subject.CoTargetID.IsZero() || *subject.TargetID == *subject.CoTargetID {
+		return false
+	}
+	return true
 }

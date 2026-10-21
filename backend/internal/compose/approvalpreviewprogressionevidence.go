@@ -23,7 +23,7 @@ func (r approvalPreviewReader) progressionEvidencePreview(ctx context.Context, a
 	change, err := deals.ReadProgressionChange(raw)
 	if err != nil {
 		preview.State = previewIncompleteState
-		return nil
+		return nil //nolint:nilerr // Invalid stored criteria cannot produce an actionable preview.
 	}
 	evidence, err := r.progressionCitations(ctx, change)
 	if state := evidenceFailureState(err); state != "" {
@@ -56,29 +56,9 @@ func (r approvalPreviewReader) progressionCitations(ctx context.Context, change 
 		if !criterion.Met {
 			continue
 		}
-		if len(criterion.EvidenceIDs) == 0 || len(criterion.CitedSourceIDs) == 0 {
-			return nil, apperrors.ErrInvalidArgument
-		}
-		current := deals.ProgressionCriterion{Label: criterion.Label, Met: true}
-		for _, id := range criterion.EvidenceIDs {
-			row, ok := byID[id]
-			if !ok || !row.Met || row.RefutedAt != nil || ids.UUID(row.CriterionId) != criterion.CriterionID.UUID {
-				return nil, apperrors.ErrVersionSkew
-			}
-			if row.SourceMissing {
-				return nil, apperrors.ErrPermissionDenied
-			}
-			if !slices.Contains(criterion.CitedSourceIDs, ids.UUID(row.SourceId)) {
-				return nil, apperrors.ErrInvalidArgument
-			}
-			source := deals.EvidenceSource{SourceType: string(row.SourceType), SourceID: ids.UUID(row.SourceId)}
-			if row.Snippet != nil {
-				source.Snippet = *row.Snippet
-			}
-			if err := r.validateProgressionQuotation(ctx, row); err != nil {
-				return nil, err
-			}
-			current.Sources = append(current.Sources, source)
+		current, err := r.progressionCriterionSources(ctx, criterion, byID)
+		if err != nil {
+			return nil, err
 		}
 		facts.Criteria = append(facts.Criteria, current)
 	}
@@ -103,7 +83,7 @@ func (r approvalPreviewReader) validateProgressionQuotation(ctx context.Context,
 		}
 		return nil
 	}
-	if row.SourceType != "activity" {
+	if row.SourceType != crmcontracts.StageEvidenceSource(recordTypeActivity) {
 		return nil
 	}
 	_, err := r.currentCitation(ctx, crmcontracts.ApprovalEvidence{
@@ -127,4 +107,32 @@ func progressionChecklist(criteria []deals.ProposedCriterion) []crmcontracts.App
 		out = append(out, previewDetail(field, criterion.Label))
 	}
 	return out
+}
+
+func (r approvalPreviewReader) progressionCriterionSources(ctx context.Context, criterion deals.ProposedCriterion, byID map[ids.UUID]crmcontracts.StageEvidence) (deals.ProgressionCriterion, error) {
+	if len(criterion.EvidenceIDs) == 0 || len(criterion.CitedSourceIDs) == 0 {
+		return deals.ProgressionCriterion{}, apperrors.ErrInvalidArgument
+	}
+	current := deals.ProgressionCriterion{Label: criterion.Label, Met: true}
+	for _, id := range criterion.EvidenceIDs {
+		row, ok := byID[id]
+		if !ok || !row.Met || row.RefutedAt != nil || ids.UUID(row.CriterionId) != criterion.CriterionID.UUID {
+			return deals.ProgressionCriterion{}, apperrors.ErrVersionSkew
+		}
+		if row.SourceMissing {
+			return deals.ProgressionCriterion{}, apperrors.ErrPermissionDenied
+		}
+		if !slices.Contains(criterion.CitedSourceIDs, ids.UUID(row.SourceId)) {
+			return deals.ProgressionCriterion{}, apperrors.ErrInvalidArgument
+		}
+		source := deals.EvidenceSource{SourceType: string(row.SourceType), SourceID: ids.UUID(row.SourceId)}
+		if row.Snippet != nil {
+			source.Snippet = *row.Snippet
+		}
+		if err := r.validateProgressionQuotation(ctx, row); err != nil {
+			return deals.ProgressionCriterion{}, err
+		}
+		current.Sources = append(current.Sources, source)
+	}
+	return current, nil
 }

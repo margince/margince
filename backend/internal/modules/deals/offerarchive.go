@@ -10,11 +10,11 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/platform/httperr"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -34,10 +34,12 @@ func (s *Store) RefuseArchiveOffer(ctx context.Context, id ids.OfferID) error {
 	})
 }
 
+// ArchiveOffer keeps unversioned callers on the same archive writer.
 func (s *Store) ArchiveOffer(ctx context.Context, id ids.OfferID) (crmcontracts.Offer, error) {
 	return s.ArchiveOfferAt(ctx, id, nil)
 }
 
+// ArchiveOfferAt checks the reviewed version under the offer lock before retiring it.
 func (s *Store) ArchiveOfferAt(ctx context.Context, id ids.OfferID, ifVersion *int64) (crmcontracts.Offer, error) {
 	if err := auth.Require(ctx, "offer", principal.ActionDelete); err != nil {
 		return crmcontracts.Offer{}, err

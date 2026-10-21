@@ -8,18 +8,21 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// OfferCreationLine retains the resolved product alongside the figures the writer will use.
 type OfferCreationLine struct {
 	Input    OfferLineInputRow
 	Figures  LineFigures
 	resolved resolvedOfferLine
 }
 
+// OfferCreationPreview keeps line and recurring totals derived from the same resolved inputs.
 type OfferCreationPreview struct {
 	Input     CreateOfferInput
 	Lines     []OfferCreationLine
@@ -67,6 +70,7 @@ func planNewOfferLines(ctx context.Context, tx pgx.Tx, currency string, inputs [
 	return lines, totals, nil
 }
 
+// PreviewOfferCreation shares admission and line pricing with the writer without allocating an offer.
 func (s *Store) PreviewOfferCreation(ctx context.Context, dealID ids.DealID, in CreateOfferInput) (OfferCreationPreview, error) {
 	var out OfferCreationPreview
 	if err := auth.Require(ctx, "offer", principal.ActionCreate); err != nil {

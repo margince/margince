@@ -17,11 +17,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// RelationshipArchivePreview makes archive effects visible before the relationship is retired.
 type RelationshipArchivePreview struct {
 	Relationship crmcontracts.Relationship
 	Successor    *crmcontracts.Relationship
 }
 
+// PreviewRelationshipArchive resolves authorized effects without applying the proposed change.
 func (s *Store) PreviewRelationshipArchive(ctx context.Context, id ids.UUID, version *int64) (RelationshipArchivePreview, error) {
 	var out RelationshipArchivePreview
 	if err := auth.Require(ctx, "relationship", principal.ActionRead); err != nil {
@@ -46,7 +48,7 @@ func (s *Store) PreviewRelationshipArchive(ctx context.Context, id ids.UUID, ver
 			return nil
 		}
 		var successor ids.UUID
-		err = tx.QueryRow(ctx, employmentSuccessorSQL(), pgx.StrictNamedArgs{"contact": *current.ContactID, "excluded": id}).Scan(&successor)
+		err = tx.QueryRow(ctx, employmentSuccessorSQL(), pgx.StrictNamedArgs{contactEntity: *current.ContactID, "excluded": id}).Scan(&successor)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}

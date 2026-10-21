@@ -39,7 +39,7 @@ func reviewDisposition(outcome predictedOutcome) (string, error) {
 	case predictUnchanged:
 		return "unchanged", nil
 	case predictUnwritable, predictCollidesSkipped:
-		return "skip", nil
+		return importRowSkip, nil
 	default:
 		return "", apperrors.ErrInvalidArgument
 	}
@@ -59,20 +59,8 @@ func (w *csvWriters) reviewRow(ctx context.Context, row migration.Row, outcome p
 	if err := json.Unmarshal(raw, &out.Values); err != nil {
 		return out, err
 	}
-	if out.Outcome != "skip" {
-		typed, err := w.reviewCheckedCells(ctx, row)
-		if err != nil {
-			return out, err
-		}
-		raw, err := json.Marshal(typed)
-		if err != nil {
-			return out, err
-		}
-		if err := json.Unmarshal(raw, &out.CheckedValues); err != nil {
-			return out, err
-		}
-		out.Links, err = w.reviewLinks(ctx, row)
-		if err != nil {
+	if out.Outcome != importRowSkip {
+		if err := w.reviewRowValues(ctx, row, &out); err != nil {
 			return out, err
 		}
 	}
@@ -114,7 +102,7 @@ func (w *csvWriters) reviewCheckedCells(ctx context.Context, row migration.Row) 
 	}
 	checked := make(map[string]any, len(typed)+1)
 	maps.Copy(checked, typed)
-	checked["source_author_id"] = author.AuthorID
+	checked[previewFieldSourceAuthorID] = author.AuthorID
 	return checked, nil
 }
 
@@ -134,4 +122,23 @@ func (w *csvWriters) reviewTarget(ctx context.Context, row migration.Row) (ids.U
 		return ids.UUID{}, apperrors.ErrNotFound
 	}
 	return id, nil
+}
+
+func (w *csvWriters) reviewRowValues(ctx context.Context, row migration.Row, out *migration.ReviewRow) error {
+	typed, err := w.reviewCheckedCells(ctx, row)
+	if err != nil {
+		return err
+	}
+	raw, err := json.Marshal(typed)
+	if err != nil {
+		return err
+	}
+	if err := json.Unmarshal(raw, &out.CheckedValues); err != nil {
+		return err
+	}
+	out.Links, err = w.reviewLinks(ctx, row)
+	if err != nil {
+		return err
+	}
+	return nil
 }

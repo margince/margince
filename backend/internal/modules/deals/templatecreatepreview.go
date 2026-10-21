@@ -8,6 +8,7 @@ import (
 	"maps"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -35,6 +36,7 @@ func (s *Store) admitTemplateCreation(ctx context.Context, tx pgx.Tx, in CreateO
 	return nil
 }
 
+// PreviewTemplateCreation shares defaults and conflict checks with the template writer.
 func (s *Store) PreviewTemplateCreation(ctx context.Context, in CreateOfferTemplateInput) (CreateOfferTemplateInput, error) {
 	if err := auth.Require(ctx, "offer_template", principal.ActionCreate); err != nil {
 		return CreateOfferTemplateInput{}, err

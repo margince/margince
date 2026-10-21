@@ -29,7 +29,7 @@ export const en = {
   "approval.merge.value.skipped": "Skipped",
   "approval.merge.value.submission_unknown": "Submission outcome unknown",
   "approval.merge.value.failed": "Failed",
-  "approval.merge.value.cancelled": "Cancelled",
+  "approval.merge.value.cancelled": "Canceled",
   "approval.merge.value.budget_exhausted": "Budget exhausted",
   "approval.merge.value.low_balance": "Insufficient balance",
   "approval.merge.value.not_eligible": "Not eligible",
@@ -48,7 +48,7 @@ export const en = {
   "approval.preview.companyReceipts":
     "Partner-program and tax-verification records move only when the survivor has none. Otherwise the source copies remain with the archived company.",
   "approval.preview.companyLookups":
-    "Website lookups move to the survivor; duplicate active lookups are cancelled. Background company scans for the removed company stop.",
+    "Website lookups move to the survivor; duplicate active lookups are canceled. Background company scans for the removed company stop.",
   "approval.merge.source": "Record removed",
   "approval.merge.survivor": "Record kept",
   "approval.merge.address": "Address moved",
@@ -77,9 +77,9 @@ export const en = {
   "approval.merge.company_customer_link": "Accounting customer moved",
   "approval.merge.company_parent_after": "Parent company after merge",
   "approval.merge.company_triaged_domain": "Resolved domain moved",
-  "approval.merge.partner_moved": "Move partner programme to survivor",
+  "approval.merge.partner_moved": "Move partner program to survivor",
   "approval.merge.partner_retained":
-    "Keep source partner programme on archived company",
+    "Keep source partner program on archived company",
   "approval.merge.vat_check_moved": "Move VAT receipt to survivor",
   "approval.merge.vat_check_retained":
     "Keep source VAT receipt on archived company",
@@ -134,9 +134,9 @@ export const en = {
   "approval.merge.introduction_after": "Introduction after merge",
   "approval.merge.introduction_before": "Introduction before merge",
   "approval.merge.introduction_cancellation": "Cancellation reason",
-  "approval.merge.introduction_contact_after": "Person introduced after merge",
+  "approval.merge.introduction_contact_after": "Contact introduced after merge",
   "approval.merge.introduction_contact_before":
-    "Person introduced before merge",
+    "Contact introduced before merge",
   "approval.merge.introduction_through_after": "Introducer after merge",
   "approval.merge.introduction_through_before": "Introducer before merge",
   "approval.merge.link_consumed": "Link used on",
@@ -289,10 +289,10 @@ export const en = {
   "approval.preview.mergeTagMove": "Record that gains the surviving tag",
   "approval.preview.mergeTagCollapse": "Record that already has both tags",
   "approval.preview.archiveCompany":
-    "Archive this company and its listed domains, classifications, partner programme and relationships. Remove its list memberships and tags. Contacts, deals and conversation history remain.",
+    "Archive this company and its listed domains, classifications, partner program and relationships. Remove its list memberships and tags. Contacts, deals and conversation history remain.",
   "approval.preview.archiveDomain": "Domain to archive",
   "approval.preview.archiveCompanyType": "Company classification to retire",
-  "approval.preview.archivePartner": "Partner programme to archive",
+  "approval.preview.archivePartner": "Partner program to archive",
   "approval.preview.archiveContact":
     "Archive this contact and retire the listed email addresses, phone numbers, channel bindings and relationships. Remove the listed memberships and tags. Conversation history remains.",
   "approval.preview.archiveEmail": "Email address to archive",
@@ -2546,8 +2546,6 @@ export const en = {
   "company.website": "Website",
   "company.contactCount": "Contacts",
   "company.openDealCount": "Open deals",
-  // Offered only where there is no partner programme yet: the tab that holds
-  // the form appears once one exists, so this is how the first one is made.
   // Where the account stands with us, and what it is to us — the two
   // questions the retired classification answered with one value.
   "company.lifecycle": "Lifecycle",
@@ -15051,9 +15049,7 @@ export const en = {
   "worklist.verb.promiseSettled": "Marked as kept",
   "worklist.verb.promiseSettleFailed":
     "Commitment was not marked as kept. Retry.",
-  // The card's two verbs. "Update" opens the composer on this meeting; the
-  // three answers below it are what that composer offers, and "Cancelled" is
-  // the one the card writes by itself.
+  // Updating opens the composer; cancellation is recorded directly by the card.
   "worklist.verb.meetingUpdate": "Update",
   "worklist.verb.meetingUpdateTitle": "Meeting",
   "worklist.verb.meetingReading": "Loading meeting…",

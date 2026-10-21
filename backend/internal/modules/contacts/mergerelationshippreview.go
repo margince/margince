@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// MergeRelationship makes relationship collisions visible before endpoints change.
 type MergeRelationship struct {
 	Relationship  crmcontracts.Relationship
 	Retired       bool
@@ -25,12 +26,12 @@ func (s *Store) previewMergeRelationships(ctx context.Context, tx pgx.Tx, kind s
 	sourceSQL := "(" + mergeWorksWithSource + ") OR (" + mergeContactEdgeSource + ")"
 	retiredSQL := "CASE WHEN a.kind='works_with' THEN " + mergeWorksWithDuplicate + " ELSE " + mergeContactEdgeDuplicate + " END"
 	primarySQL := "CASE WHEN a.kind='works_with' THEN a.is_current_primary ELSE " + mergeContactEdgePrimary + " END"
-	if kind == "company" {
+	if kind == companyEntity {
 		sourceSQL = mergeCompanyEdgeSource
 		retiredSQL = "(" + mergeCompanyEdgeSelf + ") OR (" + mergeCompanyEdgeDuplicate + ")"
 		primarySQL = "CASE WHEN a.company_id=@source THEN " + mergeCompanyEdgePrimary + " ELSE a.is_current_primary END"
 	}
-	rows, err := tx.Query(ctx, "SELECT a.id, COALESCE(("+retiredSQL+"), false), "+primarySQL+" FROM relationship a WHERE "+sourceSQL+" ORDER BY a.id LIMIT 501", pgx.StrictNamedArgs{"source": source, "target": target})
+	rows, err := tx.Query(ctx, "SELECT a.id, COALESCE(("+retiredSQL+"), false), "+primarySQL+" FROM relationship a WHERE "+sourceSQL+" ORDER BY a.id LIMIT 501", pgx.StrictNamedArgs{mergeSourceKey: source, mergeTargetKey: target})
 	if err != nil {
 		return nil, err
 	}
@@ -68,10 +69,10 @@ func (s *Store) previewMergeRelationships(ctx context.Context, tx pgx.Tx, kind s
 func (s *Store) authorizeMergePrimaryWitnesses(ctx context.Context, tx pgx.Tx, kind string, source, target ids.UUID, sourceSQL, retiredSQL string) error {
 	witness := mergeContactPrimaryWitness
 	affected := "a.kind <> 'works_with'"
-	if kind == "company" {
+	if kind == companyEntity {
 		witness, affected = mergeCompanyPrimaryWitness, "a.company_id = @source"
 	}
-	rows, err := tx.Query(ctx, "SELECT DISTINCT b.id FROM relationship a JOIN relationship b ON "+witness+" WHERE ("+sourceSQL+") AND "+affected+" AND a.is_current_primary AND NOT COALESCE(("+retiredSQL+"), false) ORDER BY b.id LIMIT 501", pgx.NamedArgs{"source": source, "target": target})
+	rows, err := tx.Query(ctx, "SELECT DISTINCT b.id FROM relationship a JOIN relationship b ON "+witness+" WHERE ("+sourceSQL+") AND "+affected+" AND a.is_current_primary AND NOT COALESCE(("+retiredSQL+"), false) ORDER BY b.id LIMIT 501", pgx.NamedArgs{mergeSourceKey: source, mergeTargetKey: target})
 	if err != nil {
 		return err
 	}

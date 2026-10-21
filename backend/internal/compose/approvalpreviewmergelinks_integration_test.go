@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/collections"
@@ -104,12 +105,12 @@ func TestMergePreviewMatchesMovedAndCombinedLinks(t *testing.T) {
 			} else if _, err := e.Contacts.MergeCompany(ctx, ids.From[ids.CompanyKind](source), ids.From[ids.CompanyKind](target), &preview.SourceVersion); err != nil {
 				t.Fatal(err)
 			}
-			checkMergedLinks(t, e, ctx, kind, source, target, expected)
+			checkMergedLinks(ctx, t, e, kind, source, target, expected)
 		})
 	}
 }
 
-func checkMergedLinks(t *testing.T, e *integration.Env, ctx context.Context, kind string, source, target ids.UUID, expected map[ids.UUID]contacts.MergeLink) {
+func checkMergedLinks(ctx context.Context, t *testing.T, e *integration.Env, kind string, source, target ids.UUID, expected map[ids.UUID]contacts.MergeLink) {
 	t.Helper()
 	if err := e.DB().Tx(ctx, func(tx pgx.Tx) error {
 		for id, link := range expected {

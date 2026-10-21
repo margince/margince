@@ -15,7 +15,7 @@ import (
 
 func commercialChanges(approval crmcontracts.Approval) (map[string]json.RawMessage, bool, error) {
 	switch approval.Kind {
-	case deals.StageProgressionKind, "merge_tags", "archive_record", "emit_flow_event", "create_record", "relink_activity", "relink_activities", "relink_thread", "promote_lead", "demote_lead", "send_message", "invite_meeting", "book_meeting", "enrich", "disqualify_lead", previewSendEmail, previewSendCompanyEmail, previewAdvanceDeal, previewProgressDeal, "advance_project_phase", toolUpdateRecord, "assign_owner", lifecycleProposalKind:
+	case deals.StageProgressionKind, operationMergeTags, toolArchiveRecord, operationEmitFlowEvent, "create_record", singleRelinkTool, operationRelinkActivities, "relink_thread", operationPromoteLead, operationDemoteLead, operationSendMessage, operationInviteMeeting, operationBookMeeting, "enrich", operationDisqualifyLead, previewSendEmail, previewSendCompanyEmail, previewAdvanceDeal, previewProgressDeal, operationAdvanceProjectPhase, toolUpdateRecord, "assign_owner", lifecycleProposalKind:
 	default:
 		return nil, false, nil
 	}
@@ -27,9 +27,9 @@ func commercialChanges(approval crmcontracts.Approval) (map[string]json.RawMessa
 		return nil, true, err
 	}
 	switch approval.Kind {
-	case "disqualify_lead":
-		return map[string]json.RawMessage{"status": json.RawMessage(`"disqualified"`)}, true, nil
-	case "merge_tags", "archive_record", "emit_flow_event", "create_record", "relink_activity", "relink_activities", "relink_thread", "promote_lead", "demote_lead", "send_message", "invite_meeting", "book_meeting", "enrich", previewSendEmail, previewSendCompanyEmail:
+	case operationDisqualifyLead:
+		return map[string]json.RawMessage{previewFieldStatus: json.RawMessage(`"disqualified"`)}, true, nil
+	case operationMergeTags, toolArchiveRecord, operationEmitFlowEvent, "create_record", singleRelinkTool, operationRelinkActivities, "relink_thread", operationPromoteLead, operationDemoteLead, operationSendMessage, operationInviteMeeting, operationBookMeeting, "enrich", previewSendEmail, previewSendCompanyEmail:
 		return map[string]json.RawMessage{}, true, nil
 	case previewAdvanceDeal, previewProgressDeal, deals.StageProgressionKind:
 		changes := map[string]json.RawMessage{fieldStageID: args["to_stage_id"]}
@@ -43,8 +43,8 @@ func commercialChanges(approval crmcontracts.Approval) (map[string]json.RawMessa
 			}
 		}
 		return changes, true, nil
-	case "advance_project_phase":
-		return map[string]json.RawMessage{"phase": args["to_phase"]}, true, nil
+	case operationAdvanceProjectPhase:
+		return map[string]json.RawMessage{fieldPhase: args["to_phase"]}, true, nil
 	case lifecycleProposalKind:
 		return map[string]json.RawMessage{previewLifecycle: args["proposed_lifecycle"]}, true, nil
 	case "assign_owner":

@@ -12,6 +12,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
+// LeadPromotionCarry collects dependent records that must move with a promotion.
 type LeadPromotionCarry struct {
 	Activities   []LeadPromotionActivity
 	Consent      []ConsentCarryChange
@@ -100,7 +101,7 @@ func (s *Store) previewMergePreferenceLinks(ctx context.Context, tx pgx.Tx, sour
 	if reader, ok := s.consentCarrier.(preferenceLinksPreviewer); ok {
 		moving := []ids.UUID{}
 		for _, address := range addresses {
-			if address.Kind == "email" {
+			if address.Kind == fieldEmail {
 				moving = append(moving, address.ID)
 			}
 		}

@@ -8,10 +8,11 @@ import (
 	"strconv"
 	"time"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 func (r approvalPreviewReader) promotionConsentLinkDetails(ctx context.Context, links commsauthz.CarriedConsentLinks) ([]crmcontracts.ApprovalPreviewDetail, error) {

@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	"github.com/jackc/pgx/v5"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
+// LeadCreationPreview resolves creation defaults and duplicate handling before approval.
 type LeadCreationPreview struct {
 	Input        CreateLeadInput
 	Existing     *crmcontracts.Lead
@@ -38,10 +39,10 @@ func (s *Store) PreviewLeadCreation(ctx context.Context, in CreateLeadInput) (Le
 	return s.PreviewLeadCreationForActor(ctx, in, creator)
 }
 
-// Creator determines defaults only; every read and admission uses the reviewer.
+// PreviewLeadCreationForActor uses creator identity for defaults only; every read and admission uses the reviewer.
 func (s *Store) PreviewLeadCreationForActor(ctx context.Context, in CreateLeadInput, creator principal.Principal) (LeadCreationPreview, error) {
 	var out LeadCreationPreview
-	if err := auth.Require(ctx, "lead", principal.ActionCreate); err != nil {
+	if err := auth.Require(ctx, leadEntity, principal.ActionCreate); err != nil {
 		return out, err
 	}
 	in, err := s.previewLeadContactDefaults(ctx, in)
@@ -52,7 +53,7 @@ func (s *Store) PreviewLeadCreationForActor(ctx context.Context, in CreateLeadIn
 	if err != nil {
 		return out, err
 	}
-	active, err := s.activeColumns(ctx, "lead")
+	active, err := s.activeColumns(ctx, leadEntity)
 	if err != nil {
 		return out, err
 	}
@@ -101,7 +102,7 @@ func initialLeadScore(ctx context.Context, tx pgx.Tx, in CreateLeadInput) (LeadS
 
 func (s *Store) previewCreatedLeadMatch(ctx context.Context, tx pgx.Tx, in CreateLeadInput, active []fieldcatalog.Column) (*crmcontracts.Lead, error) {
 	if deref(in.FullName) == "" {
-		return nil, nil
+		return nil, nil //nolint:nilnil // No name means there is no fuzzy review candidate.
 	}
 	proposed := crmcontracts.Lead{FullName: in.FullName, CompanyName: in.CompanyName}
 	if in.Email != nil {
@@ -111,10 +112,10 @@ func (s *Store) previewCreatedLeadMatch(ctx context.Context, tx pgx.Tx, in Creat
 	if err != nil || !match.found {
 		return nil, err
 	}
-	if err := auth.Require(ctx, "lead", principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, leadEntity, principal.ActionRead); err != nil {
 		return nil, err
 	}
-	if err := auth.EnsureVisible(ctx, tx, "lead", match.id.UUID); err != nil {
+	if err := auth.EnsureVisible(ctx, tx, leadEntity, match.id.UUID); err != nil {
 		return nil, err
 	}
 	lead, err := readLead(ctx, tx, ids.From[ids.LeadKind](match.id.UUID), storekit.LiveOnly, active)
@@ -137,10 +138,10 @@ func (s *Store) previewLeadContactDefaults(ctx context.Context, in CreateLeadInp
 		return CreateLeadInput{}, apperrors.ErrPermissionDenied
 	}
 	inherited := map[string]*string{
-		"full_name": in.FullName, "title": in.Title, "email": in.Email, "primary_email": in.Email, "emails": in.Email,
+		contactNameColumn: in.FullName, fieldTitle: in.Title, fieldEmail: in.Email, "primary_email": in.Email, contactEmailsField: in.Email,
 		"employer": in.CompanyName, "social": in.LinkedInURL,
 	}
-	for _, field := range auth.MaskedFields(actor, "contact", contact.Writable != nil && *contact.Writable) {
+	for _, field := range auth.MaskedFields(actor, contactEntity, contact.Writable != nil && *contact.Writable) {
 		supplied, relevant := inherited[field]
 		if relevant && strings.TrimSpace(deref(supplied)) == "" {
 			return CreateLeadInput{}, apperrors.ErrPermissionDenied

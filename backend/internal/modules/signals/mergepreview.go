@@ -7,14 +7,18 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+const signalKindArg = "kind"
+
+// PreviewSignalCarryTx refuses an incomplete signal set rather than implying a partial merge scope.
 func PreviewSignalCarryTx(ctx context.Context, tx pgx.Tx, kind string, source ids.UUID) ([]crmcontracts.Signal, error) {
-	rows, err := tx.Query(ctx, `SELECT id FROM signal WHERE entity_type = @kind AND entity_id = @source ORDER BY id LIMIT 501`, pgx.StrictNamedArgs{"kind": kind, "source": source})
+	rows, err := tx.Query(ctx, `SELECT id FROM signal WHERE entity_type = @kind AND entity_id = @source ORDER BY id LIMIT 501`, pgx.StrictNamedArgs{signalKindArg: kind, "source": source})
 	if err != nil {
 		return nil, err
 	}

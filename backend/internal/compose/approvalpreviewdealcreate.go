@@ -60,14 +60,14 @@ func (r approvalPreviewReader) dealCreationPreview(ctx context.Context, approval
 
 func (r approvalPreviewReader) dealCreationDetails(ctx context.Context, in deals.CreateDealInput) ([]crmcontracts.ApprovalPreviewDetail, error) {
 	fields := map[string]any{
-		"name": in.Name, "amount_minor": in.AmountMinor, "expected_arr_minor": in.ExpectedArrMinor, "currency": in.Currency,
-		"pipeline_id": in.PipelineID, "stage_id": in.StageID, "company_id": in.CompanyID,
-		"partner_company_id": in.PartnerCompanyID, "partner_attribution": in.PartnerAttribution,
-		"project_id": in.ProjectID, "owner_id": in.OwnerID, "expected_close_date": in.ExpectedClose,
-		"source": in.Source, "source_system": in.SourceSystem,
-		"source_author_id": in.Author.AuthorID, "source_author_name": in.Author.AuthorName,
-		"description": in.Description, "commercial_motion": in.CommercialMotion,
-		"priority": in.Priority, "acquisition_source": in.AcquisitionSource,
+		previewFieldName: in.Name, acceptFieldAmountMinor: in.AmountMinor, previewFieldExpectedArrMinor: in.ExpectedArrMinor, dealTargetCurrency: in.Currency,
+		fieldPipelineID: in.PipelineID, fieldStageID: in.StageID, refColCompany: in.CompanyID,
+		refColPartnerCompany: in.PartnerCompanyID, previewFieldPartnerAttribution: in.PartnerAttribution,
+		"project_id": in.ProjectID, bulkParamOwner: in.OwnerID, acceptFieldExpectedClose: in.ExpectedClose,
+		fieldSource: in.Source, previewFieldSourceSystem: in.SourceSystem,
+		previewFieldSourceAuthorID: in.Author.AuthorID, previewFieldSourceAuthorName: in.Author.AuthorName,
+		descriptionField: in.Description, previewFieldCommercialMotion: in.CommercialMotion,
+		previewFieldPriority: in.Priority, "acquisition_source": in.AcquisitionSource,
 	}
 	maps.Copy(fields, in.CustomFields)
 	return r.creationFieldDetails(ctx, "deal", fields)

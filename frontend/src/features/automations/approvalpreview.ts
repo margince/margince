@@ -1,4 +1,7 @@
 import type { components } from "../../api/schema";
+import { DEAL_STATUS_LABEL } from "../../components/dealdials";
+import { acquisitionKindLabel } from "../../format/acquisitionkind";
+import { RELATIONSHIP_TYPE_LABELS } from "../../format/companyrelationships";
 import {
   EMAIL_TYPE_LABEL,
   PHONE_TYPE_LABEL,
@@ -8,18 +11,15 @@ import { LEAD_STATUS_LABEL } from "../../format/leadstatus";
 import { offerStatusLabel } from "../../format/offerstatus";
 import { templateLanguage } from "../../format/offertemplatelocale";
 import { billingModelLabel } from "../../format/productbilling";
+import { unitLabel } from "../../format/productunit";
 import { PHASE_LABEL } from "../../format/projectphase";
 import { promotionTriggerLabel } from "../../format/promotion";
 import { sendPermissionReasonKey } from "../../format/sendpermissionreason";
 import type { Locale, Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { RELATIONSHIP_TYPE_LABELS } from "../companies/companylookups";
-import { DEAL_STATUS_LABEL } from "../../components/dealdials";
-import { unitLabel } from "../deals/productunit";
+import { contextOptions } from "../../lib/compose-context";
+import { KIND_LABELS } from "../../lib/relationshipkinds";
 import { WON_REASON_LABELS } from "../../lib/winreason";
-import { contextOptions } from "../mail/compose-context";
-import { acquisitionKindLabel } from "../privacy/noticeacquisition";
-import { KIND_LABELS } from "../records/relationshipkinds";
 import type { ResolvedDisplayField } from "./approvaldisplay.types";
 import { COMPANY_LIFECYCLE_LABELS } from "./approvalkind";
 import { previewFieldLabel } from "./approvalpreviewfields";

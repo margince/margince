@@ -17,7 +17,7 @@ import (
 )
 
 func promotionApprovalInput(approval crmcontracts.Approval) (contacts.PromoteLeadInput, error) {
-	if approval.TargetEntityType == nil || *approval.TargetEntityType != "lead" || approval.TargetEntityId == nil || approval.TargetVersion == nil || approval.ProposedChange == nil {
+	if approval.TargetEntityType == nil || *approval.TargetEntityType != string(recordTypeLead) || approval.TargetEntityId == nil || approval.TargetVersion == nil || approval.ProposedChange == nil {
 		return contacts.PromoteLeadInput{}, apperrors.ErrInvalidArgument
 	}
 	var in contacts.PromoteLeadInput
@@ -130,53 +130,20 @@ func (r approvalPreviewReader) promotionDetails(ctx context.Context, in contacts
 func (r approvalPreviewReader) promotionContactDetails(ctx context.Context, plan contacts.LeadContactChange) ([]crmcontracts.ApprovalPreviewDetail, error) {
 	details := []crmcontracts.ApprovalPreviewDetail{}
 	if plan.Create != nil {
-		spec := plan.Create
-		details = append(details, previewDetail("promotion_contact_name", spec.FullName), previewDetail("promotion_contact_source", spec.Source))
-		if spec.Title != nil {
-			details = append(details, previewDetail("promotion_contact_title", *spec.Title))
-		}
-		owner := crmcontracts.ApprovalPreviewValue{Kind: previewValueEmpty}
-		if spec.OwnerID != nil {
-			var err error
-			owner, err = r.referenceValue(ctx, "owner_id", spec.OwnerID.String())
-			if err != nil {
-				return nil, err
-			}
-		}
-		details = append(details, crmcontracts.ApprovalPreviewDetail{Field: "promotion_contact_owner", Value: owner})
-		for _, email := range spec.Emails {
-			details = append(details, previewDetail("promotion_contact_email", email.Email))
-		}
-		for _, phone := range spec.Phones {
-			details = append(details, previewDetail("promotion_contact_phone", phone.Phone))
-		}
-	} else {
-		contact, err := r.referenceValue(ctx, "contact_id", plan.ContactID.String())
+		var err error
+		details, err = r.promotionNewContactDetails(ctx, plan)
 		if err != nil {
 			return nil, err
 		}
-		details = append(details, crmcontracts.ApprovalPreviewDetail{Field: "promotion_existing_contact", Value: contact})
-		after := plan.Patch.After()
-		if title, ok := after["title"]; ok {
-			raw, err := json.Marshal(title)
-			if err != nil {
-				return nil, err
-			}
-			value, err := r.value(ctx, "title", raw)
-			if err != nil {
-				return nil, err
-			}
-			details = append(details, crmcontracts.ApprovalPreviewDetail{Field: "promotion_contact_title", Value: value})
-		}
-		if _, linked := after["converted_from_lead_id"]; linked {
-			details = append(details, previewDetail("promotion_set_origin", "true"))
-		}
-		for _, phone := range plan.Phones {
-			details = append(details, previewDetail("promotion_contact_phone", phone.Phone))
+	} else {
+		var err error
+		details, err = r.promotionExistingContactDetails(ctx, plan)
+		if err != nil {
+			return nil, err
 		}
 	}
 	if plan.ReviewContact != nil {
-		candidate, err := r.referenceValue(ctx, "contact_id", plan.ReviewContact.String())
+		candidate, err := r.referenceValue(ctx, companionContactField, plan.ReviewContact.String())
 		if err != nil {
 			return nil, err
 		}
@@ -237,7 +204,7 @@ func (r approvalPreviewReader) promotionDealDetails(ctx context.Context, deal co
 	for _, ref := range []struct {
 		field string
 		id    *ids.UUID
-	}{{"pipeline_id", deal.PipelineID}, {"stage_id", deal.StageID}} {
+	}{{fieldPipelineID, deal.PipelineID}, {fieldStageID, deal.StageID}} {
 		if ref.id == nil {
 			return nil, apperrors.ErrInvalidArgument
 		}
@@ -255,10 +222,63 @@ func (r approvalPreviewReader) promotionDealDetails(ctx context.Context, deal co
 	owner := crmcontracts.ApprovalPreviewValue{Kind: previewValueEmpty}
 	if deal.OwnerID != nil {
 		var err error
-		owner, err = r.referenceValue(ctx, "owner_id", deal.OwnerID.String())
+		owner, err = r.referenceValue(ctx, bulkParamOwner, deal.OwnerID.String())
 		if err != nil {
 			return nil, err
 		}
 	}
 	return append(details, crmcontracts.ApprovalPreviewDetail{Field: "promotion_deal_owner", Value: owner}), nil
+}
+
+func (r approvalPreviewReader) promotionNewContactDetails(ctx context.Context, plan contacts.LeadContactChange) ([]crmcontracts.ApprovalPreviewDetail, error) {
+	details := []crmcontracts.ApprovalPreviewDetail{}
+	spec := plan.Create
+	details = append(details, previewDetail("promotion_contact_name", spec.FullName), previewDetail("promotion_contact_source", spec.Source))
+	if spec.Title != nil {
+		details = append(details, previewDetail("promotion_contact_title", *spec.Title))
+	}
+	owner := crmcontracts.ApprovalPreviewValue{Kind: previewValueEmpty}
+	if spec.OwnerID != nil {
+		var err error
+		owner, err = r.referenceValue(ctx, bulkParamOwner, spec.OwnerID.String())
+		if err != nil {
+			return nil, err
+		}
+	}
+	details = append(details, crmcontracts.ApprovalPreviewDetail{Field: "promotion_contact_owner", Value: owner})
+	for _, email := range spec.Emails {
+		details = append(details, previewDetail("promotion_contact_email", email.Email))
+	}
+	for _, phone := range spec.Phones {
+		details = append(details, previewDetail("promotion_contact_phone", phone.Phone))
+	}
+	return details, nil
+}
+
+func (r approvalPreviewReader) promotionExistingContactDetails(ctx context.Context, plan contacts.LeadContactChange) ([]crmcontracts.ApprovalPreviewDetail, error) {
+	details := []crmcontracts.ApprovalPreviewDetail{}
+	contact, err := r.referenceValue(ctx, companionContactField, plan.ContactID.String())
+	if err != nil {
+		return nil, err
+	}
+	details = append(details, crmcontracts.ApprovalPreviewDetail{Field: "promotion_existing_contact", Value: contact})
+	after := plan.Patch.After()
+	if title, ok := after["title"]; ok {
+		raw, err := json.Marshal(title)
+		if err != nil {
+			return nil, err
+		}
+		value, err := r.value(ctx, "title", raw)
+		if err != nil {
+			return nil, err
+		}
+		details = append(details, crmcontracts.ApprovalPreviewDetail{Field: "promotion_contact_title", Value: value})
+	}
+	if _, linked := after["converted_from_lead_id"]; linked {
+		details = append(details, previewDetail("promotion_set_origin", "true"))
+	}
+	for _, phone := range plan.Phones {
+		details = append(details, previewDetail("promotion_contact_phone", phone.Phone))
+	}
+	return details, nil
 }

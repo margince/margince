@@ -26,7 +26,7 @@ func (r approvalPreviewReader) appendBookingConsent(ctx context.Context, in crmc
 	if err != nil {
 		return err
 	}
-	subject, err := r.referenceValue(ctx, "contact_id", contact.String())
+	subject, err := r.referenceValue(ctx, companionContactField, contact.String())
 	if err != nil {
 		return err
 	}

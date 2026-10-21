@@ -99,7 +99,7 @@ func (r approvalPreviewReader) lifecycleEvidence(ctx context.Context, approval c
 func (r approvalPreviewReader) signalActivityEvidence(ctx context.Context, signal crmcontracts.Signal) ([]crmcontracts.ApprovalEvidence, error) {
 	out := []crmcontracts.ApprovalEvidence{}
 	for _, citation := range signal.Evidence {
-		if citation.SourceType == nil || string(*citation.SourceType) != string(recordTypeActivity) || citation.SourceId == nil {
+		if citation.SourceType == nil || string(*citation.SourceType) != string(string(recordTypeActivity)) || citation.SourceId == nil {
 			return nil, apperrors.ErrInvalidArgument
 		}
 		id, err := ids.Parse(*citation.SourceId)
@@ -118,7 +118,7 @@ func (r approvalPreviewReader) signalActivityEvidence(ctx context.Context, signa
 		if !valid {
 			return nil, apperrors.ErrVersionSkew
 		}
-		sourceType := crmcontracts.ApprovalEvidenceSourceType(recordTypeActivity)
+		sourceType := crmcontracts.ApprovalEvidenceSourceType(string(recordTypeActivity))
 		current := crmcontracts.ApprovalEvidence{EvidenceSnippet: approvals.SanitizeSummary(quote), SourceType: &sourceType, SourceId: new(openapi_types.UUID(id))}
 		out = append(out, current)
 	}
@@ -157,7 +157,7 @@ func (r approvalPreviewReader) currentCitation(ctx context.Context, item crmcont
 	}
 	var text string
 	switch string(*item.SourceType) {
-	case string(recordTypeActivity):
+	case string(string(recordTypeActivity)):
 		source, err := r.activities.GetActivityContent(ctx, ids.From[ids.ActivityKind](ids.UUID(*item.SourceId)), storekit.LiveOnly)
 		if err != nil {
 			return item, err

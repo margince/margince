@@ -7,12 +7,14 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// ColdStartPreview retains current company state alongside proposed enrichment changes.
 type ColdStartPreview struct {
 	Read            CompanyReadPreview
 	Name            string
@@ -22,25 +24,26 @@ type ColdStartPreview struct {
 	ReviewCompanyID *ids.CompanyID
 }
 
+// PreviewColdStart resolves authorized effects without applying the proposed change.
 func (s *Store) PreviewColdStart(ctx context.Context, in ApplyColdStartProfileInput) (ColdStartPreview, error) {
 	var out ColdStartPreview
-	if err := auth.Require(ctx, "company", principal.ActionUpdate); err != nil {
+	if err := auth.Require(ctx, companyEntity, principal.ActionUpdate); err != nil {
 		return out, err
 	}
-	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, companyEntity, principal.ActionRead); err != nil {
 		return out, err
 	}
 	host, err := coldStartHost(in.SourceURL)
 	if err != nil || len(in.Fields) == 0 || len(in.Fields) > 500 {
 		return out, apperrors.ErrInvalidArgument
 	}
-	if err := previewFieldsVisible(ctx, "company", "display_name", "primary_domain"); err != nil {
+	if err := previewFieldsVisible(ctx, companyEntity, "display_name", "primary_domain"); err != nil {
 		return out, err
 	}
 	candidate, _ := coldStartCandidate(host, in.Fields)
 	out.Name, out.Domain = candidate.DisplayName, host
 	out.QueuesVATCheck = statesAVatNumber(in.Fields)
-	active, err := s.activeColumns(ctx, "company")
+	active, err := s.activeColumns(ctx, companyEntity)
 	if err != nil {
 		return out, err
 	}
@@ -53,12 +56,12 @@ func (s *Store) PreviewColdStart(ctx context.Context, in ApplyColdStartProfileIn
 			out.Read, err = previewCompanyReadTx(ctx, tx, DeepReadProposal{CompanyID: match.CompanyID, SourceURL: in.SourceURL}, in.Fields, active)
 			return err
 		}
-		if err := auth.Require(ctx, "company", principal.ActionCreate); err != nil {
+		if err := auth.Require(ctx, companyEntity, principal.ActionCreate); err != nil {
 			return err
 		}
 		out.Creates = true
 		if match.Decision == DecisionFuzzyReview {
-			if err := auth.EnsureVisible(ctx, tx, "company", match.CompanyID.UUID); err != nil {
+			if err := auth.EnsureVisible(ctx, tx, companyEntity, match.CompanyID.UUID); err != nil {
 				return err
 			}
 			out.ReviewCompanyID = &match.CompanyID
@@ -84,7 +87,7 @@ func previewNewCompanyReadFields(ctx context.Context, fields []ColdStartFieldInp
 			return nil, apperrors.ErrInvalidArgument
 		}
 		seen[field.Field] = true
-		if err := previewFieldsVisible(ctx, "company", field.Field); err != nil {
+		if err := previewFieldsVisible(ctx, companyEntity, field.Field); err != nil {
 			return nil, err
 		}
 		out = append(out, CompanyReadValue{Field: field.Field, Proposed: field.Value, After: field.Value, Quote: field.EvidenceSnippet, SourceURL: field.SourceURL})
@@ -104,7 +107,7 @@ func previewNewCompanyReadColumns(fields []ColdStartFieldInput) []CompanyReadVal
 			value = headerLine(value)
 		}
 		if column == columnAddress {
-			column = "address_line1"
+			column = columnAddressLine1
 		}
 		out = append(out, CompanyReadValue{Field: column, After: value, Proposed: value, SourceURL: field.SourceURL, Quote: field.EvidenceSnippet})
 	}

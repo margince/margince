@@ -5,10 +5,12 @@ package activities
 
 import (
 	"context"
+
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// MailFooterPreview describes owed disclosures without minting recipient tokens.
 type MailFooterPreview struct {
 	Disclosures       []DisclosureLine
 	OffersUnsubscribe bool

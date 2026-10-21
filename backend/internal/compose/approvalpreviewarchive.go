@@ -23,7 +23,7 @@ func archivePreviewCommand(approval crmcontracts.Approval) (agents.ArchiveComman
 	expected := agents.ArchiveCommand{RecordType: *approval.TargetEntityType, ID: ids.UUID(*approval.TargetEntityId)}
 	args := *approval.ProposedChange
 	if _, rest := args["operation"]; rest {
-		if previewRouteMatches(args, "archive_record", expected.RecordType, expected.ID, "DELETE") {
+		if previewRouteMatches(args, toolArchiveRecord, expected.RecordType, expected.ID, "DELETE") {
 			return expected, nil
 		}
 		return empty, apperrors.ErrInvalidArgument
@@ -50,27 +50,8 @@ func (r approvalPreviewReader) archivePreview(ctx context.Context, approval crmc
 	if err != nil {
 		return nil, err
 	}
-	var effect string
-	switch cmd.RecordType {
-	case "relationship":
-		effect = "archive_relationship_preserve_records"
-	case "company":
-		effect = "archive_company_detach_scope"
-	case "contact":
-		effect = "archive_contact_detach_scope"
-	case "project":
-		effect = "archive_project_detach_scope"
-	case "deal":
-		effect = "archive_deal_detach_scope"
-	case "activity":
-		effect = "archive_activity_preserve_content"
-	case "product":
-		effect = "archive_product_preserve_snapshots"
-	case "offer_template":
-		effect = "archive_template_preserve_offers"
-	case "offer":
-		effect = "archive_offer_preserve_lines"
-	default:
+	effect := archiveEffect(cmd.RecordType)
+	if effect == "" {
 		return out, nil
 	}
 	call := agents.NewArchiveCall(r.records, installationLanguage(r.db.Pool()), cmd)
@@ -80,7 +61,7 @@ func (r approvalPreviewReader) archivePreview(ctx context.Context, approval crmc
 		}
 		return nil, err
 	}
-	if cmd.RecordType == "relationship" {
+	if cmd.RecordType == string(recordTypeRelationship) {
 		return r.relationshipArchivePreview(ctx, approval, out)
 	}
 	details, err := r.archiveDetails(ctx, cmd.RecordType, fields)
@@ -90,30 +71,18 @@ func (r approvalPreviewReader) archivePreview(ctx context.Context, approval crmc
 	if err != nil {
 		return nil, err
 	}
-	if cmd.RecordType == "deal" || cmd.RecordType == "project" || cmd.RecordType == "contact" || cmd.RecordType == "company" {
-		scope, err := r.recordArchiveDetails(ctx, approval)
-		if errors.Is(err, apperrors.ErrVersionSkew) {
-			out.State = previewStaleState
-			return out, nil
-		}
-		if previewUnavailable(err) {
-			return out, nil
-		}
-		if err != nil {
-			return nil, err
-		}
-		details = append(details, scope...)
+	children, err := r.archiveRelatedDetails(ctx, approval, cmd.RecordType, fields)
+	if errors.Is(err, apperrors.ErrVersionSkew) {
+		out.State = previewStaleState
+		return out, nil
 	}
-	if cmd.RecordType == "contact" || cmd.RecordType == "company" {
-		children, err := r.archiveChildDetails(ctx, cmd.RecordType, fields)
-		if previewUnavailable(err) {
-			return out, nil
-		}
-		if err != nil {
-			return nil, err
-		}
-		details = append(details, children...)
+	if previewUnavailable(err) {
+		return out, nil
 	}
+	if err != nil {
+		return nil, err
+	}
+	details = append(details, children...)
 	out.Details = &details
 	out.Effects, out.State = &[]string{effect}, previewReadyState
 	return out, r.currentEvidence(ctx, approval, out)
@@ -124,23 +93,23 @@ func (r approvalPreviewReader) archiveDetails(ctx context.Context, recordType st
 	if err := json.Unmarshal(raw, &fields); err != nil {
 		return nil, err
 	}
-	keys := []string{"name", "sku", "locale", "is_default"}
-	name := "name"
-	if recordType == "company" {
-		name, keys = "display_name", []string{"display_name"}
+	keys := []string{previewFieldName, "sku", previewFieldLocale, "is_default"}
+	name := previewFieldName
+	if recordType == string(recordTypeCompany) {
+		name, keys = fieldDisplayName, []string{fieldDisplayName}
 	}
-	if recordType == "contact" {
-		name, keys = "full_name", []string{"full_name"}
+	if recordType == string(recordTypeContact) {
+		name, keys = fieldFullName, []string{fieldFullName}
 	}
-	if recordType == "deal" {
-		keys = []string{"name", "company_id", "stage_id", "currency", "amount_minor"}
+	if recordType == string(recordTypeDeal) {
+		keys = []string{previewFieldName, refColCompany, fieldStageID, dealTargetCurrency, acceptFieldAmountMinor}
 	}
-	if recordType == "activity" {
-		name, keys = "subject", []string{"subject"}
+	if recordType == string(recordTypeActivity) {
+		name, keys = activityTargetSubject, []string{activityTargetSubject}
 	}
-	if recordType == "offer" {
+	if recordType == string(recordTypeOffer) {
 		name = "offer_number"
-		keys = []string{name, "revision", "deal_id", "status", "currency", "net_minor", "gross_minor"}
+		keys = []string{name, "revision", dealIDField, previewFieldStatus, dealTargetCurrency, previewFieldNetMinor, previewFieldGrossMinor}
 	}
 	var label string
 	if err := json.Unmarshal(fields[name], &label); err != nil || strings.TrimSpace(label) == "" {
@@ -149,11 +118,56 @@ func (r approvalPreviewReader) archiveDetails(ctx context.Context, recordType st
 	selected := map[string]any{}
 	for _, key := range keys {
 		if value, ok := fields[key]; ok {
-			if key == "status" {
+			if key == previewFieldStatus {
 				key = "offer_status"
 			}
 			selected[key] = value
 		}
 	}
 	return r.creationFieldDetails(ctx, recordType, selected)
+}
+
+func archiveEffect(recordType string) string {
+	switch recordType {
+	case string(recordTypeRelationship):
+		return "archive_relationship_preserve_records"
+	case string(recordTypeCompany):
+		return "archive_company_detach_scope"
+	case string(recordTypeContact):
+		return "archive_contact_detach_scope"
+	case string(recordTypeProject):
+		return "archive_project_detach_scope"
+	case string(recordTypeDeal):
+		return "archive_deal_detach_scope"
+	case string(recordTypeActivity):
+		return "archive_activity_preserve_content"
+	case string(recordTypeProduct):
+		return "archive_product_preserve_snapshots"
+	case string(recordTypeOfferTemplate):
+		return "archive_template_preserve_offers"
+	case string(recordTypeOffer):
+		return "archive_offer_preserve_lines"
+	default:
+		return ""
+	}
+}
+
+func (r approvalPreviewReader) archiveRelatedDetails(ctx context.Context, approval crmcontracts.Approval, recordType string, fields json.RawMessage) ([]crmcontracts.ApprovalPreviewDetail, error) {
+	var details []crmcontracts.ApprovalPreviewDetail
+	switch recordType {
+	case string(recordTypeDeal), string(recordTypeProject), string(recordTypeContact), string(recordTypeCompany):
+		scope, err := r.recordArchiveDetails(ctx, approval)
+		if err != nil {
+			return nil, err
+		}
+		details = append(details, scope...)
+	}
+	if recordType == string(recordTypeContact) || recordType == string(recordTypeCompany) {
+		children, err := r.archiveChildDetails(ctx, recordType, fields)
+		if err != nil {
+			return nil, err
+		}
+		details = append(details, children...)
+	}
+	return details, nil
 }

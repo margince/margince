@@ -17,22 +17,12 @@ import (
 
 func (r approvalPreviewReader) demotionPreview(ctx context.Context, approval crmcontracts.Approval, out *crmcontracts.ApprovalPreview) (*crmcontracts.ApprovalPreview, error) {
 	out.Version, out.State = 2, previewIncompleteState
-	in, err := commercialRequest[struct {
-		LeadID ids.UUID `json:"lead_id"`
-		Reason string   `json:"reason"`
-	}](approval)
-	if previewUnavailable(err) || *approval.TargetEntityType != "lead" {
+	id, reason, err := demotionPreviewRequest(approval)
+	if previewUnavailable(err) {
 		return out, nil
 	}
 	if err != nil {
 		return nil, err
-	}
-	id := ids.From[ids.LeadKind](ids.UUID(*approval.TargetEntityId))
-	if !in.LeadID.IsZero() && in.LeadID != id.UUID {
-		return out, nil
-	}
-	if err := agents.RequireDemotionReason(in.Reason); err != nil {
-		return out, nil
 	}
 	store := contacts.NewStore(r.db)
 	lead, err := store.GetLead(ctx, id, storekit.IncludeArchived)
@@ -61,14 +51,14 @@ func (r approvalPreviewReader) demotionPreview(ctx context.Context, approval crm
 	if err != nil {
 		return nil, err
 	}
-	contact, err := r.referenceValue(ctx, "contact_id", plan.ContactID.String())
+	contact, err := r.referenceValue(ctx, companionContactField, plan.ContactID.String())
 	if previewUnavailable(err) {
 		return out, nil
 	}
 	if err != nil {
 		return nil, err
 	}
-	out.Details = &[]crmcontracts.ApprovalPreviewDetail{previewDetail("demotion_reason", in.Reason), {Field: "demotion_contact", Value: contact}}
+	out.Details = &[]crmcontracts.ApprovalPreviewDetail{previewDetail("demotion_reason", reason), {Field: "demotion_contact", Value: contact}}
 	effect := "restore_lead_preserve_contact"
 	if plan.Unwind == crmcontracts.DemoteLeadResponseUnwindDemoteUnwindReversed {
 		effect = "restore_lead_archive_contact"
@@ -76,4 +66,25 @@ func (r approvalPreviewReader) demotionPreview(ctx context.Context, approval crm
 	out.Effects = &[]string{effect}
 	out.State = previewReadyState
 	return out, r.currentEvidence(ctx, approval, out)
+}
+
+func demotionPreviewRequest(approval crmcontracts.Approval) (ids.LeadID, string, error) {
+	in, err := commercialRequest[struct {
+		LeadID ids.UUID `json:"lead_id"`
+		Reason string   `json:"reason"`
+	}](approval)
+	if previewUnavailable(err) || *approval.TargetEntityType != string(recordTypeLead) {
+		return ids.LeadID{}, "", apperrors.ErrInvalidArgument
+	}
+	if err != nil {
+		return ids.LeadID{}, "", err
+	}
+	id := ids.From[ids.LeadKind](ids.UUID(*approval.TargetEntityId))
+	if !in.LeadID.IsZero() && in.LeadID != id.UUID {
+		return ids.LeadID{}, "", apperrors.ErrInvalidArgument
+	}
+	if err := agents.RequireDemotionReason(in.Reason); err != nil {
+		return ids.LeadID{}, "", apperrors.ErrInvalidArgument
+	}
+	return id, in.Reason, nil
 }

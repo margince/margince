@@ -13,7 +13,7 @@ import (
 )
 
 func projectCreationRequest(approval crmcontracts.Approval) (projects.CreateProjectInput, error) {
-	req, tool, err := creationRequest[crmcontracts.CreateProjectRequest](approval, "project")
+	req, tool, err := creationRequest[crmcontracts.CreateProjectRequest](approval, string(recordTypeProject))
 	if err != nil {
 		return projects.CreateProjectInput{}, err
 	}
@@ -58,11 +58,11 @@ func (r approvalPreviewReader) projectCreationPreview(ctx context.Context, appro
 
 func (r approvalPreviewReader) projectCreationDetails(ctx context.Context, in projects.CreateProjectInput) ([]crmcontracts.ApprovalPreviewDetail, error) {
 	fields := map[string]any{
-		"name": in.Name, "company_id": in.CompanyID, "owner_id": in.OwnerID,
-		"description": in.Description, "started_at": in.StartedAt, "target_end_date": in.TargetEndDate,
-		"phase": projects.PhaseInitiative, "source": in.Source, "source_system": in.SourceSystem,
-		"source_author_id": in.Author.AuthorID, "source_author_name": in.Author.AuthorName,
+		previewFieldName: in.Name, refColCompany: in.CompanyID, bulkParamOwner: in.OwnerID,
+		descriptionField: in.Description, previewFieldStartedAt: in.StartedAt, "target_end_date": in.TargetEndDate,
+		fieldPhase: projects.PhaseInitiative, fieldSource: in.Source, previewFieldSourceSystem: in.SourceSystem,
+		previewFieldSourceAuthorID: in.Author.AuthorID, previewFieldSourceAuthorName: in.Author.AuthorName,
 	}
 	maps.Copy(fields, in.CustomFields)
-	return r.creationFieldDetails(ctx, "project", fields)
+	return r.creationFieldDetails(ctx, string(recordTypeProject), fields)
 }

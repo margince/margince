@@ -22,6 +22,7 @@ const preferenceCarryRetires = `p.revoked_at IS NULL AND
  AND (e.archived_at IS NOT NULL OR (e.contact_id<>@target
  AND NOT (e.contact_id=@source AND e.id=ANY(@moving_emails::uuid[]))))))`
 
+// PreviewPreferenceLinksTx limits review to the email identities the merge actually moves.
 func (s *Store) PreviewPreferenceLinksTx(ctx context.Context, tx pgx.Tx, from, to ids.ContactID, movingEmails []ids.UUID) ([]commsauthz.CarriedPreferenceLink, error) {
 	if err := admitCarryPreview(ctx, tx, commsauthz.ContactStopSubject(from), commsauthz.ContactStopSubject(to)); err != nil {
 		return nil, err
@@ -31,7 +32,7 @@ func (s *Store) PreviewPreferenceLinksTx(ctx context.Context, tx pgx.Tx, from, t
 	}
 	rows, err := tx.Query(ctx, `SELECT p.id,p.contact_email_id,p.created_at,p.expires_at,p.revoked_at,p.revoked_reason,
  `+preferenceCarryRetires+` FROM preference_token p WHERE p.contact_id=@source ORDER BY p.id LIMIT 501`,
-		pgx.NamedArgs{"source": from, "target": to, "moving_emails": movingEmails})
+		pgx.NamedArgs{carrySourceArg: from, carryTargetArg: to, "moving_emails": movingEmails})
 	if err != nil {
 		return nil, err
 	}

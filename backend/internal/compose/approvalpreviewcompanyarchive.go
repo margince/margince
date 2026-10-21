@@ -6,6 +6,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -13,7 +14,7 @@ import (
 )
 
 func (r approvalPreviewReader) archiveChildDetails(ctx context.Context, kind string, raw json.RawMessage) ([]crmcontracts.ApprovalPreviewDetail, error) {
-	if kind == "contact" {
+	if kind == string(recordTypeContact) {
 		return contactArchiveDetails(raw)
 	}
 	var company crmcontracts.Company
@@ -29,7 +30,7 @@ func (r approvalPreviewReader) archiveChildDetails(ctx context.Context, kind str
 	}
 	for _, relation := range *company.RelationshipTypes {
 		out = append(out, previewDetail("archive_company_type", string(relation)))
-		if relation == "partner" {
+		if relation == crmcontracts.CompanyRelationshipTypes(recordTypePartner) {
 			if _, err := contacts.NewStore(r.db).GetPartner(ctx, ids.From[ids.CompanyKind](ids.UUID(company.Id))); err != nil {
 				return nil, err
 			}

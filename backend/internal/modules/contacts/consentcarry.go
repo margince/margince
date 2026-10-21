@@ -199,7 +199,7 @@ func flipCarriedWithdrawals(ctx context.Context, tx pgx.Tx, spec consentCarrySpe
 		                           policy_text, policy_version, captured_at, captured_by)
 		SELECT @target, purpose_id, 'withdrawn', @origin, @wording, @version, @now, @actor
 		FROM flipped`, spec.from, spec.to),
-		pgx.NamedArgs{"source": fromID, "target": toID, "now": now, "actor": by, "origin": spec.source, "wording": spec.policyText, "version": carriedWordingVersion})
+		pgx.NamedArgs{mergeSourceKey: fromID, mergeTargetKey: toID, "now": now, "actor": by, "origin": spec.source, "wording": spec.policyText, "version": carriedWordingVersion})
 	if err != nil {
 		return fmt.Errorf("carry withdrawals onto the surviving record: %w", err)
 	}

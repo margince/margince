@@ -106,6 +106,7 @@ func stageCreateInput(req crmcontracts.CreateStageRequest) (CreateStageInput, er
 	return in, nil
 }
 
+// DealCreationInput shares request admission between HTTP creation and approval review.
 func DealCreationInput(req crmcontracts.CreateDealRequest) (CreateDealInput, error) {
 	return dealCreateInputAdmitting(req, false)
 }

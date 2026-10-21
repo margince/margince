@@ -373,6 +373,7 @@ func (s *Store) ArchiveOfferTemplate(ctx context.Context, id ids.OfferTemplateID
 	return s.ArchiveOfferTemplateAt(ctx, id, nil)
 }
 
+// ArchiveOfferTemplateAt checks the reviewed version before retiring a template.
 func (s *Store) ArchiveOfferTemplateAt(ctx context.Context, id ids.OfferTemplateID, ifVersion *int64) (crmcontracts.OfferTemplate, error) {
 	if err := auth.Require(ctx, "offer_template", principal.ActionDelete); err != nil {
 		return crmcontracts.OfferTemplate{}, err

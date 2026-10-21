@@ -158,7 +158,7 @@ func TestEndToEnd_agentWritesGovernedOnREST(t *testing.T) {
 
 	// 🟡 still exists on the calls that reach outside the workspace: an
 	// enrichment reads the company's website, so it asks a human first.
-	companyID := createdID(t, e, "/v1/companies", AnyMap{"display_name": "Governed Yellow GmbH", "source": "manual"})
+	companyID := createdID(t, e, "/v1/companies", AnyMap{"display_name": "Governed Yellow GmbH", "source": "manual", "domains": []AnyMap{{"domain": "example.com", "is_primary": true}}})
 	enrichPath := "/v1/companies/" + companyID + "/enrich"
 	var problem struct {
 		Code   string `json:"code"`

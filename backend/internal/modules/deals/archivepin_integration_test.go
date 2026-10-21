@@ -8,12 +8,12 @@ package deals
 import (
 	"encoding/json"
 	"errors"
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
 	"testing"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )

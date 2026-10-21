@@ -49,7 +49,7 @@ func skipQueuedRunsTheSourceIsBuying(ctx context.Context, tx pgx.Tx, sourceID, t
  SET state = 'skipped', skip_reason = 'category_in_flight', completed_at = now(),
  input_fingerprint = 'merged:' || gen_random_uuid()::text
  WHERE q.contact_id = @target AND q.state = 'queued' AND `+mergeProviderCategoryTwin+`
- RETURNING q.id`, pgx.StrictNamedArgs{"source": sourceID.UUID, "target": targetID.UUID})
+ RETURNING q.id`, pgx.StrictNamedArgs{mergeSourceKey: sourceID.UUID, mergeTargetKey: targetID.UUID})
 	if err != nil {
 		return fmt.Errorf("skip the survivor's queued runs the merged-away record is buying: %w", err)
 	}

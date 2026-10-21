@@ -5,8 +5,9 @@
 package feedback
 
 import (
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // StoredDecision describes a ledger row being moved, not a verdict applied to a current field value.
@@ -24,6 +25,7 @@ type StoredDecision struct {
 	Version         int64
 }
 
+// CarriedDecision pairs a moving feedback row with any verdict already held by the survivor.
 type CarriedDecision struct {
 	Source StoredDecision
 	Target *StoredDecision

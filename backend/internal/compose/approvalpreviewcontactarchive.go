@@ -5,6 +5,7 @@ package compose
 
 import (
 	"encoding/json"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 

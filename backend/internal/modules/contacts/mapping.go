@@ -55,6 +55,7 @@ func idArg[K ids.EntityKind](u *openapi_types.UUID) *ids.ID[K] {
 	return &v
 }
 
+// ContactCreationInput keeps request conversion shared by creation and its approval preview.
 func ContactCreationInput(req crmcontracts.CreateContactRequest) (CreateContactInput, error) {
 	return contactCreateInputAdmitting(req, false)
 }
@@ -67,12 +68,12 @@ func contactCreateInputFromImporter(req crmcontracts.CreateContactRequest) (Crea
 }
 
 func contactCreateInputAdmitting(req crmcontracts.CreateContactRequest, importer bool) (CreateContactInput, error) {
-	fullName, err := httperr.RequireNonBlank("full_name", req.FullName)
+	fullName, err := httperr.RequireNonBlank(contactNameColumn, req.FullName)
 	if err != nil {
 		return CreateContactInput{}, err
 	}
 	req.FullName = fullName
-	source, err := httperr.RequireNonBlank("source", req.Source)
+	source, err := httperr.RequireNonBlank(fieldSource, req.Source)
 	if err != nil {
 		return CreateContactInput{}, err
 	}
@@ -219,6 +220,7 @@ func contactUpdateInput(req crmcontracts.UpdateContactRequest, ifVersion *int64)
 	return in
 }
 
+// CompanyCreationInput keeps request conversion shared by creation and its approval preview.
 func CompanyCreationInput(req crmcontracts.CreateCompanyRequest) (CreateCompanyInput, error) {
 	return companyCreateInputAdmitting(req, false)
 }
@@ -234,7 +236,7 @@ func companyCreateInputAdmitting(req crmcontracts.CreateCompanyRequest, importer
 		return CreateCompanyInput{}, err
 	}
 	req.DisplayName = displayName
-	source, err := httperr.RequireNonBlank("source", req.Source)
+	source, err := httperr.RequireNonBlank(fieldSource, req.Source)
 	if err != nil {
 		return CreateCompanyInput{}, err
 	}
@@ -316,8 +318,7 @@ func companyUpdateInput(req crmcontracts.UpdateCompanyRequest, ifVersion *int64)
 	return in
 }
 
-// Reserved source keys belong to declared imports. Ordinary callers cannot
-// claim them and divert a later import's idempotent replay.
+// LeadCreationInput refuses reserved source keys so ordinary callers cannot divert an import replay.
 func LeadCreationInput(req crmcontracts.CreateLeadRequest) (CreateLeadInput, error) {
 	return leadCreateInputAdmitting(req, false)
 }
@@ -343,13 +344,13 @@ func leadCreateInputAdmitting(req crmcontracts.CreateLeadRequest, importer bool)
 			}
 		}
 	}
-	source, err := httperr.RequireNonBlank("source", req.Source)
+	source, err := httperr.RequireNonBlank(fieldSource, req.Source)
 	if err != nil {
 		return CreateLeadInput{}, err
 	}
 	req.Source = source
 	// `source` is nobody's to forge, the importer included.
-	if err := provenance.Refuse("source", req.Source); err != nil {
+	if err := provenance.Refuse(auditKeySource, req.Source); err != nil {
 		return CreateLeadInput{}, err
 	}
 	author, err := storekit.AdmitSourceAuthor(req.SourceAuthorId, req.SourceAuthorName, req.SourceSystem, importer)
@@ -369,7 +370,7 @@ func leadCreateInputAdmitting(req crmcontracts.CreateLeadRequest, importer bool)
 	}
 	// A lead's name is optional, but one that is sent is a name and not spaces.
 	if req.FullName != nil {
-		name, err := httperr.RequireNonBlank("full_name", *req.FullName)
+		name, err := httperr.RequireNonBlank(contactNameColumn, *req.FullName)
 		if err != nil {
 			return CreateLeadInput{}, err
 		}

@@ -58,30 +58,8 @@ func (r approvalPreviewReader) importRows(ctx context.Context, run migration.Run
 				return nil, err
 			}
 			expected := plan.Rows[index]
-			if current.Object != expected.Object || current.ExternalID != expected.ExternalID || current.Outcome != expected.Outcome ||
-				current.TargetID != expected.TargetID || current.TargetVersion != expected.TargetVersion {
-				return nil, apperrors.ErrVersionSkew
-			}
-			currentChecked, err := json.Marshal(current.CheckedValues)
-			if err != nil {
+			if err := importReviewRowMatches(plan, index, current, expected); err != nil {
 				return nil, err
-			}
-			expectedChecked, err := json.Marshal(expected.CheckedValues)
-			if err != nil {
-				return nil, err
-			}
-			if !bytes.Equal(currentChecked, expectedChecked) {
-				return nil, apperrors.ErrVersionSkew
-			}
-			comparison := *plan
-			comparison.Rows = slices.Clone(plan.Rows)
-			for i := range comparison.Rows {
-				comparison.Rows[i].Links = slices.Clone(comparison.Rows[i].Links)
-			}
-			comparison.Rows[index] = current
-			settleReviewLinks(&comparison)
-			if !comparison.Complete || !slices.Equal(comparison.Rows[index].Links, expected.Links) {
-				return nil, apperrors.ErrVersionSkew
 			}
 			projected, err := r.importRow(ctx, execCtx, writer, row, expected, creator)
 			if err != nil {
@@ -101,7 +79,7 @@ func (r approvalPreviewReader) importRow(ctx, execCtx context.Context, writer *c
 		Outcome: crmcontracts.ApprovalPreviewImportRowOutcome(reviewed.Outcome),
 		Changes: []crmcontracts.ApprovalPreviewChange{}, Details: []crmcontracts.ApprovalPreviewDetail{}, Effects: []string{},
 	}
-	if reviewed.Outcome == "skip" {
+	if reviewed.Outcome == importRowSkip {
 		return out, nil
 	}
 	linkDetails, err := r.importLinkDetails(ctx, reviewed.Links)
@@ -170,49 +148,11 @@ func (r approvalPreviewReader) importFieldChanges(ctx context.Context, object st
 		if isCreateOnly(object, field) {
 			continue
 		}
-		displayField, maskField := importPreviewField(object, field)
-		incoming := any(canonicalFor(field, changed[field]))
-		if checked, found := typed[field]; found {
-			incoming = checked
-		}
-		if err := creationFieldsVisible(ctx, object, map[string]any{maskField: incoming}); err != nil {
-			return nil, err
-		}
-		raw, err := json.Marshal(incoming)
+		change, err := r.importFieldChange(ctx, object, field, changed[field], stored, fields, typed)
 		if err != nil {
 			return nil, err
 		}
-		beforeRaw := storedValue(stored, field)
-		if object == migration.ObjectDeal && field == csvTargetCompanyRef {
-			beforeRaw = stored["company_id"]
-		}
-		if len(beforeRaw) == 0 {
-			beforeRaw = json.RawMessage("null")
-		}
-		before, err := r.value(ctx, displayField, beforeRaw)
-		if err != nil {
-			return nil, err
-		}
-		after, err := r.value(ctx, displayField, raw)
-		if err != nil {
-			return nil, err
-		}
-		if displayField == "amount_minor" {
-			if err := r.moneyValue(ctx, displayField, &before, stored); err != nil {
-				return nil, err
-			}
-			currency := stored["currency"]
-			if value, found := fields["currency"]; found {
-				currency, err = json.Marshal(value)
-				if err != nil {
-					return nil, err
-				}
-			}
-			if err := r.moneyValue(ctx, displayField, &after, map[string]json.RawMessage{"currency": currency}); err != nil {
-				return nil, err
-			}
-		}
-		changes = append(changes, crmcontracts.ApprovalPreviewChange{Field: displayField, Before: before, After: after})
+		changes = append(changes, change)
 	}
 	return changes, nil
 }
@@ -230,34 +170,123 @@ func importPreviewField(object, field string) (string, string) {
 		}
 	}
 	if field == csvTargetOwner {
-		display = "owner_id"
+		display = bulkParamOwner
 	}
 	if object == migration.ObjectLead && field == leadTargetStatus {
 		display = "lead_status"
 	}
 	if object == migration.ObjectDeal && field == csvTargetCompanyRef {
-		display = "company_id"
-	}
-	mask := display
-	if object == migration.ObjectLead && field == leadTargetStatus {
-		mask = "status"
+		display = refColCompany
 	}
 	if strings.HasPrefix(field, "address.") {
-		mask = "address"
 		display = strings.ReplaceAll(field, ".", "_")
 	}
+	return display, importMaskField(object, field, display)
+}
+
+func importReviewRowMatches(plan *migration.ReviewPlan, index int, current, expected migration.ReviewRow) error {
+	if current.Object != expected.Object || current.ExternalID != expected.ExternalID || current.Outcome != expected.Outcome ||
+		current.TargetID != expected.TargetID || current.TargetVersion != expected.TargetVersion {
+		return apperrors.ErrVersionSkew
+	}
+	currentChecked, err := json.Marshal(current.CheckedValues)
+	if err != nil {
+		return err
+	}
+	expectedChecked, err := json.Marshal(expected.CheckedValues)
+	if err != nil {
+		return err
+	}
+	if !bytes.Equal(currentChecked, expectedChecked) {
+		return apperrors.ErrVersionSkew
+	}
+	comparison := *plan
+	comparison.Rows = slices.Clone(plan.Rows)
+	for i := range comparison.Rows {
+		comparison.Rows[i].Links = slices.Clone(comparison.Rows[i].Links)
+	}
+	comparison.Rows[index] = current
+	settleReviewLinks(&comparison)
+	if !comparison.Complete || !slices.Equal(comparison.Rows[index].Links, expected.Links) {
+		return apperrors.ErrVersionSkew
+	}
+	return nil
+}
+
+func (r approvalPreviewReader) importFieldChange(ctx context.Context, object, field, changed string, stored map[string]json.RawMessage, fields map[string]string, typed map[string]any) (crmcontracts.ApprovalPreviewChange, error) {
+	displayField, maskField := importPreviewField(object, field)
+	incoming := any(canonicalFor(field, changed))
+	if checked, found := typed[field]; found {
+		incoming = checked
+	}
+	if err := creationFieldsVisible(ctx, object, map[string]any{maskField: incoming}); err != nil {
+		return crmcontracts.ApprovalPreviewChange{}, err
+	}
+	raw, err := json.Marshal(incoming)
+	if err != nil {
+		return crmcontracts.ApprovalPreviewChange{}, err
+	}
+	beforeRaw := storedValue(stored, field)
+	if object == migration.ObjectDeal && field == csvTargetCompanyRef {
+		beforeRaw = stored[refColCompany]
+	}
+	if len(beforeRaw) == 0 {
+		beforeRaw = json.RawMessage("null")
+	}
+	before, err := r.value(ctx, displayField, beforeRaw)
+	if err != nil {
+		return crmcontracts.ApprovalPreviewChange{}, err
+	}
+	after, err := r.value(ctx, displayField, raw)
+	if err != nil {
+		return crmcontracts.ApprovalPreviewChange{}, err
+	}
+	if displayField == acceptFieldAmountMinor {
+		if err := r.importMoneyValues(ctx, displayField, &before, &after, stored, fields); err != nil {
+			return crmcontracts.ApprovalPreviewChange{}, err
+		}
+	}
+	return crmcontracts.ApprovalPreviewChange{Field: displayField, Before: before, After: after}, nil
+}
+
+func importMaskField(object, field, display string) string {
+	mask := display
+	if object == migration.ObjectLead && field == leadTargetStatus {
+		mask = previewFieldStatus
+	}
+	if strings.HasPrefix(field, "address.") {
+		mask = addressField
+	}
 	if object == migration.ObjectCompany && field == fieldDomain {
-		mask = "domains"
+		mask = previewFieldDomains
 	}
 	if object == migration.ObjectContact {
 		switch field {
 		case fieldEmail:
-			mask = "emails"
+			mask = previewFieldEmails
 		case fieldPhone:
 			mask = "phones"
 		case fieldLinkedIn:
-			mask = "social"
+			mask = previewFieldSocial
 		}
 	}
-	return display, mask
+	return mask
+}
+
+func (r approvalPreviewReader) importMoneyValues(ctx context.Context, displayField string, before, after *crmcontracts.ApprovalPreviewValue, stored map[string]json.RawMessage, fields map[string]string) error {
+	if err := r.moneyValue(ctx, displayField, before, stored); err != nil {
+		return err
+	}
+	currency := stored[dealTargetCurrency]
+	if value, found := fields[dealTargetCurrency]; found {
+		encoded, err := json.Marshal(value)
+		if err != nil {
+			return err
+		}
+		currency = encoded
+	}
+	if err := r.moneyValue(ctx, displayField, after, map[string]json.RawMessage{dealTargetCurrency: currency}); err != nil {
+		return err
+	}
+	return nil
 }

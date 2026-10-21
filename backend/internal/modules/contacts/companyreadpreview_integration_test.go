@@ -23,13 +23,20 @@ func TestCompanyReadPreviewMatchesAppliedFieldsAndPreservesHumanClaims(t *testin
 	proposal := DeepReadProposal{CompanyID: id, SourceURL: "https://preview.example.test/about", Fields: []DeepReadField{
 		{Field: "industry", Value: "Architectural glass", EvidenceSnippet: "We supply architectural glass.", SourceURL: "https://preview.example.test/about", Confidence: 0.9},
 		{Field: "icp", Value: "Builders", EvidenceSnippet: "For builders.", SourceURL: "https://preview.example.test/about", Confidence: 0.9},
-	}, Facts: []DeepReadFact{{Category: "company", Field: FactEmployeeRange, Value: "25 employees", EvidenceSnippet: "Our 25 employees.", SourceURL: "https://preview.example.test/about", Confidence: 0.9}}}
+	}, Facts: []DeepReadFact{{Category: companyEntity, Field: FactEmployeeRange, Value: "25 employees", EvidenceSnippet: "Our 25 employees.", SourceURL: "https://preview.example.test/about", Confidence: 0.9}}}
 	plan, err := e.store.PreviewCompanyRead(ctx, proposal)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(plan.Profiles) != 2 || len(plan.Facts) != 1 || len(plan.Columns) != 2 {
 		t.Fatalf("incomplete preview: %+v", plan)
+	}
+	unchanged, err := e.store.GetCompany(ctx, id, storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if unchanged.Version == nil || company.Version == nil || *unchanged.Version != *company.Version || unchanged.Industry != nil || unchanged.SizeBand != nil {
+		t.Fatalf("preview changed the company: %+v", unchanged)
 	}
 	if err := e.store.ApplyDeepRead(ctx, proposal); err != nil {
 		t.Fatal(err)

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -20,10 +21,12 @@ import (
 func TestLeadCarryPreviewNamesTheRecordedBasisWithoutChangingItsValidity(t *testing.T) {
 	e := setupChannelConsent(t)
 	lead := seedLead(t, e, "Dana Buyer", "basis@example.test")
-	ctx := principal.WithActor(e.ctx, principal.Principal{Type: principal.PrincipalHuman, ID: "human:" + e.user.String(), UserID: e.user,
+	ctx := principal.WithActor(e.ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + e.user.String(), UserID: e.user,
 		Permissions: principal.Permissions{RowScope: principal.RowScopeAll, Objects: map[string]principal.ObjectGrant{
 			"lead": {Read: true, Update: true}, "contact": {Read: true, Create: true, Update: true},
-		}}})
+		}},
+	})
 	if err := e.store.db.Tx(ctx, func(tx pgx.Tx) error {
 		return recordBasis(ctx, tx, subjectRef{Kind: entityLead, ID: lead.String()},
 			resolution{Supported: true, Basis: commsauthz.BasisSubjectInitiatedCorrespondence}, commsauthz.Request{}, packRules{reply: 24 * time.Hour})
@@ -62,10 +65,12 @@ func TestLeadCarryPreviewNamesTheRecordedBasisWithoutChangingItsValidity(t *test
 func TestCarryPreviewRefusesAnOversizedScopeWithoutReturningPartialLinks(t *testing.T) {
 	e := setupChannelConsent(t)
 	lead := seedLead(t, e, "Large history", "history@example.test")
-	ctx := principal.WithActor(e.ctx, principal.Principal{Type: principal.PrincipalHuman, ID: "human:" + e.user.String(), UserID: e.user,
+	ctx := principal.WithActor(e.ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + e.user.String(), UserID: e.user,
 		Permissions: principal.Permissions{RowScope: principal.RowScopeAll, Objects: map[string]principal.ObjectGrant{
 			"lead": {Read: true, Update: true}, "contact": {Read: true, Create: true, Update: true},
-		}}})
+		}},
+	})
 	if err := e.store.db.Tx(ctx, func(tx pgx.Tx) error {
 		for i := range 501 {
 			if _, err := e.store.EnsureWithdrawalCredentialTx(ctx, tx, WithdrawalMintInput{

@@ -7,8 +7,9 @@ package contacts
 
 import (
 	"errors"
-	"github.com/jackc/pgx/v5"
 	"testing"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -144,9 +145,9 @@ func TestLeadCreationPreviewUsesCreatorDefaultsWithoutBorrowingPermissions(t *te
 	if preview.Input.OwnerID != nil {
 		t.Fatalf("human create inherited reviewer defaults: %+v", preview)
 	}
-	actor.Permissions.Objects = map[string]principal.ObjectGrant{"lead": {Read: true}}
+	actor.Permissions.Objects = map[string]principal.ObjectGrant{leadEntity: {Read: true}}
 	denied := principal.WithActor(e.ctx, actor)
-	creator.Permissions.Objects = map[string]principal.ObjectGrant{"lead": {Create: true, Read: true, Update: true}}
+	creator.Permissions.Objects = map[string]principal.ObjectGrant{leadEntity: {Create: true, Read: true, Update: true}}
 	creator.Permissions.RowScope = principal.RowScopeAll
 	if _, err := e.store.PreviewLeadCreationForActor(denied, in, creator); err == nil {
 		t.Fatal("creator permissions widened reviewer access")
@@ -164,7 +165,7 @@ func TestLeadCreationPreviewRefusesHiddenInheritedContactFields(t *testing.T) {
 		t.Fatal("missing fixture actor")
 	}
 	actor.Permissions.RowScope = principal.RowScopeOwn
-	actor.Permissions.FieldMasks = []principal.FieldMask{{Object: "contact", Field: "email", Condition: principal.MaskAlways}}
+	actor.Permissions.FieldMasks = []principal.FieldMask{{Object: contactEntity, Field: fieldEmail, Condition: principal.MaskAlways}}
 	ctx := principal.WithActor(e.ctx, actor)
 	in := CreateLeadInput{FromContactID: new(ids.From[ids.ContactKind](ids.UUID(contact.Id))), Source: "manual"}
 	preview, err := e.store.PreviewLeadCreation(ctx, in)

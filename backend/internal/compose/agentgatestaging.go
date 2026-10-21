@@ -150,7 +150,7 @@ func redeemIfPresented(w http.ResponseWriter, r *http.Request, next http.Handler
 	// loses to the version compare instead of to timing.
 	// Merge's If-Match names the source; its primary approval pin names the survivor.
 	// The native pair check reads both released pins from context instead.
-	if redemption.pinned && pol.Tool != "merge_records" && !refusesAPin(pol.Op) {
+	if redemption.pinned && pol.Tool != toolMergeRecords && !refusesAPin(pol.Op) {
 		r.Header.Set(ifMatchHeader, strconv.FormatInt(redemption.pin, 10))
 	}
 	// WithContext shares the header map set just above, so the pin travels with

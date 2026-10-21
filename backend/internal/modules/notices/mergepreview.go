@@ -7,13 +7,17 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+const noticeKindArg = "kind"
+
+// PreviewNoticeCarryTx refuses to expose another recipient's notifications during merge review.
 func PreviewNoticeCarryTx(ctx context.Context, tx pgx.Tx, kind string, source ids.UUID) ([]crmcontracts.NotificationItem, error) {
-	rows, err := tx.Query(ctx, `SELECT DISTINCT recipient_user_id FROM notice WHERE target_type=@kind AND target_id=@source LIMIT 2`, pgx.StrictNamedArgs{"kind": kind, "source": source})
+	rows, err := tx.Query(ctx, `SELECT DISTINCT recipient_user_id FROM notice WHERE target_type=@kind AND target_id=@source LIMIT 2`, pgx.StrictNamedArgs{noticeKindArg: kind, "source": source})
 	if err != nil {
 		return nil, err
 	}
@@ -35,7 +39,7 @@ func PreviewNoticeCarryTx(ctx context.Context, tx pgx.Tx, kind string, source id
 		}
 	}
 	rows, err = tx.Query(ctx, `SELECT id, kind, subject, body, target_type, target_id, created_at, origin, read_at, coalesce(dedupe_key, '')
- FROM notice WHERE target_type=@kind AND target_id=@source ORDER BY id LIMIT 501`, pgx.StrictNamedArgs{"kind": kind, "source": source})
+ FROM notice WHERE target_type=@kind AND target_id=@source ORDER BY id LIMIT 501`, pgx.StrictNamedArgs{noticeKindArg: kind, "source": source})
 	if err != nil {
 		return nil, err
 	}

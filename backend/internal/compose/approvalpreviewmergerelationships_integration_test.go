@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -25,8 +26,8 @@ func TestContactMergePreviewMatchesRelationshipRetirementAndPrimaryChanges(t *te
 			perms.Objects = maps.Clone(perms.Objects)
 			perms.Objects["relationship"] = principal.ObjectGrant{Read: true, Create: true, Update: true, Delete: true}
 			ctx := e.As(e.AdminUser, nil, perms)
-			source := ids.From[ids.ContactKind](e.SeedContact(t, "Source person", &e.AdminUser))
-			target := ids.From[ids.ContactKind](e.SeedContact(t, "Surviving person", &e.AdminUser))
+			source := ids.From[ids.ContactKind](e.SeedContact(t, "Source contact", &e.AdminUser))
+			target := ids.From[ids.ContactKind](e.SeedContact(t, "Surviving contact", &e.AdminUser))
 			peer := ids.From[ids.ContactKind](e.SeedContact(t, "Shared colleague", &e.AdminUser))
 			other := ids.From[ids.ContactKind](e.SeedContact(t, "Other colleague", &e.AdminUser))
 			expected := map[ids.UUID]bool{}

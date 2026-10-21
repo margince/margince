@@ -36,7 +36,7 @@ func (r approvalPreviewReader) referenceValue(ctx context.Context, field, text s
 	if !found || strings.TrimSpace(label) == "" {
 		return value, apperrors.ErrNotFound
 	}
-	kind := "reference"
+	kind := previewValueReference
 	if field == bulkParamOwner {
 		kind = ScopeKindOwner
 	}
@@ -48,12 +48,12 @@ func (r approvalPreviewReader) referenceValue(ctx context.Context, field, text s
 
 func previewReferenceType(field string) string {
 	switch field {
-	case "template_id":
-		return "offer_template"
+	case previewFieldTemplateID:
+		return string(recordTypeOfferTemplate)
 	case bulkParamOwner:
 		return entityUser
-	case "buyer_company_id", "parent_company_id", "partner_company_id":
-		return string(recordTypeCompany)
+	case previewFieldBuyerCompanyID, refColParentCompany, refColPartnerCompany:
+		return string(string(recordTypeCompany))
 	default:
 		return strings.TrimSuffix(field, "_id")
 	}
@@ -140,7 +140,7 @@ func (r approvalPreviewReader) previewLinkedRecords(ctx context.Context, links [
 			return nil, apperrors.ErrInvalidArgument
 		}
 		details = append(details, crmcontracts.ApprovalPreviewDetail{Field: "filed_under", Value: crmcontracts.ApprovalPreviewValue{
-			Kind: "reference", Text: label, EntityType: new(string(link.EntityType)), EntityId: new(openapi_types.UUID(link.EntityID)),
+			Kind: previewValueReference, Text: label, EntityType: new(string(link.EntityType)), EntityId: new(openapi_types.UUID(link.EntityID)),
 		}})
 	}
 	return details, nil

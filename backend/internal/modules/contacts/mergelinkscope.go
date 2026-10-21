@@ -22,6 +22,7 @@ const (
 	mergeListNoteFill     = "b.note IS NULL AND a.note IS NOT NULL"
 )
 
+// MergeLink preserves relationship identity for review before its endpoint changes.
 type MergeLink struct {
 	Kind      string
 	ID        ids.UUID
@@ -31,10 +32,10 @@ type MergeLink struct {
 
 func mergeActivityPredicates(kind string) (column, source, duplicate string, err error) {
 	switch kind {
-	case "contact":
-		column = "contact_id"
-	case "company":
-		column = "company_id"
+	case contactEntity:
+		column = columnContactID
+	case companyEntity:
+		column = columnCompanyID
 	default:
 		return "", "", "", apperrors.ErrInvalidArgument
 	}
@@ -48,13 +49,19 @@ func previewMergeLinks(ctx context.Context, tx pgx.Tx, kind string, source, targ
 	if err != nil {
 		return nil, err
 	}
-	args := pgx.NamedArgs{"source": source, "target": target, "kind": kind}
+	args := pgx.NamedArgs{mergeSourceKey: source, mergeTargetKey: target, recordKindParam: kind}
 	var out []MergeLink
-	for _, query := range []struct{ kind, sql string }{
+	queries := []struct{ kind, sql string }{
 		{"activity", "SELECT a.activity_id, " + activityDuplicate + ", NULL::text FROM activity_link a WHERE " + activitySource + " ORDER BY a.activity_id LIMIT 501"},
 		{"list", `SELECT a.list_id, ` + mergeListDuplicate + `, CASE WHEN NOT ` + mergeListDuplicate + ` OR EXISTS (SELECT 1 FROM list_member b WHERE b.list_id=a.list_id AND ` + mergeMembershipTarget + ` AND ` + mergeListNoteFill + `) THEN a.note END FROM list_member a WHERE ` + mergeMembershipSource + ` ORDER BY a.list_id LIMIT 501`},
 		{"tag", `SELECT a.tag_id, ` + mergeTagDuplicate + `, NULL::text FROM taggable a WHERE ` + mergeMembershipSource + ` ORDER BY a.tag_id LIMIT 501`},
-	} {
+	}
+	for _, query := range queries {
+		if err := auth.Require(ctx, query.kind, principal.ActionRead); err != nil {
+			return nil, err
+		}
+	}
+	for _, query := range queries {
 		rows, err := tx.Query(ctx, query.sql, args)
 		if err != nil {
 			return nil, err
@@ -71,9 +78,6 @@ func previewMergeLinks(ctx context.Context, tx pgx.Tx, kind string, source, targ
 			return nil, apperrors.ErrInvalidArgument
 		}
 		for _, link := range links {
-			if err := auth.Require(ctx, link.Kind, principal.ActionRead); err != nil {
-				return nil, err
-			}
 			switch link.Kind {
 			case "activity":
 				if err := auth.EnsureActivityContentVisible(ctx, tx, link.ID); err != nil {

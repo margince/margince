@@ -7,16 +7,19 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// MergeCompanyFact pairs source evidence with any fact already held by the survivor.
 type MergeCompanyFact struct {
 	Source crmcontracts.CompanyFact
 	Target *crmcontracts.CompanyFact
 }
 
+// MergeCompanyProfile pairs source profile evidence with any value already held by the survivor.
 type MergeCompanyProfile struct {
 	Source crmcontracts.CompanyProfileField
 	Target *crmcontracts.CompanyProfileField
@@ -24,6 +27,25 @@ type MergeCompanyProfile struct {
 
 func previewCompanyMergeEvidence(ctx context.Context, tx pgx.Tx, source, target ids.UUID, out *MergeSurvivorship) error {
 	from, to := ids.From[ids.CompanyKind](source), ids.From[ids.CompanyKind](target)
+	if err := previewCompanyMergeFacts(ctx, tx, from, to, out); err != nil {
+		return err
+	}
+	if err := previewCompanyMergeProfiles(ctx, tx, from, to, out); err != nil {
+		return err
+	}
+	if err := previewFieldsVisible(ctx, companyEntity, "relationship_types"); err != nil {
+		return err
+	}
+	types, err := readLiveRelationshipTypes(ctx, tx, from)
+	if err != nil {
+		return err
+	}
+	out.CompanyRelationshipTypes = types
+	out.CompanySingletons, err = previewCompanySingletons(ctx, tx, source, target)
+	return err
+}
+
+func previewCompanyMergeFacts(ctx context.Context, tx pgx.Tx, from, to ids.CompanyID, out *MergeSurvivorship) error {
 	sourceFacts, err := readCompanyFactsTx(ctx, tx, from)
 	if err != nil {
 		return err
@@ -45,7 +67,7 @@ func previewCompanyMergeEvidence(ctx context.Context, tx pgx.Tx, source, target 
 		kept[factKey{fact.Category, fact.Field, fact.ValueKey}] = fact
 	}
 	for _, fact := range sourceFacts {
-		if err := previewFieldsVisible(ctx, "company", string(fact.Field)); err != nil {
+		if err := previewFieldsVisible(ctx, companyEntity, string(fact.Field)); err != nil {
 			return err
 		}
 		carried := MergeCompanyFact{Source: fact}
@@ -54,6 +76,10 @@ func previewCompanyMergeEvidence(ctx context.Context, tx pgx.Tx, source, target 
 		}
 		out.CompanyFacts = append(out.CompanyFacts, carried)
 	}
+	return nil
+}
+
+func previewCompanyMergeProfiles(ctx context.Context, tx pgx.Tx, from, to ids.CompanyID, out *MergeSurvivorship) error {
 	sourceProfile, err := readCompanyProfileFieldsTx(ctx, tx, from)
 	if err != nil {
 		return err
@@ -70,7 +96,7 @@ func previewCompanyMergeEvidence(ctx context.Context, tx pgx.Tx, source, target 
 		profiles[field.Field] = field
 	}
 	for _, field := range sourceProfile {
-		if err := previewFieldsVisible(ctx, "company", string(field.Field)); err != nil {
+		if err := previewFieldsVisible(ctx, companyEntity, string(field.Field)); err != nil {
 			return err
 		}
 		carried := MergeCompanyProfile{Source: field}
@@ -79,14 +105,5 @@ func previewCompanyMergeEvidence(ctx context.Context, tx pgx.Tx, source, target 
 		}
 		out.CompanyProfiles = append(out.CompanyProfiles, carried)
 	}
-	if err := previewFieldsVisible(ctx, "company", "relationship_types"); err != nil {
-		return err
-	}
-	types, err := readLiveRelationshipTypes(ctx, tx, from)
-	if err != nil {
-		return err
-	}
-	out.CompanyRelationshipTypes = types
-	out.CompanySingletons, err = previewCompanySingletons(ctx, tx, source, target)
-	return err
+	return nil
 }

@@ -26,24 +26,15 @@ func (r approvalPreviewReader) bookingPreview(ctx context.Context, approval crmc
 		return nil, err
 	}
 	host, err := bookingPreviewHost(approval, in)
-	if err != nil {
+	if previewUnavailable(err) {
 		return out, nil
 	}
 	command := bookingPreviewCommand(in, host)
-	call := agents.NewBookMeetingCall(r.records, nil, command)
-	if err := call.Guards(ctx); err != nil {
-		var invalid *agents.BadArgsError
-		if previewUnavailable(err) || errors.As(err, &invalid) {
+	if err := r.requireBookingPreviewTarget(ctx, approval, command); err != nil {
+		if previewUnavailable(err) {
 			return out, nil
 		}
 		return nil, err
-	}
-	subject, err := call.Subject(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if approval.TargetEntityId == nil || approval.TargetEntityType == nil || subject.TargetID != ids.UUID(*approval.TargetEntityId) || subject.TargetType != *approval.TargetEntityType {
-		return out, nil
 	}
 	hostValue, err := r.referenceValue(ctx, bulkParamOwner, host.String())
 	if previewUnavailable(err) {
@@ -59,18 +50,7 @@ func (r approvalPreviewReader) bookingPreview(ctx context.Context, approval crmc
 	if err != nil {
 		return nil, err
 	}
-	details := []crmcontracts.ApprovalPreviewDetail{
-		previewDetail("subject", command.Subject),
-		previewDetail("meeting_start", in.Start.Format(time.RFC3339Nano)),
-		previewDetail("meeting_end", in.End.Format(time.RFC3339Nano)),
-		{Field: "meeting_host", Value: hostValue},
-	}
-	details = append(details, linked...)
-	if in.AttendeeEmails != nil {
-		for _, address := range *in.AttendeeEmails {
-			details = append(details, previewDetail("intended_attendee", string(address)))
-		}
-	}
+	details := bookingDetails(in, command, hostValue, linked)
 	out.Details, out.Effects = &details, &[]string{"record_meeting_only"}
 	if err := r.appendBookingConsent(ctx, in, out); err != nil {
 		if previewUnavailable(err) {
@@ -79,10 +59,7 @@ func (r approvalPreviewReader) bookingPreview(ctx context.Context, approval crmc
 		return nil, err
 	}
 	out.State = previewReadyState
-	if err := r.currentEvidence(ctx, approval, out); err != nil {
-		return nil, err
-	}
-	return out, nil
+	return out, r.currentEvidence(ctx, approval, out)
 }
 
 func bookingPreviewHost(approval crmcontracts.Approval, in crmcontracts.BookMeetingJSONRequestBody) (ids.UUID, error) {
@@ -123,4 +100,39 @@ func (r approvalPreviewReader) bookingPreviewLinks(ctx context.Context, requeste
 		links = append(links, item)
 	}
 	return r.previewLinkedRecords(ctx, links)
+}
+
+func bookingDetails(in crmcontracts.BookMeetingJSONRequestBody, command agents.BookMeetingCommand, hostValue crmcontracts.ApprovalPreviewValue, linked []crmcontracts.ApprovalPreviewDetail) []crmcontracts.ApprovalPreviewDetail {
+	details := []crmcontracts.ApprovalPreviewDetail{
+		previewDetail("subject", command.Subject),
+		previewDetail("meeting_start", in.Start.Format(time.RFC3339Nano)),
+		previewDetail("meeting_end", in.End.Format(time.RFC3339Nano)),
+		{Field: "meeting_host", Value: hostValue},
+	}
+	details = append(details, linked...)
+	if in.AttendeeEmails != nil {
+		for _, address := range *in.AttendeeEmails {
+			details = append(details, previewDetail("intended_attendee", string(address)))
+		}
+	}
+	return details
+}
+
+func (r approvalPreviewReader) requireBookingPreviewTarget(ctx context.Context, approval crmcontracts.Approval, command agents.BookMeetingCommand) error {
+	call := agents.NewBookMeetingCall(r.records, nil, command)
+	if err := call.Guards(ctx); err != nil {
+		var invalid *agents.BadArgsError
+		if previewUnavailable(err) || errors.As(err, &invalid) {
+			return apperrors.ErrInvalidArgument
+		}
+		return err
+	}
+	subject, err := call.Subject(ctx)
+	if err != nil {
+		return err
+	}
+	if approval.TargetEntityId == nil || approval.TargetEntityType == nil || subject.TargetID != ids.UUID(*approval.TargetEntityId) || subject.TargetType != *approval.TargetEntityType {
+		return apperrors.ErrInvalidArgument
+	}
+	return nil
 }

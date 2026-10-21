@@ -7,10 +7,11 @@ import (
 	"context"
 	"strings"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 func (r approvalPreviewReader) populateFrozenMessage(ctx context.Context, input activities.SendEmailInput, links []activities.ActivityLinkInput, out *crmcontracts.ApprovalPreview) error {

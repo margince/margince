@@ -21,7 +21,7 @@ func settleReviewLinks(plan *migration.ReviewPlan) {
 			var match *migration.ReviewRow
 			for k := range plan.Rows {
 				row := &plan.Rows[k]
-				if row.Object != link.Object || row.Outcome == "skip" || !reviewLinkNamesRow(*link, *row) {
+				if row.Object != link.Object || row.Outcome == importRowSkip || !reviewLinkNamesRow(*link, *row) {
 					continue
 				}
 				if match != nil {
