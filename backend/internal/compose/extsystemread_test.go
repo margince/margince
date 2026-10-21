@@ -112,8 +112,11 @@ func TestAnAttendedCanReadAnswersOnlyItsHumanCallerAboutThemselves(t *testing.T)
 	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), ids.NewV7()), human)
 	rt := runtimeFor(ctx, "dealmirror", "1.0.0", "tool/probe", extensionRuntimeBinding{pool: &pgxpool.Pool{}})
 	defer rt.release()
-	if _, err := rt.Authority().CanRead(ctx, "not-a-user", company, nil); !errors.Is(err, extension.ErrInvalid) {
-		t.Errorf("a malformed user id: err = %v, want ErrInvalid", err)
+	// A deal, so the refusal is the user id's and not the record type's.
+	deal := extension.EntityRef{Type: "deal", ID: ids.NewV7().String()}
+	if _, err := rt.Authority().CanRead(ctx, "not-a-user", deal, nil); !errors.Is(err, extension.ErrInvalid) ||
+		!strings.Contains(err.Error(), "user") {
+		t.Errorf("a malformed user id: err = %v, want ErrInvalid naming the user", err)
 	}
 }
 

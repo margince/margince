@@ -652,16 +652,19 @@ plan for:
 ### Read deals and colleagues from a handler
 
 Your SQL may touch only your own tables. So a handler reads a core deal, and the colleagues on it, through
-four system reads. No user's rights limit what they read. That is why they answer only on a job tick or a bus
-delivery, where no user gets the answer. In all other places each one answers `extension.ErrAttendedRead`: a
-tool call, a route, the inbound edge, a finance source's read and a transport's send. There the answer, or an
-error that quotes it, could reach a user whose own rights hide it.
+four system reads. No user's rights limit what they read. That is why they answer on a job tick or a bus
+delivery, where no user gets the answer. In all other places `Deals().Get`, `Deals().Responsible` and
+`Directory().Emails` answer `extension.ErrAttendedRead`: a tool call, a route, the inbound edge, a finance
+source's read and a transport's send. There the answer, or an error that quotes it, could reach a user whose
+own rights hide it.
+
+`CanRead` answers in those places too, but only a signed-in human asking about themselves. So a route can ask
+whether its own caller may open the deal before it serves what your unit stored about it. Any other question
+there, and any call an agent or a connector makes, answers `extension.ErrAttendedRead`: an agent's scopes may
+be narrower than its human's rights.
 
 The refusal guards the call, not your own tables. If you save what a read returned and show it later, ask
-`CanRead` first. `CanRead` is the one read that also answers on a call a signed-in human makes, and there it
-answers only about that human. So a route can ask whether its own caller may open the deal before it serves
-what your unit stored about it. An agent's or a connector's call is still refused, because its scopes may be
-narrower than its human's rights.
+`CanRead` first.
 
 Declare each group of reads your unit makes:
 
