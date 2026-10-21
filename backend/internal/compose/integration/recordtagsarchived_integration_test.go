@@ -15,10 +15,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// An archived record is closed to reads of what hangs off it, so its tag list
-// answers not-found as its lists do, whichever path archived it. Each case
-// archives through the product's own writer, so the row is in the state that
-// writer leaves it in.
+// An archived record is closed to reads of what hangs off it. Its tag list
+// answers not-found as its lists do, whichever path archived it.
+// Each case archives through the product's own writer, so the row is in the
+// state that writer leaves it in.
 func TestRecordTagsOfAnArchivedRecordAnswerNotFoundLikeItsSiblings(t *testing.T) {
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
