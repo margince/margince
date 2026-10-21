@@ -4,6 +4,7 @@
 
 import { describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
+import { UTC_ZONE } from "../../format/timezone";
 import { view } from "../../testing/contactpage.testkit";
 import { recipientSuggestions } from "./composehead";
 
@@ -14,7 +15,7 @@ function member(overrides: Partial<User>): User {
     id: "u-1",
     email: "sofia@gradion.test",
     display_name: "Sofia Keller",
-    timezone: "UTC",
+    timezone: UTC_ZONE,
     status: "active",
     is_agent: false,
     ...overrides,
