@@ -6,10 +6,10 @@ package compose
 import (
 	"encoding/json"
 	"sort"
-	"unicode/utf8"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // extensionArgumentPrefix keeps a unit's argument names out of the detail keys
@@ -47,19 +47,8 @@ func extensionPreview(approval crmcontracts.Approval, kind approvals.ExtensionKi
 			}
 			text = string(encoded)
 		}
-		details = append(details, previewDetail(extensionArgumentPrefix+name, shortenedArgument(text)))
+		details = append(details, previewDetail(extensionArgumentPrefix+name, textcut.BytesMarked(text, maxArgumentPreviewBytes, "…")))
 	}
 	out.Details, out.State = &details, previewReadyState
 	return out, nil
-}
-
-func shortenedArgument(text string) string {
-	if len(text) <= maxArgumentPreviewBytes {
-		return text
-	}
-	cut := maxArgumentPreviewBytes
-	for cut > 0 && !utf8.RuneStart(text[cut]) {
-		cut--
-	}
-	return text[:cut] + "…"
 }
