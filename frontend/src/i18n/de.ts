@@ -857,13 +857,13 @@ export const de = {
     "Den Link einfügen, den Link kopieren bei einem gespeicherten eigenen Bericht liefert.",
   "reporting.addQuestion": "Frage hinzufügen",
   "reporting.questionKeptWithheld":
-    "Ihr Zugriff deckt diese Frage nicht ab, daher wird die gespeicherte Antwort nicht angezeigt.",
+    "Dein Zugriff deckt diese Frage nicht ab, daher wird die gespeicherte Antwort nicht angezeigt.",
   "reporting.questionNotKeptNoRetention":
     "Nicht gespeichert: Beim Senden war für gesendete Berichte keine Aufbewahrungsfrist festgelegt.",
   "reporting.questionNotKeptTooMany":
     "Nicht gespeichert: Diese Antwort beruht auf mehr Datensätzen, als ein gesendeter Bericht speichert.",
   "reporting.questionNotKeptUnanswered":
-    "Nicht gespeichert: Beim Senden konnte der Absender diese Frage nicht stellen.",
+    "Nicht gespeichert: Beim Senden konnte das sendende Konto diese Frage nicht stellen.",
   "reporting.questionNotKeptOtherRecords":
     "Nicht gespeichert: Diese Frage zählt andere Arten von Datensätzen als die aufgelisteten, und diese speichert ein gesendeter Bericht nicht.",
   "reporting.questionExpired":
