@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind falsification H2
+
 package gates
 
 import "testing"
@@ -26,6 +28,7 @@ func readOnlyPreviewAdmission(functions map[string]*writeAuthorityFn, name strin
 }
 
 func TestReadOnlyPreviewAdmissionsCannotExcuseAFutureWriter(t *testing.T) {
+	t.Parallel()
 	for _, mutates := range []bool{false, true} {
 		functions := map[string]*writeAuthorityFn{
 			"preview": {requires: map[string]bool{"company:update": true}, calls: map[string]bool{"reader": true}},
@@ -44,6 +47,7 @@ func TestReadOnlyPreviewAdmissionsCannotExcuseAFutureWriter(t *testing.T) {
 }
 
 func TestPreviewAdmissionIncludesPackageFunctions(t *testing.T) {
+	t.Parallel()
 	receivers := map[string]map[string]*writeAuthorityFn{
 		"Store": {"preview": {requires: map[string]bool{"company:update": true}, calls: map[string]bool{"reader": true}}},
 		"":      {"reader": {calls: map[string]bool{"write": true}}, "write": {mutates: true}},
@@ -62,6 +66,7 @@ func previewMutationClosure(receivers map[string]map[string]*writeAuthorityFn) m
 }
 
 func TestPreviewAdmissionIncludesOtherReceiverMutations(t *testing.T) {
+	t.Parallel()
 	receivers := map[string]map[string]*writeAuthorityFn{
 		"Store":  {"preview": {requires: map[string]bool{"company:update": true}, calls: map[string]bool{"save": true}}},
 		"Writer": {"save": {mutates: true}},

@@ -167,6 +167,14 @@ func (stubs) GetExtensionIngestHealth(w nethttp.ResponseWriter, r *nethttp.Reque
 	httperr.NotImplemented(w, r, "GetExtensionIngestHealth")
 }
 
+func (stubs) ActivateHomeRepair(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ActivateHomeRepair")
+}
+
+func (stubs) PreviewHomeRepair(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "PreviewHomeRepair")
+}
+
 func (stubs) GetJobHealth(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetJobHealth")
 }
@@ -1641,6 +1649,10 @@ func (stubs) ResolveDealRoomThread(w nethttp.ResponseWriter, r *nethttp.Request,
 
 func (stubs) ListDealSuggestions(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListDealSuggestionsParams) {
 	httperr.NotImplemented(w, r, "ListDealSuggestions")
+}
+
+func (stubs) GetDealSuggestion(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetDealSuggestion")
 }
 
 func (stubs) AcceptDealSuggestion(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.AcceptDealSuggestionParams) {

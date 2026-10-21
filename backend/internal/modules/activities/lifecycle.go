@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -55,6 +54,9 @@ type UpdateActivityInput struct {
 	customColumns []fieldcatalog.Column
 }
 
+const archiveReasonKey = "reason"
+
+// UpdateActivity keeps an authorized edit and its audit in one transaction.
 func (s *Store) UpdateActivity(ctx context.Context, id ids.ActivityID, in UpdateActivityInput) (crmcontracts.Activity, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
 		return crmcontracts.Activity{}, err
@@ -445,7 +447,11 @@ func archiveActivityInTx(
 	if err := p.ApplyGuardedIn(ctx, tx, "activity", id.UUID, pin, activityArchivedFilter(held)); err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	auditID, err := storekit.Audit(ctx, tx, "archive", "activity", id.UUID, nil, nil)
+	var evidence map[string]any
+	if o.reason != "" {
+		evidence = map[string]any{archiveReasonKey: o.reason, "rule_version": o.ruleVersion}
+	}
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, "archive", "activity", id.UUID, p.Before(), p.After(), evidence)
 	if err != nil {
 		return crmcontracts.Activity{}, err
 	}
@@ -455,44 +461,4 @@ func archiveActivityInTx(
 		return crmcontracts.Activity{}, err
 	}
 	return readActivity(ctx, tx, id, storekit.IncludeArchived)
-}
-
-// activityUpdatedChangedFields projects the patch's touched/untouched decisions
-// onto activity.updated's BOUNDED changed_fields struct. body carries a presence
-// flag, never the content — bodies can be large and are never echoed onto the
-// wire.
-//
-// It reads the REQUEST while the audit image reads the row, and the two are not
-// interchangeable: an event announces which fields a caller asked to change, an
-// audit image records what the row then held.
-func activityUpdatedChangedFields(in UpdateActivityInput) crmcontracts.PublicEventActivityChangedFields {
-	var fields crmcontracts.PublicEventActivityChangedFields
-	if in.Subject != nil {
-		fields.Subject = in.Subject
-	}
-	if in.Body != nil {
-		bodyTouched := true
-		fields.Body = &bodyTouched
-	}
-	if in.OccurredAt != nil {
-		fields.OccurredAt = in.OccurredAt
-	}
-	if in.DueAt != nil {
-		fields.DueAt = in.DueAt
-	}
-	if in.RemindAt != nil {
-		fields.RemindAt = in.RemindAt
-	}
-	if in.AssigneeID != nil {
-		assignee := openapi_types.UUID(in.AssigneeID.UUID)
-		fields.AssigneeId = &assignee
-	}
-	if in.IsDone != nil {
-		fields.IsDone = in.IsDone
-	}
-	if in.MeetingStatus != nil {
-		status := crmcontracts.PublicEventActivityChangedFieldsMeetingStatus(*in.MeetingStatus)
-		fields.MeetingStatus = &status
-	}
-	return fields
 }

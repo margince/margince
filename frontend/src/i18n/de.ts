@@ -188,6 +188,97 @@ export const de = {
   "approval.capture.full_name": "Erfasster Name",
   "approval.capture.company_name": "Erfasstes Unternehmen",
   "approval.capture.title": "Erfasste Position",
+  "homeRepair.taskPermission":
+    "Zum Archivieren geprüfter Aufgaben brauchst du die Berechtigung, Aktivitäten zu archivieren.",
+  "homeRepair.classificationPermission":
+    "Zum Ändern von Nachrichtenergebnissen ist die Berechtigung zum Bearbeiten von Aktivitäten erforderlich.",
+  "homeRepair.reason.classificationNotAttempted":
+    "Es liegt keine abgeschlossene Prüfung vor. Prüfe erneut, sobald die Einordnung verfügbar ist.",
+  "homeRepair.reclassify": "Nachricht neu einordnen",
+  "homeRepair.classifications": "Nachrichtenergebnisse",
+  "homeRepair.asks": "Handlung angefragt",
+  "homeRepair.informs": "Nur Information",
+  "homeRepair.classificationChange":
+    "Aktuell: {before}. Vorgeschlagen: {after}.",
+  "homeRepair.reason.classificationDeclined":
+    "Die Klassifizierung hat diese Nachricht nicht bewertet. Prüfe sie selbst.",
+  "homeRepair.reason.classificationUncertain":
+    "Die neue Prüfung ist unsicher. Prüfe die Nachricht, bevor du das Ergebnis änderst.",
+  "homeRepair.reason.classificationAdopted":
+    "Menschliche Änderungen oder fehlende Nachweise verhindern eine automatische Korrektur.",
+  "homeRepair.reason.classificationWithheld":
+    "Ein Teil des Nachrichtenkontexts ist nicht zugänglich. Prüfe ihn vor einer Änderung.",
+  "homeRepair.reason.classificationCurrent":
+    "Die neue Prüfung bestätigt das aktuelle Ergebnis.",
+  "homeRepair.reason.classificationChanged":
+    "Die neue Prüfung schlägt ein anderes Ergebnis vor.",
+  "homeRepair.suggestionPermission":
+    "Zum Zurückziehen dieser Vorschläge brauchst du die Berechtigung, Deals zu erstellen.",
+  "homeRepair.supersede": "Automatischen Deal-Vorschlag zurückziehen",
+  "homeRepair.suggestions": "Deal-Vorschläge",
+  "homeRepair.reason.dealExists":
+    "Dieses Unternehmen hat bereits einen offenen Deal. Prüfe ihn, bevor du einen weiteren eröffnest.",
+  "homeRepair.reason.dealSource":
+    "Die Quelldaten stimmen nicht mehr mit den Belegen dieses Vorschlags überein.",
+  "homeRepair.reason.buyer":
+    "Die geprüften Quellen belegen keine aktuelle Käuferanfrage mehr.",
+  "homeRepair.reason.engagement":
+    "Ein aktiver Vertrag oder eine laufende Leistung spricht gegen das Ende der gesamten Kundenbeziehung.",
+  "homeRepair.reason.workstream":
+    "Die Belege betreffen das Ende eines einzelnen Auftrags, nicht der gesamten Kundenbeziehung.",
+  "homeRepair.reason.evidenceChanged":
+    "Neuere geprüfte Belege ersetzen den Kontext dieses Vorschlags.",
+  "homeRepair.withdraw": "Automatischen Vorschlag zurückziehen",
+  "homeRepair.reason.duplicate":
+    "Ein identischer offener Vorschlag bleibt verfügbar.",
+  "homeRepair.tasks": "Aufgaben",
+  "homeRepair.proposals": "Vorschläge",
+  "homeRepair.kind": "Zu prüfende Arbeit",
+  "homeRepair.preserved": "Behalten oder übersprungen",
+  "homeRepair.preservedNote":
+    "Enthält zur Prüfung behaltene und seit der Vorschau geänderte Aufgaben. Prüfe erneut, was übrig bleibt.",
+
+  "homeRepair.inspect": "Prüfen",
+  "dataTasks.blocked.review_required":
+    "Prüfe die vorgeschlagenen Änderungen vor dem Start.",
+  "homeRepair.archive": "Automatische Erinnerung archivieren",
+  "homeRepair.keepReview": "Zur persönlichen Prüfung behalten",
+  "homeRepair.keepCurrent": "Aktuelle Aufgabe behalten",
+  "homeRepair.reason.adopted":
+    "Diese Aufgabe wurde möglicherweise von einer Person erstellt, bearbeitet oder angeheftet.",
+  "homeRepair.reason.unverified":
+    "Die verfügbaren Belege rechtfertigen keine automatische Änderung.",
+  "homeRepair.reason.unavailable":
+    "Die Quelle kann mit deinem aktuellen Zugriff nicht geprüft werden.",
+  "homeRepair.reason.historical": "Historische Quelle ohne aktuelle Frist.",
+  "homeRepair.reason.baseline":
+    "Die Quelle liegt vor dem gewählten Beginn des Postfachverlaufs.",
+  "homeRepair.reason.cancelled": "Der zugrunde liegende Termin wurde abgesagt.",
+  "homeRepair.reason.requestAge":
+    "Die ursprüngliche Anfrage liegt außerhalb des Wartezeitraums. Archivieren markiert sie nicht als beantwortet.",
+  "homeRepair.reason.contextUnread":
+    "Spätere Nachrichten wurden noch nicht gelesen.",
+  "homeRepair.reason.contextUnassessed":
+    "Spätere Nachrichten wurden noch nicht auf Änderungen dieser Zusage geprüft.",
+  "homeRepair.reason.timeUnknown": "Das Datum der Quelle ist unbekannt.",
+  "homeRepair.reason.timeContradicted":
+    "Die Datumsangaben der Quelle widersprechen sich.",
+  "homeRepair.reason.meetingPending":
+    "Der zugrunde liegende Termin hat noch nicht stattgefunden.",
+  "homeRepair.reason.current":
+    "Die aktuellen Regeln lassen diese Aufgabe weiterhin zu.",
+  "homeRepair.unnamed": "Details nicht verfügbar",
+  "homeRepair.explain":
+    "Es wird nur Arbeit angezeigt, die du derzeit einsehen kannst. Prüfe bis zu 25 Einträge gleichzeitig. Veraltete automatische Erinnerungen können archiviert und doppelte oder veraltete Vorschläge zurückgezogen werden. Menschlich bearbeitete Aufgaben bleiben erhalten; nichts wird als erledigt markiert.",
+  "homeRepair.preview": "Einträge prüfen",
+  "homeRepair.next": "Nächste Seite prüfen",
+  "homeRepair.summary":
+    "Zu ändernde Ergebnisse: {reclassify}. Erinnerungen zum Archivieren: {archive}. Zurückzuziehende Vorschläge: {withdraw}. Zurückzuziehende Deal-Vorschläge: {supersede}. Zur Prüfung behalten: {review}; als aktuelle Arbeit behalten: {keep}.",
+  "homeRepair.apply_one": "{count} geprüfte Änderung anwenden",
+  "homeRepair.apply_other": "{count} geprüfte Änderungen anwenden",
+  "homeRepair.started":
+    "Der geprüfte Lauf ist vorgemerkt. Der Fortschritt erscheint oben.",
+
   "approvalPreferences.title": "Persönlich stummgeschaltete Freigaben",
   "approvalPreferences.explain":
     "Stummgeschaltete Arten verschwinden nur aus deiner Worklist. Andere Mitglieder behalten ihre Vorschläge. Stummschalten und Wiederherstellen deaktivieren deine automatischen Änderungen dieser Art. Versand, Buchungen, Zusammenführungen und Vorschläge mit Agentenpass bleiben sichtbar.",

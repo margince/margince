@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -309,23 +310,30 @@ func (o Offer) Approved() bool { return o.Status == approvalStatusApproved }
 // OffersForTx reads the offers of this kind against this target, LOCKED, for
 // a caller that must not act around one still waiting as well as one refused.
 func (s *Service) OffersForTx(ctx context.Context, tx pgx.Tx, kind string, targetID ids.UUID) ([]Offer, error) {
-	if err := storekit.LockWriteIdentity(ctx, tx, "approval_offers", kind+":"+targetID.String()); err != nil {
-		return nil, err
+	return offersAtTx(ctx, tx, kind, targetID, s.now())
+}
+
+func offersAtTx(ctx context.Context, tx pgx.Tx, kind string, targetID ids.UUID, now time.Time) ([]Offer, error) {
+	return readOffersAtTx(ctx, tx, kind, targetID, now, true)
+}
+
+func readOffersAtTx(ctx context.Context, tx pgx.Tx, kind string, targetID ids.UUID, now time.Time, forDecision bool) ([]Offer, error) {
+	if forDecision {
+		if err := storekit.LockWriteIdentity(ctx, tx, "approval_offers", kind+":"+targetID.String()); err != nil {
+			return nil, err
+		}
 	}
-	// EVERY offer is locked, not only the already-rejected ones: a pending row
-	// is exactly the one a human is about to reject, and leaving it unlocked
-	// would reopen the gap this closes.
-	rows, err := tx.Query(ctx, `
-		SELECT id, status, proposed_change, expires_at FROM approval
-		 WHERE kind = $1 AND target_entity_id = $2
-		 `+lockOrder+`
-		 FOR UPDATE`, kind, targetID)
+	query := `SELECT id, status, proposed_change, expires_at FROM approval
+ WHERE kind = @kind AND target_entity_id = @target ` + lockOrder
+	if forDecision {
+		query += " FOR UPDATE"
+	}
+	rows, err := tx.Query(ctx, query, pgx.NamedArgs{"kind": kind, "target": targetID})
 	if err != nil {
 		return nil, fmt.Errorf("lock the offers for this proposal: %w", err)
 	}
 	defer rows.Close()
 
-	now := s.now()
 	var out []Offer
 	for rows.Next() {
 		held := row{Kind: kind}

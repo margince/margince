@@ -22,6 +22,9 @@ func nextStep(tasks []Task, progress map[string]Progress, now time.Time) (*selec
 	for _, task := range tasks {
 		for _, step := range task.Steps {
 			p, exists := progress[progressKey(task.ID, step.Name)]
+			if task.Manual && !task.hasCurrentReview(p) {
+				continue
+			}
 			if complete(task, p) {
 				continue
 			}

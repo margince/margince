@@ -44,7 +44,7 @@ func TestTwoCorrectionReconcilersShareOneRiverJob(t *testing.T) {
 	if got := e.WsCount(t, `SELECT count(*) FROM river_job WHERE kind='data_task_run'`); got != 1 {
 		t.Fatalf("executor jobs=%d", got)
 	}
-	if got := e.WsCount(t, `SELECT count(*) FROM data_task_run`); got != 2 {
+	if got := e.WsCount(t, `SELECT count(*) FROM data_task_run`); got != registeredDataTaskSteps(dataTaskCatalog(e.Pool, time.Now)) {
 		t.Fatalf("seeded steps=%d", got)
 	}
 	workers := []*dataTaskRunWorker{{pool: e.Pool, pace: time.Second}, {pool: e.Pool, pace: time.Second}}
@@ -68,6 +68,12 @@ func TestTwoCorrectionReconcilersShareOneRiverJob(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, p := range progress {
+		if p.AwaitingReview() {
+			if p.Batches != 0 {
+				t.Fatalf("unreviewed manual work executed: %+v", p)
+			}
+			continue
+		}
 		if p.Status != datatask.Done || p.Batches != 1 {
 			t.Fatalf("empty bootstrap progress=%+v", p)
 		}
@@ -111,10 +117,16 @@ func TestOwnerCorrectionCommandsEstimateAndEnqueueWithoutExecuting(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(after) != 2 || len(before) != len(after) {
+	if len(after) != registeredDataTaskSteps(dataTaskCatalog(e.Pool, time.Now)) || len(before) != len(after) {
 		t.Fatalf("registered steps before=%d after=%d", len(before), len(after))
 	}
 	for i, p := range after {
+		if p.AwaitingReview() {
+			if p.Version != before[i].Version || p.Batches != 0 || p.Estimate != nil {
+				t.Fatalf("unreviewed manual estimate changed: %+v", p)
+			}
+			continue
+		}
 		if p.Version != before[i].Version+1 || p.Estimate == nil || p.Batches != 0 || p.Status != datatask.Pending {
 			t.Fatalf("estimate executed or failed to refresh: %+v", p)
 		}
@@ -165,7 +177,7 @@ func TestReconciliationQueuesCompletedCorrectionsAtANewerCodeVersion(t *testing.
 		t.Fatal(err)
 	}
 	e.WsExec(t, `UPDATE data_task_run SET status='done'`)
-	tasks := dataTaskCatalog(func() time.Time { return clocktest.Now(t) })
+	tasks := dataTaskCatalog(e.Pool, func() time.Time { return clocktest.Now(t) })
 	tasks[0].Version++
 	upgraded, err := datatask.New(e.Pool, tasks, "test", func() time.Time { return clocktest.Now(t) }, dataTaskFailureNotice(e.Pool))
 	if err != nil {
@@ -189,4 +201,12 @@ func TestReconciliationQueuesCompletedCorrectionsAtANewerCodeVersion(t *testing.
 	if progress[0].Status != datatask.Pending {
 		t.Fatalf("completed old code reported done: %+v", progress[0])
 	}
+}
+
+func registeredDataTaskSteps(tasks []datatask.Task) int {
+	count := 0
+	for _, task := range tasks {
+		count += len(task.Steps)
+	}
+	return count
 }

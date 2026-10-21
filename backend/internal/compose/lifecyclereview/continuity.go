@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/projects"
@@ -19,6 +20,14 @@ import (
 // Reconcile keeps ongoing agreements and delivery from becoming account endings.
 func Reconcile(ctx context.Context, tx pgx.Tx, company ids.CompanyID, now time.Time) (Finding, error) {
 	return reconcileContinuity(ctx, tx, company, now, false)
+}
+
+// ReconcileForDecision locks account evidence before a lifecycle mutation.
+func ReconcileForDecision(ctx context.Context, tx pgx.Tx, company ids.CompanyID, now time.Time) (Finding, error) {
+	if _, err := contacts.LockCompanyTx(ctx, tx, company); err != nil {
+		return Finding{}, err
+	}
+	return reconcileContinuity(ctx, tx, company, now, true)
 }
 
 func reconcileContinuity(ctx context.Context, tx pgx.Tx, company ids.CompanyID, now time.Time, lock bool) (Finding, error) {

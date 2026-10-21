@@ -763,6 +763,68 @@ paths:
         '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
 
+  /admin/home-repair/preview:
+    post:
+      tags: [Identity]
+      operationId: previewHomeRepair
+      security: [{cookieAuth: []}]
+      x-agent-access: human-only
+      summary: Review a bounded page of automatic Home work.
+      description: |
+        Requires data_task:read and each record's content permissions. This operation changes no work.
+        Classification review uses the ordinary model check and holds its proposed results for fifteen minutes.
+        Classification pages contain at most 25 records; suggestion and proposal pages contain at most 200.
+        Other pages accept up to 1000 records, but activation also limits the encoded selection to 256 KiB.
+        The application reviews 25 records per page.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [limit]
+              properties:
+                limit: {type: integer, minimum: 1, maximum: 1000}
+                after: {type: string, format: uuid}
+                source: {type: string, enum: [task, approval, suggestion, verdict], default: task}
+      responses:
+        '200':
+          description: Exact reviewed identities, dispositions and rule version. Use the last identity to read the next page.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/HomeRepairReview'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
+  /admin/home-repair/activate:
+    post:
+      tags: [Identity]
+      operationId: activateHomeRepair
+      security: [{cookieAuth: []}]
+      x-agent-access: human-only
+      summary: Activate exactly the reviewed automatic Home work.
+      description: Requires data_task:update. The review expires after fifteen minutes; changed records or rules require another preview.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [version, review]
+              properties:
+                version: {type: integer, format: int64, minimum: 1}
+                review: {$ref: '#/components/schemas/HomeRepairReview'}
+      responses:
+        '204': {description: The bounded reviewed run was activated.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
   /admin/job-health:
     get:
       tags: [Identity]
@@ -5232,6 +5294,26 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
+
+  /deal-suggestions/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Deals]
+      operationId: getDealSuggestion
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      summary: Read one suggestion and its currently visible evidence.
+      description: Requires deal and company read permission and visibility of every cited source. Missing and inaccessible suggestions both return 404.
+      responses:
+        '200':
+          description: The suggestion in its current state.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealSuggestion' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
 
   /deal-suggestions/{id}/accept:
     parameters:
@@ -52988,6 +53070,49 @@ components:
         refused: { type: integer, description: Records this check refused in the window. }
         last_refused_at: { type: string, format: date-time }
 
+    HomeRepairReview:
+      type: object
+      additionalProperties: false
+      required: [tasks, digest, rule_version, limit, as_of, counts]
+      properties:
+        tasks:
+          type: array
+          maxItems: 1000
+          items: {$ref: '#/components/schemas/HomeRepairTask'}
+        counts: {$ref: '#/components/schemas/HomeRepairCounts'}
+        preview_token: {type: string, minLength: 43, maxLength: 43, description: Reader-bound classification review token; expires after fifteen minutes and is consumed on activation.}
+        digest: {type: string, minLength: 64, maxLength: 64}
+        rule_version: {type: string}
+        limit: {type: integer, minimum: 0, maximum: 1000}
+        as_of: {type: string, format: date-time}
+    HomeRepairTask:
+      type: object
+      additionalProperties: false
+      required: [id, version, action, reason]
+      properties:
+        id: {type: string, format: uuid}
+        source: {type: string, enum: [task, approval, suggestion, verdict]}
+        before_verdict: {type: string, enum: [asks_us, informs_us]}
+        after_verdict: {type: string, enum: [asks_us, informs_us]}
+        snapshot: {type: string, minLength: 64, maxLength: 64}
+        version: {type: integer, format: int64}
+        action:
+          type: string
+          enum: [archive_automatic_reminder, withdraw_proposal, supersede_suggestion, reclassify_message, human_review, leave_current]
+        reason: {type: string}
+
+    HomeRepairCounts:
+      type: object
+      additionalProperties: false
+      required: [archive, withdraw, supersede, reclassify, review, keep]
+      properties:
+        reclassify: {type: integer, minimum: 0}
+        archive: {type: integer, minimum: 0}
+        withdraw: {type: integer, minimum: 0}
+        supersede: {type: integer, minimum: 0}
+        review: {type: integer, minimum: 0}
+        keep: {type: integer, minimum: 0}
+
     DataTaskControl:
       type: object
       additionalProperties: false
@@ -53003,6 +53128,7 @@ components:
       additionalProperties: false
       required: [task_id, title, step, task_version, status, version, batch_limit, scanned, changed, batches, estimate_capped, consecutive_failures, missing_prerequisites]
       properties:
+        review_kind: {type: string, enum: [home_attention]}
         task_id: {type: string}
         title: {type: string}
         step: {type: string}
@@ -53030,7 +53156,7 @@ components:
         first_release: {type: string}
         blocked_reason:
           type: string
-          enum: [waiting_for_worker, newer_release_required, paused, failed, retry_wait, earlier_step, missing_prerequisite]
+          enum: [waiting_for_worker, newer_release_required, paused, failed, retry_wait, earlier_step, missing_prerequisite, review_required]
         blocked_by: {type: string}
         missing_prerequisites:
           type: array

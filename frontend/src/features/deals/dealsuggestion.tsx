@@ -133,7 +133,7 @@ export function SuggestionAnswers({
   const [action, setAction] = useState<"create" | "link" | "dismiss" | null>(
     null,
   );
-  if (!mayCreate && !mayLink) return null;
+  if (suggestion.state !== "open" || (!mayCreate && !mayLink)) return null;
   return (
     <div className="dealsuggestion-answers">
       {mayCreate && (

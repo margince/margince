@@ -3387,7 +3387,19 @@ public.data_subject_request.updated_at timestamp with time zone NOT NULL gen=- d
 public.data_subject_request_one_case_per_submission CREATE UNIQUE INDEX data_subject_request_one_case_per_submission ON public.data_subject_request USING btree (source_submission_id) WHERE (source_submission_id IS NOT NULL)
 public.data_subject_request_pkey CREATE UNIQUE INDEX data_subject_request_pkey ON public.data_subject_request USING btree (id)
 public.data_subject_request_receipt_reference CREATE UNIQUE INDEX data_subject_request_receipt_reference ON public.data_subject_request USING btree (receipt_reference) WHERE (receipt_reference IS NOT NULL)
+public.data_task_review acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.data_task_review.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.data_task_review.data_task_review_pkey PRIMARY KEY (token_hash)
+public.data_task_review.data_task_review_token_hash_check CHECK ((octet_length(token_hash) = 32))
+public.data_task_review.expires_at timestamp with time zone NOT NULL gen=- def=-
+public.data_task_review.operator text NOT NULL gen=- def=-
+public.data_task_review.review jsonb NOT NULL gen=- def=-
+public.data_task_review.task_id text NOT NULL gen=- def=-
+public.data_task_review.token_hash bytea NOT NULL gen=- def=-
+public.data_task_review_expiry CREATE INDEX data_task_review_expiry ON public.data_task_review USING btree (expires_at)
+public.data_task_review_pkey CREATE UNIQUE INDEX data_task_review_pkey ON public.data_task_review USING btree (token_hash)
 public.data_task_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.data_task_run.activation jsonb gen=- def=-
 public.data_task_run.batch_limit integer NOT NULL gen=- def=-
 public.data_task_run.batches bigint NOT NULL gen=- def=0
 public.data_task_run.changed bigint NOT NULL gen=- def=0
@@ -3420,6 +3432,14 @@ public.data_task_run.task_id text NOT NULL gen=- def=-
 public.data_task_run.task_version integer NOT NULL gen=- def=-
 public.data_task_run.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.data_task_run.version bigint NOT NULL gen=- def=1
+public.data_task_run_history acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.data_task_run_history.data_task_run_history_pkey PRIMARY KEY (run_id)
+public.data_task_run_history.preserved_at timestamp with time zone NOT NULL gen=- def=-
+public.data_task_run_history.progress jsonb NOT NULL gen=- def=-
+public.data_task_run_history.run_id uuid NOT NULL gen=- def=-
+public.data_task_run_history.step text NOT NULL gen=- def=-
+public.data_task_run_history.task_id text NOT NULL gen=- def=-
+public.data_task_run_history_pkey CREATE UNIQUE INDEX data_task_run_history_pkey ON public.data_task_run_history USING btree (run_id)
 public.data_task_run_pkey CREATE UNIQUE INDEX data_task_run_pkey ON public.data_task_run USING btree (task_id, step)
 public.data_task_run_run_id_key CREATE UNIQUE INDEX data_task_run_run_id_key ON public.data_task_run USING btree (run_id)
 public.deal acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false

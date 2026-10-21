@@ -72,6 +72,16 @@ func lockExecutor(ctx context.Context, tx pgx.Tx) (bool, error) {
 
 func (e *Engine) runBatch(ctx context.Context, tx pgx.Tx, picked selection) error {
 	p := picked.progress
+	if picked.task.Manual && !picked.task.hasCurrentReview(p) {
+		return errors.New("manual data task requires a current reviewed activation")
+	}
+	if p.Activation != nil {
+		remaining := int64(p.Activation.Limit) - p.Scanned
+		if remaining <= 0 {
+			return e.commitProgress(ctx, tx, p, BatchOut{Cursor: p.Cursor, Done: true})
+		}
+		p.BatchLimit = min(p.BatchLimit, int(remaining))
+	}
 	if p.TaskVersion != picked.task.Version {
 		p.Cursor, p.Scanned, p.Changed, p.Batches = nil, 0, 0, 0
 		p.Estimate, p.EstimatedAt = nil, nil
@@ -79,7 +89,7 @@ func (e *Engine) runBatch(ctx context.Context, tx pgx.Tx, picked selection) erro
 		p.TaskVersion = picked.task.Version
 	}
 	if p.Estimate == nil {
-		estimate, capped, err := picked.step.Estimate(ctx, tx, estimateCap)
+		estimate, capped, err := e.estimateStep(ctx, tx, picked.task, picked.step, p)
 		if err != nil {
 			return err
 		}
@@ -90,12 +100,15 @@ func (e *Engine) runBatch(ctx context.Context, tx pgx.Tx, picked selection) erro
 		p.Estimate, p.EstimateCapped, p.EstimatedAt = &estimate, capped, &now
 	}
 	ctx = storekit.WithBatch(Acting(ctx, picked.task.ID), p.RunID)
-	out, err := picked.step.Batch(ctx, tx, BatchIn{Cursor: p.Cursor, Limit: p.BatchLimit, RunID: p.RunID})
+	out, err := picked.step.Batch(ctx, tx, BatchIn{Cursor: p.Cursor, Limit: p.BatchLimit, RunID: p.RunID, Activation: p.Activation})
 	if err != nil {
 		return err
 	}
 	if err := validateBatch(p, out); err != nil {
 		return err
+	}
+	if p.Activation != nil && p.Scanned+int64(out.Scanned) >= int64(p.Activation.Limit) {
+		out.Done = true
 	}
 	if e.beforeCommit != nil {
 		if err := e.beforeCommit(ctx, tx); err != nil {

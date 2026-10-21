@@ -107,6 +107,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `grantrenewalcauses_test.go` | H1 | Every reason a standing grant needs renewing must reach the card that asks for it. |
 | `grouprolemapcap_test.go` | H3 | The ceiling on the group to role map is read in three places, and they have to be one number. |
 | `heldsendtwin_test.go` | H3 | The held-message reuse rule is written twice, and the two copies must agree. |
+| `homerepairreasons_test.go` | H3 | Home repair labels cover the reasons emitted by its canonical classifiers and reviewed projections. |
 | `humanonlyenforcement_test.go` | H1 | The declaration reaches the thing that enforces it. |
 | `idempotencymap_test.go` | H3 | The contract decides which operations promise Idempotency-Key retry safety, and internal/compose's hand-maintained replayableOperations map must list the same operations. |
 | `identifierfields_test.go` | H3 | A provider's match rules are checked against IdentifierFields(), so that list has to name every field a contact actually carries. |
@@ -614,4 +615,5 @@ The eight shapes, what each is for, and how each one silently passes:
 | `txseamreach_test.go` | H2 | Following a call one hop further than the name it is spelled with. |
 | `updateguardcases_test.go` | H2 | What the concurrency-guard census judges a function on, driven with synthetic source rather than the tree, for the reason retainedcolumncases\_test.go gives for its own cases. |
 | `writeauthorityplanted_test.go` | H2 | The defect the reach census exists for, planted and run. |
+| `writeauthoritypreview_test.go` | H2 | Preview admissions ask for the eventual write grant while leaving every row unchanged. |
 | `writelivenesscases_test.go` | H2 | What the liveness census judges, and what it credits, driven with synthetic source rather than the tree, for the reason updateguardcases\_test.go gives for its own. |

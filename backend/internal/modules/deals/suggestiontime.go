@@ -16,14 +16,21 @@ import (
 
 func suggestionSourceTimes(ctx context.Context, tx pgx.Tx, evidence []SuggestionEvidence) (bool, error) {
 	for _, item := range evidence {
-		if item.SignalID == nil {
-			continue
-		}
 		var sourceTime *time.Time
-		var args []any
-		arg := func(value any) int { args = append(args, value); return len(args) }
-		query := fmt.Sprintf(`SELECT `+storekit.CitedActivityTime("s.evidence")+`
-		 FROM signal s WHERE s.id = $%d AND s.archived_at IS NULL`, arg(*item.SignalID))
+		args := []any{item.ref()}
+		var query string
+		switch item.Kind {
+		case EvidenceSignal:
+			query = fmt.Sprintf(`SELECT `+storekit.CitedActivityTime("s.evidence")+`
+		 FROM signal s WHERE s.id = $%d AND s.archived_at IS NULL`, len(args))
+		case EvidenceMeeting:
+			query = fmt.Sprintf(`SELECT occurred_at FROM activity WHERE id=$%d AND archived_at IS NULL`, len(args))
+		case EvidenceAttachment:
+			query = fmt.Sprintf(`SELECT a.occurred_at FROM attachment at JOIN activity a ON a.id=at.activity_id
+ WHERE at.id=$%d AND at.archived_at IS NULL AND a.archived_at IS NULL`, len(args))
+		default:
+			return false, nil
+		}
 		err := tx.QueryRow(ctx, query, args...).Scan(&sourceTime)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return false, nil
@@ -39,15 +46,19 @@ func suggestionSourceTimes(ctx context.Context, tx pgx.Tx, evidence []Suggestion
 }
 
 func supersedeIfEvidenceChanged(ctx context.Context, tx pgx.Tx, current Suggestion) (bool, error) {
+	valid, err := suggestionEvidenceCurrentTx(ctx, tx, current)
+	if err != nil || valid {
+		return false, err
+	}
+	return true, supersedeTx(ctx, tx, current.ID, nil)
+}
+
+func suggestionEvidenceCurrentTx(ctx context.Context, tx pgx.Tx, current Suggestion) (bool, error) {
 	evidence := make([]SuggestionEvidence, 0, len(current.Evidence))
 	for _, item := range current.Evidence {
 		evidence = append(evidence, item.SuggestionEvidence)
 	}
-	valid, err := suggestionSourceTimes(ctx, tx, evidence)
-	if err != nil || valid {
-		return false, err
-	}
-	return true, supersedeTx(ctx, tx, current.ID)
+	return suggestionSourceTimes(ctx, tx, evidence)
 }
 
 func (s *Store) supersedeIfBuyerChanged(ctx context.Context, tx pgx.Tx, current Suggestion) (bool, error) {
@@ -55,5 +66,5 @@ func (s *Store) supersedeIfBuyerChanged(ctx context.Context, tx pgx.Tx, current 
 	if err != nil || valid {
 		return false, err
 	}
-	return true, supersedeTx(ctx, tx, current.ID)
+	return true, supersedeTx(ctx, tx, current.ID, nil)
 }

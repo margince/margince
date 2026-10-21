@@ -238,7 +238,7 @@ export const SearchRoute = lazy(
 
 export const SettingsScreen = lazy(
   routed(() =>
-    import("./features/settings/settings").then((m) => ({
+    import("./App.settings").then((m) => ({
       default: m.SettingsScreen,
     })),
   ),

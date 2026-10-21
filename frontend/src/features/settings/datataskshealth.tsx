@@ -17,6 +17,7 @@ import type { MessageKey } from "../../i18n/en";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { problemCodeOf, unwrap } from "../../lib/problem";
 import { HealthCard } from "./healthcard";
+import { HomeRepairControls } from "./homerepair";
 
 type Progress = components["schemas"]["DataTaskProgress"];
 type Control = components["schemas"]["DataTaskControl"];
@@ -32,6 +33,7 @@ const blockLabels: Record<
   NonNullable<Progress["blocked_reason"]>,
   MessageKey
 > = {
+  review_required: "dataTasks.blocked.review_required",
   waiting_for_worker: "dataTasks.blocked.waiting_for_worker",
   newer_release_required: "dataTasks.blocked.newer_release_required",
   paused: "dataTasks.blocked.paused",
@@ -145,6 +147,13 @@ function taskFacts(row: Progress, { t, plural, locale }: Words): Fact[] {
       term: t("dataTasks.nextAttempt"),
       value: date(row.next_attempt_at),
     });
+  if (row.review_kind === "home_attention")
+    facts.push({
+      key: "preserved",
+      term: t("homeRepair.preserved"),
+      value: number(row.scanned - row.changed),
+      note: t("homeRepair.preservedNote"),
+    });
   if (row.first_release)
     facts.push({
       key: "release",
@@ -166,7 +175,8 @@ function taskActions(row: Progress, canChange: boolean): Control["action"][] {
     canChange &&
     row.version > 0 &&
     knownState &&
-    row.blocked_reason !== "newer_release_required"
+    row.blocked_reason !== "newer_release_required" &&
+    row.blocked_reason !== "review_required"
   ) {
     if (row.status === "pending" || row.status === "running")
       actions.push("pause");
@@ -234,6 +244,18 @@ function TaskRow({ row }: Readonly<{ row: Progress }>) {
       control={
         <>
           <FactList facts={taskFacts(row, { t, plural, locale })} />
+          {row.review_kind === "home_attention" && (
+            <HomeRepairControls
+              version={row.version}
+              canActivate={
+                canChange &&
+                (row.blocked_reason === "review_required" ||
+                  row.status === "done" ||
+                  row.status === "paused" ||
+                  row.status === "failed")
+              }
+            />
+          )}
           {actions.length > 0 && (
             <ActionRow>
               {actions.map((action) => (

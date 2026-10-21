@@ -214,8 +214,7 @@ func TestARelinkOutsideTheLendersScopeCannotBeReleased(t *testing.T) {
 	}
 	_, err = registry.Invoke(agent, "decide_approval", json.RawMessage(
 		`{"staged_action_id":"`+staged.ApprovalID.String()+`","decision":"approve"}`))
-	var incomplete *approvals.PreviewContextError
-	if !errors.As(err, &incomplete) {
+	if _, incomplete := errors.AsType[*approvals.PreviewContextError](err); !incomplete {
 		t.Fatalf("releasing a hidden activity: %v, want non-decidable preview", err)
 	}
 	for _, id := range []ids.UUID{f.mine[0], f.theirs} {

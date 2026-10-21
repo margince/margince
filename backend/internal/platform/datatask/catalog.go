@@ -28,11 +28,14 @@ type AuditPolicy struct {
 
 // Task is release code whose durable ID survives skipped upgrades.
 type Task struct {
-	ID       string
-	Version  int
-	Title    string
-	Requires []string
-	Steps    []Step
+	ID            string
+	Version       int
+	Title         string
+	Requires      []string
+	Steps         []Step
+	Manual        bool
+	ReviewVersion string
+	Review        func(context.Context, pgx.Tx, ReviewRequest) (string, error)
 }
 
 // Step keeps the domain writer and its progress in one transaction.
@@ -47,9 +50,10 @@ type Step struct {
 
 // BatchIn retains the run attribution across retries and restarts.
 type BatchIn struct {
-	Cursor json.RawMessage
-	Limit  int
-	RunID  ids.UUID
+	Cursor     json.RawMessage
+	Limit      int
+	RunID      ids.UUID
+	Activation *Activation
 }
 
 // BatchOut advances over scanned rows even when no row needed a correction.
@@ -76,6 +80,9 @@ func Catalog(tasks []Task) ([]Task, error) {
 		}
 		if i > 0 && out[i-1].ID == task.ID {
 			return nil, fmt.Errorf("data task is registered twice: %s", task.ID)
+		}
+		if task.Manual && (task.ReviewVersion == "" || task.Review == nil) {
+			return nil, fmt.Errorf("manual data task %s requires a versioned review", task.ID)
 		}
 		for _, requirement := range task.Requires {
 			if !requirementPattern.MatchString(requirement) {

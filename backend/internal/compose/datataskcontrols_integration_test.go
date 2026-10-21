@@ -51,7 +51,7 @@ func TestDataTaskHTTPControlsRequireCurrentHumanAuthority(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &unseeded); err != nil {
 		t.Fatal(err)
 	}
-	if rec.Code != 200 || len(unseeded.Data) != 2 || unseeded.Data[0].Estimate != nil || unseeded.Data[0].Version != 0 {
+	if rec.Code != 200 || len(unseeded.Data) != 3 || unseeded.Data[0].Estimate != nil || unseeded.Data[0].Version != 0 {
 		t.Fatalf("unseeded=%s", rec.Body.String())
 	}
 	engine, err := newDataTaskEngine(e.Pool, "test", func() time.Time { return time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC) })

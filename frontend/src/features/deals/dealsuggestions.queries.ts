@@ -20,6 +20,18 @@ export type SuggestionFilter = { company_id?: string; pipeline_id?: string };
 
 export const dealSuggestionsKey = ["deal-suggestions"] as const;
 
+export function useDealSuggestion(id: string) {
+  return useQuery({
+    queryKey: [...dealSuggestionsKey, "detail", id],
+    queryFn: async () =>
+      unwrap(
+        await api.GET("/deal-suggestions/{id}", {
+          params: { path: { id } },
+        }),
+      ),
+  });
+}
+
 // The server's page ceiling. A board or a company page shows every open
 // suggestion it is given; two hundred is well past what either holds.
 const SUGGESTION_PAGE = 200;

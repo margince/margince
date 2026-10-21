@@ -7,7 +7,7 @@ import "time"
 
 // DataTaskIDs lets the upgrade gate inspect the catalog the worker actually uses.
 func DataTaskIDs() []string {
-	tasks := dataTaskCatalog(time.Now)
+	tasks := dataTaskCatalog(nil, time.Now)
 	out := make([]string, 0, len(tasks))
 	for _, task := range tasks {
 		out = append(out, task.ID)

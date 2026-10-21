@@ -375,6 +375,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/home-repair/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Review a bounded page of automatic Home work.
+         * @description Requires data_task:read and each record's content permissions. This operation changes no work.
+         *     Classification review uses the ordinary model check and holds its proposed results for fifteen minutes.
+         *     Classification pages contain at most 25 records; suggestion and proposal pages contain at most 200.
+         *     Other pages accept up to 1000 records, but activation also limits the encoded selection to 256 KiB.
+         *     The application reviews 25 records per page.
+         */
+        post: operations["previewHomeRepair"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/home-repair/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Activate exactly the reviewed automatic Home work.
+         * @description Requires data_task:update. The review expires after fifteen minutes; changed records or rules require another preview.
+         */
+        post: operations["activateHomeRepair"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/job-health": {
         parameters: {
             query?: never;
@@ -3571,6 +3615,29 @@ export interface paths {
          *     or report counts them.
          */
         get: operations["listDealSuggestions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/deal-suggestions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Read one suggestion and its currently visible evidence.
+         * @description Requires deal and company read permission and visibility of every cited source. Missing and inaccessible suggestions both return 404.
+         */
+        get: operations["getDealSuggestion"];
         put?: never;
         post?: never;
         delete?: never;
@@ -38690,6 +38757,41 @@ export interface components {
             /** Format: date-time */
             last_refused_at?: string;
         };
+        HomeRepairReview: {
+            tasks: components["schemas"]["HomeRepairTask"][];
+            counts: components["schemas"]["HomeRepairCounts"];
+            /** @description Reader-bound classification review token; expires after fifteen minutes and is consumed on activation. */
+            preview_token?: string;
+            digest: string;
+            rule_version: string;
+            limit: number;
+            /** Format: date-time */
+            as_of: string;
+        };
+        HomeRepairTask: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            source?: "task" | "approval" | "suggestion" | "verdict";
+            /** @enum {string} */
+            before_verdict?: "asks_us" | "informs_us";
+            /** @enum {string} */
+            after_verdict?: "asks_us" | "informs_us";
+            snapshot?: string;
+            /** Format: int64 */
+            version: number;
+            /** @enum {string} */
+            action: "archive_automatic_reminder" | "withdraw_proposal" | "supersede_suggestion" | "reclassify_message" | "human_review" | "leave_current";
+            reason: string;
+        };
+        HomeRepairCounts: {
+            reclassify: number;
+            archive: number;
+            withdraw: number;
+            supersede: number;
+            review: number;
+            keep: number;
+        };
         DataTaskControl: {
             task_id: string;
             step: string;
@@ -38699,6 +38801,8 @@ export interface components {
             version: number;
         };
         DataTaskProgress: {
+            /** @enum {string} */
+            review_kind?: "home_attention";
             task_id: string;
             title: string;
             step: string;
@@ -38734,7 +38838,7 @@ export interface components {
             last_progress_at?: string;
             first_release?: string;
             /** @enum {string} */
-            blocked_reason?: "waiting_for_worker" | "newer_release_required" | "paused" | "failed" | "retry_wait" | "earlier_step" | "missing_prerequisite";
+            blocked_reason?: "waiting_for_worker" | "newer_release_required" | "paused" | "failed" | "retry_wait" | "earlier_step" | "missing_prerequisite" | "review_required";
             blocked_by?: string;
             missing_prerequisites: string[];
         };
@@ -48690,6 +48794,73 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    previewHomeRepair: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    limit: number;
+                    /** Format: uuid */
+                    after?: string;
+                    /**
+                     * @default task
+                     * @enum {string}
+                     */
+                    source?: "task" | "approval" | "suggestion" | "verdict";
+                };
+            };
+        };
+        responses: {
+            /** @description Exact reviewed identities, dispositions and rule version. Use the last identity to read the next page. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HomeRepairReview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    activateHomeRepair: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: int64 */
+                    version: number;
+                    review: components["schemas"]["HomeRepairReview"];
+                };
+            };
+        };
+        responses: {
+            /** @description The bounded reviewed run was activated. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     getJobHealth: {
         parameters: {
             query?: never;
@@ -53187,6 +53358,32 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    getDealSuggestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The suggestion in its current state. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealSuggestion"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     acceptDealSuggestion: {

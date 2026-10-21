@@ -243,12 +243,14 @@ var tableOwners = map[string]string{
 	// its own key on the transaction writing its owning row, so the writes reach this
 	// table from all of them through platform's helper — which is why the helper, and
 	// the table with it, sit below every module rather than inside one.
-	"stored_object_intent": "internal/platform/storedobjects",
-	"data_task_run":        "internal/platform/datatask",
-	"deal_document_hide":   "internal/modules/activities",
-	"meeting_proposal":     "internal/modules/activities",
-	"meeting_invitation":   "internal/modules/activities",
-	"booking_page":         "internal/modules/activities",
+	"stored_object_intent":  "internal/platform/storedobjects",
+	"data_task_run_history": "internal/platform/datatask",
+	"data_task_review":      "internal/platform/datatask",
+	"data_task_run":         "internal/platform/datatask",
+	"deal_document_hide":    "internal/modules/activities",
+	"meeting_proposal":      "internal/modules/activities",
+	"meeting_invitation":    "internal/modules/activities",
+	"booking_page":          "internal/modules/activities",
 	// approvals. The autonomy policy is what each rep decided about a KIND of
 	// proposal, so it sits with the kinds and the decisions it counts.
 	"approval":                 "internal/modules/approvals",

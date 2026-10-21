@@ -349,6 +349,28 @@ describe("a suggestion's card", () => {
     expect(screen.queryByRole("button", { name: "Not a deal" })).toBeNull();
   });
 
+  it.each(["accepted", "dismissed", "superseded"] as const)(
+    "keeps %s suggestion evidence readable without offering another decision",
+    async (state) => {
+      vi.stubGlobal("fetch", stubBackend({ suggestions: [] }));
+      draw(
+        <>
+          <DealSuggestionCard suggestion={suggestion} />
+          <DealSuggestionCard
+            suggestion={{ ...suggestion, id: "previous", state }}
+          />
+        </>,
+      );
+      await screen.findByRole("button", { name: "Open this deal" });
+      const previous = within(screen.getAllByTestId("deal-suggestion")[1]);
+      expect(previous.getByText("Sent: Angebot_2026.pdf")).toBeTruthy();
+      expect(
+        previous.queryByRole("button", { name: "Open this deal" }),
+      ).toBeNull();
+      expect(previous.queryByRole("button", { name: "Not a deal" })).toBeNull();
+    },
+  );
+
   it("opens the deal with the reader's corrections under one key", async () => {
     const user = userEvent.setup();
     const sent: Sent[] = [];

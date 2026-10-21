@@ -15,6 +15,7 @@ import {
 import { LocaleProvider, translate } from "../i18n";
 import type { RbacObject } from "../lib/capability";
 import { type GrantSpec, meFixture } from "./mefixture";
+import { ReviewActionsProvider } from "./reviewactions";
 
 // The render helpers and grant fixtures every `settings*.test.tsx` suite needs,
 // in one place. Settings is ONE route carrying fourteen entries, so its coverage
@@ -53,7 +54,9 @@ export const render = (ui: ReactNode): SettingsRender => {
   return {
     ...rtlRender(
       <QueryClientProvider client={client}>
-        <LocaleProvider initial="en">{ui}</LocaleProvider>
+        <LocaleProvider initial="en">
+          <ReviewActionsProvider>{ui}</ReviewActionsProvider>
+        </LocaleProvider>
       </QueryClientProvider>,
     ),
     client,

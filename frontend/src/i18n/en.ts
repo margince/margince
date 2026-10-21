@@ -181,6 +181,95 @@ export const en = {
   "approval.capture.full_name": "Captured name",
   "approval.capture.company_name": "Captured company",
   "approval.capture.title": "Captured role",
+  "homeRepair.taskPermission":
+    "Activity archive permission is required to archive reviewed tasks.",
+  "homeRepair.classificationPermission":
+    "Activity editing permission is required to change message results.",
+  "homeRepair.reason.classificationNotAttempted":
+    "No completed check is available. Preview again when classification is available.",
+  "homeRepair.reclassify": "Reclassify message",
+  "homeRepair.classifications": "Message results",
+  "homeRepair.asks": "Requests action",
+  "homeRepair.informs": "Information only",
+  "homeRepair.classificationChange": "Current: {before}. Proposed: {after}.",
+  "homeRepair.reason.classificationDeclined":
+    "The classifier declined to assess this message. Review it yourself.",
+  "homeRepair.reason.classificationUncertain":
+    "The new check is uncertain. Review the message before changing its result.",
+  "homeRepair.reason.classificationAdopted":
+    "Human changes or missing audit evidence prevent an automatic correction.",
+  "homeRepair.reason.classificationWithheld":
+    "Some message context is outside current access. Review it before changing this result.",
+  "homeRepair.reason.classificationCurrent":
+    "The new check agrees with the current result.",
+  "homeRepair.reason.classificationChanged":
+    "The new check proposes a different message result.",
+  "homeRepair.suggestionPermission":
+    "Deal creation permission is required to retire these suggestions.",
+  "homeRepair.supersede": "Retire automatic deal suggestion",
+  "homeRepair.suggestions": "Deal suggestions",
+  "homeRepair.reason.dealExists":
+    "This company already has an open deal. Review that deal before opening another.",
+  "homeRepair.reason.dealSource":
+    "The source dates no longer match the evidence used for this suggestion.",
+  "homeRepair.reason.buyer":
+    "The reviewed sources no longer verify a current buyer request.",
+  "homeRepair.reason.engagement":
+    "An active contract or delivery contradicts ending the whole account.",
+  "homeRepair.reason.workstream":
+    "The evidence ends one engagement, not the whole account.",
+  "homeRepair.reason.evidenceChanged":
+    "Newer verified evidence replaces the context of this proposal.",
+  "homeRepair.withdraw": "Withdraw automatic proposal",
+  "homeRepair.reason.duplicate":
+    "An identical pending proposal remains available.",
+  "homeRepair.tasks": "Tasks",
+  "homeRepair.proposals": "Proposals",
+  "homeRepair.kind": "Work to review",
+  "homeRepair.preserved": "Preserved or skipped",
+  "homeRepair.preservedNote":
+    "Includes work kept for review and records changed since the preview. Preview again to inspect what remains.",
+
+  "homeRepair.inspect": "Inspect",
+  "dataTasks.blocked.review_required":
+    "Review the proposed changes before starting.",
+  "homeRepair.archive": "Archive automatic reminder",
+  "homeRepair.keepReview": "Keep for human review",
+  "homeRepair.keepCurrent": "Keep current work",
+  "homeRepair.reason.adopted":
+    "A human may have created, edited or pinned this work.",
+  "homeRepair.reason.unverified":
+    "The available evidence does not justify an automatic change.",
+  "homeRepair.reason.unavailable":
+    "The source cannot be checked with your current access.",
+  "homeRepair.reason.historical":
+    "Historical source without a current deadline.",
+  "homeRepair.reason.baseline":
+    "The source predates the mailbox history baseline.",
+  "homeRepair.reason.cancelled": "The source meeting was canceled.",
+  "homeRepair.reason.requestAge":
+    "The original request is past the waiting horizon; archiving does not mark it answered.",
+  "homeRepair.reason.contextUnread": "Later messages have not been read.",
+  "homeRepair.reason.contextUnassessed":
+    "Later messages have not been assessed for changes to this commitment.",
+  "homeRepair.reason.timeUnknown": "The source date is unknown.",
+  "homeRepair.reason.timeContradicted": "The source dates conflict.",
+  "homeRepair.reason.meetingPending":
+    "The source meeting has not taken place yet.",
+  "homeRepair.reason.current":
+    "The current admission rules still allow this work.",
+  "homeRepair.unnamed": "Details unavailable",
+  "homeRepair.explain":
+    "Only work you can currently inspect is included. Review up to 25 items at a time. Obsolete automatic reminders can be archived and duplicate or obsolete proposals withdrawn. Human work is preserved; nothing is marked completed.",
+  "homeRepair.preview": "Preview items",
+  "homeRepair.next": "Review next page",
+  "homeRepair.summary":
+    "Results to change: {reclassify}. Reminders to archive: {archive}. Proposals to withdraw: {withdraw}. Deal suggestions to retire: {supersede}. Keep for review: {review}; keep as current work: {keep}.",
+  "homeRepair.apply_one": "Apply {count} reviewed change",
+  "homeRepair.apply_other": "Apply {count} reviewed changes",
+  "homeRepair.started":
+    "The reviewed run is queued. Its progress appears above.",
+
   "approvalPreferences.title": "Personal approval mutes",
   "approvalPreferences.explain":
     "Muted kinds leave your queue only. Other readers keep their proposals. Muting or restoring a kind turns off your automatic changes for that kind. Sends, bookings, merges and proposals from agent passports stay visible.",

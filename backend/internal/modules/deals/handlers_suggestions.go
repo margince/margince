@@ -43,6 +43,16 @@ func (h Handlers) ListDealSuggestions(w http.ResponseWriter, r *http.Request, pa
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.DealSuggestionListResponse{Data: data, Page: page})
 }
 
+// GetDealSuggestion uses the same source visibility as the suggestion list.
+func (h Handlers) GetDealSuggestion(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	suggestion, err := h.store.GetSuggestion(r.Context(), ids.UUID(id))
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, SuggestionWire(suggestion))
+}
+
 // AcceptDealSuggestion opens the suggested deal. The body is optional: without
 // one the suggestion's own values stand.
 func (h Handlers) AcceptDealSuggestion(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.AcceptDealSuggestionParams) {

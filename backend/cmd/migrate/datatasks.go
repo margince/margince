@@ -66,6 +66,9 @@ func runDataTasks(ctx context.Context, args []string, stdout, stderr io.Writer) 
 func dataTasksFinished(progress []datatask.Progress) (bool, error) {
 	done := true
 	for _, p := range progress {
+		if p.AwaitingReview() {
+			continue
+		}
 		if p.BlockedReason == "missing_prerequisite" || p.BlockedReason == "newer_release_required" {
 			return false, fmt.Errorf("correction %s step %s is blocked by %s; review System health", p.TaskID, p.Step, p.BlockedReason)
 		}

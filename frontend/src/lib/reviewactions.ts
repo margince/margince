@@ -1,7 +1,29 @@
-import { type ComponentType, createContext, useContext } from "react";
+import {
+  type ComponentType,
+  createContext,
+  type ReactNode,
+  useContext,
+} from "react";
 import type { components } from "../api/schema";
 
 export type ReviewActions = Readonly<{
+  DealSuggestionReader: ComponentType<{
+    id: string;
+    children: (state: {
+      suggestion: components["schemas"]["DealSuggestion"] | undefined;
+      label: string | undefined;
+      error: unknown;
+    }) => ReactNode;
+  }>;
+  DealSuggestionCard: ComponentType<{
+    suggestion: components["schemas"]["DealSuggestion"];
+  }>;
+  ApprovalDetailModal: ComponentType<{
+    approvalId: string;
+    open: boolean;
+    onClose: () => void;
+  }>;
+
   NewDealAction: ComponentType<{
     companyId: string;
     companyName: string;

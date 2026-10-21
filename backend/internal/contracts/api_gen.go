@@ -8766,6 +8766,7 @@ const (
 	DataTaskProgressBlockedReasonNewerReleaseRequired DataTaskProgressBlockedReason = "newer_release_required"
 	DataTaskProgressBlockedReasonPaused               DataTaskProgressBlockedReason = "paused"
 	DataTaskProgressBlockedReasonRetryWait            DataTaskProgressBlockedReason = "retry_wait"
+	DataTaskProgressBlockedReasonReviewRequired       DataTaskProgressBlockedReason = "review_required"
 	DataTaskProgressBlockedReasonWaitingForWorker     DataTaskProgressBlockedReason = "waiting_for_worker"
 )
 
@@ -8784,7 +8785,24 @@ func (e DataTaskProgressBlockedReason) Valid() bool {
 		return true
 	case DataTaskProgressBlockedReasonRetryWait:
 		return true
+	case DataTaskProgressBlockedReasonReviewRequired:
+		return true
 	case DataTaskProgressBlockedReasonWaitingForWorker:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DataTaskProgressReviewKind.
+const (
+	DataTaskProgressReviewKindHomeAttention DataTaskProgressReviewKind = "home_attention"
+)
+
+// Valid indicates whether the value is a known member of the DataTaskProgressReviewKind enum.
+func (e DataTaskProgressReviewKind) Valid() bool {
+	switch e {
+	case DataTaskProgressReviewKindHomeAttention:
 		return true
 	default:
 		return false
@@ -10825,6 +10843,96 @@ func (e HistoryEdgeOtherEntityType) Valid() bool {
 	case HistoryEdgeOtherEntityTypeDeal:
 		return true
 	case HistoryEdgeOtherEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for HomeRepairTaskAction.
+const (
+	HomeRepairTaskActionArchiveAutomaticReminder HomeRepairTaskAction = "archive_automatic_reminder"
+	HomeRepairTaskActionHumanReview              HomeRepairTaskAction = "human_review"
+	HomeRepairTaskActionLeaveCurrent             HomeRepairTaskAction = "leave_current"
+	HomeRepairTaskActionReclassifyMessage        HomeRepairTaskAction = "reclassify_message"
+	HomeRepairTaskActionSupersedeSuggestion      HomeRepairTaskAction = "supersede_suggestion"
+	HomeRepairTaskActionWithdrawProposal         HomeRepairTaskAction = "withdraw_proposal"
+)
+
+// Valid indicates whether the value is a known member of the HomeRepairTaskAction enum.
+func (e HomeRepairTaskAction) Valid() bool {
+	switch e {
+	case HomeRepairTaskActionArchiveAutomaticReminder:
+		return true
+	case HomeRepairTaskActionHumanReview:
+		return true
+	case HomeRepairTaskActionLeaveCurrent:
+		return true
+	case HomeRepairTaskActionReclassifyMessage:
+		return true
+	case HomeRepairTaskActionSupersedeSuggestion:
+		return true
+	case HomeRepairTaskActionWithdrawProposal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for HomeRepairTaskAfterVerdict.
+const (
+	HomeRepairTaskAfterVerdictAsksUs    HomeRepairTaskAfterVerdict = "asks_us"
+	HomeRepairTaskAfterVerdictInformsUs HomeRepairTaskAfterVerdict = "informs_us"
+)
+
+// Valid indicates whether the value is a known member of the HomeRepairTaskAfterVerdict enum.
+func (e HomeRepairTaskAfterVerdict) Valid() bool {
+	switch e {
+	case HomeRepairTaskAfterVerdictAsksUs:
+		return true
+	case HomeRepairTaskAfterVerdictInformsUs:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for HomeRepairTaskBeforeVerdict.
+const (
+	HomeRepairTaskBeforeVerdictAsksUs    HomeRepairTaskBeforeVerdict = "asks_us"
+	HomeRepairTaskBeforeVerdictInformsUs HomeRepairTaskBeforeVerdict = "informs_us"
+)
+
+// Valid indicates whether the value is a known member of the HomeRepairTaskBeforeVerdict enum.
+func (e HomeRepairTaskBeforeVerdict) Valid() bool {
+	switch e {
+	case HomeRepairTaskBeforeVerdictAsksUs:
+		return true
+	case HomeRepairTaskBeforeVerdictInformsUs:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for HomeRepairTaskSource.
+const (
+	HomeRepairTaskSourceApproval   HomeRepairTaskSource = "approval"
+	HomeRepairTaskSourceSuggestion HomeRepairTaskSource = "suggestion"
+	HomeRepairTaskSourceTask       HomeRepairTaskSource = "task"
+	HomeRepairTaskSourceVerdict    HomeRepairTaskSource = "verdict"
+)
+
+// Valid indicates whether the value is a known member of the HomeRepairTaskSource enum.
+func (e HomeRepairTaskSource) Valid() bool {
+	switch e {
+	case HomeRepairTaskSourceApproval:
+		return true
+	case HomeRepairTaskSourceSuggestion:
+		return true
+	case HomeRepairTaskSourceTask:
+		return true
+	case HomeRepairTaskSourceVerdict:
 		return true
 	default:
 		return false
@@ -21121,6 +21229,30 @@ func (e RelinkActivityJSONBodyEntityType) Valid() bool {
 	case RelinkActivityJSONBodyEntityTypeLead:
 		return true
 	case RelinkActivityJSONBodyEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PreviewHomeRepairJSONBodySource.
+const (
+	PreviewHomeRepairJSONBodySourceApproval   PreviewHomeRepairJSONBodySource = "approval"
+	PreviewHomeRepairJSONBodySourceSuggestion PreviewHomeRepairJSONBodySource = "suggestion"
+	PreviewHomeRepairJSONBodySourceTask       PreviewHomeRepairJSONBodySource = "task"
+	PreviewHomeRepairJSONBodySourceVerdict    PreviewHomeRepairJSONBodySource = "verdict"
+)
+
+// Valid indicates whether the value is a known member of the PreviewHomeRepairJSONBodySource enum.
+func (e PreviewHomeRepairJSONBodySource) Valid() bool {
+	switch e {
+	case PreviewHomeRepairJSONBodySourceApproval:
+		return true
+	case PreviewHomeRepairJSONBodySourceSuggestion:
+		return true
+	case PreviewHomeRepairJSONBodySourceTask:
+		return true
+	case PreviewHomeRepairJSONBodySourceVerdict:
 		return true
 	default:
 		return false
@@ -35704,26 +35836,30 @@ type DataTaskProgress struct {
 	ErrorSentence       *string                        `json:"error_sentence,omitempty"`
 
 	// Estimate Bounded count of rows to inspect; absent means unknown, not zero.
-	Estimate             *int64                 `json:"estimate,omitempty"`
-	EstimateCapped       bool                   `json:"estimate_capped"`
-	EstimatedAt          *time.Time             `json:"estimated_at,omitempty"`
-	FirstRelease         *string                `json:"first_release,omitempty"`
-	LastErrorClass       *string                `json:"last_error_class,omitempty"`
-	LastProgressAt       *time.Time             `json:"last_progress_at,omitempty"`
-	MissingPrerequisites []string               `json:"missing_prerequisites"`
-	NextAttemptAt        *time.Time             `json:"next_attempt_at,omitempty"`
-	RunId                *openapi_types.UUID    `json:"run_id,omitempty"`
-	Scanned              int64                  `json:"scanned"`
-	Status               DataTaskProgressStatus `json:"status"`
-	Step                 string                 `json:"step"`
-	TaskId               string                 `json:"task_id"`
-	TaskVersion          int                    `json:"task_version"`
-	Title                string                 `json:"title"`
-	Version              int64                  `json:"version"`
+	Estimate             *int64                      `json:"estimate,omitempty"`
+	EstimateCapped       bool                        `json:"estimate_capped"`
+	EstimatedAt          *time.Time                  `json:"estimated_at,omitempty"`
+	FirstRelease         *string                     `json:"first_release,omitempty"`
+	LastErrorClass       *string                     `json:"last_error_class,omitempty"`
+	LastProgressAt       *time.Time                  `json:"last_progress_at,omitempty"`
+	MissingPrerequisites []string                    `json:"missing_prerequisites"`
+	NextAttemptAt        *time.Time                  `json:"next_attempt_at,omitempty"`
+	ReviewKind           *DataTaskProgressReviewKind `json:"review_kind,omitempty"`
+	RunId                *openapi_types.UUID         `json:"run_id,omitempty"`
+	Scanned              int64                       `json:"scanned"`
+	Status               DataTaskProgressStatus      `json:"status"`
+	Step                 string                      `json:"step"`
+	TaskId               string                      `json:"task_id"`
+	TaskVersion          int                         `json:"task_version"`
+	Title                string                      `json:"title"`
+	Version              int64                       `json:"version"`
 }
 
 // DataTaskProgressBlockedReason defines model for DataTaskProgress.BlockedReason.
 type DataTaskProgressBlockedReason string
+
+// DataTaskProgressReviewKind defines model for DataTaskProgress.ReviewKind.
+type DataTaskProgressReviewKind string
 
 // DataTaskProgressStatus defines model for DataTaskProgress.Status.
 type DataTaskProgressStatus string
@@ -38602,6 +38738,53 @@ type HistoryEdge struct {
 
 // HistoryEdgeOtherEntityType defines model for HistoryEdge.OtherEntityType.
 type HistoryEdgeOtherEntityType string
+
+// HomeRepairCounts defines model for HomeRepairCounts.
+type HomeRepairCounts struct {
+	Archive    int `json:"archive"`
+	Keep       int `json:"keep"`
+	Reclassify int `json:"reclassify"`
+	Review     int `json:"review"`
+	Supersede  int `json:"supersede"`
+	Withdraw   int `json:"withdraw"`
+}
+
+// HomeRepairReview defines model for HomeRepairReview.
+type HomeRepairReview struct {
+	AsOf   time.Time        `json:"as_of"`
+	Counts HomeRepairCounts `json:"counts"`
+	Digest string           `json:"digest"`
+	Limit  int              `json:"limit"`
+
+	// PreviewToken Reader-bound classification review token; expires after fifteen minutes and is consumed on activation.
+	PreviewToken *string          `json:"preview_token,omitempty"`
+	RuleVersion  string           `json:"rule_version"`
+	Tasks        []HomeRepairTask `json:"tasks"`
+}
+
+// HomeRepairTask defines model for HomeRepairTask.
+type HomeRepairTask struct {
+	Action        HomeRepairTaskAction         `json:"action"`
+	AfterVerdict  *HomeRepairTaskAfterVerdict  `json:"after_verdict,omitempty"`
+	BeforeVerdict *HomeRepairTaskBeforeVerdict `json:"before_verdict,omitempty"`
+	Id            openapi_types.UUID           `json:"id"`
+	Reason        string                       `json:"reason"`
+	Snapshot      *string                      `json:"snapshot,omitempty"`
+	Source        *HomeRepairTaskSource        `json:"source,omitempty"`
+	Version       int64                        `json:"version"`
+}
+
+// HomeRepairTaskAction defines model for HomeRepairTask.Action.
+type HomeRepairTaskAction string
+
+// HomeRepairTaskAfterVerdict defines model for HomeRepairTask.AfterVerdict.
+type HomeRepairTaskAfterVerdict string
+
+// HomeRepairTaskBeforeVerdict defines model for HomeRepairTask.BeforeVerdict.
+type HomeRepairTaskBeforeVerdict string
+
+// HomeRepairTaskSource defines model for HomeRepairTask.Source.
+type HomeRepairTaskSource string
 
 // ImportColumn One column of the uploaded file, described well enough to map it without opening the file elsewhere.
 type ImportColumn struct {
@@ -54260,6 +54443,22 @@ type SendMessageParams struct {
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 }
 
+// ActivateHomeRepairJSONBody defines parameters for ActivateHomeRepair.
+type ActivateHomeRepairJSONBody struct {
+	Review  HomeRepairReview `json:"review"`
+	Version int64            `json:"version"`
+}
+
+// PreviewHomeRepairJSONBody defines parameters for PreviewHomeRepair.
+type PreviewHomeRepairJSONBody struct {
+	After  *openapi_types.UUID              `json:"after,omitempty"`
+	Limit  int                              `json:"limit"`
+	Source *PreviewHomeRepairJSONBodySource `json:"source,omitempty"`
+}
+
+// PreviewHomeRepairJSONBodySource defines parameters for PreviewHomeRepair.
+type PreviewHomeRepairJSONBodySource string
+
 // ResetDataJSONBody defines parameters for ResetData.
 type ResetDataJSONBody struct {
 	// Confirmation Must equal the company name exactly.
@@ -60723,6 +60922,12 @@ type UpdateActivityReviewTemplateJSONRequestBody = UpdateActivityReviewTemplateR
 
 // ControlDataTaskJSONRequestBody defines body for ControlDataTask for application/json ContentType.
 type ControlDataTaskJSONRequestBody = DataTaskControl
+
+// ActivateHomeRepairJSONRequestBody defines body for ActivateHomeRepair for application/json ContentType.
+type ActivateHomeRepairJSONRequestBody ActivateHomeRepairJSONBody
+
+// PreviewHomeRepairJSONRequestBody defines body for PreviewHomeRepair for application/json ContentType.
+type PreviewHomeRepairJSONRequestBody PreviewHomeRepairJSONBody
 
 // ResetDataJSONRequestBody defines body for ResetData for application/json ContentType.
 type ResetDataJSONRequestBody ResetDataJSONBody
@@ -72994,6 +73199,12 @@ type ServerInterface interface {
 	// Which composed units are handing the core records it cannot express.
 	// (GET /admin/extension-ingest-health)
 	GetExtensionIngestHealth(w http.ResponseWriter, r *http.Request)
+	// Activate exactly the reviewed automatic Home work.
+	// (POST /admin/home-repair/activate)
+	ActivateHomeRepair(w http.ResponseWriter, r *http.Request)
+	// Review a bounded page of automatic Home work.
+	// (POST /admin/home-repair/preview)
+	PreviewHomeRepair(w http.ResponseWriter, r *http.Request)
 	// What the background system is holding, and whose work failed.
 	// (GET /admin/job-health)
 	GetJobHealth(w http.ResponseWriter, r *http.Request)
@@ -74101,6 +74312,9 @@ type ServerInterface interface {
 	// Open Deal Scout suggestions the caller may see, newest first.
 	// (GET /deal-suggestions)
 	ListDealSuggestions(w http.ResponseWriter, r *http.Request, params ListDealSuggestionsParams)
+	// Read one suggestion and its currently visible evidence.
+	// (GET /deal-suggestions/{id})
+	GetDealSuggestion(w http.ResponseWriter, r *http.Request, id Id)
 	// Open the suggested deal or link the evidence to an existing deal.
 	// (POST /deal-suggestions/{id}/accept)
 	AcceptDealSuggestion(w http.ResponseWriter, r *http.Request, id Id, params AcceptDealSuggestionParams)
@@ -75718,6 +75932,18 @@ func (_ Unimplemented) ControlDataTask(w http.ResponseWriter, r *http.Request) {
 // Which composed units are handing the core records it cannot express.
 // (GET /admin/extension-ingest-health)
 func (_ Unimplemented) GetExtensionIngestHealth(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Activate exactly the reviewed automatic Home work.
+// (POST /admin/home-repair/activate)
+func (_ Unimplemented) ActivateHomeRepair(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Review a bounded page of automatic Home work.
+// (POST /admin/home-repair/preview)
+func (_ Unimplemented) PreviewHomeRepair(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -77932,6 +78158,12 @@ func (_ Unimplemented) ResolveDealRoomThread(w http.ResponseWriter, r *http.Requ
 // Open Deal Scout suggestions the caller may see, newest first.
 // (GET /deal-suggestions)
 func (_ Unimplemented) ListDealSuggestions(w http.ResponseWriter, r *http.Request, params ListDealSuggestionsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read one suggestion and its currently visible evidence.
+// (GET /deal-suggestions/{id})
+func (_ Unimplemented) GetDealSuggestion(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -82388,6 +82620,46 @@ func (siw *ServerInterfaceWrapper) GetExtensionIngestHealth(w http.ResponseWrite
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetExtensionIngestHealth(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ActivateHomeRepair operation middleware
+func (siw *ServerInterfaceWrapper) ActivateHomeRepair(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ActivateHomeRepair(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewHomeRepair operation middleware
+func (siw *ServerInterfaceWrapper) PreviewHomeRepair(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewHomeRepair(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -98024,6 +98296,38 @@ func (siw *ServerInterfaceWrapper) ListDealSuggestions(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListDealSuggestions(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetDealSuggestion operation middleware
+func (siw *ServerInterfaceWrapper) GetDealSuggestion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetDealSuggestion(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -117759,6 +118063,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/admin/extension-ingest-health", wrapper.GetExtensionIngestHealth)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admin/home-repair/activate", wrapper.ActivateHomeRepair)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admin/home-repair/preview", wrapper.PreviewHomeRepair)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/admin/job-health", wrapper.GetJobHealth)
 	})
 	r.Group(func(r chi.Router) {
@@ -118864,6 +119174,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deal-suggestions", wrapper.ListDealSuggestions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/deal-suggestions/{id}", wrapper.GetDealSuggestion)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/deal-suggestions/{id}/accept", wrapper.AcceptDealSuggestion)

@@ -123,3 +123,35 @@ func TestTaskActorKeepsTheTaskIdentity(t *testing.T) {
 		t.Fatalf("task actor=%+v, present=%v", actor, ok)
 	}
 }
+
+func TestUnactivatedManualWorkDoesNotHoldAutomaticCorrections(t *testing.T) {
+	manual, automatic := testTask("core/100_manual"), testTask("core/200_automatic")
+	manual.Manual, manual.ReviewVersion = true, "rules-1"
+	now := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	for _, status := range []string{Pending, Paused, Failed} {
+		stored := map[string]Progress{progressKey(manual.ID, "first"): {TaskVersion: 1, Status: status}}
+		got, _ := nextStep([]Task{manual, automatic}, stored, now)
+		if got == nil || got.task.ID != automatic.ID {
+			t.Fatalf("unactivated %s held automatic work", status)
+		}
+	}
+	stored := map[string]Progress{progressKey(manual.ID, "first"): {TaskVersion: 1, Status: Pending, Activation: &Activation{RuleVersion: "rules-0"}}}
+	if got, _ := nextStep([]Task{manual, automatic}, stored, now); got == nil || got.task.ID != automatic.ID {
+		t.Fatal("changed rules blocked automatic work")
+	}
+}
+
+func TestChangedManualRulesRequireAnotherReview(t *testing.T) {
+	task := testTask("core/100_manual")
+	task.Manual, task.ReviewVersion = true, "rules-2"
+	key := progressKey(task.ID, "first")
+	for _, revision := range []struct {
+		task int
+		rule string
+	}{{1, "rules-1"}, {2, "rules-2"}} {
+		stored := map[string]Progress{key: {TaskVersion: revision.task, Status: Running, Activation: &Activation{RuleVersion: revision.rule}}}
+		if got, _ := nextStep([]Task{task}, stored, time.Time{}); got != nil {
+			t.Fatal("changed review continued")
+		}
+	}
+}

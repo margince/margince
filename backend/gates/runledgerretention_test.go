@@ -35,6 +35,9 @@ import (
 // what each table is and what deciding its window would cost.
 var runLedgerWindow = gatekit.Waive(map[string]string{
 	"data_task_run": "one durable row per release task step, bounded by the shipped catalog rather than execution count. Deleting a completed cursor would rerun a correction after restart; retirement requires an explicit minimum supported upgrade release.",
+	"data_task_run_history": "previous reviewed runs retain the operator, bounded selection and outcome " +
+		"needed to explain archived records after reactivation. No source bodies are stored; deleting " +
+		"this evidence requires an operator retention policy that outlives the corrected records",
 	"runner_job": "River's own job table, which the installation reset also leaves alone: " +
 		"its runtime manages retention and truncating underneath a running worker is not ours to do",
 	"agent_run": "one row per agent execution, holding the outcome and the degrade reason. The " +
@@ -79,7 +82,7 @@ var runLedgerWindow = gatekit.Waive(map[string]string{
 // ledgerName is the shape of a table that records executions rather than
 // records. Derived from the name because nothing in the catalog marks it: a
 // row-per-execution table carries no column saying so.
-var ledgerName = regexp.MustCompile(`(_run|_attempt|_delivery|_scan|_backfill|_tick|_job)s?$`)
+var ledgerName = regexp.MustCompile(`(_run|_attempt|_delivery|_scan|_backfill|_tick|_job)s?(_history)?$`)
 
 // windowedDelete is a DELETE whose predicate compares a time: the shape that
 // bounds a table rather than serving a merge or a cascade.

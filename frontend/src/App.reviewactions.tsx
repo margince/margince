@@ -1,8 +1,15 @@
 import { type ComponentProps, lazy, type ReactNode, Suspense } from "react";
 import { QueryGate } from "./design-system/querystates";
+import { ApprovalDetailModal } from "./features/automations/approvaleditor";
 import { CompanyDealPicker } from "./features/deals/companydealpicker";
-import { DealSuggestionCard } from "./features/deals/dealsuggestion";
-import { useDealSuggestions } from "./features/deals/dealsuggestions.queries";
+import {
+  DealSuggestionCard,
+  suggestedName,
+} from "./features/deals/dealsuggestion";
+import {
+  useDealSuggestion,
+  useDealSuggestions,
+} from "./features/deals/dealsuggestions.queries";
 import { OpenActivityDrawer } from "./features/voice-knowledge/activitydrawer";
 import { useT } from "./i18n";
 import { type ReviewActions, ReviewActionsContext } from "./lib/reviewactions";
@@ -12,7 +19,6 @@ const NewDealAction = lazy(() =>
     default: module.NewDealAction,
   })),
 );
-
 function ComposedNewDealAction(props: ComponentProps<typeof NewDealAction>) {
   return (
     <Suspense fallback={null}>
@@ -35,9 +41,8 @@ function CoveredDealSuggestion({
     { company_id: companyId },
     open && companyId !== undefined,
   );
-  if (companyId === undefined) {
-    return <p>{t("dealSuggestion.changed")}</p>;
-  }
+  if (!open) return null;
+  if (companyId === undefined) return <p>{t("dealSuggestion.changed")}</p>;
   return (
     <QueryGate query={suggestions} pendingLabel={t("stat.evidence")}>
       {(found) => {
@@ -52,7 +57,24 @@ function CoveredDealSuggestion({
   );
 }
 
+const DealSuggestionReader: ReviewActions["DealSuggestionReader"] = ({
+  id,
+  children,
+}) => {
+  const t = useT();
+  const detail = useDealSuggestion(id);
+  const suggestion = detail.error ? undefined : detail.data;
+  return children({
+    suggestion,
+    label: suggestion ? suggestedName(suggestion, t) : undefined,
+    error: detail.error,
+  });
+};
+
 export const reviewActions: ReviewActions = {
+  DealSuggestionReader,
+  DealSuggestionCard,
+  ApprovalDetailModal,
   NewDealAction: ComposedNewDealAction,
   CompanyDealPicker,
   CoveredDealSuggestion,

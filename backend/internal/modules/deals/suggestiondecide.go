@@ -191,19 +191,28 @@ func (s *Store) AcceptSuggestion(ctx context.Context, id ids.UUID, in AcceptSugg
 // no acceptance opens a second deal beside one it could not see, and ordinary
 // deal creation takes no lock it did not already take.
 func supersedeIfCompanyTaken(ctx context.Context, tx pgx.Tx, current Suggestion) (bool, error) {
+	free, err := suggestionCompanyFreeTx(ctx, tx, current, true)
+	if err != nil || free {
+		return false, err
+	}
+	return true, supersedeTx(ctx, tx, current.ID, nil)
+}
+
+func suggestionCompanyFreeTx(ctx context.Context, tx pgx.Tx, current Suggestion, lock bool) (bool, error) {
 	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
 		return false, err
 	}
+	args := []any{current.CompanyID}
+	query := fmt.Sprintf(`SELECT `+SuggestionCompanyFreeClause("c.id")+`
+		  FROM company c WHERE c.id = $%d`, len(args))
+	if lock {
+		query += ` FOR UPDATE OF c`
+	}
 	var free bool
-	if err := tx.QueryRow(ctx, `
-		SELECT `+SuggestionCompanyFreeClause("c.id")+`
-		  FROM company c WHERE c.id = $1 FOR UPDATE OF c`, current.CompanyID).Scan(&free); err != nil {
+	if err := tx.QueryRow(ctx, query, args...).Scan(&free); err != nil {
 		return false, fmt.Errorf("deals: locking the suggestion's company: %w", err)
 	}
-	if free {
-		return false, nil
-	}
-	return true, supersedeTx(ctx, tx, current.ID)
+	return free, nil
 }
 
 // DismissSuggestion records that the evidence is not a deal. The decision is

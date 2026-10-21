@@ -44,8 +44,5 @@ func requireCompanyMergeReads(ctx context.Context) error {
 	if err := auth.Require(ctx, mergeReadFinance, principal.ActionRead); err != nil {
 		return err
 	}
-	if err := auth.Require(ctx, mergeReadIntegrations, principal.ActionRead); err != nil {
-		return err
-	}
-	return nil
+	return auth.Require(ctx, mergeReadIntegrations, principal.ActionRead)
 }
