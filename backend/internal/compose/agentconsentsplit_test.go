@@ -34,6 +34,11 @@ func TestConsentRoutesSplitByWhoseDecisionTheyHold(t *testing.T) {
 		t.Fatal("no per-contact consent route in the policy table: the pin no longer covers anything")
 	}
 
+	define, known := agentPolicies[http.MethodPost+" /v1/consent-purposes"]
+	if !known || define.Access != accessHumanOnly {
+		t.Errorf("defining a purpose is a human decision, got %+v (known %v)", define, known)
+	}
+
 	catalog, known := agentPolicies[http.MethodGet+" /v1/consent-purposes"]
 	if !known {
 		t.Fatal("the purposes catalog left the policy table")

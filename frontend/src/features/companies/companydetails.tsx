@@ -64,9 +64,11 @@ export function CompanyDetails({
       // `CompanyTagsSection`'s own — one writer for the axes a tag write
       // answers to, whichever surface mounts the row.
       extraRows={
-        <FieldRow label={t("tags.panelTitle")} align="top">
-          <CompanyTagsSection company={company} companyId={company.id} bare />
-        </FieldRow>
+        company.archived_at ? null : (
+          <FieldRow label={t("tags.panelTitle")} align="top">
+            <CompanyTagsSection company={company} companyId={company.id} bare />
+          </FieldRow>
+        )
       }
       title={t("co.details.title")}
       fields={[

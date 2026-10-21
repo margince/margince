@@ -14123,8 +14123,8 @@ paths:
         carries none, because "no tags" is a claim about the record and this caller cannot
         make it.
 
-        An archived record answers 404, as its lists do: archiving takes the assignments off,
-        so an empty list would claim the record carried no tags.
+        An archived record answers 404, as its lists do: it is closed to reads of what hangs off
+        it, and its tags come back when it is restored.
       responses:
         '200':
           description: The record's tags.
@@ -21524,10 +21524,10 @@ paths:
     get:
       tags: [Compliance]
       operationId: listConsentPurposes
-      # The one consent route an agent reads: it names the workspace's vocabulary
-      # and holds no one's decision. Every per-contact consent route, and the write
-      # to this list, is human-only. This declaration is the only gate; the policy
-      # table, the read_view list and the tool catalog all derive from it.
+      # The one consent route that admits an agent: it names the workspace's
+      # vocabulary and holds no one's decision. Every per-contact consent route,
+      # and the write to this list, is human-only. This declaration is the only
+      # gate; the policy table, the read_view list and the tool catalog derive from it.
       x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: List the workspace's consent purposes (e.g. transactional, marketing_email, profiling).
       description: |

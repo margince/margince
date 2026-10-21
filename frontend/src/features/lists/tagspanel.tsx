@@ -57,9 +57,9 @@ type TagsPanelProps = Readonly<{
 }>;
 
 /**
- * An archived record carries no tags, because archiving takes them off, and the
- * server answers not-found for its tag list. The panel draws nothing and asks
- * nothing rather than show "no tags" for a record whose tags were removed.
+ * An archived record is closed to reads of what hangs off it, and the server
+ * answers not-found for its tag list. The panel draws nothing and asks nothing
+ * rather than show "no tags" for a record it cannot read.
  */
 export function TagsPanel({
   archived = false,
