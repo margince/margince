@@ -301,6 +301,10 @@ const (
 	// pack, update records the outcome. Admin holds both and hands it to any
 	// seat; no other system role holds it.
 	objLegalReview = "legal_review"
+	// The legal entities the installation trades as: admin describes and
+	// archives them, every other seat reads them. Assigning a user to one also
+	// asks objUserAdmin.
+	objLegalEntity = "legal_entity"
 )
 
 // AdministrationObjects are the grants that reach back and change who may do

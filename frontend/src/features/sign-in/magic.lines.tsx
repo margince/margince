@@ -11,6 +11,7 @@ import { ENTITY, isEntityKind } from "../../lib/entity";
 import { routeHash } from "../../lib/router";
 import { approvalHref } from "../automations/approvaldrawer";
 import { approvalKindLabel } from "../automations/approvalkind";
+import { MagicApproval } from "./magic.approval";
 import {
   magicByKey,
   magicConsequenceKey,
@@ -99,19 +100,33 @@ function MagicLineRow({
         data-kind={markKind(line) ?? "restore"}
         aria-hidden="true"
       />
-      <p className="magic-line-text">
-        {sentence
-          ? t(sentence, readableValues(line.summary.values, t))
-          : t("magic.undescribed")}{" "}
-        <LineSubject line={line} since={since} />{" "}
-        {detail.length > 0 && (
-          <span className="t-caption">
-            {detail.map((part) => (
-              <span key={part}>{part} </span>
-            ))}
-          </span>
-        )}
-      </p>
+      {line.lane === "needs_you" && line.approval_preview ? (
+        <div className="magic-line-text">
+          <MagicApproval
+            action={
+              line.approval_kind
+                ? approvalKindLabel(line.approval_kind, t)
+                : t("magic.approval.reviewChange")
+            }
+            line={line}
+            subject={<LineSubject line={line} since={since} />}
+          />
+        </div>
+      ) : (
+        <p className="magic-line-text">
+          {sentence
+            ? t(sentence, readableValues(line.summary.values, t))
+            : t("magic.undescribed")}{" "}
+          <LineSubject line={line} since={since} />{" "}
+          {detail.length > 0 && (
+            <span className="t-caption">
+              {detail.map((part) => (
+                <span key={part}>{part} </span>
+              ))}
+            </span>
+          )}
+        </p>
+      )}
       <LineUndo line={line} />
       <LineWhen line={line} zone={zone} byDay={byDay} />
     </li>

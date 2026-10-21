@@ -169,10 +169,12 @@ var (
 			// The admin role holds contracts in full (identity/internal/policy.go),
 			// mirrored here so the fixture matches production rather than a
 			// narrower admin that would make a suite pass for the wrong reason.
-			"contract":  {Create: true, Read: true, Update: true, Delete: true},
-			"lead":      {Create: true, Read: true, Update: true, Delete: true},
-			objActivity: {Create: true, Read: true, Update: true, Delete: true},
-			objPipeline: {Create: true, Read: true, Update: true, Delete: true},
+			"contract": {Create: true, Read: true, Update: true, Delete: true},
+			// The legal entities the installation trades as, which admin describes.
+			"legal_entity": {Create: true, Read: true, Update: true, Delete: true},
+			"lead":         {Create: true, Read: true, Update: true, Delete: true},
+			objActivity:    {Create: true, Read: true, Update: true, Delete: true},
+			objPipeline:    {Create: true, Read: true, Update: true, Delete: true},
 			// computed_field is read-only for every system role, admin
 			// included (RD-AC-7: no runtime formula-authoring surface
 			// exists) — identity/internal/policy.go's real seed, mirrored
@@ -297,6 +299,8 @@ func withoutGovernance(objects map[string]principal.ObjectGrant) map[string]prin
 	out["role_admin"] = principal.ObjectGrant{Read: true}
 	out["authentication_policy"] = principal.ObjectGrant{Read: true}
 	out["agent_client"] = principal.ObjectGrant{Read: true}
+	// Admin describes the legal entities; ops reads them, as every other seat does.
+	out["legal_entity"] = principal.ObjectGrant{Read: true}
 	for _, object := range []string{"report_definition", "sales_target", "reporting_framework", "report_schedule", "report_edition", "reporting_credit"} {
 		out[object] = principal.ObjectGrant{Read: true}
 	}

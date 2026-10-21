@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
 import { formatDate, formatMoney } from "../../format/format";
 import { LOCALES, translate } from "../../i18n";
-import { messageApproval } from "../../testing/message-approval";
 import {
   commercialPreviewDisplay,
   editedCommercialPreview,
-} from "./approvalpreview";
+} from "../../lib/approvalpreview";
+import { messageApproval } from "../../testing/message-approval";
 import { approvalAcceptable } from "./approvalresponsibility";
 
 type Preview = components["schemas"]["ApprovalPreview"];

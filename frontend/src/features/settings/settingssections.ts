@@ -94,6 +94,7 @@ export const SETTINGS_SECTIONS = {
   ],
   company: [
     "installationSettings.companyTitle",
+    "legalEntities.title",
     "settings.rates.fxTitle",
     "followUpSettings.title",
     "signatureTemplate.title",

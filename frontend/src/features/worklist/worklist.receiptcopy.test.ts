@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 import { viewerZone } from "../../format/timezone";
 import { LOCALES, translate } from "../../i18n";
-import { receiptSummary } from "./worklist.receiptcopy";
+import { receiptBasis, receiptSummary } from "./worklist.receiptcopy";
 
 it.each(LOCALES)(
   "does not repeat unverified historical forecast prose in %s",
@@ -83,8 +83,53 @@ it.each(["accepted", "reversed"])(
       "en",
       viewerZone(),
     );
-    expect(result).toContain("Close date:");
+    expect(result).toContain(
+      state === "reversed" ? "Reverted close-date estimate" : "Close date:",
+    );
     expect(result).not.toContain("needs confirmation");
     expect(result).not.toContain("Unverified");
   },
 );
+
+it("shows recorded estimate observations and admits a missing basis", () => {
+  const receipt = {
+    id: "r",
+    kind: "close_date_correction",
+    summary: "old",
+    occurred_at: "2026-09-13T08:00:00Z",
+    close_date_change: { date_changed: true, forecast_changed: false },
+  };
+  const t = (
+    key: Parameters<typeof translate>[1],
+    values?: Record<string, string>,
+  ) => translate("en", key, values);
+  expect(receiptBasis(receipt, t, "en")).toContain(
+    "No supporting sales history",
+  );
+  expect(
+    receiptBasis(
+      {
+        ...receipt,
+        close_date_change: {
+          ...receipt.close_date_change,
+          estimate_basis: {
+            won_deals: 24,
+            median_days_per_stage: 4.5,
+            remaining_stages: 2,
+          },
+        },
+      },
+      t,
+      "en",
+    ),
+  ).toBe(
+    "Estimate from 24 won deals · Median days per stage: 4.5 · Stages remaining: 2. No buyer-confirmed date.",
+  );
+  expect(
+    receiptBasis(
+      { ...receipt, undo: { audit_log_id: "a", version: 1, reversed: true } },
+      t,
+      "en",
+    ),
+  ).toBeNull();
+});

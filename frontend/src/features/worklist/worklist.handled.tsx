@@ -21,6 +21,7 @@
 // checked. It wears the team board's chrome for the same reason every other
 // panel here does: one shape, so a reader learns it once.
 
+import { Disclosure } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
@@ -32,7 +33,7 @@ import { listReadState } from "../../lib/worklist.listread";
 import { subjectHref } from "./worklist.copy";
 import { AFTER_THE_DAY } from "./worklist.layout";
 import { type Receipt, useHandledForYou } from "./worklist.queries";
-import { receiptSummary } from "./worklist.receiptcopy";
+import { receiptBasis, receiptSummary } from "./worklist.receiptcopy";
 import { ReceiptReview } from "./worklist.receiptreview";
 
 export function HandledForYouPanel() {
@@ -95,39 +96,49 @@ export function HandledForYouPanel() {
               read. */}
           {receipts && (
             <>
-              <DataTable
-                label={t("worklist.handled.title")}
-                rows={receipts}
-                rowKey={(row: Receipt) => row.id}
-                columns={[
-                  {
-                    key: "summary",
-                    header: t("worklist.handled.what"),
-                    render: (row: Receipt) =>
-                      receiptSummary(row, t, locale, recordZone),
-                  },
-                  {
-                    key: "subject",
-                    header: t("worklist.handled.about"),
-                    render: (row: Receipt) => <ReceiptRecord receipt={row} />,
-                  },
-                  {
-                    key: "when",
-                    header: t("worklist.handled.when"),
-                    render: (row: Receipt) =>
-                      formatDateTime(row.occurred_at, locale, zone),
-                  },
-                  {
-                    // The one verb this panel carries, and only on the rows
-                    // that earned it. A receipt for a decision somebody made
-                    // renders an empty cell: the work was agreed to, so there
-                    // is nothing here to take back.
-                    key: "undo",
-                    header: t("worklist.handled.wayBack"),
-                    render: (row: Receipt) => <ReceiptReview receipt={row} />,
-                  },
-                ]}
-              />
+              <Disclosure summary={t("worklist.handled.showHistory")}>
+                <DataTable
+                  label={t("worklist.handled.title")}
+                  rows={receipts}
+                  rowKey={(row: Receipt) => row.id}
+                  columns={[
+                    {
+                      key: "summary",
+                      header: t("worklist.handled.what"),
+                      render: (row: Receipt) => (
+                        <>
+                          {receiptSummary(row, t, locale, recordZone)}
+                          {receiptBasis(row, t, locale) && (
+                            <p className="t-caption">
+                              {receiptBasis(row, t, locale)}
+                            </p>
+                          )}
+                        </>
+                      ),
+                    },
+                    {
+                      key: "subject",
+                      header: t("worklist.handled.about"),
+                      render: (row: Receipt) => <ReceiptRecord receipt={row} />,
+                    },
+                    {
+                      key: "when",
+                      header: t("worklist.handled.when"),
+                      render: (row: Receipt) =>
+                        formatDateTime(row.occurred_at, locale, zone),
+                    },
+                    {
+                      // The one verb this panel carries, and only on the rows
+                      // that earned it. A receipt for a decision somebody made
+                      // renders an empty cell: the work was agreed to, so there
+                      // is nothing here to take back.
+                      key: "undo",
+                      header: t("worklist.handled.wayBack"),
+                      render: (row: Receipt) => <ReceiptReview receipt={row} />,
+                    },
+                  ]}
+                />
+              </Disclosure>
               {/* A bounded read is not the whole of what was done. A reader who
                 took this list for everything would close the page believing
                 they had seen it all, which is the one thing a receipt surface

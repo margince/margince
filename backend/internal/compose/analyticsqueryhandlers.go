@@ -24,6 +24,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -112,6 +113,78 @@ func (h analyticsQueryHandlers) RunAnalyticsQuery(w http.ResponseWriter, r *http
 		out.RunId = &saved
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// ListReportRuns implements GET /analytics/runs.
+func (h analyticsQueryHandlers) ListReportRuns(
+	w http.ResponseWriter, r *http.Request, params crmcontracts.ListReportRunsParams,
+) {
+	var after *storekit.Cursor
+	if params.Cursor != nil && *params.Cursor != "" {
+		cursor, err := storekit.DecodeCursor(*params.Cursor)
+		if err != nil {
+			httperr.Write(w, r, err)
+			return
+		}
+		after = &cursor
+	}
+	var (
+		runs   []ReportRunSummary
+		more   bool
+		schema analyticsquery.Schema
+	)
+	ctx := r.Context()
+	if err := h.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		if schema, _, err = AnalyticsSchemaIn(ctx, tx); err != nil {
+			return err
+		}
+		runs, more, err = ListReportRuns(ctx, tx, after, storekit.ClampLimit(params.Limit))
+		return err
+	}); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	out := crmcontracts.ReportRunList{Data: make([]crmcontracts.ReportRunSummary, 0, len(runs)), Page: crmcontracts.PageInfo{HasMore: more}}
+	for _, run := range runs {
+		summary, askable, err := runSummary(run, schema)
+		if err != nil {
+			httperr.Write(w, r, err)
+			return
+		}
+		if askable {
+			out.Data = append(out.Data, summary)
+		}
+	}
+	if more {
+		last := runs[len(runs)-1]
+		next, err := storekit.EncodeCursor(last.AskedAt, last.ID)
+		if err != nil {
+			httperr.Write(w, r, err)
+			return
+		}
+		out.Page.NextCursor = &next
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// runSummary lists a saved question by its shape alone. Its filter values and
+// scope name records and teams, so they stay out. A question the caller's
+// vocabulary no longer admits is not listed; the page keeps its place by the
+// last row read, listed or not.
+func runSummary(run ReportRunSummary, schema analyticsquery.Schema) (crmcontracts.ReportRunSummary, bool, error) {
+	shape := analyticsquery.Query{Entity: run.Query.Entity, GroupBy: run.Query.GroupBy, Measures: run.Query.Measures, Limit: run.Query.Limit}
+	if shape.Validate(schema) != nil {
+		return crmcontracts.ReportRunSummary{}, false, nil //nolint:nilerr // a question the vocabulary no longer admits is skipped, not a fault
+	}
+	asked, err := wireFromQuery(shape)
+	if err != nil {
+		return crmcontracts.ReportRunSummary{}, false, err
+	}
+	return crmcontracts.ReportRunSummary{
+		Id: openapi_types.UUID(run.ID), Entity: asked.Entity, GroupBy: asked.GroupBy, Measures: asked.Measures,
+		Limit: asked.Limit, Filtered: len(run.Query.Filters) > 0, AskedAt: run.AskedAt,
+	}, true, nil
 }
 
 // GetReportRun implements GET /analytics/runs/{run_id}.

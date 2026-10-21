@@ -4664,6 +4664,7 @@ public.idx_lead_score_history_series CREATE INDEX idx_lead_score_history_series 
 public.idx_lead_search CREATE INDEX idx_lead_search ON public.lead USING gin (search_tsv)
 public.idx_lead_sla_open CREATE INDEX idx_lead_sla_open ON public.lead USING btree (created_at) WHERE ((archived_at IS NULL) AND (first_response_at IS NULL) AND (sla_breached_at IS NULL))
 public.idx_lead_status_live CREATE INDEX idx_lead_status_live ON public.lead USING btree (status) WHERE (archived_at IS NULL)
+public.idx_legal_entity_member_entity CREATE INDEX idx_legal_entity_member_entity ON public.legal_entity_member USING btree (legal_entity_id)
 public.idx_legal_review_deal CREATE INDEX idx_legal_review_deal ON public.legal_review USING btree (deal_id, created_at DESC)
 public.idx_legal_review_decided CREATE INDEX idx_legal_review_decided ON public.legal_review USING btree (decided_at DESC, id DESC) WHERE (decided_at IS NOT NULL)
 public.idx_legal_review_decided_by CREATE INDEX idx_legal_review_decided_by ON public.legal_review USING btree (decided_by) WHERE (decided_by IS NOT NULL)
@@ -4724,7 +4725,7 @@ public.idx_rel_history_counterparty CREATE INDEX idx_rel_history_counterparty ON
 public.idx_rel_history_deal CREATE INDEX idx_rel_history_deal ON public.relationship USING btree (deal_id)
 public.idx_rel_history_project CREATE INDEX idx_rel_history_project ON public.relationship USING btree (project_id)
 public.idx_relationship_counterparty_contact CREATE INDEX idx_relationship_counterparty_contact ON public.relationship USING btree (counterparty_contact_id)
-public.idx_report_run_asker CREATE INDEX idx_report_run_asker ON public.report_run USING btree (asked_by, created_at DESC)
+public.idx_report_run_asker CREATE INDEX idx_report_run_asker ON public.report_run USING btree (asked_by, created_at DESC, id DESC)
 public.idx_restore_drill_recent CREATE INDEX idx_restore_drill_recent ON public.restore_drill USING btree (started_at DESC)
 public.idx_role_assignment_team CREATE INDEX idx_role_assignment_team ON public.role_assignment USING btree (team_id)
 public.idx_role_assignment_user CREATE INDEX idx_role_assignment_user ON public.role_assignment USING btree (user_id)
@@ -5190,6 +5191,71 @@ public.lead_source.trg_lead_source_updated CREATE TRIGGER trg_lead_source_update
 public.lead_source.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.lead_source.version bigint NOT NULL gen=- def=1
 public.lead_source_pkey CREATE UNIQUE INDEX lead_source_pkey ON public.lead_source USING btree (id)
+public.legal_entity acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.legal_entity.address_city text gen=- def=-
+public.legal_entity.address_line1 text gen=- def=-
+public.legal_entity.address_line2 text gen=- def=-
+public.legal_entity.address_postal_code text gen=- def=-
+public.legal_entity.address_region text gen=- def=-
+public.legal_entity.archived_at timestamp with time zone gen=- def=-
+public.legal_entity.bank_account_holder text gen=- def=-
+public.legal_entity.bic text gen=- def=-
+public.legal_entity.captured_by text NOT NULL gen=- def=-
+public.legal_entity.country text gen=- def=-
+public.legal_entity.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.legal_entity.default_language text gen=- def=-
+public.legal_entity.display_name text gen=- def=-
+public.legal_entity.iban text gen=- def=-
+public.legal_entity.id uuid NOT NULL gen=- def=uuidv7()
+public.legal_entity.imprint text gen=- def=-
+public.legal_entity.is_default boolean NOT NULL gen=- def=false
+public.legal_entity.legal_entity_bic_shape CHECK (((bic IS NULL) OR (bic ~ '^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$'::text)))
+public.legal_entity.legal_entity_country_shape CHECK (((country IS NULL) OR (country ~ '^[a-z]{2}$'::text)))
+public.legal_entity.legal_entity_default_is_permanent CHECK (((NOT is_default) OR (archived_at IS NULL)))
+public.legal_entity.legal_entity_default_reads_the_anchor CHECK (((NOT is_default) OR ((display_name IS NULL) AND (legal_name IS NULL) AND (address_line1 IS NULL) AND (address_line2 IS NULL) AND (address_postal_code IS NULL) AND (address_city IS NULL) AND (address_region IS NULL) AND (vat_id IS NULL) AND (register_court IS NULL) AND (register_number IS NULL) AND (logo_object_key IS NULL))))
+public.legal_entity.legal_entity_iban_shape CHECK (((iban IS NULL) OR (iban ~ '^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$'::text)))
+public.legal_entity.legal_entity_imprint_bounded CHECK (((imprint IS NULL) OR (length(imprint) <= 4000)))
+public.legal_entity.legal_entity_language_shape CHECK (((default_language IS NULL) OR (default_language ~ '^[a-z]{2}$'::text)))
+public.legal_entity.legal_entity_names_itself CHECK ((is_default OR ((btrim(COALESCE(display_name, ''::text)) <> ''::text) AND (btrim(COALESCE(legal_name, ''::text)) <> ''::text) AND (country IS NOT NULL))))
+public.legal_entity.legal_entity_pkey PRIMARY KEY (id)
+public.legal_entity.legal_entity_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+public.legal_entity.legal_name text gen=- def=-
+public.legal_entity.logo_object_key text gen=- def=-
+public.legal_entity.register_court text gen=- def=-
+public.legal_entity.register_number text gen=- def=-
+public.legal_entity.trg_legal_entity_default_is_permanent CREATE TRIGGER trg_legal_entity_default_is_permanent BEFORE DELETE OR UPDATE ON public.legal_entity FOR EACH ROW EXECUTE FUNCTION legal_entity_refuse_default_retirement()
+public.legal_entity.trg_legal_entity_updated CREATE TRIGGER trg_legal_entity_updated BEFORE UPDATE ON public.legal_entity FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
+public.legal_entity.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.legal_entity.vat_id text gen=- def=-
+public.legal_entity.version bigint NOT NULL gen=- def=1
+public.legal_entity_member acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.legal_entity_member.assigned_at timestamp with time zone NOT NULL gen=- def=now()
+public.legal_entity_member.assigned_by text NOT NULL gen=- def=-
+public.legal_entity_member.legal_entity_id uuid NOT NULL gen=- def=-
+public.legal_entity_member.legal_entity_member_legal_entity_id_fkey FOREIGN KEY (legal_entity_id) REFERENCES legal_entity(id) ON DELETE RESTRICT
+public.legal_entity_member.legal_entity_member_pkey PRIMARY KEY (user_id)
+public.legal_entity_member.legal_entity_member_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.legal_entity_member.user_id uuid NOT NULL gen=- def=-
+public.legal_entity_member_pkey CREATE UNIQUE INDEX legal_entity_member_pkey ON public.legal_entity_member USING btree (user_id)
+public.legal_entity_pkey CREATE UNIQUE INDEX legal_entity_pkey ON public.legal_entity USING btree (id)
+public.legal_entity_refuse_default_retirement() secdef=false cfg=- acl=- 
+BEGIN
+  IF TG_OP = 'DELETE' AND OLD.is_default THEN
+    RAISE EXCEPTION 'legal entity % is the default entity and may not be deleted', OLD.id
+      USING ERRCODE = 'check_violation',
+            CONSTRAINT = 'legal_entity_default_is_permanent';
+  END IF;
+  IF TG_OP = 'UPDATE' AND OLD.is_default AND NOT NEW.is_default THEN
+    RAISE EXCEPTION 'legal entity % is the default entity and may not be demoted', OLD.id
+      USING ERRCODE = 'check_violation',
+            CONSTRAINT = 'legal_entity_default_is_permanent';
+  END IF;
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
+  END IF;
+  RETURN NEW;
+END;
+
 public.legal_review acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.legal_review.captured_by text NOT NULL gen=- def=-
 public.legal_review.comments text gen=- def=-
@@ -6446,7 +6512,7 @@ public.report_edition_question.reason text gen=- def=-
 public.report_edition_question.report_edition_question_edition_id_fkey FOREIGN KEY (edition_id) REFERENCES report_edition(id) ON DELETE CASCADE
 public.report_edition_question.report_edition_question_kept_or_reasoned CHECK (((answer IS NULL) <> (reason IS NULL)))
 public.report_edition_question.report_edition_question_pkey PRIMARY KEY (edition_id, card_id)
-public.report_edition_question.report_edition_question_reason_known CHECK ((reason = ANY (ARRAY['retention_unconfigured'::text, 'too_many_records'::text, 'unanswered'::text])))
+public.report_edition_question.report_edition_question_reason_known CHECK ((reason = ANY (ARRAY['retention_unconfigured'::text, 'too_many_records'::text, 'unanswered'::text, 'counts_other_records'::text])))
 public.report_edition_question_pkey CREATE UNIQUE INDEX report_edition_question_pkey ON public.report_edition_question USING btree (edition_id, card_id)
 public.report_edition_question_source acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.report_edition_question_source.card_id text NOT NULL gen=- def=-
@@ -7565,6 +7631,8 @@ public.uq_lead_privacy_notice_delivery CREATE UNIQUE INDEX uq_lead_privacy_notic
 public.uq_lead_privacy_notice_lead CREATE UNIQUE INDEX uq_lead_privacy_notice_lead ON public.lead_privacy_notice USING btree (lead_id) WHERE (lead_id IS NOT NULL)
 public.uq_lead_source CREATE UNIQUE INDEX uq_lead_source ON public.lead USING btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))
 public.uq_lead_source_key CREATE UNIQUE INDEX uq_lead_source_key ON public.lead_source USING btree (key)
+public.uq_legal_entity_default CREATE UNIQUE INDEX uq_legal_entity_default ON public.legal_entity USING btree ((true)) WHERE is_default
+public.uq_legal_entity_live_name CREATE UNIQUE INDEX uq_legal_entity_live_name ON public.legal_entity USING btree (lower(display_name)) WHERE ((archived_at IS NULL) AND (NOT is_default))
 public.uq_legal_review_open_deal CREATE UNIQUE INDEX uq_legal_review_open_deal ON public.legal_review USING btree (deal_id) WHERE (status = 'requested'::text)
 public.uq_linkedin_connection_natural CREATE UNIQUE INDEX uq_linkedin_connection_natural ON public.linkedin_connection USING btree (owner_user_id, normalized_name, normalized_company, connected_on) NULLS NOT DISTINCT WHERE (provider_member_ref IS NULL)
 public.uq_linkedin_connection_provider CREATE UNIQUE INDEX uq_linkedin_connection_provider ON public.linkedin_connection USING btree (owner_user_id, provider_member_ref) WHERE (provider_member_ref IS NOT NULL)

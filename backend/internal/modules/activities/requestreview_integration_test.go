@@ -70,8 +70,8 @@ func TestConflictingNoiseLabelStaysReviewableWithoutAutomaticAssignment(t *testi
 	if err != nil {
 		t.Fatal(err)
 	}
-	if source.Summary.RequestHasReminder == nil || *source.Summary.RequestHasReminder || source.Summary.Move != crmcontracts.EmailSummaryMoveNeedsReply {
-		t.Fatal("conflicting topic either assigned or lost the confirmed request")
+	if source.Summary.RequestHasReminder == nil || *source.Summary.RequestHasReminder || source.Summary.Move != crmcontracts.EmailSummaryMoveNone {
+		t.Fatal("conflicting automatic judgments manufactured a reply obligation or reminder")
 	}
 	review, _, err := store.ListActivities(e.as(), ListActivitiesInput{RequestReviewAsOf: &at})
 	if err != nil {

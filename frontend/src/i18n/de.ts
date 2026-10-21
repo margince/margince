@@ -856,6 +856,8 @@ export const de = {
   "reporting.questionLoading": "Frage wird gestellt…",
   "reporting.questionNotKept":
     "In diesem gesendeten Bericht nicht enthalten. Der Live-Bericht zeigt die Antwort auf diese Frage.",
+  "reporting.questionPick": "Deine gespeicherten Fragen",
+  "reporting.questionPickNone": "Gespeicherte Frage wählen",
   "reporting.questionLink": "Link zu einem gespeicherten eigenen Bericht",
   "reporting.questionLinkInvalid":
     "Den Link einfügen, den Link kopieren bei einem gespeicherten eigenen Bericht liefert.",
@@ -1453,6 +1455,21 @@ export const de = {
   "brief.weekly.partialValue": "{value} (teilweise)",
   "brief.week.beforeHistory":
     "Für diese Woche gibt es keine Zahlen, da sie vor den ersten Datensätzen liegt.",
+  "magic.approval.markWon": "Als gewonnen markieren",
+  "magic.approval.markLost": "Als verloren markieren",
+  "magic.approval.reviewChange": "Vorgeschlagene Änderung prüfen",
+  "magic.approval.noEvidence":
+    "Keine Quelle beigefügt. Prüfe den Deal vor der Freigabe.",
+  "home.receipt.dateReverted":
+    "Geschätztes Abschlussdatum zurückgenommen; {before} wiederhergestellt (zuvor {after})",
+  "home.receipt.basisUnknown":
+    "Hier ist keine belegte Verkaufshistorie verfügbar. Kläre das Datum mit der Käuferseite.",
+  "home.receipt.basis_one":
+    "Schätzung aus {count} gewonnenem Deal · Median der Tage je Phase: {days} · Verbleibende Phasen: {stages}. Kein von der Käuferseite bestätigtes Datum.",
+  "home.receipt.basis_other":
+    "Schätzung aus {count} gewonnenen Deals · Median der Tage je Phase: {days} · Verbleibende Phasen: {stages}. Kein von der Käuferseite bestätigtes Datum.",
+  "brief.changes.keepDate": "Datum behalten",
+  "worklist.handled.showHistory": "Letzte Änderungen anzeigen",
   "home.receipt.date": "Abschlussdatum: {before} → {after}",
   "home.receipt.dateUnconfirmed":
     "Geschätztes Abschlussdatum: {before} → {after} (Bestätigung nötig)",
@@ -1580,7 +1597,7 @@ export const de = {
   "brief.reply.owed": "Kontakt wartet auf deine Antwort",
   "brief.changes.superseded":
     "Dieser Deal wurde erneut geändert. Öffne den Deal, um seinen aktuellen Stand zu prüfen.",
-  "brief.changes.title": "Wartet auf deine Zustimmung",
+  "brief.changes.title": "Angewandte Änderungen prüfen",
   "brief.changes.accept": "Annehmen",
   "brief.changes.accepted": "Angenommen",
   "brief.changes.undone": "Rückgängig gemacht",
@@ -4511,6 +4528,22 @@ export const de = {
   "deal.pulse.wroteUnknown":
     "Die Gegenseite hat geschrieben, und niemand hat geantwortet.",
   "deal.timeline.empty": "Noch keine Aktivität zu diesem Deal.",
+  "legalEntities.title": "Rechtsträger",
+  "legalEntities.sub":
+    "Die Rechtsträger, unter denen du auftrittst. Wer keinem zugeordnet ist, arbeitet für den Standard-Rechtsträger. Dieser übernimmt Namen, Adresse und Logo vom Unternehmen oben.",
+  "legalEntities.loading": "Rechtsträger werden geladen…",
+  "legalEntities.addOpen": "Neuer Rechtsträger",
+  "legalEntities.addTitle": "Neuer Rechtsträger",
+  "legalEntities.addConfirm": "Rechtsträger erstellen",
+  "legalEntities.colName": "Name",
+  "legalEntities.colLegalName": "Firmierung",
+  "legalEntities.colCountry": "Land",
+  "legalEntities.defaultBadge": "Standard",
+  "legalEntities.defaultUnnamed": "Dein Unternehmen",
+  "legalEntities.displayName": "Name",
+  "legalEntities.legalName": "Firmierung",
+  "legalEntities.country": "Land",
+  "legalEntities.countryHint": "Zwei Buchstaben, zum Beispiel AT.",
   "acqSources.title": "Quellenliste",
   "acqSources.sub":
     "Getrennt von den Lead-Quellen, die festhalten, wie ein Datensatz in Margince gelangt ist.",
@@ -6107,6 +6140,13 @@ export const de = {
   "analytics.q.addFilter": "Filter hinzufügen",
   "analytics.q.addMeasure": "Kennzahl hinzufügen",
   "analytics.q.allRecords": "Alle Datensätze",
+  "analytics.q.savedListTitle": "Deine gespeicherten Fragen",
+  "analytics.q.savedLoading": "Deine gespeicherten Fragen werden geladen …",
+  "analytics.q.savedEmpty":
+    "Du hast noch keine Fragen gespeichert. Speichere eine, um sie hier zu finden und in einen Bericht zu setzen.",
+  "analytics.q.savedQuestion": "Frage",
+  "analytics.q.savedAt": "Gespeichert",
+  "analytics.q.savedMore": "Mehr anzeigen",
   "analytics.q.answerTitle": "Antwort",
   "analytics.q.ask": "Bericht ausführen",
   "analytics.q.asking": "Bericht wird ausgeführt…",
@@ -11342,6 +11382,7 @@ export const de = {
   "roles.object.offer_template": "Angebotsvorlagen",
   "roles.object.contract": "Verträge",
   "roles.object.legal_review": "Rechtsprüfungen",
+  "roles.object.legal_entity": "Rechtsträger",
   "roles.object.commission": "Provisionen",
   "roles.object.deal_room": "Deal Rooms",
   "roles.object.forecast": "Prognosen",
@@ -14943,7 +14984,7 @@ export const de = {
   "worklist.manager.kind.general": "Sonstiges",
   "worklist.board.title": "Teamarbeit mit Handlungsbedarf",
   "worklist.exceptions.title": "Team-Ausnahmen",
-  "worklist.handled.title": "Für dich erledigt",
+  "worklist.handled.title": "Änderungsverlauf",
   "worklist.walk.arrived":
     "Neu seit dem Öffnen der Liste: {arrived}. Aktualisiere die Liste, um die neuen Einträge hinzuzufügen.",
   "worklist.walk.gone": "Davon seit dem Öffnen der Liste erledigt: {gone}.",
@@ -14954,13 +14995,13 @@ export const de = {
   "worklist.handled.empty":
     "Heute wurden keine Aktionen in deinem Auftrag ausgeführt.",
   "worklist.handled.loading": "Aktionen werden geladen…",
-  "worklist.handled.count": "{count} erledigt",
+  "worklist.handled.count": "Letzte Änderungen: {count}",
   "worklist.handled.what": "Aktion",
   "worklist.handled.about": "Datensatz",
   "worklist.handled.when": "Zeitpunkt",
   "worklist.handled.noRecord": "Kein Datensatz",
   "worklist.handled.hiddenRecord": "Datensatz nicht verfügbar",
-  "worklist.handled.wayBack": "Rückgängig",
+  "worklist.handled.wayBack": "Status",
   "worklist.handled.putBackDone": "Bereits rückgängig gemacht",
   "worklist.handled.truncated": "Liste gekürzt. Es gibt weitere Einträge.",
   "worklist.exceptions.empty": "Keine Team-Ausnahmen.",

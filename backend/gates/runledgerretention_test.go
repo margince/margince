@@ -50,8 +50,10 @@ var runLedgerWindow = gatekit.Waive(map[string]string{
 		"understating a one-way cutover. A window has to outlive the cutover it describes. The " +
 		"profile of sample cells goes at approval, and the uploaded file at release; only a " +
 		"stopped commit keeps its file, for its resume",
-	"report_run": "one row per report generation. The edition it produced has its own retention " +
-		"ladder, so this is the attempt rather than the artefact",
+	"report_run": "one row per saved analytics question: its asker's own citation, listed for " +
+		"them and asked again on every read, never served as stored. It is deleted with its " +
+		"asker's user row, and a deactivated seat keeps it; a sent edition that copied its " +
+		"question has its own retention ladder",
 	"workflow_run": "one row per automation tick, and auth.LiveIntakeTaskClause reads the planned " +
 		"target of a route_lead run to exclude imported follow-ups. A window here is entangled with " +
 		"that clause rather than free",

@@ -83,9 +83,7 @@ To clear several rows at once, tick them, or press **Select all**, then press **
 owns, or nobody owns. **Not a customer** removes the whole thread for everyone, and does not run
 out. Also called: dismiss, delete from worklist, hide, not relevant, mark as done, handled.
 
-Archiving a contact also takes the messages they wait on a reply to off your Worklist. Restoring the
-contact brings them back. Only the contacts you can see count. A message stays if it is filed under another
-contact you can see who is not archived. It also stays if you can see none of its contacts.
+Captured mail needs a reply only when Margince finds a request or you keep it as work. Other mail stays on the record. Archiving a contact removes their waiting messages; restoring them brings those messages back. A message stays if another contact you can see is still live, or none of its contacts are visible.
 
 ### How do I undo a snooze or removal on my worklist?
 To undo a Worklist snooze or removal in Margince, press **Undo** in the note that appears right
@@ -142,17 +140,17 @@ Also called: weekly report, week in review, weekly summary.
 ## Morning
 
 ### What is on Morning?
-**Morning**, on **Home**, opens with a sentence naming what to do first, its contact and your next
-meeting. Press a name to see where it comes from. A badge says when Margince made the brief.
+**Morning**, on **Home**, opens with the count of items that need attention.
+Press a name to open its record. A badge says when Margince made the brief.
 - **First**: the first thing to do on one card, the rest as **Then**; at most 6 in all, in Worklist
   order. Press a row to bring it onto the card; **Why first?** says why it ranks there.
   Proposals to answer, commitments due today and meetings to prepare in the next 24 hours sit here;
   tasks due later never do. A quiet day says "No immediate priorities. The full Worklist is available."
 - **Show Worklist**, under the list: the whole list, with its own filters and pages, and work that
-  is not due yet. Notices that only tell you something, such as a stage change, are read there.
+  is not due yet. Stage change notices stay in the notification center.
 - **Since your last brief**: what Margince did since your last brief, what waits on you, what it
   could not finish and what needs restoring.
-- Beside them: **Numbers**, **Upcoming meetings**, **Waiting for your word**.
+- Beside them: **Numbers**, **Upcoming meetings**, **Check applied changes**.
 A greeting covers the page on the day's first visit, once per browser, unless your settings turn
 motion off. It shows the date, the emails synced overnight, and how many items wait, how many are
 urgent and how many meetings you have. Press any key or click to go on.
@@ -185,10 +183,10 @@ The work counts come from the current Worklist read. The greeting's email count 
 
 **Since your last brief** says when some activity could not be counted. Its count then says how much it could count, and an empty list does not mean nothing happened.
 
-### Waiting for your word
-**Waiting for your word**, on **Morning**, lists deal changes you can still accept or undo. Each names the deal, what changed, why and when. A close date fix shows the old and new dates. A change in confidence alone is not called a date change.
+### Check applied changes
+**Check applied changes**, on **Morning**, lists deal changes you can still keep or undo. Each names the deal, what changed and when. Date estimates show their sales history when available. An undone or accepted change leaves this list.
 
-**Accept** records your review and keeps the change. It does not run the change again or turn a guessed date into a customer promise. **Undo** puts the deal back, and the row then reads **Undone**.
+**Keep date** keeps a date estimate; **Accept** keeps a stage change. Neither runs the change again or makes an estimate a customer promise. **Undo** puts the deal back. Past changes remain under **Change history** on the Worklist.
 
 A deal that changed again reads "This deal changed again. Open the deal to review its current state."
 Neither an undone change nor a replaced one can be accepted. To make Margince ask first, see [Approvals](approvals.md). Also called: automatic changes, review changes, accept a change.
@@ -346,16 +344,15 @@ The Worklist footer and **To review** panel count items, not cards: 8 possible d
 
 **Worklist incomplete** names sources that did not load; an empty list says **"No items in the sources that loaded."**
 
-### Handled for you
+### Change history
 
-**Handled for you**, on the Worklist, lists what Margince did for you in the last 24 hours: the
-action, the record, when, and an **Undo**.
+**Change history**, on the Worklist, keeps the changes from the last 24 hours. Press
+**Show recent changes** to read the action, record, time and status.
 
 When there is nothing: "No actions taken on your behalf today."
 
-**Undo** puts the record back the way it was before the change. It is offered on deals; other kinds
-of entry show the row without one. An entry already undone says **"Already undone"** instead of
-leaving the list, so you can see that it was.
+**Undo** puts the record back the way it was before a deal change. A change already undone
+stays in history with its status and has no action to take.
 
 ## For a team lead
 

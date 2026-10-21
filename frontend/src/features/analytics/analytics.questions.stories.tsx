@@ -16,8 +16,10 @@ import {
   ANSWER,
   CONTEXT,
   EXPLANATION,
+  NO_SAVED_RUNS,
   QUERY,
   refusal,
+  SAVED_RUNS,
   SCHEMA,
   STAGES,
   USERS,
@@ -37,6 +39,7 @@ const base: RouteMap = {
   "GET /stages": () => jsonResponse(STAGES),
   "GET /users": () => jsonResponse(USERS),
   "POST /analytics/query": () => jsonResponse(ANSWER),
+  "GET /analytics/runs": () => jsonResponse(NO_SAVED_RUNS),
   "POST /analytics/explain": () => jsonResponse(EXPLANATION),
   "POST /analytics/runs/run-1/cells/explain": () => jsonResponse(EXPLANATION),
 };
@@ -115,6 +118,15 @@ export const NoEntitiesDark: Story = {
 };
 
 export const Ready: Story = { render: viewStory({}) };
+
+// The reader's own saved questions under the builder, each named by what it
+// asks and opening at its own address.
+export const SavedListed: Story = {
+  render: viewStory({ "GET /analytics/runs": () => jsonResponse(SAVED_RUNS) }),
+  play: async () => {
+    await screen.findByRole("table", { name: "Your saved questions" });
+  },
+};
 
 export const Answered: Story = {
   render: viewStory({}),

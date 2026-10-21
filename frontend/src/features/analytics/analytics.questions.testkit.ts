@@ -111,6 +111,41 @@ export const QUERY: AnalyticsQuery = {
   limit: 100,
 };
 
+// The reader's own saved questions, as GET /analytics/runs lists them: each
+// question's shape, and whether it carried filters.
+export const SAVED_RUNS = {
+  data: [
+    {
+      id: "run-1",
+      entity: QUERY.entity,
+      group_by: QUERY.group_by,
+      measures: QUERY.measures,
+      limit: QUERY.limit,
+      filtered: false,
+      asked_at: "2026-09-24T09:00:00Z",
+    },
+    {
+      id: "run-2",
+      entity: "deals-by-stage",
+      measures: [{ fn: "count" as const }],
+      filtered: false,
+      asked_at: "2026-09-20T09:00:00Z",
+    },
+    {
+      id: "run-3",
+      entity: "deals-by-stage",
+      measures: [{ fn: "sum" as const, field: "amount_minor" }],
+      filtered: true,
+      asked_at: "2026-09-18T09:00:00Z",
+    },
+  ],
+  page: { next_cursor: null, has_more: false },
+};
+export const NO_SAVED_RUNS = {
+  data: [],
+  page: { next_cursor: null, has_more: false },
+};
+
 const QUALIFYING_ROW = {
   stage_id: "s-qual",
   currency: "EUR",

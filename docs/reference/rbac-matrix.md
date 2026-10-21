@@ -96,6 +96,7 @@ changes none.
 | `knowledge_corpus` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
 | `knowledge_document` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
 | `lead` | CRUD | CRUD | CRUD | CRUD | -R-- | CRUD |
+| `legal_entity` | CRUD | -R-- | -R-- | -R-- | -R-- | -R-- |
 | `legal_review` | -RU- | ---- | ---- | ---- | ---- | ---- |
 | `license` | -R-- | ---- | ---- | ---- | ---- | -R-- |
 | `list` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |

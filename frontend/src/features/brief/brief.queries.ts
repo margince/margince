@@ -32,7 +32,6 @@ export function useMorningBrief(): UseQueryResult<MorningBrief | null> {
     // leaves the lane intersecting a fresh list of ids against a stale set of
     // items, and an intersection that finds nothing draws the quiet-morning
     // plate over a morning that has work in it.
-    refetchOnWindowFocus: true,
     queryFn: async (): Promise<MorningBrief | null> => {
       const { data, error, response } = await api.GET("/brief");
       // No run yet is not a failure: it is a page that offers to make one.

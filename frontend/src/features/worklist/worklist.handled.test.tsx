@@ -50,6 +50,10 @@ describe("what was handled for the reader", () => {
     // Asserted over the TABLE rather than the panel: Disclosure draws a native
     // <summary> to fold itself, which is not a button role and would let a
     // whole-panel assertion pass while a row carried a verb.
+    const history = screen
+      .getByText(en["worklist.handled.showHistory"])
+      .closest("details");
+    expect(history?.open).toBe(false);
     const table = screen.getByRole("table");
     expect(
       table.querySelectorAll("button, input, [role='button']").length,
@@ -240,7 +244,7 @@ describe("what was handled for the reader", () => {
     expect(screen.queryByRole("table")).toBeNull();
     // And no figure in the footer band either: a count of nothing is a row of
     // chrome saying zero on a panel that has already said it in words.
-    expect(screen.queryByText(/^\d+ handled$/)).toBeNull();
+    expect(screen.queryByText(/^Recent changes: \d+$/)).toBeNull();
   });
 
   // An answer carrying no list AT ALL is not a quiet day. `receipts` is
@@ -278,7 +282,7 @@ describe("what was handled for the reader", () => {
       defaultOptions: { queries: { retry: false } },
     });
     render(panel(client));
-    await screen.findByText("1 handled");
+    await screen.findByText("Recent changes: 1");
 
     // Through the panel's OWN query rather than a second render over a failing
     // stub: what has to be reached is the state where the rows are still in the
@@ -301,7 +305,7 @@ describe("what was handled for the reader", () => {
     });
 
     expect(await screen.findByText(en["state.failed"])).toBeTruthy();
-    expect(screen.queryByText(/^\d+ handled$/)).toBeNull();
+    expect(screen.queryByText(/^Recent changes: \d+$/)).toBeNull();
   });
 });
 

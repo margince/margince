@@ -11,6 +11,8 @@ import { useMe } from "../../lib/session";
 import { useBriefAnswer, withFoldedBrief } from "./worklist.briefverbs";
 import { consequenceText } from "./worklist.connection";
 import {
+  briefContextTitle,
+  briefSubjectLabel,
   comparisonText,
   dealFactsText,
   isUnprepared,
@@ -140,7 +142,12 @@ export function WorklistRow({
   // Open the activity itself without leaving the queue for its linked record.
   const source = useRowSource(item);
   const viewer = useMe(false).data?.user;
-  const title = itemTitle(readerTask(item, viewer, t), t, locale);
+  const name = framedName(
+    item,
+    itemTitle(readerTask(item, viewer, t), t, locale),
+    framed,
+  );
+  const title = name.title;
   const facts =
     dealFactsText(item, t, locale, zone) ??
     leadFactsText(item, t, locale, zone);
@@ -198,7 +205,7 @@ export function WorklistRow({
   const answer = withFoldedBrief(rowAnswer(item, brief), item, brief);
   const readings: RowReadings = shapedReadings(framed, {
     item,
-    title,
+    ...name,
     href,
     open: source.open,
     sourceUnavailable: source.unavailable,
@@ -319,4 +326,13 @@ export function WorklistRow({
       </PutDownByThumb>
     </PanelRow>
   );
+}
+
+function framedName(item: WorklistItem, fallback: string, framed: boolean) {
+  const subject = framed ? briefSubjectLabel(item) : undefined;
+  return {
+    title: subject ?? fallback,
+    heading: subject !== undefined,
+    supportingTitle: subject ? briefContextTitle(item) : undefined,
+  };
 }

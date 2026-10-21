@@ -17,15 +17,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// classifyDecision: a staged proposal or a duplicate pair.
-//
-// The split is what keeps the queue honest. A decision about a SEND blocks
-// customer work and sits at level 5; contact hygiene — capturing a counterparty,
-// merging two records — is level 6 and never outranks a customer, however many
-// of them are waiting. That is the whole answer to a queue of 188 identical
-// contact questions burying an unanswered buyer.
 func classifyDecision(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	level, consequence, why := levelRoutine, crmcontracts.WorklistItemConsequence("data_drifts"), "routine"
+	if item.Kind != nil {
+		switch *item.Kind {
+		case "advance_deal", "progress_deal", "stage_progression":
+			level, consequence, why = levelAgreed, valueNone, ""
+		}
+	}
 	if blocksCustomerWork(item) {
 		level, consequence, why = levelBlocking, "work_blocked", "blocks_customer_work"
 	}
@@ -33,7 +32,9 @@ func classifyDecision(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 		level, consequence, why = levelWaiting, "work_blocked", "account_termination"
 	}
 	row := base(item, level, "decisions", consequence)
-	row.Because = []crmcontracts.WorklistReason{reason(crmcontracts.WorklistReasonKind(why), nil)}
+	if why != "" {
+		row.Because = []crmcontracts.WorklistReason{reason(crmcontracts.WorklistReasonKind(why), nil)}
+	}
 	// The two facts a routine contact decision is grouped by, from the typed
 	// field the feed fills out of the staged payload — the verdict engine
 	// already decided who the address belongs to, and deriving it again here
@@ -81,9 +82,7 @@ func stagedFactsOf(item crmcontracts.AttentionItem) StagedFacts {
 // a customer is waiting on, as opposed to tidying the database.
 //
 // The list is the approval kinds whose SUBJECT is an outbound act. A kind absent
-// here is treated as hygiene, which is the safe direction: mislabelling a merge
-// as urgent costs a reader their attention, while the reverse costs them only a
-// place in a queue they are working through anyway.
+// here does not assert that somebody outside is waiting on the decision.
 func blocksCustomerWork(item crmcontracts.AttentionItem) bool {
 	if item.Kind == nil {
 		return false

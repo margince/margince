@@ -222,7 +222,7 @@ type attentionNotices struct {
 }
 
 func (a attentionNotices) Unread(ctx context.Context, limit int) ([]attention.UnreadNotice, error) {
-	unread, err := a.store.UnreadFor(ctx, limit)
+	unread, err := a.store.UnreadWorkFor(ctx, limit)
 	if err != nil {
 		return nil, err
 	}

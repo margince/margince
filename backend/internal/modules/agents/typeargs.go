@@ -57,7 +57,7 @@ func (r *Registry) requireDeclaredTypes(name string, args json.RawMessage) error
 	for _, arg := range typed {
 		raw, supplied := present[arg.name]
 		got := jsonType(raw)
-		if !supplied || got == "null" || got == arg.kind || got == "integer" && arg.kind == "number" {
+		if !supplied || got == schemaNull || got == arg.kind || got == schemaInteger && arg.kind == schemaNumber {
 			continue
 		}
 		refusals = append(refusals, fmt.Sprintf("`%s` is %s, and its input schema declares %s", arg.name, got, arg.kind))
@@ -82,18 +82,18 @@ func jsonType(raw json.RawMessage) string {
 	}
 	switch typed := value.(type) {
 	case string:
-		return "string"
+		return schemaString
 	case bool:
-		return "boolean"
+		return schemaBoolean
 	case map[string]any:
-		return "object"
+		return schemaObject
 	case []any:
-		return "array"
+		return schemaArray
 	case float64:
 		if typed == float64(int64(typed)) {
-			return "integer"
+			return schemaInteger
 		}
-		return "number"
+		return schemaNumber
 	}
-	return "null"
+	return schemaNull
 }

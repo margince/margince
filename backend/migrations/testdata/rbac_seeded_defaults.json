@@ -223,6 +223,12 @@
         "read": true,
         "update": true
       },
+      "legal_entity": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
       "legal_review": {
         "create": false,
         "delete": false,
@@ -641,6 +647,12 @@
         "delete": true,
         "read": true,
         "update": true
+      },
+      "legal_entity": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
       },
       "legal_review": {
         "create": false,
@@ -1061,6 +1073,12 @@
         "read": true,
         "update": true
       },
+      "legal_entity": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
       "legal_review": {
         "create": false,
         "delete": false,
@@ -1480,6 +1498,12 @@
         "read": true,
         "update": true
       },
+      "legal_entity": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
       "legal_review": {
         "create": false,
         "delete": false,
@@ -1894,6 +1918,12 @@
         "update": false
       },
       "lead": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
+      "legal_entity": {
         "create": false,
         "delete": false,
         "read": true,
@@ -2317,6 +2347,12 @@
         "delete": true,
         "read": true,
         "update": true
+      },
+      "legal_entity": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
       },
       "legal_review": {
         "create": false,

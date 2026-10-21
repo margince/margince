@@ -1,4 +1,4 @@
-import type { MessageKey } from "../../i18n/en";
+import type { MessageKey } from "../i18n/en";
 
 export const MERGE_FIELD_LABELS: Readonly<Record<string, MessageKey>> = {
   merge_source: "approval.merge.source",

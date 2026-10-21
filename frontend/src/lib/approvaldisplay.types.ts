@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { DecisionDiff } from "../../design-system/decisioncard.payload";
-import type { MessageKey } from "../../i18n/en";
+import type { DecisionDiff } from "../design-system/decisioncard.payload";
+import type { MessageKey } from "../i18n/en";
 
 // The shapes of a kind's display declaration and of what resolving it yields.
 // They sit apart from the catalogue in approvaldisplay.ts, which re-exports

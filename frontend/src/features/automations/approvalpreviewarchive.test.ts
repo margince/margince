@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 import type { components } from "../../api/schema";
 import { LOCALES, translate } from "../../i18n";
-import { commercialPreviewDisplay } from "./approvalpreview";
+import { commercialPreviewDisplay } from "../../lib/approvalpreview";
 
 type Preview = components["schemas"]["ApprovalPreview"];
 

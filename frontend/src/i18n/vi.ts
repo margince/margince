@@ -843,6 +843,8 @@ export const vi = {
   "reporting.questionLoading": "Đang hỏi…",
   "reporting.questionNotKept":
     "Không lưu trong báo cáo đã gửi này. Mở báo cáo trực tiếp để xem câu trả lời cho câu hỏi này.",
+  "reporting.questionPick": "Câu hỏi bạn đã lưu",
+  "reporting.questionPickNone": "Chọn một câu hỏi đã lưu",
   "reporting.questionLink": "Liên kết tới báo cáo tùy chỉnh đã lưu",
   "reporting.questionLinkInvalid":
     "Dán liên kết mà Sao chép liên kết đưa ra trên báo cáo tùy chỉnh đã lưu.",
@@ -1416,6 +1418,21 @@ export const vi = {
   "brief.weekly.partialValue": "{value} (một phần)",
   "brief.week.beforeHistory":
     "Tuần này nằm trước thời điểm có dữ liệu đầu tiên nên không có số liệu để báo cáo.",
+  "magic.approval.markWon": "Đánh dấu thắng",
+  "magic.approval.markLost": "Đánh dấu thua",
+  "magic.approval.reviewChange": "Xem thay đổi đề xuất",
+  "magic.approval.noEvidence":
+    "Chưa đính kèm nguồn chứng minh. Kiểm tra deal trước khi phê duyệt.",
+  "home.receipt.dateReverted":
+    "Đã hoàn tác ngày chốt ước tính; khôi phục {before} (trước đó {after})",
+  "home.receipt.basisUnknown":
+    "Không có lịch sử bán hàng làm căn cứ ở đây. Xác nhận ngày với bên mua trước khi giữ lại.",
+  "home.receipt.basis_one":
+    "Ước tính từ {count} deal thắng · Số ngày trung vị mỗi giai đoạn: {days} · Số giai đoạn còn lại: {stages}. Chưa được bên mua xác nhận.",
+  "home.receipt.basis_other":
+    "Ước tính từ {count} deal thắng · Số ngày trung vị mỗi giai đoạn: {days} · Số giai đoạn còn lại: {stages}. Chưa được bên mua xác nhận.",
+  "brief.changes.keepDate": "Giữ ngày",
+  "worklist.handled.showHistory": "Xem thay đổi gần đây",
   "home.receipt.date": "Ngày chốt: {before} → {after}",
   "home.receipt.dateUnconfirmed":
     "Ngày chốt ước tính: {before} → {after} (cần xác nhận)",
@@ -1537,7 +1554,7 @@ export const vi = {
   "brief.reply.owed": "Khách hàng đang chờ bạn trả lời",
   "brief.changes.superseded":
     "Deal này lại vừa thay đổi. Mở deal để xem lại trạng thái hiện tại.",
-  "brief.changes.title": "Đang chờ bạn xác nhận",
+  "brief.changes.title": "Kiểm tra thay đổi đã áp dụng",
   "brief.changes.accept": "Chấp nhận",
   "brief.changes.accepted": "Đã chấp nhận",
   "brief.changes.undone": "Đã hoàn tác",
@@ -4398,6 +4415,22 @@ export const vi = {
     "Họ viết lần cuối vào ngày {date}, cách đây {days} ngày.",
   "deal.pulse.wroteUnknown": "Họ đã gửi thư và chưa ai trả lời.",
   "deal.timeline.empty": "Chưa có hoạt động nào trên deal này.",
+  "legalEntities.title": "Pháp nhân",
+  "legalEntities.sub":
+    "Các pháp nhân mà công ty bạn dùng để giao dịch. Đồng nghiệp chưa được gán sẽ làm việc cho pháp nhân mặc định, vốn lấy tên, địa chỉ và logo từ công ty ở trên.",
+  "legalEntities.loading": "Đang tải pháp nhân…",
+  "legalEntities.addOpen": "Pháp nhân mới",
+  "legalEntities.addTitle": "Pháp nhân mới",
+  "legalEntities.addConfirm": "Thêm pháp nhân",
+  "legalEntities.colName": "Tên",
+  "legalEntities.colLegalName": "Tên pháp lý",
+  "legalEntities.colCountry": "Quốc gia",
+  "legalEntities.defaultBadge": "Mặc định",
+  "legalEntities.defaultUnnamed": "Công ty của bạn",
+  "legalEntities.displayName": "Tên",
+  "legalEntities.legalName": "Tên pháp lý",
+  "legalEntities.country": "Quốc gia",
+  "legalEntities.countryHint": "Hai chữ cái, ví dụ AT.",
   "acqSources.title": "Danh sách nguồn",
   "acqSources.sub":
     "Tách biệt với nguồn lead, vốn ghi nhận cách một hồ sơ vào Margince.",
@@ -5961,6 +5994,13 @@ export const vi = {
   "analytics.q.addFilter": "Thêm bộ lọc",
   "analytics.q.addMeasure": "Thêm chỉ số",
   "analytics.q.allRecords": "Tất cả hồ sơ",
+  "analytics.q.savedListTitle": "Câu hỏi bạn đã lưu",
+  "analytics.q.savedLoading": "Đang tải các câu hỏi bạn đã lưu…",
+  "analytics.q.savedEmpty":
+    "Bạn chưa lưu câu hỏi nào. Hãy lưu một câu hỏi để tìm lại ở đây và đặt vào báo cáo.",
+  "analytics.q.savedQuestion": "Câu hỏi",
+  "analytics.q.savedAt": "Đã lưu",
+  "analytics.q.savedMore": "Xem thêm",
   "analytics.q.answerTitle": "Câu trả lời",
   "analytics.q.ask": "Chạy báo cáo",
   "analytics.q.asking": "Đang chạy báo cáo…",
@@ -11045,6 +11085,7 @@ export const vi = {
   "roles.object.offer_template": "Mẫu báo giá",
   "roles.object.contract": "Hợp đồng",
   "roles.object.legal_review": "Rà soát pháp lý",
+  "roles.object.legal_entity": "Pháp nhân",
   "roles.object.commission": "Hoa hồng",
   "roles.object.deal_room": "Deal Room",
   "roles.object.forecast": "Dự báo",
@@ -14578,7 +14619,7 @@ export const vi = {
   "worklist.manager.kind.general": "Khác",
   "worklist.board.title": "Việc của nhóm cần chú ý",
   "worklist.exceptions.title": "Ngoại lệ của nhóm",
-  "worklist.handled.title": "Đã xử lý thay bạn",
+  "worklist.handled.title": "Lịch sử thay đổi",
   "worklist.walk.arrived":
     "Có {arrived} việc mới từ khi mở danh sách. Làm mới để thêm vào.",
   "worklist.walk.gone":
@@ -14589,13 +14630,13 @@ export const vi = {
   "worklist.walk.refresh": "Làm mới",
   "worklist.handled.empty": "Hôm nay chưa có việc nào được xử lý thay bạn.",
   "worklist.handled.loading": "Đang tải thao tác…",
-  "worklist.handled.count": "Đã xử lý {count}",
+  "worklist.handled.count": "Thay đổi gần đây: {count}",
   "worklist.handled.what": "Thao tác",
   "worklist.handled.about": "Hồ sơ",
   "worklist.handled.when": "Thời điểm",
   "worklist.handled.noRecord": "Không có hồ sơ",
   "worklist.handled.hiddenRecord": "Hồ sơ không khả dụng",
-  "worklist.handled.wayBack": "Hoàn tác",
+  "worklist.handled.wayBack": "Trạng thái",
   "worklist.handled.putBackDone": "Đã hoàn tác",
   "worklist.handled.truncated": "Danh sách đã bị cắt bớt. Vẫn còn việc khác.",
   "worklist.exceptions.empty": "Nhóm không có ngoại lệ nào.",

@@ -8,6 +8,7 @@ import { Eyebrow } from "../../design-system/eyebrow";
 import { en } from "../../i18n/en";
 import {
   failedApprovalRow,
+  legacyStalledRow,
   taskRow,
   waitingEmailRow,
 } from "../../testing/brief.fixtures";
@@ -173,6 +174,79 @@ export const ApprovedButNotRun: Story = {
     await expect(card.getByText(failedApprovalRow().detail ?? "")).toBeTruthy();
     await expect(
       card.getByRole("button", { name: en["worklist.verb.retry"] }),
+    ).toBeTruthy();
+  },
+};
+
+export const LegacyStalledDeal: Story = {
+  render: panel([
+    {
+      ...legacyStalledRow(),
+      deal: {
+        amount_minor: 2500000,
+        currency: "EUR",
+        close_date_provisional: false,
+      },
+    },
+    {
+      ...legacyStalledRow(),
+      id: "renewal",
+      subject: { type: "deal", id: "deal-renewal", label: "Globex Renewal" },
+      deal: {
+        amount_minor: 1200000,
+        currency: "EUR",
+        close_date_provisional: false,
+      },
+    },
+    detailedDeal(),
+  ]),
+  play: async ({ canvasElement }) => {
+    const card = within(within(canvasElement).getByRole("article"));
+    await expect(
+      card.getByRole("heading", { name: "Acme Expansion" }),
+    ).toBeTruthy();
+    await expect(card.getByText("€25,000.00")).toBeTruthy();
+    await expect(
+      canvasElement.querySelector(".worklist-row-context"),
+    ).toBeNull();
+    await expect(card.getAllByText("Acme Expansion")).toHaveLength(1);
+    await expect(card.getByRole("button", { name: "Done" })).toBeTruthy();
+  },
+};
+
+export const LegacyStalledDealDark: Story = {
+  ...LegacyStalledDeal,
+  globals: { theme: "dark" },
+};
+export const LegacyStalledDealPhone: Story = {
+  ...LegacyStalledDeal,
+  tags: ["uat-phone"],
+};
+function detailedDeal(): WorklistItem {
+  return {
+    ...legacyStalledRow(),
+    id: "rollout",
+    subject: { type: "deal", id: "deal-rollout", label: "Nordwind Rollout" },
+    title: "Send the revised rollout proposal",
+    verdict: {
+      source: "brief_finding",
+      line: "The buyer requested a revised proposal.",
+    },
+  };
+}
+
+export const DealWithNextAction: Story = {
+  render: panel([detailedDeal()]),
+  play: async ({ canvasElement }) => {
+    const card = within(within(canvasElement).getByRole("article"));
+    await expect(
+      card.getByRole("heading", { name: "Nordwind Rollout" }),
+    ).toBeTruthy();
+    await expect(
+      card.getByText("Send the revised rollout proposal"),
+    ).toBeTruthy();
+    await expect(
+      card.getByText("The buyer requested a revised proposal."),
     ).toBeTruthy();
   },
 };

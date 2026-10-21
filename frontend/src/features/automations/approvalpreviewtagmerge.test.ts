@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import { LOCALES, translate } from "../../i18n";
-import { commercialPreviewDisplay } from "./approvalpreview";
+import { commercialPreviewDisplay } from "../../lib/approvalpreview";
 
 it.each(LOCALES)(
   "distinguishes moved and duplicate tag assignments in %s",

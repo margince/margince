@@ -828,6 +828,8 @@ export const en = {
   "reporting.questionLoading": "Asking the question…",
   "reporting.questionNotKept":
     "Not kept in this sent report. Open the live report to see this question’s answer.",
+  "reporting.questionPick": "Your saved questions",
+  "reporting.questionPickNone": "Choose a saved question",
   "reporting.questionLink": "Link to a saved custom report",
   "reporting.questionLinkInvalid":
     "Paste the link that Copy link gives on a saved custom report.",
@@ -1404,6 +1406,21 @@ export const en = {
   "brief.weekly.partialValue": "{value} (partial)",
   "brief.week.beforeHistory":
     "This week falls before the first records, so it has no figures to report.",
+  "magic.approval.markWon": "Mark as won",
+  "magic.approval.markLost": "Mark as lost",
+  "magic.approval.reviewChange": "Review proposed change",
+  "magic.approval.noEvidence":
+    "No supporting source was attached. Check the deal before approving.",
+  "home.receipt.dateReverted":
+    "Reverted close-date estimate; restored {before} (was {after})",
+  "home.receipt.basisUnknown":
+    "No supporting sales history is available here. Check with the buyer before keeping this date.",
+  "home.receipt.basis_one":
+    "Estimate from {count} won deal · Median days per stage: {days} · Stages remaining: {stages}. No buyer-confirmed date.",
+  "home.receipt.basis_other":
+    "Estimate from {count} won deals · Median days per stage: {days} · Stages remaining: {stages}. No buyer-confirmed date.",
+  "brief.changes.keepDate": "Keep date",
+  "worklist.handled.showHistory": "Show recent changes",
   "home.receipt.date": "Close date: {before} → {after}",
   "home.receipt.dateUnconfirmed":
     "Estimated close date: {before} → {after} (needs confirmation)",
@@ -1525,7 +1542,7 @@ export const en = {
   "brief.reply.owed": "Customer awaiting your reply",
   "brief.changes.superseded":
     "This deal changed again. Open the deal to review its current state.",
-  "brief.changes.title": "Waiting for your word",
+  "brief.changes.title": "Check applied changes",
   "brief.changes.accept": "Accept",
   "brief.changes.accepted": "Accepted",
   "brief.changes.undone": "Undone",
@@ -4503,6 +4520,22 @@ export const en = {
   "deal.pulse.wroteOn": "They last wrote on {date}. Days since: {days}.",
   "deal.pulse.wroteUnknown": "They wrote and no one has replied.",
   "deal.timeline.empty": "No activity on this deal yet.",
+  "legalEntities.title": "Legal entities",
+  "legalEntities.sub":
+    "The companies you trade as. A colleague you have not assigned works for the default, which takes its name, address and logo from the company above.",
+  "legalEntities.loading": "Loading legal entities…",
+  "legalEntities.addOpen": "New legal entity",
+  "legalEntities.addTitle": "New legal entity",
+  "legalEntities.addConfirm": "Add legal entity",
+  "legalEntities.colName": "Name",
+  "legalEntities.colLegalName": "Legal name",
+  "legalEntities.colCountry": "Country",
+  "legalEntities.defaultBadge": "Default",
+  "legalEntities.defaultUnnamed": "Your company",
+  "legalEntities.displayName": "Name",
+  "legalEntities.legalName": "Legal name",
+  "legalEntities.country": "Country",
+  "legalEntities.countryHint": "Two letters, for example AT.",
   "acqSources.title": "Source list",
   "acqSources.sub":
     "Separate from lead sources, which record how a record entered Margince.",
@@ -6140,6 +6173,13 @@ export const en = {
   "analytics.q.addFilter": "Add filter",
   "analytics.q.addMeasure": "Add measure",
   "analytics.q.allRecords": "All records",
+  "analytics.q.savedListTitle": "Your saved questions",
+  "analytics.q.savedLoading": "Loading your saved questions…",
+  "analytics.q.savedEmpty":
+    "You have saved no questions yet. Save one to find it here and to place it on a report.",
+  "analytics.q.savedQuestion": "Question",
+  "analytics.q.savedAt": "Saved",
+  "analytics.q.savedMore": "Show more",
   "analytics.q.answerTitle": "Answer",
   "analytics.q.ask": "Run report",
   "analytics.q.asking": "Running report…",
@@ -11366,6 +11406,7 @@ export const en = {
   "roles.object.offer_template": "Offer templates",
   "roles.object.contract": "Contracts",
   "roles.object.legal_review": "Legal reviews",
+  "roles.object.legal_entity": "Legal entities",
   "roles.object.commission": "Commissions",
   "roles.object.deal_room": "Deal Rooms",
   "roles.object.forecast": "Forecasts",
@@ -14906,7 +14947,7 @@ export const en = {
   "worklist.manager.kind.general": "Other",
   "worklist.board.title": "Team work needing attention",
   "worklist.exceptions.title": "Team exceptions",
-  "worklist.handled.title": "Handled for you",
+  "worklist.handled.title": "Change history",
   "worklist.walk.arrived":
     "{arrived} new since you opened the list. Refresh to add them.",
   "worklist.walk.gone":
@@ -14917,13 +14958,13 @@ export const en = {
   "worklist.walk.refresh": "Refresh",
   "worklist.handled.empty": "No actions taken on your behalf today.",
   "worklist.handled.loading": "Loading actions…",
-  "worklist.handled.count": "{count} handled",
+  "worklist.handled.count": "Recent changes: {count}",
   "worklist.handled.what": "Action",
   "worklist.handled.about": "Record",
   "worklist.handled.when": "When",
   "worklist.handled.noRecord": "No record",
   "worklist.handled.hiddenRecord": "Record not available",
-  "worklist.handled.wayBack": "Undo",
+  "worklist.handled.wayBack": "Status",
   "worklist.handled.putBackDone": "Already undone",
   "worklist.handled.truncated": "List truncated. More items exist.",
   "worklist.exceptions.empty": "No team exceptions.",

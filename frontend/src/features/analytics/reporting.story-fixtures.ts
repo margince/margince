@@ -57,6 +57,8 @@ export function reportingStoryRoutes(
     "GET /analytics/metrics": () =>
       jsonResponse({ ...reportingStoryCatalog, schedule_ready: true }),
     "GET /analytics/framework": () => jsonResponse(reportingStoryFramework),
+    "GET /analytics/runs": () =>
+      jsonResponse({ data: [], page: { next_cursor: null, has_more: false } }),
     "GET /pipelines": () =>
       jsonResponse({
         data: [

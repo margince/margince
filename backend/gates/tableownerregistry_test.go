@@ -89,6 +89,8 @@ var tableOwners = map[string]string{
 	"sdr_handoff":           "internal/modules/contacts",
 	"sdr_handoff_event":     "internal/modules/contacts",
 	"sdr_handoff_reason":    "internal/modules/contacts",
+	"legal_entity":          "internal/modules/contacts",
+	"legal_entity_member":   "internal/modules/contacts",
 	"company_profile_field": "internal/modules/contacts",
 	"company_vat_check":     "internal/modules/contacts",
 	"contact_profile_field": "internal/modules/contacts",

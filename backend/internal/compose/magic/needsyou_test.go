@@ -454,3 +454,33 @@ func TestCounterpartyDecisionKeepsItsContactQuestion(t *testing.T) {
 		t.Fatalf("contact decision lost its question: %+v", lines)
 	}
 }
+
+func TestNeedsYouCarriesTheOwningDecisionPreviewWithoutRebuildingIt(t *testing.T) {
+	for _, state := range []string{"ready", "stale", "unavailable", "incomplete"} {
+		t.Run(state, func(t *testing.T) {
+			approval := stagedApproval("advance_deal")
+			approval.Summary = new("Advance Harbor renewal to Won")
+			approval.TargetLabel = new("Harbor renewal")
+			approval.Preview = &crmcontracts.ApprovalPreview{
+				Version: 2, State: state, ReviewerReason: "requested_decider",
+				Changes:  []crmcontracts.ApprovalPreviewChange{},
+				Evidence: new([]crmcontracts.ApprovalEvidence{}),
+			}
+			if state == "ready" {
+				approval.Preview.Changes = []crmcontracts.ApprovalPreviewChange{{Field: "status", Before: crmcontracts.ApprovalPreviewValue{Kind: "text", Text: "open"}, After: crmcontracts.ApprovalPreviewValue{Kind: "text", Text: "won"}}}
+				approval.Preview.Details = new([]crmcontracts.ApprovalPreviewDetail{{Field: "amount_minor", Value: crmcontracts.ApprovalPreviewValue{Kind: "money", Text: "12500000", Currency: new("EUR")}}})
+			}
+			lines := decisionsWaiting(t, approval)
+			if len(lines) != 1 || lines[0].ApprovalKind == nil || *lines[0].ApprovalKind != approval.Kind || lines[0].ApprovalPreview != approval.Preview {
+				t.Fatalf("decision context was lost or rebuilt: %+v", lines)
+			}
+			if state == "ready" {
+				if lines[0].Summary.Key != "magic.action.approval_summary" || (*lines[0].Summary.Values)["summary"] != *approval.Summary {
+					t.Fatal("older clients lost the ready proposal summary")
+				}
+			} else if lines[0].Summary.Key == "magic.action.approval_summary" {
+				t.Fatal("unavailable context reused staged prose")
+			}
+		})
+	}
+}

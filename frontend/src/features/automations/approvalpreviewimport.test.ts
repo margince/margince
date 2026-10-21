@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 import type { components } from "../../api/schema";
 import { LOCALES, translate } from "../../i18n";
-import { commercialPreviewDisplay } from "./approvalpreview";
+import { commercialPreviewDisplay } from "../../lib/approvalpreview";
 
 it.each(LOCALES)(
   "keeps every import row outcome and full field change visible in %s",

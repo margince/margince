@@ -2,8 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { middayInstant } from "../../format/calendarday";
-import { formatDate } from "../../format/format";
+import { formatDate, formatNumber } from "../../format/format";
 import type { Locale, Translator } from "../../i18n";
+import { pluralKey } from "../../i18n";
 import type { Receipt } from "./worklist.queries";
 
 export function receiptSummary(
@@ -16,9 +17,11 @@ export function receiptSummary(
   if (!change) return receipt.summary;
   const summary = change.date_changed
     ? t(
-        receipt.review?.accepted || receipt.review?.reversed
-          ? "home.receipt.date"
-          : "home.receipt.dateUnconfirmed",
+        receipt.review?.reversed || receipt.undo?.reversed
+          ? "home.receipt.dateReverted"
+          : receipt.review?.accepted
+            ? "home.receipt.date"
+            : "home.receipt.dateUnconfirmed",
         {
           before: change.before
             ? formatDate(middayInstant(change.before, zone), locale, zone)
@@ -37,4 +40,26 @@ export function receiptSummary(
   ]
     .filter(Boolean)
     .join(" · ");
+}
+
+export function receiptBasis(
+  receipt: Receipt,
+  t: Translator,
+  locale: Locale,
+): string | null {
+  const change = receipt.close_date_change;
+  if (
+    !change?.date_changed ||
+    receipt.review?.accepted ||
+    receipt.review?.reversed ||
+    receipt.undo?.reversed
+  )
+    return null;
+  const basis = change.estimate_basis;
+  if (!basis) return t("home.receipt.basisUnknown");
+  return t(pluralKey(locale, "home.receipt.basis", basis.won_deals), {
+    count: formatNumber(basis.won_deals, locale),
+    days: formatNumber(basis.median_days_per_stage, locale),
+    stages: formatNumber(basis.remaining_stages, locale),
+  });
 }

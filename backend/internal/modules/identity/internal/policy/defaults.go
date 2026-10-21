@@ -123,6 +123,7 @@ var managerObjects = grid(crud, map[string]grant{
 	// Reviewing legal requests is handed out by an admin, never inherited by a
 	// team lead.
 	objLegalReview: none,
+	objLegalEntity: readOnly,
 })
 
 // managementObjects is managerObjects with the administration reads a
@@ -425,6 +426,7 @@ var defaults = map[string]Document{
 			objTeamOversight: none,
 			objTeamLead:      none,
 			objLegalReview:   none,
+			objLegalEntity:   readOnly,
 			// Ops configures the rules and does not send under them. Directing
 			// a message past the engine's answer about a contact is a decision
 			// somebody takes about their own correspondence, and this seat has

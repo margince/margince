@@ -26764,6 +26764,11 @@ type AssignLeadsResult struct {
 	Results []AssignLeadOutcome `json:"results"`
 }
 
+// AssignLegalEntityMemberRequest defines model for AssignLegalEntityMemberRequest.
+type AssignLegalEntityMemberRequest struct {
+	UserId openapi_types.UUID `json:"user_id"`
+}
+
 // AssignNoticeCase defines model for AssignNoticeCase.
 type AssignNoticeCase struct {
 	OwnerUserId openapi_types.UUID `json:"owner_user_id"`
@@ -30054,11 +30059,21 @@ type ClaimEvidenceSourceKind string
 
 // CloseDateChange Recorded close-date correction values, formatted at the presentation edge.
 type CloseDateChange struct {
-	After           *string `json:"after,omitempty"`
-	Basis           *string `json:"basis,omitempty"`
-	Before          *string `json:"before,omitempty"`
-	DateChanged     bool    `json:"date_changed"`
-	ForecastChanged bool    `json:"forecast_changed"`
+	After       *string `json:"after,omitempty"`
+	Basis       *string `json:"basis,omitempty"`
+	Before      *string `json:"before,omitempty"`
+	DateChanged bool    `json:"date_changed"`
+
+	// EstimateBasis Observed sales history recorded when this estimate was made, not a reconstruction from current pipeline values.
+	EstimateBasis   *CloseDateEstimateBasis `json:"estimate_basis,omitempty"`
+	ForecastChanged bool                    `json:"forecast_changed"`
+}
+
+// CloseDateEstimateBasis Observed sales history recorded when this estimate was made, not a reconstruction from current pipeline values.
+type CloseDateEstimateBasis struct {
+	MedianDaysPerStage float64 `json:"median_days_per_stage"`
+	RemainingStages    int     `json:"remaining_stages"`
+	WonDeals           int     `json:"won_deals"`
 }
 
 // ColdStartField One read-back field. EVERY field carries a non-empty `evidence_snippet` + `confidence`, or it is
@@ -35283,6 +35298,29 @@ type CreateLeadSourceRequest struct {
 	Key       *string `json:"key,omitempty"`
 	Label     string  `json:"label"`
 	SortOrder *int    `json:"sort_order,omitempty"`
+}
+
+// CreateLegalEntityRequest defines model for CreateLegalEntityRequest.
+type CreateLegalEntityRequest struct {
+	// Address The registered address. The country is the entity's `country`.
+	Address           *LegalEntityAddress `json:"address,omitempty"`
+	BankAccountHolder *string             `json:"bank_account_holder,omitempty"`
+	Bic               *string             `json:"bic,omitempty"`
+
+	// Country Lower-case ISO 3166-1 alpha-2, for example `de`.
+	Country string `json:"country"`
+
+	// DefaultLanguage ISO 639-1, for example `de`.
+	DefaultLanguage *string `json:"default_language,omitempty"`
+	DisplayName     string  `json:"display_name"`
+
+	// Iban Spaces are removed and letters upper-cased before the check.
+	Iban           *string `json:"iban,omitempty"`
+	Imprint        *string `json:"imprint,omitempty"`
+	LegalName      string  `json:"legal_name"`
+	RegisterCourt  *string `json:"register_court,omitempty"`
+	RegisterNumber *string `json:"register_number,omitempty"`
+	VatId          *string `json:"vat_id,omitempty"`
 }
 
 // CreateListRequest defines model for CreateListRequest.
@@ -41097,6 +41135,87 @@ type LeadSourceListResponse struct {
 	Discovered []DiscoveredLeadSource `json:"discovered"`
 }
 
+// LegalEntity One legal entity the installation trades as. On the default entity
+// (`is_default`), `display_name`, `legal_name`, `address`, `vat_id`, `register_court`,
+// `register_number` and `logo_url` are the anchor company's values, read live.
+type LegalEntity struct {
+	// Address The registered address. The country is the entity's `country`.
+	Address    LegalEntityAddress `json:"address"`
+	ArchivedAt *time.Time         `json:"archived_at,omitempty"`
+
+	// BankAccountHolder The name the entity's bank account is held in.
+	BankAccountHolder *string `json:"bank_account_holder,omitempty"`
+
+	// Bic The BIC, upper case.
+	Bic *string `json:"bic,omitempty"`
+
+	// Country Where the entity is established, as a lower-case ISO 3166-1 alpha-2 code. Null on the default entity means the installation's country.
+	Country   *string   `json:"country,omitempty"`
+	CreatedAt time.Time `json:"created_at"`
+
+	// DefaultLanguage The ISO 639-1 language the entity's documents default to. Null means the base text.
+	DefaultLanguage *string `json:"default_language,omitempty"`
+
+	// DisplayName The name the product shows for the entity. Empty on the default entity until the company is described.
+	DisplayName string `json:"display_name"`
+
+	// Iban The IBAN, upper case, without spaces.
+	Iban *string            `json:"iban,omitempty"`
+	Id   openapi_types.UUID `json:"id"`
+
+	// Imprint The legal notice the entity prints, up to 4000 characters.
+	Imprint *string `json:"imprint,omitempty"`
+
+	// IsDefault The entity a user with no assignment works for. Exactly one exists, and it cannot be archived.
+	IsDefault bool `json:"is_default"`
+
+	// LegalName The registered name documents are issued under.
+	LegalName *string `json:"legal_name,omitempty"`
+
+	// LogoUrl Where the entity's logo is streamed from. Null when it has none.
+	LogoUrl *string `json:"logo_url,omitempty"`
+
+	// MemberCount How many users are assigned to the entity. Always 0 on the default entity, whose members are the users with no assignment.
+	MemberCount int `json:"member_count"`
+
+	// RegisterCourt The court that keeps the entity's commercial register entry.
+	RegisterCourt *string `json:"register_court,omitempty"`
+
+	// RegisterNumber The entity's commercial register number.
+	RegisterNumber *string   `json:"register_number,omitempty"`
+	UpdatedAt      time.Time `json:"updated_at"`
+
+	// VatId The entity's VAT identification number.
+	VatId   *string `json:"vat_id,omitempty"`
+	Version int64   `json:"version"`
+}
+
+// LegalEntityAddress The registered address. The country is the entity's `country`.
+type LegalEntityAddress struct {
+	City       *string `json:"city,omitempty"`
+	Line1      *string `json:"line1,omitempty"`
+	Line2      *string `json:"line2,omitempty"`
+	PostalCode *string `json:"postal_code,omitempty"`
+	Region     *string `json:"region,omitempty"`
+}
+
+// LegalEntityListResponse defines model for LegalEntityListResponse.
+type LegalEntityListResponse struct {
+	Data []LegalEntity `json:"data"`
+}
+
+// LegalEntityMember defines model for LegalEntityMember.
+type LegalEntityMember struct {
+	AssignedAt    time.Time          `json:"assigned_at"`
+	LegalEntityId openapi_types.UUID `json:"legal_entity_id"`
+	UserId        openapi_types.UUID `json:"user_id"`
+}
+
+// LegalEntityMemberListResponse defines model for LegalEntityMemberListResponse.
+type LegalEntityMemberListResponse struct {
+	Data []LegalEntityMember `json:"data"`
+}
+
 // LegalReview A review as the reviewer reads it.
 type LegalReview struct {
 	// Earlier The deal's other reviews, newest first, so a repeated request reads with its history.
@@ -41847,6 +41966,12 @@ type MagicLine struct {
 
 	// After The same fields, as they are now, under the same mask.
 	After *map[string]interface{} `json:"after,omitempty"`
+
+	// ApprovalKind The staged action kind on a needs_you line, for an action label separate from its record name.
+	ApprovalKind *string `json:"approval_kind,omitempty"`
+
+	// ApprovalPreview A current, authorized explanation of the exact staged effect. It never grants permission or supplies execution arguments. Before values are answered only when the current record still has the staged version; stale records require restaging. Pending proposals alone carry this review-time projection. An approval attempt with stale context returns version_skew. Incomplete, unavailable or conflicting context returns 422 with approval_preview_incomplete, approval_preview_unavailable or approval_preview_conflict respectively, without recording a decision.
+	ApprovalPreview *ApprovalPreview `json:"approval_preview,omitempty"`
 
 	// Before The fields this change moved, as they were. MASKED to what the reader may see, through the same field mask the record's own history uses — a receipt is not a way around the boundary the record keeps.
 	Before *map[string]interface{} `json:"before,omitempty"`
@@ -46363,6 +46488,25 @@ type ReportRunCell struct {
 	Group *[]interface{} `json:"group,omitempty"`
 }
 
+// ReportRunList defines model for ReportRunList.
+type ReportRunList struct {
+	Data []ReportRunSummary `json:"data"`
+	Page PageInfo           `json:"page"`
+}
+
+// ReportRunSummary One saved question of the caller's, without its answer, and without its filter values and scope: those name records and teams, and the list does not judge them again. Open the question to have it asked under the caller's current authority.
+type ReportRunSummary struct {
+	AskedAt time.Time `json:"asked_at"`
+	Entity  string    `json:"entity"`
+
+	// Filtered Whether the question narrows its population with filters.
+	Filtered bool               `json:"filtered"`
+	GroupBy  *[]string          `json:"group_by,omitempty"`
+	Id       openapi_types.UUID `json:"id"`
+	Limit    *int               `json:"limit,omitempty"`
+	Measures []AnalyticsMeasure `json:"measures"`
+}
+
 // ReportScope defines model for ReportScope.
 type ReportScope struct {
 	Id   *openapi_types.UUID `json:"id,omitempty"`
@@ -50849,6 +50993,23 @@ type UpdateLeadSourceRequest struct {
 	SortOrder *int              `json:"sort_order,omitempty"`
 }
 
+// UpdateLegalEntityRequest A field left out keeps its value; a field sent as an empty string is cleared.
+type UpdateLegalEntityRequest struct {
+	// Address The registered address. The country is the entity's `country`.
+	Address           *LegalEntityAddress `json:"address,omitempty"`
+	BankAccountHolder *string             `json:"bank_account_holder,omitempty"`
+	Bic               *string             `json:"bic,omitempty"`
+	Country           *string             `json:"country,omitempty"`
+	DefaultLanguage   *string             `json:"default_language,omitempty"`
+	DisplayName       *string             `json:"display_name,omitempty"`
+	Iban              *string             `json:"iban,omitempty"`
+	Imprint           *string             `json:"imprint,omitempty"`
+	LegalName         *string             `json:"legal_name,omitempty"`
+	RegisterCourt     *string             `json:"register_court,omitempty"`
+	RegisterNumber    *string             `json:"register_number,omitempty"`
+	VatId             *string             `json:"vat_id,omitempty"`
+}
+
 // UpdateListRequest defines model for UpdateListRequest.
 type UpdateListRequest struct {
 	// Definition A Live List's new filter tree.
@@ -54824,6 +54985,22 @@ type RestoreReportingReportRevisionParams struct {
 	IfMatch string `json:"If-Match"`
 }
 
+// ListReportRunsParams defines parameters for ListReportRuns.
+type ListReportRunsParams struct {
+	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+	// effective `sort` of the originating request (field + direction) plus the last row's keyset
+	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// together with a `sort` that differs from the one the cursor was minted under returns
+	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+	// remaining pages see, so re-issue the query without the cursor when changing filters.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Limit Max items in the page.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // UpdateReportingScheduleParams defines parameters for UpdateReportingSchedule.
 type UpdateReportingScheduleParams struct {
 	IfMatch string `json:"If-Match"`
@@ -58243,6 +58420,57 @@ type ExplainLeadScoreParams struct {
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
+// ListLegalEntitiesParams defines parameters for ListLegalEntities.
+type ListLegalEntitiesParams struct {
+	// IncludeArchived Include soft-deleted (archived) rows. Default false.
+	IncludeArchived *IncludeArchived `form:"include_archived,omitempty" json:"include_archived,omitempty"`
+}
+
+// UpdateLegalEntityParams defines parameters for UpdateLegalEntity.
+type UpdateLegalEntityParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
+// ArchiveLegalEntityParams defines parameters for ArchiveLegalEntity.
+type ArchiveLegalEntityParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
+// DeleteLegalEntityLogoParams defines parameters for DeleteLegalEntityLogo.
+type DeleteLegalEntityLogoParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
+// UploadLegalEntityLogoMultipartBody defines parameters for UploadLegalEntityLogo.
+type UploadLegalEntityLogoMultipartBody struct {
+	File openapi_types.File `json:"file"`
+}
+
+// UploadLegalEntityLogoParams defines parameters for UploadLegalEntityLogo.
+type UploadLegalEntityLogoParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
 // ListLegalReviewsParams defines parameters for ListLegalReviews.
 type ListLegalReviewsParams struct {
 	Status *ListLegalReviewsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
@@ -61600,6 +61828,18 @@ type PromoteLeadJSONRequestBody = PromoteLeadRequest
 
 // QualifyLeadJSONRequestBody defines body for QualifyLead for application/json ContentType.
 type QualifyLeadJSONRequestBody = QualifyLeadRequest
+
+// CreateLegalEntityJSONRequestBody defines body for CreateLegalEntity for application/json ContentType.
+type CreateLegalEntityJSONRequestBody = CreateLegalEntityRequest
+
+// UpdateLegalEntityJSONRequestBody defines body for UpdateLegalEntity for application/json ContentType.
+type UpdateLegalEntityJSONRequestBody = UpdateLegalEntityRequest
+
+// UploadLegalEntityLogoMultipartRequestBody defines body for UploadLegalEntityLogo for multipart/form-data ContentType.
+type UploadLegalEntityLogoMultipartRequestBody UploadLegalEntityLogoMultipartBody
+
+// AssignLegalEntityMemberJSONRequestBody defines body for AssignLegalEntityMember for application/json ContentType.
+type AssignLegalEntityMemberJSONRequestBody = AssignLegalEntityMemberRequest
 
 // UpdateLegalReviewSettingsJSONRequestBody defines body for UpdateLegalReviewSettings for application/json ContentType.
 type UpdateLegalReviewSettingsJSONRequestBody = LegalReviewSettings
@@ -73520,6 +73760,9 @@ type ServerInterface interface {
 	// Create reporting schedule
 	// (POST /analytics/reports/{id}/schedules)
 	CreateReportingSchedule(w http.ResponseWriter, r *http.Request, id Id)
+	// The caller's own saved questions, newest first.
+	// (GET /analytics/runs)
+	ListReportRuns(w http.ResponseWriter, r *http.Request, params ListReportRunsParams)
 	// The answer a report sentence points at.
 	// (GET /analytics/runs/{run_id})
 	GetReportRun(w http.ResponseWriter, r *http.Request, runId openapi_types.UUID)
@@ -74843,6 +75086,36 @@ type ServerInterface interface {
 	// Explain This Score — the weighted-factor decomposition behind a lead's score.
 	// (GET /leads/{id}/score)
 	ExplainLeadScore(w http.ResponseWriter, r *http.Request, id Id, params ExplainLeadScoreParams)
+	// The legal entities this installation trades as, the default entity first.
+	// (GET /legal-entities)
+	ListLegalEntities(w http.ResponseWriter, r *http.Request, params ListLegalEntitiesParams)
+	// Describe a further legal entity.
+	// (POST /legal-entities)
+	CreateLegalEntity(w http.ResponseWriter, r *http.Request)
+	// One legal entity, archived or live.
+	// (GET /legal-entities/{id})
+	GetLegalEntity(w http.ResponseWriter, r *http.Request, id Id)
+	// Change a legal entity's description.
+	// (PATCH /legal-entities/{id})
+	UpdateLegalEntity(w http.ResponseWriter, r *http.Request, id Id, params UpdateLegalEntityParams)
+	// Archive a legal entity nobody works for any more.
+	// (POST /legal-entities/{id}/archive)
+	ArchiveLegalEntity(w http.ResponseWriter, r *http.Request, id Id, params ArchiveLegalEntityParams)
+	// Take a legal entity's logo off.
+	// (DELETE /legal-entities/{id}/logo)
+	DeleteLegalEntityLogo(w http.ResponseWriter, r *http.Request, id Id, params DeleteLegalEntityLogoParams)
+	// Replace a legal entity's logo with an uploaded image.
+	// (POST /legal-entities/{id}/logo)
+	UploadLegalEntityLogo(w http.ResponseWriter, r *http.Request, id Id, params UploadLegalEntityLogoParams)
+	// Stream a legal entity's logo image.
+	// (GET /legal-entities/{id}/logo/image)
+	GetLegalEntityLogo(w http.ResponseWriter, r *http.Request, id Id)
+	// The users assigned to this legal entity.
+	// (GET /legal-entities/{id}/members)
+	ListLegalEntityMembers(w http.ResponseWriter, r *http.Request, id Id)
+	// Make this legal entity the one a user works for.
+	// (PUT /legal-entities/{id}/members)
+	AssignLegalEntityMember(w http.ResponseWriter, r *http.Request, id Id)
 	// The reviewer's queue.
 	// (GET /legal-reviews)
 	ListLegalReviews(w http.ResponseWriter, r *http.Request, params ListLegalReviewsParams)
@@ -76490,6 +76763,12 @@ func (_ Unimplemented) ListReportingSchedules(w http.ResponseWriter, r *http.Req
 // Create reporting schedule
 // (POST /analytics/reports/{id}/schedules)
 func (_ Unimplemented) CreateReportingSchedule(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The caller's own saved questions, newest first.
+// (GET /analytics/runs)
+func (_ Unimplemented) ListReportRuns(w http.ResponseWriter, r *http.Request, params ListReportRunsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -79136,6 +79415,66 @@ func (_ Unimplemented) ReopenLead(w http.ResponseWriter, r *http.Request, id Id,
 // Explain This Score — the weighted-factor decomposition behind a lead's score.
 // (GET /leads/{id}/score)
 func (_ Unimplemented) ExplainLeadScore(w http.ResponseWriter, r *http.Request, id Id, params ExplainLeadScoreParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The legal entities this installation trades as, the default entity first.
+// (GET /legal-entities)
+func (_ Unimplemented) ListLegalEntities(w http.ResponseWriter, r *http.Request, params ListLegalEntitiesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Describe a further legal entity.
+// (POST /legal-entities)
+func (_ Unimplemented) CreateLegalEntity(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// One legal entity, archived or live.
+// (GET /legal-entities/{id})
+func (_ Unimplemented) GetLegalEntity(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Change a legal entity's description.
+// (PATCH /legal-entities/{id})
+func (_ Unimplemented) UpdateLegalEntity(w http.ResponseWriter, r *http.Request, id Id, params UpdateLegalEntityParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Archive a legal entity nobody works for any more.
+// (POST /legal-entities/{id}/archive)
+func (_ Unimplemented) ArchiveLegalEntity(w http.ResponseWriter, r *http.Request, id Id, params ArchiveLegalEntityParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Take a legal entity's logo off.
+// (DELETE /legal-entities/{id}/logo)
+func (_ Unimplemented) DeleteLegalEntityLogo(w http.ResponseWriter, r *http.Request, id Id, params DeleteLegalEntityLogoParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Replace a legal entity's logo with an uploaded image.
+// (POST /legal-entities/{id}/logo)
+func (_ Unimplemented) UploadLegalEntityLogo(w http.ResponseWriter, r *http.Request, id Id, params UploadLegalEntityLogoParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Stream a legal entity's logo image.
+// (GET /legal-entities/{id}/logo/image)
+func (_ Unimplemented) GetLegalEntityLogo(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The users assigned to this legal entity.
+// (GET /legal-entities/{id}/members)
+func (_ Unimplemented) ListLegalEntityMembers(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Make this legal entity the one a user works for.
+// (PUT /legal-entities/{id}/members)
+func (_ Unimplemented) AssignLegalEntityMember(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -86073,6 +86412,58 @@ func (siw *ServerInterfaceWrapper) CreateReportingSchedule(w http.ResponseWriter
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateReportingSchedule(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListReportRuns operation middleware
+func (siw *ServerInterfaceWrapper) ListReportRuns(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListReportRunsParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListReportRuns(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -104489,6 +104880,417 @@ func (siw *ServerInterfaceWrapper) ExplainLeadScore(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// ListLegalEntities operation middleware
+func (siw *ServerInterfaceWrapper) ListLegalEntities(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListLegalEntitiesParams
+
+	// ------------- Optional query parameter "include_archived" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "include_archived", r.URL.Query(), &params.IncludeArchived, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "include_archived"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "include_archived", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListLegalEntities(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateLegalEntity operation middleware
+func (siw *ServerInterfaceWrapper) CreateLegalEntity(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateLegalEntity(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetLegalEntity operation middleware
+func (siw *ServerInterfaceWrapper) GetLegalEntity(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetLegalEntity(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateLegalEntity operation middleware
+func (siw *ServerInterfaceWrapper) UpdateLegalEntity(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UpdateLegalEntityParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateLegalEntity(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ArchiveLegalEntity operation middleware
+func (siw *ServerInterfaceWrapper) ArchiveLegalEntity(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ArchiveLegalEntityParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ArchiveLegalEntity(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteLegalEntityLogo operation middleware
+func (siw *ServerInterfaceWrapper) DeleteLegalEntityLogo(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DeleteLegalEntityLogoParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteLegalEntityLogo(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UploadLegalEntityLogo operation middleware
+func (siw *ServerInterfaceWrapper) UploadLegalEntityLogo(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UploadLegalEntityLogoParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UploadLegalEntityLogo(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetLegalEntityLogo operation middleware
+func (siw *ServerInterfaceWrapper) GetLegalEntityLogo(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetLegalEntityLogo(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListLegalEntityMembers operation middleware
+func (siw *ServerInterfaceWrapper) ListLegalEntityMembers(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListLegalEntityMembers(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AssignLegalEntityMember operation middleware
+func (siw *ServerInterfaceWrapper) AssignLegalEntityMember(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AssignLegalEntityMember(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListLegalReviews operation middleware
 func (siw *ServerInterfaceWrapper) ListLegalReviews(w http.ResponseWriter, r *http.Request) {
 
@@ -118384,6 +119186,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/analytics/reports/{id}/schedules", wrapper.CreateReportingSchedule)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/runs", wrapper.ListReportRuns)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/runs/{run_id}", wrapper.GetReportRun)
 	})
 	r.Group(func(r chi.Router) {
@@ -119705,6 +120510,36 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/leads/{id}/score", wrapper.ExplainLeadScore)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/legal-entities", wrapper.ListLegalEntities)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/legal-entities", wrapper.CreateLegalEntity)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/legal-entities/{id}", wrapper.GetLegalEntity)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/legal-entities/{id}", wrapper.UpdateLegalEntity)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/legal-entities/{id}/archive", wrapper.ArchiveLegalEntity)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/legal-entities/{id}/logo", wrapper.DeleteLegalEntityLogo)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/legal-entities/{id}/logo", wrapper.UploadLegalEntityLogo)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/legal-entities/{id}/logo/image", wrapper.GetLegalEntityLogo)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/legal-entities/{id}/members", wrapper.ListLegalEntityMembers)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/legal-entities/{id}/members", wrapper.AssignLegalEntityMember)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/legal-reviews", wrapper.ListLegalReviews)

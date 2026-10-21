@@ -9,6 +9,7 @@ import { ErrorLine } from "../../design-system/errorline";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { throwProblem } from "../../lib/problem";
+import { invalidateHandledChange } from "../../lib/workkeys";
 import { type Receipt, worklistKey } from "./worklist.queries";
 import { ReceiptUndo } from "./worklist.receiptundo";
 
@@ -43,9 +44,7 @@ export function ReceiptReview({ receipt }: Readonly<{ receipt: Receipt }>) {
       client.invalidateQueries({ queryKey: worklistKey });
     },
     onSuccess: () => {
-      client.invalidateQueries({ queryKey: worklistKey });
-      client.invalidateQueries({ queryKey: ["brief"] });
-      client.invalidateQueries({ queryKey: ["deals"] });
+      void invalidateHandledChange(client);
     },
   });
   const review = receipt.review;
@@ -79,7 +78,11 @@ export function ReceiptReview({ receipt }: Readonly<{ receipt: Receipt }>) {
         ))}
       {review.can_accept && (
         <Button pending={decide.isPending} onClick={() => press("accept")}>
-          {t("brief.changes.accept")}
+          {t(
+            review.kind === "close_date"
+              ? "brief.changes.keepDate"
+              : "brief.changes.accept",
+          )}
         </Button>
       )}
       <ErrorLine error={decide.error} />

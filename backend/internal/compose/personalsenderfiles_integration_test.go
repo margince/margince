@@ -203,6 +203,17 @@ func notesFilesUnderPersonalVerdict(t *testing.T, byOwner bool) {
 	ctx = asConnectorFor(ctx, "connector:gmail", captureSeatID)
 	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blobstore.NewMemory()))
 	const address = "gemini-notes@google.com"
+	// The address is fixed and the seat is shared. A verdict that another case
+	// or an earlier run left for this pair would decide this case instead.
+	forgetVerdicts := func() {
+		if _, err := db.Pool().Exec(context.Background(),
+			`DELETE FROM capture_pending_counterparty WHERE owner_id = $1 AND email = $2`,
+			captureSeatID, address); err != nil {
+			t.Fatalf("clearing the sender's verdicts: %v", err)
+		}
+	}
+	forgetVerdicts()
+	t.Cleanup(forgetVerdicts)
 	viaGmail := func(sourceID string) connector.NormalizedRecord {
 		rec := fromAddress(mailRecord(sourceID), address)
 		rec.CapturedBy = "connector:gmail"

@@ -21,6 +21,7 @@ import { useCanWrite } from "../../lib/capability";
 import { VERSION_SKEW_CODE } from "../../lib/historyundo";
 import { problemCodeOf, problemMessageOf } from "../../lib/problem";
 import { useRecordRestore } from "../../lib/recordrestore";
+import { invalidateHandledChange } from "../../lib/workkeys";
 import { type Receipt, worklistKey } from "./worklist.queries";
 
 export function ReceiptUndo({ receipt }: Readonly<{ receipt: Receipt }>) {
@@ -38,9 +39,7 @@ export function ReceiptUndo({ receipt }: Readonly<{ receipt: Receipt }>) {
       // changes the deal, and the lanes above this panel are read off the same
       // deals. Refetching only the receipt would leave the page agreeing with
       // itself about a date that had just moved.
-      client.invalidateQueries({ queryKey: worklistKey });
-      client.invalidateQueries({ queryKey: ["brief"] });
-      client.invalidateQueries({ queryKey: ["deals"] });
+      void invalidateHandledChange(client);
     },
     onError: (error) => {
       const code = problemCodeOf(error);

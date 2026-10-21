@@ -4,7 +4,7 @@ import { LOCALES, translate } from "../../i18n";
 import {
   commercialPreviewDisplay,
   LIFECYCLE_CONFLICT_LABELS,
-} from "./approvalpreview";
+} from "../../lib/approvalpreview";
 
 function sourceFunction(path: string, name: string): string {
   const source = readFileSync(

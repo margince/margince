@@ -12,7 +12,10 @@ import {
   writes,
 } from "../../testing/brief.testkit";
 import { meFixture } from "../../testing/mefixture";
-import { automaticStageReceipt } from "../../testing/worklist.receiptreview.fixtures";
+import {
+  automaticDateReceipt,
+  automaticStageReceipt,
+} from "../../testing/worklist.receiptreview.fixtures";
 import { BriefChanges } from "../brief/brief.changes";
 import { ReceiptReview } from "./worklist.receiptreview";
 
@@ -42,9 +45,15 @@ it("accepts the exact recorded stage change and shows its persisted answer", asy
     },
   });
   const user = userEvent.setup();
-  render(<BriefChanges />);
+  const { client } = render(<BriefChanges />);
+  client.setQueryData(["magic"], { needs_you: [] });
   await user.click(await screen.findByRole("button", { name: "Accept" }));
-  await screen.findByText("Accepted");
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("heading", { name: en["brief.changes.title"] }),
+    ).toBeNull(),
+  );
+  expect(client.getQueryState(["magic"])?.isInvalidated).toBe(true);
   expect(writes(calls).map((call) => call.path)).toEqual([path]);
   expect(screen.queryByRole("button", { name: "Accept" })).toBeNull();
 });
@@ -139,4 +148,23 @@ it("offers no write for a superseded change", () => {
     />,
   );
   expect(screen.queryByRole("button")).toBeNull();
+});
+
+it("keeps an undo-only applied change visible until it is reversed", async () => {
+  const { review, ...change } = automaticDateReceipt;
+  stubApi({
+    "GET /me": () =>
+      jsonResponse(meFixture({ allow: { deal: ["read", "update"] } })),
+    "GET /worklist/handled": () =>
+      jsonResponse({
+        as_of: change.occurred_at,
+        truncated: false,
+        receipts: [change],
+      }),
+    [`GET /deals/${change.subject?.id}`]: () =>
+      jsonResponse({ name: "PIM Rollout" }),
+  });
+  render(<BriefChanges />);
+  expect(await screen.findByRole("button", { name: "Undo" })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Keep date" })).toBeNull();
 });

@@ -189,8 +189,14 @@ var catalog = map[string]struct {
 	"list.member_removed": {contactStreamEntity, 1},
 	"list.evaluated":      {contactStreamEntity, 1},
 
-	"reporting.changed":          {identityStreamEntity, 1},
-	"booking_page.updated":       {identityStreamEntity, 1},
+	"reporting.changed":    {identityStreamEntity, 1},
+	"booking_page.updated": {identityStreamEntity, 1},
+	// The legal entities the installation trades as, on the identity stream
+	// because an entity is installation configuration a user is assigned to.
+	"legal_entity.created":       {identityStreamEntity, 1},
+	"legal_entity.updated":       {identityStreamEntity, 1},
+	"legal_entity.archived":      {identityStreamEntity, 1},
+	"legal_entity.member_added":  {identityStreamEntity, 1},
 	"meeting_proposal.updated":   {activityStreamEntity, 1},
 	"meeting_invitation.updated": {activityStreamEntity, 1},
 	"activity.captured":          {activityStreamEntity, 1},

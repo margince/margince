@@ -607,6 +607,14 @@ export function overnightRow(id: string, dealId: string): WorklistItem {
   };
 }
 
+export function legacyStalledRow(): WorklistItem {
+  return {
+    ...overnightRow("stalled-expansion", "deal-expansion"),
+    kind: "stalled",
+    subject: { type: "deal", id: "deal-expansion", label: "Acme Expansion" },
+  };
+}
+
 /** One customer waiting on an answer — the row Do next leads with. */
 export function waitingRow(): WorklistItem {
   return {

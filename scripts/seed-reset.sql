@@ -55,6 +55,8 @@ DECLARE
     'event_outbox',
     'lead_disqualify_reason',
     'lead_source',
+    'legal_entity',
+    'legal_entity_member',
     'maskable_field',
     'oauth_client',
     'oauth_grant',
