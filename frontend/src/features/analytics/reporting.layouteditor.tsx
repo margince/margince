@@ -381,8 +381,8 @@ function AddQuestion({
   const zone = useRecordZone();
   const schema = useAnalyticsSchema();
   const fields = customLabels(t, schema.data?.entities ?? []);
-  // A filtered one is left out for the reason it is refused by link, and one
-  // the report already holds so it is not placed twice.
+  // A filtered one is left out, as it is refused by link. One the report
+  // already holds is left out so it is not placed twice.
   const placed = new Set(
     layout
       .flatMap((section) => section.cards)

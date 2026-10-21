@@ -106,8 +106,8 @@ func TestASavedQuestionIsListedForItsAskerOnly(t *testing.T) {
 	}
 }
 
-// The list gives a saved question's shape and says it was filtered, and never
-// the filter's value, which can name a record its asker no longer reads.
+// The list gives a saved question's shape and says it was filtered. It never
+// gives the filter's value, which can name a record its asker no longer reads.
 func TestASavedQuestionsFilterValueIsNotListed(t *testing.T) {
 	e := setupForecast(t)
 	mine := e.ownLensRepCtx(e.Rep1)
