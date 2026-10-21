@@ -115,7 +115,9 @@ func (s *Store) updateCompanyInTx(
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
-	storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties)
+	if err := storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties); err != nil {
+		return crmcontracts.Company{}, err
+	}
 
 	by, err := stageCompanyReplaceSets(ctx, tx, id, current, in, p)
 	if err != nil {

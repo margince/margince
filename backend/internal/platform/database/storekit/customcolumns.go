@@ -17,11 +17,11 @@ package storekit
 // fieldcatalog.Column directly, but neither storekit nor a record store
 // ever imports modules/customfields.
 //
-// Every conversion is drop-on-mismatch, not validate-and-reject: a
-// request body's additionalProperties carries no per-key shape contract
-// (it is JSON Schema `additionalProperties: true`), so a value whose
-// shape does not match its column's type is silently excluded rather
-// than answered with a 422 — the same posture poc-1 shipped.
+// A request body's additionalProperties carries no per-key shape contract
+// (it is JSON Schema `additionalProperties: true`), so SQLValue answers
+// ok=false for a value whose shape does not match its column's type. A write
+// never drops such a value: InsertFragments and SetCustomFieldPatch refuse it
+// through CheckCustomValues, so the caller is told which key was not stored.
 
 import (
 	"encoding/json"
@@ -69,10 +69,10 @@ func SelectSuffix(active []fieldcatalog.Column) string {
 // fixed columns/placeholders, plus the complete bind-arg list — one
 // fragment pair per active custom column present (with a type-matching
 // value) in rawExtra. A key with no active-column match, or whose value
-// shape does not match the column type, is silently dropped (see the
-// package doc's drop-on-mismatch note). Empty strings when nothing
-// matches, so the caller splices unconditionally. Shared by
-// contact/company/lead/deal/project Create.
+// shape does not match the column type, is refused (CheckCustomValues)
+// rather than left out. Empty strings when nothing is set, so the caller
+// splices unconditionally. Shared by contact/company/lead/deal/project
+// Create.
 //
 // It takes the statement's FIXED args rather than the index to number
 // from, and hands back the whole list, because the index is derivable
@@ -82,7 +82,10 @@ func SelectSuffix(active []fieldcatalog.Column) string {
 // eleven fixed binds needed 12, so the first custom placeholder aliased
 // `captured_by` and every CreateProject carrying a custom-field value
 // failed on a bind-count mismatch. There is no number to get wrong now.
-func InsertFragments(active []fieldcatalog.Column, rawExtra map[string]any, base []any) (cols, placeholders string, args []any) {
+func InsertFragments(active []fieldcatalog.Column, rawExtra map[string]any, base []any) (cols, placeholders string, args []any, err error) {
+	if err := CheckCustomValues(active, rawExtra); err != nil {
+		return "", "", nil, err
+	}
 	var names, holders []string
 	custom := make([]any, 0, len(active))
 	values := CreateFieldValues(active, rawExtra)
@@ -96,14 +99,14 @@ func InsertFragments(active []fieldcatalog.Column, rawExtra map[string]any, base
 		custom = append(custom, sv)
 	}
 	if len(names) == 0 {
-		return "", "", base
+		return "", "", base, nil
 	}
 	// A fresh slice rather than append(base, ...): appending into a base
 	// with spare capacity would write through to the caller's own array,
 	// and every caller here holds that array for the Exec that follows.
 	args = make([]any, 0, len(base)+len(custom))
 	args = append(append(args, base...), custom...)
-	return ", " + strings.Join(names, ", "), ", " + strings.Join(holders, ", "), args
+	return ", " + strings.Join(names, ", "), ", " + strings.Join(holders, ", "), args, nil
 }
 
 // SetCustomFieldPatch folds an update's custom-field values into the
@@ -111,11 +114,14 @@ func InsertFragments(active []fieldcatalog.Column, rawExtra map[string]any, base
 // before/after and the version-guarded UPDATE include cf_ changes with
 // no extra bookkeeping. current is the row's present wire values (the
 // AdditionalProperties map of the pre-update read); an absent key diffs
-// from nil. Same drop-on-mismatch rule as InsertFragments. The SQL SET
+// from nil. Same refusal as InsertFragments. The SQL SET
 // fragment quotes the catalog-derived identifier (a core column name is
 // a fixed literal in its store's SQL; a cf_ name is data and must never
 // splice in unquoted), while the audit diff keeps the bare wire name.
-func SetCustomFieldPatch(p *Patch, active []fieldcatalog.Column, updates, current map[string]any) {
+func SetCustomFieldPatch(p *Patch, active []fieldcatalog.Column, updates, current map[string]any) error {
+	if err := CheckCustomValues(active, updates); err != nil {
+		return err
+	}
 	for _, c := range active {
 		v, present := updates[c.Name]
 		if !present {
@@ -128,12 +134,10 @@ func SetCustomFieldPatch(p *Patch, active []fieldcatalog.Column, updates, curren
 			p.setQuoted(c.Name, current[c.Name], nil)
 			continue
 		}
-		sv, ok := SQLValue(c, v)
-		if !ok {
-			continue
-		}
+		sv, _ := SQLValue(c, v)
 		p.setQuoted(c.Name, current[c.Name], sv)
 	}
+	return nil
 }
 
 // ScanDests returns fresh scan destinations for active columns, in

@@ -95,13 +95,16 @@ func createContractTx(ctx context.Context, tx pgx.Tx, in CreateContractInput, by
 	}
 
 	id := ids.New[ids.ContractKind]()
-	cfCols, cfHolders, args := storekit.InsertFragments(active, in.CustomFields, []any{
+	cfCols, cfHolders, args, err := storekit.InsertFragments(active, in.CustomFields, []any{
 		id, in.CompanyID, in.DealID, in.ProjectID, in.ContractNumber, in.Title,
 		in.ValueMinor, in.Currency, in.ValueBasis, in.StartsOn, in.EndsOn, in.RenewalOn,
 		in.AutoRenew, in.NoticePeriodDays, in.PaymentTermDays, in.SignedOn, in.Source, by,
 		in.ArrMinor,
 	})
-	_, err := tx.Exec(ctx,
+	if err != nil {
+		return crmcontracts.Contract{}, err
+	}
+	_, err = tx.Exec(ctx,
 		`INSERT INTO contract (id, company_id, deal_id, project_id, contract_number, title,
 		                       value_minor, currency, value_basis, starts_on, ends_on, renewal_on,
 		                       auto_renew, notice_period_days, payment_term_days, signed_on,
@@ -194,7 +197,9 @@ func (s *Store) UpdateContract(ctx context.Context, id ids.ContractID, in crmcon
 		// The cf_* values travel in the request's extension bag, so they are
 		// patched from it rather than from a named field. Without this a PATCH
 		// carrying custom fields succeeds and changes nothing.
-		storekit.SetCustomFieldPatch(patch, active, in.AdditionalProperties, existing.AdditionalProperties)
+		if err := storekit.SetCustomFieldPatch(patch, active, in.AdditionalProperties, existing.AdditionalProperties); err != nil {
+			return err
+		}
 		if patch.Empty() {
 			if err := storekit.EnsureIfMatch(ctx, tx, contractTable, id.UUID, ifVersion); err != nil {
 				return err

@@ -134,7 +134,9 @@ func (s *Store) updateDealInTx(ctx context.Context, tx pgx.Tx,
 	if err != nil {
 		return crmcontracts.Deal{}, err
 	}
-	storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties)
+	if err := storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties); err != nil {
+		return crmcontracts.Deal{}, err
+	}
 	if p.Empty() {
 		if err := storekit.EnsureIfMatch(ctx, tx, dealTable, id.UUID, in.IfVersion); err != nil {
 			return crmcontracts.Deal{}, err

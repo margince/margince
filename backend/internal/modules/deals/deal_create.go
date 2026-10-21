@@ -357,7 +357,10 @@ func (s *Store) createDealInTx(ctx context.Context, tx pgx.Tx, in CreateDealInpu
 		in.Description, in.CommercialMotion, in.Priority, in.AcquisitionSource,
 		in.ExpectedArrMinor, in.SourceSystem, in.CloseDateProvisional,
 	})
-	cfCols, cfHolders, args := storekit.InsertFragments(active, in.CustomFields, base)
+	cfCols, cfHolders, args, err := storekit.InsertFragments(active, in.CustomFields, base)
+	if err != nil {
+		return crmcontracts.Deal{}, err
+	}
 	_, err = tx.Exec(ctx,
 		`INSERT INTO deal (id, name, amount_minor, currency, pipeline_id, stage_id,
 		                   company_id, partner_company_id, partner_attribution,

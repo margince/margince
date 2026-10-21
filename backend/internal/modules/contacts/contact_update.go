@@ -104,7 +104,9 @@ func (s *Store) updateContactInTx(
 	if err != nil {
 		return out, err
 	}
-	storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties)
+	if err := storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties); err != nil {
+		return out, err
+	}
 	// The If-Match check comes first: the replace-sets write child rows before
 	// the contact row's own guarded write can refuse a stale version.
 	if err := storekit.EnsureIfMatch(ctx, tx, "contact", id.UUID, in.IfVersion); err != nil {

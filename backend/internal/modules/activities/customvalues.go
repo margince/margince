@@ -108,7 +108,7 @@ func customFieldImage(image map[string]any, a crmcontracts.Activity, active []fi
 }
 
 // customAssignments renders the patch's `, "cf_x" = $n` assignments, binding
-// each value through arg. A null clears the column. checkCustomValues has
+// each value through arg. A null clears the column. storekit.CheckCustomValues has
 // already refused every key and shape this would otherwise drop.
 func customAssignments(active []fieldcatalog.Column, values map[string]any, arg func(any) int) string {
 	var b strings.Builder

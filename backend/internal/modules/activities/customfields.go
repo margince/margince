@@ -10,34 +10,14 @@ import (
 	"context"
 	"maps"
 	"slices"
-	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 // customFieldObject is the catalog's object key for an activity.
 const customFieldObject = string(fieldcatalog.TargetActivity)
-
-// customFieldPrefix starts every column the custom-field engine adds.
-const customFieldPrefix = "cf_"
-
-// The codes a refused cf_ key answers with.
-const (
-	codeUnknownField = "unknown_field"
-	codeInvalidValue = "invalid_value"
-)
-
-// CustomFieldError refuses one extra key on the create wire. The key is not a
-// custom field, names no active activity field, or carries a value of the wrong shape.
-type CustomFieldError struct{ Field, Code, Message string }
-
-func (e *CustomFieldError) Error() string { return e.Field + ": " + e.Message }
-
-// FieldFault names the key, so both transports refuse it the same way.
-func (e *CustomFieldError) FieldFault() (field, code, message string) {
-	return e.Field, e.Code, e.Message
-}
 
 // FieldCatalog is the custom-field seam. Reads and writes use the active
 // columns; an erase empties every column, retired ones included.
@@ -90,7 +70,7 @@ func (s *Store) withCustomColumns(ctx context.Context, in *LogActivityInput) err
 		return err
 	}
 	in.customChecked = true
-	return checkCustomValues(in.customColumns, in.CustomFields)
+	return storekit.CheckCustomValues(in.customColumns, in.CustomFields)
 }
 
 // checkCustomPatch reads the catalog for a patch that names a custom field and
@@ -106,7 +86,7 @@ func (s *Store) checkCustomPatch(ctx context.Context, in *UpdateActivityInput) e
 	if in.customColumns, err = s.customColumns(ctx); err != nil {
 		return err
 	}
-	return checkCustomValues(in.customColumns, in.CustomFields)
+	return storekit.CheckCustomValues(in.customColumns, in.CustomFields)
 }
 
 // refuseNonCustomKeys holds a write wire closed apart from cf_ keys. The
@@ -114,39 +94,10 @@ func (s *Store) checkCustomPatch(ctx context.Context, in *UpdateActivityInput) e
 // nothing writes.
 func refuseNonCustomKeys(extra map[string]any) error {
 	for _, key := range slices.Sorted(maps.Keys(extra)) {
-		if !strings.HasPrefix(key, customFieldPrefix) || key == customFieldPrefix {
-			return &CustomFieldError{
-				Field: key, Code: codeUnknownField,
+		if !datasource.IsCustomFieldKey(key) {
+			return &storekit.CustomFieldError{
+				Field: key, Code: storekit.CustomFieldUnknown,
 				Message: "is not a field of an activity; a custom field is sent by its cf_ key",
-			}
-		}
-	}
-	return nil
-}
-
-// checkCustomValues refuses a value the write would otherwise drop: a key no
-// active field names, or a shape its column cannot hold. A null sets nothing on
-// a create and clears the value on a patch.
-func checkCustomValues(active []fieldcatalog.Column, values map[string]any) error {
-	byName := make(map[string]fieldcatalog.Column, len(active))
-	for _, c := range active {
-		byName[c.Name] = c
-	}
-	for _, key := range slices.Sorted(maps.Keys(values)) {
-		column, ok := byName[key]
-		if !ok {
-			return &CustomFieldError{
-				Field: key, Code: codeUnknownField,
-				Message: "names no active activity custom field",
-			}
-		}
-		if values[key] == nil {
-			continue
-		}
-		if _, ok := storekit.SQLValue(column, values[key]); !ok {
-			return &CustomFieldError{
-				Field: key, Code: codeInvalidValue,
-				Message: "takes a " + column.Type + " value",
 			}
 		}
 	}

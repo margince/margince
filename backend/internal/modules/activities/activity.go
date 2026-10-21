@@ -364,7 +364,10 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 		in.ThreadKey, counterparty, in.CounterpartyOutboundAttested, origin,
 		in.SourceActivityID, in.Raw, in.DurationSeconds,
 	})
-	cfCols, cfHolders, args := storekit.InsertFragments(in.customColumns, in.CustomFields, args)
+	cfCols, cfHolders, args, err := storekit.InsertFragments(in.customColumns, in.CustomFields, args)
+	if err != nil {
+		return crmcontracts.Activity{}, false, err
+	}
 	_, err = tx.Exec(ctx,
 		`INSERT INTO activity (id, kind, channel_provider, subject, body, occurred_at, direction, meeting_status,
 		                       due_at, remind_at, assignee_id, host_user_id, claims_host_slot, booking_interval_exact, source_system, source_id, source, captured_by,

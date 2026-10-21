@@ -281,7 +281,9 @@ func (s *Store) updateLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in U
 	if err := stampStatusSetBy(ctx, p, current, in); err != nil {
 		return crmcontracts.Lead{}, err
 	}
-	storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties)
+	if err := storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties); err != nil {
+		return crmcontracts.Lead{}, err
+	}
 	if p.Empty() {
 		return current, nil
 	}

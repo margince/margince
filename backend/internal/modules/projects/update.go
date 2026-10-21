@@ -78,7 +78,9 @@ func (s *Store) UpdateProject(ctx context.Context, id ids.ProjectID, in UpdatePr
 		if err != nil {
 			return err
 		}
-		storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties)
+		if err := storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties); err != nil {
+			return err
+		}
 		if p.Empty() {
 			if err := storekit.EnsureIfMatch(ctx, tx, projectObject, id.UUID, in.IfVersion); err != nil {
 				return err
