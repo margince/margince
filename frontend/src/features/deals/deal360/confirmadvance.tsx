@@ -13,6 +13,7 @@ import {
 } from "../../../lib/winreason";
 import { closeReason, isSavedDeal } from "./closereviewoffer";
 import { CloseTasksQuestion, useCloseTasks } from "./closetasks";
+import { useDealWinEvidence } from "./winevidence";
 import "./deal360.css";
 
 type Deal = components["schemas"]["Deal"];
@@ -140,13 +141,23 @@ export function ConfirmAdvanceModal({
   };
 
   const needsLostReason = shown?.toStage.semantic === "lost";
-  // The reason panel appears only once the server has asked for it, and only
-  // for the deal it asked about. A win with a signed contract is one click,
-  // exactly as before: making every rep justify a win the paperwork already
-  // explains is how a required field becomes a field everyone fills with the
-  // same lie.
+  // A win with no signed contract behind it is asked about BEFORE Confirm, so
+  // the reader is never refused for an answer nobody asked for. A win with a
+  // signed contract stays one click: making every rep justify a win the
+  // paperwork already explains is how a required field becomes a field everyone
+  // fills with the same lie.
+  //
+  // The server still decides. It asks again when the win lands, so an agreement
+  // archived while the dialog was open ends in the refusal below, and a read
+  // that failed leaves only that refusal to ask. Hence the question shows on
+  // EITHER the read's "none" or the refusal for this deal.
+  const askedForWin = pending?.toStage.semantic === "won";
+  const evidence = useDealWinEvidence(pending?.dealId ?? null, askedForWin);
+  const checkingEvidence = askedForWin && evidence.isFetching;
   const needsWonReason =
-    pending?.toStage.semantic === "won" && refusedDealId === pending.dealId;
+    askedForWin &&
+    (evidence.data?.has_signed_contract === false ||
+      refusedDealId === pending.dealId);
   const detailMissing =
     wonReason === WON_REASON_NEEDING_DETAIL && !saysSomething(wonDetail);
   // Said beside Confirm rather than left to a grey button: the reader is told
@@ -162,7 +173,10 @@ export function ConfirmAdvanceModal({
       ? t("deals.winDetailNeeded")
       : undefined;
   })();
-  const refusal = unanswered ?? closeTasks.refusal;
+  const refusal =
+    unanswered ??
+    (checkingEvidence ? t("deals.winEvidenceChecking") : undefined) ??
+    closeTasks.refusal;
 
   const confirm = async (asked: PendingAdvance) => {
     setSubmitting(true);

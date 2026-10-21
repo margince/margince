@@ -4511,6 +4511,9 @@ export const en = {
     "The deal closed, but some of its tasks could not be completed. Complete them from the Worklist.",
   "deals.winNoEvidence":
     "No signed contract is attached. Record how the deal was won; the answer is kept on the deal and counted in reports.",
+  "deals.winEvidenceChecking": "Checking the deal’s contract…",
+  "deals.winEvidenceRequired":
+    "This deal has no signed contract. Say how it was won, then confirm.",
   "deals.winReason": "How was it won?",
   "deals.winReasonPick": "Pick how it was won",
   "deals.winReasonImported": "Imported from another system",
