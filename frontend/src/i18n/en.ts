@@ -12526,6 +12526,12 @@ export const en = {
     "Maximum time one read runs before it keeps what it found, 30 to 600 seconds.",
   "captureReading.wall.refusal":
     "Enter a whole number of seconds from 30 to 600.",
+  "captureReview.title": "Mail privacy review",
+  "captureReview.passCap.label": "Threads reviewed per run",
+  "captureReview.passCap.help":
+    "How many held mail threads one review run decides, 1 to 200. The rest wait for the next run. Raise it when new mail stays hidden from colleagues for longer than the review schedule. Default 40.",
+  "captureReview.passCap.refusal":
+    "Enter a whole number of threads from 1 to 200.",
   "agentConnections.title": "Agent connections",
   "agentConnections.sub":
     "How long an agent connected over MCP keeps its passport before it renews. A change applies to the next passport issued.",

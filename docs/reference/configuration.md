@@ -942,6 +942,23 @@ see whether the Google download or our transaction takes most of the time of a m
 to see how many messages needed no full download after the headers read. Use
 `rate(margince_connector_requests_total{result="rate_limited"}[5m])` to see whether the provider is
 slowing the import down.
+
+### Reading the confidentiality backlog
+
+A mailbox in the classified posture holds every captured message until the confidentiality pass
+answers its thread. The pass judges up to `capture.confidentiality_pass_cap` threads per run, and
+the rest wait for the next run. The job gauges cannot show a pass that runs on time and still falls
+behind, so `cmd/api` serves two more gauges beside them. They are read from the thread ledger at
+scrape time, and every api replica answers the same numbers, so read them with `max`, never `sum`:
+
+| Family | Labels | Meaning |
+|---|---|---|
+| `margince_capture_confidentiality_waiting_threads` | — | held threads the pass has not answered yet and can still claim; a seat that left the classified posture is not counted |
+| `margince_capture_confidentiality_oldest_wait_seconds` | — | how long the longest-held of them has been hidden from the team, counted from the capture of the message that opened the thread; 0 when none waits |
+
+Alert when the age stays above how often the pass runs. An admin then raises the cap under
+Settings → Capture rules, or by `PATCH /v1/capture/settings`, and the next run uses it.
+
 ## cmd/worker: the background process role
 
 **Outbound mail does not leave without this process.** Every role that takes a send stages it (the

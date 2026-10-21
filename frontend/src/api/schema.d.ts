@@ -22122,6 +22122,15 @@ export interface components {
         CaptureSettings: {
             locks?: components["schemas"]["SettingLocks"];
             /**
+             * @description How many held mail threads one confidentiality pass judges, per run. The threads
+             *     beyond the cap wait for the next run, so the cap sets how fast a backlog drains and
+             *     never whether a thread is judged. Raise it when
+             *     `margince_capture_confidentiality_oldest_wait_seconds` stays above how often the pass
+             *     runs. Each thread is one model call. Read at the start of every pass, so a change
+             *     applies without a restart. Default 40.
+             */
+            confidentiality_pass_cap: number;
+            /**
              * @description The installation-wide ceiling on AUTOMATIC website reads started in one UTC day.
              *     Company auto-enrichment and domain triage spend it from one counter. It paces and only
              *     paces: concurrency is bounded by the deep-read worker pool and model spend by the AI
@@ -22937,6 +22946,8 @@ export interface components {
             site_read_wall_seconds?: number;
             /** @description Set how long a mailbox waits between syncs, in seconds. */
             mail_sync_interval_seconds?: number;
+            /** @description Set how many held mail threads one confidentiality pass judges. */
+            confidentiality_pass_cap?: number;
             /** @description Toggle the workspace mail-sharing posture; affects correspondence captured from now on — mail, and chat on a transport whose credential belongs to one member. */
             mail_sharing?: boolean;
             /** @description Toggle the tenant-wide default for reading contact details out of captured mail — its signature and any attached vCard. A mailbox that set its own switch keeps it. */

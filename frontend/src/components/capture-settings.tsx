@@ -74,6 +74,12 @@ const READ_LIMITS = {
   site_read_wall_seconds: { min: 30, max: 600 },
 } as const;
 
+// How many held threads one privacy-review run decides, mirrored as READ_LIMITS
+// is.
+const REVIEW_LIMITS = {
+  confidentiality_pass_cap: { min: 1, max: 200 },
+} as const;
+
 // One row per limit, in the order a reader decides them: how many reads a day,
 // then how much each read may take.
 const READ_ROWS: readonly Readonly<{
@@ -193,6 +199,23 @@ export function CaptureSettingsCard() {
                   onCommit={(next) => update.mutate({ [row.property]: next })}
                 />
               ))}
+            </SettingList>
+            <PanelGroupHead title={t("captureReview.title")} level="h3" />
+            <SettingList bleed="settings" testId="capture-privacy-review">
+              <NumberSettingRow
+                label={t("captureReview.passCap.label")}
+                description={t("captureReview.passCap.help")}
+                testId="capture-review-pass-cap"
+                value={settings.confidentiality_pass_cap}
+                {...REVIEW_LIMITS.confidentiality_pass_cap}
+                refusal={t("captureReview.passCap.refusal")}
+                disabled={locked}
+                reason={reasonFor(settings, "confidentiality_pass_cap")}
+                describedBy={refusedFor("confidentiality_pass_cap")}
+                onCommit={(next) =>
+                  update.mutate({ confidentiality_pass_cap: next })
+                }
+              />
             </SettingList>
           </>
         )}
