@@ -102,7 +102,7 @@ function anyReading(
 type CellFrame = Readonly<{
   query: AnalyticsQuery;
   namer: Namer;
-  source: ExplainSource;
+  source?: ExplainSource;
   baseCurrency: string | null;
   withheldGroups: number;
   fieldLabels: CustomLabels;
@@ -135,11 +135,11 @@ function AnswerCell({
   const cell = (query.group_by ?? []).includes(column)
     ? namer(column, row[column])
     : measureCell(query, column, row, baseCurrency, locale, t);
-  if (!first) {
+  if (!first || frame.source === undefined) {
     return <>{cell}</>;
   }
   return (
-    <RowExplain frame={frame} row={row}>
+    <RowExplain frame={frame} source={frame.source} row={row}>
       {cell}
     </RowExplain>
   );
@@ -161,7 +161,9 @@ export function AnswerTable({
   query: AnalyticsQuery;
   answer: AnalyticsAnswer;
   baseCurrency: string | null;
-  source: ExplainSource;
+  // Absent for an answer kept from the past: its records are today's, so a
+  // cell offers no way into them.
+  source?: ExplainSource;
   /** The administrator's names for the installation's own fields. */
   fieldLabels?: CustomLabels;
 }>) {
@@ -261,11 +263,17 @@ function rowFigure(
 
 function RowExplain({
   frame,
+  source,
   row,
   children,
-}: Readonly<{ frame: CellFrame; row: AnswerRow; children: ReactNode }>) {
+}: Readonly<{
+  frame: CellFrame;
+  source: ExplainSource;
+  row: AnswerRow;
+  children: ReactNode;
+}>) {
   const t = useT();
-  const { query, namer, source, baseCurrency, fieldLabels } = frame;
+  const { query, namer, baseCurrency, fieldLabels } = frame;
   const group = explainGroup(query, row);
   return (
     <ExplainDrawer

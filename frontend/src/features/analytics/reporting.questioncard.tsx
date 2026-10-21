@@ -13,11 +13,19 @@ import {
 import { useAnalyticsSchema } from "./analytics.schema";
 import type { ReportingLayout } from "./reporting.layout";
 import type {
+  ReportingEdition,
   ReportingEvaluation,
   ReportingSelection,
 } from "./reporting.model";
 
 type Card = ReportingLayout[number]["cards"][number];
+type KeptQuestion = NonNullable<ReportingEdition["questions"]>[number];
+
+/** What a sent edition kept of its question cards. */
+export type KeptQuestions = Pick<
+  ReportingEdition,
+  "questions" | "expired" | "redacted"
+>;
 
 // The rows a card shows when its question names no limit: the custom report
 // page's own default.
@@ -34,14 +42,15 @@ function scopeOf(scope: ReportingSelection["scope"]) {
 
 /**
  * A card holding a custom question, asked for this reader under their own
- * grants and over the report's scope. A sent edition keeps no answer, so a
- * frozen report says so rather than answering with today's figures.
+ * grants and over the report's scope. A sent edition shows the answer it kept,
+ * never one asked today.
  */
 export function QuestionCard({
   card,
   wide,
   evaluation,
   mode,
+  kept,
 }: Readonly<{
   card: Card;
   wide: boolean;
@@ -49,9 +58,13 @@ export function QuestionCard({
   // "frozen" for a sent edition; "preview" while the page shows the report as
   // a role reads it, which this browser's own session cannot ask as.
   mode: "live" | "frozen" | "preview";
+  kept?: KeptQuestions;
 }>) {
   const t = useT();
   const question = card.question;
+  const keptAnswer = kept?.questions?.find(
+    (candidate) => candidate.card_id === card.id,
+  );
   return (
     <Panel
       className={
@@ -62,12 +75,18 @@ export function QuestionCard({
       })}
     >
       <PanelBody>
-        {mode !== "live" || !question ? (
+        {mode === "frozen" && question && keptAnswer?.answer ? (
+          <AnswerTable
+            query={question}
+            answer={keptAnswer.answer}
+            baseCurrency={evaluation.context.currency}
+          />
+        ) : mode !== "live" || !question ? (
           <EmptyState>
             {t(
               mode === "preview"
                 ? "reporting.questionNotPreviewed"
-                : "reporting.questionNotKept",
+                : notKeptMessage(keptAnswer, kept),
             )}
           </EmptyState>
         ) : (
@@ -84,6 +103,25 @@ export function QuestionCard({
       </PanelBody>
     </Panel>
   );
+}
+
+// Why a sent edition shows no answer for a card.
+function notKeptMessage(
+  question: KeptQuestion | undefined,
+  edition: KeptQuestions | undefined,
+) {
+  if (question?.status === "withheld") return "reporting.questionKeptWithheld";
+  switch (question?.reason) {
+    case "retention_unconfigured":
+      return "reporting.questionNotKeptNoRetention";
+    case "too_many_records":
+      return "reporting.questionNotKeptTooMany";
+    case "unanswered":
+      return "reporting.questionNotKeptUnanswered";
+  }
+  if (edition?.expired) return "reporting.questionExpired";
+  if (edition?.redacted) return "reporting.questionRedacted";
+  return "reporting.questionNotKept";
 }
 
 function QuestionAnswer({

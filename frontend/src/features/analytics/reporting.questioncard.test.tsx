@@ -12,6 +12,7 @@ import {
 } from "../../testing/story-utils";
 import { ANSWER } from "./analytics.questions.testkit";
 import { ReportingCharts } from "./reporting.charts";
+import type { KeptQuestions } from "./reporting.questioncard";
 import { SaveReportingDialog } from "./reporting.save";
 import {
   reportingStoryEvaluation,
@@ -51,13 +52,14 @@ const withQuestionCard = {
   },
 };
 
-function draw(editionId?: string, rolePreview?: boolean) {
+function draw(editionId?: string, rolePreview?: boolean, kept?: KeptQuestions) {
   render(
     <StoryProviders>
       <RecordZoneProvider zone={REPORTING_FIXTURE_ZONE}>
         <ReportingCharts
           evaluation={withQuestionCard}
           editionId={editionId}
+          kept={kept}
           onEvidence={() => {}}
           rolePreview={rolePreview}
         />
@@ -81,14 +83,53 @@ it("asks a question card over the report's scope, for this reader", async () => 
   );
 });
 
-it("says a sent edition keeps no answer, and asks nothing", async () => {
+it("shows the answer a sent edition kept, and asks nothing", async () => {
   const ask = vi.fn(() => jsonResponse(ANSWER));
   installFetchStub({ ...reportingStoryRoutes(), "POST /analytics/query": ask });
-  draw("edition-1");
+  draw("edition-1", false, {
+    redacted: false,
+    questions: [{ card_id: "by-stage", status: "kept", answer: ANSWER }],
+  });
   expect(
-    await screen.findByText(/Not kept in sent reports/),
+    await screen.findByRole("table", { name: "Answer" }),
+  ).toBeInTheDocument();
+  expect(screen.queryByText(/Not kept/)).not.toBeInTheDocument();
+  expect(ask).not.toHaveBeenCalled();
+});
+
+it("says why a sent edition kept no answer, and asks nothing", async () => {
+  const ask = vi.fn(() => jsonResponse(ANSWER));
+  installFetchStub({ ...reportingStoryRoutes(), "POST /analytics/query": ask });
+  draw("edition-1", false, {
+    redacted: false,
+    questions: [
+      { card_id: "by-stage", status: "not_kept", reason: "too_many_records" },
+    ],
+  });
+  expect(
+    await screen.findByText(/counted more records than a sent report keeps/),
   ).toBeInTheDocument();
   expect(ask).not.toHaveBeenCalled();
+});
+
+it("shows nothing of a kept answer this reader may not ask for", async () => {
+  installFetchStub(reportingStoryRoutes());
+  draw("edition-1", false, {
+    redacted: false,
+    questions: [{ card_id: "by-stage", status: "withheld" }],
+  });
+  expect(
+    await screen.findByText(/Your access does not cover this question/),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole("table", { name: "Answer" }),
+  ).not.toBeInTheDocument();
+});
+
+it("says an expired edition's answer is gone, not that it was never kept", async () => {
+  installFetchStub(reportingStoryRoutes());
+  draw("edition-1", false, { redacted: true, expired: true });
+  expect(await screen.findByText(/No longer available/)).toBeInTheDocument();
 });
 
 it("asks nothing under a role preview, which this session cannot ask as", async () => {

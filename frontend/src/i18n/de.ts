@@ -851,11 +851,27 @@ export const de = {
   "reporting.questionCard": "Frage: {population}",
   "reporting.questionLoading": "Frage wird gestellt…",
   "reporting.questionNotKept":
-    "In gesendeten Berichten nicht enthalten. Der Live-Bericht zeigt die Antwort auf diese Frage.",
+    "In diesem gesendeten Bericht nicht enthalten. Der Live-Bericht zeigt die Antwort auf diese Frage.",
   "reporting.questionLink": "Link zu einem gespeicherten eigenen Bericht",
   "reporting.questionLinkInvalid":
     "Den Link einfügen, den Link kopieren bei einem gespeicherten eigenen Bericht liefert.",
   "reporting.addQuestion": "Frage hinzufügen",
+  "reporting.questionKeptWithheld":
+    "Ihr Zugriff deckt diese Frage nicht ab, daher wird die gespeicherte Antwort nicht angezeigt.",
+  "reporting.questionNotKeptNoRetention":
+    "Nicht gespeichert: Beim Senden war für gesendete Berichte keine Aufbewahrungsfrist festgelegt.",
+  "reporting.questionNotKeptTooMany":
+    "Nicht gespeichert: Diese Antwort beruht auf mehr Datensätzen, als ein gesendeter Bericht speichert.",
+  "reporting.questionNotKeptUnanswered":
+    "Nicht gespeichert: Beim Senden konnte der Absender diese Frage nicht stellen.",
+  "reporting.questionExpired":
+    "Nicht mehr verfügbar. Die Aufbewahrungsregel hat die Antworten dieses gesendeten Berichts gelöscht.",
+  "reporting.questionRedacted":
+    "Durch eine Datenschutzanfrage aus diesem gesendeten Bericht entfernt.",
+  "reporting.editionRetention_one":
+    "Gesendete Berichte behalten ihre Werte und Antworten {count} Tag lang, danach löscht die Aufbewahrungsregel sie.",
+  "reporting.editionRetention_other":
+    "Gesendete Berichte behalten ihre Werte und Antworten {count} Tage lang, danach löscht die Aufbewahrungsregel sie.",
   "reporting.questionNotPreviewed":
     "In der Rollenvorschau nicht angezeigt. Diese Frage beantwortet beim Öffnen des Berichts der Zugriff des jeweiligen Kontos.",
   "reporting.questionFiltered":

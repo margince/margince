@@ -9,8 +9,8 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
 import { Select } from "../../design-system/select";
-import { INTL_LOCALE } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { formatNumber, INTL_LOCALE } from "../../format/format";
+import { useLocale, usePlural, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { throwProblem, unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
@@ -51,6 +51,8 @@ export function ReportingScheduleDialog({
     },
   });
   const ready = readiness.data?.schedule_ready === true;
+  const retentionDays = readiness.data?.edition_retention_days;
+  const plural = usePlural();
   const write = useMutation({
     mutationFn: async ({
       reportId,
@@ -122,6 +124,13 @@ export function ReportingScheduleDialog({
         <p className="t-caption">{t("reporting.scheduleResult")}</p>
         {readiness.isSuccess && !ready && (
           <p role="status">{t("reporting.scheduleSetup")}</p>
+        )}
+        {ready && retentionDays !== undefined && (
+          <p className="t-caption">
+            {plural("reporting.editionRetention", retentionDays, {
+              count: formatNumber(retentionDays, locale),
+            })}
+          </p>
         )}
         {readiness.isSuccess && !ready && canRetention && (
           <Button

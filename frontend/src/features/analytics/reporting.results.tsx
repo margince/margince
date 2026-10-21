@@ -51,6 +51,7 @@ export function ReportResults({
             </p>
             <ReportingCharts
               editionId={editionId}
+              kept={edition}
               evaluation={edition.evaluation}
               onEvidence={onEvidence}
             />

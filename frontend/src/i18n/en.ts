@@ -823,11 +823,27 @@ export const en = {
   "reporting.questionCard": "Question: {population}",
   "reporting.questionLoading": "Asking the question…",
   "reporting.questionNotKept":
-    "Not kept in sent reports. Open the live report to see this question’s answer.",
+    "Not kept in this sent report. Open the live report to see this question’s answer.",
   "reporting.questionLink": "Link to a saved custom report",
   "reporting.questionLinkInvalid":
     "Paste the link that Copy link gives on a saved custom report.",
   "reporting.addQuestion": "Add question",
+  "reporting.questionKeptWithheld":
+    "Your access does not cover this question, so its kept answer is not shown.",
+  "reporting.questionNotKeptNoRetention":
+    "Not kept: sent reports had no retention period when this one was sent.",
+  "reporting.questionNotKeptTooMany":
+    "Not kept: this answer counted more records than a sent report keeps.",
+  "reporting.questionNotKeptUnanswered":
+    "Not kept: the sender could not ask this question when the report was sent.",
+  "reporting.questionExpired":
+    "No longer available. Retention erased this sent report’s answers.",
+  "reporting.questionRedacted":
+    "Removed from this sent report by a privacy request.",
+  "reporting.editionRetention_one":
+    "Sent reports keep their readings and question answers for {count} day, then retention erases them.",
+  "reporting.editionRetention_other":
+    "Sent reports keep their readings and question answers for {count} days, then retention erases them.",
   "reporting.questionNotPreviewed":
     "Not shown in a role preview. Each reader’s own access answers this question when they open the report.",
   "reporting.questionFiltered":

@@ -838,11 +838,27 @@ export const vi = {
   "reporting.questionCard": "Câu hỏi: {population}",
   "reporting.questionLoading": "Đang hỏi…",
   "reporting.questionNotKept":
-    "Không lưu trong báo cáo đã gửi. Mở báo cáo trực tiếp để xem câu trả lời cho câu hỏi này.",
+    "Không lưu trong báo cáo đã gửi này. Mở báo cáo trực tiếp để xem câu trả lời cho câu hỏi này.",
   "reporting.questionLink": "Liên kết tới báo cáo tùy chỉnh đã lưu",
   "reporting.questionLinkInvalid":
     "Dán liên kết mà Sao chép liên kết đưa ra trên báo cáo tùy chỉnh đã lưu.",
   "reporting.addQuestion": "Thêm câu hỏi",
+  "reporting.questionKeptWithheld":
+    "Quyền truy cập của bạn không bao gồm câu hỏi này, nên câu trả lời đã lưu không được hiển thị.",
+  "reporting.questionNotKeptNoRetention":
+    "Không lưu: báo cáo đã gửi chưa có thời hạn lưu giữ khi báo cáo này được gửi.",
+  "reporting.questionNotKeptTooMany":
+    "Không lưu: câu trả lời này dựa trên nhiều bản ghi hơn mức một báo cáo đã gửi lưu giữ.",
+  "reporting.questionNotKeptUnanswered":
+    "Không lưu: tài khoản gửi không thể đặt câu hỏi này khi báo cáo được gửi.",
+  "reporting.questionExpired":
+    "Không còn khả dụng. Quy tắc lưu giữ đã xóa các câu trả lời của báo cáo đã gửi này.",
+  "reporting.questionRedacted":
+    "Đã bị xóa khỏi báo cáo đã gửi này theo một yêu cầu quyền riêng tư.",
+  "reporting.editionRetention_one":
+    "Báo cáo đã gửi giữ các số liệu và câu trả lời trong {count} ngày, sau đó quy tắc lưu giữ sẽ xóa chúng.",
+  "reporting.editionRetention_other":
+    "Báo cáo đã gửi giữ các số liệu và câu trả lời trong {count} ngày, sau đó quy tắc lưu giữ sẽ xóa chúng.",
   "reporting.questionNotPreviewed":
     "Không hiển thị trong bản xem trước theo vai trò. Quyền truy cập của mỗi tài khoản đọc sẽ trả lời câu hỏi này khi mở báo cáo.",
   "reporting.questionFiltered":

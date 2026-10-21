@@ -16,7 +16,7 @@ import type {
   ReportingEvaluation,
   ReportingEvidenceRef,
 } from "./reporting.model";
-import { QuestionCard } from "./reporting.questioncard";
+import { type KeptQuestions, QuestionCard } from "./reporting.questioncard";
 import { ResultsSummary } from "./reporting.summary";
 import { WrittenSummary } from "./reporting.written";
 import "./reporting.css";
@@ -26,12 +26,15 @@ type EvidenceAction = (reference: ReportingEvidenceRef) => void;
 export function ReportingCharts({
   evaluation,
   editionId,
+  kept,
   afterSummary,
   onEvidence,
   rolePreview,
 }: Readonly<{
   evaluation: ReportingEvaluation;
   editionId?: string;
+  // What a sent edition kept of its question cards.
+  kept?: KeptQuestions;
   // Drawn between the headline readings and the charts: what a reader should
   // act on before reading further.
   afterSummary?: ReactNode;
@@ -57,6 +60,7 @@ export function ReportingCharts({
           editionId={editionId}
           onEvidence={onEvidence}
           questions={questionMode(editionId, rolePreview)}
+          kept={kept}
         />
       ))}
       <MetricsTable evaluation={evaluation} onEvidence={onEvidence} />
@@ -97,12 +101,14 @@ function ChartSection({
   editionId,
   onEvidence,
   questions,
+  kept,
 }: Readonly<{
   section: LaidOutSection;
   evaluation: ReportingEvaluation;
   editionId?: string;
   onEvidence: EvidenceAction;
   questions: "live" | "frozen" | "preview";
+  kept?: KeptQuestions;
 }>) {
   const wide = pairWidths(
     section.items.map(
@@ -135,6 +141,7 @@ function ChartSection({
               wide={wide[index] === true}
               evaluation={evaluation}
               mode={questions}
+              kept={kept}
             />
           ),
         )}

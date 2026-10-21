@@ -36725,7 +36725,8 @@ export interface components {
          *     `question`. The page asks it through `/analytics/query` for each reader, under their
          *     own grants and over the report's scope. Every reader of the report receives it, so it
          *     carries no filters (a filter value can name a record a reader may not open), no scope
-         *     and no save. A sent edition does not keep its answer.
+         *     and no save. A sent edition keeps the answer its sender was given, as
+         *     `ReportingEditionQuestion` describes.
          */
         ReportingCardQuestion: {
             /** @description The population, by name. */
@@ -36889,6 +36890,8 @@ export interface components {
         ReportingCatalog: {
             /** @description Whether saved snapshots have the retention policy required for automatic publication. Present for schedule authors. */
             schedule_ready?: boolean;
+            /** @description How many days a sent edition keeps its readings and question answers before retention erases them. Present for schedule authors while the policy is on. */
+            edition_retention_days?: number;
             metrics: components["schemas"]["ReportingMetricDefinition"][];
         };
         ReportingReportInput: {
@@ -37078,6 +37081,27 @@ export interface components {
             evaluation: components["schemas"]["ReportingEvaluation"];
             redacted: boolean;
             withheld: boolean;
+            /** @description The answer each question card of the edition's layout kept, by card id. Present when one edition is read; absent in a list and once retention or erasure removed the answers. */
+            questions?: components["schemas"]["ReportingEditionQuestion"][];
+        };
+        /**
+         * @description What a sent edition kept for one question card. The answer is the one the sender was
+         *     given when the edition was captured. Each row stays only while the reader may read every
+         *     record behind it; any other row arrives withheld, as the analytics floor withholds one.
+         */
+        ReportingEditionQuestion: {
+            card_id: string;
+            /**
+             * @description `kept`: the answer follows. `withheld`: this reader may not ask the question now, so nothing of the answer is shown. `not_kept`: the edition kept no answer, and `reason` says why.
+             * @enum {string}
+             */
+            status: "kept" | "withheld" | "not_kept";
+            /**
+             * @description Why no answer was kept. `retention_unconfigured`: sent editions had no retention policy. `too_many_records`: the answer rested on more records than an edition keeps. `unanswered`: the sender could not ask the question when the edition was captured.
+             * @enum {string}
+             */
+            reason?: "retention_unconfigured" | "too_many_records" | "unanswered";
+            answer?: components["schemas"]["AnalyticsAnswer"];
         };
         ReportingEvidenceRow: {
             key: string;
