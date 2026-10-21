@@ -4,12 +4,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { LocaleProvider } from "../i18n";
+import { LocaleProvider } from "../../i18n";
 import type {
   ExtensionPanelProps,
   ExtensionPanelRegistry,
-} from "../lib/extensions";
-import { type GrantSpec, meFixture } from "../testing/mefixture";
+} from "../../lib/extensions";
+import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { ExtensionPanels } from "./extensionpanels";
 
 // The vanilla registry is empty, so each case hands the slot the descriptors

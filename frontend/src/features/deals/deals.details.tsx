@@ -1,7 +1,6 @@
 import { useState } from "react";
 import type { CreateField } from "../../components/create";
 import { useEntityName } from "../../components/entityref";
-import { ExtensionPanels } from "../../components/extensionpanels";
 import { RecordFields, rawRecord } from "../../components/recordfields";
 import { useT } from "../../i18n";
 import { useAcquisitionSources } from "../../lib/acquisitionsources.queries";
@@ -26,6 +25,7 @@ import {
   usePartnerOptions,
 } from "./deals.fields";
 import { dealEditRecord, mapDealUpdate, stringValues } from "./deals.write";
+import { ExtensionPanels } from "./extensionpanels";
 
 export function DealDetails({
   deal,
