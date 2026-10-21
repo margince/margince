@@ -17,6 +17,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -87,6 +88,9 @@ func (r approvalPreviewReader) read(ctx context.Context, approval crmcontracts.A
 	}
 	if approval.Kind == operationCommitImport {
 		return r.importPreview(ctx, approval, out)
+	}
+	if kind, registered := approvals.RegisteredExtensionKind(approval.Kind); registered {
+		return extensionPreview(approval, kind, out)
 	}
 	changes, covered, err := commercialChanges(approval)
 	if !covered {

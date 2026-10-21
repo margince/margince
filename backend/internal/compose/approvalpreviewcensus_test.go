@@ -5,9 +5,6 @@ package compose
 
 import (
 	"context"
-	"encoding/json"
-	"os"
-	"path/filepath"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -87,47 +84,23 @@ func assertApprovalContextCovered(t *testing.T, reader approvalPreviewReader, ki
 	}
 }
 
-func TestEnabledExtensionApprovalProducersCannotEscapeTheContextCensus(t *testing.T) {
-	root := filepath.Join("..", "..", "..", "extensions")
-	entries, err := os.ReadDir(root)
-	if err != nil {
+// An extension's staged kind is its tool name, registered at boot from the
+// served tools; the census walks that same derivation.
+func TestEveryStageableExtensionVerbHasReviewContext(t *testing.T) {
+	kinds := extensionStagingKinds(confirmFirstUnit(t))
+	if len(kinds) == 0 {
+		t.Fatal("the confirm-first unit derived no staged kind")
+	}
+	if err := approvals.RegisterExtensionKinds(kinds); err != nil {
 		t.Fatal(err)
 	}
-	units := 0
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
+	t.Cleanup(func() {
+		if err := approvals.RegisterExtensionKinds(nil); err != nil {
+			t.Errorf("clearing the registered kinds: %v", err)
 		}
-		dir := filepath.Join(root, entry.Name())
-		if _, err := os.Stat(filepath.Join(dir, "go.mod")); os.IsNotExist(err) {
-			continue
-		} else if err != nil {
-			t.Fatal(err)
-		}
-		units++
-		raw, err := os.ReadFile(filepath.Join(dir, "manifest.generated.json"))
-		if err != nil {
-			t.Fatal(err)
-		}
-		var manifest struct {
-			RiskTiers []struct {
-				Kind      string `json:"kind"`
-				Operation string `json:"operation"`
-				Tier      string `json:"tier"`
-			} `json:"risk_tiers"`
-		}
-		if err := json.Unmarshal(raw, &manifest); err != nil {
-			t.Fatal(err)
-		}
-		for _, risk := range manifest.RiskTiers {
-			if risk.Kind == "extension_job" || risk.Tier == "auto_execute" {
-				continue
-			}
-			assertApprovalContextCovered(t, approvalPreviewReader{}, risk.Operation)
-		}
-	}
-	if units == 0 {
-		t.Fatal("no enabled extension units were inspected")
+	})
+	for _, kind := range kinds {
+		assertApprovalContextCovered(t, approvalPreviewReader{}, kind.Verb)
 	}
 }
 
