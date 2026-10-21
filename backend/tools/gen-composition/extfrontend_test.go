@@ -146,8 +146,8 @@ func TestCollectUnitFrontendAcceptsAWellFormedLayer(t *testing.T) {
 	}
 }
 
-// A unit with no frontend layer is the common case — de and crm-hello are
-// both shaped that way — and composes normally.
+// A unit with no frontend layer is the common case (de is shaped that way),
+// and it composes normally.
 func TestCollectUnitFrontendAbsentIsNotAnError(t *testing.T) {
 	got, err := collectUnitFrontend("demo", t.TempDir())
 	if err != nil || got != nil {

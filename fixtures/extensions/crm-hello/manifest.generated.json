@@ -16,8 +16,8 @@
         "read"
       ],
       "tier": "confirmation_required",
-      "fragment_hash": "sha256:d6310bcb4e4a9f121d711da667449afe63ff9cdc3a47325947c43816f3fd7044",
-      "digest": "sha256:1fc8a5bc3aebe1d44efd755e73f4f1e8bc8bf7baead29d6bb5a510b6a35734fa"
+      "fragment_hash": "sha256:3c7c2c9db57c3d861885e4d53c7a44d5c1154d60a0e830bd1fc0a2bfe0b1292e",
+      "digest": "sha256:2852fe45792d4439b55c82c58ee8edfc1ba3796b4fd1e94d61d40e2517946b12"
     }
   ],
   "subscriptions": [
@@ -26,6 +26,13 @@
       "events": [
         "deal.updated"
       ]
+    }
+  ],
+  "panels": [
+    {
+      "slot": "record_panel.deal",
+      "export": "DealHello",
+      "object": "ext_crm_hello_ping"
     }
   ],
   "system_reads": [

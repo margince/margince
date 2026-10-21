@@ -143,7 +143,7 @@ func frontendGen(manifests []derivedManifest, verbs []declaredVerb, merged map[s
 // what a unit PUBLISHES and exists for every unit, while this says what RENDERS
 // it and exists only for a unit that ships a frontend package. A unit with none
 // falls through to the generic published-operations card, which is what de
-// and crm-hello do.
+// does.
 //
 // Import order follows unit order, which scanExtensions has already sorted by
 // name, so this file is a function of the enabled set rather than of the order

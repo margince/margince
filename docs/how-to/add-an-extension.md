@@ -589,7 +589,7 @@ the core names a unit. `extensions/openchannel` declares a contact header entry.
 
 ## Draw a panel on a core page
 
-A unit with a frontend package can draw its own component inline on a core page. Declare one
+A unit with a frontend package can draw its own part of a page inline on a core page. Declare one
 `extension.Panel` per place:
 
 ```go
@@ -606,13 +606,13 @@ Panels: []extension.Panel{{
 |---|---|
 | `extension.SlotDealPanel` (`record_panel.deal`) | A deal page's side column, above Details |
 
-- **`Export`** is a named export of your frontend package's `main` module: the component the page mounts.
+- **`Export`** is a named export of your frontend package's `main` module: the function the page mounts.
   A declared export the package does not have fails the composed typecheck.
 - **`Object`** is one of your RBAC objects. The panel shows only to a reader whose role grants `read` on it.
   `make gen` and the start both refuse an object that none of your operations gates on.
 - One panel per slot per unit. A unit that declares a panel and ships no `frontend/package.json` is refused.
 
-The page hands the component the record it shows, typed by `ExtensionPanelProps` from
+The page hands that function the record it shows, typed by `ExtensionPanelProps` from
 `@margince/frontend/app`:
 
 ```tsx
@@ -622,14 +622,14 @@ export function VisitsPanel({ record }: ExtensionPanelProps) {
 }
 ```
 
-Draw your own card from the design system, and return `null` when there is nothing to say. The page puts
-each unit's panel in its own error boundary: a render failure shows a retry card in that panel's place, and
-the page and the other units' panels go on. Several units fill one slot in the order of the composed
+Draw your own card from the design system, and return `null` when there is nothing to say. The page holds
+each unit's panel apart. A panel that fails to draw shows a retry card in its place. The page and the other
+units' panels go on. Several units fill one slot in the order of the composed
 registry. A slot that no enabled unit fills draws nothing, so a page looks as it does without the tier.
 
-The panel calls your own routes like a screen does. A route that serves something about the record asks
-`Authority().CanRead`, or `CanWrite` before it acts, about its own caller first (see
-[Read deals and colleagues from a handler](#read-deals-and-colleagues-from-a-handler)).
+The panel calls your own routes like a screen does. A route that serves something about the record first
+asks `Authority().CanRead` about its own caller. A route that acts asks `CanWrite`. See
+[Read deals and colleagues from a handler](#read-deals-and-colleagues-from-a-handler).
 
 ## Own scheduled jobs
 
@@ -697,12 +697,14 @@ plan for:
 
 Your SQL may touch only your own tables. So a handler reads a core deal, and the colleagues on it, through
 four system reads. No user's rights limit what they read. That is why they answer on a job tick or a bus
-delivery, where no user gets the answer. In all other places `Deals().Get`, `Deals().Responsible` and
-`Directory().Emails` answer `extension.ErrAttendedRead`: a tool call, a route, the inbound edge, a finance
-source's read and a transport's send. There the answer, or an error that quotes it, could reach a user whose
+delivery, where no user gets the answer.
+
+In all other places `Deals().Get`, `Deals().Responsible` and
+`Directory().Emails` answer `extension.ErrAttendedRead`. Those places are a tool call, a route, the inbound
+edge, a finance source's read and a transport's send. There the answer, or an error that quotes it, could reach a user whose
 own rights hide it.
 
-`CanRead` and `CanWrite` answer in those places too, but only a signed-in human asking about themselves. So a route can ask
+`CanRead` and `CanWrite` answer in those places too, but only a signed-in human asking about their own rights. So a route can ask
 whether its own caller may open the deal before it serves what your unit stored about it. Any other question
 there, and any call an agent or a connector makes, answers `extension.ErrAttendedRead`: an agent's scopes may
 be narrower than its human's rights.
