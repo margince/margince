@@ -100,7 +100,7 @@ The 24 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_backfill
 
-25 columns · primary key `(id)` · referenced by 1 foreign key
+25 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -456,13 +456,14 @@ The 24 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_pending_counterparty
 
-21 columns · primary key `(id)` · referenced by 0 foreign keys
+22 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `activity_id` | `uuid` | yes | Points at `activity.id`. |
 | `attempts` | `integer`, default `0` | yes |  |
+| `backfill_id` | `uuid` |  | Points at `capture_backfill.id`. |
 | `claimed_by` | `uuid` |  |  |
 | `claimed_until` | `timestamp with time zone` |  |  |
 | `confidence` | `numeric` |  |  |
@@ -487,6 +488,7 @@ The 24 tables owned by `capture`, as the migrations build them. [Back to the ent
 | Columns | Table | When the parent goes |
 |---|---|---|
 | `activity_id` | `activity` | deleting the parent deletes this row |
+| `backfill_id` | `capture_backfill` | deleting the parent keeps this row and clears the link |
 | `owner_id` | `app_user` | deleting the parent deletes this row |
 | `proposal_id` | `approval` | deleting the parent keeps this row and clears the link |
 
@@ -498,6 +500,7 @@ The 24 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 **Indexes**
 
+- `capture_pending_counterparty_backfill_idx`: `btree (backfill_id) WHERE (backfill_id IS NOT NULL)`
 - `capture_pending_counterparty_pkey`: `unique, btree (id)`
 - `idx_capture_pending_counterparty_activity`: `btree (activity_id)`
 - `idx_capture_pending_counterparty_due`: `btree (next_attempt_at) WHERE (next_attempt_at IS NOT NULL)`

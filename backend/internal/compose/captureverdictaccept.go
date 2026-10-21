@@ -153,13 +153,14 @@ func applyCounterpartyAccept(ctx context.Context, tx pgx.Tx, store *contacts.Sto
 	filer *connectorTagFiler, pending *capture.PendingStore, proposal approvalsubject.Counterparty,
 ) (string, error) {
 	created, err := createCounterpartyRecords(ctx, tx, store, filer, counterpartyCreation{
-		Email:       proposal.Email,
-		DisplayName: proposal.DisplayName,
-		Domain:      proposal.Domain,
-		OwnerID:     proposal.OwnerID,
-		ActivityID:  proposal.ActivityID,
-		Source:      counterpartyProposalKind,
-		CapturedBy:  counterpartyExecutorActor,
+		DispositionID: proposal.DispositionID,
+		Email:         proposal.Email,
+		DisplayName:   proposal.DisplayName,
+		Domain:        proposal.Domain,
+		OwnerID:       proposal.OwnerID,
+		ActivityID:    proposal.ActivityID,
+		Source:        counterpartyProposalKind,
+		CapturedBy:    counterpartyExecutorActor,
 	})
 	if err != nil {
 		return "", err
