@@ -19,6 +19,7 @@ package integration
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"math"
 	"testing"
 
@@ -237,33 +238,43 @@ func TestCustomFieldValues_AllSixTypesRoundTrip(t *testing.T) {
 	assertCF(t, got.AdditionalProperties, boolean, true)
 }
 
-// TestCustomFieldValues_WrongShapeDropped: additionalProperties carries
-// no per-key schema, so a value whose shape does not match its column's
-// type is dropped — the write succeeds, the key never lands (and an
-// update's drop leaves the stored value standing).
-func TestCustomFieldValues_WrongShapeDropped(t *testing.T) {
+// assertRefusedCF asserts a write was refused for one custom-field key, with
+// the code that says why.
+func assertRefusedCF(t *testing.T, err error, key, code string) {
+	t.Helper()
+	refusal, ok := errors.AsType[*storekit.CustomFieldError](err)
+	if !ok || refusal.Field != key || refusal.Code != code {
+		t.Fatalf("got %v, want a %s refusal on %s", err, code, key)
+	}
+}
+
+// TestCustomFieldValues_WrongShapeRefused: additionalProperties carries no
+// per-key schema, so a value whose shape does not match its column's type is
+// refused by name, on a create and on an update, and an update's refusal leaves
+// the stored value standing.
+func TestCustomFieldValues_WrongShapeRefused(t *testing.T) {
 	f := setupCFV(t)
 	col := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Score", Type: customfields.TypeNumber, Source: "manual"})
 
-	created, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{
+	_, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{
 		FullName: "Mismatch On Create", Source: "manual",
 		CustomFields: map[string]any{col: true},
 	})
-	if err != nil {
-		t.Fatalf("CreateContact with mismatched value shape: %v", err)
-	}
-	assertNoCF(t, created.AdditionalProperties, col)
+	assertRefusedCF(t, err, col, storekit.CustomFieldInvalid)
 
+	created, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{FullName: "Valid", Source: "manual"})
+	if err != nil {
+		t.Fatalf("CreateContact: %v", err)
+	}
 	if _, err := f.store.UpdateContact(f.ctx, ContactIDOf(ids.UUID(created.Id)), contacts.UpdateContactInput{
 		CustomFields: map[string]any{col: float64(7)},
 	}); err != nil {
 		t.Fatalf("UpdateContact (valid shape): %v", err)
 	}
-	if _, err := f.store.UpdateContact(f.ctx, ContactIDOf(ids.UUID(created.Id)), contacts.UpdateContactInput{
+	_, err = f.store.UpdateContact(f.ctx, ContactIDOf(ids.UUID(created.Id)), contacts.UpdateContactInput{
 		CustomFields: map[string]any{col: "not-a-number"},
-	}); err != nil {
-		t.Fatalf("UpdateContact with mismatched value shape: %v", err)
-	}
+	})
+	assertRefusedCF(t, err, col, storekit.CustomFieldInvalid)
 	got, err := f.store.GetContact(f.ctx, ContactIDOf(ids.UUID(created.Id)), storekit.LiveOnly)
 	if err != nil {
 		t.Fatalf("GetContact: %v", err)
@@ -271,12 +282,12 @@ func TestCustomFieldValues_WrongShapeDropped(t *testing.T) {
 	assertCF(t, got.AdditionalProperties, col, json.Number("7"))
 }
 
-// TestCustomFieldValues_WrongShapeDroppedAcrossTypes: WrongShapeDropped
-// proves the drop only for a number-typed mismatch; SQLValue's shape
+// TestCustomFieldValues_WrongShapeRefusedAcrossTypes: WrongShapeRefused
+// proves the refusal only for a number-typed mismatch; SQLValue's shape
 // check runs once per column type (currency wants float64, date wants
 // string, boolean wants bool), so each type's own mismatch needs its
-// own proof that the write still succeeds with the key simply absent.
-func TestCustomFieldValues_WrongShapeDroppedAcrossTypes(t *testing.T) {
+// own proof that the write is refused.
+func TestCustomFieldValues_WrongShapeRefusedAcrossTypes(t *testing.T) {
 	f := setupCFV(t)
 	eur := "EUR"
 	currency := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Budget", Type: customfields.TypeCurrency, Currency: &eur, Source: "manual"})
@@ -294,14 +305,11 @@ func TestCustomFieldValues_WrongShapeDroppedAcrossTypes(t *testing.T) {
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			created, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{
+			_, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{
 				FullName: "Mismatch", Source: "manual",
 				CustomFields: map[string]any{tc.col: tc.wrong},
 			})
-			if err != nil {
-				t.Fatalf("CreateContact: %v", err)
-			}
-			assertNoCF(t, created.AdditionalProperties, tc.col)
+			assertRefusedCF(t, err, tc.col, storekit.CustomFieldInvalid)
 		})
 	}
 }
@@ -311,8 +319,8 @@ func TestCustomFieldValues_WrongShapeDroppedAcrossTypes(t *testing.T) {
 // column: the float64 every other suite writes through, plus the
 // json.Number/plain-decimal-string a UseNumber-decoding caller could
 // hand it — this proves those other two shapes actually round-trip
-// (and that a string that fails to parse as a number still drops,
-// same posture as every other type mismatch).
+// (and that a string that fails to parse as a number is still refused,
+// as every other type mismatch is).
 func TestCustomFieldValues_NumberAcceptsJSONNumberAndDecimalString(t *testing.T) {
 	f := setupCFV(t)
 	col := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Score", Type: customfields.TypeNumber, Source: "manual"})
@@ -335,14 +343,11 @@ func TestCustomFieldValues_NumberAcceptsJSONNumberAndDecimalString(t *testing.T)
 	}
 	assertCF(t, fromString.AdditionalProperties, col, json.Number("7.25"))
 
-	unparseable, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{
+	_, err = f.store.CreateContact(f.ctx, contacts.CreateContactInput{
 		FullName: "Via unparseable string", Source: "manual",
 		CustomFields: map[string]any{col: "not-a-number-string"},
 	})
-	if err != nil {
-		t.Fatalf("CreateContact (unparseable string): %v", err)
-	}
-	assertNoCF(t, unparseable.AdditionalProperties, col)
+	assertRefusedCF(t, err, col, storekit.CustomFieldInvalid)
 }
 
 // TestCustomFieldValues_NumberNaNDropped: a number-typed value that
@@ -364,17 +369,14 @@ func TestCustomFieldValues_NumberNaNDropped(t *testing.T) {
 	assertNoCF(t, created.AdditionalProperties, col)
 }
 
-func TestCustomFieldValues_UnknownKeyDropped(t *testing.T) {
+func TestCustomFieldValues_UnknownKeyRefused(t *testing.T) {
 	f := setupCFV(t)
 
-	created, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{
+	_, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{
 		FullName: "No Such Column", Source: "manual",
 		CustomFields: map[string]any{"cf_never_defined": "x"},
 	})
-	if err != nil {
-		t.Fatalf("CreateContact with unknown cf_ key: %v", err)
-	}
-	assertNoCF(t, created.AdditionalProperties, "cf_never_defined")
+	assertRefusedCF(t, err, "cf_never_defined", storekit.CustomFieldUnknown)
 }
 
 // TestCustomFieldValues_RetiredFieldHiddenButPreserved: retiring a field
@@ -409,12 +411,11 @@ func TestCustomFieldValues_RetiredFieldHiddenButPreserved(t *testing.T) {
 	}
 	assertNoCF(t, got.AdditionalProperties, col)
 
-	// A write against the retired key is dropped like any unknown key.
-	if _, err := f.store.UpdateContact(f.ctx, ContactIDOf(ids.UUID(created.Id)), contacts.UpdateContactInput{
+	// A write against the retired key is refused like any unknown key.
+	_, err = f.store.UpdateContact(f.ctx, ContactIDOf(ids.UUID(created.Id)), contacts.UpdateContactInput{
 		CustomFields: map[string]any{col: "silver"},
-	}); err != nil {
-		t.Fatalf("UpdateContact against retired key: %v", err)
-	}
+	})
+	assertRefusedCF(t, err, col, storekit.CustomFieldUnknown)
 
 	// The stored value is untouched underneath.
 	var stored *string

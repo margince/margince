@@ -15,7 +15,7 @@ func TestALeadWhoseLinkedInURLIsHeldIsSkippedInThePreviewAndTheCommit(t *testing
 	var held struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, http.MethodPost, "/v1/leads", AnyMap{"name": "Held Lead", "email": "held@lead.example", "linkedin_url": "https://www.linkedin.com/in/held-lead", "source": "manual"}, nil, &held); status != http.StatusCreated {
+	if status := e.Call(t, http.MethodPost, "/v1/leads", AnyMap{"full_name": "Held Lead", "email": "held@lead.example", "linkedin_url": "https://www.linkedin.com/in/held-lead", "source": "manual"}, nil, &held); status != http.StatusCreated {
 		t.Fatalf("POST /v1/leads → %d, want 201", status)
 	}
 	if got := recordField(t, e, "/v1/leads", "email", "held@lead.example", "linkedin_url"); got != "https://www.linkedin.com/in/held-lead" {

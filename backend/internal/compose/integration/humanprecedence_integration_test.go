@@ -133,13 +133,16 @@ func TestEndToEnd_caseVariantKeyCannotBypassPrecedence(t *testing.T) {
 	}
 	bearer := map[string]string{"Authorization": "Bearer " + minted.Token}
 
-	// The case-variant key binds to no known field (exact-key decode) and no
-	// active custom column, so it drops to an empty patch: 200, no write.
+	// The case-variant key binds to no known field (exact-key decode) and is no
+	// cf_ key, so it is refused by name and nothing is written.
+	if status := e.Call(t, "PATCH", "/v1/leads/"+lead.ID, AnyMap{"FULL_NAME": "Otto Machine"}, bearer, nil); status != 422 {
+		t.Fatalf("case-variant patch → %d, want 422 (refused, not written)", status)
+	}
 	var patched struct {
 		FullName string `json:"full_name"`
 	}
-	if status := e.Call(t, "PATCH", "/v1/leads/"+lead.ID, AnyMap{"FULL_NAME": "Otto Machine"}, bearer, &patched); status != 200 {
-		t.Fatalf("case-variant patch → %d, want 200 (dropped, not written)", status)
+	if status := e.Call(t, "GET", "/v1/leads/"+lead.ID, nil, nil, &patched); status != 200 {
+		t.Fatalf("read the lead → %d", status)
 	}
 	if patched.FullName != "Otto Human" {
 		t.Fatalf("case-variant key must not overwrite the human value: got %q", patched.FullName)
