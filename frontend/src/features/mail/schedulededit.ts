@@ -28,13 +28,12 @@ const isRelinkKind = (type: string): type is RelinkKind =>
 
 /**
  * The composer's opening state for a scheduled message, or nothing when the
- * message cannot be written again faithfully.
+ * composer cannot write it again faithfully.
  *
- * Editing is cancel-and-recompose, because the approval is bound to the
- * content. So only a message the composer itself could have written qualifies:
- * a new conversation filed under a record, with none of the marketing purpose,
- * evidence or legacy consent key the composer has no field for. A reply names
- * a thread and not the record behind it, so it is left out as well.
+ * The approval is bound to the content, so an edit is a new send. Only a new
+ * conversation filed under a record qualifies, with no marketing purpose,
+ * evidence or legacy consent key, which the composer has no field for. A reply
+ * names a thread and not the record behind it.
  */
 export function editSeedOf(send: ScheduledSend): EditSeed | undefined {
   const [anchor, ...rest] = send.links ?? [];
