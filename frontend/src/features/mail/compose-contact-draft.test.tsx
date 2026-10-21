@@ -289,6 +289,39 @@ describe("drafting to a contact", () => {
     });
   });
 
+  // The deterministic floor writes from the record and never reads the body,
+  // so its answer must not take the place of the words the rep wrote.
+  it("keeps the body the reader wrote when no model answered", async () => {
+    stubRoutes({
+      "POST /contacts/c-1/draft-email": () =>
+        jsonResponse({
+          ...CONTACT_DRAFT,
+          generated_by: "deterministic",
+          ai_generated: false,
+          ai_disclosure: null,
+        }),
+    });
+    render(
+      <ComposeModal
+        intent="Make this nicer"
+        entityType="contact"
+        entityId="c-1"
+        contactId="c-1"
+        recordAddress="annabelle@akeneo.example"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+    writeMessage("Body", "hi, two products missing. pls send");
+
+    await userEvent.click(
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
+    );
+
+    await screen.findByDisplayValue("Zwei Produkte ohne Übersetzung");
+    expect(messageText("Body")).toContain("pls send");
+  });
+
   it("discloses a model-written draft", async () => {
     stubRoutes({
       "POST /contacts/c-1/draft-email": () => jsonResponse(CONTACT_DRAFT),

@@ -62,7 +62,8 @@ export type DraftResult =
       reasoning?: DraftReason[];
       // Account path only: what the scoped read kept, when a project was chosen.
       scope?: ProjectScope;
-      // The route was sent the body on screen and answered a revision of it.
+      // A model was sent the body on screen and answered a revision of it. The
+      // deterministic floor never reads that body, so its answer is no revision.
       revised?: boolean;
     };
 
@@ -190,7 +191,7 @@ function draftAnswer(
     draft: data,
     reasoning: data.reasoning,
     scope: data.scope,
-    revised: rewriteOf.trim() !== "",
+    revised: rewriteOf.trim() !== "" && data.ai_generated === true,
   };
 }
 
