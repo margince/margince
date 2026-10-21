@@ -38,6 +38,7 @@ var kindIDPairsTheMergeLeaves = gatekit.Waive(map[string]string{
 	"ai_call.subject_id":                            "the ledger of one model call is history, written with a label of its subject at the time; moving it would rewrite what the call was about",
 	"ai_task_run.subject_id":                        "a task run is the record of what the assistant did to the retired record, with its own subject label; it stays addressable through merged_into",
 	"report_edition_contribution.source_id":         "a published edition is frozen evidence of what the report counted when it was published; moving a source would change a number already shown",
+	"report_edition_question_source.source_id":      "a kept question answer is frozen evidence of the records a sent edition counted; its sources are the question's population, a deal, lead, project or activity, and a reader is shown the answer only while each still answers to it",
 	"field_provenance.object_id":                    "carried field by field for exactly the values the survivor inherits, in carryFieldAuthors, through the stamp writer every other path uses",
 })
 
