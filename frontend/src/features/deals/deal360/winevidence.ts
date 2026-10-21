@@ -39,11 +39,10 @@ type AskedAdvance = Readonly<{
  * What the win dialog asks about contract evidence, for the advance it was
  * opened on.
  *
- * `needed` is whether to ask how the win happened: the read found no signed
- * contract, or the server refused this deal's win for naming none. `checking`
- * is true while the read is out, and Confirm waits on it. `stillBare` asks
- * again at the press, because the server takes a stated reason without looking
- * for paper and a contract may have been filed while the dialog sat open.
+ * `needed` means ask how the win happened: the read found no signed contract,
+ * or the server refused this deal's win for naming none. `checking` holds
+ * Confirm while the read is out. `stillBare` asks again at the press, because
+ * the server takes a stated reason without looking for paper.
  */
 export function useWinQuestion(
   pending: AskedAdvance | null,
