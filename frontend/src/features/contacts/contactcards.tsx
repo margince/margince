@@ -376,7 +376,10 @@ export function ContactCommitmentsCard({
           <LoopStatus loop={loop} />
         </PanelRow>
       ))}
-      <ContactClaimsReview claims={view.claims ?? []} />
+      <ContactClaimsReview
+        claims={view.claims ?? []}
+        dismiss={(id) => <DismissClaimButton id={id} />}
+      />
     </Panel>
   );
 }
