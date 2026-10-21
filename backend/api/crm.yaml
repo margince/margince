@@ -32467,9 +32467,20 @@ components:
       description: |
         The workspace-shared capture posture (ADR-0072, CAP-PARAM-7). Read by every role,
         changed only by admin/ops.
-      required: [auto_enrich, mail_sharing, shared_posture_allowed, signature_enrich, auto_enrich_daily_cap, site_read, mail_sync_interval_seconds]
+      required: [auto_enrich, mail_sharing, shared_posture_allowed, signature_enrich, auto_enrich_daily_cap, site_read, mail_sync_interval_seconds, confidentiality_pass_cap]
       properties:
         locks: { $ref: '#/components/schemas/SettingLocks' }
+        confidentiality_pass_cap:
+          type: integer
+          minimum: 1
+          maximum: 200
+          description: |
+            How many held mail threads one confidentiality pass judges, per run. The threads
+            beyond the cap wait for the next run, so the cap sets how fast a backlog drains and
+            never whether a thread is judged. Raise it when
+            `margince_capture_confidentiality_oldest_wait_seconds` stays above how often the pass
+            runs. Each thread is one model call. Read at the start of every pass, so a change
+            applies without a restart. Default 40.
         auto_enrich_daily_cap:
           type: integer
           minimum: 1
@@ -33622,6 +33633,7 @@ components:
         site_read_max_mib: { type: integer, minimum: 1, maximum: 128, description: 'Set the size limit of one website read, in MiB.' }
         site_read_wall_seconds: { type: integer, minimum: 30, maximum: 600, description: 'Set the time limit of one website crawl, in seconds.' }
         mail_sync_interval_seconds: { type: integer, minimum: 30, maximum: 3600, description: 'Set how long a mailbox waits between syncs, in seconds.' }
+        confidentiality_pass_cap: { type: integer, minimum: 1, maximum: 200, description: 'Set how many held mail threads one confidentiality pass judges.' }
         mail_sharing: { type: boolean, description: 'Toggle the workspace mail-sharing posture; affects correspondence captured from now on — mail, and chat on a transport whose credential belongs to one member.' }
         signature_enrich: { type: boolean, description: 'Toggle the tenant-wide default for reading contact details out of captured mail — its signature and any attached vCard. A mailbox that set its own switch keeps it.' }
         shared_posture_allowed: { type: boolean, description: 'Allow a seat to put their mailbox in the `shared` posture. Off by default; see CaptureSettings.shared_posture_allowed for what turning it on asserts.' }

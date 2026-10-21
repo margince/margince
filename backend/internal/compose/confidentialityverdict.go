@@ -39,9 +39,6 @@ import (
 const (
 	// confidentialityClaimSize is how many threads one pass leases at a time.
 	confidentialityClaimSize = 8
-	// confidentialityCatchUpCap bounds one pass so a large backlog drains over
-	// several cycles rather than holding one workspace's budget for all of it.
-	confidentialityCatchUpCap = 40
 	// confidentialityActor is the principal every write of this engine is
 	// attributed to. The `agent:` prefix is the contract's grammar, not a
 	// description of the process.
@@ -94,16 +91,14 @@ func (e *ConfidentialityVerdictEngine) workspaceCtx(ctx context.Context) context
 }
 
 // RunWorkspace drains up to maxVerdicts threads in the workspace already bound
-// in ctx. A budget stop ends the pass cleanly: what was decided is committed,
-// and the rest stays claimable for the next cycle.
+// in ctx, or up to the admin's pass cap when maxVerdicts is not positive. A
+// budget stop ends the pass cleanly: what was decided is committed, and the
+// rest stays claimable for the next cycle.
 func (e *ConfidentialityVerdictEngine) RunWorkspace(ctx context.Context, maxVerdicts int) error {
 	if !e.CanJudge() {
 		// No model bound. Every thread stays held, which is the answer this
 		// deployment gets until an admin binds a lane.
 		return nil
-	}
-	if maxVerdicts <= 0 {
-		maxVerdicts = confidentialityCatchUpCap
 	}
 	if _, ok := principal.WorkspaceID(ctx); !ok {
 		// Exported, so a caller other than the worker can reach it: refuse
@@ -111,9 +106,19 @@ func (e *ConfidentialityVerdictEngine) RunWorkspace(ctx context.Context, maxVerd
 		return errors.New("confidentiality: a verdict pass requires a workspace-bound context")
 	}
 	wsCtx := e.workspaceCtx(ctx)
+	if maxVerdicts <= 0 {
+		passCap, err := e.threads.PassCap(wsCtx)
+		if err != nil {
+			return err
+		}
+		maxVerdicts = passCap
+	}
 	resolved := 0
 	for resolved < maxVerdicts {
-		batch, err := e.threads.ClaimDue(wsCtx, confidentialityClaimSize)
+		// A claim never takes more than the pass has left: the cap is a number
+		// an admin chooses, so it is not always a multiple of the claim size, and
+		// a whole batch judged past it would be a cap that is only a suggestion.
+		batch, err := e.threads.ClaimDue(wsCtx, min(confidentialityClaimSize, maxVerdicts-resolved))
 		if err != nil {
 			return fmt.Errorf("confidentiality: claiming the thread backlog: %w", err)
 		}

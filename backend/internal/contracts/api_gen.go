@@ -29669,6 +29669,14 @@ type CaptureSettings struct {
 	// without a restart. Default 500.
 	AutoEnrichDailyCap int `json:"auto_enrich_daily_cap"`
 
+	// ConfidentialityPassCap How many held mail threads one confidentiality pass judges, per run. The threads
+	// beyond the cap wait for the next run, so the cap sets how fast a backlog drains and
+	// never whether a thread is judged. Raise it when
+	// `margince_capture_confidentiality_oldest_wait_seconds` stays above how often the pass
+	// runs. Each thread is one model call. Read at the start of every pass, so a change
+	// applies without a restart. Default 40.
+	ConfidentialityPassCap int `json:"confidentiality_pass_cap"`
+
 	// Locks The settings in this response that a boot source sets, each with its source. A client
 	// shows each as read-only. Empty when nothing is locked. A write ignores it.
 	Locks *SettingLocks `json:"locks,omitempty"`
@@ -50311,6 +50319,9 @@ type UpdateCaptureSettingsRequest struct {
 
 	// AutoEnrichDailyCap Set the daily ceiling on automatic website reads.
 	AutoEnrichDailyCap *int `json:"auto_enrich_daily_cap,omitempty"`
+
+	// ConfidentialityPassCap Set how many held mail threads one confidentiality pass judges.
+	ConfidentialityPassCap *int `json:"confidentiality_pass_cap,omitempty"`
 
 	// MailSharing Toggle the workspace mail-sharing posture; affects correspondence captured from now on — mail, and chat on a transport whose credential belongs to one member.
 	MailSharing *bool `json:"mail_sharing,omitempty"`

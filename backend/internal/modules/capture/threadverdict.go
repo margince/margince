@@ -151,17 +151,10 @@ func (s *ThreadVerdictStore) ClaimDue(ctx context.Context, limit int) ([]Pending
 			       updated_at = now()
 			 WHERE v.id IN (
 			   SELECT id FROM capture_thread_verdict
-			    WHERE status = 'pending'
-			      AND next_attempt_at IS NOT NULL AND next_attempt_at <= now()
+			    WHERE `+threadOwedAnswerSQL+`
+			      AND next_attempt_at <= now()
 			      AND (claimed_until IS NULL OR claimed_until <= now())
 			      AND attempts < $3
-			      AND EXISTS (SELECT 1 FROM activity a
-			                   WHERE a.id = first_activity_id
-			                     AND a.restricted_at IS NULL)
-			      AND EXISTS (SELECT 1 FROM capture_connection c
-			                   WHERE c.user_id = capture_thread_verdict.user_id
-			                     AND c.archived_at IS NULL
-			                     AND c.mail_posture = 'classified')
 			    ORDER BY next_attempt_at
 			    LIMIT $1
 			    FOR UPDATE SKIP LOCKED)
