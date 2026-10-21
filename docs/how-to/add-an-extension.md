@@ -983,7 +983,9 @@ ignores files you add to the unit later. `git add -f` stages the files once, but
 it does not take the place of the line.
 
 A unit for one installation only should stay ignored. Its presence
-in the working tree already turns it on for that install.
+in the working tree already turns it on for that install. Give it a module path of its own, outside
+`github.com/margince/margince/`. `backend/gates/extensionsignored_test.go` reads that path to tell the
+installation's unit from one of this repository that lost its `.gitignore` line.
 
 Commit **the whole unit folder**: every source and test file, plus its module files (`go.mod`, and `go.sum` if it
 uses outside packages). Commit it together with the `.gitignore` line. Do **not** commit `build/composition/`,
