@@ -179,23 +179,19 @@ and in the Worklist.
 Morning names each source it could not read, with **Refresh brief**, and never shows it as a zero.
 - **Flagged pipeline value** adds up deal value without the deals that have no price, and says how many those are.
 - That value is the full deal amount, not the amount you expect to lose. It may not be complete, and it is not a forecast.
-- Meetings count calendar entries still to come. Margince does not say you are prepared unless the
-  source says so.
+- Meetings count calendar entries still to come. Margince does not say you are prepared unless the source says so.
 
 The work counts come from the current Worklist read. The greeting's email count comes from the nightly run; it does not count today's decisions. Each part of Home can refresh at a different time. Another Worklist page keeps the same members but reads their current state; pages do not share one fixed time.
 
-**Since your last brief** says when some activity could not be counted. Its count then shows a minimum, and an empty list does not mean nothing happened.
+**Since your last brief** says when some activity could not be counted. Its count then says how much it could count, and an empty list does not mean nothing happened.
 
 ### Waiting for your word
-**Waiting for your word**, on **Morning**, lists the changes Margince made to your deals that you can
-still accept or undo. Each names the deal, what changed, why and when. A close date fix names the
-old and new date; a change in confidence alone is not called a date change. **Accept** records that
-you reviewed the change and keeps what it set. It does not run the change again, or turn a guessed
-date into a customer promise. **Undo** puts the deal back, and the row then reads **Undone**.
+**Waiting for your word**, on **Morning**, lists deal changes you can still accept or undo. Each names the deal, what changed, why and when. A close date fix shows the old and new dates. A change in confidence alone is not called a date change.
 
-A deal that changed again since reads "This deal changed again. Open the deal to review its current
-state." Neither an undone change nor a replaced one can be accepted. To make Margince ask you first,
-see [Approvals](approvals.md). Also called: automatic changes, review changes, accept a change.
+**Accept** records your review and keeps the change. It does not run the change again or turn a guessed date into a customer promise. **Undo** puts the deal back, and the row then reads **Undone**.
+
+A deal that changed again reads "This deal changed again. Open the deal to review its current state."
+Neither an undone change nor a replaced one can be accepted. To make Margince ask first, see [Approvals](approvals.md). Also called: automatic changes, review changes, accept a change.
 
 ### What happens to a promise from a call or an email?
 A promise Margince reads in a meeting transcript or an email becomes something to watch or a task,
