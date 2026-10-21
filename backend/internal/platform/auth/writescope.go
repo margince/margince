@@ -234,8 +234,7 @@ func WritableLiveBy(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) (
 	if err != nil {
 		return false, err
 	}
-	verbs := p.Permissions.Allows(table, principal.ActionRead) && p.Permissions.Allows(table, principal.ActionUpdate)
-	if !verbs && p.Type != principal.PrincipalSystem {
+	if !p.Permissions.Allows(table, principal.ActionRead) || !p.Permissions.Allows(table, principal.ActionUpdate) {
 		return false, nil
 	}
 	return writableAnswer(EnsureWritableLive(ctx, tx, table, id))

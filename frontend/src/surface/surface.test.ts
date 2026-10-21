@@ -57,6 +57,10 @@ describe("the published frontend surface", () => {
       // hand-wrote a `<dl>` that nothing styled. See the note beside its export.
       "FactList",
       "Field",
+      // Panel and PanelBody: a unit's deal panel stands in the page's own
+      // column, where the catalog wants a Panel and forbids a titled Card.
+      "Panel",
+      "PanelBody",
       "RecordPicker",
       // Row and Stack: the gap every other name on this list works around. A
       // unit ships no stylesheet, so before these its only ways to separate two

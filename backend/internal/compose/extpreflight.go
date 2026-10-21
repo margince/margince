@@ -123,7 +123,8 @@ func preflightSurfaces(e extension.Extension) error {
 
 // preflightPanels validates one unit's panels through the published
 // Panel.Validate the generator runs. It refuses two panels in one slot, since
-// the page draws a unit once per slot.
+// the page draws a unit once per slot. The generator refuses the same at make
+// gen; this holds a hand-built registry at boot, as preflightEntries does.
 func preflightPanels(e extension.Extension) error {
 	seen := make(map[extension.PanelSlot]bool, len(e.Panels))
 	for _, panel := range e.Panels {

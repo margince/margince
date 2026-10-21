@@ -88,6 +88,10 @@ export { ErrorLine } from "../design-system/errorline";
 // primitive that gets published rather than FieldGrid: a unit describing what it
 // connected is not editing it.
 export { type Fact, FactList } from "../design-system/factlist";
+// Panel and PanelBody, because a unit's deal panel stands in the page's own
+// column beside core's panels. A titled Card there is a second pane chrome,
+// which the catalog's Card row forbids and no gate can see in unit code.
+export { Panel, PanelBody } from "../design-system/panel";
 // RecordPicker, because the alternative is every unit that touches a core
 // record asking a contact to paste a UUID.
 //

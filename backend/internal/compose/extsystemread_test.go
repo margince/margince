@@ -86,6 +86,7 @@ func TestAnAttendedCanReadAnswersOnlyItsHumanCallerAboutThemselves(t *testing.T)
 	self, other := ids.NewV7(), ids.NewV7()
 	human := principal.Principal{Type: principal.PrincipalHuman, UserID: self}
 	agent := principal.Principal{Type: principal.PrincipalAgent, ID: "agent:probe", OnBehalfOf: self}
+	connector := principal.Principal{Type: principal.PrincipalConnector, ID: "connector:probe", OnBehalfOf: self}
 	company := extension.EntityRef{Type: "company", ID: ids.NewV7().String()}
 	for name, c := range map[string]struct {
 		actor principal.Principal
@@ -95,6 +96,7 @@ func TestAnAttendedCanReadAnswersOnlyItsHumanCallerAboutThemselves(t *testing.T)
 		"a human about themselves":     {human, self, extension.ErrInvalid},
 		"a human about a colleague":    {human, other, extension.ErrAttendedRead},
 		"an agent about its own human": {agent, self, extension.ErrAttendedRead},
+		"a connector about its human":  {connector, self, extension.ErrAttendedRead},
 		"the same id in upper case":    {human, self, extension.ErrInvalid},
 	} {
 		ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), ids.NewV7()), c.actor)

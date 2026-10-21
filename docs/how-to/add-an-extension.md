@@ -622,13 +622,20 @@ The page hands that function the record it shows, typed by `ExtensionPanelProps`
 ```tsx
 export function VisitsPanel({ record }: ExtensionPanelProps) {
   // record is { type: "deal", id: "…" }
-  return <Card title={t("extVisitLog.panel.title")}>…</Card>;
+  return (
+    <Panel title={t("extVisitLog.panel.title")} titleAction={<Badge>…</Badge>}>
+      <PanelBody>…</PanelBody>
+    </Panel>
+  );
 }
 ```
 
-Draw your own card from the design system, and return `null` when there is nothing to say. The page holds
-each unit's panel apart. A panel that fails to draw shows a retry card in its place. The page and the other
-units' panels go on. Several units fill one slot in the order of the composed
+Draw it as a `Panel` with a `PanelBody`, both from `@margince/frontend/design-system`, as the page's own
+panels are. A titled `Card` in the page's column would be a second pane, and no gate reads unit code to
+catch it. Return `null` when there is nothing to say.
+
+The page holds each unit's panel apart. A panel that fails to draw shows a retry card in its place. The page
+and the other units' panels go on. Several units fill one slot in the order of the composed
 registry. A slot that no enabled unit fills draws nothing, so a page looks as it does without the tier.
 
 The panel calls your own routes like a screen does. A route that serves something about the record first
@@ -711,7 +718,8 @@ own rights hide it.
 `CanRead` and `CanWrite` answer in those places too, but only a signed-in human asking about their own rights. So a route can ask
 whether its own caller may open the deal before it serves what your unit stored about it. Any other question
 there, and any call an agent or a connector makes, answers `extension.ErrAttendedRead`: an agent's scopes may
-be narrower than its human's rights.
+be narrower than its human's rights. A user id that is no UUID answers `extension.ErrInvalid`. A unit that did
+not declare `authority` in `SystemReads` is refused, as for any read it did not declare.
 
 The refusal guards the call, not your own tables. If you save what a read returned and show it later, ask
 `CanRead` first.
