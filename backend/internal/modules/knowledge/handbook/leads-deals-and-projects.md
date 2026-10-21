@@ -5,8 +5,7 @@ A lead is someone you may sell to. A deal is one opportunity with one company, a
 
 ## Leads
 
-> "Leads are kept apart from Contacts. A lead becomes a contact only when you
-> qualify it."
+> "Leads are kept apart from Contacts. A lead becomes a contact only when you qualify it."
 
 A lead needs only a source. Email and LinkedIn address are the fields used to
 find copies of one lead; a second live lead with the same email is refused.

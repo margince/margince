@@ -92,6 +92,36 @@ export const en = {
   "homeRepair.started":
     "The reviewed run is queued. Its progress appears above.",
 
+  "approvalPreferences.title": "Personal approval mutes",
+  "approvalPreferences.explain":
+    "Muted kinds leave your queue only. Other readers keep their proposals. Muting or restoring a kind turns off your automatic changes for that kind. Sends, bookings, merges and proposals from agent passports stay visible.",
+  "approvalPreferences.review": "Review including muted",
+  "approvalPreferences.reviewExplain":
+    "This review includes muted proposals and expired items. Bundles in your ordinary queue can show fewer members because of your personal mutes; review each proposal before deciding.",
+  "approvalPreferences.close": "Close review",
+  "approvalPreferences.next": "Next page",
+  "approvalPreferences.first": "First page",
+  "dealSuggestion.linkedUnlinked":
+    "Evidence linked. Some evidence remains in place because permissions do not allow it to be moved.",
+  "dealSuggestion.searchExisting": "Search deals",
+  "dealSuggestion.existingDeal": "Existing deal",
+  "dealSuggestion.moreDeals": "Load more deals",
+  "dealSuggestion.noMatchingDeals": "No matching deals at this company.",
+  "dealSuggestion.changed":
+    "This suggestion is no longer available. Refresh the findings to see its current state.",
+  "dealSuggestion.linkExisting": "Link to existing deal",
+  "dealSuggestion.linked": "Evidence linked to the deal.",
+  "dealSuggestion.dismissTitle": "Dismiss deal suggestion",
+  "dealSuggestion.linkEffect":
+    "Attach the cited evidence to a deal at {company}; no new deal is created.",
+  "dealSuggestion.dismissEffect":
+    "Close this suggestion for {company} and record the reason.",
+  "dealSuggestion.dismissReason": "Reason",
+  "dealSuggestion.dismissReason.not_a_deal": "No buying interest",
+  "dealSuggestion.dismissReason.already_tracked": "Already tracked",
+  "dealSuggestion.dismissReason.wrong_company": "Wrong company",
+  "dealSuggestion.dismissReason.historical": "Historical activity",
+  "dealSuggestion.dismissReason.other": "Other reason",
   "dataTasks.unknownState": "Update the application to manage this state.",
   "dataTasks.blockedBy": "Waiting for: {name}",
   "roles.object.data_task": "Data updates",
@@ -349,6 +379,13 @@ export const en = {
   "reporting.draftPreviewing":
     "You are looking at the draft. Readers still see the published report.",
   "reporting.previewDraft": "Preview draft",
+  "reporting.previewAs": "Preview as",
+  "reporting.previewAsSelf": "Your own view",
+  "reporting.previewAsBanner":
+    "Preview as {role}: what a seat with this role and your teams reads of this report. Records private to someone else stay hidden here too.",
+  "reporting.endPreview": "End preview",
+  "reporting.previewNoRecords":
+    "Records do not open in a preview. End the preview to open them under your own access.",
   "reporting.showPublished": "Show published report",
   "reporting.publishDraft": "Publish draft",
   "reporting.discardDraft": "Discard draft",
@@ -4886,6 +4923,9 @@ export const en = {
     "Creates a new company unless one is picked from the list.",
   "create.dealName": "Deal name",
   "create.amount": "Value",
+  "create.amountNegative": "Enter an amount of zero or more.",
+  "create.referenceNotFound":
+    "This record no longer exists, or you cannot see it.",
   "create.currency": "Currency",
   "create.stage": "Stage",
   "create.relatedCompany": "Company",
@@ -6862,6 +6902,8 @@ export const en = {
   "import.reason.run_in_flight":
     "This import is already running. It finishes on its own and this page updates.",
   "import.reason.undo_failed": "The record could not be undone.",
+  "import.reason.amount_negative":
+    "“{value}” is below zero, and a deal’s amount cannot be.",
   "import.reason.author_too_long": "Author is longer than {max} characters.",
   "import.reason.cannot_create":
     "You cannot create {plural}, so the {plural} file is skipped.",

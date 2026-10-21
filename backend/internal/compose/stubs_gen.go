@@ -463,6 +463,10 @@ func (stubs) ListReportingExecutions(w nethttp.ResponseWriter, r *nethttp.Reques
 	httperr.NotImplemented(w, r, "ListReportingExecutions")
 }
 
+func (stubs) PreviewReportingReportAsRole(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.PreviewReportingReportAsRoleParams) {
+	httperr.NotImplemented(w, r, "PreviewReportingReportAsRole")
+}
+
 func (stubs) ListReportingReportRevisions(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "ListReportingReportRevisions")
 }

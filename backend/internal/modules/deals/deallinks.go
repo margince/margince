@@ -32,7 +32,7 @@ func applyDealLinkPatches(ctx context.Context, tx pgx.Tx,
 	ensurePartner EnsurePartner, ensureProjectAttachable EnsureProjectAttachable,
 ) error {
 	if in.CompanyID != nil {
-		if err := auth.EnsureLinkTarget(ctx, tx, "company", in.CompanyID.UUID); err != nil {
+		if err := auth.EnsureReferenceTarget(ctx, tx, "company_id", "company", in.CompanyID.UUID); err != nil {
 			return err
 		}
 		p.Set("company_id", current.CompanyId, *in.CompanyID)
@@ -50,7 +50,7 @@ func applyDealLinkPatches(ctx context.Context, tx pgx.Tx,
 	}
 	if in.ProjectID != nil {
 		if err := ensureProjectAttachable(ctx, tx, in.ProjectID.UUID); err != nil {
-			return err
+			return auth.NameMissingReference("project_id", err)
 		}
 		p.Set("project_id", current.ProjectId, *in.ProjectID)
 	}

@@ -151,6 +151,7 @@ export function fieldControl(
       // A bare number input steps by 1, so the browser refuses 14.60 before
       // any handler sees it. A money field has to say it takes cents.
       step={field.step}
+      min={field.min}
       maxLength={field.maxLength}
       value={value}
       placeholder={field.placeholder}

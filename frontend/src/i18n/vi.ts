@@ -99,6 +99,28 @@ export const vi = {
   "homeRepair.started":
     "Lượt xử lý đã xem xét đang chờ chạy. Tiến độ hiển thị ở trên.",
 
+  "dealSuggestion.linkedUnlinked":
+    "Đã liên kết bằng chứng. Một số bằng chứng giữ nguyên vì không có quyền di chuyển.",
+  "dealSuggestion.searchExisting": "Tìm giao dịch",
+  "dealSuggestion.existingDeal": "Giao dịch hiện có",
+  "dealSuggestion.moreDeals": "Tải thêm giao dịch",
+  "dealSuggestion.noMatchingDeals":
+    "Không có giao dịch phù hợp tại công ty này.",
+  "dealSuggestion.changed":
+    "Đề xuất này không còn khả dụng. Tải lại các mục cần kiểm tra để xem trạng thái hiện tại.",
+  "dealSuggestion.linkExisting": "Liên kết với giao dịch hiện có",
+  "dealSuggestion.linked": "Đã liên kết bằng chứng với giao dịch.",
+  "dealSuggestion.dismissTitle": "Bỏ qua đề xuất giao dịch",
+  "dealSuggestion.linkEffect":
+    "Liên kết bằng chứng được trích dẫn với giao dịch tại {company}; không tạo giao dịch mới.",
+  "dealSuggestion.dismissEffect":
+    "Đóng đề xuất này cho {company} và lưu lý do.",
+  "dealSuggestion.dismissReason": "Lý do",
+  "dealSuggestion.dismissReason.not_a_deal": "Không có ý định mua",
+  "dealSuggestion.dismissReason.already_tracked": "Đã được theo dõi",
+  "dealSuggestion.dismissReason.wrong_company": "Sai công ty",
+  "dealSuggestion.dismissReason.historical": "Hoạt động trong quá khứ",
+  "dealSuggestion.dismissReason.other": "Lý do khác",
   "dataTasks.unknownState": "Cập nhật ứng dụng để quản lý trạng thái này.",
   "dataTasks.blockedBy": "Đang chờ: {name}",
   "roles.object.data_task": "Cập nhật dữ liệu",
@@ -361,6 +383,13 @@ export const vi = {
   "reporting.draftPreviewing":
     "Bạn đang xem bản nháp. Ai đọc báo cáo vẫn thấy bản đã công bố.",
   "reporting.previewDraft": "Xem trước bản nháp",
+  "reporting.previewAs": "Xem trước với vai trò",
+  "reporting.previewAsSelf": "Góc nhìn của bạn",
+  "reporting.previewAsBanner":
+    "Xem trước với vai trò {role}: những gì một tài khoản có vai trò này và cùng các nhóm đọc được trong báo cáo này. Bản ghi riêng tư của tài khoản khác vẫn bị ẩn ở đây.",
+  "reporting.endPreview": "Kết thúc xem trước",
+  "reporting.previewNoRecords":
+    "Bản xem trước không mở bản ghi. Kết thúc xem trước để mở chúng với quyền truy cập của bạn.",
   "reporting.showPublished": "Hiện bản đã công bố",
   "reporting.publishDraft": "Công bố bản nháp",
   "reporting.discardDraft": "Bỏ bản nháp",
@@ -4713,6 +4742,9 @@ export const vi = {
     "Tạo công ty mới nếu không chọn công ty có sẵn trong danh sách.",
   "create.dealName": "Tên deal",
   "create.amount": "Giá trị",
+  "create.amountNegative": "Nhập số tiền từ 0 trở lên.",
+  "create.referenceNotFound":
+    "Bản ghi này không còn tồn tại hoặc bạn không thể xem.",
   "create.currency": "Loại tiền",
   "create.stage": "Giai đoạn",
   "create.relatedCompany": "Công ty",
@@ -6601,6 +6633,8 @@ export const vi = {
   "import.reason.run_in_flight":
     "Lần nhập này đang chạy. Nó tự hoàn tất và trang này tự cập nhật.",
   "import.reason.undo_failed": "Không thể hoàn tác bản ghi này.",
+  "import.reason.amount_negative":
+    "“{value}” nhỏ hơn 0, mà số tiền của deal thì không được âm.",
   "import.reason.author_too_long": "Tác giả dài hơn {max} ký tự.",
   "import.reason.cannot_create":
     "Bạn không có quyền tạo {plural} nên tệp {plural} bị bỏ qua.",

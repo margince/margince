@@ -110,7 +110,8 @@ func validDraft(d SuggestionDraft) error {
 	if d.CompanyID.IsZero() || !nameHints[d.NameHint] || len(d.Evidence) == 0 {
 		return ErrSuggestionDraftInvalid
 	}
-	if moneyPairError(d.AmountMinor, nil, d.Currency) != nil || d.Confidence < 0 || d.Confidence > 1 {
+	if moneyPairError(d.AmountMinor, nil, d.Currency) != nil || amountSetError(d.AmountMinor) != nil ||
+		d.Confidence < 0 || d.Confidence > 1 {
 		return ErrSuggestionDraftInvalid
 	}
 	for _, e := range d.Evidence {

@@ -43,6 +43,7 @@ func (h Handlers) ListDealSuggestions(w http.ResponseWriter, r *http.Request, pa
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.DealSuggestionListResponse{Data: data, Page: page})
 }
 
+// GetDealSuggestion uses the same source visibility as the suggestion list.
 func (h Handlers) GetDealSuggestion(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	suggestion, err := h.store.GetSuggestion(r.Context(), ids.UUID(id))
 	if err != nil {

@@ -32,6 +32,10 @@ import (
 type CreateDealInput struct {
 	Name        string
 	AmountMinor *int64
+	// ReferencesFromRequest says the caller typed the ids this deal points at,
+	// so a miss is refused naming the field. A writer that derives them (a
+	// stored suggestion, a lead, an import row) leaves it false.
+	ReferencesFromRequest bool
 	// ExpectedArrMinor is the recurring half of the price, in the same
 	// currency as AmountMinor.
 	ExpectedArrMinor *int64
@@ -157,6 +161,9 @@ func (s *Store) readyDealCreate(ctx context.Context, in CreateDealInput) (bornDe
 	if err := moneyPairError(in.AmountMinor, in.ExpectedArrMinor, in.Currency); err != nil {
 		return bornDeal{}, err
 	}
+	if err := amountSetError(in.AmountMinor); err != nil {
+		return bornDeal{}, err
+	}
 	attribution, err := birthAttribution(in)
 	if err != nil {
 		return bornDeal{}, err
@@ -220,13 +227,17 @@ func ensureBirthLinksVisible(ctx context.Context, tx pgx.Tx, in CreateDealInput,
 	// than checked as a zero id.
 	var links []recordLink
 	if in.CompanyID != nil {
-		links = append(links, recordLink{linkEntityCompany, in.CompanyID.UUID})
+		links = append(links, recordLink{fieldCompanyID, linkEntityCompany, in.CompanyID.UUID})
 	}
 	if in.PartnerCompanyID != nil {
-		links = append(links, recordLink{linkEntityCompany, in.PartnerCompanyID.UUID})
+		links = append(links, recordLink{fieldPartnerCompanyID, linkEntityCompany, in.PartnerCompanyID.UUID})
 	}
 	for _, link := range links {
-		if err := auth.EnsureLinkTarget(ctx, tx, link.entity, link.id); err != nil {
+		err := auth.EnsureLinkTarget(ctx, tx, link.entity, link.id)
+		if in.ReferencesFromRequest {
+			err = auth.NameMissingReference(link.field, err)
+		}
+		if err != nil {
 			return err
 		}
 	}
@@ -236,15 +247,19 @@ func ensureBirthLinksVisible(ctx context.Context, tx pgx.Tx, in CreateDealInput,
 	// ensureProjectAttachable says the whole reasoning.
 	if in.ProjectID != nil {
 		if err := ensureProjectAttachable(ctx, tx, in.ProjectID.UUID); err != nil {
+			if in.ReferencesFromRequest {
+				err = auth.NameMissingReference("project_id", err)
+			}
 			return err
 		}
 	}
 	return nil
 }
 
-// recordLink is one row-scoped record a deal points at, named by the entity the
-// visibility gate knows it as.
+// recordLink is one row-scoped record a deal points at: the body field that
+// carried the id, and the entity the visibility gate knows it as.
 type recordLink struct {
+	field  string
 	entity string
 	id     ids.UUID
 }
@@ -254,6 +269,12 @@ type recordLink struct {
 const (
 	linkEntityCompany = "company"
 	linkEntityProject = "project"
+)
+
+// The body fields a refusal names for those links.
+const (
+	fieldCompanyID        = "company_id"
+	fieldPartnerCompanyID = "partner_company_id"
 )
 
 // clearedForBirth runs every gate a newborn deal must pass and answers the
@@ -272,7 +293,7 @@ func (s *Store) clearedForBirth(ctx context.Context, tx pgx.Tx, in CreateDealInp
 		in.OwnerID = owner
 	}
 
-	if err := ensureOpenBirthStage(ctx, tx, in.StageID, in.PipelineID); err != nil {
+	if err := ensureOpenBirthStage(ctx, tx, in.StageID, in.PipelineID, in.ReferencesFromRequest); err != nil {
 		return in, err
 	}
 	if err := refuseBirthPastLegalGate(ctx, tx, in.StageID); err != nil {

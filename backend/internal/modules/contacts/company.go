@@ -180,7 +180,7 @@ func createCompanyInTx(ctx context.Context, tx pgx.Tx, in CreateCompanyInput, by
 	// row scope, not merely same-workspace (H1 — an FK argument to a
 	// row-scoped record is a read of that record).
 	if in.ParentCompanyID != nil {
-		if err := auth.EnsureLinkTarget(ctx, tx, "company", in.ParentCompanyID.UUID); err != nil {
+		if err := auth.EnsureReferenceTarget(ctx, tx, "parent_company_id", "company", in.ParentCompanyID.UUID); err != nil {
 			return crmcontracts.Company{}, err
 		}
 	}

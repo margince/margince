@@ -328,6 +328,7 @@ func (c commsAdapter) BookMeeting(ctx context.Context, in agents.BookMeetingArgs
 	}
 	booked := activities.BookMeetingInput{
 		Host: ids.From[ids.UserKind](hostID), Start: in.Start, End: in.End, Subject: in.Subject,
+		LinksFromRequest: true,
 	}
 	for _, l := range in.Links {
 		booked.Links = append(booked.Links, activities.ActivityLinkInput{

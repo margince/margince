@@ -292,7 +292,7 @@ func TestCreateProjectRefusesAnIncompleteBodyOverHTTP(t *testing.T) {
 		},
 		"company_id names nothing visible": {
 			AnyMap{"name": "Orphan", "company_id": ids.NewV7().String(), "source": "manual"},
-			http.StatusNotFound,
+			http.StatusUnprocessableEntity,
 		},
 	} {
 		t.Run(name, func(t *testing.T) {

@@ -43,9 +43,10 @@ func relationshipCreateInput(req crmcontracts.CreateRelationshipRequest) (Create
 		return CreateRelationshipInput{}, err
 	}
 	in := CreateRelationshipInput{
-		Kind:   string(req.Kind),
-		Role:   req.Role,
-		Source: source,
+		ReferencesFromRequest: true,
+		Kind:                  string(req.Kind),
+		Role:                  req.Role,
+		Source:                source,
 		// Passed through as the pointer, not collapsed to a bool: the store
 		// decides the flag only for a caller who omitted it, and an omitted
 		// field and an explicit false are different requests.

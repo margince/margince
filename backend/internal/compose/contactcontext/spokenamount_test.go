@@ -35,10 +35,9 @@ func TestSpokenAmount(t *testing.T) {
 		// €1,999,999 as "€1m", understating by nearly half in an outbound
 		// draft. To the thousand it loses 999 units at worst.
 		"just under two million is not rounded to one": {199_999_900, "EUR", "€1999k"},
-		// A deal amount can be negative: no CHECK on the column, no minimum in
-		// the contract, and a POST carrying one answers 201. Comparing the
-		// SIGNED value against the tiers abbreviated only the positive half and
-		// put the minus inside the figure — "€-95000".
+		// An older deal can hold a negative amount. Comparing the SIGNED value
+		// against the tiers abbreviated only the positive half. The minus
+		// landed inside the figure, as "€-95000".
 		"a credit is abbreviated too":            {-9_500_000, "EUR", "-€95k"},
 		"a credit in the millions":               {-150_000_000_000, "EUR", "-€1500000k"},
 		"a credit in a zero-decimal currency":    {-18_000_000, "VND", "-₫18000k"},

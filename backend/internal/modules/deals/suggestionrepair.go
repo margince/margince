@@ -16,8 +16,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// SuggestionRepairVersion binds reviewed plans to the owner’s retirement rules.
 const SuggestionRepairVersion = "1"
 
+// RepairReasonCurrentWork and its peers explain why reviewed work is kept or retired.
 const (
 	RepairReasonCurrentWork     = "current_work"
 	RepairReasonUnverified      = "source_rule_not_verified"
@@ -27,13 +29,16 @@ const (
 	RepairReasonBuyerUnverified = "buyer_no_longer_verified"
 )
 
+// SuggestionBuyerVerifier reuses current buyer admission at review and execution.
 type SuggestionBuyerVerifier func(context.Context, pgx.Tx, Suggestion, time.Time) (bool, error)
 
+// SuggestionRepairProvenance ties an automatic retirement to the reviewed run.
 type SuggestionRepairProvenance struct {
 	RuleVersion string
 	RunID       ids.UUID
 }
 
+// SuggestionRepair binds the proposed outcome to the version actually reviewed.
 type SuggestionRepair struct {
 	ID        ids.UUID
 	Version   int64
@@ -78,6 +83,7 @@ func SuggestionRepairPageTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limi
 	return out, nil
 }
 
+// PreviewSuggestionRepairTx keeps inspection read-only while enforcing ordinary visibility.
 func PreviewSuggestionRepairTx(ctx context.Context, tx pgx.Tx, id ids.UUID, asOf time.Time, buyerVerified SuggestionBuyerVerifier) (SuggestionRepair, error) {
 	current, err := readVisibleSuggestionTx(ctx, tx, id, false)
 	if err != nil {

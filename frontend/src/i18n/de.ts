@@ -96,6 +96,37 @@ export const de = {
   "homeRepair.started":
     "Der geprüfte Lauf ist vorgemerkt. Der Fortschritt erscheint oben.",
 
+  "approvalPreferences.title": "Persönlich stummgeschaltete Freigaben",
+  "approvalPreferences.explain":
+    "Stummgeschaltete Arten verschwinden nur aus deiner Worklist. Andere Mitglieder behalten ihre Vorschläge. Stummschalten und Wiederherstellen deaktivieren deine automatischen Änderungen dieser Art. Versand, Buchungen, Zusammenführungen und Vorschläge mit Agentenpass bleiben sichtbar.",
+  "approvalPreferences.review": "Auch stumme Vorschläge prüfen",
+  "approvalPreferences.reviewExplain":
+    "Diese Ansicht enthält stumme und abgelaufene Vorschläge. Pakete in deiner normalen Worklist können durch persönliche Einstellungen weniger Einträge zeigen. Prüfe jeden Vorschlag vor der Entscheidung.",
+  "approvalPreferences.close": "Prüfung schließen",
+  "approvalPreferences.next": "Nächste Seite",
+  "approvalPreferences.first": "Erste Seite",
+  "dealSuggestion.linkedUnlinked":
+    "Belege verknüpft. Einige Belege bleiben unverändert, da die Berechtigung zum Verschieben fehlt.",
+  "dealSuggestion.searchExisting": "Deals suchen",
+  "dealSuggestion.existingDeal": "Bestehender Deal",
+  "dealSuggestion.moreDeals": "Weitere Deals laden",
+  "dealSuggestion.noMatchingDeals":
+    "Keine passenden Deals bei diesem Unternehmen.",
+  "dealSuggestion.changed":
+    "Dieser Vorschlag ist nicht mehr verfügbar. Lade die Prüfpunkte neu, um den aktuellen Stand zu sehen.",
+  "dealSuggestion.linkExisting": "Mit bestehendem Deal verknüpfen",
+  "dealSuggestion.linked": "Belege mit dem Deal verknüpft.",
+  "dealSuggestion.dismissTitle": "Deal-Vorschlag verwerfen",
+  "dealSuggestion.linkEffect":
+    "Die genannten Belege mit einem Deal bei {company} verknüpfen; es entsteht kein neuer Deal.",
+  "dealSuggestion.dismissEffect":
+    "Diesen Vorschlag für {company} schließen und den Grund speichern.",
+  "dealSuggestion.dismissReason": "Grund",
+  "dealSuggestion.dismissReason.not_a_deal": "Kein Kaufinteresse",
+  "dealSuggestion.dismissReason.already_tracked": "Bereits erfasst",
+  "dealSuggestion.dismissReason.wrong_company": "Falsches Unternehmen",
+  "dealSuggestion.dismissReason.historical": "Frühere Aktivität",
+  "dealSuggestion.dismissReason.other": "Anderer Grund",
   "dataTasks.unknownState":
     "Aktualisiere die Anwendung, um diesen Status zu verwalten.",
   "dataTasks.blockedBy": "Wartet auf: {name}",
@@ -361,6 +392,13 @@ export const de = {
   "reporting.draftPreviewing":
     "Hier steht der Entwurf. Wer den Bericht liest, sieht weiter die veröffentlichte Fassung.",
   "reporting.previewDraft": "Entwurf ansehen",
+  "reporting.previewAs": "Vorschau als",
+  "reporting.previewAsSelf": "Eigene Ansicht",
+  "reporting.previewAsBanner":
+    "Vorschau als {role}: was ein Platz mit dieser Rolle und denselben Teams von diesem Bericht liest. Private Datensätze anderer bleiben auch hier verborgen.",
+  "reporting.endPreview": "Vorschau beenden",
+  "reporting.previewNoRecords":
+    "In der Vorschau öffnen sich keine Datensätze. Nach dem Ende der Vorschau öffnen sie sich mit dem eigenen Zugriff.",
   "reporting.showPublished": "Veröffentlichte Fassung zeigen",
   "reporting.publishDraft": "Entwurf veröffentlichen",
   "reporting.discardDraft": "Entwurf verwerfen",
@@ -4819,6 +4857,9 @@ export const de = {
     "Erstellt ein neues Unternehmen, sofern keines aus der Liste ausgewählt wird.",
   "create.dealName": "Deal-Name",
   "create.amount": "Wert",
+  "create.amountNegative": "Gib einen Betrag von null oder mehr ein.",
+  "create.referenceNotFound":
+    "Dieser Datensatz existiert nicht mehr, oder du kannst ihn nicht sehen.",
   "create.currency": "Währung",
   "create.stage": "Phase",
   "create.relatedCompany": "Unternehmen",
@@ -6783,6 +6824,8 @@ export const de = {
     "Dieser Import läuft bereits. Er endet von selbst und diese Seite aktualisiert sich.",
   "import.reason.undo_failed":
     "Der Datensatz konnte nicht zurückgenommen werden.",
+  "import.reason.amount_negative":
+    "„{value}“ liegt unter null, und der Betrag eines Deals darf das nicht sein.",
   "import.reason.author_too_long":
     "Die Angabe, wer den Eintrag erstellt hat, ist länger als {max} Zeichen.",
   "import.reason.cannot_create":

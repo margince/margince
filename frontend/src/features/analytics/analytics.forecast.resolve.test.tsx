@@ -348,6 +348,39 @@ it("opens the canonical proposal when a buying finding is already covered", asyn
   expect(within(sheet).queryByRole("radio")).toBeNull();
 });
 
+it("shows an unavailable proposal when its finding has lost the company claim", async () => {
+  const user = userEvent.setup();
+  show({
+    covered: true,
+    findings: [
+      {
+        ...FIRST,
+        type: "unlinked_signal",
+        subject_kind: "signal",
+        subject_id: "signal-one",
+        subject: { type: "company", id: suggestion.company_id, label: "Acme" },
+        observed: { suggestion_id: suggestion.id },
+      },
+    ],
+  });
+  await user.click(await answerButton("Acme"));
+  const sheet = await screen.findByRole("dialog");
+  expect(
+    await within(sheet).findByText(
+      "This suggestion is no longer available. Refresh the findings to see its current state.",
+    ),
+  ).toBeTruthy();
+  expect(
+    vi
+      .mocked(fetch)
+      .mock.calls.some(([input]) =>
+        String(input instanceof Request ? input.url : input).includes(
+          "/deal-suggestions",
+        ),
+      ),
+  ).toBe(false);
+});
+
 it("does not offer deal linking to a reader without deal update permission", async () => {
   const user = userEvent.setup();
   show({
