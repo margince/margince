@@ -174,7 +174,7 @@ func (h analyticsQueryHandlers) ListReportRuns(
 func runSummary(run ReportRunSummary, schema analyticsquery.Schema) (crmcontracts.ReportRunSummary, bool, error) {
 	shape := analyticsquery.Query{Entity: run.Query.Entity, GroupBy: run.Query.GroupBy, Measures: run.Query.Measures, Limit: run.Query.Limit}
 	if shape.Validate(schema) != nil {
-		return crmcontracts.ReportRunSummary{}, false, nil
+		return crmcontracts.ReportRunSummary{}, false, nil //nolint:nilerr // a question the vocabulary no longer admits is skipped, not a fault
 	}
 	asked, err := wireFromQuery(shape)
 	if err != nil {
