@@ -133,12 +133,13 @@ func (h analyticsQueryHandlers) ListReportRuns(
 		more   bool
 		schema analyticsquery.Schema
 	)
-	if err := h.db.Tx(r.Context(), func(tx pgx.Tx) error {
+	ctx := r.Context()
+	if err := h.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		if schema, _, err = AnalyticsSchemaIn(r.Context(), tx); err != nil {
+		if schema, _, err = AnalyticsSchemaIn(ctx, tx); err != nil {
 			return err
 		}
-		runs, more, err = ListReportRuns(r.Context(), tx, after, storekit.ClampLimit(params.Limit))
+		runs, more, err = ListReportRuns(ctx, tx, after, storekit.ClampLimit(params.Limit))
 		return err
 	}); err != nil {
 		httperr.Write(w, r, err)
