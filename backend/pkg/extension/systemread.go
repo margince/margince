@@ -30,7 +30,7 @@ type SystemRead string
 const (
 	// SystemReadDeals admits Deals().Get and Deals().Responsible.
 	SystemReadDeals SystemRead = "deals"
-	// SystemReadAuthority admits Authority().CanRead.
+	// SystemReadAuthority admits Authority().CanRead and Authority().CanWrite.
 	SystemReadAuthority SystemRead = "authority"
 	// SystemReadDirectory admits Directory().Emails.
 	SystemReadDirectory SystemRead = "directory"
@@ -113,6 +113,11 @@ type Authority interface {
 	// or a connector's call, or a question about anyone else, answers
 	// ErrAttendedRead.
 	CanRead(ctx context.Context, user UserID, record EntityRef, fields []string) (bool, error)
+
+	// CanWrite reports whether user could change record now: it is live, they
+	// may open it, and their own grants let them update it. It answers on the
+	// same calls, about the same users, as CanRead.
+	CanWrite(ctx context.Context, user UserID, record EntityRef) (bool, error)
 }
 
 // Directory reads colleagues' details for a job tick or a bus delivery.

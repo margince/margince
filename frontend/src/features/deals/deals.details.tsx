@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { CreateField } from "../../components/create";
 import { useEntityName } from "../../components/entityref";
+import { ExtensionPanels } from "../../components/extensionpanels";
 import { RecordFields, rawRecord } from "../../components/recordfields";
 import { useT } from "../../i18n";
 import { useAcquisitionSources } from "../../lib/acquisitionsources.queries";
@@ -205,6 +206,12 @@ export function DealContext({
       {/* What the deal is commercially, then who of ours is on it. The buyer's
           seats are not here: they live in the committee card in the column, with
           the verbs that change them. The rail holds no second copy of that list. */}
+      {/* Units' panels lead the column: each is the unit's own card about this
+          deal, fenced off so one unit's failure stays in its card. */}
+      <ExtensionPanels
+        slot="record_panel.deal"
+        record={{ type: "deal", id: deal.id }}
+      />
       <DealDetails deal={deal} meId={meId} />
       <RecordTeam recordType="deal" recordId={deal.id} readOnly={!canWrite} />
       <DealTagsSection deal={deal} />

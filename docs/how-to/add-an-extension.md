@@ -587,6 +587,50 @@ see it, as for any other id.
 The registry the SPA reads is generated from the enabled set, so removing the unit removes its entries. Nothing in
 the core names a unit. `extensions/openchannel` declares a contact header entry.
 
+## Draw a panel on a core page
+
+A unit with a frontend package can draw its own component inline on a core page. Declare one
+`extension.Panel` per place:
+
+```go
+Panels: []extension.Panel{{
+	Slot:   extension.SlotDealPanel,
+	Export: "VisitsPanel",
+	Object: "ext_visit_log_report",
+}},
+```
+
+`Slot` names the place. The list is `extension.PanelSlots()` in `backend/pkg/extension/panel.go`:
+
+| Slot | Where the panel shows |
+|---|---|
+| `extension.SlotDealPanel` (`record_panel.deal`) | A deal page's side column, above Details |
+
+- **`Export`** is a named export of your frontend package's `main` module: the component the page mounts.
+  A declared export the package does not have fails the composed typecheck.
+- **`Object`** is one of your RBAC objects. The panel shows only to a reader whose role grants `read` on it.
+  `make gen` and the start both refuse an object that none of your operations gates on.
+- One panel per slot per unit. A unit that declares a panel and ships no `frontend/package.json` is refused.
+
+The page hands the component the record it shows, typed by `ExtensionPanelProps` from
+`@margince/frontend/app`:
+
+```tsx
+export function VisitsPanel({ record }: ExtensionPanelProps) {
+  // record is { type: "deal", id: "…" }
+  return <Card title={t("extVisitLog.panel.title")}>…</Card>;
+}
+```
+
+Draw your own card from the design system, and return `null` when there is nothing to say. The page puts
+each unit's panel in its own error boundary: a render failure shows a retry card in that panel's place, and
+the page and the other units' panels go on. Several units fill one slot in the order of the composed
+registry. A slot that no enabled unit fills draws nothing, so a page looks as it does without the tier.
+
+The panel calls your own routes like a screen does. A route that serves something about the record asks
+`Authority().CanRead`, or `CanWrite` before it acts, about its own caller first (see
+[Read deals and colleagues from a handler](#read-deals-and-colleagues-from-a-handler)).
+
 ## Own scheduled jobs
 
 Declare **two kinds** in `api/jobs.yaml`. One is a `dispatcher` on a clock that fans out over every workspace.
@@ -658,7 +702,7 @@ delivery, where no user gets the answer. In all other places `Deals().Get`, `Dea
 source's read and a transport's send. There the answer, or an error that quotes it, could reach a user whose
 own rights hide it.
 
-`CanRead` answers in those places too, but only a signed-in human asking about themselves. So a route can ask
+`CanRead` and `CanWrite` answer in those places too, but only a signed-in human asking about themselves. So a route can ask
 whether its own caller may open the deal before it serves what your unit stored about it. Any other question
 there, and any call an agent or a connector makes, answers `extension.ErrAttendedRead`: an agent's scopes may
 be narrower than its human's rights.
@@ -705,6 +749,9 @@ emails, err := rt.Directory().Emails(ctx, ids)           // active human members
   `CanRead` about each colleague in order, and keep the first ones it lets in. If you cut the list first,
   colleagues it refuses can take the place of one it would let in.
 - **`Emails` takes at most `extension.MaxResponsible` users**, so the list `Responsible` gave always fits.
+- `CanWrite` comes before you act for someone on a deal. It reports whether the user could change the deal
+  now: it is live, they may open it, and their own role lets them update it. It answers on the same calls,
+  about the same users, as `CanRead`, and it takes no fields.
 
 ## Capture records from your own provider
 

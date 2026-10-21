@@ -492,3 +492,60 @@ func TestCanReadAnswersNoForADealThatDoesNotExist(t *testing.T) {
 		t.Error("a colleague who may read every deal may read one that does not exist")
 	}
 }
+
+// dealWriterGrants lets its holder change every deal.
+const dealWriterGrants = `{"objects":{"deal":{"read":true,"update":true}},"row_scope":"all"}`
+
+func (s *systemReadEnv) canWrite(t *testing.T, user ids.UUID, deal ids.UUID) bool {
+	t.Helper()
+	var writable bool
+	s.onDelivery(t, func(ctx context.Context, rt extension.Runtime) error {
+		var err error
+		writable, err = rt.Authority().CanWrite(ctx, asUser(user), extension.EntityRef{Type: "deal", ID: deal.String()})
+		return err
+	})
+	return writable
+}
+
+func TestCanWriteAnswersUnderTheColleaguesOwnGrants(t *testing.T) {
+	s := setupSystemRead(t)
+	writer := s.seat(t, "writer@example.test", "active", false)
+	s.grant(t, writer, dealWriterGrants)
+	if !s.canWrite(t, writer, s.deal) {
+		t.Error("a colleague who may change every deal was refused")
+	}
+	if s.canWrite(t, s.Rep1, s.deal) {
+		t.Error("a colleague who may only read deals may change one")
+	}
+	if s.canWrite(t, writer, ids.NewV7()) {
+		t.Error("a deal no row holds was answered as one a writer may change")
+	}
+	s.WsExec(t, `UPDATE deal SET archived_at = now() WHERE id = $1`, s.deal)
+	if s.canWrite(t, writer, s.deal) {
+		t.Error("an archived deal was answered as one a writer may change")
+	}
+}
+
+// On an attended call CanWrite answers its human caller about themselves.
+func TestAnAttendedCanWriteAnswersTheCaller(t *testing.T) {
+	s := setupSystemRead(t)
+	writer := s.seat(t, "writer@example.test", "active", false)
+	s.grant(t, writer, dealWriterGrants)
+	deal := extension.EntityRef{Type: "deal", ID: s.deal.String()}
+	for user, want := range map[ids.UUID]bool{writer: true, s.Rep1: false} {
+		rt := runtimeFor(s.As(user, nil, integration.AdminPerms), "dealmirror", "1.0.0", "tool/probe", boundExtensionRuntime())
+		writable, err := rt.Authority().CanWrite(context.Background(), asUser(user), deal)
+		rt.release()
+		if err != nil {
+			t.Fatalf("CanWrite about the caller: %v", err)
+		}
+		if writable != want {
+			t.Errorf("CanWrite about %s = %v, want %v", user, writable, want)
+		}
+	}
+	rt := runtimeFor(s.As(writer, nil, integration.AdminPerms), "dealmirror", "1.0.0", "tool/probe", boundExtensionRuntime())
+	defer rt.release()
+	if _, err := rt.Authority().CanWrite(context.Background(), asUser(s.Rep1), deal); !errors.Is(err, extension.ErrAttendedRead) {
+		t.Errorf("CanWrite about a colleague on an attended call: err = %v, want ErrAttendedRead", err)
+	}
+}

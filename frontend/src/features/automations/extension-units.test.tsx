@@ -37,6 +37,7 @@ const DISPACT: ExtensionDescriptor = {
   name: "dispact-connector",
   title: "extDispactConnector.title",
   secretScope: "user",
+  panels: [],
   verbs: [],
   entries: [],
 };
@@ -71,6 +72,7 @@ describe("the units offered on a settings page", () => {
         name: "open_notes",
         title: "",
         secretScope: "user",
+        panels: [],
         verbs: [],
         entries: [],
       },
@@ -98,7 +100,14 @@ describe("the units offered on a settings page", () => {
   it("gives every offered unit its own row", () => {
     unitsForSecretScope.mockReturnValue([
       DISPACT,
-      { name: "notes", title: "", secretScope: "user", verbs: [], entries: [] },
+      {
+        name: "notes",
+        title: "",
+        secretScope: "user",
+        verbs: [],
+        entries: [],
+        panels: [],
+      },
     ]);
     renderCard("user");
     expect(screen.getAllByRole("link")).toHaveLength(2);

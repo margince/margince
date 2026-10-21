@@ -39,6 +39,7 @@ export { LocaleProvider, useLocale } from "../i18n";
 export { useCan, useCanWrite } from "../lib/capability";
 // The record an entry on a core screen opened the unit on, for prefill.
 export { type EntryRecord, useEntryContext } from "../lib/extensionentries";
+export type { ExtensionPanelProps } from "../lib/extensions";
 // useOAuthReturn: after an admin connects a unit's OAuth app, the unit's screen
 // gets the outcome in the address, and reads it with this.
 export {

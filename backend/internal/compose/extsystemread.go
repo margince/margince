@@ -239,8 +239,9 @@ func (a systemAuthority) CanRead(ctx context.Context, user extension.UserID, rec
 	if err != nil {
 		return false, err
 	}
-	if record.Type != fieldmask.Deal {
-		return false, fmt.Errorf("%w: CanRead answers for a deal only, not a %q", extension.ErrInvalid, record.Type)
+	userID, dealID, err := dealQuestion(user, record)
+	if err != nil {
+		return false, err
 	}
 	known := dealFieldNames()
 	for _, field := range fields {
@@ -248,19 +249,42 @@ func (a systemAuthority) CanRead(ctx context.Context, user extension.UserID, rec
 			return false, fmt.Errorf("%w: a deal has no field %q", extension.ErrInvalid, field)
 		}
 	}
-	userID, err := unitID(string(user), "user")
-	if err != nil {
-		return false, err
-	}
-	dealID, err := unitID(record.ID, "deal")
-	if err != nil {
-		return false, err
-	}
 	shown, err := dealShownTo(ctx, a.rt.deps.pool, userID, dealID, fields)
 	if err != nil {
 		return false, a.rt.systemReadFault(ctx, err)
 	}
 	return shown, nil
+}
+
+func (a systemAuthority) CanWrite(ctx context.Context, user extension.UserID, record extension.EntityRef) (bool, error) {
+	ctx, err := a.rt.authorityRead(ctx, user)
+	if err != nil {
+		return false, err
+	}
+	userID, dealID, err := dealQuestion(user, record)
+	if err != nil {
+		return false, err
+	}
+	writable, err := dealWritableBy(ctx, a.rt.deps.pool, userID, dealID)
+	if err != nil {
+		return false, a.rt.systemReadFault(ctx, err)
+	}
+	return writable, nil
+}
+
+// dealQuestion checks what CanRead and CanWrite are asked about: one user, and
+// one deal, each by a canonical id.
+func dealQuestion(user extension.UserID, record extension.EntityRef) (userID, dealID ids.UUID, err error) {
+	if record.Type != fieldmask.Deal {
+		return ids.Nil, ids.Nil, fmt.Errorf("%w: Authority answers for a deal only, not a %q", extension.ErrInvalid, record.Type)
+	}
+	if userID, err = unitID(string(user), "user"); err != nil {
+		return ids.Nil, ids.Nil, err
+	}
+	if dealID, err = unitID(record.ID, "deal"); err != nil {
+		return ids.Nil, ids.Nil, err
+	}
+	return userID, dealID, nil
 }
 
 // dealFieldNames are the contract's names for a deal's fields, which are also
@@ -281,25 +305,9 @@ var dealFieldNames = sync.OnceValue(func() []string {
 // and read every one of fields. A mask that lifts only on a row they could
 // write counts as withholding, so the answer holds on any row.
 func dealShownTo(ctx context.Context, pool *pgxpool.Pool, colleague, deal ids.UUID, fields []string) (bool, error) {
-	// An agent seat holds grants too, and is no colleague a unit may show a deal to.
-	human, err := readColleagueEmails(ctx, pool, []ids.UUID{colleague})
-	if err != nil || len(human) == 0 {
+	ownCtx, own, ok, err := asColleague(ctx, pool, colleague)
+	if err != nil || !ok {
 		return false, err
-	}
-	correlation, bound := principal.CorrelationID(ctx)
-	if !bound {
-		correlation = ids.NewV7()
-	}
-	ownCtx, err := companyscan.WorkerContext(ctx, identity.NewService(pool), ids.From[ids.UserKind](colleague), correlation)
-	if errors.Is(err, apperrors.ErrNotFound) {
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	own, bound := principal.Actor(ownCtx)
-	if !bound {
-		return false, errors.New("compose: the colleague's own principal was not bound")
 	}
 	masked := auth.MaskedFields(own, fieldmask.Deal, false)
 	if slices.ContainsFunc(fields, func(f string) bool { return slices.Contains(masked, f) }) {
@@ -313,6 +321,55 @@ func dealShownTo(ctx context.Context, pool *pgxpool.Pool, colleague, deal ids.UU
 		return err
 	})
 	return visible, err
+}
+
+// dealWritableBy answers whether colleague, under their own grants, could
+// change deal now. It must be live and theirs to open, and their update verb
+// must reach the row through their write scope.
+func dealWritableBy(ctx context.Context, pool *pgxpool.Pool, colleague, deal ids.UUID) (bool, error) {
+	ownCtx, _, ok, err := asColleague(ctx, pool, colleague)
+	if err != nil || !ok {
+		return false, err
+	}
+	var writable bool
+	err = database.WithWorkspaceTx(ownCtx, pool, func(tx pgx.Tx) error {
+		// Live, not merely existing: an archived deal takes no new work.
+		if probe := auth.EnsureVisibleLive(ownCtx, tx, fieldmask.Deal, deal); probe != nil {
+			if errors.Is(probe, apperrors.ErrNotFound) {
+				return nil
+			}
+			return probe
+		}
+		rows, err := auth.WritableSubset(ownCtx, tx, fieldmask.Deal, []ids.UUID{deal})
+		writable = rows[deal]
+		return err
+	})
+	return writable, err
+}
+
+// asColleague binds colleague's own principal. It answers false for a seat that
+// is no colleague a unit may act for: an agent, or a user who cannot sign in.
+func asColleague(ctx context.Context, pool *pgxpool.Pool, colleague ids.UUID) (context.Context, principal.Principal, bool, error) {
+	human, err := readColleagueEmails(ctx, pool, []ids.UUID{colleague})
+	if err != nil || len(human) == 0 {
+		return nil, principal.Principal{}, false, err
+	}
+	correlation, bound := principal.CorrelationID(ctx)
+	if !bound {
+		correlation = ids.NewV7()
+	}
+	ownCtx, err := companyscan.WorkerContext(ctx, identity.NewService(pool), ids.From[ids.UserKind](colleague), correlation)
+	if errors.Is(err, apperrors.ErrNotFound) {
+		return nil, principal.Principal{}, false, nil
+	}
+	if err != nil {
+		return nil, principal.Principal{}, false, err
+	}
+	own, bound := principal.Actor(ownCtx)
+	if !bound {
+		return nil, principal.Principal{}, false, errors.New("compose: the colleague's own principal was not bound")
+	}
+	return ownCtx, own, true, nil
 }
 
 type systemDirectory struct{ rt *callRuntime }
