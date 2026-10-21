@@ -278,6 +278,7 @@ func TestTheCensusDescribesEverySourceTheQueueClassifies(t *testing.T) {
 // so every stub carries a row.
 func aDayWithEveryLaneCarryingARow(t *testing.T) crmcontracts.Attention {
 	t.Helper()
+	briefDeal := ids.NewV7()
 	commitment := promise("a promise", readInstant)
 	commitment.ActivityID = ids.NewV7()
 	svc := NewService(
@@ -295,9 +296,9 @@ func aDayWithEveryLaneCarryingARow(t *testing.T) crmcontracts.Attention {
 			LinkType: "contact", LinkID: ids.NewV7(),
 		}}},
 		stubReceipts{},
-		stubBriefing{rows: []BriefEntry{{ID: ids.NewV7(), DealID: ids.NewV7(), Rank: 1}}},
+		stubBriefing{rows: []BriefEntry{{ID: ids.NewV7(), DealID: briefDeal, Rank: 1}}},
 		&stubCommitments{rows: []Commitment{commitment}},
-		stubAtRisk{rows: []RiskyDeal{{DealID: ids.NewV7(), Name: "a deal", QuietDays: 20}}},
+		stubAtRisk{rows: []RiskyDeal{{DealID: briefDeal, Name: "a deal", QuietDays: 20}}},
 		&stubDecay{rows: []QuietRelationship{{ContactID: ids.NewV7(), Name: "a contact", QuietDays: 63, LastAt: readInstant}}},
 		&stubMeetings{rows: []Meeting{{ID: ids.NewV7(), Subject: "a meeting", StartsAt: readInstant}}},
 		&stubFailedEffects{rows: []FailedEffect{{

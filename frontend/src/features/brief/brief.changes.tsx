@@ -14,6 +14,7 @@ import {
 } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { type Locale, useLocale, useT } from "../../i18n";
+import { isReviewableReceipt } from "../../lib/receiptreview";
 import { useRecordZone } from "../../lib/recordzone";
 import { listReadState } from "../../lib/worklist.listread";
 import { useHandledForYou } from "../worklist/worklist.queries";
@@ -30,13 +31,7 @@ export function BriefChanges() {
   const zone = viewerZone();
   const query = useHandledForYou();
   const titleId = useId();
-  const receipts = query.data?.receipts?.filter((receipt) =>
-    receipt.review
-      ? !receipt.review.accepted &&
-        !receipt.review.reversed &&
-        (receipt.review.can_accept || receipt.review.can_undo)
-      : receipt.undo && !receipt.undo.reversed,
-  );
+  const receipts = query.data?.receipts?.filter(isReviewableReceipt);
   const asOf = query.data?.as_of;
   const state = listReadState(query, receipts);
   if (state === "loading" || state === "empty") {

@@ -148,7 +148,7 @@ func oneLine(text string) string {
 // Reachability is activities.CompanyLinkedActivityExists, the same walk
 // nextStepsSection uses.
 func hasOpenTask(
-	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, opts AssembleOptions,
+	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time, opts AssembleOptions,
 ) (bool, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
@@ -165,8 +165,8 @@ func hasOpenTask(
 		SELECT EXISTS (
 		  SELECT 1 FROM activity a
 		  WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL AND %[1]s
-		    AND %[2]s`+opts.projectScope(arg)+`)`,
-		activityScope, activities.CompanyLinkedActivityExists(companyPos)), args...).Scan(&scheduled)
+		    AND %[2]s AND %[3]s`+opts.projectScope(arg)+`)`,
+		activityScope, activities.CompanyLinkedActivityExists(companyPos), activities.CurrentCommitmentTaskClause("a", now, arg)), args...).Scan(&scheduled)
 	if err != nil {
 		return false, fmt.Errorf("read whether anything is scheduled on the account: %w", err)
 	}
@@ -256,7 +256,7 @@ func gatherSuggestionInputs(
 			return suggestionInputs{}, err
 		}
 		in.newest, in.hasNewest = newest, found
-		scheduled, err := hasOpenTask(ctx, tx, companyID, opts)
+		scheduled, err := hasOpenTask(ctx, tx, companyID, now, opts)
 		if err != nil {
 			return suggestionInputs{}, err
 		}

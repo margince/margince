@@ -387,7 +387,7 @@ func everyLane() []struct {
 			item("x", "dedupe_candidate"),
 		}}},
 		{"brief_item", crmcontracts.Attention{AsOf: rankInstant, ThisMorning: []crmcontracts.AttentionItem{
-			item("x", "brief_item"),
+			item("x", "brief_item", withCurrentIntervention()),
 		}}},
 		{"capture_health", crmcontracts.Attention{AsOf: rankInstant, CaptureHealth: lane(
 			item("x", "capture_health"),

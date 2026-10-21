@@ -9,17 +9,16 @@ import { useLocale, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
 import { useMe } from "../../lib/session";
 import { useBriefAnswer, withFoldedBrief } from "./worklist.briefverbs";
-import { consequenceText } from "./worklist.connection";
 import {
   briefContextTitle,
   briefSubjectLabel,
-  comparisonText,
   dealFactsText,
   isUnprepared,
   itemTitle,
   phrasedReasons,
   reasonText,
   rowHref,
+  subjectHref,
   whenText,
 } from "./worklist.copy";
 import { PutDownByThumb } from "./worklist.dispositions";
@@ -33,12 +32,7 @@ import type { WorklistItem } from "./worklist.queries";
 import { noticeDetail, readerTask } from "./worklist.reader";
 import { PromiseRecipients } from "./worklist.recipients";
 import { useDrawerDials, withWorklistReturn } from "./worklist.return";
-import {
-  aboutRecord,
-  REASONS_BEFORE_THE_FOLD,
-  shapedReadings,
-  touchOf,
-} from "./worklist.row.captions";
+import { aboutRecord, shapedReadings, touchOf } from "./worklist.row.captions";
 import { CompactRowLine, type RowReadings } from "./worklist.row.compact";
 import { RowActs } from "./worklist.rowverbs";
 import "./worklist.row.css";
@@ -142,11 +136,7 @@ export function WorklistRow({
   // Open the activity itself without leaving the queue for its linked record.
   const source = useRowSource(item);
   const viewer = useMe(false).data?.user;
-  const name = framedName(
-    item,
-    itemTitle(readerTask(item, viewer, t), t, locale),
-    framed,
-  );
+  const name = framedName(readerTask(item, viewer, t), t, locale, framed);
   const title = name.title;
   const facts =
     dealFactsText(item, t, locale, zone) ??
@@ -157,7 +147,8 @@ export function WorklistRow({
   // by how long — on the two rows whose whole claim is a moment.
   const when = whenText(item, t, locale, zone, recordZone, new Date());
   // The supporting line, which every source sends as a sentence already.
-  const detail = noticeDetail(item, viewer, t);
+  const sourceDetail = noticeDetail(item, viewer, t);
+  const detail = sourceDetail === item.verdict?.line ? undefined : sourceDetail;
   // The badged reasons are drawn as badges above and left out here, so one
   // meeting does not report the same finding twice in two registers. The when
   // line takes `due_today` the same way when it is drawn: the moment names the
@@ -167,17 +158,9 @@ export function WorklistRow({
     .filter((reason) => allowPin || reason.kind !== "pinned")
     .map((reason) => reasonText(reason, t, locale, zone))
     .filter((phrase): phrase is string => phrase !== null);
-  // WHERE THE FOLD FALLS, decided once for both densities. Sliced here rather
-  // than inside each one, because two copies of `slice(0, N)` are two answers
-  // to how many reasons a row says outright, and they drift the first time the
-  // ceiling moves.
-  const said = reasons.slice(0, REASONS_BEFORE_THE_FOLD);
-  const folded = reasons.slice(REASONS_BEFORE_THE_FOLD);
-  const above =
-    !allowPin && item.above_next?.comparator === "pin"
-      ? null
-      : comparisonText(item.above_next, t, locale, zone);
-  const consequence = consequenceText(item, t);
+  const said = [...new Set(reasons)].filter(
+    (reason) => reason !== detail && reason !== item.verdict?.line,
+  );
   // How this row NAMES ITSELF: the canonical email row when there is a message
   // AND somewhere to open it, the title line otherwise. Held as the opener
   // rather than as a flag, so the row cannot be drawn without one — a caller
@@ -212,9 +195,6 @@ export function WorklistRow({
     when,
     facts,
     said,
-    folded,
-    above,
-    consequence,
     detail,
     sample,
     zone,
@@ -328,10 +308,19 @@ export function WorklistRow({
   );
 }
 
-function framedName(item: WorklistItem, fallback: string, framed: boolean) {
+function framedName(
+  item: WorklistItem,
+  t: Parameters<typeof itemTitle>[1],
+  locale: Parameters<typeof itemTitle>[2],
+  framed: boolean,
+) {
   const subject = framed ? briefSubjectLabel(item) : undefined;
+  const subjectNamed =
+    framed &&
+    !!subjectHref(item) &&
+    (!item.contact?.label || item.contact.id === item.subject?.id);
   return {
-    title: subject ?? fallback,
+    title: subject ?? itemTitle(item, t, locale, subjectNamed),
     heading: subject !== undefined,
     supportingTitle: subject ? briefContextTitle(item) : undefined,
   };

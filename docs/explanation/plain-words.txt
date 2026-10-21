@@ -1333,7 +1333,6 @@ sixty
 size
 skip
 sleep
-slice
 slim
 slot
 slow

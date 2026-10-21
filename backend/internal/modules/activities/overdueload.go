@@ -49,13 +49,23 @@ const overdueLoadSQL = `
 	  FROM activity a
 	 WHERE a.kind = 'task' AND NOT a.is_done
 	   AND a.archived_at IS NULL
-	   AND a.due_at IS NOT NULL AND a.due_at < $%[1]d
+	   AND a.due_at IS NOT NULL AND a.due_at %[4]s $%[1]d
 	   AND %[2]s
 	   AND %[3]s
+	   %[5]s
 	 GROUP BY 1`
 
 // OverdueLoadByAssignee counts each contact's open tasks already past due.
 func (s *Store) OverdueLoadByAssignee(ctx context.Context, asOf time.Time) ([]OverdueLoad, error) {
+	return s.taskLoadByAssignee(ctx, asOf, false)
+}
+
+// CommitmentLoadByAssignee counts current conversation promises due at the given instant.
+func (s *Store) CommitmentLoadByAssignee(ctx context.Context, asOf time.Time) ([]OverdueLoad, error) {
+	return s.taskLoadByAssignee(ctx, asOf, true)
+}
+
+func (s *Store) taskLoadByAssignee(ctx context.Context, asOf time.Time, commitments bool) ([]OverdueLoad, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, err
 	}
@@ -72,7 +82,12 @@ func (s *Store) OverdueLoadByAssignee(ctx context.Context, asOf time.Time) ([]Ov
 			scope = scopeUnbounded
 		}
 		agedOut := worklistAgeOutClause(asOf, "a.assignee_id", arg)
-		rows, err := tx.Query(ctx, fmt.Sprintf(overdueLoadSQL, instant, scope, agedOut), args...)
+		comparison, source := "<", ""
+		if commitments {
+			comparison = "<="
+			source = fmt.Sprintf("AND a.source_system = $%d", arg(CommitmentTaskSource))
+		}
+		rows, err := tx.Query(ctx, fmt.Sprintf(overdueLoadSQL, instant, scope, agedOut, comparison, source), args...)
 		if err != nil {
 			return err
 		}

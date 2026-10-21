@@ -202,7 +202,7 @@ func (s *Store) ListContacts(ctx context.Context, in ListContactsInput) ([]crmco
 	shared := contactCommonFilters(in)
 	return listPage(ctx, s, in.Sort, in.Limit, listPageSpec[crmcontracts.Contact]{
 		entity:  contactEntity,
-		columns: contactColumns,
+		columns: func(context.Context, func(any) int) string { return contactColumns },
 		fields:  contactListFields,
 		filters: func(ctx context.Context, active []fieldcatalog.Column, sorted *storekit.ListSort, arg func(any) int) ([]string, error) {
 			where, err := shared.clauses(ctx, active, sorted, arg)

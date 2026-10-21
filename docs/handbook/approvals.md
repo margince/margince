@@ -13,8 +13,7 @@ the change. Owners and stages have names. **Review authority** explains why you 
 A deal win also names its effects on linked correspondence and eligible delivery projects.
 **Set when applied** means Margince records that value when the change takes effect.
 
-Open the source evidence before answering a lifecycle proposal. A linked proposal remains a
-separate decision. If the record changed or the full change cannot be shown, you cannot approve it.
+Source evidence appears when it is available. A linked proposal remains a separate decision. If the record changed or the full change cannot be shown, you cannot approve it.
 Request a new proposal with current context, or reject the old one.
 
 ## Reading an import proposal

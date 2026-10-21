@@ -165,6 +165,9 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // keeps "Email". German translates it, and does.
   "deal.forecast.pipeline",
   "room.create.defaultTitle",
+  // These slots receive category counts and action names already translated by their owners.
+  "brief.agenda.summary",
+  "magic.action.approval_pending",
   // Pure punctuation layouts: every word in them is a placeholder, so there is
   // nothing to translate and a "translation" could only reorder the slots.
   "dealSuggestion.name",

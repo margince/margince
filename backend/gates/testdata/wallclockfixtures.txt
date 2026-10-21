@@ -30,7 +30,7 @@ internal/compose/attentionfeed_integration_test.go 8
 internal/compose/attentionleads_integration_test.go 5
 internal/compose/auditimagenull_integration_test.go 1
 internal/compose/awaitingseam_integration_test.go 2
-internal/compose/bulkworklist_integration_test.go 3
+internal/compose/bulkworklist_integration_test.go 2
 internal/compose/canceledmeetingclocks_integration_test.go 1
 internal/compose/canceledmeetingfolds_integration_test.go 6
 internal/compose/capturedigestprojects_integration_test.go 2
@@ -239,7 +239,7 @@ internal/compose/magic/describe_test.go 17
 internal/compose/magic/fieldmask_test.go 1
 internal/compose/magiccountfloor_integration_test.go 2
 internal/compose/magicneedsyou_integration_test.go 2
-internal/compose/maybedone_integration_test.go 3
+internal/compose/maybedone_integration_test.go 1
 internal/compose/meetingattendeerepair_integration_test.go 4
 internal/compose/meetinglane_integration_test.go 1
 internal/compose/meetingparties_integration_test.go 3

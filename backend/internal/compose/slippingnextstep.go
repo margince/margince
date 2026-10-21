@@ -26,6 +26,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -75,11 +76,14 @@ func dealsWithNoOpenNextStep(
 	// Selected FROM deal rather than from the activity rows, because the shared
 	// predicate asks about a deal and answers over two different tables: a
 	// statement shaped around one of them could not see the other.
+	args := []any{candidates, asOf}
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	current := storekit.CurrentCommitmentTaskClause("t", asOf, arg)
 	query := fmt.Sprintf(`
 		SELECT d.id FROM deal d
-		 WHERE d.id = ANY($1) AND %s`, deals.OpenNextStepSQL("d.id", "$2"))
+		 WHERE d.id = ANY($1) AND %s`, deals.OpenNextStepSQL("d.id", "$2", current))
 	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, query, candidates, asOf)
+		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return err
 		}

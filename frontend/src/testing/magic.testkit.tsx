@@ -12,9 +12,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { type RenderResult, render } from "@testing-library/react";
 import { vi } from "vitest";
-import { type Locale, LocaleProvider } from "../../i18n";
-import { MagicPanel } from "./magic";
-import type { MagicLine, MagicReceipt } from "./magic.queries";
+import { MagicPanel } from "../features/sign-in/magic";
+import type {
+  MagicLine,
+  MagicReceipt,
+} from "../features/sign-in/magic.queries";
+import { type Locale, LocaleProvider } from "../i18n";
 
 export function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -65,11 +68,12 @@ export function renderMagic(
   client: QueryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   }),
+  visible: Parameters<typeof MagicPanel>[0] = {},
 ): RenderResult {
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial={locale}>
-        <MagicPanel />
+        <MagicPanel {...visible} />
       </LocaleProvider>
     </QueryClientProvider>,
   );

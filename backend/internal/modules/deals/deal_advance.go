@@ -298,7 +298,11 @@ func announceStageAdvance(
 	ctx context.Context, tx pgx.Tx, id ids.DealID, in AdvanceDealInput,
 	current crmcontracts.Deal, p *storekit.Patch, status string, winProbability int,
 ) error {
-	auditID, err := storekit.Audit(ctx, tx, "advance_stage", "deal", id.UUID, p.Before(), p.After())
+	var evidence map[string]any
+	if in.ApprovalID != nil {
+		evidence = map[string]any{StageApprovalEvidenceKey: in.ApprovalID.String()}
+	}
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, "advance_stage", "deal", id.UUID, p.Before(), p.After(), evidence)
 	if err != nil {
 		return fmt.Errorf("audit stage advance: %w", err)
 	}

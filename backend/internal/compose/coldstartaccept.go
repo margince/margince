@@ -79,6 +79,7 @@ func approvalsServiceTelling(pool *pgxpool.Pool, notices *siteLeadNoticeLane) *a
 		siteLeadAcceptEffect(svc, newCaptureSink(pool, captureConfig), pool, notices))
 	svc.WithPrecheck(siteLeadProposalKind, siteLeadPrecheck(notices))
 	svc.WithEffect(counterpartyProposalKind, counterpartyAcceptEffect(svc, store, newConnectorTagFiler(pool), capture.NewPendingStore(InstallationDB(pool)), newDomainTriageTrigger(pool, slog.Default(), captureConfig.SkipReservedDomainProposals)))
+	svc.WithPrecheck(counterpartyProposalKind, counterpartyPrecheck(store))
 	svc.WithEffect(companyNameProposalKind, companyNameAcceptEffect(svc, store))
 	svc.WithEffect(captureCollisionKind, captureCollisionAcceptEffect(svc, store))
 	svc.WithEffect(linkedInMatchKind, linkedInMatchAcceptEffect(svc))

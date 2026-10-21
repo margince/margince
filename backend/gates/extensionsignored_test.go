@@ -35,25 +35,20 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"testing"
 )
 
-// TestEveryEnabledExtensionIsTracked: no first-party directory under
-// extensions/ may be ignored.
+// TestEveryEnabledExtensionIsTracked: no directory under extensions/ may be
+// ignored.
 //
-// A unit's go.mod says whose it is. This repository's units are
-// github.com/margince/margince/extensions/<name>, as the how-to prescribes. A
-// unit under any other path belongs to an installation and stays ignored. A
-// tracked unit must name this repository, so no module line can wave a
-// first-party unit through.
-//
-// Fixtures are checked whatever their module paths. CI copies them into
-// extensions/, so a fixture git does not have is the same defect.
+// It covers fixtures/extensions/ too. Those are not ignored today and there is
+// no rule that they might become so — but the fixtures are what CI copies into
+// extensions/ to exercise the tier, so a fixture git does not have is the same
+// defect one lane further out.
 func TestEveryEnabledExtensionIsTracked(t *testing.T) {
 	t.Parallel()
-	namespace := repositoryModuleNamespace(t)
+	operator := operatorUnits(t)
 	for _, root := range []string{"../extensions", "../fixtures/extensions"} {
 		entries, err := os.ReadDir(root)
 		if os.IsNotExist(err) {
@@ -79,74 +74,105 @@ func TestEveryEnabledExtensionIsTracked(t *testing.T) {
 			// git runs at the repository root (-C ..), so it is asked about a
 			// root-relative path rather than this package's ../ spelling.
 			repoPath := strings.TrimPrefix(filepath.ToSlash(onDisk), "../")
-			rule, ignored := gitIgnoreRule(t, repoPath)
-			if root == "../fixtures/extensions" {
-				if ignored {
-					t.Errorf("%s is git-ignored by %q, so CI cannot copy the fixture in.", repoPath, rule)
-				}
+			// The one enabled unit that is SUPPOSED to be untracked: the
+			// reference fixture CI copies in (`cp -R fixtures/extensions/
+			// crm-hello extensions/`, ci.yml's extension-reference job) to
+			// prove the tier composes a unit this repository does not ship.
+			// That copy is a build artifact of the job, and un-ignoring it
+			// would invite committing a second copy of a fixture that is
+			// already tracked one directory over. The exemption costs nothing:
+			// the fixture ITSELF is checked by the second root below, so the
+			// "a fixture git does not have" defect is still caught — at its
+			// source, where it belongs. A genuinely new first-party unit has no
+			// fixture of the same name and still fails here.
+			if root == "../extensions" && (isTrackedFixture(t, e.Name(), onDisk) || operator[e.Name()]) {
 				continue
 			}
-			module, firstParty := declaredModulePath(t, onDisk), namespace+"/extensions/"+e.Name()
-			switch {
-			case ignored && !installationModule(module, namespace):
+			if rule, ignored := gitIgnoreRule(t, repoPath); ignored {
 				t.Errorf("%s is git-ignored by %q — every gate would pass over this unit and no clone "+
 					"of this repository would have it. Add an un-ignore line for it beside the others "+
 					"in .gitignore (see docs/how-to/add-an-extension.md).", repoPath, rule)
-			case !ignored && module != firstParty:
-				t.Errorf("%s declares module %q; a unit this repository carries is %q. Any other path "+
-					"marks the unit an installation's own, and this gate stops asking whether git has it.",
-					repoPath, module, firstParty)
 			}
 		}
 	}
 }
 
-// installationModule reports whether a unit's module line names an owner other
-// than this repository. An unreadable or missing line names none, so the unit
-// is still asked about: the safe direction.
-func installationModule(module, namespace string) bool {
-	return module != "" && module != namespace && !strings.HasPrefix(module, namespace+"/")
-}
+// operatorUnitsFile lists, one name per line, the units an operator composes
+// into extensions/ for one installation. Such a unit is not this repository's,
+// so it stays ignored, and so does the list: no clone exempts anything.
+const operatorUnitsFile = "operator-units"
 
-// repositoryModuleNamespace is this repository's module prefix, read from the
-// backend's own go.mod rather than spelled here.
-func repositoryModuleNamespace(t *testing.T) string {
+// operatorUnits reads the operator's list, or nothing when there is none.
+func operatorUnits(t *testing.T) map[string]bool {
 	t.Helper()
-	backend := declaredModulePath(t, "go.mod")
-	namespace, found := strings.CutSuffix(backend, "/backend")
-	if !found {
-		t.Fatalf("the backend module is %q, not <namespace>/backend; this gate cannot tell "+
-			"this repository's units from an installation's", backend)
+	raw, err := os.ReadFile(filepath.Join("..", "extensions", operatorUnitsFile)) // #nosec G304 -- a fixed path in this tree
+	if os.IsNotExist(err) {
+		return nil
 	}
-	return namespace
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Both questions: check-ignore --no-index answers from the patterns alone,
+	// so a list added with `git add -f` still reads as ignored.
+	_, ignored := gitIgnoreRule(t, "extensions/"+operatorUnitsFile)
+	tracked := exec.Command("git", "-C", "..", "ls-files", "--error-unmatch", "extensions/"+operatorUnitsFile).Run() == nil
+	if !ignored || tracked {
+		t.Errorf("extensions/%s is tracked or not git-ignored: it names one installation's units, and a "+
+			"committed list would exempt them in every clone", operatorUnitsFile)
+	}
+	out := map[string]bool{}
+	for line := range strings.SplitSeq(string(raw), "\n") {
+		if name := strings.TrimSpace(line); name != "" {
+			out[name] = true
+		}
+	}
+	return out
 }
 
-// declaredModulePath reads a go.mod's module line, or "" when the file cannot be
-// read or declares none.
+// isTrackedFixture reports whether extensions/<name> is CI's copy of the
+// same-named reference fixture. Three things are required: the fixture must
+// exist as a Go module, git must actually have it, and the unit on disk must
+// BE it.
+//
+// The tracked-fixture half is what keeps the exemption from being a hole in
+// the other direction — a fixture that were itself ignored would stop
+// exempting anything, and the copy would be reported again.
+//
+// The module-identity half is what keeps the NAME from being the exemption.
+// Matching on the directory name alone means any git-ignored unit called
+// `crm-hello` is waved through, so the day that fixture is promoted to a
+// first-party unit — or a genuine unit is given a name a fixture already has —
+// this gate silently stops asking about it, which is exactly the "no clone of
+// this repository would have it" defect it was built to catch. Comparing the
+// two `module` lines makes the exemption a statement about the unit rather
+// than about its directory: CI's `cp -R` copies the fixture's go.mod verbatim,
+// so the real copy matches and an impostor does not.
+func isTrackedFixture(t *testing.T, name, onDisk string) bool {
+	t.Helper()
+	fixture := filepath.Join("..", "fixtures", "extensions", name, "go.mod")
+	if _, err := os.Stat(fixture); err != nil {
+		return false
+	}
+	if _, ignored := gitIgnoreRule(t, "fixtures/extensions/"+name+"/go.mod"); ignored {
+		return false
+	}
+	fixtureModule, unitModule := declaredModulePath(t, fixture), declaredModulePath(t, onDisk)
+	return fixtureModule != "" && fixtureModule == unitModule
+}
+
+// declaredModulePath reads a go.mod's module line, or "" when the file cannot be read
+// or declares none — either of which makes the caller's comparison fail, which
+// is the safe direction: an unreadable go.mod exempts nothing.
 func declaredModulePath(t *testing.T, goMod string) string {
 	t.Helper()
 	raw, err := os.ReadFile(goMod) // #nosec G304 -- a path this test walked to
 	if err != nil {
 		return ""
 	}
-	return modulePathIn(string(raw))
-}
-
-// modulePathIn reads the module directive as the go command does: a trailing
-// comment is not part of it, and a quoted path is unquoted. A raw quote left on
-// the path would read as another owner's and exempt the unit.
-func modulePathIn(goMod string) string {
-	for line := range strings.SplitSeq(goMod, "\n") {
-		path, ok := strings.CutPrefix(strings.TrimSpace(line), "module ")
-		if !ok {
-			continue
+	for line := range strings.SplitSeq(string(raw), "\n") {
+		if path, ok := strings.CutPrefix(strings.TrimSpace(line), "module "); ok {
+			return strings.TrimSpace(path)
 		}
-		path, _, _ = strings.Cut(path, "//")
-		path = strings.TrimSpace(path)
-		if unquoted, err := strconv.Unquote(path); err == nil {
-			return unquoted
-		}
-		return path
 	}
 	return ""
 }
@@ -172,40 +198,5 @@ func gitIgnoreRule(t *testing.T, path string) (rule string, ignored bool) {
 		t.Fatalf("git check-ignore %s: %v — this gate cannot be skipped: the failure it catches is "+
 			"invisible to every other check in the tree", path, detail)
 		return "", false
-	}
-}
-
-// TestAUnitNamesItsOwnerByItsModulePath holds the line the gate draws: only a
-// module outside this repository's namespace marks a unit an installation's.
-func TestAUnitNamesItsOwnerByItsModulePath(t *testing.T) {
-	t.Parallel()
-	const namespace = "github.com/margince/margince"
-	for module, installation := range map[string]bool{
-		"github.com/margince/margince/extensions/de": false,
-		"github.com/margince/margince":               false,
-		"":                                           false,
-		"github.com/margince/margince-fork/extensions": true,
-		"example.margince.dev/ext/crm-hello":           true,
-		"github.com/acme/crm/extensions/billing":       true,
-	} {
-		if got := installationModule(module, namespace); got != installation {
-			t.Errorf("installationModule(%q) = %v, want %v", module, got, installation)
-		}
-	}
-}
-
-func TestTheModuleDirectiveIsReadAsTheGoCommandReadsIt(t *testing.T) {
-	t.Parallel()
-	for goMod, want := range map[string]string{
-		"module github.com/margince/margince/extensions/de\n\ngo 1.27.3\n":   "github.com/margince/margince/extensions/de",
-		"module \"github.com/margince/margince/extensions/de\"\n":            "github.com/margince/margince/extensions/de",
-		"module `github.com/margince/margince/extensions/de`\n":              "github.com/margince/margince/extensions/de",
-		"module github.com/margince/margince/extensions/de // first-party\n": "github.com/margince/margince/extensions/de",
-		"// A comment first.\nmodule example.com/acme/billing\n":             "example.com/acme/billing",
-		"go 1.27.3\n": "",
-	} {
-		if got := modulePathIn(goMod); got != want {
-			t.Errorf("modulePathIn(%q) = %q, want %q", goMod, got, want)
-		}
 	}
 }

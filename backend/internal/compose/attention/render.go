@@ -330,6 +330,9 @@ func taskItem(task Task, asOf, until time.Time, loc *time.Location) crmcontracts
 		Subject: subjectOf(task.LinkType, task.LinkID),
 		Actions: []crmcontracts.AttentionItemActions{"complete", "snooze"},
 	}
+	if task.SourceActivityID != nil {
+		item.SourceRecord = subjectOf("activity", *task.SourceActivityID)
+	}
 	if len(task.Recipients) > 0 {
 		item.PromiseRecipients = &task.Recipients
 	}

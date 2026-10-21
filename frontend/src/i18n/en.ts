@@ -1411,12 +1411,9 @@ export const en = {
   "magic.approval.markWon": "Mark as won",
   "magic.approval.markLost": "Mark as lost",
   "magic.approval.reviewChange": "Review proposed change",
-  "magic.approval.noEvidence":
-    "No supporting source was attached. Check the deal before approving.",
   "home.receipt.dateReverted":
     "Reverted close-date estimate; restored {before} (was {after})",
-  "home.receipt.basisUnknown":
-    "No supporting sales history is available here. Check with the buyer before keeping this date.",
+  "home.receipt.basisUnknown": "Estimate basis unavailable",
   "home.receipt.basis_one":
     "Estimate from {count} won deal · Median days per stage: {days} · Stages remaining: {stages}. No buyer-confirmed date.",
   "home.receipt.basis_other":
@@ -5016,17 +5013,9 @@ export const en = {
   "brief.view.weekly": "Weekly",
   // The Brief's opening sentence, composed from the rows the page is showing —
   // never model-written, so it cannot say what the rows contradict.
-  "brief.sentence.clear": "No immediate priorities found.",
-  "brief.sentence.one": "First: {lead}",
-  "brief.sentence.many": "First: {lead}. Then {rest}.",
-  "brief.sentence.rest": "{count} more",
-  "brief.sentence.oneFor": "First, for {who}: {lead}",
-  "brief.sentence.manyFor": "First, for {who}: {lead}. Then {rest}.",
-  "brief.sentence.meeting": "Your next meeting is {meeting} at {time}.",
   "brief.briefedAt": "Briefed by Margince at {time}",
   "brief.first.title": "First",
   "brief.first.then": "Then",
-  "brief.first.why": "Why first?",
   "brief.intro.waiting": "Waiting on you",
   "brief.intro.meetings": "Meetings today",
   "brief.intro.urgent": "Urgent",
@@ -5181,7 +5170,7 @@ export const en = {
   "brief.weekly.meetingsHeld": "Meetings with follow-up",
   "brief.weekly.ofMeetings": "{withStep} of {held}",
   "brief.weekly.carriedOver": "Open at week’s end",
-  "brief.act": "Done",
+  "brief.act": "Mark handled",
   "brief.dismiss": "Dismiss",
 
   "brief.glance.morning": "Good morning, {name}.",
@@ -5193,10 +5182,24 @@ export const en = {
   "brief.glance.night": "Working late, {name}.",
   "brief.glance.nightAnon": "Working late.",
   "brief.glance.introWeekly": "Review results and plan your next steps.",
-  "brief.glance.attention_one": "1 item needs attention.",
-  "brief.glance.attention_other": "{count} items need attention.",
+  "brief.suggestions.review": "Review deal suggestions",
+  "brief.suggestions.empty": "No deal suggestions in this brief.",
+  "brief.agenda.summary": "{agenda}",
+  "brief.agenda.customer_waiting_one": "{count} customer request",
+  "brief.agenda.customer_waiting_other": "{count} customer requests",
+  "brief.agenda.leads_one": "{count} lead",
+  "brief.agenda.leads_other": "{count} leads",
+  "brief.agenda.deals_at_risk_one": "{count} deal needing attention",
+  "brief.agenda.deals_at_risk_other": "{count} deals needing attention",
+  "brief.agenda.meetings_one": "{count} meeting",
+  "brief.agenda.meetings_other": "{count} meetings",
+  "brief.agenda.tasks_one": "{count} task",
+  "brief.agenda.tasks_other": "{count} tasks",
+  "brief.agenda.decisions_one": "{count} decision",
+  "brief.agenda.decisions_other": "{count} decisions",
+  "brief.agenda.system_one": "{count} system issue",
+  "brief.agenda.system_other": "{count} system issues",
   "worklist.source.failed_approval": "Approved but not run",
-  "brief.glance.intro": "Your day at a glance.",
   "brief.panel.decisions": "Approvals",
   // The rail's own panel titles, after the rename that made each claim exactly
   // what its rows are. "Promises & tasks" named a thing the product does not
@@ -13765,6 +13768,8 @@ export const en = {
   "contact.loops.empty":
     "No commitments or questions in the captured messages.",
   "contact.loops.ours": "You",
+  "contact.loops.team": "Team",
+  "contact.loops.review": "Review conversation findings",
   "contact.loops.question": "Open question",
   "contact.loops.overdue_one": "overdue {count} day",
   "contact.loops.overdue_other": "overdue {count} days",
@@ -15116,8 +15121,6 @@ export const en = {
   "worklist.because.non_buyer_request": "not established as customer work",
   "worklist.because.buyer_wrote_last": "buyer wrote last",
   "worklist.because.waiting_days": "waiting",
-  "worklist.because.more_one": "+{count} more",
-  "worklist.because.more_other": "+{count} more",
   "worklist.because.waiting_days.value_one": "waiting {value} day",
   "worklist.because.waiting_days.value_other": "waiting {value} days",
   "worklist.because.overdue": "overdue",
@@ -15134,7 +15137,7 @@ export const en = {
   "worklist.because.quiet_days": "gone quiet",
   "worklist.because.quiet_days.value_one": "quiet for {value} day",
   "worklist.because.quiet_days.value_other": "quiet for {value} days",
-  "worklist.because.no_next_step": "no next step planned",
+  "worklist.because.no_next_step": "no next step recorded",
   "worklist.because.no_champion": "no champion",
   "worklist.because.champion_unknown": "champion unknown",
   "worklist.because.promised": "committed by you",
@@ -15181,52 +15184,12 @@ export const en = {
   "worklist.because.link_off_sender":
     "its link leads to a different site than the sender’s",
   "worklist.because.read_only": "you can read this but not change it",
-  "worklist.above.pin": "Ranked above the next item because you pinned it.",
-  "worklist.above.level":
-    "Ranked above the next item because it is more urgent.",
-  "worklist.above.deadline": "Ranked above the next item by date.",
-  "worklist.above.deadline.pair":
-    "Ranked above the next item: {mine} compared with {theirs}.",
-  "worklist.above.expected_revenue":
-    "Ranked above the next item by expected revenue.",
-  "worklist.above.expected_revenue.pair":
-    "Ranked above the next item: {mine} compared with {theirs}.",
-  "worklist.above.waiting_days": "Ranked above the next item by waiting time.",
-  "worklist.above.waiting_days.pair":
-    "Ranked above the next item: {mine} compared with {theirs}.",
-  "worklist.above.relationship":
-    "Ranked above the next item by relationship strength.",
-  "worklist.above.crowded":
-    "Ranked above the next item, which is one of many of its kind.",
   "worklist.verdict.live": "Live",
   "worklist.verdict.drifting": "Drifting",
   "worklist.verdict.blocked": "Blocked",
   "worklist.verdict.cold": "Cold",
   "worklist.verdict.believes": "Assessment",
-  "worklist.verdict.rule": "Why this is here",
   "worklist.verdict.asOf": "As of {when}",
-  "worklist.consequence.buyer_waits": "If ignored, the buyer keeps waiting.",
-  "worklist.consequence.promise_breaks": "If ignored, a commitment is broken.",
-  "worklist.consequence.deal_drifts": "If ignored, the deal keeps drifting.",
-  "worklist.consequence.deal_slips_past_close":
-    "If ignored, the deal slips past the agreed close date.",
-  "worklist.consequence.meeting_unprepared":
-    "If ignored, you go into the meeting unprepared.",
-  "worklist.consequence.task_slips": "If ignored, the task slips.",
-  "worklist.consequence.work_blocked": "If ignored, the work stays blocked.",
-  "worklist.consequence.customer_never_received":
-    "If ignored, the customer never receives it.",
-  "worklist.consequence.you_believe_it_happened":
-    "If ignored, it still looks done although it never ran.",
-  "worklist.consequence.legal_deadline_missed":
-    "If ignored, a legal deadline passes.",
-  "worklist.consequence.mailbox_blind":
-    "If ignored, mail that is not arriving stays missing from this page.",
-  "worklist.consequence.data_drifts": "If ignored, the records go out of date.",
-  "worklist.consequence.calendar_blind":
-    "If ignored, meetings that are not arriving stay missing from this page.",
-  "worklist.consequence.connection_blind":
-    "If ignored, what this connection brings in stays missing from this page.",
   "worklist.untitled.approval": "Approval waiting",
   "worklist.untitled.dedupe_candidate": "Possible duplicate records",
   "worklist.untitled.task": "Untitled task",
@@ -15903,14 +15866,11 @@ export const en = {
   "magic.action.schedule": "A meeting was booked",
   "magic.action.disqualify": "A lead was disqualified",
   "magic.action.automation_troubled": "{name} is in trouble: {outcome}",
-  "magic.action.approval_coldstart":
-    "A first approach is waiting for your word",
-  "magic.action.approval_send_email": "A message is waiting for your word",
-  "magic.action.approval_advance_deal": "A stage move is waiting for your word",
-  "magic.action.approval_promote_lead":
-    "Promoting a lead is waiting for your word",
-  "magic.action.approval_overnight":
-    "An overnight proposal is waiting for your word",
+  "magic.action.approval_coldstart": "Review first approach",
+  "magic.action.approval_send_email": "Review message",
+  "magic.action.approval_advance_deal": "Review stage change",
+  "magic.action.approval_promote_lead": "Review lead promotion",
+  "magic.action.approval_overnight": "Review proposal",
   "approval.commitment.proposalExpiresIn": "Proposal expires in {countdown}",
   "approval.commitment.noDueDay": "No day stated",
   "approval.commitment.promiseStatus": "Commitment status",
@@ -15924,12 +15884,11 @@ export const en = {
   "magic.action.approval_commitment_task_summary": "{summary}",
   "magic.action.approval_commitment_task_unverified":
     "{party} (unverified): {summary}",
-  "magic.action.approval_commitment_task":
-    "A commitment from a conversation is waiting for your word",
+  "magic.action.approval_commitment_task": "Review proposed task",
   "magic.action.approval_capture_counterparty":
     "{target} wrote to you. Keep them as a contact?",
   "magic.action.approval_summary": "Proposed: {summary}",
-  "magic.action.approval_pending": "A {kind} proposal is waiting for your word",
+  "magic.action.approval_pending": "{kind}",
   "magic.action.capture_reauth_required":
     "{provider} needs to be connected again",
   "magic.action.capture_connection_error": "{provider} could not be reached",
@@ -15947,12 +15906,10 @@ export const en = {
   "magic.consequence.lead_disqualified": "The lead has left the pipeline.",
   "magic.consequence.automation_did_nothing":
     "Nothing the rule promised has happened.",
-  "magic.consequence.capture_not_collecting":
-    "Nothing is being collected from this source.",
+  "magic.consequence.capture_not_collecting": "Capture stopped.",
   "magic.consequence.capture_may_be_incomplete":
-    "What you see from this source may be short.",
-  "magic.consequence.capture_history_incomplete":
-    "Older exchanges from this source are missing.",
+    "Recent capture may be incomplete.",
+  "magic.consequence.capture_history_incomplete": "History import incomplete.",
   "aiFigures.window.24h": "24 h",
   "aiFigures.window.7d": "7 d",
   "aiFigures.window.30d": "30 d",

@@ -157,13 +157,7 @@ func (s *Service) optionalLanes(
 		{
 			name: "at_risk", bound: s.atRisk != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {
-				// The lane's own cut flag is not read here: boundedSources
-				// answers truncation for /attention's whole page from the row
-				// counts, and moving this one source off that reading would
-				// leave two spellings of "was this cut" side by side. The team
-				// board, which has no row counts to fall back on, reads the flag.
-				risky, _, err := s.atRisk.Quiet(ctx)
-				return renderEach(risky, riskItem), err
+				return s.readRisk(ctx, out)
 			},
 			into: &out.AtRisk, count: &out.Counts.AtRisk,
 		},
@@ -364,4 +358,13 @@ func fill(
 		assign()
 		return omitted, nil
 	}
+}
+
+func (s *Service) readRisk(ctx context.Context, out *crmcontracts.Attention) ([]crmcontracts.AttentionItem, error) {
+	risky, cut, err := s.atRisk.Quiet(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out.AtRiskMoreAvailable = &cut
+	return renderEach(risky, riskItem), nil
 }

@@ -195,9 +195,7 @@
 .worklist-row-when,
 .worklist-row-facts,
 .worklist-row-sample,
-.worklist-row-because,
-.worklist-row-consequence,
-.worklist-row-above {
+.worklist-row-because {
   margin: 0;
 }
 .worklist-row-about,
@@ -279,62 +277,6 @@
 
 .worklist-row-verdict-line {
   color: var(--textPrimary);
-}
-
-/* Why this row is where it is, past what fits on the line: the reasons the fold
-   cuts off, and the comparison with the row below it.
-
-   A native <details>, so the toggle is the summary itself and keyboard and
-   screen-reader behaviour come for free. It carries no chevron and no box: a
-   row is not a section, and furniture around one caption line would cost more
-   height than the fold saves.
-
-   The marker is removed on both spellings — ::marker is the standard one and
-   ::-webkit-details-marker is what Safari still uses — because the "+N more"
-   text IS the affordance, and a triangle beside it says the same thing twice.
-   `display: inline` on the summary is what makes the reasons and the "+N more"
-   read as one sentence rather than a line with a control under it. */
-.worklist-row-because-fold > summary {
-  cursor: pointer;
-  display: inline;
-  list-style: none;
-}
-
-/* Closed, the fold is one more fragment of the meta line and shares it with
-   the moment and the figures. OPENED, it takes a line of its own, because what
-   it reveals is prose: left inline it would start at whatever x the fragments
-   before it happened to end on, in whatever width was left, and a sentence
-   about a deadline would arrive as four words per line. */
-.worklist-row-because-fold {
-  min-width: 0;
-}
-
-.worklist-row-because-fold[open] {
-  flex: 1 1 100%;
-}
-
-.worklist-row-because-fold > summary::marker,
-.worklist-row-because-fold > summary::-webkit-details-marker {
-  display: none;
-}
-
-/* The count reads as the control, so it takes the accent the rest of the line
-   does not. Underlined on hover rather than always: a caption line that is
-   permanently underlined mid-sentence reads as a broken link. */
-.worklist-row-because-more {
-  color: var(--accentText);
-}
-
-.worklist-row-because-fold > summary:hover .worklist-row-because-more {
-  text-decoration: underline;
-}
-
-/* The opened remainder sits under the line it belongs to, not indented: it is
-   more of the same sentence rather than a nested thing. It is also two lines on
-   the rows that carry both, so the interval rides on every one of them. */
-.worklist-row-because-fold[open] > .worklist-row-because,
-.worklist-row-because-fold[open] > .worklist-row-above {
-  margin-block-start: var(--space-1);
 }
 
 /* The queue is an ordered list for assistive technology and a plain stack on

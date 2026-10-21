@@ -9,6 +9,7 @@ import { ErrorLine } from "../../design-system/errorline";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { throwProblem } from "../../lib/problem";
+import { isReviewableReceipt } from "../../lib/receiptreview";
 import { invalidateHandledChange } from "../../lib/workkeys";
 import { type Receipt, worklistKey } from "./worklist.queries";
 import { ReceiptUndo } from "./worklist.receiptundo";
@@ -51,7 +52,7 @@ export function ReceiptReview({ receipt }: Readonly<{ receipt: Receipt }>) {
   if (!review) return <ReceiptUndo receipt={receipt} />;
   if (review.reversed) return <span>{t("brief.changes.undone")}</span>;
   if (review.accepted) return <span>{t("brief.changes.accepted")}</span>;
-  if (!review.can_accept && !review.can_undo)
+  if (!isReviewableReceipt(receipt))
     return <p>{t("brief.changes.superseded")}</p>;
   const subject = receipt.subject;
   if (!writable || !review.writable || subject?.type !== "deal") return null;

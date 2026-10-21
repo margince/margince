@@ -110,10 +110,7 @@ func (s *Store) SetClaimDoneTx(ctx context.Context, tx pgx.Tx, id ids.UUID, done
 	return version, nil
 }
 
-// VisibleClaims answers which of the named claims the caller may see now,
-// through the gates OpenCommitmentsDue reads promises under: the contact and
-// activity read grants, a live contact in scope, and a live message whose
-// content the caller may read. One query for the whole batch.
+// VisibleClaims applies contact and source-content scope to the whole batch.
 func VisibleClaims(ctx context.Context, tx pgx.Tx, named []ids.UUID) (map[ids.UUID]bool, error) {
 	out := make(map[ids.UUID]bool, len(named))
 	err := auth.Require(ctx, "contact", principal.ActionRead)

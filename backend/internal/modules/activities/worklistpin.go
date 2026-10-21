@@ -154,7 +154,7 @@ func (s *Store) PinnedRows(ctx context.Context, tx pgx.Tx) (map[WorklistRowRef]b
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	rows, err := tx.Query(ctx, sprintf("SELECT source, row_id FROM %s pins WHERE reader_id = $%d",
-		effectivePinsSQL(arg), arg(reader)), args...)
+		auth.EffectiveWorklistPinsSQL(arg), arg(reader)), args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading worklist pins: %w", err)
 	}
@@ -173,35 +173,10 @@ func (s *Store) PinnedRows(ctx context.Context, tx pgx.Tx) (map[WorklistRowRef]b
 	return out, nil
 }
 
-// effectivePinsSQL is the pins in effect, as (reader_id, source, row_id): each
-// reader's newest maxPinsPerReader. The page's pin pass and the Worklist age-out
-// both read it, so a pin pushed out of effect stops keeping an overdue task on
-// the Worklist too. Uncorrelated, so a read evaluates it once rather than per row;
-// a filter on reader_id reaches inside the window and uses the primary key.
-func effectivePinsSQL(arg func(any) int) string {
-	return sprintf(`(SELECT reader_id, source, row_id FROM (
-		SELECT reader_id, source, row_id, row_number() OVER (
-		         PARTITION BY reader_id ORDER BY pinned_at DESC, source, row_id) AS newness
-		  FROM worklist_pin) ranked
-		 WHERE newness <= $%d)`, arg(maxPinsPerReader))
-}
-
 // maxPinnedRowIDLen bounds a pinned row's id. A uuid is 36 characters and a
 // folded group's synthetic key is short; this is generous room above both,
 // bounding what an unmatched key can cost rather than describing any real id.
 const maxPinnedRowIDLen = 128
-
-// maxPinsPerReader bounds what one reader's page reads.
-//
-// A pin outlives the row it names — the row may not be on today's page, or any
-// page — and nothing removes one but the reader. Unbounded, a rep who pinned
-// steadily would pay for every pin they ever made on every assembly.
-//
-// Fifty is far past what a page can show: the queue draws twenty-five, so a
-// reader at this bound has pinned twice a page. It is a ceiling on cost rather
-// than a product rule, which is why it is not published — a reader who reaches
-// it keeps their fifty newest pins and loses nothing they could have seen.
-const maxPinsPerReader = 50
 
 // The two verbs, as the audit trail spells them.
 const (

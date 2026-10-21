@@ -3,7 +3,7 @@
 
 package activities
 
-import "github.com/margince/margince/backend/internal/shared/kernel/principal"
+import "github.com/margince/margince/backend/internal/platform/database/storekit"
 
 // requestUnsettledSQL uses the activity alias a. Classification records intent;
 // a topic label, a deal outcome and elapsed time do not prove fulfillment.
@@ -60,15 +60,7 @@ func heldRequestSQL() string {
 	return `a.id = ANY (ARRAY(SELECT held.source_activity_id FROM activity held
  WHERE held.archived_at IS NULL AND NOT held.is_done AND held.source_activity_id IS NOT NULL
  AND held.source_system = '` + EmailRequestTaskSource + `'
- AND ` + humanWroteReminderSQL("held") + `))`
-}
-
-// humanWroteReminderSQL is whether a human ever wrote the reminder under alias,
-// read off the audit trail because an edit leaves captured_by as it was.
-func humanWroteReminderSQL(alias string) string {
-	return `EXISTS (SELECT 1 FROM audit_log worked
- WHERE worked.entity_type = 'activity' AND worked.entity_id = ` + alias + `.id
-   AND worked.actor_type = '` + string(principal.PrincipalHuman) + `')`
+ AND ` + storekit.HumanWroteActivityClause("held") + `))`
 }
 
 const openRequestReminderSQL = `EXISTS (SELECT 1 FROM activity reminder

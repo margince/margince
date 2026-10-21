@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactNode, useState } from "react";
+import type { ReactNode } from "react";
 import { Badge } from "../../design-system/atoms";
-import { EmailReference } from "../../design-system/emailreference";
 import { Heading } from "../../design-system/heading";
-import { RecordChip } from "../../design-system/recordchip";
 import { isoWeekOf } from "../../format/calendarday";
 import {
   formatDateTime,
@@ -16,21 +14,14 @@ import {
   hourInZone,
 } from "../../format/format";
 import { startOfDayInZone, viewerZone } from "../../format/timezone";
-import { pluralKey, useLocale, useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useRecordZone } from "../../lib/recordzone";
 import type { Worklist } from "../worklist/worklist.queries";
 import type { WeeklyReview } from "./brief.queries";
-import {
-  type BriefSentence,
-  briefSentence,
-  meetingSentence,
-  sentenceParts,
-} from "./brief.sentence";
+import { type BriefSentence, briefSentence } from "./brief.sentence";
 import type { BriefView } from "./brief.view";
 import { weekSentence } from "./brief.weeksentence";
-
-const TODAY_SECTION = "brief-today";
 
 // Four greetings, and the boundaries are the reader's day rather than the
 // clock's quarters: work starts before noon, the afternoon runs to the end of
@@ -122,149 +113,6 @@ export type GlanceFacts = Readonly<{
 export type GlanceProps = GlanceFacts;
 
 /**
- * Scroll the day's own order under the reader's eye.
- *
- * A BUTTON rather than an anchor, and the reason is the address bar: every
- * `href` in this product is a route (`#/worklist`), so a fragment link would
- * replace the route with `#brief-today` and send the reader off the page the
- * tail of the sentence is pointing AT.
- */
-function showToday(): void {
-  // jsdom has no scrollIntoView; the browser always does.
-  document.getElementById(TODAY_SECTION)?.scrollIntoView?.({ block: "start" });
-}
-
-/**
- * The day in one sentence, with the two clauses a reader can act on made
- * reachable: the lead opens its own record, and the tail reaches today's order.
- *
- * The template is translated with its holes INTACT and cut apart here, because
- * a string with the holes already filled has nowhere to put a link and a
- * sentence assembled from clauses would produce German in English word order.
- */
-function GlanceSentence({
-  sentence,
-  meeting,
-}: Readonly<{ sentence: BriefSentence; meeting: BriefSentence | null }>) {
-  const t = useT();
-  const [opened, setOpened] = useState<Opened>(null);
-  const chips: Chips = {
-    opened,
-    press: (name) => setOpened(opened === name ? null : name),
-  };
-  const words = (clause: BriefSentence) =>
-    sentenceParts(t(clause.key)).map((part) =>
-      part.kind === "text" ? part.text : filled(part.name, clause, t, chips),
-    );
-  const source =
-    opened === "who"
-      ? sentence.who?.source
-      : opened === "meeting"
-        ? meeting?.meeting?.source
-        : undefined;
-  return (
-    <>
-      <p className="glance-sentence" data-testid="glance-sentence">
-        {/* A template's own words go in as STRINGS rather than wrapped in spans:
-            only the filled holes are elements, and a hole's name is its
-            identity — each appears once. */}
-        {words(sentence)}
-        {meeting && <> {words(meeting)}</>}
-      </p>
-      {source && (
-        <p className="glance-quote" role="note">
-          {source.kind === "email" ? (
-            <EmailReference
-              subject={source.subject}
-              occurredAt={source.occurredAt}
-              withheld={source.withheld}
-            />
-          ) : (
-            <>
-              <span className="glance-quote-from">{source.from}</span> ·{" "}
-              {source.text}
-            </>
-          )}
-        </p>
-      )}
-    </>
-  );
-}
-
-/** Which chip in the sentence has its source open. */
-type Opened = "who" | "meeting" | null;
-
-type Chips = Readonly<{ opened: Opened; press: (name: Opened) => void }>;
-
-/**
- * What goes in one hole of the sentence.
- *
- * A hole with no value renders its own name back, which is exactly what
- * `translate` does with one: a sentence missing a clause reads as an obvious
- * defect on the page rather than as a sentence that quietly lost a word.
- */
-function filled(
-  name: string,
-  sentence: BriefSentence,
-  t: (key: MessageKey, values?: Record<string, string>) => string,
-  chips: Chips,
-): ReactNode {
-  const value = sentence.values[name];
-  if (value === undefined) {
-    return `{${name}}`;
-  }
-  const record =
-    name === "who"
-      ? sentence.who
-      : name === "meeting"
-        ? sentence.meeting
-        : undefined;
-  if (record?.source) {
-    const opened = name === "who" ? "who" : "meeting";
-    return (
-      <RecordChip
-        key={name}
-        kind={name === "who" ? "contact" : "meeting"}
-        label={record.label}
-        identity={record.id}
-        pressed={chips.opened === opened}
-        onPress={() => chips.press(opened)}
-        size="large"
-      />
-    );
-  }
-  if (name === "lead" && sentence.leadHref !== undefined) {
-    return (
-      <a key={name} className="entity-link" href={sentence.leadHref}>
-        {value}
-      </a>
-    );
-  }
-  if (name === "rest") {
-    // The WHOLE clause is the control, not the numeral inside it: "4" alone is
-    // a two-character press target and reads as a figure rather than as a way
-    // anywhere.
-    //
-    // `glance-rest` is what puts it back INTO the sentence: `.link-button` is
-    // an inline-flex box with side padding, which is right for a verb standing
-    // on its own and wrong for a clause mid-sentence — it printed a space
-    // before the full stop that follows it, and its box raised the line the
-    // clamp then reserved two of.
-    return (
-      <button
-        key={name}
-        type="button"
-        className="link-button glance-rest"
-        onClick={showToday}
-      >
-        {t("brief.sentence.rest", { count: value })}
-      </button>
-    );
-  }
-  return value;
-}
-
-/**
  * The line over the title. The morning names its day written out; the weekly
  * names the report, its calendar week, and when it was frozen.
  */
@@ -330,8 +178,6 @@ export function BriefGlance({
         : t("brief.panel.weekly")
       : greetingText(firstName, hour, t);
   const sentence = glanceSentence({ view, day, week }, t, locale);
-  const meeting =
-    view === "morning" ? meetingSentence(day, now, t, locale) : null;
   const date = view === "morning" ? now.toISOString() : week?.local_week_start;
   return (
     <header className="glance arrive" data-testid="brief-glance">
@@ -352,7 +198,7 @@ export function BriefGlance({
         </div>
       )}
       {!narratedWeek(view, week) && (
-        <GlanceOpening view={view} sentence={sentence} meeting={meeting} />
+        <GlanceOpening view={view} sentence={sentence} />
       )}
       {briefedAt && (
         <p className="glance-briefed">
@@ -376,17 +222,19 @@ function narratedWeek(view: BriefView, week: GlanceFacts["week"]): boolean {
 function GlanceOpening({
   view,
   sentence,
-  meeting,
 }: Readonly<{
   view: BriefView;
   sentence: BriefSentence | null;
-  meeting: BriefSentence | null;
 }>) {
   const t = useT();
-  if (sentence) return <GlanceSentence sentence={sentence} meeting={meeting} />;
-  // No sentence yet: the read is in flight or failed. The fallback names the
-  // view, since there is nothing to describe, in the same face as a sentence.
-  return <p className="glance-sentence">{t(introKey(view))}</p>;
+  if (sentence)
+    return (
+      <p className="glance-sentence" data-testid="glance-sentence">
+        {t(sentence.key, sentence.values)}
+      </p>
+    );
+  if (view === "morning") return null;
+  return <p className="glance-sentence">{t("brief.glance.introWeekly")}</p>;
 }
 
 function glanceSentence(
@@ -395,18 +243,7 @@ function glanceSentence(
   locale: ReturnType<typeof useLocale>["locale"],
 ) {
   if (facts.view === "morning") {
-    const count = facts.day?.focus?.items.length ?? 0;
-    if (count > 0) {
-      return {
-        key: pluralKey(locale, "brief.glance.attention", count),
-        values: { count: formatNumber(count, locale) },
-      } satisfies BriefSentence;
-    }
     return briefSentence(facts.day, t, locale);
   }
   return weekSentence(facts.week, t, locale);
-}
-
-function introKey(view: BriefView): MessageKey {
-  return view === "weekly" ? "brief.glance.introWeekly" : "brief.glance.intro";
 }

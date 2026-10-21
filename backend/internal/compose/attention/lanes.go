@@ -166,6 +166,7 @@ type Tasks interface {
 
 // Task is one piece of agreed work.
 type Task struct {
+	SourceActivityID       *ids.UUID
 	Recipients             []crmcontracts.WorklistPromiseRecipient
 	LeadResponseEscalation bool
 	ID                     ids.UUID
@@ -429,6 +430,7 @@ type DealFacts interface {
 // DealFigures is what a card needs to state a deal's commercial case: what it
 // is worth, when it was meant to land, and who answers for it.
 type DealFigures struct {
+	Closed               bool
 	CloseDateProvisional *bool
 	ForecastCategory     *string
 	StageID              ids.UUID

@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -393,16 +394,15 @@ func healthActivityEvidence(ctx context.Context, tx pgx.Tx, now time.Time, in *d
 	}
 	in.engagedStakeholderIDs = engaged
 
-	// Commitments evidence: the open overdue tasks on the deal. No audience
-	// clause, and that is the difference rather than an omission: a task is
-	// hand-logged work, never a captured message, so it has no importing
-	// mailbox and nothing to hold it from.
+	args := []any{in.dealID, now}
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	current := storekit.CurrentCommitmentTaskClause("a", now, arg)
 	overdue, err := collectIDs(tx.Query(ctx, `
-		SELECT a.id FROM activity a
-		JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = $1
-		WHERE a.kind = 'task' AND a.is_done = false AND a.archived_at IS NULL
-		  AND a.due_at IS NOT NULL AND a.due_at < $2
-		ORDER BY a.due_at, a.id`, in.dealID, now))
+  SELECT a.id FROM activity a
+  JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = $1
+  WHERE a.kind = 'task' AND a.is_done = false AND a.archived_at IS NULL
+   AND a.due_at IS NOT NULL AND a.due_at < $2 AND `+current+`
+  ORDER BY a.due_at, a.id`, args...))
 	if err != nil {
 		return err
 	}

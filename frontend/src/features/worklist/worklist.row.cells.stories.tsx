@@ -25,9 +25,7 @@ const meta: Meta<typeof RowText> = {
       when: null,
       facts: null,
       said: [],
-      folded: [],
-      above: null,
-      consequence: null,
+
       sample: [],
       touch: [],
       zone: viewerZone(),

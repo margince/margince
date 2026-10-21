@@ -31,14 +31,14 @@ var errRelayRefused = errors.New("the relay refused the envelope")
 
 // Named tasks exercise live attention without relying on a model finding.
 // Owners share a pipeline because the fixture seeds unique default stages.
-func seedWorkFor(t *testing.T, e *integration.Env, owners ...ids.UUID) {
+func seedWorkFor(t *testing.T, e *integration.Env, due time.Time, owners ...ids.UUID) {
 	t.Helper()
 	pipeline, open, _ := integration.DealFixture(t, e)
 	for _, owner := range owners {
 		e.SeedDeal(t, "Globex Renewal", pipeline, open, &owner)
 		title := "Send the revised Globex quote"
 		assignee := ids.From[ids.UserKind](owner)
-		if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{Kind: "task", Subject: &title, AssigneeID: &assignee, Source: "manual"}); err != nil {
+		if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{Kind: "task", Subject: &title, AssigneeID: &assignee, DueAt: &due, Source: "manual"}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -93,8 +93,8 @@ func waitingItemsOf(t *testing.T, user ids.UUID, day time.Time) int {
 func TestTheMorningBriefIsMailedOncePerRepPerDay(t *testing.T) {
 	relay := &countingMailer{}
 	b := setupBriefJob(t).withMailer(relay)
-	seedWorkFor(t, b.Env, b.Rep1)
 	morning := time.Date(2026, 6, 4, 9, 0, 0, 0, time.UTC)
+	seedWorkFor(t, b.Env, morning, b.Rep1)
 	b.now = morning
 
 	if err := b.run(t); err != nil {
@@ -130,8 +130,8 @@ func TestTheMorningBriefIsMailedOncePerRepPerDay(t *testing.T) {
 func TestARepWhoAskedForNoMorningMailGetsNoneAndKeepsTheirAttempt(t *testing.T) {
 	relay := &countingMailer{}
 	b := setupBriefJob(t).withMailer(relay)
-	seedWorkFor(t, b.Env, b.Rep1)
 	morning := time.Date(2026, 6, 4, 9, 0, 0, 0, time.UTC)
+	seedWorkFor(t, b.Env, morning, b.Rep1)
 	none := identity.DeliveryNone
 	for _, rep := range []ids.UUID{b.Rep1, b.Rep2, b.Rep3} {
 		setDelivery(t, rep, &none, nil)
@@ -190,8 +190,8 @@ func TestAQuietMorningIsNotMailedUnlessTheRepAskedToHear(t *testing.T) {
 func TestARefusedRelaySpendsTheAttemptAndSaysWhy(t *testing.T) {
 	relay := &countingMailer{fail: errRelayRefused}
 	b := setupBriefJob(t).withMailer(relay)
-	seedWorkFor(t, b.Env, b.Rep1)
 	morning := time.Date(2026, 6, 4, 9, 0, 0, 0, time.UTC)
+	seedWorkFor(t, b.Env, morning, b.Rep1)
 	b.now = morning
 
 	// The assembly must not fail over a relay: the brief is on Home either way,
@@ -297,11 +297,11 @@ func setDeliveryHour(t *testing.T, user ids.UUID, hour int) {
 func TestARepsChosenHourHoldsTheMorningBackAndThenSendsIt(t *testing.T) {
 	relay := &countingMailer{}
 	b := setupBriefJob(t).withMailer(relay)
-	seedWorkFor(t, b.Env, b.Rep1)
 	setDeliveryHour(t, b.Rep1, 9)
 
 	// The briefing hour comes first and assembles the run. Nine has not.
 	morning := time.Date(2026, 6, 4, 7, 0, 0, 0, time.UTC)
+	seedWorkFor(t, b.Env, morning, b.Rep1)
 	b.now = morning
 	if err := b.run(t); err != nil {
 		t.Fatalf("the seven o'clock pass failed: %v", err)
@@ -356,9 +356,9 @@ func TestARepsChosenHourHoldsTheMorningBackAndThenSendsIt(t *testing.T) {
 func TestARepWithNoChosenHourIsMailedByTheAssemblingPass(t *testing.T) {
 	relay := &countingMailer{}
 	b := setupBriefJob(t).withMailer(relay)
-	seedWorkFor(t, b.Env, b.Rep1)
 
 	morning := time.Date(2026, 6, 4, 9, 0, 0, 0, time.UTC)
+	seedWorkFor(t, b.Env, morning, b.Rep1)
 	b.now = morning
 	if err := b.run(t); err != nil {
 		t.Fatalf("the overnight pass failed: %v", err)
@@ -390,11 +390,11 @@ func TestADepartedSeatDoesNotCostTheOthersTheirMorning(t *testing.T) {
 	// brief is not mailed at all unless the rep asked to hear about quiet days.
 	// Seeding one rep would leave this test asserting the departure guard while
 	// actually exercising a quiet morning.
-	seedWorkFor(t, b.Env, b.Rep1, b.Rep2)
 	setDeliveryHour(t, b.Rep1, 9)
 	setDeliveryHour(t, b.Rep2, 9)
 
 	morning := time.Date(2026, 6, 4, 7, 0, 0, 0, time.UTC)
+	seedWorkFor(t, b.Env, morning, b.Rep1, b.Rep2)
 	b.now = morning
 	if err := b.run(t); err != nil {
 		t.Fatalf("the seven o'clock pass failed: %v", err)

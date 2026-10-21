@@ -36,6 +36,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
@@ -173,7 +174,10 @@ type followUpCandidate struct {
 // Extracted from reconcileWorkspace so the statement, its two bounds and the
 // reason for them sit together rather than being read past on the way to the
 // scan loop.
-func reconcileCandidatesSQL() string {
+func reconcileCandidatesSQL(now time.Time) (string, []any) {
+	args := []any{now.Add(-reconcileLookback), reconcileBatch, now}
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	current := storekit.CurrentCommitmentTaskClause("t", now, arg)
 	return fmt.Sprintf(`
 		SELECT d.id, d.name, ev.activity_id, ev.kind, ev.direction, ev.occurred_at, ev.subject
 		FROM deal d
@@ -202,16 +206,16 @@ func reconcileCandidatesSQL() string {
 		ORDER BY d.id
 		LIMIT $2`,
 		MeetingIsOverSQL("a", "$3"),
-		OpenNextStepSQL("d.id", "$3"),
-		relstrength.MeetingCountsSQL("a"))
+		OpenNextStepSQL("d.id", "$3", current),
+		relstrength.MeetingCountsSQL("a")), args
 }
 
 func (r *FollowUpReconciler) reconcileWorkspace(ctx context.Context) error {
 	now := r.now().UTC()
 	var candidates []followUpCandidate
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, reconcileCandidatesSQL(),
-			now.Add(-reconcileLookback), reconcileBatch, now)
+		query, args := reconcileCandidatesSQL(now)
+		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return err
 		}

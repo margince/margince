@@ -204,3 +204,21 @@ func TestAutomationConfigRejectsAgents(t *testing.T) {
 		t.Fatalf("agent create automation → %d, want 403", status)
 	}
 }
+
+// An automation always has a name, params and a status. A null on one is
+// refused by name, never answered 200 with nothing changed.
+func TestAnAutomationRefusesANullItCannotHold(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	createdID := createPausedAutomation(t, e)
+
+	for _, field := range []string{"name", "params", "status"} {
+		var problem companyProblem
+		status := e.Call(t, "PATCH", "/v1/automations/"+createdID, AnyMap{field: nil},
+			map[string]string{"If-Match": "1"}, &problem)
+		if status != http.StatusUnprocessableEntity || len(problem.Details.Errors) != 1 ||
+			problem.Details.Errors[0].Field != field || problem.Details.Errors[0].Code != "field_not_clearable" {
+			t.Errorf("PATCH %s: null = %d %+v, want 422 field_not_clearable on %s", field, status, problem, field)
+		}
+	}
+}

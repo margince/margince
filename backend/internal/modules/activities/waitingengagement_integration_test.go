@@ -405,3 +405,7 @@ func TestAnUnknownReaderAddressDemotesNothing(t *testing.T) {
 			"addresses are unknown must not have their waiting mail quietly sink")
 	}
 }
+
+func (f fixedDomains) MailSeatIdentitiesSQL(ctx context.Context, tx pgx.Tx, bind func(any) int) (string, error) {
+	return (&Store{}).mailSeatIdentitiesSQL(ctx, tx, bind)
+}

@@ -91,14 +91,11 @@ export function MagicApproval({
 }
 
 function ApprovalBasis({ preview }: Readonly<{ preview: Preview }>) {
-  const t = useT();
   if (preview.state !== "ready" || preview.version !== 2) return null;
   const hasEvidence = preview.evidence?.some((item) =>
     item.evidence_snippet.trim(),
   );
   return hasEvidence ? (
     <DecisionEvidence evidence={preview.evidence} collapsed={false} />
-  ) : (
-    <p className="t-caption">{t("magic.approval.noEvidence")}</p>
-  );
+  ) : null;
 }

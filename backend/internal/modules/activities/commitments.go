@@ -74,6 +74,8 @@ type OpenTask struct {
 // bound: an empty input is the whole workspace's open promises, which is
 // what "who owes what" asks for.
 type ListOpenTasksInput struct {
+	// AsOf pins automatic admission to the composite read; zero uses the store clock.
+	AsOf       time.Time
 	AssigneeID *ids.UUID
 	// EntityType and EntityID narrow to the promises made about ONE record,
 	// spelled with the same vocabulary the timeline filter uses. Both or
@@ -147,6 +149,9 @@ func (s *Store) ListOpenTasks(ctx context.Context, in ListOpenTasksInput) ([]Ope
 	var tasks []OpenTask
 	var truncated bool
 	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
+		if in.AsOf.IsZero() {
+			in.AsOf = s.now()
+		}
 		tasks, truncated, err = listOpenTasks(ctx, tx, in)
 		return err
 	})
@@ -159,6 +164,9 @@ func (s *Store) ListOpenTasks(ctx context.Context, in ListOpenTasksInput) ([]Ope
 func (s *Store) ListOpenTasksTx(ctx context.Context, tx pgx.Tx, in ListOpenTasksInput) ([]OpenTask, bool, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, false, err
+	}
+	if in.AsOf.IsZero() {
+		in.AsOf = s.now()
 	}
 	return listOpenTasks(ctx, tx, in)
 }
@@ -259,6 +267,9 @@ func openTasksFilter(ctx context.Context, in ListOpenTasksInput, arg func(any) i
 	}
 	if scope != "" {
 		where = append(where, scope)
+	}
+	if !in.AsOf.IsZero() {
+		where = append(where, CurrentCommitmentTaskClause("a", in.AsOf, arg))
 	}
 	if in.AssigneeID != nil {
 		where = append(where, sprintf("a.assignee_id = $%d", arg(*in.AssigneeID)))

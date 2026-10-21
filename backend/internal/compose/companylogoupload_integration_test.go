@@ -329,3 +329,43 @@ func TestReReadingTheCompanysSiteReplacesTheMarkAnEarlierReadLanded(t *testing.T
 		t.Fatalf("%d row(s) still name the collected object at %q", n, stale)
 	}
 }
+
+// The key a replaced or removed mark drops is provisional in the ledger. A
+// delete the object store refuses leaves bytes the sweep still collects.
+func TestADroppedCompanyMarkIsLeftForTheSweepWhenItsDeleteFails(t *testing.T) {
+	for name, drop := range map[string]func(*testing.T, *integration.Env, companyHandlers){
+		"replaced": func(t *testing.T, e *integration.Env, handlers companyHandlers) {
+			uploadMark(t, e, handlers, logoFixture(t, 300, 300), "acme-new.png")
+		},
+		"removed": func(t *testing.T, e *integration.Env, handlers companyHandlers) {
+			recorder := httptest.NewRecorder()
+			handlers.DeleteAnchorCompanyLogo(recorder, httptest.NewRequest(http.MethodDelete, "/v1/company/logo", nil).
+				WithContext(e.As(e.Rep1, nil, integration.AdminPerms)))
+			if recorder.Code != http.StatusOK {
+				t.Fatalf("delete → %d %s, want 200", recorder.Code, recorder.Body.String())
+			}
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := integration.Setup(t)
+			blob := &countingBlob{Store: blobstore.NewMemory()}
+			handlers := companyHandlers{store: e.Contacts, blob: blob}
+			company := theCompanyExists(t, e)
+			uploadMark(t, e, handlers, logoFixture(t, 400, 400), "acme-logo.png")
+			first, err := e.Contacts.CompanyLogoKey(e.As(e.Rep1, nil, integration.AdminPerms), company.CompanyID, contacts.LogoWide)
+			if err != nil {
+				t.Fatalf("reading the first mark: %v", err)
+			}
+
+			blob.failDeletes = true
+			drop(t, e, handlers)
+
+			if _, _, err := blob.Get(context.Background(), first); err != nil {
+				t.Fatalf("the refused delete removed the bytes after all: %v", err)
+			}
+			if n := intentsFor(t, first); n != 1 {
+				t.Errorf("the dropped key has %d intents, want 1 so the sweep collects its bytes", n)
+			}
+		})
+	}
+}

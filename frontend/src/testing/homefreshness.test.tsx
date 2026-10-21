@@ -5,10 +5,10 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { createQueryClient } from "../app/queryclient";
 import { useMagic } from "../features/sign-in/magic.queries";
-import { jsonResponse, line, receipt } from "../features/sign-in/magic.testkit";
 import { useHandledForYou } from "../features/worklist/worklist.reads";
 import { usePendingApprovals } from "../lib/approvals.queries";
 import { proposal } from "./brief.fixtures";
+import { jsonResponse, line, receipt } from "./magic.testkit";
 import { automaticDateReceipt } from "./worklist.receiptreview.fixtures";
 
 let client: ReturnType<typeof createQueryClient>;

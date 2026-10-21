@@ -21,7 +21,6 @@ import { nonBuyerRequest } from "./worklist.eyebrow";
 import type { Worklist, WorklistItem } from "./worklist.queries";
 
 export {
-  comparisonText,
   dealFactsText,
   isUnprepared,
   phrasedReasons,
@@ -310,7 +309,12 @@ export function briefContextTitle(item: WorklistItem): string | undefined {
     : undefined;
 }
 
-export function itemTitle(item: WorklistItem, t: T, locale: Locale): string {
+export function itemTitle(
+  item: WorklistItem,
+  t: T,
+  locale: Locale,
+  subjectNamed = false,
+): string {
   // A group names itself by what it holds and how much: "43 likely automated
   // senders" is the whole row, and a reader decides whether to open it from
   // that sentence alone.
@@ -338,12 +342,12 @@ export function itemTitle(item: WorklistItem, t: T, locale: Locale): string {
     }
     return translatePlural(locale, base, item.batch.count, { count, cause });
   }
+  const named = subjectNamed ? undefined : item.subject?.label;
   if (item.title) {
     // A title that names no record, on a row that HAS one, gets the record's
     // name beside it. Eight rows reading "Follow up with the new lead" cannot
     // be told apart or put in order, and the lead's name is already on the row
     // — it was only the sentence that discarded it.
-    const named = item.subject?.label;
     return named && !item.title.includes(named)
       ? `${item.title} · ${named}`
       : item.title;
@@ -357,7 +361,7 @@ export function itemTitle(item: WorklistItem, t: T, locale: Locale): string {
       : (connectionTitleKey(item) ??
           (`worklist.untitled.${item.source}` as const)),
   );
-  return item.subject?.label ? `${title} · ${item.subject.label}` : title;
+  return named ? `${title} · ${named}` : title;
 }
 
 // Which source could not be read, and why, in words.

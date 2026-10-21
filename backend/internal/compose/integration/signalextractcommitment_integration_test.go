@@ -58,6 +58,7 @@ const pricingPromise = "We will send the revised pricing over by Friday."
 // The customer's promise is filed on them to watch, and never becomes a task.
 func TestACustomersEmailedPromiseIsWatchedNotTasked(t *testing.T) {
 	e := Setup(t)
+	e.Contacts.WithClock(func() time.Time { return extractClock })
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	ines := employeeOf(t, e, company, "Ines Huber")
 	message := captureCommitmentMessage(t, e, ines, "thread-volumes", "Volumes", "Thanks. "+pricingPromise, "inbound",

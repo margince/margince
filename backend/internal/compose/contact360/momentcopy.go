@@ -57,9 +57,6 @@ var momentWords = struct {
 	PromisedYesterday langcopy.Phrase
 	Send              langcopy.Phrase
 	ClaimUndated      langcopy.Phrase
-	YourEmail         langcopy.Phrase
-	MaybeDone         langcopy.Phrase
-	Done              langcopy.Phrase
 }{
 	Meeting:           langcopy.Phrase{En: "Meeting", De: "die Besprechung", Vi: "Cuộc họp"},
 	Prepare:           langcopy.Phrase{En: "Prepare for %s", De: "Auf %s vorbereiten", Vi: "Chuẩn bị cho %s"},
@@ -93,13 +90,10 @@ var momentWords = struct {
 	Write:             langcopy.Phrase{En: "Write to them", De: "Nachricht schreiben", Vi: "Viết cho họ"},
 	TeamOwes:          langcopy.Phrase{En: "Your team owes them: %s", De: "Ihr Team schuldet ihnen: %s", Vi: "Nhóm của bạn cần thực hiện cho họ: %s"},
 	YouOwe:            langcopy.Phrase{En: "You owe them: %s", De: "Sie schulden ihnen: %s", Vi: "Bạn cần thực hiện cho họ: %s"},
-	TaskUndated:       langcopy.Phrase{En: "Task from %s with no due date. Stays open until you do it or close it.", De: "Aufgabe vom %s ohne Fälligkeitsdatum. Sie bleibt offen, bis Sie sie erledigen oder schließen.", Vi: "Nhiệm vụ từ ngày %s chưa có hạn. Nhiệm vụ vẫn mở cho đến khi bạn thực hiện hoặc đóng lại."},
+	TaskUndated:       langcopy.Phrase{En: "Task from %s with no due date.", De: "Aufgabe vom %s ohne Fälligkeitsdatum.", Vi: "Nhiệm vụ từ ngày %s chưa có hạn."},
 	PromisedToday:     langcopy.Phrase{En: "Promised for a date earlier today.", De: "Für einen früheren Zeitpunkt heute zugesagt.", Vi: "Đã cam kết thực hiện vào thời điểm trước đó trong hôm nay."},
 	PromisedAgo:       langcopy.Phrase{En: "Promised for a date %d days ago.", De: "Für einen Termin vor %d Tagen zugesagt.", Vi: "Đã cam kết thực hiện cách đây %d ngày."},
 	PromisedYesterday: langcopy.Phrase{En: "Promised for yesterday.", De: "Für gestern zugesagt.", Vi: "Đã cam kết thực hiện vào hôm qua."},
 	Send:              langcopy.Phrase{En: "Send it", De: "Senden", Vi: "Gửi đi"},
-	ClaimUndated:      langcopy.Phrase{En: "Promised in a conversation, no due date. Stays open until you do it or close it.", De: "In einem Gespräch zugesagt, ohne Fälligkeitsdatum. Die Zusage bleibt offen, bis Sie sie erfüllen oder schließen.", Vi: "Đã cam kết trong cuộc trao đổi, chưa có hạn. Cam kết vẫn mở cho đến khi bạn thực hiện hoặc đóng lại."},
-	YourEmail:         langcopy.Phrase{En: "Your email", De: "Ihre E-Mail", Vi: "Email của bạn"},
-	MaybeDone:         langcopy.Phrase{En: "You may have done this — you wrote to them on %s", De: "Möglicherweise schon erledigt: Sie haben am %s geschrieben", Vi: "Bạn có thể đã hoàn thành việc này: bạn đã viết cho họ vào ngày %s"},
-	Done:              langcopy.Phrase{En: "Done", De: "Erledigt", Vi: "Hoàn thành"},
+	ClaimUndated:      langcopy.Phrase{En: "No due date agreed.", De: "Kein Fälligkeitsdatum vereinbart.", Vi: "Chưa thống nhất hạn."},
 }

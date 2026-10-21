@@ -11,7 +11,6 @@ import { translatePlural } from "../../i18n";
 import type { T } from "./worklist.copy";
 import { heldText } from "./worklist.held";
 import type {
-  WorklistComparison,
   WorklistItem,
   WorklistReason,
   WorklistValue,
@@ -71,29 +70,6 @@ function valued(kind: WorklistReason["kind"]): kind is ValuedReason {
   return kind in VALUED_REASONS;
 }
 
-// The comparators this build can name, for the same reason.
-//
-// `crowded` reads the other way round from the rest. This row is above because
-// the one below was held back, so a single lane could not own the page. The
-// server sends no values with it: "8th against 9th" is a fact about the lane,
-// not either row. Absent from this list, it would draw nothing on the row whose
-// position most needs explaining.
-const KNOWN_COMPARATORS = {
-  pin: true,
-  level: true,
-  deadline: true,
-  expected_revenue: true,
-  waiting_days: true,
-  relationship: true,
-  crowded: true,
-} as const;
-
-function knownComparator(
-  comparator: WorklistComparison["comparator"],
-): comparator is keyof typeof KNOWN_COMPARATORS {
-  return comparator in KNOWN_COMPARATORS;
-}
-
 /**
  * The reason kind that reads as a badge, not as a phrase in the line.
  *
@@ -148,6 +124,14 @@ export function phrasedReasons(
   return item.because.filter(
     (reason) =>
       reason.kind !== BADGED &&
+      !["material", "below_material", "routine", "pinned"].includes(
+        reason.kind,
+      ) &&
+      !(
+        reason.kind === "expected_revenue" &&
+        item.deal?.amount_minor != null &&
+        item.deal.currency
+      ) &&
       !(whenDrawn && SAID_BY_THE_WHEN_LINE.has(reason.kind)),
   );
 }
@@ -178,51 +162,6 @@ export function reasonText(
     return t(`worklist.because.${reason.kind}.value` as const, { value });
   }
   return t(`worklist.because.${reason.kind}` as const);
-}
-
-// The comparators whose sentence names both sides. A level or a pin decided
-// without a figure a reader would compare, so those say what decided and stop.
-const PAIRED_COMPARATORS = {
-  deadline: true,
-  expected_revenue: true,
-  waiting_days: true,
-} as const;
-
-type PairedComparator = keyof typeof PAIRED_COMPARATORS;
-
-function paired(
-  comparator: WorklistComparison["comparator"],
-): comparator is PairedComparator {
-  return comparator in PAIRED_COMPARATORS;
-}
-
-// Why this row sits above the next one.
-//
-// The comparator that decided, with both sides' values, so a reader can check
-// the order instead of trusting it. `order` means every comparator tied and the
-// ids broke it. A reader needs no such reason, so it draws nothing.
-export function comparisonText(
-  comparison: WorklistComparison | undefined,
-  t: T,
-  locale: Locale,
-  zone: string,
-): string | null {
-  if (
-    !comparison ||
-    comparison.comparator === "order" ||
-    !knownComparator(comparison.comparator)
-  ) {
-    return null;
-  }
-  const mine = valueText(comparison.mine, locale, zone);
-  const theirs = valueText(comparison.theirs, locale, zone);
-  if (mine === null || theirs === null || !paired(comparison.comparator)) {
-    return t(`worklist.above.${comparison.comparator}` as const);
-  }
-  return t(`worklist.above.${comparison.comparator}.pair` as const, {
-    mine,
-    theirs,
-  });
 }
 
 // The deal's own figures, in one line: what it is worth, and when it closes.

@@ -319,3 +319,33 @@ func (p *preflightEnv) promoteLead(t *testing.T, lead string) {
 		t.Fatalf("promoting the lead: %v", err)
 	}
 }
+
+// A save replaces the whole draft, so a null html_body stores none: the plain
+// body is all the draft holds afterwards.
+func TestADraftSavedWithANullHTMLBodyHoldsNone(t *testing.T) {
+	p := setupPreflight(t)
+	draft := func(html any) AnyMap {
+		return AnyMap{
+			"anchor_type": "activity", "anchor_id": p.activityID,
+			"to": []string{"buyer@preflight.test"}, "subject": "Re: pricing",
+			"body": "The whole thought", "html_body": html,
+		}
+	}
+	var saved wireDraft
+	if status := p.Call(t, "PUT", "/v1/mail-drafts", draft("<p>The whole thought</p>"), nil, &saved); status != http.StatusOK {
+		t.Fatalf("saving a draft with HTML → %d, want 200", status)
+	}
+	ifMatch := map[string]string{"If-Match": strconv.FormatInt(saved.Version, 10)}
+	if status := p.Call(t, "PUT", "/v1/mail-drafts", draft(nil), ifMatch, nil); status != http.StatusOK {
+		t.Fatalf("replacing it with html_body null → %d, want 200", status)
+	}
+	var html *string
+	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `SELECT html_body FROM mail_draft WHERE id = $1`, saved.ID).Scan(&html)
+	}); err != nil {
+		t.Fatalf("reading the draft row: %v", err)
+	}
+	if html != nil {
+		t.Errorf("html_body = %q after a null, want none", *html)
+	}
+}

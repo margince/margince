@@ -99,7 +99,8 @@ describe("the Brief's dials", () => {
     expect(
       await screen.findByRole("group", { name: en["brief.view.label"] }),
     ).toBeTruthy();
-    await screen.findByTestId("glance-sentence");
+    await screen.findByTestId("brief-readings");
+    expect(screen.queryByTestId("glance-sentence")).toBeNull();
     expect(screen.queryByRole("button", { name: "Team" })).toBeNull();
   });
 
@@ -292,25 +293,13 @@ describe("the Brief's dials", () => {
     }
   });
 
-  // The opening block belongs to the view it is about. The sentence is composed
-  // from the ranked queue — what waits TODAY — so over the weekly it would be
-  // describing this morning under a heading about the week that closed.
-  //
-  // TWO LINES AND NOTHING ELSE, either way. The uppercase eyebrow that named
-  // the view and the clock that reported the minute the queue was read are
-  // gone: the view is the dial's own state, drawn beside this block, and an
-  // as-of that ticked every sixty seconds re-rendered the page's opening for a
-  // digit nobody read.
-  it("keeps the composed sentence to the morning, and names no view above it", async () => {
+  it("omits an incomplete morning agenda and keeps the weekly opening", async () => {
     stubBrief(["mine"]);
     render(<BriefScreen />);
-    // findBy: the sentence is composed from the worklist read, so it appears
-    // when that lands rather than on the first paint.
-    expect(await screen.findByTestId("glance-sentence")).toBeTruthy();
-    // The greeting, and then the sentence. Nothing between them and nothing
-    // above the greeting — which is the whole of what the block draws now.
+    await screen.findByTestId("brief-readings");
+    expect(screen.queryByTestId("glance-sentence")).toBeNull();
     const glance = screen.getByTestId("brief-glance");
-    expect(glance.children).toHaveLength(3);
+    expect(glance.children).toHaveLength(2);
     expect(glance.firstElementChild?.firstElementChild?.tagName).toBe("H1");
     // And no clock. The time the queue was read was the one thing here that
     // moved on its own, and a substring read is what catches it coming back in
@@ -331,7 +320,7 @@ describe("the Brief's dials", () => {
     // heading — and the morning's "this is your day" read as the wrong week
     // entirely beneath "YOUR WEEK".
     expect(screen.getByText(en["brief.glance.introWeekly"])).toBeTruthy();
-    expect(screen.queryByText(en["brief.glance.intro"])).toBeNull();
+    expect(screen.queryByText("Your day at a glance.")).toBeNull();
   });
 
   // The morning shows what waits; the weekly shows the week. Neither shows the

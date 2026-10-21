@@ -21,22 +21,3 @@ export function connectionTitleKey(item: Connected): MessageKey | undefined {
     ? "worklist.untitled.capture_health_calendar"
     : undefined;
 }
-
-// What happens if the reader does nothing. The wire says mailbox for every
-// capture connection, so the medium decides, and an unknown one says neither.
-export function consequenceText(item: WorklistItem, t: T): string | null {
-  if (item.consequence === "none") {
-    return null;
-  }
-  if (
-    item.consequence === "mailbox_blind" &&
-    item.connection?.medium !== "mailbox"
-  ) {
-    return t(
-      item.connection
-        ? "worklist.consequence.calendar_blind"
-        : "worklist.consequence.connection_blind",
-    );
-  }
-  return t(`worklist.consequence.${item.consequence}` as const);
-}

@@ -259,7 +259,7 @@ func (a *assembly) activityFacts() (activities.ProjectActivityFacts, error) {
 	if a.factsRead {
 		return a.facts, nil
 	}
-	facts, err := a.svc.activities.ProjectActivityFactsTx(a.ctx, a.tx, a.projectID)
+	facts, err := a.svc.activities.ProjectActivityFactsTx(a.ctx, a.tx, a.projectID, a.now)
 	if err != nil {
 		return activities.ProjectActivityFacts{}, err
 	}

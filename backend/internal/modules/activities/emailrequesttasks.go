@@ -6,6 +6,7 @@ package activities
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -16,7 +17,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
-	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // EmailRequestTaskSource identifies tasks derived from a confirmed email request.
@@ -29,15 +29,12 @@ const automaticRequestHorizonDays = 14
 // establish a direct recipient. mailmap.Message.Record prepends the parsed
 // envelope before all sender text; only that captured-email path may use it.
 // Resolve before the waiting scan's bound.
-const emailRequestAssigneeSQL = `SELECT min(u.id::text)::uuid AS user_id FROM capture_import ci
+func emailRequestAssigneeSQL(identities string) string {
+	return `SELECT min(u.id::text)::uuid AS user_id FROM capture_import ci
       JOIN (SELECT id AS owner_id, app_user.* FROM app_user) u ON u.id = ci.user_id AND %s
-      WHERE ci.activity_id = a.id AND (EXISTS (
-        SELECT 1 FROM activity_participant recipient
-        WHERE recipient.activity_id = a.id AND recipient.role = 'to'
-          AND lower(recipient.address) = lower(u.email))
-		 OR (a.source_system = '` + connector.EmailSourceSystem + `' AND a.captured_by LIKE 'connector:%%' AND a.body LIKE E'From:%%\nTo:%%\n\n%%'
-		   AND lower(split_part(a.body, E'\n', 2)) = 'to: ' || lower(u.email)))
+      WHERE ci.activity_id = a.id AND ` + strings.ReplaceAll(directMailRecipientSQL("a", mailSeatAddressesSQL(identities, "u.id")), "%", "%%") + `
       HAVING count(DISTINCT u.id) = 1`
+}
 
 // CaptureEmailRequests reconciles recent confirmed requests into undated tasks
 // for their one directly addressed importing seat, and retires the ones it filed
@@ -65,7 +62,11 @@ func (s *Store) CaptureEmailRequests(ctx context.Context, asOf time.Time) error 
 		if err != nil {
 			return err
 		}
-		assigneeSQL := fmt.Sprintf(emailRequestAssigneeSQL, auth.AssigneeEligibleSQL(actor, "u", arg))
+		identities, err := s.mailSeatIdentitiesSQL(ctx, tx, arg)
+		if err != nil {
+			return err
+		}
+		assigneeSQL := fmt.Sprintf(emailRequestAssigneeSQL(identities), auth.AssigneeEligibleSQL(actor, "u", arg))
 		wake := messageSnoozeLiftedSQL(fmt.Sprintf("$%d", arg(asOf)), "TRUE")
 		eligible, err := waitingReplyExistsClause(ctx, arg, asOf, nil, nil, domains, nil, automaticRequestHorizonDays,
 			outstandingRequestSQL+`

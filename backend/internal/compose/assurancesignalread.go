@@ -94,7 +94,7 @@ func assuranceSignalExceptions(ctx context.Context, tx pgx.Tx, owners []ids.UUID
 	if err != nil {
 		return nil, err
 	}
-	columns := strings.Replace(exceptionColumns, "e.observed", `CASE WHEN EXISTS (
+	columns := strings.Replace(exceptionSelect(rawFindingMoney), rawFindingMoney.observed, `CASE WHEN EXISTS (
   SELECT 1 FROM deal_suggestion s WHERE s.id::text = e.observed->>'suggestion_id'
   AND s.state = 'open' AND `+suggestionScope+`) THEN e.observed ELSE e.observed - 'suggestion_id' END`, 1)
 	rows, err := tx.Query(ctx, `SELECT `+columns+`, c.display_name, c.owner_id

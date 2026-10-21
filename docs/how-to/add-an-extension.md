@@ -412,6 +412,10 @@ constant. A name built at run time is a finding too, because a reader that canno
 it. This guards against errors, not attacks. See `what the tier does not protect against` in
 [extensibility.md](../explanation/extensibility.md).
 
+A vendor API may take a query in its own language that reads like SQL, such as `SELECT * FROM Invoice`. That
+string goes to the vendor, not to the database. Put `//margince:vendor-query <where it goes>` on its line or the
+line above it, and the check skips it. A marker with no reason is a finding.
+
 **A new migration is a new file**, even for an index. `dbmigrate` keys on the version. So a line added to an
 applied `0001` runs only on installations that do not need it (a new one). It never runs on the ones that
 do. `extensions/openchannel/migrations/0003_drain.up.sql` is the worked example. What it adds belongs to
@@ -1038,9 +1042,8 @@ ignores files you add to the unit later. `git add -f` stages the files once, but
 it does not take the place of the line.
 
 A unit for one installation only should stay ignored. Its presence
-in the working tree already turns it on for that install. Give it a module path of its own, outside
-`github.com/margince/margince/`. `backend/gates/extensionsignored_test.go` reads that path to tell the
-installation's unit from one of this repository that lost its `.gitignore` line.
+in the working tree already turns it on for that install. List its name in `extensions/operator-units`, one per
+line, so `TestEveryEnabledExtensionIsTracked` lets it stay ignored. Keep that file ignored too.
 
 Commit **the whole unit folder**: every source and test file, plus its module files (`go.mod`, and `go.sum` if it
 uses outside packages). Commit it together with the `.gitignore` line. Do **not** commit `build/composition/`,

@@ -30,6 +30,9 @@ import (
 // StageProgressionKind is the approval kind a proposed move is staged as.
 const StageProgressionKind = "stage_progression"
 
+// StageApprovalEvidenceKey links an applied stage audit to its original decision.
+const StageApprovalEvidenceKey = "stage_approval_id"
+
 const progressionEntity = "stage_progression_outcome"
 
 // The two audit-image keys this file writes. Constants rather than literals at

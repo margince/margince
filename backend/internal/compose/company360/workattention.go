@@ -230,10 +230,10 @@ func overdueTasksBy(
 		         AND `+identity.LiveMemberSQL("u")+`
 		 WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL
 		   AND a.due_at IS NOT NULL AND a.due_at < $%[4]d
-		   AND %[6]s
+		   AND %[6]s AND %[7]s
 		 ORDER BY l.%[1]s, coalesce((%[5]s), false) DESC, a.due_at, a.id`,
 		linkColumn, keysPos, companyPos, nowPos, activityScope,
-		activities.CompanyLinkedActivityExists(companyPos)), args...)
+		activities.CompanyLinkedActivityExists(companyPos), activities.CurrentCommitmentTaskClause("a", now, arg)), args...)
 	if err != nil {
 		return nil, false, fmt.Errorf("read the account's overdue tasks: %w", err)
 	}

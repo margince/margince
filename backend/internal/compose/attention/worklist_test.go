@@ -379,7 +379,7 @@ func TestADealPastItsCloseDateOutranksAQuieterOne(t *testing.T) {
 func TestTheOvernightBriefingReachesTheQueue(t *testing.T) {
 	day := crmcontracts.Attention{
 		AsOf:        rankInstant,
-		ThisMorning: []crmcontracts.AttentionItem{item("brief-1", "brief_item")},
+		ThisMorning: []crmcontracts.AttentionItem{item("brief-1", "brief_item", withCurrentIntervention())},
 	}
 
 	rows := classifyDay(day, rankInstant, dayMoney{})

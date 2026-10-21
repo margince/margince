@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { en } from "../../i18n/en";
 import {
@@ -180,9 +180,7 @@ export const ApprovedButNotRun: Story = {
   render: panel([failedApprovalRow(), taskRow("call", "Call the buyer")]),
   play: async ({ canvasElement }) => {
     const card = within(within(canvasElement).getByRole("article"));
-    await expect(
-      card.getByText("Move deal to Won · Nordwind renewal"),
-    ).toBeTruthy();
+    await expect(card.getByText("Move deal to Won")).toBeTruthy();
     await expect(card.getByText(failedApprovalRow().detail ?? "")).toBeTruthy();
     await expect(
       card.getByRole("button", { name: en["worklist.verb.retry"] }),
@@ -222,7 +220,13 @@ export const LegacyStalledDeal: Story = {
       canvasElement.querySelector(".worklist-row-context"),
     ).toBeNull();
     await expect(card.getAllByText("Acme Expansion")).toHaveLength(1);
-    await expect(card.getByRole("button", { name: "Done" })).toBeTruthy();
+    await expect(
+      card.getByRole("link", { name: en["deal.openDeal"] }),
+    ).toBeTruthy();
+    await expect(card.queryByText("Why first?")).toBeNull();
+    await expect(
+      card.getByRole("button", { name: en["brief.act"] }),
+    ).toBeTruthy();
   },
 };
 
@@ -261,4 +265,63 @@ export const DealWithNextAction: Story = {
       card.getByText("The buyer requested a revised proposal."),
     ).toBeTruthy();
   },
+};
+
+export const RecordedNextStepGap: Story = {
+  render: panel([
+    {
+      ...legacyStalledRow(),
+      because: [{ kind: "no_next_step" }, { kind: "material" }],
+      deal: {
+        amount_minor: 2500000,
+        currency: "EUR",
+        close_date_provisional: false,
+      },
+    },
+  ]),
+  play: async ({ canvasElement }) => {
+    const card = within(within(canvasElement).getByRole("article"));
+    await waitFor(() =>
+      expect(card.getByText(en["worklist.because.no_next_step"])).toBeVisible(),
+    );
+    await expect(
+      card.getByRole("link", { name: en["deal.openDeal"] }),
+    ).toBeVisible();
+    await expect(
+      card.queryByText(/typical|If ignored|Ranked above/),
+    ).toBeNull();
+  },
+};
+export const RecordedNextStepGapDark: Story = {
+  ...RecordedNextStepGap,
+  globals: { theme: "dark" },
+};
+export const RecordedNextStepGapPhone: Story = {
+  ...RecordedNextStepGap,
+  tags: ["uat-phone"],
+};
+
+export const LongTaskTitlePhone: Story = {
+  tags: ["uat-phone"],
+  render: panel([
+    {
+      ...taskRow(
+        "long-call",
+        "Call back about retrofit delivery and the revised installation schedule",
+      ),
+      subject: { type: "contact", id: "alice", label: "Alice" },
+    },
+  ]),
+  play: async ({ canvasElement }) => {
+    const title = within(canvasElement).getByRole("button", {
+      name: "Call back about retrofit delivery and the revised installation schedule",
+    });
+    await expect(title).toHaveClass("btn-valuelabel");
+    await expect(title.scrollWidth).toBeLessThanOrEqual(title.clientWidth + 1);
+  },
+};
+export const LongTaskTitlePhoneDark: Story = {
+  ...LongTaskTitlePhone,
+  tags: ["uat-phone"],
+  globals: { theme: "dark" },
 };

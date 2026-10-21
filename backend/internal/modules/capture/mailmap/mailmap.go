@@ -92,6 +92,7 @@ type Message struct {
 	// openRecipients holds the To and Cc addresses, the owner's own included, and
 	// linkHosts where the body's links lead: the evidence capture.MailEnvelope carries.
 	openRecipients   []string
+	directRecipients []string
 	recipientsUnread bool
 	linkHosts        []string
 	linksCut         bool
@@ -217,6 +218,7 @@ func Parse(raw []byte, owner string) (Message, error) {
 		participants:     otherParties(toList, ccList, bccList, ownerLower, participantExclusion(counterparty, calendarNotice)),
 		addresses:        allAddresses(fromList, toList, ccList, bccList),
 		openRecipients:   allAddresses(toList, ccList),
+		directRecipients: allAddresses(toList),
 		recipientsUnread: toErr != nil || ccErr != nil,
 		linkHosts:        walked.links,
 		linksCut:         walked.linksCut,
@@ -443,7 +445,7 @@ func (m Message) envelope() *capture.MailEnvelope {
 		return nil
 	}
 	return &capture.MailEnvelope{
-		OpenRecipients: m.openRecipients, RecipientsUnreadable: m.recipientsUnread,
+		OpenRecipients: m.openRecipients, DirectRecipients: m.directRecipients, RecipientsUnreadable: m.recipientsUnread,
 		LinkHosts: m.linkHosts, LinksTruncated: m.linksCut,
 	}
 }

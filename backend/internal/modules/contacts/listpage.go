@@ -36,7 +36,7 @@ const whereAlways = "1=1"
 // named after their objects.
 type listPageSpec[T any] struct {
 	entity  string
-	columns string
+	columns func(context.Context, func(any) int) string
 	// fields is the core sortable vocabulary (data-model §13.5); active
 	// cf_ columns join it per request.
 	fields map[string]storekit.SortField
@@ -107,13 +107,14 @@ func listPage[T any](ctx context.Context, s *Store, sortSpec *string, limitIn *i
 		return nil, storekit.Page{}, err
 	}
 
+	columns := spec.columns(ctx, arg)
 	var recs []T
 	var page storekit.Page
 	// txSnapshot, not tx: the page and its total are two statements whose
 	// answers are shown as one, so they have to see one snapshot.
 	err = s.txSnapshot(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx,
-			`SELECT `+spec.columns+storekit.SelectSuffix(active)+sorted.CursorKeySuffix()+
+			`SELECT `+columns+storekit.SelectSuffix(active)+sorted.CursorKeySuffix()+
 				` FROM `+spec.entity+` WHERE `+strings.Join(where, " AND ")+
 				sorted.OrderBy()+storekit.SQLf(` LIMIT %d`, limit+1),
 			args...)

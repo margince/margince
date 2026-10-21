@@ -104,7 +104,7 @@ it("shows recorded estimate observations and admits a missing basis", () => {
     values?: Record<string, string>,
   ) => translate("en", key, values);
   expect(receiptBasis(receipt, t, "en")).toContain(
-    "No supporting sales history",
+    "Estimate basis unavailable",
   );
   expect(
     receiptBasis(

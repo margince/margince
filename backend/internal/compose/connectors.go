@@ -406,6 +406,11 @@ func (h connectorHandlers) SetConnectorSignatureEnrichment(w http.ResponseWriter
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
+	// A null follows the workspace default; a body that omits the switch is a mistake.
+	if err := httperr.RequireSent(r, "enabled", "send enabled: true, false, or null to follow the workspace default"); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	view, err := h.registry.SetSignatureEnrichment(r.Context(), string(provider), req.Enabled)
 	// A mailbox this caller has not connected is not theirs to configure, and
 	// answers as absent — the registry's sentinel is a plain error and would

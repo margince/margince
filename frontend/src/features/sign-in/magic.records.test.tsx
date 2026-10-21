@@ -2,7 +2,12 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { jsonResponse, line, receipt, renderMagic } from "./magic.testkit";
+import {
+  jsonResponse,
+  line,
+  receipt,
+  renderMagic,
+} from "../../testing/magic.testkit";
 
 afterEach(() => {
   cleanup();

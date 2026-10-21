@@ -86,9 +86,7 @@ var declinedWriteIsSilent = gatekit.Waive(map[string]string{
 // Each names the issue carrying the behaviour change. That is a separate
 // review: growing an error where a caller expects nil changes what a worker
 // does next.
-var declinedWriteOwesACheck = gatekit.Waive(map[string]string{
-	"backend/internal/modules/ai/voice_build_run.go:SetBuildStage": "a stage advances only while the build is running, so a worker whose build was cancelled keeps spending model calls on stages nothing records (#7210)",
-})
+var declinedWriteOwesACheck = gatekit.Waive(map[string]string{})
 
 // countingHelpers names every function in one package whose body reads a
 // write's outcome. A caller handing its statement to one of them is credited
@@ -276,10 +274,8 @@ func TestAConditionalByIDWriteReportsThatItDeclined(t *testing.T) {
 	// The debt is counted as well as waived, because a waived finding on its
 	// own is invisible.
 	//
-	// Pinning it keeps the gate green while holding the debt where it is. A
-	// sixth write owing a check fails here, and each one #7210 fixes lowers
-	// this number.
-	const writesOwingACheck = 1
+	// Pinned at zero: a write that owes a check and is waived here fails.
+	const writesOwingACheck = 0
 	if got := len(declinedWriteOwesACheck.Subjects()); got != writesOwingACheck {
 		t.Errorf("%d writes owe an outcome check, pinned at %d: a new one is debt this gate refuses, "+
 			"and one fixed lowers the pin", got, writesOwingACheck)
