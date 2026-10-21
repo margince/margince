@@ -12,6 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -72,28 +73,14 @@ func (w *csvWriters) lockReviewedTarget(ctx context.Context, row migration.Row) 
 	if err != nil {
 		return false, apperrors.ErrVersionSkew
 	}
-	var table string
-	switch w.object {
-	case migration.ObjectCompany:
-		table = string(recordTypeCompany)
-	case migration.ObjectContact:
-		table = string(recordTypeContact)
-	case migration.ObjectLead:
-		table = string(recordTypeLead)
-	case migration.ObjectDeal:
-		table = string(recordTypeDeal)
-	case migration.ObjectActivity:
-		table = string(recordTypeActivity)
-	default:
-		return false, apperrors.ErrVersionSkew
-	}
 	// The ambient row transaction also holds tag and relationship writes.
 	replayed := false
 	err = database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
-		if _, err := lockReviewedImportRow(ctx, tx, table, id); err != nil {
+		table, err := w.lockReviewedImportRow(ctx, tx, id)
+		if err != nil {
 			return err
 		}
-		err := storekit.EnsureIfMatch(ctx, tx, table, id, &expected.TargetVersion)
+		err = storekit.EnsureIfMatch(ctx, tx, table, id, &expected.TargetVersion)
 		if !errors.Is(err, apperrors.ErrVersionSkew) {
 			return err
 		}
@@ -341,19 +328,23 @@ func (w *csvWriters) reviewCheckedSource(ctx context.Context, row migration.Row,
 	return nil
 }
 
-func lockReviewedImportRow(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) (storekit.RowLock, error) {
-	switch table {
-	case tableCompany:
-		return storekit.LockRow(ctx, tx, tableCompany, id, storekit.LiveOnly)
-	case tableContact:
-		return storekit.LockRow(ctx, tx, tableContact, id, storekit.LiveOnly)
-	case tableLead:
-		return storekit.LockRow(ctx, tx, tableLead, id, storekit.LiveOnly)
-	case tableDeal:
-		return storekit.LockRow(ctx, tx, tableDeal, id, storekit.LiveOnly)
-	case tableActivity:
-		return storekit.LockRow(ctx, tx, tableActivity, id, storekit.LiveOnly)
+func (w *csvWriters) lockReviewedImportRow(ctx context.Context, tx pgx.Tx, id ids.UUID) (string, error) {
+	switch w.object {
+	case migration.ObjectCompany:
+		_, err := w.contacts.LockCompanyForBulkTx(ctx, tx, ids.From[ids.CompanyKind](id))
+		return tableCompany, err
+	case migration.ObjectContact:
+		_, err := w.contacts.LockContactForBulkTx(ctx, tx, ids.From[ids.ContactKind](id))
+		return tableContact, err
+	case migration.ObjectLead:
+		_, err := w.contacts.LockLeadForBulkTx(ctx, tx, ids.From[ids.LeadKind](id))
+		return tableLead, err
+	case migration.ObjectDeal:
+		_, err := w.deals.LockDealForBulkTx(ctx, tx, ids.From[ids.DealKind](id))
+		return tableDeal, err
+	case migration.ObjectActivity:
+		return tableActivity, activities.LockActivityLive(ctx, tx, ids.From[ids.ActivityKind](id))
 	default:
-		return storekit.RowLock{}, apperrors.ErrVersionSkew
+		return "", apperrors.ErrVersionSkew
 	}
 }
