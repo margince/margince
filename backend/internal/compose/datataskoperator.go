@@ -33,7 +33,7 @@ func DataTaskOperation(ctx context.Context, pool *pgxpool.Pool, action string) (
 	}
 	if action == datatask.EstimateAction {
 		for _, p := range progress {
-			if p.Version == 0 {
+			if p.Version == 0 || p.AwaitingReview() {
 				continue
 			}
 			if err := engine.Control(ctx, p.TaskID, p.Step, datatask.EstimateAction, p.Version); err != nil {

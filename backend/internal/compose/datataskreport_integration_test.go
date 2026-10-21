@@ -9,10 +9,12 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 )
@@ -31,7 +33,7 @@ func TestCorrectionMetricsReadTheLedgerAndSurfaceTransportFailure(t *testing.T) 
 	if err := section(t.Context(), &out); err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"margince_data_task_read_success 1", `margince_data_task_steps{status="pending"} 2`} {
+	for _, want := range []string{"margince_data_task_read_success 1", fmt.Sprintf(`margince_data_task_steps{status="pending"} %d`, registeredDataTaskSteps(dataTaskCatalog(e.Pool, time.Now)))} {
 		if !strings.Contains(out.String(), want) {
 			t.Fatalf("missing %q: %s", want, &out)
 		}

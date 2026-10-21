@@ -55,13 +55,13 @@ step. Use System health to review the cause before resuming or retrying.
 
 ## Require a reviewed scope
 
-Set `Manual`, `ReviewVersion` and `Review` on a task that needs a person's decision. The callback
+Set `Manual`, `ReviewVersion` and `Review` on a task that needs an operator’s decision. The callback
 must recheck the supplied identities, versions, permissions and dispositions on its transaction.
 A digest identifies the plan; current domain checks decide whether the plan is still valid.
 
 Use `Engine.Activate` from a human-only handler with the observed ledger version. Keep the scope
 bounded and free of source content. The worker receives the scope and operator in `BatchIn`.
-Rebuild that person's current authority before each batch. A revoked object grant must stop work.
+Rebuild that operator’s current authority before each batch. A revoked object grant must stop work.
 A changed record can be skipped with a reason and run ID after any partial write has rolled back.
 
 Unreviewed tasks and reviews invalidated by a rule change do not hold up automatic corrections.

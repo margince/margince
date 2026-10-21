@@ -186,13 +186,19 @@ func (e *scoutEnv) twinsOf(t *testing.T, company ids.UUID) []ids.UUID {
 func (e *scoutEnv) meetingDraft(t *testing.T, company, meeting ids.UUID) deals.SuggestionDraft {
 	t.Helper()
 	at := e.daysAgo(3).Truncate(time.Microsecond)
+	var meetingAt time.Time
+	if err := database.WithWorkspaceTx(e.system(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(e.system(), `SELECT occurred_at FROM activity WHERE id = $1`, meeting).Scan(&meetingAt)
+	}); err != nil {
+		t.Fatal(err)
+	}
 	source, buyer := e.buyingEmail(t, company, at)
 	opportunity := e.signal(t, "new_opportunity", company, source, e.now, ids.Nil, buyer)
 	commitment := e.signal(t, "commitment_made", company, source, e.now, ids.Nil)
 	return deals.SuggestionDraft{
 		CompanyID: company, NameHint: deals.HintOpportunitySignaled, Confidence: 0.8,
 		Evidence: []deals.SuggestionEvidence{
-			{Kind: deals.EvidenceMeeting, ActivityID: &meeting, OccurredAt: e.daysAgo(3)},
+			{Kind: deals.EvidenceMeeting, ActivityID: &meeting, OccurredAt: meetingAt},
 			{Kind: deals.EvidenceSignal, SignalID: &opportunity, OccurredAt: at},
 			{Kind: deals.EvidenceSignal, SignalID: &commitment, OccurredAt: at},
 		},

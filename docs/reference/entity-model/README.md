@@ -28,8 +28,8 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 316 |
-| Columns | 3753 |
+| Tables | 317 |
+| Columns | 3759 |
 | Foreign keys | 521 |
 | Owning areas | 36 |
 
@@ -117,7 +117,7 @@ erDiagram
 | [knowledge](knowledge.md) | 3 |
 | [migration](migration.md) | 2 |
 | [notices](notices.md) | 3 |
-| [platform](platform.md) | 12 |
+| [platform](platform.md) | 13 |
 | [privacy](privacy.md) | 2 |
 | [projects](projects.md) | 3 |
 | [reporting](reporting.md) | 10 |
@@ -257,6 +257,7 @@ erDiagram
 | [`currency_minor_digits`](platform.md#currency_minor_digits) | platform | 2 | 0 |
 | [`custom_field`](customfields.md#custom_field) | customfields | 16 | 0 |
 | [`data_subject_request`](consent.md#data_subject_request) | consent | 16 | 0 |
+| [`data_task_review`](platform.md#data_task_review) | platform | 6 | 0 |
 | [`data_task_run`](platform.md#data_task_run) | platform | 22 | 0 |
 | [`data_task_run_history`](platform.md#data_task_run_history) | platform | 5 | 0 |
 | [`deal`](deals.md#deal) | deals | 43 | 26 |

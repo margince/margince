@@ -1,21 +1,21 @@
 import { type ComponentProps, lazy, type ReactNode, Suspense } from "react";
-import { QueryGate } from "../design-system/querystates";
-import { ApprovalDetailModal } from "../features/automations/approvaleditor";
-import { CompanyDealPicker } from "../features/deals/companydealpicker";
+import { QueryGate } from "./design-system/querystates";
+import { ApprovalDetailModal } from "./features/automations/approvaleditor";
+import { CompanyDealPicker } from "./features/deals/companydealpicker";
 import {
   DealSuggestionCard,
   suggestedName,
-} from "../features/deals/dealsuggestion";
+} from "./features/deals/dealsuggestion";
 import {
   useDealSuggestion,
   useDealSuggestions,
-} from "../features/deals/dealsuggestions.queries";
-import { OpenActivityDrawer } from "../features/voice-knowledge/activitydrawer";
-import { useT } from "../i18n";
-import { type ReviewActions, ReviewActionsContext } from "../lib/reviewactions";
+} from "./features/deals/dealsuggestions.queries";
+import { OpenActivityDrawer } from "./features/voice-knowledge/activitydrawer";
+import { useT } from "./i18n";
+import { type ReviewActions, ReviewActionsContext } from "./lib/reviewactions";
 
 const NewDealAction = lazy(() =>
-  import("../features/companies/companyactions").then((module) => ({
+  import("./features/companies/companyactions").then((module) => ({
     default: module.NewDealAction,
   })),
 );
@@ -41,6 +41,8 @@ function CoveredDealSuggestion({
     { company_id: companyId },
     open && companyId !== undefined,
   );
+  if (!open) return null;
+  if (companyId === undefined) return <p>{t("dealSuggestion.changed")}</p>;
   return (
     <QueryGate query={suggestions} pendingLabel={t("stat.evidence")}>
       {(found) => {

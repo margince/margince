@@ -17,6 +17,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/buildinfo"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -140,6 +141,8 @@ func homeRepairReviewWire(review datatask.ReviewRequest) (crmcontracts.HomeRepai
 			out.Counts.Review++
 		case repairLeaveCurrent:
 			out.Counts.Keep++
+		default:
+			return crmcontracts.HomeRepairReview{}, apperrors.ErrInvalidArgument
 		}
 	}
 	return out, nil

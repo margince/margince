@@ -66,12 +66,12 @@ func TestHomeRepairExplainsEveryOwnerReason(t *testing.T) {
 		t.Fatal("repair label map is missing")
 	}
 	body := string(source)[start:]
-	end := strings.Index(body, "\n};")
-	if end < 0 {
+	body, _, found := strings.Cut(body, "\n};")
+	if !found {
 		t.Fatal("repair label map is incomplete")
 	}
 	labels := map[string]bool{}
-	for _, match := range tsReasonEntry.FindAllStringSubmatch(tsReasonComment.ReplaceAllString(body[:end], ""), -1) {
+	for _, match := range tsReasonEntry.FindAllStringSubmatch(tsReasonComment.ReplaceAllString(body, ""), -1) {
 		labels[match[1]] = true
 	}
 	for label := range labels {

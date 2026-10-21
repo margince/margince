@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Suspense } from "react";
-import { AnalyticsScreen as AnalyticsRoute } from "../App.screens";
-import { reportingStoryRoutes } from "../features/analytics/reporting.story-fixtures";
-import { installFetchStub, StoryProviders } from "../testing/story-utils";
-import { AnalyticsScreen } from "./analytics";
+import { AnalyticsScreen } from "./App.analytics";
+import { AnalyticsScreen as AnalyticsRoute } from "./App.screens";
+import { reportingStoryRoutes } from "./features/analytics/reporting.story-fixtures";
+import { installFetchStub, StoryProviders } from "./testing/story-utils";
 
 const meta = {
   title: "Shell/Reports",

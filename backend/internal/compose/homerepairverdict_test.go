@@ -5,11 +5,13 @@ package compose
 
 import (
 	"encoding/json"
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 func TestRepairDigestUsesTheExecutedTypedScope(t *testing.T) {
@@ -64,5 +66,12 @@ func TestClassificationReviewDistinguishesMissingChecksFromUncertainty(t *testin
 				t.Fatal("unresolved result became an accepted verdict")
 			}
 		})
+	}
+}
+
+func TestRepairWireRefusesAnUncountedAction(t *testing.T) {
+	review := datatask.ReviewRequest{Scope: json.RawMessage(`{"tasks":[{"action":"unknown"}]}`)}
+	if _, err := homeRepairReviewWire(review); !errors.Is(err, apperrors.ErrInvalidArgument) {
+		t.Fatalf("uncounted review action: %v", err)
 	}
 }

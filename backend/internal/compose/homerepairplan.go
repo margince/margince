@@ -151,10 +151,7 @@ func validateHomeRepairItemTx(ctx context.Context, tx pgx.Tx, expected homeRepai
 		if !review.Trusted {
 			return apperrors.ErrPermissionDenied
 		}
-		if err := validateHomeRepairVerdictTx(ctx, tx, expected); err != nil {
-			return err
-		}
-		return nil
+		return validateHomeRepairVerdictTx(ctx, tx, expected)
 	}
 	if expected.Source == repairSourceSuggestion {
 		return validateHomeRepairSuggestionTx(ctx, tx, expected, review.AsOf)

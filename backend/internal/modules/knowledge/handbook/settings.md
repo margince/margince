@@ -301,8 +301,8 @@ System health and Reset data sit in the **Governance** group, and Data import in
   Nothing is written until you check the test run.
 - **Search index**: building the index again, behind search and behind what the
   AI finds.
-- **Data updates**: progress and controls for background corrections. A correction that needs
-  review stays idle until an authorized person starts it.
+- **Data updates**: progress and controls for background changes. Work that needs
+  review waits until an authorized user starts it.
 - **Background jobs**: jobs that wait to run, and jobs that failed, by owner.
   Admin and Ops.
 - **AI provider status**: whether each AI provider is answering, as the app
@@ -325,18 +325,20 @@ System health and Reset data sit in the **Governance** group, and Data import in
 
 ### Review automatic Home work
 
-In **Data updates**, choose tasks, approval proposals or deal suggestions, then open
+In **Data updates**, choose tasks, approval proposals, deal suggestions or message review, then open
 **Preview items**. Each item shows its name, proposed action and reason. **Inspect** opens the
-evidence you can read. Only work you can currently inspect is included. Use **Review next page** to continue.
+evidence you can read. Only work you can currently read is included. Use **Review next page** to continue.
 
 **Apply reviewed changes** starts the reviewed page. The button names how many changes it will
-make. The preview counts reminders to archive, proposals to withdraw and deal suggestions to retire
-separately. None of these actions marks an obligation completed or approves a proposed deal change.
-Human-created, edited or pinned work stays available. Uncertain evidence leaves work for review.
-You need permission to make the proposed changes; permission to inspect alone does not allow them.
+make.
 
-Progress shows the records checked, changes made, and work preserved or skipped. A concurrent edit
-or loss of source access can leave a reviewed item unchanged. Preview again to inspect what remains.
+The preview counts reminders to archive, proposals to withdraw and deal suggestions to retire
+separately. None of these actions marks an obligation completed or approves a proposed deal change.
+Human-created, edited or pinned work stays available. Evidence that is not clear leaves work for review.
+You need permission to make the proposed changes; permission to read alone does not allow them.
+
+Progress shows the records checked, changes made, and work kept or skipped. An edit made after review
+or a change in source access can leave a reviewed item as it was. Preview again to read what remains.
 A changed rule or an old preview requires another review before starting.
 
 ## Data import

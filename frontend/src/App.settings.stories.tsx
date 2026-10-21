@@ -4,16 +4,16 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Suspense } from "react";
 import { expect, within } from "storybook/test";
-import { SettingsScreen as SettingsRoute } from "../App.screens";
-import { runningDataTask } from "../features/settings/datataskshealth.fixtures";
-import { settingsAddress } from "../features/settings/settings";
+import { SettingsScreen as SettingsRoute } from "./App.screens";
+import { SettingsScreen } from "./App.settings";
+import { runningDataTask } from "./features/settings/datataskshealth.fixtures";
+import { settingsAddress } from "./features/settings/settings";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "../testing/story-utils";
-import { SettingsScreen } from "./settings";
+} from "./testing/story-utils";
 
 const meta = {
   title: "Shell/Settings",
@@ -48,7 +48,9 @@ export const ReviewedWork: Story = {
     installReview();
     return (
       <StoryProviders>
-        <SettingsScreen route={settingsAddress("system-health")} />
+        <Suspense fallback={null}>
+          <SettingsScreen route={settingsAddress("system-health")} />
+        </Suspense>
       </StoryProviders>
     );
   },

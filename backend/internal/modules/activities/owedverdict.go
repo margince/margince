@@ -463,9 +463,5 @@ func validateOwedVerdictWrite(ctx context.Context, verdict, ruleset string) erro
 	if ruleset == "" {
 		return errRulesetUnnamed
 	}
-	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
-		return err
-	}
-
-	return nil
+	return auth.Require(ctx, "activity", principal.ActionUpdate)
 }

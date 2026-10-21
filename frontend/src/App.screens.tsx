@@ -200,7 +200,7 @@ export const ConfirmDetailsScreen = lazy(
 
 export const AnalyticsScreen = lazy(
   routed(() =>
-    import("./app/analytics").then((m) => ({
+    import("./App.analytics").then((m) => ({
       default: m.AnalyticsScreen,
     })),
   ),
@@ -238,7 +238,7 @@ export const SearchRoute = lazy(
 
 export const SettingsScreen = lazy(
   routed(() =>
-    import("./app/settings").then((m) => ({
+    import("./App.settings").then((m) => ({
       default: m.SettingsScreen,
     })),
   ),
