@@ -94,13 +94,18 @@ func TestWaitingDirectionUsesExistingRelationshipAndRelevanceFacts(t *testing.T)
 			}
 			for _, row := range waiting {
 				if row.ActivityID == id {
+					if tc.label == "noise" {
+						t.Fatal("noise became a reply obligation despite its conflicting automatic request verdict")
+					}
 					if row.NonBuyer != tc.nonBuyer || !row.ConfirmedRequest {
 						t.Fatalf("direction changed the request verdict: %+v", row)
 					}
 					return
 				}
 			}
-			t.Fatal("the request disappeared rather than retaining its direction")
+			if tc.label != "noise" {
+				t.Fatal("the request disappeared rather than retaining its direction")
+			}
 		})
 	}
 }

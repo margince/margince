@@ -126,9 +126,11 @@ func pendingLine(a crmcontracts.Approval) (crmcontracts.MagicLine, bool) {
 	}
 	sentence, values := pendingCaption(a)
 	line := crmcontracts.MagicLine{
-		Id:         a.Id,
-		OccurredAt: a.CreatedAt,
-		Lane:       crmcontracts.MagicLineLaneMagicLaneNeedsYou,
+		Id:              a.Id,
+		ApprovalKind:    &a.Kind,
+		ApprovalPreview: a.Preview,
+		OccurredAt:      a.CreatedAt,
+		Lane:            crmcontracts.MagicLineLaneMagicLaneNeedsYou,
 		Summary: crmcontracts.MagicSentence{
 			Key:    sentence,
 			Values: &values,
@@ -218,7 +220,7 @@ func pendingCaption(a crmcontracts.Approval) (string, map[string]string) {
 		}
 		values["summary"], values["party"] = summary, party
 	}
-	if a.Kind != "commitment_task" && a.Kind != kindCaptureCounterparty && a.Summary != nil {
+	if a.Kind != "commitment_task" && a.Kind != kindCaptureCounterparty && (a.Preview == nil || a.Preview.State == "ready") && a.Summary != nil {
 		if summary := approvals.SanitizeSummary(*a.Summary); summary != "" {
 			sentence = "magic.action.approval_summary"
 			values["summary"] = summary

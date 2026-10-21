@@ -3,7 +3,13 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import type { QueryLike } from "../design-system/querystates";
 import { unwrap } from "./problem";
-import { briefKey, digestKey, magicKey, worklistKey } from "./workkeys";
+import {
+  briefKey,
+  digestKey,
+  isLiveWorkRead,
+  magicKey,
+  worklistKey,
+} from "./workkeys";
 
 // The approvals query-hook family.
 //
@@ -81,7 +87,9 @@ export function useApprovals(status: ApprovalStatus, enabled = true) {
   return useQuery({
     queryKey: ["approvals", status],
     enabled,
-    refetchOnWindowFocus: true,
+    ...(!isLiveWorkRead(["approvals", status])
+      ? { refetchOnWindowFocus: true }
+      : {}),
     queryFn: async (): Promise<ApprovalPage> => ({
       data: await fetchAllApprovals(status),
     }),

@@ -8,6 +8,7 @@ import { Eyebrow } from "../../design-system/eyebrow";
 import { en } from "../../i18n/en";
 import {
   failedApprovalRow,
+  legacyStalledRow,
   taskRow,
   waitingEmailRow,
 } from "../../testing/brief.fixtures";
@@ -174,5 +175,15 @@ export const ApprovedButNotRun: Story = {
     await expect(
       card.getByRole("button", { name: en["worklist.verb.retry"] }),
     ).toBeTruthy();
+  },
+};
+
+export const LegacyStalledDeal: Story = {
+  render: panel([legacyStalledRow()]),
+  play: async ({ canvasElement }) => {
+    const card = within(within(canvasElement).getByRole("article"));
+    await expect(card.getByText("Agree a next step")).toBeTruthy();
+    await expect(card.getAllByText("Acme Expansion")).toHaveLength(1);
+    await expect(card.getByRole("button", { name: "Done" })).toBeTruthy();
   },
 };

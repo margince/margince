@@ -46128,8 +46128,16 @@ export interface components {
             /** @description Whether this reader may write this deal. */
             writable: boolean;
         };
+        /** @description Observed sales history recorded when this estimate was made, not a reconstruction from current pipeline values. */
+        CloseDateEstimateBasis: {
+            won_deals: number;
+            /** Format: double */
+            median_days_per_stage: number;
+            remaining_stages: number;
+        };
         /** @description Recorded close-date correction values, formatted at the presentation edge. */
         CloseDateChange: {
+            estimate_basis?: components["schemas"]["CloseDateEstimateBasis"];
             date_changed: boolean;
             forecast_changed: boolean;
             before?: string;
@@ -47269,6 +47277,9 @@ export interface components {
              * @enum {string}
              */
             lane: "done" | "needs_you" | "could_not_complete" | "watching";
+            /** @description The staged action kind on a needs_you line, for an action label separate from its record name. */
+            approval_kind?: string;
+            approval_preview?: components["schemas"]["ApprovalPreview"];
             summary: components["schemas"]["MagicSentence"];
             entity?: components["schemas"]["MagicEntityRef"];
             /** @description The fields this change moved, as they were. MASKED to what the reader may see, through the same field mask the record's own history uses — a receipt is not a way around the boundary the record keeps. */

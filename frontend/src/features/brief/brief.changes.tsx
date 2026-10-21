@@ -17,7 +17,7 @@ import { type Locale, useLocale, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
 import { listReadState } from "../../lib/worklist.listread";
 import { useHandledForYou } from "../worklist/worklist.queries";
-import { receiptSummary } from "../worklist/worklist.receiptcopy";
+import { receiptBasis, receiptSummary } from "../worklist/worklist.receiptcopy";
 import { ReceiptReview } from "../worklist/worklist.receiptreview";
 
 // The changes made for the reader that they can still accept or take back, in
@@ -30,7 +30,13 @@ export function BriefChanges() {
   const zone = viewerZone();
   const query = useHandledForYou();
   const titleId = useId();
-  const receipts = query.data?.receipts;
+  const receipts = query.data?.receipts?.filter((receipt) =>
+    receipt.review
+      ? !receipt.review.accepted &&
+        !receipt.review.reversed &&
+        (receipt.review.can_accept || receipt.review.can_undo)
+      : receipt.undo && !receipt.undo.reversed,
+  );
   const asOf = query.data?.as_of;
   const state = listReadState(query, receipts);
   if (state === "loading" || state === "empty") {
@@ -58,6 +64,11 @@ export function BriefChanges() {
                   {receipt.subject?.type === "deal" && (
                     <span className="magic-line-subject">
                       <EntityRef kind="deal" id={receipt.subject.id} />
+                    </span>
+                  )}
+                  {receiptBasis(receipt, t, locale) && (
+                    <span className="t-caption magic-line-basis">
+                      {receiptBasis(receipt, t, locale)}
                     </span>
                   )}
                 </p>

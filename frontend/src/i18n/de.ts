@@ -1453,6 +1453,21 @@ export const de = {
   "brief.weekly.partialValue": "{value} (teilweise)",
   "brief.week.beforeHistory":
     "Für diese Woche gibt es keine Zahlen, da sie vor den ersten Datensätzen liegt.",
+  "magic.approval.markWon": "Als gewonnen markieren",
+  "magic.approval.markLost": "Als verloren markieren",
+  "magic.approval.reviewChange": "Vorgeschlagene Änderung prüfen",
+  "magic.approval.noEvidence":
+    "Keine Quelle beigefügt. Prüfe den Deal vor der Freigabe.",
+  "home.receipt.dateReverted":
+    "Geschätztes Abschlussdatum zurückgenommen; {before} wiederhergestellt (zuvor {after})",
+  "home.receipt.basisUnknown":
+    "Hier ist keine belegte Verkaufshistorie verfügbar. Kläre das Datum mit der Käuferseite.",
+  "home.receipt.basis_one":
+    "Schätzung aus {count} gewonnenem Deal · Median der Tage je Phase: {days} · Verbleibende Phasen: {stages}. Kein von der Käuferseite bestätigtes Datum.",
+  "home.receipt.basis_other":
+    "Schätzung aus {count} gewonnenen Deals · Median der Tage je Phase: {days} · Verbleibende Phasen: {stages}. Kein von der Käuferseite bestätigtes Datum.",
+  "brief.changes.keepDate": "Datum behalten",
+  "worklist.handled.showHistory": "Letzte Änderungen anzeigen",
   "home.receipt.date": "Abschlussdatum: {before} → {after}",
   "home.receipt.dateUnconfirmed":
     "Geschätztes Abschlussdatum: {before} → {after} (Bestätigung nötig)",
@@ -1580,7 +1595,7 @@ export const de = {
   "brief.reply.owed": "Kontakt wartet auf deine Antwort",
   "brief.changes.superseded":
     "Dieser Deal wurde erneut geändert. Öffne den Deal, um seinen aktuellen Stand zu prüfen.",
-  "brief.changes.title": "Wartet auf deine Zustimmung",
+  "brief.changes.title": "Angewandte Änderungen prüfen",
   "brief.changes.accept": "Annehmen",
   "brief.changes.accepted": "Angenommen",
   "brief.changes.undone": "Rückgängig gemacht",
@@ -14927,7 +14942,7 @@ export const de = {
   "worklist.manager.kind.general": "Sonstiges",
   "worklist.board.title": "Teamarbeit mit Handlungsbedarf",
   "worklist.exceptions.title": "Team-Ausnahmen",
-  "worklist.handled.title": "Für dich erledigt",
+  "worklist.handled.title": "Änderungsverlauf",
   "worklist.walk.arrived":
     "Neu seit dem Öffnen der Liste: {arrived}. Aktualisiere die Liste, um die neuen Einträge hinzuzufügen.",
   "worklist.walk.gone": "Davon seit dem Öffnen der Liste erledigt: {gone}.",
@@ -14938,13 +14953,13 @@ export const de = {
   "worklist.handled.empty":
     "Heute wurden keine Aktionen in deinem Auftrag ausgeführt.",
   "worklist.handled.loading": "Aktionen werden geladen…",
-  "worklist.handled.count": "{count} erledigt",
+  "worklist.handled.count": "Letzte Änderungen: {count}",
   "worklist.handled.what": "Aktion",
   "worklist.handled.about": "Datensatz",
   "worklist.handled.when": "Zeitpunkt",
   "worklist.handled.noRecord": "Kein Datensatz",
   "worklist.handled.hiddenRecord": "Datensatz nicht verfügbar",
-  "worklist.handled.wayBack": "Rückgängig",
+  "worklist.handled.wayBack": "Status",
   "worklist.handled.putBackDone": "Bereits rückgängig gemacht",
   "worklist.handled.truncated": "Liste gekürzt. Es gibt weitere Einträge.",
   "worklist.exceptions.empty": "Keine Team-Ausnahmen.",
@@ -15204,6 +15219,9 @@ export const de = {
   "worklist.untitled.meeting": "Termin ohne Titel",
   "worklist.untitled.meeting_outcome": "Terminergebnis",
   "worklist.untitled.relationship_decay": "Beziehung wird still",
+  "worklist.briefAction.stalled": "Nächsten Schritt vereinbaren",
+  "worklist.briefAction.closingSoon": "Abschlussplan bestätigen",
+  "worklist.briefAction.opportunity": "Nächsten Vertriebsschritt planen",
   "worklist.untitled.failed_approval": "Freigegebene Aktion nicht ausgeführt",
   "worklist.untitled.dsr": "Offene Datenschutzanfrage",
   "noticeDuty.title": "Datenschutzhinweis geschuldet (DSGVO Art. 14)",

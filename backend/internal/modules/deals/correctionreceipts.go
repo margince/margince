@@ -36,9 +36,10 @@ type CorrectionReceipt struct {
 	AuditLogID ids.UUID
 	// Fields the correction moved, so the sentence can name them all rather
 	// than the one the reader happens to notice.
-	Fields    []string
-	Basis     string
-	AppliedAt time.Time
+	Fields        []string
+	EstimateBasis *CorrectionEstimateBasis
+	Basis         string
+	AppliedAt     time.Time
 	// Reversed reports that somebody already put this back. The row stays on
 	// the lane saying so, rather than vanishing and leaving the reader
 	// wondering whether their Undo landed.
@@ -106,7 +107,9 @@ func (s *Store) RecentCorrectionsOwnedBy(
 			            THEN coalesce(a.evidence->>'basis', '')
 			            ELSE '' END,
 			       c.applied_at,
-			       c.reversed_at IS NOT NULL, d.version, a.before->>'expected_close_date', a.after->>'expected_close_date'
+			       c.reversed_at IS NOT NULL, d.version, a.before->>'expected_close_date', a.after->>'expected_close_date',
+ CASE WHEN nullif(a.evidence->>'basis_owner', '') IS NOT DISTINCT FROM d.owner_id::text
+ THEN a.evidence ELSE '{}'::jsonb END
 			  FROM deal_correction c
 			  JOIN deal d ON d.id = c.deal_id
 			  JOIN audit_log a ON a.id = c.audit_log_id
@@ -124,11 +127,13 @@ func (s *Store) RecentCorrectionsOwnedBy(
 		defer rows.Close()
 		for rows.Next() {
 			var row CorrectionReceipt
+			var evidence []byte
 			if err := rows.Scan(&row.DealID, &row.DealName, &row.AuditLogID,
 				&row.Fields, &row.Basis, &row.AppliedAt, &row.Reversed,
-				&row.Version, &row.BeforeClose, &row.AfterClose); err != nil {
+				&row.Version, &row.BeforeClose, &row.AfterClose, &evidence); err != nil {
 				return err
 			}
+			row.EstimateBasis = correctionEstimateBasis(evidence)
 			out = append(out, row)
 		}
 		return rows.Err()

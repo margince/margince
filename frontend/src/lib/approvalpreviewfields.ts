@@ -1,7 +1,7 @@
-import type { Translator } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
-import { historyFieldLabel } from "../../lib/historyfieldlabels";
+import type { Translator } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { MERGE_FIELD_LABELS } from "./approvalpreviewmergefields";
+import { historyFieldLabel } from "./historyfieldlabels";
 
 const PREVIEW_DETAIL_LABELS: Record<string, MessageKey> = {
   import_create_tag: "approval.import.createTag",

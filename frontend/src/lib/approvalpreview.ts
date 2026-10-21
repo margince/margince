@@ -1,30 +1,27 @@
-import type { components } from "../../api/schema";
-import { DEAL_STATUS_LABEL } from "../../components/dealdials";
-import { acquisitionKindLabel } from "../../format/acquisitionkind";
-import { RELATIONSHIP_TYPE_LABELS } from "../../format/companyrelationships";
-import {
-  EMAIL_TYPE_LABEL,
-  PHONE_TYPE_LABEL,
-} from "../../format/contactchannels";
-import { formatMoneyOrAbsent, formatNumber } from "../../format/format";
-import { LEAD_STATUS_LABEL } from "../../format/leadstatus";
-import { offerStatusLabel } from "../../format/offerstatus";
-import { templateLanguage } from "../../format/offertemplatelocale";
-import { billingModelLabel } from "../../format/productbilling";
-import { unitLabel } from "../../format/productunit";
-import { PHASE_LABEL } from "../../format/projectphase";
-import { promotionTriggerLabel } from "../../format/promotion";
-import { sendPermissionReasonKey } from "../../format/sendpermissionreason";
-import type { Locale, Translator } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
-import { contextOptions } from "../../lib/compose-context";
-import { KIND_LABELS } from "../../lib/relationshipkinds";
-import { WON_REASON_LABELS } from "../../lib/winreason";
+import type { components } from "../api/schema";
+import { acquisitionKindLabel } from "../format/acquisitionkind";
+import { COMPANY_LIFECYCLE_LABELS } from "../format/companylifecycle";
+import { RELATIONSHIP_TYPE_LABELS } from "../format/companyrelationships";
+import { EMAIL_TYPE_LABEL, PHONE_TYPE_LABEL } from "../format/contactchannels";
+import { DEAL_STATUS_LABEL } from "../format/dealstatus";
+import { formatMoneyOrAbsent, formatNumber } from "../format/format";
+import { LEAD_STATUS_LABEL } from "../format/leadstatus";
+import { offerStatusLabel } from "../format/offerstatus";
+import { templateLanguage } from "../format/offertemplatelocale";
+import { billingModelLabel } from "../format/productbilling";
+import { unitLabel } from "../format/productunit";
+import { PHASE_LABEL } from "../format/projectphase";
+import { promotionTriggerLabel } from "../format/promotion";
+import { sendPermissionReasonKey } from "../format/sendpermissionreason";
+import type { Locale, Translator } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import type { ResolvedDisplayField } from "./approvaldisplay.types";
-import { COMPANY_LIFECYCLE_LABELS } from "./approvalkind";
 import { previewFieldLabel } from "./approvalpreviewfields";
 import { importPreviewFields } from "./approvalpreviewimport";
 import { mergeValueLabel } from "./approvalpreviewmergevalues";
+import { contextOptions } from "./compose-context";
+import { KIND_LABELS } from "./relationshipkinds";
+import { WON_REASON_LABELS } from "./winreason";
 
 const PREVIEW_EFFECT_LABELS: Record<string, MessageKey> = {
   create_activity_record: "approval.import.createActivity",

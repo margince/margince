@@ -1,6 +1,6 @@
-import type { components } from "../../api/schema";
-import type { Translator } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
+import type { components } from "../api/schema";
+import type { Translator } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import type { ResolvedDisplayField } from "./approvaldisplay.types";
 import { previewFieldLabel } from "./approvalpreviewfields";
 

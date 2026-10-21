@@ -1416,6 +1416,21 @@ export const vi = {
   "brief.weekly.partialValue": "{value} (một phần)",
   "brief.week.beforeHistory":
     "Tuần này nằm trước thời điểm có dữ liệu đầu tiên nên không có số liệu để báo cáo.",
+  "magic.approval.markWon": "Đánh dấu thắng",
+  "magic.approval.markLost": "Đánh dấu thua",
+  "magic.approval.reviewChange": "Xem thay đổi đề xuất",
+  "magic.approval.noEvidence":
+    "Chưa đính kèm nguồn chứng minh. Kiểm tra deal trước khi phê duyệt.",
+  "home.receipt.dateReverted":
+    "Đã hoàn tác ngày chốt ước tính; khôi phục {before} (trước đó {after})",
+  "home.receipt.basisUnknown":
+    "Không có lịch sử bán hàng làm căn cứ ở đây. Xác nhận ngày với bên mua trước khi giữ lại.",
+  "home.receipt.basis_one":
+    "Ước tính từ {count} deal thắng · Số ngày trung vị mỗi giai đoạn: {days} · Số giai đoạn còn lại: {stages}. Chưa được bên mua xác nhận.",
+  "home.receipt.basis_other":
+    "Ước tính từ {count} deal thắng · Số ngày trung vị mỗi giai đoạn: {days} · Số giai đoạn còn lại: {stages}. Chưa được bên mua xác nhận.",
+  "brief.changes.keepDate": "Giữ ngày",
+  "worklist.handled.showHistory": "Xem thay đổi gần đây",
   "home.receipt.date": "Ngày chốt: {before} → {after}",
   "home.receipt.dateUnconfirmed":
     "Ngày chốt ước tính: {before} → {after} (cần xác nhận)",
@@ -1537,7 +1552,7 @@ export const vi = {
   "brief.reply.owed": "Khách hàng đang chờ bạn trả lời",
   "brief.changes.superseded":
     "Deal này lại vừa thay đổi. Mở deal để xem lại trạng thái hiện tại.",
-  "brief.changes.title": "Đang chờ bạn xác nhận",
+  "brief.changes.title": "Kiểm tra thay đổi đã áp dụng",
   "brief.changes.accept": "Chấp nhận",
   "brief.changes.accepted": "Đã chấp nhận",
   "brief.changes.undone": "Đã hoàn tác",
@@ -14563,7 +14578,7 @@ export const vi = {
   "worklist.manager.kind.general": "Khác",
   "worklist.board.title": "Việc của nhóm cần chú ý",
   "worklist.exceptions.title": "Ngoại lệ của nhóm",
-  "worklist.handled.title": "Đã xử lý thay bạn",
+  "worklist.handled.title": "Lịch sử thay đổi",
   "worklist.walk.arrived":
     "Có {arrived} việc mới từ khi mở danh sách. Làm mới để thêm vào.",
   "worklist.walk.gone":
@@ -14574,13 +14589,13 @@ export const vi = {
   "worklist.walk.refresh": "Làm mới",
   "worklist.handled.empty": "Hôm nay chưa có việc nào được xử lý thay bạn.",
   "worklist.handled.loading": "Đang tải thao tác…",
-  "worklist.handled.count": "Đã xử lý {count}",
+  "worklist.handled.count": "Thay đổi gần đây: {count}",
   "worklist.handled.what": "Thao tác",
   "worklist.handled.about": "Hồ sơ",
   "worklist.handled.when": "Thời điểm",
   "worklist.handled.noRecord": "Không có hồ sơ",
   "worklist.handled.hiddenRecord": "Hồ sơ không khả dụng",
-  "worklist.handled.wayBack": "Hoàn tác",
+  "worklist.handled.wayBack": "Trạng thái",
   "worklist.handled.putBackDone": "Đã hoàn tác",
   "worklist.handled.truncated": "Danh sách đã bị cắt bớt. Vẫn còn việc khác.",
   "worklist.exceptions.empty": "Nhóm không có ngoại lệ nào.",
@@ -14832,6 +14847,9 @@ export const vi = {
   "worklist.untitled.meeting": "Cuộc họp chưa có tiêu đề",
   "worklist.untitled.meeting_outcome": "Kết quả cuộc họp",
   "worklist.untitled.relationship_decay": "Liên lạc đang thưa dần",
+  "worklist.briefAction.stalled": "Thống nhất bước tiếp theo",
+  "worklist.briefAction.closingSoon": "Xác nhận kế hoạch chốt giao dịch",
+  "worklist.briefAction.opportunity": "Lên kế hoạch bước bán hàng tiếp theo",
   "worklist.untitled.failed_approval":
     "Hành động đã duyệt không được thực hiện",
   "worklist.untitled.dsr": "Yêu cầu quyền riêng tư đang mở",

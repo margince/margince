@@ -140,7 +140,12 @@ export function WorklistRow({
   // Open the activity itself without leaving the queue for its linked record.
   const source = useRowSource(item);
   const viewer = useMe(false).data?.user;
-  const title = itemTitle(readerTask(item, viewer, t), t, locale);
+  const title = framedTitle(
+    item,
+    itemTitle(readerTask(item, viewer, t), t, locale),
+    framed,
+    t,
+  );
   const facts =
     dealFactsText(item, t, locale, zone) ??
     leadFactsText(item, t, locale, zone);
@@ -319,4 +324,28 @@ export function WorklistRow({
       </PutDownByThumb>
     </PanelRow>
   );
+}
+
+function framedTitle(
+  item: WorklistItem,
+  fallback: string,
+  framed: boolean,
+  t: ReturnType<typeof useT>,
+): string {
+  if (
+    !framed ||
+    item.source !== "brief_item" ||
+    (item.title && item.title !== item.subject?.label)
+  )
+    return fallback;
+  switch (item.kind) {
+    case "stalled":
+      return t("worklist.briefAction.stalled");
+    case "closing_soon":
+      return t("worklist.briefAction.closingSoon");
+    case "opportunity":
+      return t("worklist.briefAction.opportunity");
+    default:
+      return fallback;
+  }
 }

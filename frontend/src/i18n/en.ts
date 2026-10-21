@@ -1404,6 +1404,21 @@ export const en = {
   "brief.weekly.partialValue": "{value} (partial)",
   "brief.week.beforeHistory":
     "This week falls before the first records, so it has no figures to report.",
+  "magic.approval.markWon": "Mark as won",
+  "magic.approval.markLost": "Mark as lost",
+  "magic.approval.reviewChange": "Review proposed change",
+  "magic.approval.noEvidence":
+    "No supporting source was attached. Check the deal before approving.",
+  "home.receipt.dateReverted":
+    "Reverted close-date estimate; restored {before} (was {after})",
+  "home.receipt.basisUnknown":
+    "No supporting sales history is available here. Check with the buyer before keeping this date.",
+  "home.receipt.basis_one":
+    "Estimate from {count} won deal · Median days per stage: {days} · Stages remaining: {stages}. No buyer-confirmed date.",
+  "home.receipt.basis_other":
+    "Estimate from {count} won deals · Median days per stage: {days} · Stages remaining: {stages}. No buyer-confirmed date.",
+  "brief.changes.keepDate": "Keep date",
+  "worklist.handled.showHistory": "Show recent changes",
   "home.receipt.date": "Close date: {before} → {after}",
   "home.receipt.dateUnconfirmed":
     "Estimated close date: {before} → {after} (needs confirmation)",
@@ -1525,7 +1540,7 @@ export const en = {
   "brief.reply.owed": "Customer awaiting your reply",
   "brief.changes.superseded":
     "This deal changed again. Open the deal to review its current state.",
-  "brief.changes.title": "Waiting for your word",
+  "brief.changes.title": "Check applied changes",
   "brief.changes.accept": "Accept",
   "brief.changes.accepted": "Accepted",
   "brief.changes.undone": "Undone",
@@ -14891,7 +14906,7 @@ export const en = {
   "worklist.manager.kind.general": "Other",
   "worklist.board.title": "Team work needing attention",
   "worklist.exceptions.title": "Team exceptions",
-  "worklist.handled.title": "Handled for you",
+  "worklist.handled.title": "Change history",
   "worklist.walk.arrived":
     "{arrived} new since you opened the list. Refresh to add them.",
   "worklist.walk.gone":
@@ -14902,13 +14917,13 @@ export const en = {
   "worklist.walk.refresh": "Refresh",
   "worklist.handled.empty": "No actions taken on your behalf today.",
   "worklist.handled.loading": "Loading actions…",
-  "worklist.handled.count": "{count} handled",
+  "worklist.handled.count": "Recent changes: {count}",
   "worklist.handled.what": "Action",
   "worklist.handled.about": "Record",
   "worklist.handled.when": "When",
   "worklist.handled.noRecord": "No record",
   "worklist.handled.hiddenRecord": "Record not available",
-  "worklist.handled.wayBack": "Undo",
+  "worklist.handled.wayBack": "Status",
   "worklist.handled.putBackDone": "Already undone",
   "worklist.handled.truncated": "List truncated. More items exist.",
   "worklist.exceptions.empty": "No team exceptions.",
@@ -15159,6 +15174,9 @@ export const en = {
   "worklist.untitled.meeting": "Untitled meeting",
   "worklist.untitled.meeting_outcome": "Meeting outcome",
   "worklist.untitled.relationship_decay": "Relationship going quiet",
+  "worklist.briefAction.stalled": "Agree a next step",
+  "worklist.briefAction.closingSoon": "Confirm the close plan",
+  "worklist.briefAction.opportunity": "Plan the next sales step",
   "worklist.untitled.failed_approval": "Approved action did not run",
   "worklist.untitled.dsr": "Open privacy request",
   "noticeDuty.title": "Privacy notice owed (GDPR Art. 14)",

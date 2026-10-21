@@ -2,18 +2,20 @@
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
-import { ToastProvider } from "../../design-system/toast";
-import { en } from "../../i18n/en";
+import { ToastProvider } from "../design-system/toast";
+import { BriefFeed } from "../features/brief/brief.feed";
+import { BriefGlance } from "../features/brief/brief.glance";
+import { WorklistRow } from "../features/worklist/worklist.row";
+import { en } from "../i18n/en";
 import {
   failedApprovalRow,
+  legacyStalledRow,
   meetingRow,
   readingsDay,
   taskRow,
   waitingEmailRow,
-} from "../../testing/brief.fixtures";
-import { render, stubApi } from "../../testing/brief.testkit";
-import { BriefFeed } from "./brief.feed";
-import { BriefGlance } from "./brief.glance";
+} from "./brief.fixtures";
+import { render, stubApi } from "./brief.testkit";
 
 afterEach(() => {
   cleanup();
@@ -438,3 +440,68 @@ it.each([true, false])(
     ).toBeTruthy();
   },
 );
+
+it.each([
+  ["stalled", "Agree a next step"],
+  ["closing_soon", "Confirm the close plan"],
+  ["opportunity", "Plan the next sales step"],
+])(
+  "names the next action for a legacy %s brief item without inventing evidence",
+  (kind, title) => {
+    stubApi({});
+    const row = { ...legacyStalledRow(), kind };
+    const { container } = render(
+      <BriefFeed day={readingsDay({}, [row])} state="ready" />,
+    );
+    const card = inHand(container);
+    expect(container.querySelector(".worklist-row-title")?.textContent).toBe(
+      title,
+    );
+    expect(card.getAllByText("Acme Expansion")).toHaveLength(1);
+    expect(container.querySelector(".worklist-row-verdict")).toBeNull();
+    expect(card.getByRole("button", { name: "Done" })).toBeTruthy();
+  },
+);
+
+it("keeps the server's finding beneath the brief action", () => {
+  stubApi({});
+  const row = {
+    ...legacyStalledRow(),
+    verdict: {
+      source: "brief_finding" as const,
+      line: "No next meeting has been agreed.",
+    },
+  };
+  const { container } = render(
+    <BriefFeed day={readingsDay({}, [row])} state="ready" />,
+  );
+  expect(inHand(container).getAllByText(row.verdict.line)).toHaveLength(1);
+  expect(container.querySelector(".worklist-row-title")?.textContent).toBe(
+    "Agree a next step",
+  );
+});
+
+it("preserves a concrete brief action supplied by the server", () => {
+  stubApi({});
+  const row = {
+    ...legacyStalledRow(),
+    title: "Call the buyer about the renewal",
+  };
+  const { container } = render(
+    <BriefFeed day={readingsDay({}, [row])} state="ready" />,
+  );
+  expect(container.querySelector(".worklist-row-title")?.textContent).toBe(
+    "Call the buyer about the renewal · Acme Expansion",
+  );
+  expect(inHand(container).queryByText("Agree a next step")).toBeNull();
+});
+
+it("keeps the canonical deal title for an unframed brief row", () => {
+  stubApi({});
+  const { container } = render(
+    <WorklistRow item={legacyStalledRow()} position={1} owner="" />,
+  );
+  expect(container.querySelector(".worklist-row-title")?.textContent).toBe(
+    "Acme Expansion",
+  );
+});

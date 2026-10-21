@@ -30054,11 +30054,21 @@ type ClaimEvidenceSourceKind string
 
 // CloseDateChange Recorded close-date correction values, formatted at the presentation edge.
 type CloseDateChange struct {
-	After           *string `json:"after,omitempty"`
-	Basis           *string `json:"basis,omitempty"`
-	Before          *string `json:"before,omitempty"`
-	DateChanged     bool    `json:"date_changed"`
-	ForecastChanged bool    `json:"forecast_changed"`
+	After       *string `json:"after,omitempty"`
+	Basis       *string `json:"basis,omitempty"`
+	Before      *string `json:"before,omitempty"`
+	DateChanged bool    `json:"date_changed"`
+
+	// EstimateBasis Observed sales history recorded when this estimate was made, not a reconstruction from current pipeline values.
+	EstimateBasis   *CloseDateEstimateBasis `json:"estimate_basis,omitempty"`
+	ForecastChanged bool                    `json:"forecast_changed"`
+}
+
+// CloseDateEstimateBasis Observed sales history recorded when this estimate was made, not a reconstruction from current pipeline values.
+type CloseDateEstimateBasis struct {
+	MedianDaysPerStage float64 `json:"median_days_per_stage"`
+	RemainingStages    int     `json:"remaining_stages"`
+	WonDeals           int     `json:"won_deals"`
 }
 
 // ColdStartField One read-back field. EVERY field carries a non-empty `evidence_snippet` + `confidence`, or it is
@@ -41847,6 +41857,12 @@ type MagicLine struct {
 
 	// After The same fields, as they are now, under the same mask.
 	After *map[string]interface{} `json:"after,omitempty"`
+
+	// ApprovalKind The staged action kind on a needs_you line, for an action label separate from its record name.
+	ApprovalKind *string `json:"approval_kind,omitempty"`
+
+	// ApprovalPreview A current, authorized explanation of the exact staged effect. It never grants permission or supplies execution arguments. Before values are answered only when the current record still has the staged version; stale records require restaging. Pending proposals alone carry this review-time projection. An approval attempt with stale context returns version_skew. Incomplete, unavailable or conflicting context returns 422 with approval_preview_incomplete, approval_preview_unavailable or approval_preview_conflict respectively, without recording a decision.
+	ApprovalPreview *ApprovalPreview `json:"approval_preview,omitempty"`
 
 	// Before The fields this change moved, as they were. MASKED to what the reader may see, through the same field mask the record's own history uses — a receipt is not a way around the boundary the record keeps.
 	Before *map[string]interface{} `json:"before,omitempty"`

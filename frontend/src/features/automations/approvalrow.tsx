@@ -21,6 +21,7 @@ import { formatCountdown, useNow } from "../../format/now";
 import { viewerZone } from "../../format/timezone";
 import type { Locale, Translator } from "../../i18n";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { editedCommercialPreview } from "../../lib/approvalpreview";
 import {
   type Approval,
   invalidateApprovalViews,
@@ -51,7 +52,6 @@ import {
   approvalKindLabel,
   decisionSkewKey,
 } from "./approvalkind";
-import { editedCommercialPreview } from "./approvalpreview";
 import { approvalAcceptable, useApprovalNames } from "./approvalresponsibility";
 import { stagedSendOf } from "./approvalsend";
 import "./approvalrow.css";

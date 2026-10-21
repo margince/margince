@@ -13,6 +13,7 @@ import {
   subscribeConnectivity,
 } from "../lib/connectivity";
 import { logUnexpectedError, ProblemError } from "../lib/problem";
+import { isLiveWorkRead } from "../lib/workkeys";
 
 // The data layer's parameters (architecture/frontend, FE-PARAM-1..5). The
 // library's defaults are not this product's: they hold nothing back from the
@@ -72,7 +73,7 @@ const LIVE_RECORD_MS = 60_000;
 // the workspace's AI budget on an open tab. Its key is the status card's, not
 // the deal record's, which is what keeps it out.
 export function liveInterval(query: { queryKey: QueryKey }): number | false {
-  return isRecordRead(query.queryKey) && LIVE_RECORD_MS;
+  return isLiveRead(query.queryKey) && LIVE_RECORD_MS;
 }
 
 // "always" and not `true`, which is the same word meaning something weaker:
@@ -82,7 +83,13 @@ export function liveInterval(query: { queryKey: QueryKey }): number | false {
 // above is priced against — the return is what covers the reader who leaves —
 // so the return has to actually read.
 export function liveOnReturn(query: { queryKey: QueryKey }): "always" | false {
-  return isRecordRead(query.queryKey) && "always";
+  return isLiveRead(query.queryKey) && "always";
+}
+
+// Decisions and receipt controls can change in another tab or a worker.
+// Their current state must refresh just like the records they act on.
+function isLiveRead(key: QueryKey): boolean {
+  return isRecordRead(key) || isLiveWorkRead(key);
 }
 
 // FE-PARAM-2. Two retries, and only for a failure the server reported as its
@@ -245,6 +252,8 @@ export function createQueryClient(): QueryClient {
         // coming back to one is exactly when the cached answer is wrong, and
         // exactly when the reader acts on it.
         refetchOnWindowFocus: liveOnReturn,
+        refetchOnMount: (query) =>
+          isLiveWorkRead(query.queryKey) ? "always" : true,
       },
       // Reads wait out an outage and rerun when it clears. A write never
       // waits: a paused one would run on reconnect, after the reader moved on.

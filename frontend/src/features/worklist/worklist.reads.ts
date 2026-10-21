@@ -1,7 +1,7 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import { unwrap } from "../../lib/problem";
-import { worklistKey } from "../../lib/workkeys";
+import { isLiveWorkRead, worklistKey } from "../../lib/workkeys";
 import type {
   HandledForYou,
   TeamBoard,
@@ -31,10 +31,11 @@ export function useWorklist(
   owner?: string,
   enabled = true,
 ) {
+  const queryKey = [...worklistKey, scope, filter, owner ?? ""];
   return useInfiniteQuery({
     enabled,
-    queryKey: [...worklistKey, scope, filter, owner ?? ""],
-    refetchOnWindowFocus: true,
+    queryKey,
+    ...(!isLiveWorkRead(queryKey) ? { refetchOnWindowFocus: true } : {}),
     initialPageParam: undefined as string | undefined,
     queryFn: async ({ pageParam }): Promise<Worklist> => {
       const dials = owner ? { owner, filter } : { scope, filter };

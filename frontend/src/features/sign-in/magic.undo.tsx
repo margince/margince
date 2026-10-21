@@ -16,8 +16,8 @@ import { useT } from "../../i18n";
 import { isEntityKind } from "../../lib/entity";
 import { problemMessageOf } from "../../lib/problem";
 import { useRecordRestore } from "../../lib/recordrestore";
+import { invalidateHandledChange } from "../../lib/workkeys";
 import { magicUndoReasonKey } from "./magic.keys";
-import { magicKey } from "./magic.queries";
 
 type MagicUndo = components["schemas"]["MagicUndo"];
 
@@ -64,7 +64,7 @@ export function MagicUndoButton({
     onSuccess: () => {
       setRefused(null);
       setUndone(true);
-      void client.invalidateQueries({ queryKey: magicKey });
+      void invalidateHandledChange(client);
     },
     onError: (error) => setRefused(problemMessageOf(error, t)),
   });

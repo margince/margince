@@ -5,16 +5,16 @@ import type { MessageKey } from "../../i18n/en";
 import type {
   DisplayField,
   ResolvedDisplayField,
-} from "./approvaldisplay.types";
+} from "../../lib/approvaldisplay.types";
+import { commercialPreviewDisplay } from "../../lib/approvalpreview";
 import { humanizeKind } from "./approvalkind";
-import { commercialPreviewDisplay } from "./approvalpreview";
 import { commitmentResponsibility } from "./approvalresponsibility";
 
 // Typed proposals expose declared business facts; raw-argument kinds retain their fields.
 export type {
   DisplayField,
   ResolvedDisplayField,
-} from "./approvaldisplay.types";
+} from "../../lib/approvaldisplay.types";
 
 // The §11 hygiene findings, spelled as deals.CloseDateFlag spells them
 // (modules/deals/closedate.go). A flag with no entry here renders as its own

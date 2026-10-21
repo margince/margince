@@ -2,7 +2,7 @@ import { expect, it } from "vitest";
 import { formatDate } from "../../format/format";
 import { UTC_ZONE } from "../../format/timezone";
 import { LOCALES, translate } from "../../i18n";
-import { commercialPreviewDisplay } from "./approvalpreview";
+import { commercialPreviewDisplay } from "../../lib/approvalpreview";
 
 it.each(LOCALES)(
   "explains employment succession and date precision in %s",

@@ -15,6 +15,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/mailsubject"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // answerArm is one kind of evidence that a message was answered: the rows it
@@ -246,12 +247,10 @@ func firstAnswerAtSQL(inbound, until string) string {
 // of asOf. The "needs reply" badge is exactly this; the waiting lane is this
 // plus its queue rules.
 //
-// A request (asked of us, accepted by a human, or an unjudged scheduling or
-// commitment mail) stays owed through replies until it is completed, settled
-// or dismissed: a reply is not proof the request was met. Any other inbound
-// is owed while it is the newest inbound on its thread and unanswered. Mail
-// from an address no human reads, and a calendar response, are owed only as a
-// confirmed request.
+// Captured mail requires confirmed intent; a topic label does not prove work.
+// Confirmed requests survive replies until fulfilled, settled or dismissed.
+// Unclassified manually logged mail retains the newest-unanswered rule.
+// Machine senders and calendar responses require confirmed requests too.
 //
 // Two judgements end the obligation and are each counted in
 // /worklist/hidden: a human's not-sales call on the thread, and the
@@ -260,13 +259,14 @@ func firstAnswerAtSQL(inbound, until string) string {
 // OR-ed in front of them; the hidden-backlog reading passes TRUE to count
 // what one hides, every other caller passes neverRelaxed.
 //
-// unjudgedResponseStillOwed admits an unjudged calendar response. Only the
-// owed-verdict backlog passes TRUE: a sender can mark any request REPLY, so
-// such mail must still be judged before it leaves the lane.
+// unjudgedResponseStillOwed admits unjudged captured mail and calendar responses
+// to classification. Only the owed-verdict backlog passes TRUE; pending intent
+// must remain judgeable without appearing as an obligation.
 //
 // The newer-inbound walk names its kinds for the index, as answerArms does.
 func owedSQL(asOf, dismissedStillOwed, informsStillOwed, unjudgedResponseStillOwed string) string {
 	return `(NOT ` + ImportedHistorySQL + ` AND ` + requestOpenSQL + `
+ AND (` + capturedReplyAdmissionSQL(unjudgedResponseStillOwed, informsStillOwed) + `)
 	 AND (` + dismissedStillOwed + ` OR ` + notDismissedSQL + `)
 	 AND (` + informsStillOwed + ` OR a.owed_verdict IS DISTINCT FROM '` + OwedVerdictInformsUs + `'
 	   OR ` + acceptedRequestSQL + `)
@@ -295,3 +295,12 @@ const machineSenderSQL = `EXISTS (
 	  WHERE machine.activity_id = a.id
 	    AND machine.role = 'from'
 	    AND machine.address ~* '(noreply|no-reply|do-not-reply|donotreply|notification|mailer-daemon)')`
+
+// Captured mail needs an intent judgment before it becomes somebody's work.
+// The classifier still reads pending mail; a human can explicitly keep noise.
+func capturedReplyAdmissionSQL(classifying, reviewingInformational string) string {
+	human := heldRequestSQL() + ` OR (a.owed_verdict = 'asks_us' AND ` + humanReviewedOwedSQL("a") + `)`
+	return `(` + classifying + ` OR (` + reviewingInformational + ` AND a.owed_verdict = 'informs_us') OR (` + human + `) OR (
+   a.capture_label IS DISTINCT FROM 'noise'
+   AND (NOT starts_with(a.captured_by, '` + string(principal.PrincipalConnector) + `:') OR (` + confirmedRequestSQL + `))))`
+}

@@ -21,5 +21,8 @@ func correctionValues(c deals.CorrectionReceipt) *crmcontracts.CloseDateChange {
 	if c.Basis != "" {
 		change.Basis = &c.Basis
 	}
+	if basis := c.EstimateBasis; basis != nil {
+		change.EstimateBasis = &crmcontracts.CloseDateEstimateBasis{WonDeals: basis.WonDeals, MedianDaysPerStage: basis.MedianDaysPerStage, RemainingStages: basis.RemainingStages}
+	}
 	return change
 }

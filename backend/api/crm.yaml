@@ -61540,11 +61540,22 @@ components:
         can_accept: { type: boolean }
         writable: { type: boolean, description: Whether this reader may write this deal. }
 
+    CloseDateEstimateBasis:
+      type: object
+      description: Observed sales history recorded when this estimate was made, not a reconstruction from current pipeline values.
+      required: [won_deals, median_days_per_stage, remaining_stages]
+      properties:
+        won_deals: { type: integer, minimum: 1 }
+        median_days_per_stage: { type: number, format: double, minimum: 0 }
+        remaining_stages: { type: integer, minimum: 1 }
+
     CloseDateChange:
       type: object
       description: Recorded close-date correction values, formatted at the presentation edge.
       required: [date_changed, forecast_changed]
       properties:
+        estimate_basis:
+          $ref: '#/components/schemas/CloseDateEstimateBasis'
         date_changed: { type: boolean }
         forecast_changed: { type: boolean }
         before: { type: string, pattern: '^\d{4}-\d{2}-\d{2}$' }
@@ -62796,6 +62807,11 @@ components:
             Which lane this line belongs to. Carried on the line as well as by the array
             it sits in, so a client that flattens the four for a preview does not lose
             which one a line came from.
+        approval_kind:
+          type: string
+          description: The staged action kind on a needs_you line, for an action label separate from its record name.
+        approval_preview:
+          $ref: '#/components/schemas/ApprovalPreview'
         summary:
           $ref: '#/components/schemas/MagicSentence'
         entity:

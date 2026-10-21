@@ -26,8 +26,8 @@ import (
 // message. The readers are the Worklist lane, the queue's count, the
 // timeline's waiting filter and the owed-verdict backlog.
 type waitingSurfaces struct {
-	lane, timeline, backlog bool
-	count                   int
+	lane, waitingFilter, backlog bool
+	count                        int
 }
 
 func (o *owedEnv) surfaces(t *testing.T, message ids.UUID) waitingSurfaces {
@@ -45,7 +45,7 @@ func (o *owedEnv) surfaces(t *testing.T, message ids.UUID) waitingSurfaces {
 		t.Fatalf("reading the timeline's waiting filter: %v", err)
 	}
 	for _, row := range listed {
-		out.timeline = out.timeline || ids.UUID(row.Id) == message
+		out.waitingFilter = out.waitingFilter || ids.UUID(row.Id) == message
 	}
 	backlog, _, err := store.OwedBacklog(o.judge(), "prompts-test", now, 100, 400, 400)
 	if err != nil {
@@ -92,23 +92,33 @@ func (o *owedEnv) waitingRow(t *testing.T, message ids.UUID) (activities.Waiting
 // The message waits, and every reader drops it once the contact is archived.
 // Every reader has it again once the contact is restored.
 func TestArchivingTheContactTakesTheirMessageOffEveryWaitingReader(t *testing.T) {
-	o := setupOwed(t)
-	pat := o.contact(t, "Pat Buyer", "pat@customer.example")
-	asked := o.customerWrites(t, "pat@customer.example", "Pricing for next year", o.now.Add(-3*time.Hour))
-
-	live := o.surfaces(t, asked)
-	if !live.lane || !live.timeline || !live.backlog || live.count != 1 {
-		t.Fatalf("before the archive the readers say %+v; want the message on every one and a count of 1", live)
-	}
-
-	o.archiveContact(t, pat)
-	if got := o.surfaces(t, asked); got.lane || got.timeline || got.backlog || got.count != 0 {
-		t.Fatalf("after the archive the readers say %+v; want the message on none and a count of 0", got)
-	}
-
-	o.restoreContact(t, pat)
-	if got := o.surfaces(t, asked); got != live {
-		t.Fatalf("after the restore the readers say %+v; want what they said before the archive, %+v", got, live)
+	for _, judged := range []bool{false, true} {
+		name := "pending classification"
+		if judged {
+			name = "confirmed request"
+		}
+		t.Run(name, func(t *testing.T) {
+			o := setupOwed(t)
+			pat := o.contact(t, "Pat Buyer", "pat@customer.example")
+			asked := o.customerWrites(t, "pat@customer.example", "Pricing for next year", o.now.Add(-3*time.Hour))
+			want := waitingSurfaces{backlog: true}
+			if judged {
+				o.judgeAsRequest(t, asked)
+				want = waitingSurfaces{lane: true, waitingFilter: true, count: 1}
+			}
+			live := o.surfaces(t, asked)
+			if live != want {
+				t.Fatalf("before archive=%+v want=%+v", live, want)
+			}
+			o.archiveContact(t, pat)
+			if got := o.surfaces(t, asked); got != (waitingSurfaces{}) {
+				t.Fatalf("archived message remains: %+v", got)
+			}
+			o.restoreContact(t, pat)
+			if got := o.surfaces(t, asked); got != live {
+				t.Fatalf("restored=%+v want=%+v", got, live)
+			}
+		})
 	}
 }
 
@@ -119,6 +129,7 @@ func TestAMessageStaysWhileOneContactItIsFiledUnderIsLive(t *testing.T) {
 	pat := o.contact(t, "Pat Buyer", "pat@customer.example")
 	robin := o.contact(t, "Robin Buyer", "robin@customer.example")
 	asked := o.ccMail(t, "pat@customer.example", "robin@customer.example", "Rollout dates")
+	o.judgeAsRequest(t, asked)
 	if row, ok := o.waitingRow(t, asked); !ok || row.ContactID != pat {
 		t.Fatalf("before the archive the row is %+v (present=%v); want it naming the sender %v", row, ok, pat)
 	}
@@ -151,6 +162,7 @@ func TestAContactTheReaderCannotSeeDoesNotKeepTheMessage(t *testing.T) {
 	pat := o.contact(t, "Pat Buyer", "pat@customer.example")
 	robin := o.contact(t, "Robin Buyer", "robin@customer.example")
 	asked := o.ccMail(t, "pat@customer.example", "robin@customer.example", "Rollout dates")
+	o.judgeAsRequest(t, asked)
 	o.e.MakeCapturePrivate(t, "contact", robin, o.e.Rep3)
 	if !o.waiting(t, asked) {
 		t.Fatal("before the archive the message is not waiting; the case below would pass for the wrong reason")
@@ -188,6 +200,7 @@ func TestTheArchivedContactsOwnerDoesNotOweTheReply(t *testing.T) {
 		t.Fatalf("the copied contact is owned by %v; the case needs it unowned", *created.OwnerId)
 	}
 	asked := o.ccMail(t, "pat@customer.example", "robin@customer.example", "Rollout dates")
+	o.judgeAsRequest(t, asked)
 	if row, ok := o.waitingRow(t, asked); !ok || row.OwnerID != o.e.Rep2 {
 		t.Fatalf("before the archive the row is %+v (present=%v); want the sender's owner %v to owe it", row, ok, o.e.Rep2)
 	}

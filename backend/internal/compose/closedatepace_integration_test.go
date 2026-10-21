@@ -9,7 +9,9 @@ import (
 	"context"
 	"strconv"
 	"testing"
+	"time"
 
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -74,5 +76,38 @@ func TestObservedCloseDateCarriesItsActualSampleAndPace(t *testing.T) {
 	}
 	if samples != deals.CloseDateMinHistory || median != 14 || stages != 2 {
 		t.Fatalf("invented pace: samples=%d median=%v stages=%d", samples, median, stages)
+	}
+}
+
+func TestEstimateReceiptUsesOnlyRecordedAuthorizedObservations(t *testing.T) {
+	e := setupCloseDate(t)
+	id := e.seedSweepDeal(t, "Observed receipt", e.early, nil, new(-12), 3)
+	if err := e.sweep(); err != nil {
+		t.Fatal(err)
+	}
+	store := deals.NewStore(e.DB(), DealsInstallation())
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
+	read := func(reader context.Context) *deals.CorrectionEstimateBasis {
+		t.Helper()
+		rows, err := store.RecentCorrectionsOwnedBy(reader, time.Time{}, 10)
+		if err != nil || len(rows) != 1 {
+			t.Fatalf("receipts = %+v, %v", rows, err)
+		}
+		projected := correctionValues(rows[0])
+		if (projected.EstimateBasis == nil) != (rows[0].EstimateBasis == nil) {
+			t.Fatal("wire lost estimate basis")
+		}
+		return rows[0].EstimateBasis
+	}
+	basis := read(ctx)
+	if basis == nil || basis.WonDeals != deals.CloseDateMinHistory || basis.MedianDaysPerStage != 14 || basis.RemainingStages != 2 {
+		t.Fatalf("observed receipt basis = %+v", basis)
+	}
+
+	if _, err := store.UpdateDeal(e.Admin(), ids.From[ids.DealKind](id), deals.UpdateDealInput{OwnerID: new(ids.From[ids.UserKind](e.Rep2))}); err != nil {
+		t.Fatal(err)
+	}
+	if read(e.As(e.Rep2, []ids.UUID{e.Team1}, integration.AdminPerms)) != nil {
+		t.Fatal("receipt disclosed the previous owner's observations")
 	}
 }
