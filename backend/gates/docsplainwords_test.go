@@ -240,7 +240,7 @@ var plainPools = []struct{ prefix, list string }{
 // must equal its list's size, so a list that shrinks pins its cap lower with it.
 var plainCaps = map[string]int{
 	plainWordsFile:                     plainWordCap,
-	"docs/how-to/plain-words.txt":      1386,
+	"docs/how-to/plain-words.txt":      1385,
 	"docs/explanation/plain-words.txt": 1660,
 	"docs/handbook/plain-words.txt":    1398,
 	"docs/reference/plain-words.txt":   1757,

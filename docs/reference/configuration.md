@@ -1922,6 +1922,9 @@ answers 404, the same as an installation with no file.
 
 ### License
 
+Gradion issues the license token.
+[Get a license token](../how-to/deploy-margince.md#get-a-license-token) says how to ask for one.
+
 The `license:` block points at the license token of the installation. Margince checks it
 **offline**, in the process, against the license check WebAssembly module bundled at
 `backend/internal/platform/licensecheck/module/`. It makes no call out of any kind. So an
