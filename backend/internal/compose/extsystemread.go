@@ -6,7 +6,8 @@ package compose
 // The core's half of the published system reads. They run as the invocation's
 // system actor, so no grant narrows them. systemRead is what makes that safe:
 // they answer only on a job tick or a bus delivery, where no caller receives the
-// answer. CanRead then answers under one colleague's own grants and masks.
+// answer. CanRead then answers under one colleague's own grants and masks, and
+// so may also answer a signed-in human about themselves.
 
 import (
 	"context"
@@ -49,11 +50,30 @@ func (r *callRuntime) Directory() extension.Directory { return systemDirectory{r
 // lifetime and scope, refuses an invocation whose outcome a user receives, and
 // refuses a read the unit's declaration does not list.
 func (r *callRuntime) systemRead(ctx context.Context, read extension.SystemRead) (context.Context, error) {
+	return r.gatedRead(ctx, read, r.systemReads)
+}
+
+// authorityRead is systemRead for CanRead, which also answers a signed-in human
+// asking about themselves: the answer is what their own grants already show
+// them, so it hands the caller nothing they could not open.
+func (r *callRuntime) authorityRead(ctx context.Context, user extension.UserID) (context.Context, error) {
+	return r.gatedRead(ctx, extension.SystemReadAuthority, r.systemReads || r.callerIs(user))
+}
+
+// callerIs reports whether user is the human this call runs as. An agent or a
+// connector is refused even on its human's id: its scopes may be narrower.
+func (r *callRuntime) callerIs(user extension.UserID) bool {
+	caller := r.Caller()
+	id, err := unitID(string(user), "user")
+	return err == nil && caller.Type == extension.CallerHuman && !caller.IsAgent && caller.UserID == id.String()
+}
+
+func (r *callRuntime) gatedRead(ctx context.Context, read extension.SystemRead, admitted bool) (context.Context, error) {
 	ctx, err := r.scoped(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if !r.systemReads {
+	if !admitted {
 		return nil, extension.ErrAttendedRead
 	}
 	if !slices.Contains(declaredSystemReads(r.unit), read) {
@@ -210,7 +230,7 @@ func readDealResponsible(ctx context.Context, pool *pgxpool.Pool, id ids.UUID) (
 type systemAuthority struct{ rt *callRuntime }
 
 func (a systemAuthority) CanRead(ctx context.Context, user extension.UserID, record extension.EntityRef, fields []string) (bool, error) {
-	ctx, err := a.rt.systemRead(ctx, extension.SystemReadAuthority)
+	ctx, err := a.rt.authorityRead(ctx, user)
 	if err != nil {
 		return false, err
 	}

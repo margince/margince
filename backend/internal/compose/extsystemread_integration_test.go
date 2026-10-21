@@ -458,3 +458,21 @@ func TestASystemReadIsRefusedOnACallThatHasACaller(t *testing.T) {
 		}
 	}
 }
+
+// A signed-in human may ask about themselves, and the answer is their own
+// grants', not the permissions the request carried.
+func TestAnAttendedCanReadAnswersTheCallerUnderTheirOwnGrants(t *testing.T) {
+	s := setupSystemRead(t)
+	deal := extension.EntityRef{Type: "deal", ID: s.deal.String()}
+	for user, want := range map[ids.UUID]bool{s.Rep1: true, s.Rep2: false} {
+		rt := runtimeFor(s.As(user, nil, integration.AdminPerms), "dealmirror", "1.0.0", "tool/probe", boundExtensionRuntime())
+		shown, err := rt.Authority().CanRead(context.Background(), asUser(user), deal, []string{"name"})
+		rt.release()
+		if err != nil {
+			t.Fatalf("CanRead about the caller: %v", err)
+		}
+		if shown != want {
+			t.Errorf("CanRead about %s = %v, want %v", user, shown, want)
+		}
+	}
+}

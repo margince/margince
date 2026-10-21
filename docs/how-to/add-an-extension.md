@@ -658,7 +658,10 @@ tool call, a route, the inbound edge, a finance source's read and a transport's 
 error that quotes it, could reach a user whose own rights hide it.
 
 The refusal guards the call, not your own tables. If you save what a read returned and show it later, ask
-`CanRead` first.
+`CanRead` first. `CanRead` is the one read that also answers on a call a signed-in human makes, and there it
+answers only about that human. So a route can ask whether its own caller may open the deal before it serves
+what your unit stored about it. An agent's or a connector's call is still refused, because its scopes may be
+narrower than its human's rights.
 
 Declare each group of reads your unit makes:
 

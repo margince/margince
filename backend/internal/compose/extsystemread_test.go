@@ -77,6 +77,34 @@ func TestOnlyATickAndADeliveryAnswerASystemRead(t *testing.T) {
 	}
 }
 
+// On an attended call CanRead answers its human caller about themselves, and
+// refuses every other question. The gate is passed when the record type, not
+// the caller, is what refuses: a company is no record CanRead answers for.
+func TestAnAttendedCanReadAnswersOnlyItsHumanCallerAboutThemselves(t *testing.T) {
+	composeReader(t, extension.SystemReadAuthority)
+	self, other := ids.NewV7(), ids.NewV7()
+	human := principal.Principal{Type: principal.PrincipalHuman, UserID: self}
+	agent := principal.Principal{Type: principal.PrincipalAgent, ID: "agent:probe", OnBehalfOf: self}
+	company := extension.EntityRef{Type: "company", ID: ids.NewV7().String()}
+	for name, c := range map[string]struct {
+		actor principal.Principal
+		about ids.UUID
+		want  error
+	}{
+		"a human about themselves":     {human, self, extension.ErrInvalid},
+		"a human about a colleague":    {human, other, extension.ErrAttendedRead},
+		"an agent about its own human": {agent, self, extension.ErrAttendedRead},
+	} {
+		ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), ids.NewV7()), c.actor)
+		rt := runtimeFor(ctx, "dealmirror", "1.0.0", "tool/probe", extensionRuntimeBinding{pool: &pgxpool.Pool{}})
+		_, err := rt.Authority().CanRead(ctx, extension.UserID(c.about.String()), company, nil)
+		rt.release()
+		if !errors.Is(err, c.want) {
+			t.Errorf("%s: err = %v, want %v", name, err, c.want)
+		}
+	}
+}
+
 // composeReader composes the dealmirror unit declaring reads for this test.
 func composeReader(t *testing.T, reads ...extension.SystemRead) {
 	t.Helper()
