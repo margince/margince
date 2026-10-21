@@ -2611,7 +2611,7 @@ export const vi = {
   "consent.sourceApi": "ghi nhận qua API",
   "consent.sourceConfirmDetails": "liên hệ xác nhận qua liên kết thông tin",
   "consent.sourceConsentLink": "liên hệ xác nhận qua liên kết đồng ý",
-  "consent.sourcePreferenceCenter": "liên hệ đặt trên trang tùy chọn",
+  "consent.sourcePreferenceCenter": "liên hệ thiết lập qua trang tùy chọn",
   "consent.sourcePublicBooking": "đồng ý trên trang đặt lịch",
   "consent.sourceMerge": "chuyển sang khi hợp nhất",
   "consent.sourcePromotion": "chuyển sang từ một lead",
