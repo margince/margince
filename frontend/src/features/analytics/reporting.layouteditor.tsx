@@ -10,7 +10,12 @@ import { SortableList } from "../../design-system/sortablelist";
 import { formatNumber, ordinalNumber } from "../../format/format";
 import { type Translator, useLocale, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
-import { entityLabel } from "./analytics.questions.vocab";
+import {
+  savedQuestionLabel,
+  useSavedQuestions,
+} from "./analytics.questions.saved";
+import { customLabels, entityLabel } from "./analytics.questions.vocab";
+import { useAnalyticsSchema } from "./analytics.schema";
 import {
   type CardChoice,
   cardQuestion,
@@ -351,8 +356,9 @@ function AddCard({
 }
 
 /**
- * Adds a saved custom question from its link. The card keeps a copy of the
- * question, so the link's later edits do not move a published report.
+ * Adds a saved custom question: one of the reader's own from a list, or any
+ * other from its link. The card keeps a copy of the question, so a later save
+ * of another question does not move a published report.
  */
 function AddQuestion({
   layout,
@@ -367,6 +373,13 @@ function AddQuestion({
   // question, and a filter value can name a record they may not open.
   const [filtered, setFiltered] = useState(false);
   const runId = runIdOf(link);
+  const saved = useSavedQuestions();
+  const schema = useAnalyticsSchema();
+  const fields = customLabels(t, schema.data?.entities ?? []);
+  // A filtered one is left out here for the reason it is refused by link.
+  const pickable = (saved.data?.pages ?? [])
+    .flatMap((page) => page.data)
+    .filter((run) => !run.query.filters?.length);
   const read = useMutation({
     mutationFn: async (id: string) =>
       unwrap(
@@ -387,6 +400,22 @@ function AddQuestion({
     return null;
   return (
     <div className="form-stack">
+      {pickable.length > 0 && (
+        <Select
+          aria-label={t("reporting.questionPick")}
+          value=""
+          placeholder={t("reporting.questionPickNone")}
+          options={pickable.map((run) => ({
+            value: run.id,
+            label: savedQuestionLabel(t, run.query, fields),
+          }))}
+          onChange={(id) => {
+            const run = pickable.find((candidate) => candidate.id === id);
+            if (run)
+              onChange(edit.addQuestion(layout, cardQuestion(run.query)));
+          }}
+        />
+      )}
       <Field
         label={t("reporting.questionLink")}
         hint={link && !runId ? t("reporting.questionLinkInvalid") : undefined}

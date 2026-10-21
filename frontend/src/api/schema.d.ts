@@ -18109,6 +18109,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/analytics/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The caller's own saved questions, newest first.
+         * @description Each question the caller saved, with when they saved it. Only the question is listed:
+         *     the stored rows stay unserved, and opening one re-asks it through
+         *     `/analytics/runs/{run_id}` under the caller's authority.
+         */
+        get: operations["listReportRuns"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/analytics/runs/{run_id}": {
         parameters: {
             query?: never;
@@ -38216,6 +38238,18 @@ export interface components {
             asked_by: string;
             /** @description The group floor that judged the ORIGINAL answer. Reported, never applied — this read is floored by the installation's current setting. Two runs served under different floors make different promises about what is missing. */
             stored_floor: number;
+        };
+        /** @description One saved question of the caller's, without its answer. */
+        ReportRunSummary: {
+            /** Format: uuid */
+            id: string;
+            query: components["schemas"]["AnalyticsQuery"];
+            /** Format: date-time */
+            asked_at: string;
+        };
+        ReportRunList: {
+            data: components["schemas"]["ReportRunSummary"][];
+            page: components["schemas"]["PageInfo"];
         };
         /** @description A report as composed: structure and words, with every figure named by a handle. */
         ReportDocument: {
@@ -75862,6 +75896,42 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listReportRuns: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
+                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     together with a `sort` that differs from the one the cursor was minted under returns
+                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
+                 */
+                cursor?: components["parameters"]["Cursor"];
+                /** @description Max items in the page. */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of the caller's saved questions. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportRunList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
             422: components["responses"]["ValidationError"];
         };
     };

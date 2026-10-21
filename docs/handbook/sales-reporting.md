@@ -46,7 +46,7 @@ Open **Definitions** to see how each number is worked out, the rules for credit,
 
 Choose **Save report**, name it and choose **Visible to**. A **Purpose** tells readers what the report is for and shows under its name. Use **Customize report** to change numbers and graphs. Under **Charts and order**, put graphs into titled sections, each graph taking a whole row or half of one. Drag a graph by its handle to change its place, or press Tab to reach the handle and use the arrow keys. **Preview** shows a graph with this report's figures before you add it.
 
-**Add question** places a saved custom report with no filters from its link, answered for each reader. An edition keeps the answer its sender was given, if a retention rule for editions exists. A reader of the edition sees only the rows whose records they may open.
+**Add question** places a saved custom report with no filters, answered for each reader. Pick one of yours from the list, or paste the link to anyone's. An edition keeps the answer its sender was given, if a retention rule for editions exists. A reader of the edition sees only the rows whose records they may open.
 
 The saved report keeps its graphs and their layout, scope, pipeline and time span rules. Open it from **Reports** to see its values of today. Copy a report to keep a setup of its own; editing creates a new version.
 

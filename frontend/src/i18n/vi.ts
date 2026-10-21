@@ -843,6 +843,8 @@ export const vi = {
   "reporting.questionLoading": "Đang hỏi…",
   "reporting.questionNotKept":
     "Không lưu trong báo cáo đã gửi này. Mở báo cáo trực tiếp để xem câu trả lời cho câu hỏi này.",
+  "reporting.questionPick": "Câu hỏi bạn đã lưu",
+  "reporting.questionPickNone": "Chọn một câu hỏi đã lưu",
   "reporting.questionLink": "Liên kết tới báo cáo tùy chỉnh đã lưu",
   "reporting.questionLinkInvalid":
     "Dán liên kết mà Sao chép liên kết đưa ra trên báo cáo tùy chỉnh đã lưu.",
@@ -5976,6 +5978,13 @@ export const vi = {
   "analytics.q.addFilter": "Thêm bộ lọc",
   "analytics.q.addMeasure": "Thêm chỉ số",
   "analytics.q.allRecords": "Tất cả hồ sơ",
+  "analytics.q.savedListTitle": "Câu hỏi bạn đã lưu",
+  "analytics.q.savedLoading": "Đang tải các câu hỏi bạn đã lưu…",
+  "analytics.q.savedEmpty":
+    "Bạn chưa lưu câu hỏi nào. Hãy lưu một câu hỏi để tìm lại ở đây và đặt vào báo cáo.",
+  "analytics.q.savedQuestion": "Câu hỏi",
+  "analytics.q.savedAt": "Đã lưu",
+  "analytics.q.savedMore": "Xem thêm",
   "analytics.q.answerTitle": "Câu trả lời",
   "analytics.q.ask": "Chạy báo cáo",
   "analytics.q.asking": "Đang chạy báo cáo…",

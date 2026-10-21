@@ -719,7 +719,7 @@ The 43 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 **Indexes**
 
-- `idx_report_run_asker`: `btree (asked_by, created_at DESC)`
+- `idx_report_run_asker`: `btree (asked_by, created_at DESC, id DESC)`
 - `report_run_pkey`: `unique, btree (id)`
 
 ## signal_thread_scan

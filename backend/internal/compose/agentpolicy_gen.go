@@ -242,6 +242,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/analytics/reports/{id}/reader-preview":                         {Op: "previewReportingReportAsRole", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/analytics/reports/{id}/revisions":                              {Op: "listReportingReportRevisions", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/analytics/reports/{id}/schedules":                              {Op: "listReportingSchedules", Access: "tool", Tool: "read_view", RecordType: "", Tier: "auto_execute", Scope: "read"},
+	"GET /v1/analytics/runs":                                                {Op: "listReportRuns", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/analytics/runs/{run_id}":                                       {Op: "getReportRun", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/analytics/schema":                                              {Op: "getAnalyticsSchema", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/analytics/targets":                                             {Op: "listReportingTargets", Access: "tool", Tool: "read_view", RecordType: "", Tier: "auto_execute", Scope: "read"},

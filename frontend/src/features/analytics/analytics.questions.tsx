@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { api } from "../../api/client";
 import { EntityRef } from "../../components/entityref";
@@ -37,6 +37,10 @@ import {
   toQuery,
 } from "./analytics.questions.draft";
 import { useValueNamer } from "./analytics.questions.names";
+import {
+  SAVED_QUESTIONS_KEY,
+  SavedQuestions,
+} from "./analytics.questions.saved";
 import {
   type AnalyticsEntity,
   type AnalyticsQuery,
@@ -111,14 +115,17 @@ export function QuestionsView({
     );
   }
   return (
-    <AskQuestion
-      selection={selection}
-      draft={draft}
-      onDraft={setDraft}
-      baseCurrency={baseCurrency}
-      scopeNotice={scopeNotice}
-      onAsked={() => setScopeNotice(null)}
-    />
+    <Stack gap="4">
+      <AskQuestion
+        selection={selection}
+        draft={draft}
+        onDraft={setDraft}
+        baseCurrency={baseCurrency}
+        scopeNotice={scopeNotice}
+        onAsked={() => setScopeNotice(null)}
+      />
+      <SavedQuestions />
+    </Stack>
   );
 }
 
@@ -140,10 +147,12 @@ function AskQuestion({
   const t = useT();
   const schema = useAnalyticsSchema();
   const ask = useMutation({ mutationFn: askQuestion });
+  const client = useQueryClient();
   const save = useMutation({
     mutationFn: (query: AnalyticsQuery) =>
       askQuestion({ ...query, save: true }),
-    onSuccess: (answer) => {
+    onSuccess: async (answer) => {
+      await client.invalidateQueries({ queryKey: SAVED_QUESTIONS_KEY });
       if (answer.run_id) {
         openSavedQuestion(answer.run_id);
       }

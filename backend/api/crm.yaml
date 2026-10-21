@@ -26547,6 +26547,28 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /analytics/runs:
+    get:
+      tags: [Reports]
+      operationId: listReportRuns
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: The caller's own saved questions, newest first.
+      description: |
+        Each question the caller saved, with when they saved it. Only the question is listed:
+        the stored rows stay unserved, and opening one re-asks it through
+        `/analytics/runs/{run_id}` under the caller's authority.
+      x-agent-access: human-only
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: One page of the caller's saved questions.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReportRunList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /analytics/runs/{run_id}:
     get:
       tags: [Reports]
@@ -52137,6 +52159,24 @@ components:
             The group floor that judged the ORIGINAL answer. Reported, never applied — this
             read is floored by the installation's current setting. Two runs served under
             different floors make different promises about what is missing.
+      additionalProperties: false
+    ReportRunSummary:
+      type: object
+      description: One saved question of the caller's, without its answer.
+      required: [id, query, asked_at]
+      properties:
+        id: { type: string, format: uuid }
+        query: { $ref: '#/components/schemas/AnalyticsQuery' }
+        asked_at: { type: string, format: date-time }
+      additionalProperties: false
+    ReportRunList:
+      type: object
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/ReportRunSummary' }
+        page: { $ref: '#/components/schemas/PageInfo' }
       additionalProperties: false
     ReportDocument:
       type: object

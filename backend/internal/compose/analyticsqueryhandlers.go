@@ -24,6 +24,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -110,6 +111,52 @@ func (h analyticsQueryHandlers) RunAnalyticsQuery(w http.ResponseWriter, r *http
 	if runID != nil {
 		saved := openapi_types.UUID(*runID)
 		out.RunId = &saved
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// ListReportRuns implements GET /analytics/runs.
+func (h analyticsQueryHandlers) ListReportRuns(
+	w http.ResponseWriter, r *http.Request, params crmcontracts.ListReportRunsParams,
+) {
+	var after *storekit.Cursor
+	if params.Cursor != nil && *params.Cursor != "" {
+		cursor, err := storekit.DecodeCursor(*params.Cursor)
+		if err != nil {
+			httperr.Write(w, r, err)
+			return
+		}
+		after = &cursor
+	}
+	var (
+		runs []ReportRunSummary
+		more bool
+	)
+	if err := h.db.Tx(r.Context(), func(tx pgx.Tx) error {
+		var err error
+		runs, more, err = ListReportRuns(r.Context(), tx, after, storekit.ClampLimit(params.Limit))
+		return err
+	}); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	out := crmcontracts.ReportRunList{Data: make([]crmcontracts.ReportRunSummary, 0, len(runs)), Page: crmcontracts.PageInfo{HasMore: more}}
+	for _, run := range runs {
+		asked, err := wireFromQuery(run.Query)
+		if err != nil {
+			httperr.Write(w, r, err)
+			return
+		}
+		out.Data = append(out.Data, crmcontracts.ReportRunSummary{Id: openapi_types.UUID(run.ID), Query: asked, AskedAt: run.AskedAt})
+	}
+	if more {
+		last := runs[len(runs)-1]
+		next, err := storekit.EncodeCursor(last.AskedAt, last.ID)
+		if err != nil {
+			httperr.Write(w, r, err)
+			return
+		}
+		out.Page.NextCursor = &next
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
 }

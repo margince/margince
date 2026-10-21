@@ -483,6 +483,10 @@ func (stubs) CreateReportingSchedule(w nethttp.ResponseWriter, r *nethttp.Reques
 	httperr.NotImplemented(w, r, "CreateReportingSchedule")
 }
 
+func (stubs) ListReportRuns(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListReportRunsParams) {
+	httperr.NotImplemented(w, r, "ListReportRuns")
+}
+
 func (stubs) GetReportRun(w nethttp.ResponseWriter, r *nethttp.Request, runId openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "GetReportRun")
 }

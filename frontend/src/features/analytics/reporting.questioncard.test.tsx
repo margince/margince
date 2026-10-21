@@ -4,13 +4,14 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { pickOption } from "../../design-system/select-testing";
 import { RecordZoneProvider } from "../../lib/recordzone";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
-import { ANSWER } from "./analytics.questions.testkit";
+import { ANSWER, SAVED_RUNS } from "./analytics.questions.testkit";
 import { ReportingCharts } from "./reporting.charts";
 import type { KeptQuestions } from "./reporting.questioncard";
 import { SaveReportingDialog } from "./reporting.save";
@@ -228,6 +229,56 @@ it("adds a saved question from its link, without its own scope", async () => {
           expect.objectContaining({
             cards: expect.arrayContaining([
               expect.objectContaining({ kind: "question", question }),
+            ]),
+          }),
+        ],
+      }),
+    }),
+  );
+});
+
+it("adds one of the reader's own saved questions from the list, as from its link", async () => {
+  const user = userEvent.setup({ delay: null });
+  const write = vi.fn(() => jsonResponse(reportingStoryReport));
+  installFetchStub({
+    ...reportingStoryRoutes(),
+    "GET /analytics/runs": () => jsonResponse(SAVED_RUNS),
+    "PATCH /analytics/reports/report": write,
+  });
+  render(
+    <StoryProviders>
+      <SaveReportingDialog
+        selection={reportingStoryReport.selection}
+        report={reportingStoryReport}
+        onClose={() => {}}
+        onSaved={() => {}}
+      />
+    </StoryProviders>,
+  );
+  await user.click(
+    screen.getByText("Charts and order", { selector: ".disclosure-label" }),
+  );
+  const saved = SAVED_RUNS.data[1];
+  await pickOption(
+    user,
+    await screen.findByRole("combobox", { name: "Your saved questions" }),
+    /· Count$/,
+  );
+  await user.click(screen.getByRole("button", { name: "Save report" }));
+  await waitFor(() => expect(write).toHaveBeenCalled());
+  expect(write).toHaveBeenCalledWith(
+    expect.objectContaining({
+      selection: expect.objectContaining({
+        layout: [
+          expect.objectContaining({
+            cards: expect.arrayContaining([
+              expect.objectContaining({
+                kind: "question",
+                question: {
+                  entity: saved?.query.entity,
+                  measures: saved?.query.measures,
+                },
+              }),
             ]),
           }),
         ],

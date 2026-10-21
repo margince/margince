@@ -856,6 +856,8 @@ export const de = {
   "reporting.questionLoading": "Frage wird gestellt…",
   "reporting.questionNotKept":
     "In diesem gesendeten Bericht nicht enthalten. Der Live-Bericht zeigt die Antwort auf diese Frage.",
+  "reporting.questionPick": "Deine gespeicherten Fragen",
+  "reporting.questionPickNone": "Gespeicherte Frage wählen",
   "reporting.questionLink": "Link zu einem gespeicherten eigenen Bericht",
   "reporting.questionLinkInvalid":
     "Den Link einfügen, den Link kopieren bei einem gespeicherten eigenen Bericht liefert.",
@@ -6122,6 +6124,13 @@ export const de = {
   "analytics.q.addFilter": "Filter hinzufügen",
   "analytics.q.addMeasure": "Kennzahl hinzufügen",
   "analytics.q.allRecords": "Alle Datensätze",
+  "analytics.q.savedListTitle": "Deine gespeicherten Fragen",
+  "analytics.q.savedLoading": "Deine gespeicherten Fragen werden geladen …",
+  "analytics.q.savedEmpty":
+    "Du hast noch keine Fragen gespeichert. Speichere eine, um sie hier zu finden und in einen Bericht zu setzen.",
+  "analytics.q.savedQuestion": "Frage",
+  "analytics.q.savedAt": "Gespeichert",
+  "analytics.q.savedMore": "Mehr anzeigen",
   "analytics.q.answerTitle": "Antwort",
   "analytics.q.ask": "Bericht ausführen",
   "analytics.q.asking": "Bericht wird ausgeführt…",

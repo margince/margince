@@ -15,6 +15,7 @@ import {
   ANSWER,
   CONTEXT,
   QUERY,
+  SAVED_RUNS,
   SCHEMA,
   STAGES,
   USERS,
@@ -88,6 +89,27 @@ async function chooseDeals(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe("the Questions section", () => {
+  it("lists the reader's own saved questions by what they ask, and opens one", async () => {
+    const user = userEvent.setup();
+    stubServer({ "GET /analytics/runs": () => jsonResponse(SAVED_RUNS) });
+    renderView();
+    const list = await screen.findByRole("table", {
+      name: "Your saved questions",
+    });
+    const rows = within(list).getAllByRole("button");
+    expect(rows).toHaveLength(2);
+    await user.click(rows[0] as HTMLElement);
+    expect(globalThis.location.hash).toContain("run-1");
+  });
+
+  it("says when the reader has saved no question", async () => {
+    stubServer();
+    renderView();
+    expect(
+      await screen.findByText(/You have saved no questions yet/),
+    ).toBeTruthy();
+  });
+
   it("is the last tab of Analytics", async () => {
     vi.stubGlobal("fetch", reportsStub());
     render(<AnalyticsScreen />);

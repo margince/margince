@@ -46379,6 +46379,21 @@ type ReportRunCell struct {
 	Group *[]interface{} `json:"group,omitempty"`
 }
 
+// ReportRunList defines model for ReportRunList.
+type ReportRunList struct {
+	Data []ReportRunSummary `json:"data"`
+	Page PageInfo           `json:"page"`
+}
+
+// ReportRunSummary One saved question of the caller's, without its answer.
+type ReportRunSummary struct {
+	AskedAt time.Time          `json:"asked_at"`
+	Id      openapi_types.UUID `json:"id"`
+
+	// Query One question, in the vocabulary the schema returned.
+	Query AnalyticsQuery `json:"query"`
+}
+
 // ReportScope defines model for ReportScope.
 type ReportScope struct {
 	Id   *openapi_types.UUID `json:"id,omitempty"`
@@ -54838,6 +54853,22 @@ type PreviewReportingReportAsRoleParams struct {
 // RestoreReportingReportRevisionParams defines parameters for RestoreReportingReportRevision.
 type RestoreReportingReportRevisionParams struct {
 	IfMatch string `json:"If-Match"`
+}
+
+// ListReportRunsParams defines parameters for ListReportRuns.
+type ListReportRunsParams struct {
+	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+	// effective `sort` of the originating request (field + direction) plus the last row's keyset
+	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// together with a `sort` that differs from the one the cursor was minted under returns
+	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+	// remaining pages see, so re-issue the query without the cursor when changing filters.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Limit Max items in the page.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // UpdateReportingScheduleParams defines parameters for UpdateReportingSchedule.
@@ -73536,6 +73567,9 @@ type ServerInterface interface {
 	// Create reporting schedule
 	// (POST /analytics/reports/{id}/schedules)
 	CreateReportingSchedule(w http.ResponseWriter, r *http.Request, id Id)
+	// The caller's own saved questions, newest first.
+	// (GET /analytics/runs)
+	ListReportRuns(w http.ResponseWriter, r *http.Request, params ListReportRunsParams)
 	// The answer a report sentence points at.
 	// (GET /analytics/runs/{run_id})
 	GetReportRun(w http.ResponseWriter, r *http.Request, runId openapi_types.UUID)
@@ -76506,6 +76540,12 @@ func (_ Unimplemented) ListReportingSchedules(w http.ResponseWriter, r *http.Req
 // Create reporting schedule
 // (POST /analytics/reports/{id}/schedules)
 func (_ Unimplemented) CreateReportingSchedule(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The caller's own saved questions, newest first.
+// (GET /analytics/runs)
+func (_ Unimplemented) ListReportRuns(w http.ResponseWriter, r *http.Request, params ListReportRunsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -86089,6 +86129,58 @@ func (siw *ServerInterfaceWrapper) CreateReportingSchedule(w http.ResponseWriter
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateReportingSchedule(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListReportRuns operation middleware
+func (siw *ServerInterfaceWrapper) ListReportRuns(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListReportRunsParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListReportRuns(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -118398,6 +118490,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/analytics/reports/{id}/schedules", wrapper.CreateReportingSchedule)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/runs", wrapper.ListReportRuns)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/runs/{run_id}", wrapper.GetReportRun)

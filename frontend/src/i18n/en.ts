@@ -828,6 +828,8 @@ export const en = {
   "reporting.questionLoading": "Asking the question…",
   "reporting.questionNotKept":
     "Not kept in this sent report. Open the live report to see this question’s answer.",
+  "reporting.questionPick": "Your saved questions",
+  "reporting.questionPickNone": "Choose a saved question",
   "reporting.questionLink": "Link to a saved custom report",
   "reporting.questionLinkInvalid":
     "Paste the link that Copy link gives on a saved custom report.",
@@ -6155,6 +6157,13 @@ export const en = {
   "analytics.q.addFilter": "Add filter",
   "analytics.q.addMeasure": "Add measure",
   "analytics.q.allRecords": "All records",
+  "analytics.q.savedListTitle": "Your saved questions",
+  "analytics.q.savedLoading": "Loading your saved questions…",
+  "analytics.q.savedEmpty":
+    "You have saved no questions yet. Save one to find it here and to place it on a report.",
+  "analytics.q.savedQuestion": "Question",
+  "analytics.q.savedAt": "Saved",
+  "analytics.q.savedMore": "Show more",
   "analytics.q.answerTitle": "Answer",
   "analytics.q.ask": "Run report",
   "analytics.q.asking": "Running report…",

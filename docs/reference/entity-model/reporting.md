@@ -146,7 +146,7 @@ The 12 tables owned by `reporting`, as the migrations build them. [Back to the e
 | `card_id` | `text` | yes |  |
 | `edition_id` | `uuid` | yes | Points at `report_edition.id`. |
 | `entity` | `text` | yes |  |
-| `reason` | `text` |  | One of `retention_unconfigured`, `too_many_records`, `unanswered`. |
+| `reason` | `text` |  | One of `retention_unconfigured`, `too_many_records`, `unanswered`, `counts_other_records`. |
 
 **Points at**
 
@@ -157,7 +157,7 @@ The 12 tables owned by `reporting`, as the migrations build them. [Back to the e
 **Rules**
 
 - `report_edition_question_kept_or_reasoned`: `CHECK (((answer IS NULL) <> (reason IS NULL)))`
-- `report_edition_question_reason_known`: `CHECK ((reason = ANY (ARRAY['retention_unconfigured', 'too_many_records', 'unanswered'])))`
+- `report_edition_question_reason_known`: `CHECK ((reason = ANY (ARRAY['retention_unconfigured', 'too_many_records', 'unanswered', 'counts_other_records'])))`
 
 **Indexes**
 
