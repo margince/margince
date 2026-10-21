@@ -12,6 +12,10 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  messageText,
+  writeMessage,
+} from "../../design-system/richtext-testing";
 import { LocaleProvider } from "../../i18n";
 import {
   allowedPreview,
@@ -249,6 +253,40 @@ describe("drafting to a contact", () => {
 
     const first = sent.find((c) => c.key === "POST /contacts/c-1/draft-email");
     expect(first?.body).toEqual({ intent: "Follow up on our discussion" });
+  });
+
+  // A rep who wrote a body and asked for a draft wants those words improved.
+  // The model is sent them, and its answer takes their place.
+  it("revises the body the reader wrote when asked for a draft", async () => {
+    const sent = stubRoutes({
+      "POST /contacts/c-1/draft-email": () => jsonResponse(CONTACT_DRAFT),
+    });
+    render(
+      <ComposeModal
+        intent="Make this nicer"
+        entityType="contact"
+        entityId="c-1"
+        contactId="c-1"
+        recordAddress="annabelle@akeneo.example"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+    writeMessage("Body", "hi, two products missing. pls send");
+
+    await userEvent.click(
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
+    );
+
+    await waitFor(() =>
+      expect(messageText("Body")).toContain("brauchen wir zwei Produkte"),
+    );
+    expect(messageText("Body")).not.toContain("pls send");
+    const ask = sent.find((c) => c.key === "POST /contacts/c-1/draft-email");
+    expect(ask?.body).toEqual({
+      intent: "Make this nicer",
+      rewrite_of: "hi, two products missing. pls send",
+    });
   });
 
   it("discloses a model-written draft", async () => {

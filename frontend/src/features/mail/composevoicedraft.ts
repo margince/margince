@@ -128,7 +128,7 @@ export function useVoiceDraft({
         subject: fields.subject,
         body,
         toEmpty: fields.to.length === 0,
-        rewrite: ask.instruction !== undefined,
+        rewrite: ask.instruction !== undefined || result.revised === true,
         setSubject: fields.setSubject,
         setBody: fields.adoptDraftedBody,
         setServedBody: fields.setServedBody,
