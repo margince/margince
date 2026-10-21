@@ -81,8 +81,8 @@ export function recipientSuggestions(
     offer(contact.primary_email, contact.full_name);
   }
   for (const member of colleagues) {
-    // Members come last: a message is addressed to the record's people first.
-    // An agent seat has no mailbox a person writes to, and a suspended or
+    // Members come last: a message goes to the record's contacts first.
+    // An agent seat has no mailbox anyone writes to, and a suspended or
     // deactivated member no longer reads one.
     if (
       !("email" in member) ||
