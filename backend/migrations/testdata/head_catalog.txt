@@ -5725,6 +5725,7 @@ public.offer.offer_gross_minor_js_safe CHECK (((gross_minor >= '-900719925474099
 public.offer.offer_net_minor_js_safe CHECK (((net_minor >= '-9007199254740991'::bigint) AND (net_minor <= '9007199254740991'::bigint)))
 public.offer.offer_number text NOT NULL gen=- def=-
 public.offer.offer_number_rev_unique UNIQUE (offer_number, revision)
+public.offer.offer_number_shape CHECK ((offer_number ~ '^A-[0-9]+$'::text))
 public.offer.offer_pkey PRIMARY KEY (id)
 public.offer.offer_revision_check CHECK ((revision >= 1))
 public.offer.offer_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'sent'::text, 'accepted'::text, 'rejected'::text, 'expired'::text, 'superseded'::text])))

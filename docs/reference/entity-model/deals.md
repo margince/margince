@@ -677,6 +677,7 @@ The 23 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `offer_gross_minor_js_safe`: `CHECK (((gross_minor >= '-9007199254740991'::bigint) AND (gross_minor <= '9007199254740991'::bigint)))`
 - `offer_net_minor_js_safe`: `CHECK (((net_minor >= '-9007199254740991'::bigint) AND (net_minor <= '9007199254740991'::bigint)))`
 - `offer_number_rev_unique`: `UNIQUE (offer_number, revision)`
+- `offer_number_shape`: `CHECK ((offer_number ~ '^A-[0-9]+$'))`
 - `offer_revision_check`: `CHECK ((revision >= 1))`
 - `offer_status_check`: `CHECK ((status = ANY (ARRAY['draft', 'sent', 'accepted', 'rejected', 'expired', 'superseded'])))`
 - `offer_tax_minor_js_safe`: `CHECK (((tax_minor >= '-9007199254740991'::bigint) AND (tax_minor <= '9007199254740991'::bigint)))`
