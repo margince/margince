@@ -33,6 +33,13 @@ import (
 // deal.updated payload — one spelling for all three tiers.
 const correctionFlagsKey = "flags"
 
+// Observed pace travels with the audit so receipts do not invent its basis later.
+const (
+	CloseDateSampleCountKey     = "close_date_sample_count"
+	CloseDateMedianDaysKey      = "close_date_median_stage_days"
+	CloseDateRemainingStagesKey = "close_date_remaining_stages"
+)
+
 // basisOwnerKey names the seat whose permissions composed a correction's basis
 // sentence, inside the same evidence map.
 //
@@ -142,12 +149,12 @@ func setForecastCategory(p *storekit.Patch, stored *string, effective, notched s
 // INTENTION would let the receipt claim corrections that never reached a deal.
 // That is the same "machine work that changed nothing" defect the no-op guard
 // exists to stop, one layer up.
-func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidate, hygiene CloseDateHygiene, category string, now time.Time, loc *time.Location, runID ids.UUID) (string, error) {
+func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidate, hygiene CloseDateHygiene, category string, pace closeDatePace, now time.Time, loc *time.Location, runID ids.UUID) (string, error) {
 	// Nothing to correct. A provisional date the sweep set and nobody has
 	// changed since is simply the date this deal has — there is no card to keep
 	// alive, because the correction was applied when it was made and the
 	// receipt said so that morning.
-	if !hygiene.Flagged || (!hygiene.Downgrade && cand.expectedClose != nil &&
+	if hygiene.ProposedClose == nil || (!hygiene.Downgrade && cand.expectedClose != nil &&
 		dateOnly(*cand.expectedClose).Equal(*hygiene.ProposedClose)) {
 		return closeDateMemberChecked, nil
 	}
@@ -178,7 +185,7 @@ func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidat
 		RemainingOpenStages: StagesRemaining(cand.remainingOpen),
 		Asking:              AskingIsThisDateRight,
 		Flags:               hygiene.Flags,
-		Basis:               c.said.pacedBasis(StagesToGo(cand.remainingOpen)),
+		Basis:               c.said.pacedBasis(StagesToGo(cand.remainingOpen), pace),
 	}
 
 	takenBack, err := c.answeredByAReversal(ctx, cand, hygiene, proposal)
@@ -215,8 +222,11 @@ func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidat
 				p.Set("close_date_provisional", false, true)
 			}
 		}, map[string]any{
-			correctionFlagsKey: hygiene.Flags,
-			"basis":            proposal.Basis,
+			correctionFlagsKey:          hygiene.Flags,
+			"basis":                     proposal.Basis,
+			CloseDateSampleCountKey:     pace.wonDeals,
+			CloseDateMedianDaysKey:      pace.days,
+			CloseDateRemainingStagesKey: StagesToGo(cand.remainingOpen),
 			// Stamped on this tier too, though pacedBasis names nobody: the
 			// receipt applies ONE rule to every correction rather than knowing
 			// which tier wrote which sentence, and a tier that omitted the key
@@ -234,7 +244,7 @@ func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidat
 		return closeDateEffect{wrote: wrote}.outcome(), nil
 
 	case CloseDateActionDowngradeAndReview:
-		return c.downgradeAndReview(ctx, cand, hygiene, category, proposal, now, loc, runID)
+		return c.downgradeAndReview(ctx, cand, hygiene, category, proposal, pace, now, loc, runID)
 	}
 	return "", fmt.Errorf("close-date sweep: no executor for action %q", hygiene.Action)
 }
@@ -243,7 +253,7 @@ func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidat
 // notch and its owner is asked whether it is still real.
 func (c *CloseDateCorrector) downgradeAndReview(
 	ctx context.Context, cand closeDateCandidate, hygiene CloseDateHygiene, category string,
-	proposal CloseDateCorrection, now time.Time, loc *time.Location, runID ids.UUID,
+	proposal CloseDateCorrection, pace closeDatePace, now time.Time, loc *time.Location, runID ids.UUID,
 ) (string, error) {
 	notched := forecastDowngrade(category)
 	// The 🟡 review: gone quiet — still alive? The proposal keeps the
@@ -268,14 +278,10 @@ func (c *CloseDateCorrector) downgradeAndReview(
 	// first costs the same and lands the reason on the row that reports the
 	// change.
 	review.Basis = c.quietBasis(ctx, cand.id, now, loc)
-	_, wrote, err := c.apply(ctx, cand, "downgrade_and_review", EvidenceOf(review, cand.expectedClose), runID, func(p *storekit.Patch) {
-		setForecastCategory(p, cand.forecastCat, category, notched)
-		// A future date stays intact while confidence is reviewed.
-		setCloseDate(p, cand.expectedClose, *hygiene.ProposedClose)
-		if !cand.provisional && (cand.expectedClose == nil || !dateOnly(*cand.expectedClose).Equal(*hygiene.ProposedClose)) {
-			p.Set("close_date_provisional", false, true)
-		}
-	}, map[string]any{
+	if hygiene.Provisional {
+		review.Basis += " " + c.said.pacedBasis(StagesToGo(cand.remainingOpen), pace)
+	}
+	extra := map[string]any{
 		correctionFlagsKey: hygiene.Flags,
 		"at_risk":          true,
 		// The same key the paced tiers record. The receipt reads one basis
@@ -292,7 +298,20 @@ func (c *CloseDateCorrector) downgradeAndReview(
 		// reader compares this against the deal's owner NOW and withholds the
 		// sentence when they differ.
 		basisOwnerKey: ownerString(cand.ownerID),
-	})
+	}
+	if hygiene.Provisional {
+		extra[CloseDateSampleCountKey] = pace.wonDeals
+		extra[CloseDateMedianDaysKey] = pace.days
+		extra[CloseDateRemainingStagesKey] = StagesToGo(cand.remainingOpen)
+	}
+	_, wrote, err := c.apply(ctx, cand, "downgrade_and_review", EvidenceOf(review, cand.expectedClose), runID, func(p *storekit.Patch) {
+		setForecastCategory(p, cand.forecastCat, category, notched)
+		// A future date stays intact while confidence is reviewed.
+		setCloseDate(p, cand.expectedClose, *hygiene.ProposedClose)
+		if !cand.provisional && (cand.expectedClose == nil || !dateOnly(*cand.expectedClose).Equal(*hygiene.ProposedClose)) {
+			p.Set("close_date_provisional", false, true)
+		}
+	}, extra)
 	if err != nil {
 		return "", err
 	}

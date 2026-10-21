@@ -140,6 +140,7 @@ func (f attentionFailedEffects) Failed(ctx context.Context, limit int) ([]attent
 			ID:        ids.UUID(row.Id),
 			Kind:      row.Kind,
 			Sentence:  *row.EffectFailure,
+			Summary:   row.Summary,
 			FailedAt:  *row.EffectFailedAt,
 			Retryable: decision.Retryable,
 		}

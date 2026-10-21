@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { unwrap } from "../../lib/problem";
+import { magicKey } from "../../lib/workkeys";
 
 export type MagicReceipt = components["schemas"]["MagicReceipt"];
 export type MagicLine = components["schemas"]["MagicLine"];
@@ -13,7 +14,7 @@ export type MagicNotShown = components["schemas"]["MagicNotShown"];
 // is a compile error here instead of a heading over rows that never arrive.
 export type MagicLane = MagicLine["lane"];
 
-export const magicKey = ["magic"] as const;
+export { magicKey } from "../../lib/workkeys";
 
 // The most lines a lane's page may hold, asked for rather than left to the
 // server's default so the client knows its own bound: the receipt carries no

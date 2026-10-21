@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/auditentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -43,7 +44,7 @@ func discardFailedDocument(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	default:
 		return fmt.Errorf("discard the failed document to replace it: %w", err)
 	}
-	if _, err := storekit.Audit(ctx, tx, "delete", "knowledge_document", id, map[string]any{
+	if _, err := storekit.Audit(ctx, tx, "delete", auditentity.KnowledgeDocument, id, map[string]any{
 		filenameKey: filename,
 		checksumKey: checksum,
 	}, nil); err != nil {

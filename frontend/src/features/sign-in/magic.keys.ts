@@ -39,6 +39,7 @@ export const MAGIC_SENTENCE_KEYS = [
   "magic.action.approval_commitment_task_unverified",
   "magic.action.approval_capture_counterparty",
   "magic.action.approval_pending",
+  "magic.action.approval_summary",
   "magic.action.capture_reauth_required",
   "magic.action.capture_connection_error",
   "magic.action.capture_sync_failing",
@@ -73,6 +74,7 @@ export type MagicSentenceKey = (typeof MAGIC_SENTENCE_KEYS)[number];
 export const MAGIC_WHY_KEYS = [
   "magic.why.forecast_review",
   "magic.why.forecast_date",
+  "magic.why.forecast_date_basis",
   "magic.why.mail_filed",
   "magic.why.public_records",
   "magic.why.site_read",
@@ -109,7 +111,6 @@ export const MAGIC_CONSEQUENCE_KEYS = [
   "magic.consequence.meeting_booked",
   "magic.consequence.lead_disqualified",
   "magic.consequence.automation_did_nothing",
-  "magic.consequence.awaits_your_decision",
   "magic.consequence.capture_not_collecting",
   "magic.consequence.capture_may_be_incomplete",
   "magic.consequence.capture_history_incomplete",

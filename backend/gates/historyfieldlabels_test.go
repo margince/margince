@@ -46,6 +46,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -95,7 +96,7 @@ func TestEveryProjectedAuditKeyHasALabel(t *testing.T) {
 			if auditDoorsWithBeforeImage[site.door] && !readAsALine {
 				continue
 			}
-			entity, entityKnown := resolveString(site.argAt(auditEntityTypeArg), consts)
+			entity, entityKnown := resolveAuditEntity(t, parsed.File, site.argAt(auditEntityTypeArg), consts)
 			// An unresolvable verb or record type is READ AS PROJECTED rather
 			// than skipped. Under-recognition is the one direction a census
 			// must not have: a site this walk cannot place would otherwise
@@ -520,4 +521,37 @@ func tsMapKeys(t *testing.T, path, source, marker string) map[string]bool {
 		t.Fatalf("%s's %s literal reads as empty, so every key would look unlabelled", path, marker)
 	}
 	return keys
+}
+
+// Imported audit subjects keep the writer and receipt on one vocabulary.
+func resolveAuditEntity(t *testing.T, file *ast.File, expr ast.Expr, local map[string]string) (string, bool) {
+	t.Helper()
+	if value, ok := resolveString(expr, local); ok {
+		return value, true
+	}
+	selector, ok := expr.(*ast.SelectorExpr)
+	if !ok {
+		return "", false
+	}
+	qualifier, ok := selector.X.(*ast.Ident)
+	if !ok || qualifier.Obj != nil {
+		return "", false
+	}
+	for _, imported := range file.Imports {
+		path, err := strconv.Unquote(imported.Path.Value)
+		if err != nil {
+			t.Fatal(err)
+		}
+		name, dot := gatekit.ImportedAs(file, path)
+		if dot || name != qualifier.Name {
+			continue
+		}
+		dir, internal := strings.CutPrefix(path, modulePath+"/")
+		if !internal {
+			return "", false
+		}
+		value, known := gatekit.PackageStringConstants(t, dir)[selector.Sel.Name]
+		return value, known
+	}
+	return "", false
 }

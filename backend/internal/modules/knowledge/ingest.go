@@ -28,6 +28,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/auditentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -149,7 +150,7 @@ func (s *Store) WriteChunks(ctx context.Context, documentID ids.UUID, corpusID i
 		if err := insertChunks(ctx, tx, documentID, corpusID, chunks); err != nil {
 			return err
 		}
-		if _, err := storekit.Audit(ctx, tx, "update", "knowledge_document", documentID,
+		if _, err := storekit.Audit(ctx, tx, "update", auditentity.KnowledgeDocument, documentID,
 			map[string]any{chunkCountColumn: wasCount},
 			map[string]any{chunkCountColumn: len(chunks)}); err != nil {
 			return fmt.Errorf("audit the document's chunking: %w", err)
@@ -235,7 +236,7 @@ func (s *Store) FailIngest(ctx context.Context, documentID ids.UUID, detail stri
 		if tag.RowsAffected() != 1 {
 			return apperrors.ErrNotFound
 		}
-		if _, err := storekit.Audit(ctx, tx, "update", "knowledge_document", documentID,
+		if _, err := storekit.Audit(ctx, tx, "update", auditentity.KnowledgeDocument, documentID,
 			map[string]any{"ingest_status": wasStatus, "ingest_detail": wasDetail},
 			map[string]any{"ingest_status": "failed", "ingest_detail": detail}); err != nil {
 			return fmt.Errorf("audit the failed ingest: %w", err)

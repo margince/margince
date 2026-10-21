@@ -248,8 +248,9 @@ type FailedEffects interface {
 
 // FailedEffect is one approved decision whose promised work never happened.
 type FailedEffect struct {
-	ID   ids.UUID
-	Kind string
+	ID      ids.UUID
+	Kind    string
+	Summary *string
 	// Sentence is the server's own line about what did not run, written for
 	// the reader when the failure was recorded.
 	Sentence string

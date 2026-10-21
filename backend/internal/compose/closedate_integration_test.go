@@ -5,13 +5,8 @@
 
 package compose
 
-// Close-date hygiene over real migrated Postgres (formulas §11/§12,
-// B-E09.19/.20): the write layer rejects a past close date on an open
-// deal at source; the forecast drops flagged deals out of
-// Commit/Best-case; and the nightly corrector applies the A6 tiers —
-// after a run, no open deal is left claiming a past close date
-// (INV-CLOSE-PAST), and a provisional replacement stays excluded until
-// a human confirms it through the approvals inbox.
+// The native sweep uses observed stage history, keeps estimates unconfirmed,
+// and preserves the audited corrections that human review can put back.
 
 import (
 	"context"
@@ -84,6 +79,7 @@ func setupCloseDate(t *testing.T) *closeDateEnv {
 			t.Fatal(err)
 		}
 	}
+	e.seedObservedPace(t)
 	quiet := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	e.svc = approvals.NewService(e.DB())
 	e.svc.WithEffect(deals.CloseDateCorrectionKind, closeDateConfirmEffect(e.svc, deals.NewStore(e.DB(), DealsInstallation())))
@@ -257,7 +253,7 @@ func TestCloseDateSweepRollsClearOverdueActiveDealProvisionally(t *testing.T) {
 	e := setupCloseDate(t)
 	// Early stage (20%), plainly overdue, touched 3 days ago, no forecast
 	// override → the §11 worked example's 🟢 case. Two open stages remain
-	// from position 0, velocity falls back to 14 → today + 28.
+	// from position 0, observed median pace is 14 days → today + 28.
 	id := e.seedSweepDeal(t, "Slipped but alive", e.early, nil, new(-12), 3)
 
 	if err := e.sweep(); err != nil {
@@ -265,9 +261,9 @@ func TestCloseDateSweepRollsClearOverdueActiveDealProvisionally(t *testing.T) {
 	}
 
 	swept := e.readSwept(t, id)
-	want := today().AddDate(0, 0, 2*deals.CloseDateStageDays)
+	want := today().AddDate(0, 0, 2*14)
 	if swept.expectedClose == nil || !swept.expectedClose.Equal(want) {
-		t.Errorf("auto-rolled date = %v, want %s (2 stages × 14-day fallback)", swept.expectedClose, want.Format(time.DateOnly))
+		t.Errorf("auto-rolled date = %v, want %s (2 stages × observed 14-day median)", swept.expectedClose, want.Format(time.DateOnly))
 	}
 	// The rolled date is a stage-velocity estimate, so it lands PROVISIONAL
 	// and asks. The 🟢 tier buys promptness — the deal stops claiming a date
@@ -328,7 +324,7 @@ func TestCloseDateSweepRecordsTheForecastItMoved(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := today().AddDate(0, 0, 2*deals.CloseDateStageDays)
+	want := today().AddDate(0, 0, 2*14)
 	if swept := e.readSwept(t, id); swept.expectedClose == nil || !swept.expectedClose.Equal(want) {
 		t.Fatalf("the sweep did not re-date the deal (%v), so the rest of this test proves nothing", swept.expectedClose)
 	}
@@ -453,6 +449,9 @@ func TestALeftoverCardStillConfirmsTheDateAndClearsProvisional(t *testing.T) {
 // Quietness lowers confidence while a recorded future date stays intact.
 func TestCloseDateSweepDowngradesWithoutMovingAFutureDate(t *testing.T) {
 	e := setupCloseDate(t)
+	if _, err := e.owner.Exec(context.Background(), `UPDATE deal SET archived_at=now() WHERE pipeline_id=$1 AND status='won'`, e.pipeline); err != nil {
+		t.Fatal(err)
+	}
 	// Quiet 90 days, commit override, date still future but inside the
 	// stalled window (unrealistic_stale) → 🔻: one forecast notch down,
 	// the date untouched — the zombie guard.
@@ -476,6 +475,13 @@ func TestCloseDateSweepDowngradesWithoutMovingAFutureDate(t *testing.T) {
 	if got := e.pendingCorrections(t, id); got != 0 {
 		t.Errorf("the gone-quiet tier staged %d cards; both the notch and the date "+
 			"are applied, and one receipt carries them with one way back", got)
+	}
+	var hasPace bool
+	if err := e.owner.QueryRow(context.Background(), `SELECT evidence ? 'close_date_sample_count' OR evidence ? 'close_date_median_stage_days' OR evidence ? 'close_date_remaining_stages' FROM audit_log WHERE entity_type='deal' AND entity_id=$1 AND evidence ? 'close_date_correction'`, id).Scan(&hasPace); err != nil {
+		t.Fatal(err)
+	}
+	if hasPace {
+		t.Fatal("a retained human date must not acquire an invented estimate basis")
 	}
 }
 

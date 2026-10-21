@@ -424,3 +424,33 @@ func TestCommitmentLinesDoNotAssertAnUnverifiedPromiser(t *testing.T) {
 		t.Fatalf("unverified commitment line = %+v", lines)
 	}
 }
+
+func TestWaitingDecisionNamesTheProposedChange(t *testing.T) {
+	for _, kind := range []string{"advance_deal", "close_deal", "update_record", "send_email", "new_kind"} {
+		a := stagedApproval(kind)
+		a.Summary = new("Close deal Acme renewal as won")
+		lines := decisionsWaiting(t, a)
+		if len(lines) != 1 || lines[0].Summary.Key != "magic.action.approval_summary" || lines[0].Summary.Values == nil || (*lines[0].Summary.Values)["summary"] != *a.Summary {
+			t.Fatalf("%s decision did not name its proposed change: %+v", kind, lines)
+		}
+	}
+}
+
+func TestBlankDecisionSummaryKeepsTheReviewRoute(t *testing.T) {
+	a := stagedApproval("close_deal")
+	a.Summary = new("  ")
+	lines := decisionsWaiting(t, a)
+	if len(lines) != 1 || lines[0].Summary.Key != genericApprovalSentence {
+		t.Fatalf("blank summary lost its review route: %+v", lines)
+	}
+}
+
+func TestCounterpartyDecisionKeepsItsContactQuestion(t *testing.T) {
+	a := stagedApproval(kindCaptureCounterparty)
+	a.Summary = new("Message from Alex")
+	a.TargetLabel = new("Alex")
+	lines := decisionsWaiting(t, a)
+	if len(lines) != 1 || lines[0].Summary.Key != approvalSentences[kindCaptureCounterparty] {
+		t.Fatalf("contact decision lost its question: %+v", lines)
+	}
+}

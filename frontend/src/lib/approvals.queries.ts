@@ -1,8 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
+import { type QueryClient, useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import type { QueryLike } from "../design-system/querystates";
 import { unwrap } from "./problem";
+import { briefKey, digestKey, magicKey, worklistKey } from "./workkeys";
 
 // The approvals query-hook family.
 //
@@ -176,4 +177,17 @@ export function useBundleApprovals(bundleId: string) {
       ),
     }),
   });
+}
+
+export function invalidateApprovalViews(client: QueryClient) {
+  return Promise.all(
+    [
+      ["approvals"],
+      ["approval"],
+      worklistKey,
+      briefKey,
+      magicKey,
+      digestKey,
+    ].map((queryKey) => client.invalidateQueries({ queryKey })),
+  );
 }

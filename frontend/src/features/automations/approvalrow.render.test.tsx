@@ -15,6 +15,7 @@ import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import type { Approval } from "../../lib/approvals.queries";
+import { magicKey, worklistKey } from "../../lib/workkeys";
 import {
   isPreviewDoor,
   refusedPreview,
@@ -41,10 +42,12 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-function render(ui: ReactNode) {
-  const client = new QueryClient({
+function render(
+  ui: ReactNode,
+  client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
+  }),
+) {
   return rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
@@ -325,3 +328,31 @@ it("updates the visible approval change while its reason is edited", async () =>
   expect(screen.getByText("Corrected reason")).toBeVisible();
   expect(screen.queryByText("Old reason")).toBeNull();
 });
+
+it.each(["Approve", "Reject"])(
+  "refreshes Home after %s without a page reload",
+  async (verdict) => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    client.setQueryData(magicKey, { needs_you: [{ id: "ap1" }] });
+    client.setQueryData([...worklistKey, "mine"], { total: 1 });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          id: "ap1",
+          status: verdict === "Approve" ? "approved" : "rejected",
+        }),
+      ),
+    );
+    render(<ApprovalRow approval={closeDateApproval()} />, client);
+    await userEvent.click(screen.getByRole("button", { name: verdict }));
+    await waitFor(() => {
+      expect(client.getQueryState(magicKey)?.isInvalidated).toBe(true);
+      expect(
+        client.getQueryState([...worklistKey, "mine"])?.isInvalidated,
+      ).toBe(true);
+    });
+  },
+);

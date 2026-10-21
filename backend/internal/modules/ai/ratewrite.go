@@ -15,6 +15,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/auditentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -351,7 +352,7 @@ func (s *RateStore) writeModelRate(ctx context.Context, tx pgx.Tx, p preparedMod
 	// fx_rate sibling). The verb is the SAME word the gate above demanded, so
 	// authorization_rule attributes the grant that actually admitted the write
 	// rather than a plausible-looking one.
-	if _, err := storekit.Audit(ctx, tx, string(action), "ai_model_rate", id, before,
+	if _, err := storekit.Audit(ctx, tx, string(action), auditentity.ModelRate, id, before,
 		modelRateImage(p, effDate)); err != nil {
 		return ModelRateRow{}, fmt.Errorf("audit ai_model_rate %s: %w", action, err)
 	}

@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   formatDateTime,
   formatDayMonth,
+  formatNumber,
   formatTimeOfDay,
 } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
@@ -46,6 +47,56 @@ async function onlyLine(name: string): Promise<HTMLElement> {
 }
 
 describe("a receipt line is one row", () => {
+  it("formats recorded forecast numbers for the reader's locale", async () => {
+    stub(
+      receipt({
+        done: [
+          line({
+            entity: fleet,
+            reason: {
+              key: "magic.why.forecast_date_basis",
+              values: {
+                sample_count: "24",
+                median_days: "12.555555555",
+                remaining_stages: "2",
+              },
+            },
+          }),
+        ],
+      }),
+    );
+    renderMagic("de");
+    expect(
+      await screen.findByText(
+        new RegExp(
+          `Median ${formatNumber(12.555555555, "de").replaceAll(".", "\\.")} Tage pro Phase`,
+        ),
+      ),
+    ).not.toBeNull();
+    expect(screen.queryByText(/12\.555555555/)).toBeNull();
+  });
+
+  it.each([
+    {
+      key: "magic.why.forecast_date_basis",
+      values: {
+        sample_count: "24",
+        median_days: "12.5",
+        remaining_stages: "2",
+      },
+      text: "Unconfirmed estimate from 24 won deals: median 12.5 days per stage, 2 stages remaining.",
+    },
+    {
+      key: "magic.why.forecast_date",
+      values: undefined,
+      text: "Unconfirmed estimate; no usable recorded basis to show.",
+    },
+  ])("shows an honest forecast basis: $key", async ({ key, values, text }) => {
+    stub(receipt({ done: [line({ entity: fleet, reason: { key, values } })] }));
+    renderMagic();
+    expect(rowOf(await onlyLine("Done for you")).detail).toContain(text);
+  });
+
   it("prints what happened, its record and the reason visibly", async () => {
     stub(
       receipt({

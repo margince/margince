@@ -6,7 +6,11 @@ import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { en } from "../../i18n/en";
-import { taskRow, waitingEmailRow } from "../../testing/brief.fixtures";
+import {
+  failedApprovalRow,
+  taskRow,
+  waitingEmailRow,
+} from "../../testing/brief.fixtures";
 import {
   installFetchStub,
   meRoute,
@@ -157,4 +161,18 @@ export const AccountTermination: Story = {
 export const AccountTerminationDark: Story = {
   ...AccountTermination,
   globals: { theme: "dark" },
+};
+
+export const ApprovedButNotRun: Story = {
+  render: panel([failedApprovalRow(), taskRow("call", "Call the buyer")]),
+  play: async ({ canvasElement }) => {
+    const card = within(within(canvasElement).getByRole("article"));
+    await expect(
+      card.getByText("Move deal to Won · Nordwind renewal"),
+    ).toBeTruthy();
+    await expect(card.getByText(failedApprovalRow().detail ?? "")).toBeTruthy();
+    await expect(
+      card.getByRole("button", { name: en["worklist.verb.retry"] }),
+    ).toBeTruthy();
+  },
 };

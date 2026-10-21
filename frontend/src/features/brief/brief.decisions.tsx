@@ -31,6 +31,7 @@ import {
   useT,
 } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { invalidateApprovalViews } from "../../lib/approvals.queries";
 import { approvalDotTier, useAgentTierMap } from "../../lib/autonomy";
 import { isVersionSkewOf, problemMessageOf } from "../../lib/problem";
 import { navigate } from "../../lib/router";
@@ -51,7 +52,6 @@ import {
   useApprovalNames,
 } from "../automations/approvalresponsibility";
 import { worklistLaneHref } from "../worklist/worklist.header";
-import { worklistKey } from "../worklist/worklist.queries";
 import { commitTray } from "./brief.decisions.commit";
 
 // The decisions half of Brief: the deck, its tray, and the one act that sends
@@ -216,8 +216,7 @@ export function DecisionsSection({
       if (result.alreadyDecided) {
         onAlreadyDecided();
       }
-      queryClient.invalidateQueries({ queryKey: ["approvals"] });
-      queryClient.invalidateQueries({ queryKey: worklistKey });
+      void invalidateApprovalViews(queryClient);
       if (result.failure) {
         // Reported after the outcomes that DID land, and as a failure: the tray
         // keeps what it still holds and the notice under it says what stopped.

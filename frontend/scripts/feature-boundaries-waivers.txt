@@ -53,7 +53,6 @@ reach features/brief/brief.decisions.tsx features/automations/approvalevidence.t
 reach features/brief/brief.decisions.tsx features/automations/approvalkind.ts
 reach features/brief/brief.decisions.tsx features/automations/approvalresponsibility.ts
 reach features/brief/brief.decisions.tsx features/worklist/worklist.header.tsx
-reach features/brief/brief.decisions.tsx features/worklist/worklist.queries.ts
 reach features/brief/brief.dials.test.tsx features/worklist/worklist.queries.ts
 reach features/brief/brief.facts.ts features/worklist/worklist.queries.ts
 reach features/brief/brief.facts.ts features/worklist/worklist.reads.ts
@@ -77,7 +76,6 @@ reach features/brief/brief.plan.contract.tsx features/worklist/weeklyplan.querie
 reach features/brief/brief.plan.stories.tsx features/worklist/weeklyplan.queries.ts
 reach features/brief/brief.plan.test.tsx features/worklist/weeklyplan.queries.ts
 reach features/brief/brief.plan.tsx features/worklist/weeklyplan.queries.ts
-reach features/brief/brief.queries.ts features/worklist/worklist.queries.ts
 reach features/brief/brief.queue.tsx features/worklist/worklist.address.ts
 reach features/brief/brief.queue.tsx features/worklist/worklist.header.tsx
 reach features/brief/brief.queue.tsx features/worklist/worklist.return.tsx

@@ -83,13 +83,15 @@ These rules hold the morning brief to what it read:
 
 ## Close dates and Accept
 
-The nightly sweep in `closedatesweep.go` replaces a missing or past expected close, and keeps any future
-date. `proposedCloseDate` in `closedate.go` takes today plus the median days per stage of won deals in the
+The nightly sweep in `closedatesweep.go` replaces a missing or past expected close only when
+observed history supports an estimate, and keeps any future date. `proposedCloseDate` in `closedate.go` takes today plus the median days per stage of won deals in the
 pipeline, times `StagesToGo`, rounded up to whole weeks. The floor is 7 days. Below `CloseDateMinHistory`
-(20 won deals) it uses `CloseDateStageDays` (14).
+(20 won deals) it keeps the date as it is. You still need to confirm estimates. They record the observed
+won-deal count, median days per stage and stages left.
 
-A stalled deal never has its date pushed forward. Its forecast category drops one step instead, since a fresh date is how a dead deal stays in the forecast. Only
-a replaced date is provisional; a date a human set stays theirs.
+A stalled deal keeps its future date while its forecast category drops one step. A missing or past
+date still needs enough observed history before it can be replaced. Only a replaced date is
+provisional; a future date a human set stays theirs.
 
 `setCloseDate` and `setForecastCategory` in `closedatecorrect.go` write only a real change. The sweep sees a quiet deal again every night. Without that guard, the audit log would show a forecast that moves each night while it stands
 still.

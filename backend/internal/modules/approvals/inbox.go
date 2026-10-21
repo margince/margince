@@ -345,7 +345,7 @@ func approvalWhere(in ListInput, from *keysetStart, arg func(any) int) string {
 		terms = append(terms, fmt.Sprintf("decided_at > $%d", arg(*in.DecidedAfter)))
 	}
 	if in.failedDecider != nil {
-		terms = append(terms, fmt.Sprintf("decided_by = $%d AND %s", arg(*in.failedDecider), stillFailing))
+		terms = append(terms, fmt.Sprintf("decided_by = $%d AND %s", arg(*in.failedDecider), stillFailing), noCompletedStageReplacement)
 	}
 	if from != nil {
 		terms = append(terms, fmt.Sprintf("(created_at, id) < ($%d, $%d)", arg(from.createdAt), arg(from.id)))

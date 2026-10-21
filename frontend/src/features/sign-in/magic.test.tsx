@@ -329,8 +329,8 @@ describe("the receipt draws every lane it promises", () => {
     renderMagic();
     const waiting = await lane("Waiting on you");
     expect(
-      within(waiting).getByText("Nothing happens until you decide."),
-    ).toBeTruthy();
+      within(waiting).queryByText("Nothing happens until you decide."),
+    ).toBeNull();
     const decide = within(waiting).getByRole("link", { name: "Decide" });
     expect(decide.getAttribute("href")).toBe(
       "#/home?approval=0198a0de-0000-7000-8000-00000000d0c1",
@@ -628,4 +628,30 @@ describe("the receipt draws every lane it promises", () => {
     );
     expect(container.querySelector(".brief-section")).toBeNull();
   });
+});
+
+it("names the proposed change in the waiting row before opening a decision", async () => {
+  stub(
+    receipt({
+      needs_you: [
+        line({
+          lane: "needs_you",
+          consequence: "magic.consequence.awaits_your_decision",
+          summary: {
+            key: "magic.action.approval_summary",
+            values: { summary: "Close deal Acme renewal as won" },
+          },
+        }),
+      ],
+    }),
+  );
+  renderMagic();
+  expect(
+    await screen.findByText("Close deal Acme renewal as won", { exact: false }),
+  ).not.toBeNull();
+  expect(
+    screen.queryByText(
+      /proposal is waiting for your word|Nothing happens until you decide/,
+    ),
+  ).toBeNull();
 });

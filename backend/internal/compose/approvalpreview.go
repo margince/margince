@@ -167,6 +167,7 @@ func (r approvalPreviewReader) populateChanges(ctx context.Context, approval crm
 	if err != nil {
 		return nil, err
 	}
+	contextFields := maps.Clone(current)
 	out.State = previewIncompleteState
 	if err := r.stageChanges(ctx, approval, current, changes, out); err != nil {
 		if errors.Is(err, apperrors.ErrVersionSkew) {
@@ -190,6 +191,9 @@ func (r approvalPreviewReader) populateChanges(ctx context.Context, approval crm
 		return nil, err
 	}
 	markExecutionValues(approval.Kind, out.Changes)
+	if err := r.dealDecisionContext(ctx, approval, contextFields, changes, out); err != nil {
+		return nil, err
+	}
 	out.State = previewReadyState
 	if err := r.currentEvidence(ctx, approval, out); err != nil {
 		return nil, err

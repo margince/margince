@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/auditentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -360,7 +361,7 @@ func (s *Store) UpdateTag(ctx context.Context, id ids.TagID, in TagUpdate, expec
 			}
 			return err
 		}
-		_, err = storekit.Audit(ctx, tx, "update", "tag", id.UUID,
+		_, err = storekit.Audit(ctx, tx, "update", auditentity.Tag, id.UUID,
 			map[string]any{nameField: before.Name, suggestibleField: before.Suggestible},
 			map[string]any{nameField: out.Name, suggestibleField: out.Suggestible})
 		return err
@@ -426,7 +427,7 @@ func (s *Store) RestoreTag(ctx context.Context, id ids.TagID) (tagRow, error) {
 			}
 			return err
 		}
-		_, err = storekit.Audit(ctx, tx, "update", "tag", id.UUID,
+		_, err = storekit.Audit(ctx, tx, "update", auditentity.Tag, id.UUID,
 			map[string]any{"archived_at": before.ArchivedAt},
 			map[string]any{"archived_at": nil, nameField: out.Name})
 		return err

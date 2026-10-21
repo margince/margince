@@ -3,12 +3,7 @@
 
 package magic
 
-// The needs-you lane: a decision waiting.
-//
-// The same staged approvals /attention serves, drawn beside the rest of the
-// machinery's output so a morning is one page rather than two. Still a router
-// and not a second inbox: the line says a decision is waiting and names what it
-// is about, and the approvals surface keeps the verb.
+// Staged decisions share the receipt; execution stays on the approvals surface.
 
 import (
 	"context"
@@ -129,29 +124,7 @@ func pendingLine(a crmcontracts.Approval) (crmcontracts.MagicLine, bool) {
 	if !machine {
 		return crmcontracts.MagicLine{}, false
 	}
-	values := map[string]string{"kind": a.Kind}
-	sentence := sentenceForKind(a.Kind)
-	if summary, party := commitmentCaption(a); summary != "" {
-		sentence = "magic.action.approval_commitment_task_summary"
-		if party != "" {
-			sentence = "magic.action.approval_commitment_task_named"
-			if unresolved, ok := (*a.ProposedChange)["promiser_unresolved"].(bool); ok && unresolved {
-				sentence = "magic.action.approval_commitment_task_unverified"
-			}
-		}
-		values["summary"], values["party"] = summary, party
-	}
-	if a.TargetLabel == nil && sentence == approvalSentences[kindCaptureCounterparty] {
-		// Its sentence names who wrote; a proposal staged before it carried a
-		// name has none to give.
-		sentence = genericApprovalSentence
-	}
-	if a.TargetLabel != nil {
-		// The caption frozen at staging time, which is what the approver was
-		// shown; re-resolving it here would name whatever the record became.
-		values["target"] = *a.TargetLabel
-	}
-	consequence := "magic.consequence.awaits_your_decision"
+	sentence, values := pendingCaption(a)
 	line := crmcontracts.MagicLine{
 		Id:         a.Id,
 		OccurredAt: a.CreatedAt,
@@ -160,8 +133,7 @@ func pendingLine(a crmcontracts.Approval) (crmcontracts.MagicLine, bool) {
 			Key:    sentence,
 			Values: &values,
 		},
-		Consequence: &consequence,
-		Actor:       actor,
+		Actor: actor,
 		// No undo at all. Nothing has happened yet, so the line's action is
 		// deciding, which the approvals surface holds; a refusal here would read
 		// as "this cannot be undone" about a change nobody has made.
@@ -231,4 +203,36 @@ func commitmentCaption(a crmcontracts.Approval) (string, string) {
 	}
 	party, _ := (*a.ProposedChange)["party"].(string)
 	return summary, approvals.SanitizeSummary(party)
+}
+
+func pendingCaption(a crmcontracts.Approval) (string, map[string]string) {
+	values := map[string]string{"kind": a.Kind}
+	sentence := sentenceForKind(a.Kind)
+	if summary, party := commitmentCaption(a); summary != "" {
+		sentence = "magic.action.approval_commitment_task_summary"
+		if party != "" {
+			sentence = "magic.action.approval_commitment_task_named"
+			if unresolved, ok := (*a.ProposedChange)["promiser_unresolved"].(bool); ok && unresolved {
+				sentence = "magic.action.approval_commitment_task_unverified"
+			}
+		}
+		values["summary"], values["party"] = summary, party
+	}
+	if a.Kind != "commitment_task" && a.Kind != kindCaptureCounterparty && a.Summary != nil {
+		if summary := approvals.SanitizeSummary(*a.Summary); summary != "" {
+			sentence = "magic.action.approval_summary"
+			values["summary"] = summary
+		}
+	}
+	if a.TargetLabel == nil && sentence == approvalSentences[kindCaptureCounterparty] {
+		// Its sentence names who wrote; a proposal staged before it carried a
+		// name has none to give.
+		sentence = genericApprovalSentence
+	}
+	if a.TargetLabel != nil {
+		// The caption frozen at staging time, which is what the approver was
+		// shown; re-resolving it here would name whatever the record became.
+		values["target"] = *a.TargetLabel
+	}
+	return sentence, values
 }

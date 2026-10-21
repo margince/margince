@@ -16,7 +16,7 @@ import {
   hourInZone,
 } from "../../format/format";
 import { startOfDayInZone, viewerZone } from "../../format/timezone";
-import { useLocale, useT } from "../../i18n";
+import { pluralKey, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useRecordZone } from "../../lib/recordzone";
 import type { Worklist } from "../worklist/worklist.queries";
@@ -394,7 +394,16 @@ function glanceSentence(
   t: ReturnType<typeof useT>,
   locale: ReturnType<typeof useLocale>["locale"],
 ) {
-  if (facts.view === "morning") return briefSentence(facts.day, t, locale);
+  if (facts.view === "morning") {
+    const count = facts.day?.focus?.items.length ?? 0;
+    if (count > 0) {
+      return {
+        key: pluralKey(locale, "brief.glance.attention", count),
+        values: { count: formatNumber(count, locale) },
+      } satisfies BriefSentence;
+    }
+    return briefSentence(facts.day, t, locale);
+  }
   return weekSentence(facts.week, t, locale);
 }
 

@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/storedobjects"
+	"github.com/margince/margince/backend/internal/shared/kernel/auditentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/pkg/extension"
@@ -120,7 +121,7 @@ func (s *Store) UploadDocument(ctx context.Context, in NewDocument, queue QueueI
 			}
 			return fmt.Errorf("insert corpus document: %w", err)
 		}
-		if _, err := storekit.Audit(ctx, tx, "create", "knowledge_document", id, nil, map[string]any{
+		if _, err := storekit.Audit(ctx, tx, "create", auditentity.KnowledgeDocument, id, nil, map[string]any{
 			corpusIDKey:    in.CorpusID,
 			filenameKey:    in.Filename,
 			contentTypeKey: media,
@@ -393,7 +394,7 @@ func (s *Store) DeleteDocument(ctx context.Context, documentID ids.UUID) error {
 		// through field history, record history and the compliance log after
 		// the document itself was deleted — a deletion that leaves the prose
 		// behind in the audit trail is not a deletion.
-		if _, err := storekit.Audit(ctx, tx, "delete", "knowledge_document", documentID,
+		if _, err := storekit.Audit(ctx, tx, "delete", auditentity.KnowledgeDocument, documentID,
 			map[string]any{
 				filenameKey:      doc.filename,
 				checksumKey:      doc.checksum,

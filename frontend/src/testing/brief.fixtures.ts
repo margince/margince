@@ -804,6 +804,22 @@ export function taskRow(id: string, title: string): WorklistItem {
   };
 }
 
+export function failedApprovalRow(): WorklistItem {
+  return {
+    id: "approved-stage-change",
+    source: "failed_approval",
+    category: "tasks",
+    level: 4,
+    title: "Move deal to Won",
+    detail: "The action did not finish. Review it before trying again.",
+    subject: { type: "deal", id: "deal-nordwind", label: "Nordwind renewal" },
+    occurred_at: "2026-09-03T07:00:00Z",
+    because: [{ kind: "approved_and_failed" }],
+    consequence: "task_slips",
+    actions: ["acknowledge", "retry"],
+  };
+}
+
 export const sharedWeeklyNumbers: components["schemas"]["WeeklyNumericSummary"] =
   {
     version: "analytics-1",
