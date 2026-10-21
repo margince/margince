@@ -24,6 +24,7 @@ import "./composehead.css";
 type Contact360 = components["schemas"]["Contact360"];
 type Company360 = components["schemas"]["Company360"];
 type User = components["schemas"]["User"];
+type Team = components["schemas"]["Team"];
 
 const MAILABLE_STATUS: ReadonlySet<User["status"]> = new Set([
   "active",
@@ -60,7 +61,7 @@ export function FieldNeed({
 export function recipientSuggestions(
   contact: Contact360 | undefined,
   company: Company360 | undefined,
-  colleagues: readonly User[] = [],
+  colleagues: readonly (User | Team)[] = [],
 ): readonly TokenSuggestion[] {
   const seen = new Set<string>();
   const out: TokenSuggestion[] = [];
@@ -83,7 +84,11 @@ export function recipientSuggestions(
     // Members come last: a message is addressed to the record's people first.
     // An agent seat has no mailbox a person writes to, and a suspended or
     // deactivated member no longer reads one.
-    if (member.is_agent || !MAILABLE_STATUS.has(member.status)) {
+    if (
+      !("email" in member) ||
+      member.is_agent ||
+      !MAILABLE_STATUS.has(member.status)
+    ) {
       continue;
     }
     offer(member.email, member.display_name);

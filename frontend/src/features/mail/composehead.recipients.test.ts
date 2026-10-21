@@ -1,8 +1,10 @@
+/** @vitest-environment happy-dom */
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
+import { view } from "../../testing/contactpage.testkit";
 import { recipientSuggestions } from "./composehead";
 
 type User = components["schemas"]["User"];
@@ -12,6 +14,7 @@ function member(overrides: Partial<User>): User {
     id: "u-1",
     email: "sofia@gradion.test",
     display_name: "Sofia Keller",
+    timezone: "UTC",
     status: "active",
     is_agent: false,
     ...overrides,
@@ -20,19 +23,7 @@ function member(overrides: Partial<User>): User {
 
 describe("recipientSuggestions", () => {
   it("offers workspace members after the record's own contacts", () => {
-    const offered = recipientSuggestions(
-      {
-        as_of: "2026-08-15T09:00:00Z",
-        contact: {
-          id: "p-1",
-          full_name: "Dana Brandt",
-          emails: [{ email: "dana@brandt.example", is_primary: true }],
-        },
-        sections_omitted: [],
-      } as components["schemas"]["Contact360"],
-      undefined,
-      [member({})],
-    );
+    const offered = recipientSuggestions(view, undefined, [member({})]);
     expect(offered.map((row) => row.value)).toEqual([
       "dana@brandt.example",
       "sofia@gradion.test",
@@ -48,6 +39,14 @@ describe("recipientSuggestions", () => {
       member({ id: "i", email: "new@gradion.test", status: "invited" }),
     ]);
     expect(offered.map((row) => row.value)).toEqual(["new@gradion.test"]);
+  });
+
+  it("skips teams, which have no address", () => {
+    const offered = recipientSuggestions(undefined, undefined, [
+      { id: "t-1", name: "Sales" },
+      member({}),
+    ]);
+    expect(offered.map((row) => row.value)).toEqual(["sofia@gradion.test"]);
   });
 
   it("offers an address once when a contact and a member share it", () => {
