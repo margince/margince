@@ -42,8 +42,8 @@ func setupScout(t *testing.T) *scoutEnv {
 	t.Helper()
 	e := integration.Setup(t)
 	pipeline, open, won := integration.DealFixture(t, e)
-	// Postgres keeps microseconds, and the suggestion writer compares cited
-	// evidence times exactly, so the clock starts at the precision it is stored at.
+	// Postgres keeps microseconds, and the suggestion writer requires cited
+	// evidence times to equal the stored ones, so the clock starts at that precision.
 	return &scoutEnv{Env: e, pipeline: pipeline, open: open, won: won, now: time.Now().Truncate(time.Microsecond)}
 }
 

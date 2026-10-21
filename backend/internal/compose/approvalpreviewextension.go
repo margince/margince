@@ -11,10 +11,10 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 )
 
-// extensionPreview shows a staged extension call as the composed declaration
-// names it plus every argument the approved call runs with. The approvals
-// module shows the approval only while the unit row exists, and a unit row
-// carries no version, so the display reads nothing the approval lacks.
+// extensionPreview shows the operation the composed declaration names and
+// every argument the approved call runs with. The approvals module shows the
+// approval only while the unit row exists. A unit row carries no version, so
+// the display reads nothing the approval lacks.
 func extensionPreview(approval crmcontracts.Approval, kind approvals.ExtensionKind, out *crmcontracts.ApprovalPreview) (*crmcontracts.ApprovalPreview, error) {
 	out.Version, out.State = 2, previewIncompleteState
 	if approval.TargetEntityId == nil || approval.TargetEntityType == nil || *approval.TargetEntityType != kind.TargetTable ||
