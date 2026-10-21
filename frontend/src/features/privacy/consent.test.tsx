@@ -233,8 +233,8 @@ describe("ConsentSection", () => {
     expect(screen.queryByText(/typed by you/i)).not.toBeInTheDocument();
   });
 
-  // Each door a proof row comes through is worded, and a principal that is
-  // not a seat is shown by its own name rather than looked up as one.
+  // Each door a proof row comes through is worded. A principal that is not a
+  // seat is shown by its own name.
   it("says how each decision was recorded and by which principal", async () => {
     stubRoutes({
       "GET /contacts/contact-1/consent": () =>
