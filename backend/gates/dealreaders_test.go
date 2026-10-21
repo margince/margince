@@ -119,6 +119,7 @@ var predicateDealReads = gatekit.Waive(map[string]string{
 // gate would admit them anyway and the entry records why asking was never the
 // point.
 var lifecycleDealReads = gatekit.Waive(map[string]string{
+	"internal/modules/privacy/reportingquestions.go:heldQuestionSource":         "Retention lifecycle checks legal holds on every record behind a kept question answer before selecting an edition for expiry; it returns edition ids to the audited eraser, not source records to a reader.",
 	"internal/modules/privacy/reportingretention.go:reportingRetentionSelector": "Retention lifecycle checks legal holds across all linked subjects before selecting an edition for expiry; it returns edition ids to the audited eraser, not source records to a reader.",
 	// Deal Scout: its system-principal evidence read and the suggestion writer's own conditions.
 	"internal/modules/deals/suggestion.go:SuggestionFloorExpr":         "the instant a company's suggestion evidence must be newer than, read from the latest close of a deal on it. Composed only into the system-only suggestion writer and the scout's system-principal evidence read; it selects a timestamp that decides which evidence counts, never a deal",

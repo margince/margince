@@ -45,7 +45,7 @@ func redactSubjectReporting(ctx context.Context, tx pgx.Tx, subject ids.ContactI
 			return err
 		}
 	}
-	return nil
+	return redactSubjectQuestions(ctx, tx, subject)
 }
 
 //craft:ignore naked-any Bound SQL parameters carry pgx's heterogeneous value types.
@@ -53,7 +53,7 @@ func redactReportingSource(ctx context.Context, tx pgx.Tx, kind string, sources 
 	if len(sources) == 0 {
 		return nil
 	}
-	if err := storekit.FenceReportProjection(ctx, tx); err != nil {
+	if err := redactQuestionSource(ctx, tx, kind, sources); err != nil {
 		return err
 	}
 	args := []any{kind, sources}
@@ -123,6 +123,9 @@ func (*RetentionService) eraseReportEdition(ctx context.Context, tx pgx.Tx, id i
 	edition.Name = "Expired report edition"
 	edition.Evaluation.Metrics = []crmcontracts.ReportingMetric{}
 	if _, err := tx.Exec(ctx, "DELETE FROM report_edition_contribution WHERE edition_id="+p, id); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, "DELETE FROM report_edition_question WHERE edition_id="+p, id); err != nil {
 		return err
 	}
 	raw, err := json.Marshal(edition)

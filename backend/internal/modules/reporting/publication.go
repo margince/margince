@@ -68,8 +68,15 @@ func (s *Service) executeClaim(ctx context.Context, claim executionClaim) error 
 		if !evaluation.Result.Context.Interval.StartAt.Equal(run.Interval.StartAt) || !evaluation.Result.Context.Interval.EndAt.Equal(run.Interval.EndAt) {
 			return invalid("reporting cutoff precedes the requested capture interval")
 		}
+		questions, err := s.captureQuestions(human, tx, selection)
+		if err != nil {
+			return err
+		}
 		edition := crmcontracts.ReportingEdition{Id: openapi_types.UUID(ids.NewV7()), ReportId: report.Id, ReportRevision: run.Execution.ReportRevision, Name: report.Name, CapturedAt: evaluation.Result.Context.EvaluatedAt, IntendedDueAt: run.Execution.IntendedDueAt, Evaluation: evaluation.Result}
 		if err := s.writeEdition(human, tx, claim, report, edition, evaluation.Facts); err != nil {
+			return err
+		}
+		if err := writeEditionQuestions(human, tx, edition.Id, questions); err != nil {
 			return err
 		}
 		return s.completeClaim(human, tx, claim, edition)

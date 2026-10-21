@@ -37,6 +37,11 @@ func (s *Service) Catalog(ctx context.Context) (crmcontracts.ReportingCatalog, e
 		}
 		ready, err := scheduleReady(ctx, tx)
 		out.ScheduleReady = &ready
+		if err != nil || !ready {
+			return err
+		}
+		days, err := editionRetentionDays(ctx, tx)
+		out.EditionRetentionDays = &days
 		return err
 	})
 	return out, err

@@ -28,9 +28,9 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 317 |
-| Columns | 3759 |
-| Foreign keys | 521 |
+| Tables | 319 |
+| Columns | 3769 |
+| Foreign keys | 523 |
 | Owning areas | 36 |
 
 ## The 12 records everything else hangs off
@@ -120,7 +120,7 @@ erDiagram
 | [platform](platform.md) | 13 |
 | [privacy](privacy.md) | 2 |
 | [projects](projects.md) | 3 |
-| [reporting](reporting.md) | 10 |
+| [reporting](reporting.md) | 12 |
 | [search](search.md) | 4 |
 | [signals](signals.md) | 2 |
 | [webhooks](webhooks.md) | 2 |
@@ -369,8 +369,10 @@ erDiagram
 | [`relationship_nudge_dismissal`](contacts.md#relationship_nudge_dismissal) | contacts | 5 | 0 |
 | [`report_definition`](reporting.md#report_definition) | reporting | 11 | 2 |
 | [`report_definition_revision`](reporting.md#report_definition_revision) | reporting | 6 | 2 |
-| [`report_edition`](reporting.md#report_edition) | reporting | 12 | 1 |
+| [`report_edition`](reporting.md#report_edition) | reporting | 12 | 2 |
 | [`report_edition_contribution`](reporting.md#report_edition_contribution) | reporting | 9 | 0 |
+| [`report_edition_question`](reporting.md#report_edition_question) | reporting | 5 | 1 |
+| [`report_edition_question_source`](reporting.md#report_edition_question_source) | reporting | 5 | 0 |
 | [`report_execution`](reporting.md#report_execution) | reporting | 19 | 1 |
 | [`report_projection_fence`](platform.md#report_projection_fence) | platform | 2 | 0 |
 | [`report_run`](compose.md#report_run) | compose | 11 | 0 |

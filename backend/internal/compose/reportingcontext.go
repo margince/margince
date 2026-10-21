@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/reporting"
@@ -124,5 +125,7 @@ func reportingMemberStrings(frame crmcontracts.ReportingContext) []string {
 
 func newReportingService(pool *pgxpool.Pool, now func() time.Time) *reporting.Service {
 	db := InstallationDB(pool)
-	return reporting.NewService(db, metricEvaluator{forecast: newForecastStore(db)}, reportingAuthority{users: identity.NewService(pool)}, reportingCalendar, now).WithBaseLanguage(identity.BaseLanguageForRecord)
+	return reporting.NewService(db, metricEvaluator{forecast: newForecastStore(db)}, reportingAuthority{users: identity.NewService(pool)}, reportingCalendar, now).
+		WithBaseLanguage(identity.BaseLanguageForRecord).
+		WithQuestions(reportingQuestions{floor: analyticsquery.DefaultFloor, names: newAttentionNames(db)})
 }

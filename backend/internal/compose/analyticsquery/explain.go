@@ -144,3 +144,49 @@ func CompileExplain(in Explain, schema Schema, scope ScopeClauses) (ExplainPlan,
 		whereSQL(where), bind(ExplainRowLimit))
 	return ExplainPlan{SQL: sql, Args: args, Columns: columns}, nil
 }
+
+// CompileSources renders every record behind an answer, each with the group
+// keys that place it in a row. It reads the answer's own row set, as an
+// explanation does. only, when given, restricts it to those record ids, so a
+// kept answer's records can be judged again under a later reader. The caller
+// passes one past its bound as limit, to tell a full list from a cut one.
+func CompileSources(q Query, schema Schema, scope ScopeClauses, only []string, limit int) (ExplainPlan, error) {
+	if scope == nil {
+		return ExplainPlan{}, &RefusalError{
+			Kind:    RefusalInvalid,
+			Message: "a source listing was compiled with no scope source",
+			Suggest: "this is a wiring fault rather than a question anybody asked",
+		}
+	}
+	if err := q.Validate(schema); err != nil {
+		return ExplainPlan{}, err
+	}
+	entity := schema.Entities[q.Entity]
+
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	bind := func(v any) string { return fmt.Sprintf("$%d", arg(v)) }
+
+	where, err := whereClauses(entity, q.Filters, bind)
+	if err != nil {
+		return ExplainPlan{}, err
+	}
+	scoped, err := scope(arg)
+	if err != nil {
+		return ExplainPlan{}, err
+	}
+	where = append(where, scoped...)
+	if only != nil {
+		where = append(where, "t.id = ANY("+bind(only)+"::uuid[])")
+	}
+
+	selects := []string{"t.id"}
+	columns := []string{"id"}
+	for _, name := range q.GroupBy {
+		selects = append(selects, entity.Fields[name].Expr)
+		columns = append(columns, name)
+	}
+	sql := fmt.Sprintf("SELECT %s FROM %s%s LIMIT %s",
+		strings.Join(selects, ", "), entity.From, whereSQL(where), bind(limit))
+	return ExplainPlan{SQL: sql, Args: args, Columns: columns}, nil
+}

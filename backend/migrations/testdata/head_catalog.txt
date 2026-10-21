@@ -6437,6 +6437,26 @@ public.report_edition_contribution.source_type text NOT NULL gen=- def=-
 public.report_edition_contribution_pkey CREATE UNIQUE INDEX report_edition_contribution_pkey ON public.report_edition_contribution USING btree (edition_id, metric, context_id, contribution_key)
 public.report_edition_execution_id_key CREATE UNIQUE INDEX report_edition_execution_id_key ON public.report_edition USING btree (execution_id)
 public.report_edition_pkey CREATE UNIQUE INDEX report_edition_pkey ON public.report_edition USING btree (id)
+public.report_edition_question acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.report_edition_question.answer jsonb gen=- def=-
+public.report_edition_question.card_id text NOT NULL gen=- def=-
+public.report_edition_question.edition_id uuid NOT NULL gen=- def=-
+public.report_edition_question.entity text NOT NULL gen=- def=-
+public.report_edition_question.reason text gen=- def=-
+public.report_edition_question.report_edition_question_edition_id_fkey FOREIGN KEY (edition_id) REFERENCES report_edition(id) ON DELETE CASCADE
+public.report_edition_question.report_edition_question_kept_or_reasoned CHECK (((answer IS NULL) <> (reason IS NULL)))
+public.report_edition_question.report_edition_question_pkey PRIMARY KEY (edition_id, card_id)
+public.report_edition_question.report_edition_question_reason_known CHECK ((reason = ANY (ARRAY['retention_unconfigured'::text, 'too_many_records'::text, 'unanswered'::text])))
+public.report_edition_question_pkey CREATE UNIQUE INDEX report_edition_question_pkey ON public.report_edition_question USING btree (edition_id, card_id)
+public.report_edition_question_source acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.report_edition_question_source.card_id text NOT NULL gen=- def=-
+public.report_edition_question_source.edition_id uuid NOT NULL gen=- def=-
+public.report_edition_question_source.report_edition_question_source_edition_id_card_id_fkey FOREIGN KEY (edition_id, card_id) REFERENCES report_edition_question(edition_id, card_id) ON DELETE CASCADE
+public.report_edition_question_source.report_edition_question_source_pkey PRIMARY KEY (edition_id, card_id, row_index, source_id)
+public.report_edition_question_source.row_index integer NOT NULL gen=- def=-
+public.report_edition_question_source.source_id uuid NOT NULL gen=- def=-
+public.report_edition_question_source.source_type text NOT NULL gen=- def=-
+public.report_edition_question_source_pkey CREATE UNIQUE INDEX report_edition_question_source_pkey ON public.report_edition_question_source USING btree (edition_id, card_id, row_index, source_id)
 public.report_execution acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.report_execution.attempt bigint NOT NULL gen=- def=0
 public.report_execution.edition_id uuid gen=- def=-
@@ -6476,6 +6496,7 @@ public.report_projection_fence.report_projection_fence_pkey PRIMARY KEY (singlet
 public.report_projection_fence.report_projection_fence_singleton_check CHECK (singleton)
 public.report_projection_fence.singleton boolean NOT NULL gen=- def=true
 public.report_projection_fence_pkey CREATE UNIQUE INDEX report_projection_fence_pkey ON public.report_projection_fence USING btree (singleton)
+public.report_question_source CREATE INDEX report_question_source ON public.report_edition_question_source USING btree (source_type, source_id)
 public.report_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.report_run.asked_by uuid NOT NULL gen=- def=-
 public.report_run.captured_by text NOT NULL gen=- def=-

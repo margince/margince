@@ -15418,6 +15418,48 @@ func (e ReportingCardKind) Valid() bool {
 	}
 }
 
+// Defines values for ReportingEditionQuestionReason.
+const (
+	ReportingEditionQuestionReasonRetentionUnconfigured ReportingEditionQuestionReason = "retention_unconfigured"
+	ReportingEditionQuestionReasonTooManyRecords        ReportingEditionQuestionReason = "too_many_records"
+	ReportingEditionQuestionReasonUnanswered            ReportingEditionQuestionReason = "unanswered"
+)
+
+// Valid indicates whether the value is a known member of the ReportingEditionQuestionReason enum.
+func (e ReportingEditionQuestionReason) Valid() bool {
+	switch e {
+	case ReportingEditionQuestionReasonRetentionUnconfigured:
+		return true
+	case ReportingEditionQuestionReasonTooManyRecords:
+		return true
+	case ReportingEditionQuestionReasonUnanswered:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportingEditionQuestionStatus.
+const (
+	ReportingEditionQuestionStatusKept     ReportingEditionQuestionStatus = "kept"
+	ReportingEditionQuestionStatusNotKept  ReportingEditionQuestionStatus = "not_kept"
+	ReportingEditionQuestionStatusWithheld ReportingEditionQuestionStatus = "withheld"
+)
+
+// Valid indicates whether the value is a known member of the ReportingEditionQuestionStatus enum.
+func (e ReportingEditionQuestionStatus) Valid() bool {
+	switch e {
+	case ReportingEditionQuestionStatusKept:
+		return true
+	case ReportingEditionQuestionStatusNotKept:
+		return true
+	case ReportingEditionQuestionStatusWithheld:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ReportingExecutionStatus.
 const (
 	ReportingExecutionStatusFailed    ReportingExecutionStatus = "failed"
@@ -46359,7 +46401,8 @@ type ReportingCard struct {
 	// `question`. The page asks it through `/analytics/query` for each reader, under their
 	// own grants and over the report's scope. Every reader of the report receives it, so it
 	// carries no filters (a filter value can name a record a reader may not open), no scope
-	// and no save. A sent edition does not keep its answer.
+	// and no save. A sent edition keeps the answer its sender was given, as
+	// `ReportingEditionQuestion` describes.
 	Question *ReportingCardQuestion `json:"question,omitempty"`
 
 	// Width `half` shares a row with the next half card. A chart that needs the whole width draws full regardless.
@@ -46376,7 +46419,8 @@ type ReportingCardKind string
 // `question`. The page asks it through `/analytics/query` for each reader, under their
 // own grants and over the report's scope. Every reader of the report receives it, so it
 // carries no filters (a filter value can name a record a reader may not open), no scope
-// and no save. A sent edition does not keep its answer.
+// and no save. A sent edition keeps the answer its sender was given, as
+// `ReportingEditionQuestion` describes.
 type ReportingCardQuestion struct {
 	// Entity The population, by name.
 	Entity  string    `json:"entity"`
@@ -46389,7 +46433,9 @@ type ReportingCardQuestion struct {
 
 // ReportingCatalog defines model for ReportingCatalog.
 type ReportingCatalog struct {
-	Metrics []ReportingMetricDefinition `json:"metrics"`
+	// EditionRetentionDays How many days a sent edition keeps its readings and question answers before retention erases them. Present for schedule authors while the policy is on.
+	EditionRetentionDays *int                        `json:"edition_retention_days,omitempty"`
+	Metrics              []ReportingMetricDefinition `json:"metrics"`
 
 	// ScheduleReady Whether saved snapshots have the retention policy required for automatic publication. Present for schedule authors.
 	ScheduleReady *bool `json:"schedule_ready,omitempty"`
@@ -46472,14 +46518,17 @@ type ReportingEdition struct {
 	Evaluation ReportingEvaluation `json:"evaluation"`
 
 	// Expired Retention removed the readings; dated metadata remains.
-	Expired        *bool              `json:"expired,omitempty"`
-	Id             openapi_types.UUID `json:"id"`
-	IntendedDueAt  time.Time          `json:"intended_due_at"`
-	Name           string             `json:"name"`
-	Redacted       bool               `json:"redacted"`
-	ReportId       openapi_types.UUID `json:"report_id"`
-	ReportRevision int64              `json:"report_revision"`
-	Withheld       bool               `json:"withheld"`
+	Expired       *bool              `json:"expired,omitempty"`
+	Id            openapi_types.UUID `json:"id"`
+	IntendedDueAt time.Time          `json:"intended_due_at"`
+	Name          string             `json:"name"`
+
+	// Questions The answer each question card of the edition's layout kept, by card id. Present when one edition is read; absent in a list and once retention or erasure removed the answers.
+	Questions      *[]ReportingEditionQuestion `json:"questions,omitempty"`
+	Redacted       bool                        `json:"redacted"`
+	ReportId       openapi_types.UUID          `json:"report_id"`
+	ReportRevision int64                       `json:"report_revision"`
+	Withheld       bool                        `json:"withheld"`
 }
 
 // ReportingEditionList defines model for ReportingEditionList.
@@ -46487,6 +46536,26 @@ type ReportingEditionList struct {
 	Data       []ReportingEdition `json:"data"`
 	NextCursor *string            `json:"next_cursor,omitempty"`
 }
+
+// ReportingEditionQuestion What a sent edition kept for one question card. The answer is the one the sender was
+// given when the edition was captured. Each row stays only while the reader may read every
+// record behind it; any other row arrives withheld, as the analytics floor withholds one.
+type ReportingEditionQuestion struct {
+	Answer *AnalyticsAnswer `json:"answer,omitempty"`
+	CardId string           `json:"card_id"`
+
+	// Reason Why no answer was kept. `retention_unconfigured`: sent editions had no retention policy. `too_many_records`: the answer rested on more records than an edition keeps. `unanswered`: the sender could not ask the question when the edition was captured.
+	Reason *ReportingEditionQuestionReason `json:"reason,omitempty"`
+
+	// Status `kept`: the answer follows. `withheld`: this reader may not ask the question now, so nothing of the answer is shown. `not_kept`: the edition kept no answer, and `reason` says why.
+	Status ReportingEditionQuestionStatus `json:"status"`
+}
+
+// ReportingEditionQuestionReason Why no answer was kept. `retention_unconfigured`: sent editions had no retention policy. `too_many_records`: the answer rested on more records than an edition keeps. `unanswered`: the sender could not ask the question when the edition was captured.
+type ReportingEditionQuestionReason string
+
+// ReportingEditionQuestionStatus `kept`: the answer follows. `withheld`: this reader may not ask the question now, so nothing of the answer is shown. `not_kept`: the edition kept no answer, and `reason` says why.
+type ReportingEditionQuestionStatus string
 
 // ReportingEvaluation defines model for ReportingEvaluation.
 type ReportingEvaluation struct {
