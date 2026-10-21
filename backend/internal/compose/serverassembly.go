@@ -230,6 +230,9 @@ func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
 	reportingService := newReportingService(pool, time.Now)
 	s.reportingHandlers = reporting.NewHandlers(reportingService)
 	s.reportingExportHandlers = reportingExportHandlers{service: reportingService}
+	s.reportingReaderPreviewHandlers = reportingReaderPreviewHandlers{
+		reports: reportingService, roles: identity.NewServiceFor(InstallationDB(pool)),
+	}
 	s.forecastHandlers = forecasting.NewHandlers(
 		newForecastStoreFor(pool),
 		ForecastDeals, ForecastPeriodAt, ForecastWritableScope,

@@ -35,6 +35,9 @@ function CoveredDealSuggestion({
     { company_id: companyId },
     open && companyId !== undefined,
   );
+  if (companyId === undefined) {
+    return <p>{t("dealSuggestion.changed")}</p>;
+  }
   return (
     <QueryGate query={suggestions} pendingLabel={t("stat.evidence")}>
       {(found) => {

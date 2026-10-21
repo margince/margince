@@ -89,6 +89,28 @@ export const vi = {
   "dataTasks.blocked.earlier_step": "Cần hoàn tất bước trước đó.",
   "dataTasks.blocked.missing_prerequisite":
     "Cần hoàn tất các bản cập nhật bắt buộc trước.",
+  "dealSuggestion.linkedUnlinked":
+    "Đã liên kết bằng chứng. Một số bằng chứng giữ nguyên vì không có quyền di chuyển.",
+  "dealSuggestion.searchExisting": "Tìm giao dịch",
+  "dealSuggestion.existingDeal": "Giao dịch hiện có",
+  "dealSuggestion.moreDeals": "Tải thêm giao dịch",
+  "dealSuggestion.noMatchingDeals":
+    "Không có giao dịch phù hợp tại công ty này.",
+  "dealSuggestion.changed":
+    "Đề xuất này không còn khả dụng. Tải lại các mục cần kiểm tra để xem trạng thái hiện tại.",
+  "dealSuggestion.linkExisting": "Liên kết với giao dịch hiện có",
+  "dealSuggestion.linked": "Đã liên kết bằng chứng với giao dịch.",
+  "dealSuggestion.dismissTitle": "Bỏ qua đề xuất giao dịch",
+  "dealSuggestion.linkEffect":
+    "Liên kết bằng chứng được trích dẫn với giao dịch tại {company}; không tạo giao dịch mới.",
+  "dealSuggestion.dismissEffect":
+    "Đóng đề xuất này cho {company} và lưu lý do.",
+  "dealSuggestion.dismissReason": "Lý do",
+  "dealSuggestion.dismissReason.not_a_deal": "Không có ý định mua",
+  "dealSuggestion.dismissReason.already_tracked": "Đã được theo dõi",
+  "dealSuggestion.dismissReason.wrong_company": "Sai công ty",
+  "dealSuggestion.dismissReason.historical": "Hoạt động trong quá khứ",
+  "dealSuggestion.dismissReason.other": "Lý do khác",
   "approval.preview.nameUnavailable": "Không có tên",
   "approval.preview.structured": "Giá trị có cấu trúc: {value}",
   "approval.preview.resolveConflict":
@@ -276,6 +298,13 @@ export const vi = {
   "reporting.draftPreviewing":
     "Bạn đang xem bản nháp. Ai đọc báo cáo vẫn thấy bản đã công bố.",
   "reporting.previewDraft": "Xem trước bản nháp",
+  "reporting.previewAs": "Xem trước với vai trò",
+  "reporting.previewAsSelf": "Góc nhìn của bạn",
+  "reporting.previewAsBanner":
+    "Xem trước với vai trò {role}: những gì một tài khoản có vai trò này và cùng các nhóm đọc được trong báo cáo này. Bản ghi riêng tư của tài khoản khác vẫn bị ẩn ở đây.",
+  "reporting.endPreview": "Kết thúc xem trước",
+  "reporting.previewNoRecords":
+    "Bản xem trước không mở bản ghi. Kết thúc xem trước để mở chúng với quyền truy cập của bạn.",
   "reporting.showPublished": "Hiện bản đã công bố",
   "reporting.publishDraft": "Công bố bản nháp",
   "reporting.discardDraft": "Bỏ bản nháp",

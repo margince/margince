@@ -82,6 +82,28 @@ export const de = {
     "Ein vorheriger Schritt muss zuerst abgeschlossen werden.",
   "dataTasks.blocked.missing_prerequisite":
     "Erforderliche Aktualisierungen müssen zuerst abgeschlossen werden.",
+  "dealSuggestion.linkedUnlinked":
+    "Belege verknüpft. Einige Belege bleiben unverändert, da die Berechtigung zum Verschieben fehlt.",
+  "dealSuggestion.searchExisting": "Deals suchen",
+  "dealSuggestion.existingDeal": "Bestehender Deal",
+  "dealSuggestion.moreDeals": "Weitere Deals laden",
+  "dealSuggestion.noMatchingDeals":
+    "Keine passenden Deals bei diesem Unternehmen.",
+  "dealSuggestion.changed":
+    "Dieser Vorschlag ist nicht mehr verfügbar. Lade die Prüfpunkte neu, um den aktuellen Stand zu sehen.",
+  "dealSuggestion.linkExisting": "Mit bestehendem Deal verknüpfen",
+  "dealSuggestion.linked": "Belege mit dem Deal verknüpft.",
+  "dealSuggestion.dismissTitle": "Deal-Vorschlag verwerfen",
+  "dealSuggestion.linkEffect":
+    "Die genannten Belege mit einem Deal bei {company} verknüpfen; es entsteht kein neuer Deal.",
+  "dealSuggestion.dismissEffect":
+    "Diesen Vorschlag für {company} schließen und den Grund speichern.",
+  "dealSuggestion.dismissReason": "Grund",
+  "dealSuggestion.dismissReason.not_a_deal": "Kein Kaufinteresse",
+  "dealSuggestion.dismissReason.already_tracked": "Bereits erfasst",
+  "dealSuggestion.dismissReason.wrong_company": "Falsches Unternehmen",
+  "dealSuggestion.dismissReason.historical": "Frühere Aktivität",
+  "dealSuggestion.dismissReason.other": "Anderer Grund",
   "approval.preview.nameUnavailable": "Name nicht verfügbar",
   "approval.preview.structured": "Strukturierter Wert: {value}",
   "approval.preview.resolveConflict":
@@ -270,6 +292,13 @@ export const de = {
   "reporting.draftPreviewing":
     "Hier steht der Entwurf. Wer den Bericht liest, sieht weiter die veröffentlichte Fassung.",
   "reporting.previewDraft": "Entwurf ansehen",
+  "reporting.previewAs": "Vorschau als",
+  "reporting.previewAsSelf": "Eigene Ansicht",
+  "reporting.previewAsBanner":
+    "Vorschau als {role}: was ein Platz mit dieser Rolle und denselben Teams von diesem Bericht liest. Private Datensätze anderer bleiben auch hier verborgen.",
+  "reporting.endPreview": "Vorschau beenden",
+  "reporting.previewNoRecords":
+    "In der Vorschau öffnen sich keine Datensätze. Nach dem Ende der Vorschau öffnen sie sich mit dem eigenen Zugriff.",
   "reporting.showPublished": "Veröffentlichte Fassung zeigen",
   "reporting.publishDraft": "Entwurf veröffentlichen",
   "reporting.discardDraft": "Entwurf verwerfen",
