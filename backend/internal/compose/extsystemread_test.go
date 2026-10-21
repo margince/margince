@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -94,14 +95,25 @@ func TestAnAttendedCanReadAnswersOnlyItsHumanCallerAboutThemselves(t *testing.T)
 		"a human about themselves":     {human, self, extension.ErrInvalid},
 		"a human about a colleague":    {human, other, extension.ErrAttendedRead},
 		"an agent about its own human": {agent, self, extension.ErrAttendedRead},
+		"the same id in upper case":    {human, self, extension.ErrInvalid},
 	} {
 		ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), ids.NewV7()), c.actor)
 		rt := runtimeFor(ctx, "dealmirror", "1.0.0", "tool/probe", extensionRuntimeBinding{pool: &pgxpool.Pool{}})
-		_, err := rt.Authority().CanRead(ctx, extension.UserID(c.about.String()), company, nil)
+		about := c.about.String()
+		if name == "the same id in upper case" {
+			about = strings.ToUpper(about)
+		}
+		_, err := rt.Authority().CanRead(ctx, extension.UserID(about), company, nil)
 		rt.release()
 		if !errors.Is(err, c.want) {
 			t.Errorf("%s: err = %v, want %v", name, err, c.want)
 		}
+	}
+	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), ids.NewV7()), human)
+	rt := runtimeFor(ctx, "dealmirror", "1.0.0", "tool/probe", extensionRuntimeBinding{pool: &pgxpool.Pool{}})
+	defer rt.release()
+	if _, err := rt.Authority().CanRead(ctx, "not-a-user", company, nil); !errors.Is(err, extension.ErrInvalid) {
+		t.Errorf("a malformed user id: err = %v, want ErrInvalid", err)
 	}
 }
 

@@ -57,15 +57,20 @@ func (r *callRuntime) systemRead(ctx context.Context, read extension.SystemRead)
 // human about themselves. That answer is what their own grants already show
 // them, so it hands the caller nothing they could not open.
 func (r *callRuntime) authorityRead(ctx context.Context, user extension.UserID) (context.Context, error) {
-	return r.gatedRead(ctx, extension.SystemReadAuthority, r.systemReads || r.callerIs(user))
+	return r.gatedRead(ctx, extension.SystemReadAuthority, r.systemReads || r.asksAboutItself(user))
 }
 
-// callerIs reports whether user is the human this call runs as. An agent or a
-// connector is refused even on its human's id: its scopes may be narrower.
-func (r *callRuntime) callerIs(user extension.UserID) bool {
-	caller := r.Caller()
+// asksAboutItself reports whether user is the human this call runs as. An agent
+// or a connector is refused even on its human's id: its scopes may be narrower.
+// A malformed id passes, so CanRead refuses it as malformed rather than as
+// attended.
+func (r *callRuntime) asksAboutItself(user extension.UserID) bool {
 	id, err := unitID(string(user), "user")
-	return err == nil && caller.Type == extension.CallerHuman && !caller.IsAgent && caller.UserID == id.String()
+	if err != nil {
+		return true
+	}
+	caller := r.Caller()
+	return caller.Type == extension.CallerHuman && !caller.IsAgent && caller.UserID == id.String()
 }
 
 func (r *callRuntime) gatedRead(ctx context.Context, read extension.SystemRead, admitted bool) (context.Context, error) {
