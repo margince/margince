@@ -14575,7 +14575,7 @@ export const de = {
   "sched.recipientsMore": "{first} und {count} weitere",
   "sched.move": "Neu planen",
   "sched.moveTo": "Neuer Zeitpunkt für „{subject}“",
-  "sched.moveSave": "Auf diesen Zeitpunkt verschieben",
+  "sched.moveSave": "Nachricht verschieben",
   "sched.withdraw": "Zurückziehen",
   "sched.withdrawTitle": "Nachricht zurückziehen?",
   "sched.withdrawBody":

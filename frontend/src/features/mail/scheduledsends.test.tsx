@@ -295,7 +295,7 @@ it("pins a move to the version the row was drawn from", async () => {
   );
   await user.clear(picker);
   await user.type(picker, "2026-09-02T08:30");
-  await user.click(screen.getByRole("button", { name: "Move to this time" }));
+  await user.click(screen.getByRole("button", { name: "Move message" }));
   const patch = calls.find((call) => call.method === "PATCH");
   expect(patch?.ifMatch).toBe("3");
   expect(patch?.body).toEqual({
@@ -328,7 +328,7 @@ it("refuses to move a message to nowhere", async () => {
   await user.clear(screen.getByLabelText(/New time for/));
   expect(
     screen
-      .getByRole("button", { name: "Move to this time" })
+      .getByRole("button", { name: "Move message" })
       .hasAttribute("disabled"),
   ).toBe(true);
   expect(calls.some((call) => call.method === "PATCH")).toBe(false);
@@ -356,7 +356,7 @@ it("tells the reader to read the list again when the row is not the row on the s
   const user = userEvent.setup();
   mountRefusing([WAITING], "PATCH");
   await user.click(await screen.findByRole("button", { name: /Reschedule: / }));
-  await user.click(screen.getByRole("button", { name: "Move to this time" }));
+  await user.click(screen.getByRole("button", { name: "Move message" }));
   expect(await screen.findByText(/List out of date/)).toBeTruthy();
   expect(screen.getByRole("button", { name: "Reload" })).toBeTruthy();
   // The raw server detail is the one thing that must not reach the reader: it

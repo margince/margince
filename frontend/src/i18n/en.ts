@@ -14548,7 +14548,7 @@ export const en = {
   "sched.recipientsMore": "{first} and {count} more",
   "sched.move": "Reschedule",
   "sched.moveTo": "New time for “{subject}”",
-  "sched.moveSave": "Move to this time",
+  "sched.moveSave": "Move message",
   "sched.withdraw": "Withdraw",
   "sched.withdrawTitle": "Withdraw this message?",
   "sched.withdrawBody":

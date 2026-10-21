@@ -252,7 +252,7 @@ Also called: send later, delayed send, timed email.
 ### How do I cancel or reschedule a scheduled email?
 To cancel or move a scheduled email in Margince, press the clock beside the bell in the top bar. Use **Reschedule** or **Withdraw** on the message.
 1. Press the clock, **Scheduled messages**. Its number counts waiting and held messages, and it changes colour when one is held.
-2. To move it, press **Reschedule**, then **Tomorrow morning**, **Tomorrow afternoon** or **Monday morning**. Or pick a time and press **Move to this time**. A toast offers **Undo**. Only the time can change.
+2. To move it, press **Reschedule**, then **Tomorrow morning**, **Tomorrow afternoon** or **Monday morning**. Or pick a time and press **Move message**. A toast offers **Undo**. Only the time can change.
 3. To cancel it, press **Withdraw**, then **Withdraw message** in "Withdraw this message?".
 Also called: unschedule, delete a scheduled email, change send time.
 

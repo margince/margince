@@ -14216,7 +14216,7 @@ export const vi = {
   "sched.recipientsMore": "{first} và {count} người khác",
   "sched.move": "Đổi giờ gửi",
   "sched.moveTo": "Giờ gửi mới cho “{subject}”",
-  "sched.moveSave": "Chuyển sang giờ này",
+  "sched.moveSave": "Chuyển tin nhắn",
   "sched.withdraw": "Thu h\u1ed3i",
   "sched.withdrawTitle": "Thu h\u1ed3i tin nh\u1eafn n\u00e0y?",
   "sched.withdrawBody":
