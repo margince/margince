@@ -15,14 +15,12 @@ import (
 
 // calendarReadFailure gives a provider's failure to report a calendar's
 // occupancy one answer for every reader of busy time. The booking page, the
-// proposal page, the assistant tool, the reschedule check and the writes that
-// re-check the slot all read it through calendarBusy, so their verdicts agree.
+// assistant tool, the reschedule check and the writes that re-check a slot all
+// read it through calendarBusy, so their verdicts agree.
 //
-// Only a failure that came from the provider is the calendar's fault: the
-// connector's own classification, or a provider that could not be reached.
-// Everything else (a database error, a missing connector, a refused
-// credential, a caller who left) passes through, so it keeps its status and
-// its error-level log line.
+// Only a failure from the provider is the calendar's fault: the connector's own
+// classification, or a provider that could not be reached. Anything else
+// passes through, so it keeps its status and its error-level log line.
 func calendarReadFailure(ctx context.Context, host ids.UserID, provider, calendar string, err error) error {
 	if ctx.Err() != nil {
 		return err

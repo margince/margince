@@ -5,12 +5,12 @@
 
 package gates
 
-// A port error that answers a reader with its own machine code through
-// MessageFault must have catalog copy on the screen, keyed by that code
-// (PROBLEM_CODE_COPY in problemcodecopy.ts), or the reader gets the server's
-// English sentence whatever language they set. The ports are the subject because
-// their errors reach several surfaces and are written away from the screens.
-// The codes are read from the MessageFault methods, so no list is kept here.
+// A port error that answers a reader with its own code through MessageFault
+// needs catalog copy on the screen. The copy is keyed by that code
+// (PROBLEM_CODE_COPY in problemcodecopy.ts). Without it the reader gets the
+// server's English sentence in any language. The ports are the subject because their errors reach several
+// surfaces and are written away from the screens. The codes are read from the
+// MessageFault methods, so no list is kept here.
 
 import (
 	"go/ast"

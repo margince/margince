@@ -17,13 +17,13 @@ import (
 const CalendarUnavailableCode = "calendar_unavailable"
 
 // CalendarUnavailableError says a selected calendar's occupancy could not be
-// established. The provider reported an error for it, left it out, or answered
-// in a shape that cannot be trusted. Slots on a partial picture would
-// double-book the host, so every availability read refuses instead.
+// established. The provider reported an error, left it out, or answered in a
+// shape that cannot be trusted. A partial picture would double-book the host,
+// so availability refuses instead.
 //
 // Calendar and Reason are for the operator's log only. The client gets the
-// fixed sentence from MessageFault: the calendar id is the host's account, and
-// the reason is text a remote party chose.
+// fixed sentence from MessageFault, because the calendar id is the host's
+// account and the reason is text a remote party chose.
 type CalendarUnavailableError struct {
 	Calendar string
 	// Reason is the provider's machine code, or a short label when it named
@@ -39,10 +39,10 @@ func NewCalendarUnavailable(calendar, reason string, cause error) *CalendarUnava
 }
 
 // CalendarReadFailed classifies a failure out of a provider's busy-time answer.
-// A shape the connector cannot trust (an unreadable body, an interval that ends
-// before it starts, a page chain that never ends) becomes the calendar's fault.
-// A refused credential, an unreachable provider and a cancelled request keep
-// their own classes, because the caller already acts on each of them.
+// A shape the connector cannot trust becomes the calendar's fault. Examples are
+// an unreadable body, an interval that ends before it starts and a page chain
+// that never ends. A refused credential, an unreachable provider and a
+// cancelled request keep their own classes, which the caller already acts on.
 func CalendarReadFailed(calendar string, err error) error {
 	if err == nil || errors.Is(err, ErrAuthRejected) || errors.Is(err, ErrUnreachable) ||
 		errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {

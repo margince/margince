@@ -157,9 +157,9 @@ export function retryQuery(failureCount: number, error: Error): boolean {
   // three of them, and the reader is told in the same breath that the first
   // may still be working. Their own retry is a decision; this one is not.
   const code = problemCodeOf(error);
-  // An unreadable host calendar is settled until the host repairs it, and every
-  // repeat is another provider call and another warn line, from an anonymous
-  // page as often as from the host's own.
+  // An unreadable host calendar is settled until the host repairs it. Each
+  // repeat is another provider call and another warn line. An anonymous page
+  // causes them as often as the host's own.
   const needsTheHost = code === "calendar_unavailable";
   const gaveUpWaiting = code === "gateway_unavailable";
   return (

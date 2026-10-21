@@ -18,8 +18,8 @@ import (
 
 const teamCalendar = "team@example.test"
 
-// serveGoogle answers freeBusy with an empty, error-free calendar and hands the
-// event read to events, so a test drives the shape of one answer at a time.
+// serveGoogle answers freeBusy with an empty, error-free calendar. The event
+// read goes to events, so a test drives the shape of one answer at a time.
 func serveGoogle(t *testing.T, events func(http.ResponseWriter, *http.Request)) *httptest.Server {
 	t.Helper()
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
