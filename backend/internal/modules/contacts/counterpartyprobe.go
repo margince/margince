@@ -5,10 +5,12 @@ package contacts
 
 import (
 	"context"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 // ProbeCounterpartyMatch refuses a sender whose address or domain already
@@ -25,6 +27,12 @@ func (s *Store) ProbeCounterpartyMatch(ctx context.Context, email, domain string
 // transaction. It matches as the ensure does, and holds each matched record
 // FOR SHARE until the ensure that follows has written.
 func (s *Store) ProbeCounterpartyMatchTx(ctx context.Context, tx pgx.Tx, email, domain string) error {
+	// An erased address creates nothing, so there is no record to ask about;
+	// the ensure resolves it as suppressed.
+	suppressed, err := storekit.EmailSuppressed(ctx, tx, strings.ToLower(strings.TrimSpace(email)))
+	if err != nil || suppressed {
+		return err
+	}
 	matched, err := exactContactByEmail(ctx, tx, []string{email})
 	if err != nil {
 		return err

@@ -159,3 +159,36 @@ func TestAcceptingASenderWhoseCompanyTheDeciderCannotSeeIsRefused(t *testing.T) 
 		t.Errorf("a refused accept planted %d employment edge(s) on the private company", n)
 	}
 }
+
+// A held lead on the sender's address is promoted by the accept only for a
+// decider who may promote one. The write runs as the system, which may.
+func TestAcceptingASenderPromotesTheirLeadOnlyForADeciderWhoMay(t *testing.T) {
+	for name, mayPromote := range map[string]bool{"may not": false, "may": true} {
+		t.Run(name, func(t *testing.T) {
+			s := stageSenderCard(t, func(e *integration.Env) ids.UUID { return e.Rep1 })
+			lead := ids.NewV7()
+			s.WsExec(t, `INSERT INTO lead (id, full_name, email, status, source, captured_by)
+				VALUES ($1, 'Held Lead', $2, 'new', 'manual', 'human:x')`, lead, privateSender)
+			// A lead is folded only into a contact the workspace sees, and only
+			// once the sender has written to us.
+			s.WsExec(t, `UPDATE contact SET visibility = 'workspace' WHERE id = $1`, s.contact)
+			s.WsExec(t, `INSERT INTO activity_participant (activity_id, role, address) VALUES ($1, 'from', $2)`,
+				s.mail, privateSender)
+			decider := s.decider()
+			if mayPromote {
+				actor, _ := principal.Actor(decider)
+				actor.Permissions.Objects = maps.Clone(actor.Permissions.Objects)
+				actor.Permissions.Objects["lead"] = principal.ObjectGrant{Read: true, Update: true}
+				decider = principal.WithActor(decider, actor)
+			}
+
+			if _, err := s.svc.Decide(decider, s.approval, true, nil); err != nil {
+				t.Fatalf("accepting: %v", err)
+			}
+			status := s.WsScalar(t, `SELECT status FROM lead WHERE id = $1`, lead)
+			if promoted := status == "promoted"; promoted != mayPromote {
+				t.Errorf("the lead is %q after a decider who %s promote it accepted, want promoted=%v", status, name, mayPromote)
+			}
+		})
+	}
+}
