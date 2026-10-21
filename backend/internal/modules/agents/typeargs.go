@@ -4,9 +4,8 @@
 package agents
 
 // A top-level argument's declared JSON `type`, held at the chokepoint numargs.go
-// uses. It runs before a call is staged, so a human is never asked to release a
-// call whose handler would refuse its arguments; an extension unit's handler is
-// the only other place a type is checked, and it runs after the approval is spent.
+// uses. It runs before a call is staged, so no human approves a call its handler
+// would refuse. An extension handler checks types only after the approval is spent.
 
 import (
 	"encoding/json"

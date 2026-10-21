@@ -252,9 +252,9 @@ func (p localProvider) ReadLeadForReversal(ctx context.Context, id ids.UUID) (da
 func (localProvider) Read(_ context.Context, ref datasource.EntityRef) (datasource.Record, error) {
 	return nativeRecord(datasource.Record{
 		Ref: ref, Version: 1,
-		// One record shape serving every tool in the corpus: a name for the
-		// labels a summary is written from, the channel kind the reply tools
-		// ask for before they will describe a send, and the domain a read reads.
+		// One record shape serves every tool in the corpus. It carries a name for
+		// the summary labels, the channel kind the reply tools need, and the
+		// domain an enrich reads.
 		Fields: json.RawMessage(`{"full_name":"Ada Lovelace","name":"Ada Lovelace",` +
 			`"kind":"message","channel_provider":"telegram","domains":[{"domain":"acme.example"}]}`),
 	}), nil

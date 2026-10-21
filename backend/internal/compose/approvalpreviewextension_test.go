@@ -14,8 +14,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// A unit names its own arguments, so one named like a detail the client renders
-// as markup must still reach the client under the plain-text prefix, and bounded.
+// A unit names its own arguments. One named like a detail the client renders as
+// markup still reaches the client under the plain-text prefix, and bounded.
 func TestAnExtensionArgumentCannotTakeADetailKeyTheClientRendersAsMarkup(t *testing.T) {
 	kind := approvals.ExtensionKind{Verb: "forget_record", TargetTable: "ext_demo_record"}
 	target, table, summary := openapi_types.UUID(ids.NewV7()), kind.TargetTable, "Forget record (demo)"
