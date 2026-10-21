@@ -174,12 +174,11 @@ gate guards the values.
 
 One rule catches developers out: a record write refuses what it cannot store. A request body's
 `additionalProperties` carries no shape contract per key, so the write checks each extra key itself
-(`storekit.CheckCustomValues`). A 422 names each key that fails. Three things fail. One is a key that
-is not a `cf_` key. Another is a `cf_` key that names no active field. The third is a value of the wrong
-type or outside the field's options.
+(`storekit.CheckCustomValues`). A 422 names each key that fails.
 
-The codes are `unknown_field` and `invalid_value`. Nothing is written, so a success always means every
-key was stored.
+Three things fail. One is a key that is not a `cf_` key. Another is a `cf_` key that names no active
+field. The third is a value of the wrong type or outside the field's options. The codes are
+`unknown_field` and `invalid_value`. Nothing is written, so a success means every key was stored.
 
 ## No `cf_*` column is indexed
 

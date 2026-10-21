@@ -16,13 +16,13 @@ func optionColumn(name, typ string, options ...string) fieldcatalog.Column {
 
 func TestEveryRefusedCustomKeyIsNamedInOneAnswer(t *testing.T) {
 	active := []fieldcatalog.Column{col("cf_score", fieldcatalog.TypeNumber)}
-	_, err := CustomBindValues(active, map[string]any{"cf_nmae": "x", "cf_score": "n/a", "cf_other": 1})
+	_, err := CustomBindValues(active, map[string]any{"cf_nme": "x", "cf_score": "n/a", "cf_other": 1})
 	refused, ok := errors.AsType[CustomFieldErrors](err)
 	if !ok || len(refused) != 3 {
 		t.Fatalf("got %v, want all three keys refused", err)
 	}
 	faults := refused.FieldFaults()
-	if faults[0].Field != "cf_nmae" || faults[1].Field != "cf_other" || faults[2].Field != "cf_score" {
+	if faults[0].Field != "cf_nme" || faults[1].Field != "cf_other" || faults[2].Field != "cf_score" {
 		t.Fatalf("the keys came back as %+v, want them in key order", faults)
 	}
 	if refused.Error() == refused[0].Error() {

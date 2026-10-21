@@ -132,7 +132,7 @@ func TestACustomValueNoColumnTakesIsRefusedByName(t *testing.T) {
 		name, key, code string
 		values          map[string]any
 	}{
-		{"a key no column names", "cf_nmae", CustomFieldUnknown, map[string]any{"cf_nmae": "x"}},
+		{"a key no column names", "cf_nme", CustomFieldUnknown, map[string]any{"cf_nme": "x"}},
 		{"a retired column", "cf_old", CustomFieldUnknown, map[string]any{"cf_old": true}},
 		{"a wrong shape", "cf_score", CustomFieldInvalid, map[string]any{"cf_score": "not-a-number"}},
 	}
