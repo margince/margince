@@ -36845,6 +36845,14 @@ type DealSuggestionListResponse struct {
 	Page PageInfo         `json:"page"`
 }
 
+// DealWinEvidence defines model for DealWinEvidence.
+type DealWinEvidence struct {
+	// HasSignedContract True when the deal has a contract that left draft, with a signing date and a
+	// current or final contract or legal file attached. A win on such a deal needs
+	// no reason; any other win names why there is none.
+	HasSignedContract bool `json:"has_signed_contract"`
+}
+
 // DecideCommissionRequest defines model for DecideCommissionRequest.
 type DecideCommissionRequest struct {
 	// Decision `approve` moves an accrued entry to approved; `pay` moves an approved one to paid.
@@ -74093,6 +74101,9 @@ type ServerInterface interface {
 	// Where the deal stands, what could lose it, and the one thing to do next.
 	// (GET /deals/{id}/status)
 	GetDealStatus(w http.ResponseWriter, r *http.Request, id Id, params GetDealStatusParams)
+	// Whether the deal has the signed agreement a win rests on.
+	// (GET /deals/{id}/win-evidence)
+	GetDealWinEvidence(w http.ResponseWriter, r *http.Request, id Id)
 	// The dedupe review queue, confidence-sorted.
 	// (GET /dedupe/candidates)
 	ListDedupeCandidates(w http.ResponseWriter, r *http.Request, params ListDedupeCandidatesParams)
@@ -78086,6 +78097,12 @@ func (_ Unimplemented) ListDealStakeholders(w http.ResponseWriter, r *http.Reque
 // Where the deal stands, what could lose it, and the one thing to do next.
 // (GET /deals/{id}/status)
 func (_ Unimplemented) GetDealStatus(w http.ResponseWriter, r *http.Request, id Id, params GetDealStatusParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Whether the deal has the signed agreement a win rests on.
+// (GET /deals/{id}/win-evidence)
+func (_ Unimplemented) GetDealWinEvidence(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -100121,6 +100138,40 @@ func (siw *ServerInterfaceWrapper) GetDealStatus(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// GetDealWinEvidence operation middleware
+func (siw *ServerInterfaceWrapper) GetDealWinEvidence(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetDealWinEvidence(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListDedupeCandidates operation middleware
 func (siw *ServerInterfaceWrapper) ListDedupeCandidates(w http.ResponseWriter, r *http.Request) {
 
@@ -119773,6 +119824,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deals/{id}/status", wrapper.GetDealStatus)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/deals/{id}/win-evidence", wrapper.GetDealWinEvidence)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/dedupe/candidates", wrapper.ListDedupeCandidates)

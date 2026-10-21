@@ -4792,6 +4792,37 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/deals/{id}/win-evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Whether the deal has the signed agreement a win rests on.
+         * @description The question `POST /deals/{id}/advance` asks before it lets a deal land on a won
+         *     stage: does the deal carry a contract that left draft, has a signing date, and has
+         *     a current or final contract or legal file attached. It is the same check, so the
+         *     answer and the refusal cannot disagree.
+         *
+         *     A client reads this before it asks someone to confirm a win. With
+         *     `has_signed_contract: false` the win needs `won_without_contract_reason`, and the
+         *     client can ask for it up front instead of after a refused attempt. The advance
+         *     still checks again when it runs, because the agreement can be archived in between.
+         */
+        get: operations["getDealWinEvidence"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/stage-automation/report": {
         parameters: {
             query?: never;
@@ -32927,6 +32958,14 @@ export interface components {
             data: components["schemas"]["StageEvidence"][];
             page: components["schemas"]["PageInfo"];
         };
+        DealWinEvidence: {
+            /**
+             * @description True when the deal has a contract that left draft, with a signing date and a
+             *     current or final contract or legal file attached. A win on such a deal needs
+             *     no reason; any other win names why there is none.
+             */
+            has_signed_contract: boolean;
+        };
         /**
          * @description One thing that must be true of a deal before it leaves a stage. Mirrors the
          *     `stage_exit_criterion` table. Configuration, not observation: whether a
@@ -56285,6 +56324,32 @@ export interface operations {
                     "application/json": components["schemas"]["StageEvidenceListResponse"];
                 };
             };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getDealWinEvidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Whether the agreement a win needs is on the deal. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealWinEvidence"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };

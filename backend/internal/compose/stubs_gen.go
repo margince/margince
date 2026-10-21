@@ -1783,6 +1783,10 @@ func (stubs) GetDealStatus(w nethttp.ResponseWriter, r *nethttp.Request, id crmc
 	httperr.NotImplemented(w, r, "GetDealStatus")
 }
 
+func (stubs) GetDealWinEvidence(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetDealWinEvidence")
+}
+
 func (stubs) ListDedupeCandidates(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListDedupeCandidatesParams) {
 	httperr.NotImplemented(w, r, "ListDedupeCandidates")
 }

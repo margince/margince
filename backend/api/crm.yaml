@@ -7048,6 +7048,35 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /deals/{id}/win-evidence:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Deals]
+      operationId: getDealWinEvidence
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
+      summary: Whether the deal has the signed agreement a win rests on.
+      description: |
+        The question `POST /deals/{id}/advance` asks before it lets a deal land on a won
+        stage: does the deal carry a contract that left draft, has a signing date, and has
+        a current or final contract or legal file attached. It is the same check, so the
+        answer and the refusal cannot disagree.
+
+        A client reads this before it asks someone to confirm a win. With
+        `has_signed_contract: false` the win needs `won_without_contract_reason`, and the
+        client can ask for it up front instead of after a refused attempt. The advance
+        still checks again when it runs, because the agreement can be archived in between.
+      responses:
+        '200':
+          description: Whether the agreement a win needs is on the deal.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealWinEvidence' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   # ------------------------- /stage-automation/report -------------------------
   /stage-automation/report:
     get:
@@ -45482,6 +45511,17 @@ components:
       properties:
         data: { type: array, items: { $ref: '#/components/schemas/StageEvidence' } }
         page: { $ref: '#/components/schemas/PageInfo' }
+
+    DealWinEvidence:
+      type: object
+      required: [has_signed_contract]
+      properties:
+        has_signed_contract:
+          type: boolean
+          description: |
+            True when the deal has a contract that left draft, with a signing date and a
+            current or final contract or legal file attached. A win on such a deal needs
+            no reason; any other win names why there is none.
 
     StageExitCriterion:
       type: object
