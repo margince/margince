@@ -11,7 +11,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/agents"
 )
 
-// A consent route is human-only when it holds or changes a person's decision.
+// A consent route is human-only when it holds or changes a contact's decision.
 // It is a read tool when it names the workspace's vocabulary.
 // The contract says which, and the policy table derives from it, so this test
 // reads the table and keeps no list of its own.
@@ -19,13 +19,13 @@ import (
 // The purposes catalog is configuration and holds no one's consent. An agent
 // reads it to name a purpose on the send tools. Its writes stay human-only.
 func TestConsentRoutesSplitByWhoseDecisionTheyHold(t *testing.T) {
-	const personConsent = "/v1/contacts/{id}/consent"
+	const contactConsent = "/v1/contacts/{id}/consent"
 	seen := 0
 	for route, pol := range agentPolicies {
-		if _, pattern, _ := strings.Cut(route, " "); strings.HasPrefix(pattern, personConsent) {
+		if _, pattern, _ := strings.Cut(route, " "); strings.HasPrefix(pattern, contactConsent) {
 			seen++
 			if pol.Access != accessHumanOnly {
-				t.Errorf("%s (%s) holds a person's consent and is admitted as %q; it must be human-only",
+				t.Errorf("%s (%s) holds a contact's consent and is admitted as %q; it must be human-only",
 					route, pol.Op, pol.Access)
 			}
 		}
