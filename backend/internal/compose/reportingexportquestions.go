@@ -14,10 +14,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/formulacell"
 )
 
-// questionCSVRows writes each question card of an edition in page order: one
-// row per kept answer row and measure, or one row saying why there is none. A
-// question's text reaches the file only through formulacell.Guard, since a
-// measure's alias and a group's name are typed by people.
+// questionCSVRows writes each question card of an edition in page order. It
+// writes one row per kept answer row and measure, or one saying why not. A
+// question's text reaches the file only through formulacell.Guard. People
+// type a measure's alias and a group's name.
 func questionCSVRows(edition crmcontracts.ReportingEdition) [][]string {
 	// Retention and erasure remove every answer and leave no list. That is not
 	// the same as an answer never kept, so such an edition writes no question rows.
@@ -89,8 +89,8 @@ func keptAnswerRows(question crmcontracts.ReportingCardQuestion, answer crmcontr
 	return rows
 }
 
-// answerMoney reads a money measure the way the screen does: a converted
-// amount is in the base currency, a native one in its row's own currency.
+// answerMoney reads a money measure the way the screen does. A converted
+// amount is in the base currency. A native one is in its row's own currency.
 type answerMoney struct {
 	spec reportSpec
 	base string

@@ -40,8 +40,8 @@ func exportedQuestionRows(reader context.Context, t *testing.T, q *questionEditi
 }
 
 // The edition's export carries the kept answer, judged for whoever downloads
-// it as the screen judges it: the sender gets the count, and a reader who may
-// not ask the question gets only that it was withheld.
+// it as the screen judges it. The sender gets the count. A reader who may not
+// ask the question gets only that it was withheld.
 func TestAnEditionExportCarriesItsKeptAnswers(t *testing.T) {
 	q := newQuestionEditions(t)
 	q.keepForAYear(t)

@@ -65,8 +65,8 @@ func TestAnEditionExportGuardsAQuestionsAlias(t *testing.T) {
 	}
 }
 
-// A kept money measure is written with its unit and the one currency it is
-// in, or with no value and the reason no single currency applies.
+// A kept money measure is written with its unit and its one currency. Without
+// a single currency it has no value and says why.
 func TestAKeptMoneyMeasureStatesItsUnitAndCurrency(t *testing.T) {
 	native := answerMoney{spec: reportSpec{nativeMeasures: nativeMoney(fieldAmountMinor)}, base: "EUR"}
 	noBase := answerMoney{spec: native.spec}
@@ -94,8 +94,8 @@ func TestAKeptMoneyMeasureStatesItsUnitAndCurrency(t *testing.T) {
 	}
 }
 
-// Retention and erasure leave an edition with no answers at all, which is not
-// the same as answers never kept, so the file says nothing about its cards.
+// Retention and erasure leave an edition with no answers at all. That differs
+// from answers never kept, so the file says nothing about its cards.
 func TestAnEditionWhoseAnswersWereRemovedWritesNoQuestionRows(t *testing.T) {
 	edition := questionEdition("deals")
 	edition.Questions = nil
