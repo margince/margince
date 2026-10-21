@@ -330,6 +330,12 @@ const source = "FROM contact LIMIT 1"`,
 		tables: 1,
 	},
 	{
+		name:   "a trailing marker covers only its own line",
+		body:   "\n_ = \"SELECT * FROM Invoice\" //margince:vendor-query sent to the vendor's query API\n_ = \"SELECT id FROM contact\"\n",
+		want:   `"contact"`,
+		tables: 1,
+	},
+	{
 		name:   "prose that merely reads like SQL",
 		body:   `_ = "hello from the demo extension"; _ = "update the note, then select the row"; _ = "truncate the note body before sending"; _ = "do the work, then copy the note"`,
 		tables: 0,

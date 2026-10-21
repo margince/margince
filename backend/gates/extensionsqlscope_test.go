@@ -146,7 +146,7 @@ func scanUnitSQL(t testing.TB, unit string, sources map[string]string) extSQLSca
 	consts := stringConstants(files)
 	scan := extSQLScan{}
 	for _, file := range files {
-		marked, unexplained := vendorQueryLines(fset, file)
+		marked, unexplained := vendorQueryLines(fset, file, sources[fset.File(file.Pos()).Name()])
 		scan.findings = append(scan.findings, unexplained...)
 		for _, stmt := range sqlStrings(file, consts) {
 			if marked[fset.Position(stmt.pos).Line] {
@@ -167,9 +167,11 @@ func scanUnitSQL(t testing.TB, unit string, sources map[string]string) extSQLSca
 // query API. It never reaches the database, so it names no table of ours.
 const vendorQueryMarker = "//margince:vendor-query"
 
-// vendorQueryLines answers the lines each marker covers, its own and the next,
-// and a finding for each marker that gives no reason.
-func vendorQueryLines(fset *token.FileSet, file *ast.File) (map[int]bool, []string) {
+// vendorQueryLines answers the lines each marker covers, and a finding for each
+// marker that gives no reason. A marker after code covers its own line; one on
+// a line of its own covers the next.
+func vendorQueryLines(fset *token.FileSet, file *ast.File, src string) (map[int]bool, []string) {
+	lines := strings.Split(src, "\n")
 	marked := map[int]bool{}
 	var unexplained []string
 	for _, group := range file.Comments {
@@ -184,7 +186,10 @@ func vendorQueryLines(fset *token.FileSet, file *ast.File) (map[int]bool, []stri
 					"so a reader can check it never reaches the database", at, vendorQueryMarker))
 				continue
 			}
-			marked[at.Line], marked[at.Line+1] = true, true
+			marked[at.Line] = true
+			if before := lines[at.Line-1][:at.Column-1]; strings.TrimSpace(before) == "" {
+				marked[at.Line+1] = true
+			}
 		}
 	}
 	return marked, unexplained

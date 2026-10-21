@@ -112,9 +112,13 @@ func operatorUnits(t *testing.T) map[string]bool {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, ignored := gitIgnoreRule(t, "extensions/"+operatorUnitsFile); !ignored {
-		t.Errorf("extensions/%s is not git-ignored: it names one installation's units, and a committed "+
-			"list would exempt them in every clone", operatorUnitsFile)
+	// Both questions: check-ignore --no-index answers from the patterns alone,
+	// so a list added with `git add -f` still reads as ignored.
+	_, ignored := gitIgnoreRule(t, "extensions/"+operatorUnitsFile)
+	tracked := exec.Command("git", "-C", "..", "ls-files", "--error-unmatch", "extensions/"+operatorUnitsFile).Run() == nil
+	if !ignored || tracked {
+		t.Errorf("extensions/%s is tracked or not git-ignored: it names one installation's units, and a "+
+			"committed list would exempt them in every clone", operatorUnitsFile)
 	}
 	out := map[string]bool{}
 	for line := range strings.SplitSeq(string(raw), "\n") {
