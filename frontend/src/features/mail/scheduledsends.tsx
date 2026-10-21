@@ -25,6 +25,7 @@ import "./scheduledsends.css";
 // no owner column here and no sharing affordance — the page is one contact's.
 import { type ScheduledSend, useScheduledSends } from "./scheduledqueue";
 import { TimelineDays } from "./scheduledsends.days";
+import { EditComposer } from "./scheduledsends.edit";
 import { QueueSkewNotice } from "./scheduledsends.notices";
 import { SendRow } from "./scheduledsends.row";
 import { useQueueWrites } from "./scheduledsends.writes";
@@ -94,6 +95,7 @@ export function ScheduledSendsScreen() {
   // own zone unless the send names another (see Moment).
   const readerZone = viewerZone();
   const [withdrawing, setWithdrawing] = useState<ScheduledSend | null>(null);
+  const [editing, setEditing] = useState<ScheduledSend | null>(null);
   const [view, setView] = useState<View>("all");
   // Re-read each minute so "today" and the presets stay true on a page left open.
   const now = new Date(useNow(60_000));
@@ -124,6 +126,7 @@ export function ScheduledSendsScreen() {
       isNext={send.id === nextId}
       movePending={move.isPending}
       onMove={(input) => moveWithUndo(input, send)}
+      onEdit={setEditing}
       onWithdraw={setWithdrawing}
     />
   );
@@ -203,6 +206,11 @@ export function ScheduledSendsScreen() {
           )
         )}
       </QueryStates>
+      <EditComposer
+        send={editing}
+        onClose={() => setEditing(null)}
+        onReplaced={(id) => withdraw.mutate({ id })}
+      />
       {/* Withdrawing is confirmed and moving is not, and the difference is what
           each one costs to undo: a moved message can be moved back, while a
           withdrawn one is gone and has to be written again from nothing — the

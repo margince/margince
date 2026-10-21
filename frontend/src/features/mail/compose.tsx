@@ -35,6 +35,7 @@ import {
   useTransportDial,
 } from "./composetarget";
 import { useVoiceDraft } from "./composevoicedraft";
+import type { EditSeed } from "./schedulededit";
 import { SendRefusal } from "./sendrefusal";
 import "./compose.css";
 import { ComposeHead } from "./compose.head";
@@ -151,6 +152,7 @@ export function ComposeModal({
   initialTransportId,
   staleThread = false,
   intent: askedIntent,
+  edit,
   open,
   onClose,
   onSent,
@@ -203,6 +205,10 @@ export function ComposeModal({
    *  fired — "their reply is overdue", "the meeting needs an agenda" — and that
    *  reason shaped nothing until it reached the steer field. */
   intent?: string;
+  /** A scheduled message written again. Read when the composer mounts, so the
+   *  caller keys the modal on the message. It keeps no saved draft: the
+   *  words are the scheduled message's, not a draft's. */
+  edit?: EditSeed;
   open: boolean;
   onClose: () => void;
   // A message left this composer — sent now or scheduled. Called before the
@@ -216,7 +222,12 @@ export function ComposeModal({
   const bodyId = useId();
   const dial = useTransportDial({ open, transports, initialTransportId, kind });
   const { isChannelReply } = dial;
-  const fields = useComposeFields({ initialMessage, askedIntent, contactId });
+  const fields = useComposeFields({
+    initialMessage,
+    askedIntent,
+    contactId,
+    edit,
+  });
   const { answering, choose } = useAnswerTarget({
     open,
     channelAnchorId: dial.channel?.anchorId,
@@ -275,7 +286,12 @@ export function ComposeModal({
     [settle, restoreSaved],
   );
   const savedDraft = useSavedDraft({
-    where: { answering, entityType, entityId, isChannelReply },
+    where: {
+      answering,
+      entityType,
+      entityId: edit ? "" : entityId,
+      isChannelReply,
+    },
     open,
     fields: {
       to: fields.to,

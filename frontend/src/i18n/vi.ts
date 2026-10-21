@@ -14305,6 +14305,8 @@ export const vi = {
   "sched.moved": "Đã đổi tin nhắn sang {when}",
   "sched.undo": "Hoàn tác",
   "sched.moveFor": "Đổi giờ gửi: {subject}",
+  "sched.edit": "Chỉnh sửa",
+  "sched.editFor": "Chỉnh sửa: {subject}",
   "sched.withdrawFor": "Thu hồi: {subject}",
   "outbox.name": "Tin nhắn đã hẹn giờ",
   "outbox.nameWaiting_one": "Tin nhắn đã hẹn giờ, {count} đang chờ",

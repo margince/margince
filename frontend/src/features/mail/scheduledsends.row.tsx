@@ -10,6 +10,7 @@ import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { logUnexpectedError } from "../../lib/problem";
 import { useSendPermission } from "../../lib/usesendpermission";
+import { editSeedOf } from "./schedulededit";
 import type { ScheduledSend, Status } from "./scheduledqueue";
 import { type Move, RescheduleMenu } from "./scheduledsends.reschedule";
 
@@ -152,6 +153,7 @@ export function SendRow({
   isNext,
   movePending,
   onMove,
+  onEdit,
   onWithdraw,
 }: Readonly<{
   send: ScheduledSend;
@@ -161,6 +163,7 @@ export function SendRow({
   isNext: boolean;
   movePending: boolean;
   onMove: (move: Move) => void;
+  onEdit: (send: ScheduledSend) => void;
   onWithdraw: (send: ScheduledSend) => void;
 }>) {
   const t = useT();
@@ -241,6 +244,14 @@ export function SendRow({
               pending={movePending}
               onMove={onMove}
             />
+            {editSeedOf(send) && (
+              <Button variant="ghost" onClick={() => onEdit(send)}>
+                <span aria-hidden>{t("sched.edit")}</span>
+                <span className="sr-only">
+                  {t("sched.editFor", { subject: send.subject })}
+                </span>
+              </Button>
+            )}
             <Button variant="danger" onClick={() => onWithdraw(send)}>
               <span aria-hidden>{t("sched.withdraw")}</span>
               <span className="sr-only">

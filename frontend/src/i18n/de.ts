@@ -14663,6 +14663,8 @@ export const de = {
   "sched.moved": "Nachricht auf {when} verschoben",
   "sched.undo": "Rückgängig",
   "sched.moveFor": "Neu planen: {subject}",
+  "sched.edit": "Bearbeiten",
+  "sched.editFor": "Bearbeiten: {subject}",
   "sched.withdrawFor": "Zurückziehen: {subject}",
   "outbox.name": "Geplante Nachrichten",
   "outbox.nameWaiting_one": "Geplante Nachrichten, {count} offen",

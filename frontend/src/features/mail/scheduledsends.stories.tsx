@@ -211,6 +211,7 @@ const rowProps = {
   isNext: false,
   movePending: false,
   onMove: () => {},
+  onEdit: () => {},
   onWithdraw: () => {},
 };
 
@@ -234,4 +235,22 @@ export const ChangedContextPhone: Story = {
   ...ChangedContext,
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
+};
+
+/** A message the composer could write again: the row offers Edit beside Reschedule. */
+export const Editable: Story = {
+  render: () => (
+    <StoryProviders>
+      <ol className="scheduledsends-list">
+        <SendRow
+          {...rowProps}
+          send={{
+            ...waiting,
+            status: "scheduled",
+            links: [{ entity_type: "company", entity_id: "company-1" }],
+          }}
+        />
+      </ol>
+    </StoryProviders>
+  ),
 };
