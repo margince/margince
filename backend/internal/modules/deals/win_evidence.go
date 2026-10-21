@@ -189,8 +189,7 @@ func ensureDetailWithinBound(detail *string) error {
 
 // signedAgreementFrom is the gate's one question, named so a test can read it.
 // The advance asks it under a lock (evidenceQuery) and the client's read asks
-// it without one (readEvidenceQuery). Both are this text, so the question and
-// the refusal cannot disagree.
+// it without one (readEvidenceQuery). Both embed this text.
 const signedAgreementFrom = `
 			FROM contract c
 			JOIN attachment a ON a.contract_id = c.id

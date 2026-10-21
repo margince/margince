@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 9 |
 | Tool catalog | 123.8 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 32583 |
+| Approx. wire tokens | 32588 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -89,7 +89,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 1812 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 351 |
-| [`read_view`](#read_view) | Read a view | yes |  | 989 |
+| [`read_view`](#read_view) | Read a view | yes |  | 994 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 488 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 393 |
 | [`schedule_meeting`](#schedule_meeting) | Book or invite to a meeting |  |  | 474 |
@@ -6380,6 +6380,7 @@ view refuses an argument it does not take and names the ones it does.
         "deal_outcome_reviews",
         "deal_stakeholders",
         "deal_status",
+        "deal_win_evidence",
         "dedupe_candidate",
         "dedupe_candidates",
         "email_presentation",
