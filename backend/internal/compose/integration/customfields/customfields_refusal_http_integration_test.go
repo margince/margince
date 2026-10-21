@@ -52,7 +52,7 @@ func TestARecordWriteNeverDropsACustomFieldKey(t *testing.T) {
 		name, key, code string
 		value           json.RawMessage
 	}{
-		{"a key no field names", "cf_nmae", "unknown_field", json.RawMessage(`"x"`)},
+		{"a key no field names", "cf_nme", "unknown_field", json.RawMessage(`"x"`)},
 		{"a retired field's key", retired.ColumnName, "unknown_field", json.RawMessage(`"x"`)},
 		{"a value the column cannot hold", field.ColumnName, "invalid_value", json.RawMessage(`5`)},
 	}
