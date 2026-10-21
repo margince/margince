@@ -31,8 +31,10 @@ const twoSections: ReportingLayout = [
 
 let latest: ReportingLayout = twoSections;
 
-function Harness() {
-  const [layout, setLayout] = useState(twoSections);
+function Harness({
+  start = twoSections,
+}: Readonly<{ start?: ReportingLayout }>) {
+  const [layout, setLayout] = useState(start);
   return (
     <StoryProviders>
       <LayoutEditor
@@ -72,6 +74,26 @@ it("moves a section down, and offers no move past either end", async () => {
   );
   expect(latest.map((section) => section.title)).toEqual([
     "Targets",
+    "Pipeline",
+  ]);
+});
+
+it("keeps focus with a section it moves, so pressing again moves it further", async () => {
+  const user = userEvent.setup();
+  const three: ReportingLayout = [
+    ...twoSections,
+    {
+      title: "Outcomes",
+      cards: [{ id: "d", kind: "bookings_trend", width: "full" }],
+    },
+  ];
+  render(<Harness start={three} />);
+  screen.getByRole("button", { name: "Move down: Section 1" }).focus();
+  await user.keyboard("{Enter}");
+  await user.keyboard("{Enter}");
+  expect(latest.map((section) => section.title)).toEqual([
+    "Targets",
+    "Outcomes",
     "Pipeline",
   ]);
 });

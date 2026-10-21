@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, X } from "lucide-react";
-import { type ReactNode, useId, useState } from "react";
+import { type ReactNode, useId, useRef, useState } from "react";
 import { api } from "../../api/client";
 import { Button, Field, TextInput } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
@@ -60,6 +60,7 @@ export function LayoutEditor({
   const t = useT();
   const { locale } = useLocale();
   const hintId = useId();
+  const sections = useSectionKeys(layout.length);
   const place = (position: number, count: number) => ({
     position: formatNumber(position, locale),
     total: formatNumber(count, locale),
@@ -71,8 +72,7 @@ export function LayoutEditor({
       </span>
       {layout.map((section, at) => (
         <fieldset
-          // biome-ignore lint/suspicious/noArrayIndexKey: a section has no id; its position is its name
-          key={at}
+          key={sections.keys[at]}
           className="form-stack reporting-layout-section"
         >
           <legend>
@@ -120,7 +120,18 @@ export function LayoutEditor({
             )}
           />
           {layout.length > 1 && (
-            <SectionActions layout={layout} at={at} onChange={onChange} />
+            <SectionActions
+              layout={layout}
+              at={at}
+              onMove={(step) => {
+                sections.move(at, step);
+                onChange(edit.moveSection(layout, at, step));
+              }}
+              onRemove={() => {
+                sections.remove(at);
+                onChange(edit.removeSection(layout, at));
+              }}
+            />
           )}
         </fieldset>
       ))}
@@ -135,7 +146,10 @@ export function LayoutEditor({
         <Button
           variant="ghost"
           disabled={layout.length >= MAX_SECTIONS}
-          onClick={() => onChange(edit.addSection(layout))}
+          onClick={() => {
+            sections.add();
+            onChange(edit.addSection(layout));
+          }}
         >
           {t("reporting.addSection")}
         </Button>
@@ -144,15 +158,45 @@ export function LayoutEditor({
   );
 }
 
+/**
+ * A key for each section while the editor is open. A section has no id, and a
+ * key by position would hand a moved section's focus and drag to the one that
+ * took its place. Keys move with their section; a layout of another length
+ * from outside gets fresh ones.
+ */
+function useSectionKeys(count: number) {
+  const minted = useRef(0);
+  const mint = () => `section-key-${minted.current++}`;
+  const [keys, setKeys] = useState<readonly string[]>(() =>
+    Array.from({ length: count }, mint),
+  );
+  const current =
+    keys.length === count ? keys : Array.from({ length: count }, mint);
+  if (current !== keys) setKeys(current);
+  return {
+    keys: current,
+    move: (at: number, step: -1 | 1) => {
+      const next = [...current];
+      const [moving] = next.splice(at, 1);
+      if (moving) next.splice(at + step, 0, moving);
+      setKeys(next);
+    },
+    remove: (at: number) => setKeys(current.filter((_, index) => index !== at)),
+    add: () => setKeys([...current, mint()]),
+  };
+}
+
 // Moves a section up or down, or removes it and keeps its cards.
 function SectionActions({
   layout,
   at,
-  onChange,
+  onMove,
+  onRemove,
 }: Readonly<{
   layout: ReportingLayout;
   at: number;
-  onChange: (next: ReportingLayout) => void;
+  onMove: (step: -1 | 1) => void;
+  onRemove: () => void;
 }>) {
   const t = useT();
   const name = t("reporting.sectionN", { n: ordinalNumber(at + 1) });
@@ -162,18 +206,15 @@ function SectionActions({
         label={`${t("reporting.moveUp")}: ${name}`}
         icon={<ArrowUp aria-hidden />}
         disabled={at === 0}
-        onClick={() => onChange(edit.moveSection(layout, at, -1))}
+        onClick={() => onMove(-1)}
       />
       <IconAction
         label={`${t("reporting.moveDown")}: ${name}`}
         icon={<ArrowDown aria-hidden />}
         disabled={at === layout.length - 1}
-        onClick={() => onChange(edit.moveSection(layout, at, 1))}
+        onClick={() => onMove(1)}
       />
-      <Button
-        variant="ghost"
-        onClick={() => onChange(edit.removeSection(layout, at))}
-      >
+      <Button variant="ghost" onClick={onRemove}>
         {t("reporting.removeSection", { n: ordinalNumber(at + 1) })}
       </Button>
     </div>

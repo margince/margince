@@ -25,12 +25,18 @@ const labels = {
 function Harness({
   onReorder,
   busy,
-}: Readonly<{ onReorder?: (keys: string[]) => void; busy?: boolean }>) {
+  without,
+}: Readonly<{
+  onReorder?: (keys: string[]) => void;
+  busy?: boolean;
+  // A row the page took away, as another control on it can.
+  without?: string;
+}>) {
   const [rows, setRows] = useState(ROWS);
   return (
     <SortableList
       label="Rows"
-      items={rows}
+      items={rows.filter((row) => row.key !== without)}
       busy={busy}
       labels={labels}
       onReorder={
@@ -139,6 +145,16 @@ describe("SortableList", () => {
     rerender(<Harness onReorder={onReorder} busy />);
     fireEvent.pointerUp(globalThis.window, { pointerId: 1 });
     expect(onReorder).not.toHaveBeenCalled();
+  });
+
+  it("drops a drag that lands after a row was taken away, and says nothing moved", () => {
+    const onReorder = vi.fn();
+    const { rerender } = render(<Harness onReorder={onReorder} />);
+    dragBravoToTheEnd();
+    rerender(<Harness onReorder={onReorder} without="a" />);
+    fireEvent.pointerUp(globalThis.window, { pointerId: 1 });
+    expect(onReorder).not.toHaveBeenCalled();
+    expect(screen.queryByText(/^Bravo is /)).toBeNull();
   });
 
   it("draws no grip for a reader who may not reorder", () => {
