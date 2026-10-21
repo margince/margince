@@ -196,6 +196,11 @@ func (w *voiceBuildWorker) Work(ctx context.Context, job *river.Job[VoiceBuildAr
 	if err == nil {
 		return nil
 	}
+	// The row already holds the outcome that stopped it, so nothing is written.
+	if errors.Is(err, ai.ErrVoiceBuildNotRunning) {
+		w.log.InfoContext(ctx, "voice build stopped running; the run ends", "build", buildID.String())
+		return nil
+	}
 	if ai.IsDeferral(err) {
 		terminal, cancel := terminalCtx(ctx)
 		defer cancel()
@@ -269,6 +274,20 @@ func (w *voiceBuildWorker) deferralDeadline(err error) time.Time {
 	return w.now().Add(voiceBuildDeferral)
 }
 
+// advance records the next stage. A build that stopped running ends the run
+// before its next model call. Any other failure to record is logged, and the
+// run carries on: the stage is display state.
+func (w *voiceBuildWorker) advance(ctx context.Context, buildID ids.UUID, stage string) error {
+	err := w.store.SetBuildStage(ctx, buildID, stage)
+	if errors.Is(err, ai.ErrVoiceBuildNotRunning) {
+		return err
+	}
+	if err != nil {
+		w.log.WarnContext(ctx, "voice build stage update failed", "build", buildID.String(), "err", err)
+	}
+	return nil
+}
+
 // run drives extract → evaluate → activate on a claimed build. Every
 // terminal write below mints its detached context AT write time (deep-read
 // precedent): a context minted before the model calls would carry a deadline
@@ -276,15 +295,15 @@ func (w *voiceBuildWorker) deferralDeadline(err error) time.Time {
 // recorded — the build would sit "running" until reclaim, forever retrying.
 func (w *voiceBuildWorker) run(ctx context.Context, buildID ids.UUID, input ai.VoiceBuildInput, said voiceCopy) error {
 	heldOut, buildSamples := splitVoiceHeldOut(input.Samples, input.Build.SourceHash)
-	if err := w.store.SetBuildStage(ctx, buildID, "extract"); err != nil {
-		w.log.WarnContext(ctx, "voice build stage update failed", "build", buildID.String(), "err", err)
+	if err := w.advance(ctx, buildID, "extract"); err != nil {
+		return err
 	}
 	artifact, err := ai.DeriveVoice(ctx, w.brain, input.Personality, input.Build.SourceHash, buildSamples)
 	if err != nil {
 		return err
 	}
-	if err := w.store.SetBuildStage(ctx, buildID, "evaluate"); err != nil {
-		w.log.WarnContext(ctx, "voice build stage update failed", "build", buildID.String(), "err", err)
+	if err := w.advance(ctx, buildID, "evaluate"); err != nil {
+		return err
 	}
 	var predecessor *ai.VoiceProfileVersion
 	if active, ok, err := w.store.ActiveVersion(ctx, input.Profile.ID); err != nil {
@@ -311,8 +330,8 @@ func (w *voiceBuildWorker) run(ctx context.Context, buildID ids.UUID, input ai.V
 		}
 	}
 	corpusStats := ai.AnalyzeVoice(input.Samples)
-	if err := w.store.SetBuildStage(ctx, buildID, "activate"); err != nil {
-		w.log.WarnContext(ctx, "voice build stage update failed", "build", buildID.String(), "err", err)
+	if err := w.advance(ctx, buildID, "activate"); err != nil {
+		return err
 	}
 	// The completing write must outlive a job timeout that fires mid-run: a
 	// canceled work context must never strand a finished artifact unrecorded.
