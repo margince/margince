@@ -620,7 +620,11 @@ The page hands that function the record it shows, typed by `ExtensionPanelProps`
 `@margince/frontend/app`:
 
 ```tsx
+import { type ExtensionPanelProps, useT } from "@margince/frontend/app";
+import { Badge, Panel, PanelBody } from "@margince/frontend/design-system";
+
 export function VisitsPanel({ record }: ExtensionPanelProps) {
+  const t = useT();
   // record is { type: "deal", id: "…" }
   return (
     <Panel title={t("extVisitLog.panel.title")} titleAction={<Badge>…</Badge>}>
