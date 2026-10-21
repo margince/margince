@@ -93,6 +93,7 @@ func onboardingDraftInput(in crmcontracts.OnboardingCompanyDraft) identity.Onboa
 		BuyingIntents: in.BuyingIntents, CommonObjections: in.CommonObjections,
 		SalesMotion: in.SalesMotion, LegalName: in.LegalName,
 		RegisteredAddress: in.RegisteredAddress, RegisterVAT: in.RegisterVat,
+		LegalForm: in.LegalForm, RegisterCourt: in.RegisterCourt, RegisterNumber: in.RegisterNumber,
 		Industry: in.Industry, History: in.History,
 	}
 }
@@ -131,6 +132,7 @@ func onboardingDraftResponse(in identity.OnboardingCompanyDraft) crmcontracts.On
 		BuyingIntents: in.BuyingIntents, CommonObjections: in.CommonObjections,
 		SalesMotion: in.SalesMotion, LegalName: in.LegalName,
 		RegisteredAddress: in.RegisteredAddress, RegisterVat: in.RegisterVAT,
+		LegalForm: in.LegalForm, RegisterCourt: in.RegisterCourt, RegisterNumber: in.RegisterNumber,
 		Industry: in.Industry, History: in.History,
 	}
 }
