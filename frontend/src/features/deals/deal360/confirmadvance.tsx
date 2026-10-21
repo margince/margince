@@ -13,7 +13,7 @@ import {
 } from "../../../lib/winreason";
 import { closeReason, isSavedDeal } from "./closereviewoffer";
 import { CloseTasksQuestion, useCloseTasks } from "./closetasks";
-import { useDealWinEvidence } from "./winevidence";
+import { useWinQuestion } from "./winevidence";
 import "./deal360.css";
 
 type Deal = components["schemas"]["Deal"];
@@ -147,13 +147,8 @@ export function ConfirmAdvanceModal({
   // lie from every rep.
   // The server asks again when the win lands, so its refusal for this deal
   // also shows the question.
-  const askedForWin = pending?.toStage.semantic === "won";
-  const evidence = useDealWinEvidence(pending?.dealId ?? null, askedForWin);
-  const checkingEvidence = askedForWin && evidence.isFetching;
-  const needsWonReason =
-    askedForWin &&
-    (evidence.data?.has_signed_contract === false ||
-      refusedDealId === pending.dealId);
+  const winQuestion = useWinQuestion(pending, refusedDealId);
+  const needsWonReason = winQuestion.needed;
   const detailMissing =
     wonReason === WON_REASON_NEEDING_DETAIL && !saysSomething(wonDetail);
   // Said beside Confirm rather than left to a grey button: the reader is told
@@ -171,7 +166,7 @@ export function ConfirmAdvanceModal({
   })();
   const refusal =
     unanswered ??
-    (checkingEvidence ? t("deals.winEvidenceChecking") : undefined) ??
+    (winQuestion.checking ? t("deals.winEvidenceChecking") : undefined) ??
     closeTasks.refusal;
 
   const confirm = async (asked: PendingAdvance) => {
@@ -179,14 +174,8 @@ export function ConfirmAdvanceModal({
     // Captured BEFORE the await: `dismiss()` clears what was typed, and the
     // review starts from the words this reader actually wrote for THIS close.
     const tasksToComplete = closeTasks.chosen;
-    // The server takes a stated reason without looking for paper. So a
-    // contract filed while the dialog sat open would still be recorded as a win
-    // without one. Asking again at the press shrinks that gap to the press. A
-    // refusal needs no re-read, because it is the server's current answer.
     const withoutPaper =
-      needsWonReason &&
-      (refusedDealId === asked.dealId ||
-        (await evidence.refetch()).data?.has_signed_contract !== true);
+      needsWonReason && (await winQuestion.stillBare(asked.dealId));
     const why = closeReason({
       wonAsked: withoutPaper,
       lost: lostReason,

@@ -163,9 +163,9 @@ const winWithoutContract = advance({
 async function askedBeforeConfirm() {
   const dialog = within(await screen.findByRole("dialog"));
   await dialog.findByRole("combobox", { name: "How was it won?" });
-  expect(dialog.getByRole("button", { name: "Confirm" })).toHaveAccessibleDescription(
-    "Pick how the deal was won.",
-  );
+  expect(
+    dialog.getByRole("button", { name: "Confirm" }),
+  ).toHaveAccessibleDescription("Pick how the deal was won.");
 }
 
 export const WinWithoutContract: Story = {

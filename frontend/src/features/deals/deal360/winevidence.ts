@@ -14,7 +14,7 @@ import { unwrap } from "../../../lib/problem";
  * win lands. A failed read leaves the data empty, and the dialog then asks
  * only if the server refuses.
  */
-export function useDealWinEvidence(dealId: string | null, asked: boolean) {
+function useDealWinEvidence(dealId: string | null, asked: boolean) {
   return useQuery({
     queryKey: ["deals", dealId, "win-evidence"],
     enabled: asked && dealId !== null,
@@ -28,4 +28,35 @@ export function useDealWinEvidence(dealId: string | null, asked: boolean) {
         }),
       ),
   });
+}
+
+type AskedAdvance = Readonly<{
+  dealId: string;
+  toStage: Readonly<{ semantic: string }>;
+}>;
+
+/**
+ * What the win dialog asks about contract evidence, for the advance it was
+ * opened on.
+ *
+ * `needed` is whether to ask how the win happened: the read found no signed
+ * contract, or the server refused this deal's win for naming none. `checking`
+ * is true while the read is out, and Confirm waits on it. `stillBare` asks
+ * again at the press, because the server takes a stated reason without looking
+ * for paper and a contract may have been filed while the dialog sat open.
+ */
+export function useWinQuestion(
+  pending: AskedAdvance | null,
+  refusedDealId: string | null,
+) {
+  const asked = pending?.toStage.semantic === "won";
+  const evidence = useDealWinEvidence(pending?.dealId ?? null, asked);
+  const refused = pending !== null && refusedDealId === pending.dealId;
+  return {
+    needed: asked && (evidence.data?.has_signed_contract === false || refused),
+    checking: asked && evidence.isFetching,
+    stillBare: async (dealId: string) =>
+      refusedDealId === dealId ||
+      (await evidence.refetch()).data?.has_signed_contract !== true,
+  };
 }
