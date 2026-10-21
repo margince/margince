@@ -42966,8 +42966,6 @@ export interface components {
             /** @description Defaults to true. */
             active?: boolean | null;
             source: string;
-        } & {
-            [key: string]: unknown;
         };
         /** @description Any subset; omit a field to leave it unchanged. A price change never re-prices existing offer lines (they hold snapshots). */
         UpdateProductRequest: {
@@ -42991,8 +42989,6 @@ export interface components {
             /** Format: double */
             default_tax_rate?: number;
             active?: boolean;
-        } & {
-            [key: string]: unknown;
         };
         /**
          * @description Where the room stands. A room is created `live`, and `live` and `closed` are
@@ -43799,8 +43795,6 @@ export interface components {
             template_id?: string | null;
             line_items?: components["schemas"]["OfferLineItemInput"][] | null;
             source: string;
-        } & {
-            [key: string]: unknown;
         };
         /** @description Header-field patch; allowed only while status=draft (422 offer_not_draft otherwise). Totals are derived and not settable (422). */
         UpdateOfferRequest: {
@@ -43821,8 +43815,6 @@ export interface components {
             template_id?: string | null;
             intro_text?: string | null;
             terms_text?: string | null;
-        } & {
-            [key: string]: unknown;
         };
         RejectOfferRequest: {
             /** @description Optional buyer-given decline reason (rides offer.rejected). */
