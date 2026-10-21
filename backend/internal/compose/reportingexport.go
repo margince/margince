@@ -107,7 +107,7 @@ func writeReportingCSV(w http.ResponseWriter, r *http.Request, raw []byte, err e
 	}
 	(httperr.Download{ContentType: reportingCSVContentType, Filename: "reporting.csv", Size: int64(len(raw))}).WriteHeaders(w)
 	w.Header().Set("Cache-Control", "no-store")
-	if _, err := w.Write(raw); err != nil {
+	if _, err := w.Write(raw); err != nil { // #nosec G705 -- a CSV attachment, never rendered as a page
 		slog.WarnContext(r.Context(), "reporting export connection closed", "error", err)
 	}
 }
