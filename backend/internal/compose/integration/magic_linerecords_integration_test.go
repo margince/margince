@@ -11,6 +11,7 @@ package integration
 import (
 	"context"
 	"errors"
+	"strconv"
 	"testing"
 	"time"
 
@@ -170,5 +171,43 @@ func TestAnOpenedLineWithholdsWhatTheReadersRoleMasks(t *testing.T) {
 	}
 	if len(opened.Data[0].Changes) != 1 {
 		t.Errorf("changes %+v, want only next_step", opened.Data[0].Changes)
+	}
+}
+
+// The app's clock and the database's are two clocks. A line opened by an app
+// a little behind the database still opens to every record it counted.
+func TestALineOpensWhenTheAppClockTrailsTheDatabase(t *testing.T) {
+	e := Setup(t)
+	seedEnrichedDeals(t, e, e.Rep1, 3)
+	// Both instants come from the database's clock, which dated the entries.
+	micros, err := strconv.ParseInt(e.WsScalar(t, `SELECT (extract(epoch FROM now()) * 1e6)::bigint::text`), 10, 64)
+	if err != nil {
+		t.Fatalf("reading the database clock: %v", err)
+	}
+	database := time.UnixMicro(micros)
+	since := database.Add(-time.Hour)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
+	behind := func() time.Time { return database.Add(-2 * time.Second) }
+	svc := magic.NewService(e.Pool, nil, behind).WithUndoJudge(&judgeStub{undoable: true})
+
+	receipt, err := svc.Read(ctx, &since, 20)
+	if err != nil {
+		t.Fatalf("reading the receipt: %v", err)
+	}
+	var lineID ids.UUID
+	for _, l := range receipt.Done {
+		if l.Count != nil && *l.Count == 3 {
+			lineID = ids.UUID(l.Id)
+		}
+	}
+	if lineID.IsZero() {
+		t.Fatalf("no line folded the three deals; done = %+v", receipt.Done)
+	}
+	opened, err := svc.LineRecords(ctx, lineID, since, nil, 0)
+	if err != nil {
+		t.Fatalf("opening the line with the app clock behind the database: %v", err)
+	}
+	if len(opened.Data) != 3 {
+		t.Fatalf("opened %d records, want the 3 the line counted", len(opened.Data))
 	}
 }
