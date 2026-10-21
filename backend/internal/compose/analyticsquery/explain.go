@@ -145,12 +145,20 @@ func CompileExplain(in Explain, schema Schema, scope ScopeClauses) (ExplainPlan,
 	return ExplainPlan{SQL: sql, Args: args, Columns: columns}, nil
 }
 
+// SourceFilter narrows a source listing. Only restricts it to those record
+// ids, so a kept answer's records can be judged again under a later reader.
+// Groups restricts it to the records of those groups, one key per GroupBy
+// field each: nil leaves every group in, and an empty list lists nothing.
+type SourceFilter struct {
+	Only   []string
+	Groups *[][]any
+}
+
 // CompileSources renders every record behind an answer, each with the group
 // keys that place it in a row. It reads the answer's own row set, as an
-// explanation does. only, when given, restricts it to those record ids, so a
-// kept answer's records can be judged again under a later reader. The caller
-// passes one past its bound as limit, to tell a full list from a cut one.
-func CompileSources(q Query, schema Schema, scope ScopeClauses, only []string, limit int) (ExplainPlan, error) {
+// explanation does. The caller passes one past its bound as limit, to tell a
+// full list from a cut one; the order by id makes a cut list the same twice.
+func CompileSources(q Query, schema Schema, scope ScopeClauses, filter SourceFilter, limit int) (ExplainPlan, error) {
 	if scope == nil {
 		return ExplainPlan{}, &RefusalError{
 			Kind:    RefusalInvalid,
@@ -176,8 +184,11 @@ func CompileSources(q Query, schema Schema, scope ScopeClauses, only []string, l
 		return ExplainPlan{}, err
 	}
 	where = append(where, scoped...)
-	if only != nil {
-		where = append(where, "t.id = ANY("+bind(only)+"::uuid[])")
+	if filter.Only != nil {
+		where = append(where, "t.id = ANY("+bind(filter.Only)+"::uuid[])")
+	}
+	if filter.Groups != nil {
+		where = append(where, groupsClause(entity, q.GroupBy, *filter.Groups, bind))
 	}
 
 	selects := []string{"t.id"}
@@ -186,7 +197,24 @@ func CompileSources(q Query, schema Schema, scope ScopeClauses, only []string, l
 		selects = append(selects, entity.Fields[name].Expr)
 		columns = append(columns, name)
 	}
-	sql := fmt.Sprintf("SELECT %s FROM %s%s LIMIT %s",
+	sql := fmt.Sprintf("SELECT %s FROM %s%s ORDER BY t.id LIMIT %s",
 		strings.Join(selects, ", "), entity.From, whereSQL(where), bind(limit))
 	return ExplainPlan{SQL: sql, Args: args, Columns: columns}, nil
+}
+
+// groupsClause matches a record to any of the groups. IS NOT DISTINCT FROM,
+// because a group whose key is unset must match its records, which = never does.
+func groupsClause(entity Entity, groupBy []string, groups [][]any, bind func(any) string) string {
+	if len(groups) == 0 {
+		return "FALSE"
+	}
+	rows := make([]string, len(groups))
+	for i, keys := range groups {
+		parts := make([]string, len(groupBy))
+		for j, name := range groupBy {
+			parts[j] = entity.Fields[name].Expr + " IS NOT DISTINCT FROM " + bind(keys[j])
+		}
+		rows[i] = "(" + strings.Join(parts, " AND ") + ")"
+	}
+	return "(" + strings.Join(rows, " OR ") + ")"
 }

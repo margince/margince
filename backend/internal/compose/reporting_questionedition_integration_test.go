@@ -33,6 +33,13 @@ type questionEditions struct {
 
 func newQuestionEditions(t *testing.T) *questionEditions {
 	t.Helper()
+	return newQuestionEditionsShowing(t, nil)
+}
+
+// newQuestionEditionsShowing asks the question with a row limit, nil for the
+// card's default.
+func newQuestionEditionsShowing(t *testing.T, limit *int) *questionEditions {
+	t.Helper()
 	e := setupForecast(t)
 	reportingWorkerIdentity(t, e)
 	amount := int64(100_000)
@@ -46,6 +53,7 @@ func newQuestionEditions(t *testing.T) *questionEditions {
 		Entity:   "open-deals-per-company",
 		GroupBy:  &[]string{"company_id"},
 		Measures: []crmcontracts.AnalyticsMeasure{{Fn: "count", As: new("deals")}},
+		Limit:    limit,
 	}
 	layout := []crmcontracts.ReportingSection{{Cards: []crmcontracts.ReportingCard{
 		{Id: "trend", Kind: "bookings_trend", Width: crmcontracts.ReportingCardWidthFull},
@@ -282,5 +290,61 @@ func TestAKeptAnswerIsWithheldOnceOneOfItsRecordsChangesGroup(t *testing.T) {
 	seen := onlyQuestion(t, q.read(q.human, t, ids.UUID(edition.Id)))
 	if seen.Status != crmcontracts.ReportingEditionQuestionStatusWithheld {
 		t.Fatalf("the card reads %+v after a counted deal changed company, want it withheld", seen)
+	}
+}
+
+// seedCompanyDeals gives one company, by a fixed id, that many open Rep1 deals
+// in one statement.
+func (q *questionEditions) seedCompanyDeals(t *testing.T, company string, deals int) {
+	t.Helper()
+	ctx := context.Background()
+	if _, err := q.e.owner.Exec(ctx, `INSERT INTO company(id,display_name,source,captured_by) VALUES($1,'Seeded','manual','human:x')`, company); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := q.e.owner.Exec(ctx, `INSERT INTO deal (name, pipeline_id, stage_id, owner_id, company_id, amount_minor, currency, expected_close_date, source, captured_by)
+		SELECT 'Seeded', $1, $2, $3, $4, 100000, 'EUR', (now() + interval '30 days')::date, 'manual', 'human:x' FROM generate_series(1, $5)`,
+		q.e.pipeline, q.e.stages[20], q.e.Rep1, company, deals); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// Groups sort by company id with the unset group last, so the small company
+// comes first and the one over the bound second.
+const (
+	smallCompany = "00000000-0000-7000-8000-000000000001"
+	largeCompany = "ffffffff-ffff-7fff-bfff-ffffffffffff"
+)
+
+// The bound counts the records behind the rows the answer shows. A company
+// over the bound that the row limit leaves out does not stop the answer being
+// kept.
+func TestTheRecordBoundCountsOnlyTheRecordsBehindShownRows(t *testing.T) {
+	q := newQuestionEditionsShowing(t, new(1))
+	q.keepForAYear(t)
+	q.seedCompanyDeals(t, smallCompany, 6)
+	q.seedCompanyDeals(t, largeCompany, maxQuestionSources+1)
+	edition := q.send(t)
+	kept := onlyQuestion(t, edition)
+	if kept.Status != crmcontracts.ReportingEditionQuestionStatusKept || kept.Answer == nil || len(kept.Answer.Rows) != 1 {
+		t.Fatalf("the card reads %+v, want the one shown row kept", kept)
+	}
+	var sources int
+	if err := q.e.owner.QueryRow(context.Background(), `SELECT count(*) FROM report_edition_question_source WHERE edition_id=$1`, edition.Id).Scan(&sources); err != nil {
+		t.Fatal(err)
+	}
+	if sources != 6 {
+		t.Fatalf("the kept answer rests on %d records, want the small company's 6", sources)
+	}
+}
+
+// A shown row over the bound still stops the answer being kept.
+func TestAnAnswerShowingMoreRecordsThanAnEditionKeepsIsNotKept(t *testing.T) {
+	q := newQuestionEditionsShowing(t, new(2))
+	q.keepForAYear(t)
+	q.seedCompanyDeals(t, smallCompany, 6)
+	q.seedCompanyDeals(t, largeCompany, maxQuestionSources+1)
+	unkept := onlyQuestion(t, q.send(t))
+	if unkept.Reason == nil || *unkept.Reason != crmcontracts.ReportingEditionQuestionReasonTooManyRecords {
+		t.Fatalf("the card reads %+v, want not kept for too many records", unkept)
 	}
 }

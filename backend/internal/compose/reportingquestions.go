@@ -84,7 +84,7 @@ func (q reportingQuestions) Capture(ctx context.Context, tx pgx.Tx, question crm
 	if err != nil {
 		return out, err
 	}
-	sourceType, records, err := analyticsSources(ctx, tx, query, nil)
+	sourceType, records, err := analyticsSources(ctx, tx, query, shownGroups(query, answer.Rows))
 	if unanswerable(err) {
 		out.Reason = crmcontracts.ReportingEditionQuestionReasonUnanswered
 		return out, nil
@@ -118,6 +118,27 @@ func (q reportingQuestions) Capture(ctx context.Context, tx pgx.Tx, question crm
 	return out, nil
 }
 
+// shownGroups narrows a capture to the records behind the rows the answer
+// shows. A record behind a row the floor withheld, or one past the question's
+// row limit, vouches for nothing the edition keeps.
+func shownGroups(query analyticsquery.Query, rows []map[string]any) analyticsquery.SourceFilter {
+	if len(query.GroupBy) == 0 {
+		return analyticsquery.SourceFilter{}
+	}
+	groups := [][]any{}
+	for _, row := range rows {
+		if row[withheldColumn] == true {
+			continue
+		}
+		keys := make([]any, len(query.GroupBy))
+		for i, name := range query.GroupBy {
+			keys[i] = row[name]
+		}
+		groups = append(groups, keys)
+	}
+	return analyticsquery.SourceFilter{Groups: &groups}
+}
+
 // Reveal implements reporting.Questions. The reader is shown the kept answer
 // only when they could ask the question today. Every record behind every
 // served row must also still be in their population and in that row's group.
@@ -131,7 +152,7 @@ func (q reportingQuestions) Reveal(ctx context.Context, tx pgx.Tx, question crmc
 			only = append(only, record.ID.String())
 		}
 	}
-	_, readable, err := analyticsSources(ctx, tx, query, only)
+	_, readable, err := analyticsSources(ctx, tx, query, analyticsquery.SourceFilter{Only: only})
 	if unanswerable(err) {
 		return crmcontracts.AnalyticsAnswer{}, false, nil
 	}
@@ -220,7 +241,7 @@ func countsOtherRecords(ctx context.Context, tx pgx.Tx, query analyticsquery.Que
 // grants: the population's read gate, its vocabulary and its scope, as
 // RunAnalyticsQuery applies them. It answers one record past the bound when
 // the population is larger.
-func analyticsSources(ctx context.Context, tx pgx.Tx, query analyticsquery.Query, only []string) (string, []map[string]any, error) {
+func analyticsSources(ctx context.Context, tx pgx.Tx, query analyticsquery.Query, filter analyticsquery.SourceFilter) (string, []map[string]any, error) {
 	schema, specs, err := AnalyticsSchemaIn(ctx, tx)
 	if err != nil {
 		return "", nil, err
@@ -233,7 +254,7 @@ func analyticsSources(ctx context.Context, tx pgx.Tx, query analyticsquery.Query
 		return "", nil, err
 	}
 	var narrowed string
-	plan, err := analyticsquery.CompileSources(query, schema, analyticsScope(ctx, tx, spec, query, &narrowed), only, maxQuestionSources+1)
+	plan, err := analyticsquery.CompileSources(query, schema, analyticsScope(ctx, tx, spec, query, &narrowed), filter, maxQuestionSources+1)
 	if err != nil {
 		return "", nil, err
 	}
