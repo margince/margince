@@ -9,11 +9,10 @@ import { unwrap } from "../../../lib/problem";
  * Whether the deal has the signed agreement a win rests on, asked while the
  * dialog that closes it as won is open.
  *
- * Never kept: the answer decides what the dialog asks, and one cached from
- * before an agreement was archived would let the reader through to a refusal.
- * The server asks again when the win lands, so this only decides whether the
- * question comes before the press or after it. A read that fails leaves the
- * data empty, and the dialog then asks only if the server refuses.
+ * Never kept, because a cached answer from before an agreement was archived
+ * would let the reader through to a refusal. The server asks again when the
+ * win lands. A failed read leaves the data empty, and the dialog then asks
+ * only if the server refuses.
  */
 export function useDealWinEvidence(dealId: string | null, asked: boolean) {
   return useQuery({

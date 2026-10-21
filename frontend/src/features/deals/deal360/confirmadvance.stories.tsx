@@ -12,11 +12,9 @@ import {
 } from "../../../testing/story-utils";
 import { ConfirmAdvanceModal } from "./confirmadvance";
 
-// The confirm a terminal stage move goes through. A loss asks for a reason.
-// A loss on a deal with open tasks also asks what happens to them. A win with
-// a signed contract is one press. A win on a deal with none asks how it was won
-// first; when the server refuses a win the read did not foresee, the dialog
-// stays open and asks then.
+// The confirm a terminal stage move goes through. A loss asks for a reason
+// and for what happens to the open tasks. A win with a signed contract is one
+// press. A win without one asks how it was won first.
 //
 // `Modal` portals to document.body, so the story canvas holds nothing and the
 // dialog is queried off the document. Each play is what proves the dialog drew
@@ -92,9 +90,8 @@ function advance(
   }>,
 ) {
   return () => {
-    // The autonomy dot beside the title reads the agent-tool tiers, the
-    // deal's own tasks are read for the question about them, and a win reads
-    // whether the deal has a signed contract.
+    // The dot beside the title reads the agent-tool tiers. The deal's tasks
+    // feed the question about them, and a win reads its signed contract.
     installFetchStub({
       "GET /agent-tools": () =>
         jsonResponse({ data: [{ name: "progress_deal", tier: "confirm" }] }),
@@ -161,8 +158,8 @@ const winWithoutContract = advance({
   signed: false,
 });
 
-// A win on a deal with no signed contract: the question is on the dialog from
-// the start, and Confirm waits for the answer instead of being refused for it.
+// A win on a deal with no signed contract. The question is there from the
+// start, and Confirm waits for the answer instead of being refused for it.
 async function askedBeforeConfirm() {
   const dialog = within(await screen.findByRole("dialog"));
   await dialog.findByRole("combobox", { name: "How was it won?" });

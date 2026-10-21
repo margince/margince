@@ -187,11 +187,10 @@ func ensureDetailWithinBound(detail *string) error {
 	return nil
 }
 
-// signedAgreementFrom is the gate's one question, named so a test can read it
-// rather than keeping a second copy that drifts. The advance asks it under a
-// lock (evidenceQuery) and the read a client uses to decide what to ask asks it
-// without one (readEvidenceQuery); both are this text, so the question put to a
-// person and the refusal that follows cannot disagree.
+// signedAgreementFrom is the gate's one question, named so a test can read it.
+// The advance asks it under a lock (evidenceQuery) and the client's read asks
+// it without one (readEvidenceQuery). Both are this text, so the question and
+// the refusal cannot disagree.
 const signedAgreementFrom = `
 			FROM contract c
 			JOIN attachment a ON a.contract_id = c.id
@@ -211,8 +210,8 @@ const evidenceQuery = `
 			FOR SHARE OF c, a
 		)`
 
-// readEvidenceQuery is the same question for a reader that writes nothing, so
-// it takes no lock: asking whether to show a form must not hold up an archive.
+// readEvidenceQuery is the same question for a reader that writes nothing.
+// It takes no lock, because showing a form must not hold up an archive.
 const readEvidenceQuery = `
 		SELECT EXISTS (
 			SELECT 1` + signedAgreementFrom + `
@@ -258,11 +257,10 @@ func hasSignedContract(ctx context.Context, tx pgx.Tx, dealID ids.DealID) (bool,
 }
 
 // DealWinEvidence answers whether the deal has the signed agreement a win rests
-// on, for the client that must decide whether to ask how a win happened.
+// on. A client reads it to ask how a win happened before a refusal.
 //
-// Not a gate: the advance asks again under a lock when it runs, so an agreement
-// archived after this answered still ends in a refusal rather than a win with
-// nothing behind it. This read only spares the person from being refused first.
+// Not a gate. The advance asks again under a lock when it runs, so an agreement
+// archived after this answered still ends in a refusal.
 func (s *Store) DealWinEvidence(ctx context.Context, dealID ids.DealID) (bool, error) {
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return false, err

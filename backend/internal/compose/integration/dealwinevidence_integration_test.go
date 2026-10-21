@@ -5,14 +5,12 @@
 
 package integration
 
-// The read a client uses to decide whether to ask how a win happened, against
-// the advance that enforces the same rule.
+// The win-evidence read against the advance that enforces the same rule.
 //
-// The claim is that the two cannot disagree: whatever the read calls "no signed
-// agreement", the advance refuses, and whatever it calls "signed", the advance
-// lets through. The agreement and its file are written by the real contract
-// writer; the status and the file's parent are set directly because the
-// subject is the READ, as seedDocument does.
+// The two cannot disagree. What the read calls unsigned, the advance refuses,
+// and what it calls signed, the advance lets through. The agreement comes from
+// the real contract writer. Its status and its file's parent are set directly,
+// as seedDocument does, because the subject is the read.
 
 import (
 	"errors"

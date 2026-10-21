@@ -161,8 +161,8 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
     .getByRole("button", { name: "Won" })
     .click();
   await expect(page.getByText("In die Phase Won verschieben?")).toBeVisible();
-  // No contract is on the deal, so the dialog asks how it was won as soon as
-  // it opens, and the one press of Confirm that follows is the win.
+  // No contract is on the deal, so the dialog asks how it was won on opening.
+  // The one Confirm that follows is the win.
   await choose(
     page,
     dialog.getByRole("combobox", { name: "Wie wurde der Deal gewonnen?" }),

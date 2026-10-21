@@ -141,16 +141,12 @@ export function ConfirmAdvanceModal({
   };
 
   const needsLostReason = shown?.toStage.semantic === "lost";
-  // A win with no signed contract behind it is asked about BEFORE Confirm, so
-  // the reader is never refused for an answer nobody asked for. A win with a
-  // signed contract stays one click: making every rep justify a win the
-  // paperwork already explains is how a required field becomes a field everyone
-  // fills with the same lie.
-  //
-  // The server still decides. It asks again when the win lands, so an agreement
-  // archived while the dialog was open ends in the refusal below, and a read
-  // that failed leaves only that refusal to ask. Hence the question shows on
-  // EITHER the read's "none" or the refusal for this deal.
+  // A win with no signed contract is asked about before Confirm, so nobody is
+  // refused for an answer they were never asked for. A win with a contract
+  // stays one click, because a question every rep must answer gets the same
+  // lie from every rep.
+  // The server asks again when the win lands, so its refusal for this deal
+  // also shows the question.
   const askedForWin = pending?.toStage.semantic === "won";
   const evidence = useDealWinEvidence(pending?.dealId ?? null, askedForWin);
   const checkingEvidence = askedForWin && evidence.isFetching;
@@ -183,11 +179,10 @@ export function ConfirmAdvanceModal({
     // Captured BEFORE the await: `dismiss()` clears what was typed, and the
     // review starts from the words this reader actually wrote for THIS close.
     const tasksToComplete = closeTasks.chosen;
-    // The server takes a stated reason at its word without looking for paper,
-    // so an agreement filed while this dialog sat open would still be recorded
-    // as a win without one. Asked again at the press, the gap is the press and
-    // not the time the dialog was open. A refusal needs no re-read: it IS the
-    // server's current answer.
+    // The server takes a stated reason without looking for paper. So a
+    // contract filed while the dialog sat open would still be recorded as a win
+    // without one. Asking again at the press shrinks that gap to the press. A
+    // refusal needs no re-read, because it is the server's current answer.
     const withoutPaper =
       needsWonReason &&
       (refusedDealId === asked.dealId ||

@@ -136,9 +136,8 @@ func TestTheEvidenceQueryRefusesADraftContract(t *testing.T) {
 	}
 }
 
-// The read that decides whether to ask is the advance's question without its
-// lock: a reader that locked would hold up an archive for nothing, and one that
-// worded the question itself would drift from the refusal.
+// The read is the advance's question without its lock. A reader that locked
+// would hold up an archive, and one that reworded the question would drift.
 func TestTheReadAsksTheAdvancesQuestionWithoutItsLock(t *testing.T) {
 	if !strings.Contains(readEvidenceQuery, signedAgreementFrom) || !strings.Contains(evidenceQuery, signedAgreementFrom) {
 		t.Error("the read and the advance do not share one question")

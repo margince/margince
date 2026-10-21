@@ -128,7 +128,7 @@ func (h Handlers) ListStageEvidence(w http.ResponseWriter, r *http.Request, id c
 }
 
 // GetDealWinEvidence answers whether the deal has the signed agreement a win
-// rests on, so a client can ask how a win happened before it is refused.
+// rests on. A client asks it to put the question before the refusal.
 func (h Handlers) GetDealWinEvidence(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	signed, err := h.store.DealWinEvidence(r.Context(), pathID[ids.DealKind](id))
 	if err != nil {
