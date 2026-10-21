@@ -74,8 +74,7 @@ type runnerEnv struct {
 const stagingSpecName = "e2e_staging_agent"
 
 // enrichDomains gives an enrich target the page the call reads. A company with
-// no domain has nothing to read, so its approval preview is incomplete and the
-// decision is refused.
+// no domain has nothing to read, so the call is refused before it is staged.
 var enrichDomains = []integration.AnyMap{{"domain": "enrich-target.example", "is_primary": true}}
 
 // stagingSpec resolves the catalog for the 🟡 tests: the shipped entries

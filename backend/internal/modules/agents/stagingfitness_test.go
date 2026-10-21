@@ -59,7 +59,7 @@ type elsewhereProvider struct {
 }
 
 func (elsewhereProvider) Read(_ context.Context, ref datasource.EntityRef) (datasource.Record, error) {
-	return datasource.Record{Ref: ref, Fields: json.RawMessage(`{"full_name":"Mirrored"}`)}, nil
+	return datasource.Record{Ref: ref, Fields: json.RawMessage(`{"full_name":"Mirrored","domains":[{"domain":"acme.example"}]}`)}, nil
 }
 
 // stageableToolArgs is the argument corpus every walk over the stageable set
@@ -253,10 +253,10 @@ func (localProvider) Read(_ context.Context, ref datasource.EntityRef) (datasour
 	return nativeRecord(datasource.Record{
 		Ref: ref, Version: 1,
 		// One record shape serving every tool in the corpus: a name for the
-		// labels a summary is written from, and the channel kind the reply
-		// tools ask for before they will describe a send.
+		// labels a summary is written from, the channel kind the reply tools
+		// ask for before they will describe a send, and the domain a read reads.
 		Fields: json.RawMessage(`{"full_name":"Ada Lovelace","name":"Ada Lovelace",` +
-			`"kind":"message","channel_provider":"telegram"}`),
+			`"kind":"message","channel_provider":"telegram","domains":[{"domain":"acme.example"}]}`),
 	}), nil
 }
 
