@@ -20,7 +20,10 @@ import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { consequenceText } from "../worklist/worklist.connection";
 import {
+  briefContextTitle,
+  briefSubjectLabel,
   comparisonText,
+  dealFactsText,
   itemTitle,
   phrasedReasons,
   reasonText,
@@ -196,7 +199,7 @@ function QueueEntry({
         {formatNumber(rank, locale)}
       </span>
       <span className="brief-focus-item-title">
-        {itemTitle(item, t, locale)}
+        {briefSubjectLabel(item) ?? itemTitle(item, t, locale)}
       </span>
       {line && <span className="t-caption brief-focus-item-line">{line}</span>}
     </button>
@@ -246,7 +249,9 @@ function WhyFirst({ item }: Readonly<{ item: WorklistItem }>) {
 function AboutLine({ item }: Readonly<{ item: WorklistItem }>) {
   const t = useT();
   const contact = item.contact;
-  const label = contact?.label ?? item.subject?.label;
+  const label =
+    contact?.label ??
+    (briefSubjectLabel(item) ? undefined : item.subject?.label);
   const href = contact?.label ? contactHref(contact) : subjectHref(item);
   const inbox = item.email_summary?.display_status;
   return (
@@ -281,8 +286,11 @@ function queueLine(
       .filter((entry) => entry.kind !== "pinned")
       .map((entry) => reasonText(entry, t, locale, zone))
       .find((text) => text !== null) ?? null;
-  const parts = [who, reason].filter(
-    (part): part is string => part !== null && part !== "",
+  const subject = briefSubjectLabel(item);
+  const action = briefContextTitle(item);
+  const facts = subject ? dealFactsText(item, t, locale, zone) : null;
+  const parts = [action, who, facts, reason].filter(
+    (part): part is string => part != null && part !== "",
   );
   return parts.length > 0 ? parts.join(" · ") : null;
 }

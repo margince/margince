@@ -3,6 +3,7 @@
 
 import type { ReactNode } from "react";
 import { Badge } from "../../design-system/atoms";
+import { Heading } from "../../design-system/heading";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { isUnprepared } from "./worklist.copy";
@@ -57,26 +58,49 @@ export function RowText({
     zone,
   } = readings;
   const t = useT();
-  return (
+  const name = (
     <>
-      {(!emailOpener || badged) && (
-        <p className="t-body worklist-row-title">
-          {emailOpener ? null : (
-            <RowName
-              title={title}
-              href={href}
-              open={readings.open}
-              unavailable={readings.sourceUnavailable}
-            />
-          )}
-          {item.overdue && <Badge tone="danger">{t("worklist.overdue")}</Badge>}
-          {/* A state of the meeting, not a reason among reasons: a rep
+      {emailOpener ? null : (
+        <RowName
+          title={title}
+          href={href}
+          open={readings.open}
+          unavailable={readings.sourceUnavailable}
+        />
+      )}
+    </>
+  );
+  const badges = (
+    <>
+      {item.overdue && <Badge tone="danger">{t("worklist.overdue")}</Badge>}
+      {/* A state of the meeting, not a reason among reasons: a rep
               scanning for the one to open before it starts has to see it
               without reading the line under the title. Warn, not danger: an
               unprepared meeting is work to do, not a deadline already missed. */}
-          {isUnprepared(item) && (
-            <Badge tone="warning">{t("worklist.needsPrep")}</Badge>
-          )}
+      {isUnprepared(item) && (
+        <Badge tone="warning">{t("worklist.needsPrep")}</Badge>
+      )}
+    </>
+  );
+  return (
+    <>
+      {(!emailOpener || badged) &&
+        (readings.heading ? (
+          <div className="worklist-row-title">
+            <Heading size="large" as="h3">
+              {name}
+            </Heading>
+            {badges}
+          </div>
+        ) : (
+          <p className="t-body worklist-row-title">
+            {name}
+            {badges}
+          </p>
+        ))}
+      {readings.supportingTitle && (
+        <p className="t-body worklist-row-context">
+          {readings.supportingTitle}
         </p>
       )}
       {/* The supporting line, from every source that sends prose: which

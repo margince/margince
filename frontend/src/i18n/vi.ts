@@ -14856,9 +14856,6 @@ export const vi = {
   "worklist.untitled.meeting": "Cuộc họp chưa có tiêu đề",
   "worklist.untitled.meeting_outcome": "Kết quả cuộc họp",
   "worklist.untitled.relationship_decay": "Liên lạc đang thưa dần",
-  "worklist.briefAction.stalled": "Thống nhất bước tiếp theo",
-  "worklist.briefAction.closingSoon": "Xác nhận kế hoạch chốt giao dịch",
-  "worklist.briefAction.opportunity": "Lên kế hoạch bước bán hàng tiếp theo",
   "worklist.untitled.failed_approval":
     "Hành động đã duyệt không được thực hiện",
   "worklist.untitled.dsr": "Yêu cầu quyền riêng tư đang mở",

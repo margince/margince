@@ -200,12 +200,21 @@
 
 /* THE NAME OF THE ROW IN HAND is the page's one headline after the greeting.
    A waiting message names itself by its subject, at the same rung. */
-.brief-triage-lead .worklist-row-title,
+.brief-triage-lead p.worklist-row-title,
 .brief-triage-lead .emailentry__subject {
   font: var(--fontHeadingXXLarge);
   white-space: normal;
   overflow-wrap: anywhere;
   text-wrap: balance;
+}
+.brief-triage-lead .worklist-row-context,
+.brief-triage-lead .worklist-row-detail,
+.brief-triage-lead .worklist-row-verdict {
+  font: var(--fontBodyLarge);
+}
+.brief-triage-lead .worklist-row-facts {
+  font: var(--fontBody);
+  color: var(--textPrimary);
 }
 .brief-triage-lead .worklist-row-title > a {
   overflow: visible;

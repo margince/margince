@@ -11,6 +11,8 @@ import { useMe } from "../../lib/session";
 import { useBriefAnswer, withFoldedBrief } from "./worklist.briefverbs";
 import { consequenceText } from "./worklist.connection";
 import {
+  briefContextTitle,
+  briefSubjectLabel,
   comparisonText,
   dealFactsText,
   isUnprepared,
@@ -140,12 +142,12 @@ export function WorklistRow({
   // Open the activity itself without leaving the queue for its linked record.
   const source = useRowSource(item);
   const viewer = useMe(false).data?.user;
-  const title = framedTitle(
+  const name = framedName(
     item,
     itemTitle(readerTask(item, viewer, t), t, locale),
     framed,
-    t,
   );
+  const title = name.title;
   const facts =
     dealFactsText(item, t, locale, zone) ??
     leadFactsText(item, t, locale, zone);
@@ -203,7 +205,7 @@ export function WorklistRow({
   const answer = withFoldedBrief(rowAnswer(item, brief), item, brief);
   const readings: RowReadings = shapedReadings(framed, {
     item,
-    title,
+    ...name,
     href,
     open: source.open,
     sourceUnavailable: source.unavailable,
@@ -326,26 +328,11 @@ export function WorklistRow({
   );
 }
 
-function framedTitle(
-  item: WorklistItem,
-  fallback: string,
-  framed: boolean,
-  t: ReturnType<typeof useT>,
-): string {
-  if (
-    !framed ||
-    item.source !== "brief_item" ||
-    (item.title && item.title !== item.subject?.label)
-  )
-    return fallback;
-  switch (item.kind) {
-    case "stalled":
-      return t("worklist.briefAction.stalled");
-    case "closing_soon":
-      return t("worklist.briefAction.closingSoon");
-    case "opportunity":
-      return t("worklist.briefAction.opportunity");
-    default:
-      return fallback;
-  }
+function framedName(item: WorklistItem, fallback: string, framed: boolean) {
+  const subject = framed ? briefSubjectLabel(item) : undefined;
+  return {
+    title: subject ?? fallback,
+    heading: subject !== undefined,
+    supportingTitle: subject ? briefContextTitle(item) : undefined,
+  };
 }

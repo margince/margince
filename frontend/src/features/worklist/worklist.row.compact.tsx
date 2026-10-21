@@ -31,6 +31,9 @@ export type RowReadings = Readonly<{
   item: WorklistItem;
   /** The row's name, and where pressing it goes — no `href`, not a link. */
   title: string;
+  /** A framed brief names its record first and keeps the source sentence below. */
+  heading?: boolean;
+  supportingTitle?: string;
   href?: string;
   /** Opens what the row is about in place, for a subject with no page. */
   open?: () => void;

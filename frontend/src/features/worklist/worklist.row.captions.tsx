@@ -6,7 +6,7 @@ import { translatePlural, useLocale, useT } from "../../i18n";
 import { ENTITY } from "../../lib/entity";
 import { routeHash } from "../../lib/router";
 import type { UrlParams } from "../../lib/urlstate";
-import { subjectHref } from "./worklist.copy";
+import { briefSubjectLabel, subjectHref } from "./worklist.copy";
 import { employerOf } from "./worklist.meetingparties";
 import type { HeldTouch } from "./worklist.pane";
 import type { WorklistItem } from "./worklist.queries";
@@ -19,17 +19,7 @@ import type { RowReadings } from "./worklist.row.compact";
 // file had reached the length the tree allows and these captions are one idea
 // — the row's own account of itself — that reads whole on its own.
 
-/**
- * The readings as a FRAMED row prints them: the title and the work, nothing
- * under it. The card around the row in hand on the Brief already says whose
- * row it is, which side wrote last, why it is here and where it stands in the
- * day, each once and in its own place — so the captions the queue's row prints
- * under its title would say every one of them a second time.
- *
- * Keyed on the frame rather than on the verb ORDER the card also takes: the
- * queue drawer reads its rows in that order with no card around them, and
- * there these captions are the only place those facts are said.
- */
+// The frame owns timing and ranking text; brief-deal figures have no other home on the card.
 export function shapedReadings(
   framed: boolean,
   readings: RowReadings,
@@ -38,7 +28,7 @@ export function shapedReadings(
   return {
     ...readings,
     when: null,
-    facts: null,
+    facts: briefSubjectLabel(readings.item) ? readings.facts : null,
     said: [],
     folded: [],
     above: null,
