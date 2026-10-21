@@ -53,11 +53,11 @@ export const de = {
   "homeRepair.kind": "Zu prüfende Arbeit",
   "homeRepair.preserved": "Behalten oder übersprungen",
   "homeRepair.preservedNote":
-    "Enthält zur Prüfung behaltene und seit der Vorschau geänderte Aufgaben. Prüfen Sie erneut, was übrig bleibt.",
+    "Enthält zur Prüfung behaltene und seit der Vorschau geänderte Aufgaben. Prüfe erneut, was übrig bleibt.",
 
   "homeRepair.inspect": "Prüfen",
   "dataTasks.blocked.review_required":
-    "Prüfen Sie die vorgeschlagenen Änderungen vor dem Start.",
+    "Prüfe die vorgeschlagenen Änderungen vor dem Start.",
   "homeRepair.archive": "Automatische Erinnerung archivieren",
   "homeRepair.keepReview": "Zur persönlichen Prüfung behalten",
   "homeRepair.keepCurrent": "Aktuelle Aufgabe behalten",
@@ -66,7 +66,7 @@ export const de = {
   "homeRepair.reason.unverified":
     "Die verfügbaren Belege rechtfertigen keine automatische Änderung.",
   "homeRepair.reason.unavailable":
-    "Die Quelle kann mit Ihrem aktuellen Zugriff nicht geprüft werden.",
+    "Die Quelle kann mit deinem aktuellen Zugriff nicht geprüft werden.",
   "homeRepair.reason.historical": "Historische Quelle ohne aktuelle Frist.",
   "homeRepair.reason.baseline":
     "Die Quelle liegt vor dem gewählten Beginn des Postfachverlaufs.",

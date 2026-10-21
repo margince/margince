@@ -166,9 +166,10 @@ func figureOf(m crmcontracts.ResponseMetrics) atRiskFigure {
 // judged at all.
 func TestTheSameDayNextStepFigureCountsWhatThePassRecorded(t *testing.T) {
 	e := setupVerdicts(t)
-	e.passAt(t, e.taskAt.Add(-24*time.Hour))
-	e.passAt(t, e.taskAt)
-	e.passAt(t, e.taskAt.Add(24*time.Hour))
+	at := e.dayNoon(t)
+	e.passAt(t, at.Add(-24*time.Hour))
+	e.passAt(t, at)
+	e.passAt(t, at.Add(24*time.Hour))
 
 	for name, deal := range map[string]ids.UUID{"booked": e.booked, "other team's": e.other} {
 		if got := e.verdicts(t, deal); got != 3 {
@@ -181,7 +182,7 @@ func TestTheSameDayNextStepFigureCountsWhatThePassRecorded(t *testing.T) {
 		}
 	}
 
-	later := e.taskAt.Add(48 * time.Hour)
+	later := at.Add(48 * time.Hour)
 	whole := e.figureAt(e.Admin(), t, later)
 	if whole.Judged != 6 || whole.Booked != 1 {
 		t.Errorf("an unbounded reader sees %d judged and %d booked, want 6 and 1 — the task counts on the day it was "+
@@ -417,8 +418,9 @@ func TestASeatCannotRecordAVerdict(t *testing.T) {
 // The verdicts age out on the seeded window, and go with their deal.
 func TestTheVerdictsAgeOutAndGoWithTheirDeal(t *testing.T) {
 	e := setupVerdicts(t)
-	e.passAt(t, e.taskAt.Add(-24*time.Hour))
-	e.passAt(t, e.taskAt)
+	at := e.dayNoon(t)
+	e.passAt(t, at.Add(-24*time.Hour))
+	e.passAt(t, at)
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return consent.SeedDefaultRetentionTx(context.Background(), tx)
 	}); err != nil {
