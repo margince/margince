@@ -31,6 +31,7 @@ import { formatDate, formatMoney } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { useRecordZone } from "../../lib/recordzone";
+import { routeHash } from "../../lib/router";
 import { DealSuggestionAnswerDialog } from "./dealsuggestion.answer";
 import {
   type AcceptDealSuggestionBody,
@@ -84,7 +85,21 @@ export function DealSuggestionCard({
           <ConfidenceMeter level={confidenceLevel(suggestion.confidence)} />
         </Row>
         <p>
-          <span className="staged-value">{suggestedName(suggestion, t)}</span>
+          {compact ? (
+            // On the board this card is the suggestion's only trace. It leads to
+            // the company it is about, as the Worklist row does.
+            <a
+              className="staged-value"
+              href={routeHash({
+                screen: "companies",
+                id: suggestion.company_id,
+              })}
+            >
+              {suggestedName(suggestion, t)}
+            </a>
+          ) : (
+            <span className="staged-value">{suggestedName(suggestion, t)}</span>
+          )}
         </p>
         {suggestion.amount_minor != null && suggestion.currency && (
           <p className="dealsuggestion-amount t-caption">

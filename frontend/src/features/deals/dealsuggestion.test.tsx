@@ -472,6 +472,25 @@ describe("a suggestion on the pipeline board", () => {
     expect(within(proposal).queryByTestId("deal-suggestion")).toBeNull();
   });
 
+  it.each([
+    ["All", ""],
+    ["Mine", "#/deals?owner_id=u-me"],
+  ])(
+    "opens the suggestion's company from the card under %s",
+    async (_, hash) => {
+      window.location.hash = hash;
+      try {
+        const { column } = await columnFigures([suggestion]);
+        const name = await within(column).findByRole("link", {
+          name: "Acme GmbH: proposal sent",
+        });
+        expect(name.getAttribute("href")).toBe("#/companies/co-1");
+      } finally {
+        window.location.hash = "";
+      }
+    },
+  );
+
   it("leaves the column's count and totals as the deals alone make them", async () => {
     const withSuggestion = await columnFigures([suggestion]);
     await within(withSuggestion.column).findByTestId("deal-suggestion");
