@@ -97,19 +97,13 @@ func RawFields(v any) (json.RawMessage, error) {
 	}
 }
 
-// StrictDecode rejects unknown fields — an agent misspelling an argument
-// gets a 422 naming it, never a silent drop.
+// StrictDecode rejects unknown fields: an agent misspelling an argument gets a
+// 422 naming it, never a silent drop.
 //
-// It also refuses a field key that is not a BYTE-EXACT match for a
-// contract field name. encoding/json matches struct fields
-// case-insensitively, so `{"FULL_NAME":…}` would otherwise decode into
-// `full_name` and write the column — and the human-edit-precedence probe
-// (compose), which matches audit keys case-sensitively in jsonb, would
-// have cleared that same patch as touching no human-owned field. The two
-// must agree on key identity or an agent smuggles a human-owned overwrite
-// through the 🟢 path under a differently-cased key. A type that carries an
-// AdditionalProperties catch-all admits custom fields beside its own, so a key
-// there is a contract field or a cf_ key and nothing else.
+// A key must match a contract field name byte for byte. encoding/json would
+// match `FULL_NAME` to `full_name`, while the human-edit probe reads audit keys
+// case-sensitively and would clear that patch as touching no human-owned field.
+// A target with a catch-all map also admits cf_ keys.
 //
 //craft:ignore naked-any the deserialization seam: the decode target is whichever provider request struct the caller owns
 func StrictDecode(raw json.RawMessage, into any) error {
@@ -134,14 +128,11 @@ func StrictDecode(raw json.RawMessage, into any) error {
 	return nil
 }
 
-// RejectNonCanonicalKeys enforces byte-exact field-key identity. A target
-// with an AdditionalProperties catch-all (json:"-" map) admits custom fields
-// beside its own, and they travel as cf_ keys: any other key outside the
-// contract is a misspelling, not a custom field, and is refused as a closed
-// target refuses it. Both transports validate through this ONE function — the
-// provider seam (StrictDecode) and the REST body decode (platform/httperr) —
-// so a case-variant or misspelt key cannot be a field patch on one surface and
-// a rejected key on the other.
+// RejectNonCanonicalKeys refuses a key that is no contract field, byte for byte.
+// A target with an AdditionalProperties catch-all admits custom fields beside its
+// own, and they travel as cf_ keys. Any other key there is a misspelling. The
+// provider seam and the REST decode both call it, so neither takes a key the
+// other refuses.
 //
 //craft:ignore naked-any mirror of StrictDecode's seam target
 func RejectNonCanonicalKeys(raw json.RawMessage, into any) error {
@@ -176,14 +167,11 @@ func RejectNonCanonicalKeys(raw json.RawMessage, into any) error {
 	return &UnknownFieldError{Fields: unknown}
 }
 
-// collectCanonicalKeys gathers the byte-exact json field names of a struct
-// into out, following encoding/json's own rules: an embedded struct
-// promotes its fields, so it is walked recursively. It returns true if the
-// type carries an AdditionalProperties catch-all — a `json:"-"` MAP field,
-// the shape oapi-codegen generates for `additionalProperties`. The catch-all
-// test is the field's kind, not just its tag: a plain `json:"-"` (an internal
-// ignored field, a common idiom) must NOT be taken for one. The walk goes on
-// past a catch-all, because a field declared after it is still a contract key.
+// collectCanonicalKeys gathers the json field names of a struct into out, walking
+// embedded structs as encoding/json does. It reports whether the type carries an
+// AdditionalProperties catch-all, a `json:"-"` map field. The test is the field's
+// kind, so a plain ignored `json:"-"` field is not one. The walk goes on past a
+// catch-all, because a field declared after it is still a contract key.
 func collectCanonicalKeys(t reflect.Type, out map[string]struct{}) (hasCatchAll bool) {
 	for field := range t.Fields() {
 		tag := field.Tag.Get("json")

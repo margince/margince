@@ -45,10 +45,9 @@ func dealProvider(e *Env) *deals.Provider {
 	return deals.NewProvider(e.DB(), installseam.Deals())
 }
 
-// An agent that names a key is REFUSED, not quietly obeyed with a different
-// key, and told the key is not its to set rather than that the field is
-// unknown. A key an agent could choose is a key it could point at every
-// bracketed mention of a common word.
+// An agent that names a key is refused and told the key is not its to set. A
+// key an agent could choose is a key it could point at every bracketed mention
+// of a common word.
 func TestTheAgentSeamCannotChooseAProjectsKey(t *testing.T) {
 	e := Setup(t)
 	p := projectProvider(e)
@@ -137,12 +136,10 @@ func TestProjectThroughTheAgentSeam(t *testing.T) {
 	}
 }
 
-// The create contract carries additionalProperties for custom fields, and
-// only cf_ keys may ride in it. A key naming a real project column the contract
-// does not accept is refused by name, so it cannot reach that column. `phase`
-// moves only through advanceProjectPhase, which keeps a move, its history row
-// and its event in one transaction — so the agent seam must not be a side door
-// onto it.
+// Only cf_ keys may ride in the create body's extension map. A key naming a
+// project column the contract does not accept is refused by name. `phase` moves
+// only through advanceProjectPhase, which keeps the move, its history row and its
+// event in one transaction. The agent seam must not reach it.
 func TestTheAgentSeamCannotSetPhaseThroughAnUnrecognisedField(t *testing.T) {
 	e := Setup(t)
 	p := projectProvider(e)

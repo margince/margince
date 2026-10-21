@@ -16,9 +16,8 @@ const (
 	CustomFieldInvalid = "invalid_value"
 )
 
-// CustomFieldError refuses one custom-field key of a write: no active column
-// carries its name, or the value is of a shape the column cannot hold. It
-// classifies as a 422 naming the key.
+// CustomFieldError refuses one custom-field key of a write. It classifies as a
+// 422 naming the key.
 type CustomFieldError struct{ Field, Code, Message string }
 
 func (e *CustomFieldError) Error() string { return e.Field + ": " + e.Message }
@@ -28,11 +27,10 @@ func (e *CustomFieldError) FieldFault() (field, code, message string) {
 	return e.Field, e.Code, e.Message
 }
 
-// CheckCustomValues refuses a custom-field value the write would otherwise
-// drop: a key no active column names (unknown or retired), or a shape its
-// column cannot hold. A null passes, because it sets nothing on a create and
-// clears the value on an update. InsertFragments and SetCustomFieldPatch run
-// it, so no record write can answer success for a value it did not store.
+// CheckCustomValues refuses a key no active column names, retired ones
+// included, and a value its column cannot hold. A null passes: it sets nothing
+// on a create and clears the value on an update. InsertFragments and
+// SetCustomFieldPatch run it, so no write succeeds without storing every key.
 func CheckCustomValues(active []fieldcatalog.Column, values map[string]any) error {
 	byName := make(map[string]fieldcatalog.Column, len(active))
 	for _, c := range active {

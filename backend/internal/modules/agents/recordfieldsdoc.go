@@ -267,13 +267,10 @@ func activityReachNotes(shapes map[datasource.EntityType]reflect.Type) []string 
 		"write changes what an activity says, never who it is about."}
 }
 
-// customFieldNotes says how an extra key is read, which of the two fates it
-// meets, and which record types carry no custom fields at all.
+// customFieldNotes says how an extra key is read, and which record types carry
+// no custom fields at all.
 func customFieldNotes(shapes map[datasource.EntityType]reflect.Type) []string {
-	// Every write refuses a key it cannot store, by name: a key that is not
-	// cf_-prefixed, and a cf_ key whose custom field is not active in this
-	// workspace or whose value the column cannot hold. An agent is told so, to
-	// trust a success it receives.
+	// A write refuses any key it cannot store, so a success means all were stored.
 	notes := []string{"Extra keys must be named cf_<slug> and are read as custom-field values; any other " +
 		"key is REFUSED by name, and so is a cf_ key whose custom field is not ACTIVE in this workspace " +
 		"or whose value its type cannot hold, so a success means every key you sent was stored."}

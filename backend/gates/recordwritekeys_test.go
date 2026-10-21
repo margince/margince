@@ -3,12 +3,11 @@
 
 package gates
 
-// A record write names the fields the record has, or a cf_ key. The request
-// schemas that admit custom fields set additionalProperties, which makes the
-// generated decoder take any key, so the only thing between a misspelt field
-// and a write that "succeeds" with nothing stored is the key check both
-// transports share (datasource.RejectNonCanonicalKeys). This gate derives the
-// bodies that need it from the contract and proves each one is held.
+// A record write names the fields the record has, or a cf_ key. The schemas
+// that admit custom fields set additionalProperties, so the generated decoder
+// takes any key. Only the key check both transports share stands between a
+// misspelt field and a write that stores nothing. This gate derives the bodies
+// from the contract and proves each one is held.
 
 import (
 	"encoding/json"
@@ -97,10 +96,9 @@ func TestEveryCustomFieldRequestBodyRefusesAMisspeltKey(t *testing.T) {
 	}
 }
 
-// A body that admits extra keys is a body this gate must list. The listing
-// above reads schema names; this reads the operations, so a catch-all schema
-// that a route takes as its body under a name not ending in Request is found
-// too.
+// A body that admits extra keys must be listed here. The census above reads
+// schema names, and this one reads the operations, so a catch-all schema a
+// route takes under another name is found too.
 func TestEveryRequestBodyThatAdmitsExtraKeysIsListedHere(t *testing.T) {
 	doc := loadContractDocument(t)
 	paths, ok := doc["paths"].(map[string]any)

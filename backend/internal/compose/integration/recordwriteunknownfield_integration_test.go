@@ -6,9 +6,8 @@
 package integration
 
 // A record write names only fields the record has. The schemas admit extra
-// keys so a custom field can ride beside the standard ones, but a key that is
-// neither a standard field nor a cf_ key is a mistake, and a 200 that changed
-// nothing would tell the caller the write was done.
+// keys so a custom field can ride beside the standard ones. A key that is
+// neither is a mistake, and a 200 that changed nothing would hide it.
 
 import (
 	"net/http"

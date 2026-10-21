@@ -248,10 +248,9 @@ func assertRefusedCF(t *testing.T, err error, key, code string) {
 	}
 }
 
-// TestCustomFieldValues_WrongShapeRefused: additionalProperties carries no
-// per-key schema, so a value whose shape does not match its column's type is
-// refused by name, on a create and on an update, and an update's refusal leaves
-// the stored value standing.
+// TestCustomFieldValues_WrongShapeRefused: a value of the wrong shape for its
+// column is refused by name, on a create and on an update. An update's refusal
+// leaves the stored value standing.
 func TestCustomFieldValues_WrongShapeRefused(t *testing.T) {
 	f := setupCFV(t)
 	col := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Score", Type: customfields.TypeNumber, Source: "manual"})
@@ -282,11 +281,9 @@ func TestCustomFieldValues_WrongShapeRefused(t *testing.T) {
 	assertCF(t, got.AdditionalProperties, col, json.Number("7"))
 }
 
-// TestCustomFieldValues_WrongShapeRefusedAcrossTypes: WrongShapeRefused
-// proves the refusal only for a number-typed mismatch; SQLValue's shape
-// check runs once per column type (currency wants float64, date wants
-// string, boolean wants bool), so each type's own mismatch needs its
-// own proof that the write is refused.
+// TestCustomFieldValues_WrongShapeRefusedAcrossTypes: SQLValue checks shape once
+// per column type. Currency wants a float64, a date a string, a boolean a bool.
+// Each type's mismatch needs its own proof.
 func TestCustomFieldValues_WrongShapeRefusedAcrossTypes(t *testing.T) {
 	f := setupCFV(t)
 	eur := "EUR"
@@ -314,13 +311,9 @@ func TestCustomFieldValues_WrongShapeRefusedAcrossTypes(t *testing.T) {
 	}
 }
 
-// TestCustomFieldValues_NumberAcceptsJSONNumberAndDecimalString:
-// sqlNumber's doc comment promises three input shapes bind a number
-// column: the float64 every other suite writes through, plus the
-// json.Number/plain-decimal-string a UseNumber-decoding caller could
-// hand it — this proves those other two shapes actually round-trip
-// (and that a string that fails to parse as a number is still refused,
-// as every other type mismatch is).
+// TestCustomFieldValues_NumberAcceptsJSONNumberAndDecimalString: a number column
+// takes a float64, a json.Number and a plain decimal string, and all three
+// round-trip. A string that does not parse as a number is refused.
 func TestCustomFieldValues_NumberAcceptsJSONNumberAndDecimalString(t *testing.T) {
 	f := setupCFV(t)
 	col := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Score", Type: customfields.TypeNumber, Source: "manual"})

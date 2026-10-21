@@ -156,11 +156,9 @@ const recordFieldsDescription = "The crm.yaml body for the record_type. The fiel
 // rejectUnknownFields refuses a `fields` payload carrying keys the record type
 // cannot store, naming them and the ones it accepts.
 //
-// The provider's own decode refuses the same keys (datasource.StrictDecode), so
-// a record write never drops one in silence on any door. This check runs first
-// to answer with the record type's vocabulary, which the decoder's refusal does
-// not carry. A cf_ key passes: whether that custom field is active in this
-// workspace is the store's question, not a shape this tool can judge.
+// The provider's decode refuses the same keys, so no door drops one. This check
+// runs first to answer with the record type's vocabulary. A cf_ key passes:
+// whether that field is active is the store's question.
 func rejectUnknownFields(shapes writeShapes, recordType string, fields json.RawMessage) error {
 	shape, ok := shapes.types[datasource.EntityType(recordType)]
 	if !ok {

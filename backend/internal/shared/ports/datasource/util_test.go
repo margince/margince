@@ -46,12 +46,10 @@ func TestStrictDecodeRefusesCaseVariantFieldKeys(t *testing.T) {
 	}
 }
 
-// A target that carries an AdditionalProperties catch-all admits custom fields
-// beside its own, and they travel as cf_ keys. Any other key outside the
-// contract is a misspelling of a contract field, so it is refused by name
-// where a silent drop would answer success for a write that changed nothing.
-// The catch-all is a `json:"-"` MAP; a plain `json:"-"` ignored field (a
-// common Go idiom) is not one.
+// A target with an AdditionalProperties catch-all admits custom fields, which
+// travel as cf_ keys. Any other key outside the contract is a misspelling and is
+// refused by name. The catch-all is a `json:"-"` map; a plain ignored
+// `json:"-"` field is not one.
 func TestStrictDecodeAdmitsOnlyCustomKeysBeyondACatchAllsFields(t *testing.T) {
 	type withMapCatchAll struct {
 		FullName             *string        `json:"full_name,omitempty"`

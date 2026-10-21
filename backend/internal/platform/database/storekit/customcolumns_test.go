@@ -3,11 +3,10 @@
 
 package storekit
 
-// The customcolumns helper matrix: every one of the six closed field
-// types, both directions (SQLValue on write, ExtractValues on read), the
-// refusal of a key or shape no column holds, and the empty/missing-key edge cases — the
-// unit-test half of the fieldcatalog cross-module seam (the catalog-read
-// half is modules/customfields' integration suite).
+// The customcolumns helper matrix. It covers the six closed field types in both
+// directions, SQLValue on write and ExtractValues on read. It also covers the
+// refusal of a key or shape no column holds, and the empty and missing key cases.
+// The catalog read itself is tested elsewhere.
 
 import (
 	"encoding/json"
@@ -123,7 +122,7 @@ func TestInsertFragments_EmptyWhenNothingIsSet(t *testing.T) {
 }
 
 // A custom-field value no column can take is refused by name, on a create and
-// on an update, where it used to be left out of a write that answered success.
+// on an update.
 func TestACustomValueNoColumnTakesIsRefusedByName(t *testing.T) {
 	active := []fieldcatalog.Column{
 		col("cf_active", fieldcatalog.TypeBoolean),

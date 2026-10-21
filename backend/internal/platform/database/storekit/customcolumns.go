@@ -17,11 +17,9 @@ package storekit
 // fieldcatalog.Column directly, but neither storekit nor a record store
 // ever imports modules/customfields.
 //
-// A request body's additionalProperties carries no per-key shape contract
-// (it is JSON Schema `additionalProperties: true`), so SQLValue answers
-// ok=false for a value whose shape does not match its column's type. A write
-// never drops such a value: InsertFragments and SetCustomFieldPatch refuse it
-// through CheckCustomValues, so the caller is told which key was not stored.
+// A request body's extra keys carry no per-key shape contract. SQLValue answers
+// ok=false for a value of the wrong shape, and a write never drops one:
+// InsertFragments and SetCustomFieldPatch refuse it through CheckCustomValues.
 
 import (
 	"encoding/json"
@@ -109,15 +107,12 @@ func InsertFragments(active []fieldcatalog.Column, rawExtra map[string]any, base
 	return ", " + strings.Join(names, ", "), ", " + strings.Join(holders, ", "), args, nil
 }
 
-// SetCustomFieldPatch folds an update's custom-field values into the
-// patch — the same Patch that carries core columns, so the audit
-// before/after and the version-guarded UPDATE include cf_ changes with
-// no extra bookkeeping. current is the row's present wire values (the
-// AdditionalProperties map of the pre-update read); an absent key diffs
-// from nil. Same refusal as InsertFragments. The SQL SET
-// fragment quotes the catalog-derived identifier (a core column name is
-// a fixed literal in its store's SQL; a cf_ name is data and must never
-// splice in unquoted), while the audit diff keeps the bare wire name.
+// SetCustomFieldPatch folds an update's custom-field values into the patch that
+// carries the core columns, so the audit diff and the version-guarded UPDATE
+// include them. current is the row's present wire values; an absent key diffs
+// from nil. It refuses what InsertFragments refuses. The SQL SET quotes the
+// catalog-derived identifier, because a cf_ name is data, while the audit diff
+// keeps the bare wire name.
 func SetCustomFieldPatch(p *Patch, active []fieldcatalog.Column, updates, current map[string]any) error {
 	if err := CheckCustomValues(active, updates); err != nil {
 		return err

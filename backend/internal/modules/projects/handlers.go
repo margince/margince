@@ -293,11 +293,8 @@ func projectUpdateInput(req crmcontracts.UpdateProjectRequest, ifVersion *int64)
 }
 
 // claimCallerChosenKey answers 422 read_only to a `key`, in place of the
-// unknown-field refusal every other stranger to the contract gets.
-//
-// The field left the contract when the server took over minting, and a client
-// that still sends it needs to hear that the key is not theirs to set, not that
-// the field does not exist.
+// unknown-field refusal any other stranger to the contract gets. A client that
+// still sends it needs to hear the key is not theirs to set.
 func claimCallerChosenKey(key string) error {
 	if key != projectKeyField {
 		return nil

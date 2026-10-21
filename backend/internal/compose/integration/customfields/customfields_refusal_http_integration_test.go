@@ -5,10 +5,9 @@
 
 package customfields
 
-// A record write stores every custom-field key it was sent or answers a 422
-// naming the one it could not. A key no active field names, a retired field's
-// key and a value the column cannot hold are each refused, on a create and on
-// an update, where they used to be left out of a write that answered success.
+// A record write stores every custom-field key or answers a 422 naming the one
+// it could not. A create and an update both refuse three cases. They are a key
+// no field names, a retired field's key, and a value its column cannot hold.
 
 import (
 	"encoding/json"

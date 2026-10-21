@@ -312,10 +312,7 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 	if err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
-	occurredAt := time.Now().UTC()
-	if in.OccurredAt != nil {
-		occurredAt = in.OccurredAt.UTC()
-	}
+	occurredAt := occurredAtOf(in)
 	assignee, err := checkedTaskAssignee(ctx, tx, in)
 	if err != nil {
 		return crmcontracts.Activity{}, false, err
@@ -391,6 +388,13 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 		return crmcontracts.Activity{}, false, err
 	}
 	return out, true, nil
+}
+
+func occurredAtOf(in LogActivityInput) time.Time {
+	if in.OccurredAt != nil {
+		return in.OccurredAt.UTC()
+	}
+	return time.Now().UTC()
 }
 
 // writeActivitySatellites writes the rows that ride with a new activity and
