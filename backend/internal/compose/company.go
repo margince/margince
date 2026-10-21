@@ -144,6 +144,12 @@ func (h companyHandlers) PutAnchorCompany(w http.ResponseWriter, r *http.Request
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
+	// Before the name check, which would read a null display_name as empty.
+	fields := profileFields(req)
+	if err := clearProfileFields(fields, httperr.ClearedFields(r)); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	if code, why := values.CompanyNameFault(req.DisplayName); code != "" {
 		httperr.Write(w, r, httperr.Validation("display_name", code, why))
 		return
@@ -187,11 +193,6 @@ func (h companyHandlers) PutAnchorCompany(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	fields := profileFields(req)
-	if err := clearProfileFields(fields, httperr.ClearedFields(r)); err != nil {
-		httperr.Write(w, r, err)
-		return
-	}
 	company, err := h.store.SaveCompany(r.Context(), contacts.SaveCompanyInput{
 		DisplayName: strings.TrimSpace(req.DisplayName),
 		Website:     website,

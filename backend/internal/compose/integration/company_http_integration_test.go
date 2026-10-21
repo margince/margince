@@ -349,11 +349,14 @@ func TestACompanyProfileFieldClearsOnNull(t *testing.T) {
 		t.Fatalf("usp: null = %d, usp %v; want 200 and no usp", status, cleared.Usp)
 	}
 
-	body["website"] = nil
-	var problem companyProblem
-	status := e.Call(t, "PUT", "/v1/company", body, nil, &problem)
-	if status != http.StatusUnprocessableEntity || len(problem.Details.Errors) != 1 ||
-		problem.Details.Errors[0].Field != "website" || problem.Details.Errors[0].Code != "field_not_clearable" {
-		t.Fatalf("website: null = %d %+v, want 422 field_not_clearable on website", status, problem)
+	for _, field := range []string{"website", "display_name"} {
+		refused := wellFormedCompany()
+		refused[field] = nil
+		var problem companyProblem
+		status := e.Call(t, "PUT", "/v1/company", refused, nil, &problem)
+		if status != http.StatusUnprocessableEntity || len(problem.Details.Errors) != 1 ||
+			problem.Details.Errors[0].Field != field || problem.Details.Errors[0].Code != "field_not_clearable" {
+			t.Errorf("%s: null = %d %+v, want 422 field_not_clearable on %s", field, status, problem, field)
+		}
 	}
 }
