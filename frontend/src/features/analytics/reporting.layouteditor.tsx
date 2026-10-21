@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, X } from "lucide-react";
-import { type ReactNode, useId, useRef, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { api } from "../../api/client";
 import { Button, Field, TextInput } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
@@ -41,9 +41,9 @@ export function cardLabel(
 }
 
 /**
- * Sections of chart cards. A card is dragged by its handle, or moved with the
- * arrow keys on it; a menu moves it to another section, and buttons move a
- * section, so a keyboard and a screen reader can do every step.
+ * Sections of chart cards. A card is dragged by its handle or moved with the
+ * arrow keys on it. A menu moves it to another section, and buttons move a
+ * section. So a keyboard and a screen reader can do every step.
  */
 export function LayoutEditor({
   layout,
@@ -165,24 +165,30 @@ export function LayoutEditor({
  * from outside gets fresh ones.
  */
 function useSectionKeys(count: number) {
-  const minted = useRef(0);
-  const mint = () => `section-key-${minted.current++}`;
-  const [keys, setKeys] = useState<readonly string[]>(() =>
-    Array.from({ length: count }, mint),
-  );
+  const fresh = (minted: number, length: number) => ({
+    keys: Array.from({ length }, (_, index) => `section-key-${minted + index}`),
+    minted: minted + length,
+  });
+  const [state, setState] = useState(() => fresh(0, count));
   const current =
-    keys.length === count ? keys : Array.from({ length: count }, mint);
-  if (current !== keys) setKeys(current);
+    state.keys.length === count ? state : fresh(state.minted, count);
+  if (current !== state) setState(current);
+  const keep = (keys: string[]) => setState({ ...current, keys });
   return {
-    keys: current,
+    keys: current.keys,
     move: (at: number, step: -1 | 1) => {
-      const next = [...current];
+      const next = [...current.keys];
       const [moving] = next.splice(at, 1);
       if (moving) next.splice(at + step, 0, moving);
-      setKeys(next);
+      keep(next);
     },
-    remove: (at: number) => setKeys(current.filter((_, index) => index !== at)),
-    add: () => setKeys([...current, mint()]),
+    remove: (at: number) =>
+      keep(current.keys.filter((_, index) => index !== at)),
+    add: () =>
+      setState({
+        keys: [...current.keys, `section-key-${current.minted}`],
+        minted: current.minted + 1,
+      }),
   };
 }
 

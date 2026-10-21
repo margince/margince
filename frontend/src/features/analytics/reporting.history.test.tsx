@@ -249,11 +249,12 @@ it("saves edited layout order, metric selection and team audience", async () => 
   await user.click(
     screen.getByText("Charts and order", { selector: ".disclosure-label" }),
   );
-  await user.click(
+  (
     await screen.findByRole("button", {
-      name: "Move down: Sales won over time",
-    }),
-  );
+      name: /^Move Sales won over time, 1 of /,
+    })
+  ).focus();
+  await user.keyboard("{ArrowDown}");
   await user.click(
     screen.getByRole("button", { name: "Remove Time in current stage" }),
   );
