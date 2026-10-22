@@ -306,26 +306,27 @@ func (s *Store) waitingStatement(
 	if relax.keepSetAside {
 		setAside = scopeUnbounded
 	}
-	readerAddresses, err := s.readerAddressList(ctx, tx, readerOrNobody(ctx))
-	if err != nil {
-		return "", err
-	}
 	// Relaxations widen eligibility rules, never what a reader may be shown.
 	bookedDiscover, err := bookedDiscoverClause(ctx, arg)
 	if err != nil {
 		return "", err
 	}
+	identities, err := s.mailSeatIdentitiesSQL(ctx, tx, arg)
+	if err != nil {
+		return "", err
+	}
+	responsibility := personalMailResponsibilitySQL(&relax.reader, identities, arg)
 	return fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, WaitingScanCap,
 		horizon,
 		liveRecord(openDealPredicate, "d"),
 		liveRecord(workingLeadPredicate, "ld"),
 		liveRecord(openDealPredicate, "openDeal"),
 		arg(relax.reader),
-		scopeUnbounded,
+		responsibility,
 		notSales, unlinked,
 		colleague, ownDomainSenderSQL("a", arg(ownDomains)),
 		messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent),
-		fmt.Sprintf("$%d", arg(readerAddresses)),
+		mailSeatAddressesSQL(identities, fmt.Sprintf("$%d::uuid", arg(relax.reader))),
 		informsUs,
 		noKeyset, bookedDiscover,
 		setAside, neverRelaxed), nil

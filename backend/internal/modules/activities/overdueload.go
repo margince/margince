@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -81,7 +82,11 @@ func (s *Store) taskLoadByAssignee(ctx context.Context, asOf time.Time, commitme
 		if scope == "" {
 			scope = scopeUnbounded
 		}
-		agedOut := worklistAgeOutClause(asOf, "a.assignee_id", arg)
+		identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
+		if err != nil {
+			return err
+		}
+		agedOut := worklistAgeOutClause(asOf, "a.assignee_id", identities, arg)
 		comparison, source := "<", ""
 		if commitments {
 			comparison = "<="

@@ -22,6 +22,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 // waitingContactRank orders the contacts one message is filed under so the
@@ -259,7 +260,8 @@ var waitingRepliesSQL = `
 	     WHERE request_task.source_system = '` + EmailRequestTaskSource + `'
 	       AND request_task.source_activity_id = a.id
        AND (request_task.is_done OR (request_task.archived_at IS NULL
-         AND (request_task.assignee_id = $%[9]d OR $%[9]d = '00000000-0000-0000-0000-000000000000'::uuid))))
+         AND (request_task.assignee_id = $%[9]d OR $%[9]d = '00000000-0000-0000-0000-000000000000'::uuid
+          OR ` + storekit.HumanWroteActivityClause("request_task") + `))))
 	   AND ` + withinWaitingHorizonSQL("$%[1]d", "%[5]d") + `
 	   -- A SALES link, or it is not this queue's business.
 	   --
@@ -342,10 +344,10 @@ var waitingRepliesSQL = `
 	 -- is a public-suffix question rather than a LIKE — so the caller filters
 	 -- what survives and asks for another page when too much of it went. The
 	 -- cap bounds ONE page; the caller bounds how many it will ask for.
-		 ORDER BY a.occurred_at DESC
+		 ORDER BY a.occurred_at DESC, a.id DESC
 	 LIMIT %[4]d))
 	 GROUP BY a.id, a.kind, a.subject, a.occurred_at
-	 ORDER BY a.occurred_at DESC`
+	 ORDER BY a.occurred_at DESC, a.id DESC`
 
 // planEachBind runs a statement carrying waitingRepliesSQL unnamed, so Postgres
 // plans it at each Bind with the values. A reused named statement turns generic

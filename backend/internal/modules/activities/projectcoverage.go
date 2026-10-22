@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -82,7 +83,11 @@ func (s *Store) ProjectActivityFactsTx(ctx context.Context, tx pgx.Tx, id ids.Pr
 	if edgeScope == "" {
 		edgeScope = scopeUnbounded
 	}
-	current := CurrentCommitmentTaskClause("a", asOf, arg)
+	identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
+	if err != nil {
+		return ProjectActivityFacts{}, err
+	}
+	current := CurrentTaskClause("a", asOf, identities, arg)
 	var facts ProjectActivityFacts
 	// The candidate set is every activity with ANY link into the project's
 	// neighbourhood; each is then classified once, so an activity linked to

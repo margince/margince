@@ -22,6 +22,10 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 	if err := requireActivityListScope(ctx, tx, in); err != nil {
 		return nil, storekit.Page{}, err
 	}
+	var err error
+	if in.mailIdentities, err = currentTaskMailIdentities(ctx, tx, in); err != nil {
+		return nil, storekit.Page{}, err
+	}
 	limit := storekit.ClampLimit(in.Limit)
 	where, content, sorted, args, err := listActivitiesFilter(ctx, in)
 	if err != nil {

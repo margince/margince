@@ -1,5 +1,5 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
-import { itemsOf, signIn } from "./waits";
+import { signIn } from "./waits";
 
 /**
  * The company record page against the design's glance (DESIGN.md §7).
@@ -126,12 +126,6 @@ test.describe("company record — the glance's page shape", () => {
     }
   });
 
-  // Overview · History · Contacts · Deals · Tasks · Finance · Documents · Profile,
-  // plus Partner for an account that has a partner programme (companyTabsFor
-  // in companies.tsx gates it on relationship_types, not on a fixed
-  // count) — so the expectation follows the fixture's own data rather than
-  // assuming either shape. The details control stands at the END of the row
-  // and is not a tab: it is the one pressed button among them.
   test("the tab strip offers every tab, plus partner only where the account has one, and ends in the details control", async ({
     page,
   }) => {
@@ -145,8 +139,13 @@ test.describe("company record — the glance's page shape", () => {
       return Boolean(company?.relationship_types?.includes("partner"));
     });
     await expect(
+      page
+        .locator("[data-testid='co-tabs']")
+        .getByRole("button", { name: "Finanzen", exact: true }),
+    ).toBeVisible();
+    await expect(
       page.locator("[data-testid='co-tabs'] .recordtabs-tab"),
-    ).toHaveCount(isPartnerAccount ? 8 : 7);
+    ).toHaveCount(isPartnerAccount ? 9 : 8);
     await expect(
       page.locator(
         "[data-testid='co-tabs'] .recordtabs-trailing button[aria-pressed]",
@@ -154,43 +153,33 @@ test.describe("company record — the glance's page shape", () => {
     ).toHaveCount(1);
   });
 
-  // The 360 is the first pane and the only one that may look like a feature
-  // (DESIGN.md §7): one pane, the account brief, the needs list and the money
-  // under it on the left, Ask on the right. What this pins is that they are
-  // PANES of the glance in that order, not a column of cards that each reads
-  // the account.
-  //
-  // Anchored on rendered TEXT rather than classes: the strings are the German
-  // chrome the suite pins via `locale: de-DE`.
-  test("the overview leads with the 360, then the needs list and the money on the left, Ask on the right", async ({
+  test("the overview stacks the account brief, needs and questions, with commercial detail on Deals", async ({
     page,
   }) => {
     await openCompany(page, POPULATED_COMPANY as string);
     const call = page.getByRole("heading", { name: "Unternehmensbericht" });
-    await expect(call).toHaveCount(1);
     const needs = page.getByRole("heading", { name: "Handlungsbedarf" });
-    await expect(needs).toHaveCount(1);
-    const money = page.getByRole("heading", { name: "Geschäftliches" });
     const ask = page.getByRole("heading", {
       name: "Fragen zu diesem Unternehmen",
     });
-    await expect(ask).toHaveCount(1);
-    // Next steps is gone from this page — its open tasks are the needs list
-    // and the Tasks tab now.
+    await expect(call).toBeVisible();
+    await expect(needs).toBeVisible();
+    await expect(ask).toBeVisible();
     await expect(
-      page.getByRole("heading", { name: "Nächste Schritte" }),
+      page.getByRole("heading", { name: "Nächste Schritte", exact: true }),
     ).toHaveCount(0);
-
-    // Order: the 360 above the needs list, the needs list above the money, and
-    // Ask beside the needs list rather than under it.
     expect(await topOf(call)).toBeLessThan(await topOf(needs));
-    expect(await topOf(needs)).toBeLessThan(await topOf(money));
-    const needsBox = await needs.boundingBox();
-    const askBox = await ask.boundingBox();
-    if (!needsBox || !askBox) {
-      throw new Error("the needs list and Ask are visible but one has no box");
-    }
-    expect(askBox.x).toBeGreaterThan(needsBox.x);
+    expect(await topOf(needs)).toBeLessThan(await topOf(ask));
+    await expect(
+      page.getByRole("heading", { name: "Geschäftliches" }),
+    ).toHaveCount(0);
+    await page
+      .locator("[data-testid='co-tabs']")
+      .getByRole("button", { name: /^Deals und Projekte/ })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: "Deals", exact: true }),
+    ).toBeVisible();
   });
 
   // The needs list asks for a move on the account, so it belongs to the tab a
@@ -207,50 +196,41 @@ test.describe("company record — the glance's page shape", () => {
     await expect(needs).toHaveCount(0);
   });
 
-  // The details pane is the record's, on the RIGHT of the work under the tab
-  // row, and it starts closed: the Details control at the end of the tab row
-  // opens it (DESIGN.md §6). Inside it, ONE pane of named sections — the
-  // account's fields, its deals, its contacts, the hold where the account has a
-  // domain, its tags — each a disclosure with a non-empty summary, never a
-  // stack of cards.
-  //
-  // What is asserted is structural, not textual: the pane's presence, that it
-  // carries its named slices, and that it stands to the right of the overview
-  // (the x comparison holds above the 1200px restack, which this suite's
-  // viewport pins). The German copy inside is not pinned.
-  test("the details pane opens from the tab row as one pane of named sections, on the right", async ({
+  test("the context rail keeps named account cards beside the overview", async ({
     page,
   }) => {
     await openCompany(page, POPULATED_COMPANY as string);
     const rail = page.locator(".co-rail");
-    await expect(rail).toBeHidden();
-
-    await page
-      .locator(
-        "[data-testid='co-tabs'] .recordtabs-trailing button[aria-pressed]",
-      )
-      .click();
     await expect(rail).toBeVisible();
-
-    // Waited for, not counted straight away: the rail's own visibility says its
-    // frame has painted, and a bare count on what is inside it reads whatever
-    // has mounted by that instant.
-    await expect(rail.locator("> .panel")).toHaveCount(1);
-    const sections = rail.locator("> .panel > details");
-    // Four on every account, five where the account has a domain to hold.
-    await expect(sections.first()).toBeVisible();
-    expect(await sections.count()).toBeGreaterThanOrEqual(4);
-    expect(await sections.count()).toBeLessThanOrEqual(5);
-    for (const summary of await itemsOf(sections.locator("> summary"))) {
-      expect((await summary.textContent())?.trim()).not.toBe("");
+    const context = rail.locator(":scope > .panel").filter({
+      has: page.getByRole("heading", { name: "Aktive Deals", exact: true }),
+    });
+    await expect(context).toHaveCount(1);
+    for (const name of [
+      "Registrierung",
+      "Zuständigkeiten",
+      "Aktive Deals",
+      "Projekte",
+      "Wichtige Kontakte",
+    ]) {
+      await expect(
+        context.getByRole("heading", { name, exact: true }),
+      ).toBeVisible();
     }
-
+    await expect(
+      rail.getByRole("heading", { name: "Details", exact: true }),
+    ).toBeVisible();
+    const headings = rail.getByRole("heading");
+    await expect(headings.first()).toBeVisible();
+    expect(await headings.count()).toBeGreaterThanOrEqual(4);
+    for (const heading of await headings.all()) {
+      await expect(heading).not.toBeEmpty();
+    }
     const railBox = await rail.boundingBox();
     const bodyBox = await page.locator(".co-overview-stack").boundingBox();
-    if (!railBox || !bodyBox) {
-      throw new Error("rail and stack are visible but one has no box");
-    }
-    expect(railBox.x).toBeGreaterThan(bodyBox.x);
+    if (!railBox || !bodyBox)
+      throw new Error("account context and overview need visible boxes");
+    expect(railBox.x).toBeGreaterThan(bodyBox.x + bodyBox.width - 1);
   });
 
   // A freshly imported company is lifecycle `unknown` and has nothing on it.
@@ -294,36 +274,22 @@ test.describe("company record — the glance's page shape", () => {
   });
 });
 
-/**
- * The mockup's PROMINENCE, measured off the boxes the page lays out.
- *
- * The structural suite above passes on a page rendering at half the mockup's
- * size, because a count does not know how big anything is. These are the things
- * a reader actually sees at their drawn size: the account's logo and the
- * control that says where the account stands.
- *
- * Floors rather than exact values. A mark that lands at 120px where the mockup
- * drew 110 is right; one that lands at 44 is the list-row avatar these exist to
- * catch. Pixel equality would fail on a rounding difference and tell nobody
- * anything.
- */
-test.describe("company record — the mockup's visual weight", () => {
+// Live geometry complements the structural and record-header unit tests.
+test.describe("company record — visual weight", () => {
   test.beforeEach(async ({ page }) => {
     await signIn(page);
     await openCompany(page, POPULATED_COMPANY as string);
   });
 
-  test("the company's mark is a logo, not a favicon", async ({ page }) => {
-    // ~110px square in the mockups, beside a name at ~40px. At 44 it reads as
-    // a list-row avatar that wandered onto a record page.
-    const box = await page
-      .locator(".record-head .avatar")
-      .first()
-      .boundingBox();
-    if (!box) {
-      throw new Error("the header avatar has no box");
-    }
-    expect(box.width).toBeGreaterThanOrEqual(72);
+  test("the compact company header uses the large record mark", async ({
+    page,
+  }) => {
+    const mark = page.locator(".record-head-compact .avatar-lg").first();
+    await expect(mark).toBeVisible();
+    const box = await mark.boundingBox();
+    if (!box) throw new Error("the header mark needs a visible box");
+    expect(Math.round(box.width)).toBeGreaterThanOrEqual(46);
+    expect(box.height).toBeCloseTo(box.width, 2);
   });
 
   test("the lifecycle control is a control, not a tag", async ({ page }) => {
@@ -348,7 +314,7 @@ test.describe("company record — the mockup's visual weight", () => {
         "no [data-testid='company-lifecycle'] on the company header — the id moved, or the control did",
       );
     }
-    expect(box.height).toBeGreaterThanOrEqual(32);
+    expect(Math.round(box.height)).toBeGreaterThanOrEqual(32);
   });
 
   // Website, LinkedIn, location, industry, size: five pills under the

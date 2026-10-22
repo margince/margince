@@ -16,9 +16,11 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -81,7 +83,11 @@ func orderByLeadLastActivity(context.Context, func(any) int) (string, error) {
 // A lead with no open task shows none and orders by none, which the list's
 // ORDER BY already puts last.
 func orderByLeadNextTaskDue(ctx context.Context, arg func(any) int) (string, error) {
-	return leadNextTaskDueSQL(leadTaskWorkSQL(ctx, arg)), nil
+	work, err := leadTaskWorkSQL(ctx, arg)
+	if err != nil {
+		return "", err
+	}
+	return leadNextTaskDueSQL(work), nil
 }
 
 // orderByLeadSourceLabel orders by the words the Source column prints rather
@@ -104,6 +110,9 @@ func (s *Store) ListLeads(ctx context.Context, in ListLeadsInput) ([]crmcontract
 			return nil, storekit.Page{}, err
 		}
 	}
+	if err := auth.Require(ctx, leadEntity, principal.ActionRead); err != nil {
+		return nil, storekit.Page{}, err
+	}
 	if in.Sort == nil || *in.Sort == "" {
 		return s.listLeadWorkQueue(ctx, in)
 	}
@@ -116,6 +125,7 @@ func (s *Store) ListLeads(ctx context.Context, in ListLeadsInput) ([]crmcontract
 	ctx = withPinnedSLANow(ctx, leadSLAClock().UTC())
 	return listPage(ctx, s, in.Sort, in.Limit, listPageSpec[crmcontracts.Lead]{
 		entity:  leadEntity,
+		prepare: withLeadTaskIdentities,
 		columns: leadColumns,
 		fields:  leadListFields,
 		filters: func(ctx context.Context, active []fieldcatalog.Column, sorted *storekit.ListSort, arg func(any) int) ([]string, error) {

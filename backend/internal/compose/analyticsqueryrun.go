@@ -98,7 +98,7 @@ func RunAnalyticsQuery(
 	if err != nil {
 		return AnalyticsAnswer{}, err
 	}
-	sql, args, err := bindReportTokens(ctx, frame, plan.SQL, plan.Args)
+	sql, args, err := bindReportTokens(ctx, tx, frame, plan.SQL, plan.Args)
 	if err != nil {
 		return AnalyticsAnswer{}, err
 	}
@@ -151,7 +151,7 @@ func refuseIfTheFilterHidesTooLittle(
 	if plan.ExcludedSQL == "" || floor <= 0 {
 		return nil
 	}
-	sql, args, err := bindReportTokens(ctx, frame, plan.ExcludedSQL, plan.ExcludedArgs)
+	sql, args, err := bindReportTokens(ctx, tx, frame, plan.ExcludedSQL, plan.ExcludedArgs)
 	if err != nil {
 		return err
 	}

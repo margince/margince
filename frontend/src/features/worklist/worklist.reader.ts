@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { Translator } from "../../i18n";
+import { type Locale, type Translator, translatePlural } from "../../i18n";
 import {
   actorAttribution,
   HUMAN_ACTOR_PREFIX,
@@ -86,4 +86,30 @@ function noticeActor(
     attribution.qualifierName ??
     (attribution.qualifierKey ? t(attribution.qualifierKey) : undefined);
   return [label, qualifier].filter(Boolean).join(" · ");
+}
+
+export function sharedResponsibility(
+  item: WorklistItem,
+  locale: Locale,
+  t: Translator,
+): string | null {
+  const owner = item.owner;
+  if (owner?.kind !== "shared" || !owner.users?.length) return null;
+  const names = owner.users.flatMap((user) =>
+    user.label?.trim() ? [user.label.trim()] : [],
+  );
+  if (names.length === owner.users.length) {
+    return t("worklist.owner.shared", {
+      names: new Intl.ListFormat(locale, {
+        style: "long",
+        type: "conjunction",
+      }).format(names),
+    });
+  }
+  return translatePlural(
+    locale,
+    "worklist.owner.sharedCount",
+    owner.users.length,
+    { count: String(owner.users.length) },
+  );
 }

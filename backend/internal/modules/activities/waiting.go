@@ -24,6 +24,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -161,7 +162,7 @@ const WaitingScanCap = 200
 // Applied BEFORE the cap, which is the whole shape of this query: a filter after
 // LIMIT lets two hundred rows nobody wants fill the scan and push a real
 // customer past it, and the page then says nobody is waiting.
-const waitingHorizonDays = 90
+const waitingHorizonDays = storekit.DefaultWaitingHorizonDays
 
 // What "still live" means, per record type, as one spelling each.
 //
@@ -233,26 +234,26 @@ func liveRecord(predicate, alias string) string {
 // and the public-suffix walk are both Go, and compose owns the seam that has
 // them.
 func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingReply, error) {
-	return s.WaitingRepliesBefore(ctx, asOf, time.Time{})
+	return s.WaitingRepliesBefore(ctx, asOf, WaitingPosition{})
 }
 
 // WaitingRepliesBefore is WaitingReplies continued: the next page of the same
-// scan, older than the instant given.
+// scan, after the timestamp and identity given.
 //
 // One implementation, two names. The unpaged spelling is what almost every
 // caller wants — one page is two hundred rows and more than a queue shows —
 // and it says so by taking no cursor at all, rather than every call site
 // carrying a zero somebody has to recognise as "the beginning".
-func (s *Store) WaitingRepliesBefore(ctx context.Context, asOf time.Time, before time.Time) ([]WaitingReply, error) {
+func (s *Store) WaitingRepliesBefore(ctx context.Context, asOf time.Time, before WaitingPosition) ([]WaitingReply, error) {
 	return s.scanWaitingReplies(ctx, asOf, before, nil)
 }
 
 // WaitingRepliesForOwnerBefore narrows mail responsibility before the scan bound.
-func (s *Store) WaitingRepliesForOwnerBefore(ctx context.Context, asOf, before time.Time, owner ids.UUID) ([]WaitingReply, error) {
+func (s *Store) WaitingRepliesForOwnerBefore(ctx context.Context, asOf time.Time, before WaitingPosition, owner ids.UUID) ([]WaitingReply, error) {
 	return s.scanWaitingReplies(ctx, asOf, before, &owner)
 }
 
-func (s *Store) scanWaitingReplies(ctx context.Context, asOf, before time.Time, owner *ids.UUID) ([]WaitingReply, error) {
+func (s *Store) scanWaitingReplies(ctx context.Context, asOf time.Time, before WaitingPosition, owner *ids.UUID) ([]WaitingReply, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, err
 	}
@@ -301,13 +302,11 @@ func (s *Store) scanWaitingReplies(ctx context.Context, asOf, before time.Time, 
 		if linkVisible == "" {
 			linkVisible = scopeUnbounded
 		}
-		// WHOSE set-asides apply. The reader comes from the principal rather
-		// than from a parameter, so one contact's snooze cannot be asked for on
-		// another's behalf. A caller with no contact behind it — a system pass
-		// reading the same query — matches no reader_state row and therefore
-		// has nothing hidden from it, which is the honest answer: a background
-		// job has set nothing aside.
-		reader := arg(readerOrNobody(ctx))
+		subject := readerOrNobody(ctx)
+		if owner != nil {
+			subject = *owner
+		}
+		reader := arg(subject)
 		// One snapshot for this read. Passed as a list rather than tested in Go
 		// so the clause runs before the scan cap — see OwnDomains.
 		ownDomains, err := s.ownDomainList(ctx, tx)
@@ -321,13 +320,7 @@ func (s *Store) scanWaitingReplies(ctx context.Context, asOf, before time.Time, 
 		if err != nil {
 			return err
 		}
-		// The reader's own addresses, read in the SAME transaction as the scan
-		// so a mailbox connected mid-read cannot make one row judge the
-		// envelope differently from the next.
-		readerAddresses, err := s.readerAddressList(ctx, tx, readerOrNobody(ctx))
-		if err != nil {
-			return err
-		}
+
 		bookedDiscover, err := bookedDiscoverClause(ctx, arg)
 		if err != nil {
 			return err
@@ -348,10 +341,10 @@ func (s *Store) scanWaitingReplies(ctx context.Context, asOf, before time.Time, 
 				neverRelaxed, neverRelaxed,
 				neverRelaxed, ownDomainSenderSQL("a", arg(ownDomains)),
 				messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent),
-				fmt.Sprintf("$%d", arg(readerAddresses)),
+				storekit.MailSeatAddressesSQL(identities, fmt.Sprintf("$%d::uuid", reader)),
 				neverRelaxed,
 				olderThan(before, arg), bookedDiscover,
-				neverRelaxed, neverRelaxed)+") waiting JOIN activity a ON a.id = waiting.id ORDER BY waiting.occurred_at DESC", planEachBind(args)...)
+				neverRelaxed, neverRelaxed)+") waiting JOIN activity a ON a.id = waiting.id ORDER BY waiting.occurred_at DESC, waiting.id DESC", planEachBind(args)...)
 		if err != nil {
 			return err
 		}

@@ -377,6 +377,9 @@ func (s *Store) CountActivities(ctx context.Context, in ListActivitiesInput) (in
 		if in.ownDomains, err = s.ownDomainList(ctx, tx); err != nil {
 			return err
 		}
+		if in.mailIdentities, err = currentTaskMailIdentities(ctx, tx, in); err != nil {
+			return err
+		}
 		where, content, _, args, err := listActivitiesFilter(ctx, in)
 		if err != nil {
 			return err

@@ -14,30 +14,19 @@ package capture
 
 import (
 	"context"
-	"fmt"
 	"slices"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// providerAttestedLabels are the transports whose account_label the PROVIDER
-// supplied, read out of an OAuth-sealed credential bundle that the connecting
-// caller never authored.
-//
-// An allowlist rather than a denylist of imap: a transport added later is
-// unproven until somebody looks at its AccountLabel and adds it here, which is
-// the direction this must fail in.
 const (
-	providerGmail    = "gmail"
-	providerGcal     = "gcal"
-	providerGraph    = "graph"
-	providerGraphcal = "graphcal"
+	providerGmail = "gmail"
+	providerGraph = "graph"
 )
-
-var providerAttestedLabels = []string{providerGmail, providerGcal, providerGraph, providerGraphcal}
 
 // SeatProvedAddressTx reports whether one seat has proven one address is a
 // mailbox of theirs, on evidence a third party supplied.
@@ -180,29 +169,18 @@ func UnambiguouslyProvedAddressesTx(ctx context.Context, tx pgx.Tx) ([]ProvedAdd
 // ownerIdentitiesTx already folds it. A display-form label compared as a whole
 // address matches no header.
 func provedAddressesTx(ctx context.Context, tx pgx.Tx) ([]ProvedAddress, error) {
-	rows, err := tx.Query(ctx, `
-		SELECT user_id, account_label FROM capture_connection
-		 WHERE coalesce(account_label, '') <> '' AND archived_at IS NULL
-		   AND status = 'connected' AND provider = ANY($1)`,
-		providerAttestedLabels)
+	labels, err := storekit.ProvedMailboxLabels(ctx, tx)
 	if err != nil {
-		return nil, fmt.Errorf("capture: reading the addresses seats proved: %w", err)
+		return nil, err
 	}
-	defer rows.Close()
 	var out []ProvedAddress
-	for rows.Next() {
-		var seat ids.UUID
-		var label string
-		if err := rows.Scan(&seat, &label); err != nil {
-			return nil, fmt.Errorf("capture: reading the addresses seats proved: %w", err)
+	for seat, values := range labels {
+		for _, label := range values {
+			bare := bareAddress(label)
+			if folded := foldAddress(bare); folded != "" {
+				out = append(out, ProvedAddress{Seat: seat, Address: folded, Label: bare})
+			}
 		}
-		bare := bareAddress(label)
-		if folded := foldAddress(bare); folded != "" {
-			out = append(out, ProvedAddress{Seat: seat, Address: folded, Label: bare})
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("capture: reading the addresses seats proved: %w", err)
 	}
 	return out, nil
 }
