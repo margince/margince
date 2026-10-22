@@ -31,8 +31,8 @@ const isRelinkKind = (type: string): type is RelinkKind =>
 /**
  * Whether the composer can write this message again faithfully.
  *
- * The approval is bound to the content, so an edit is a new send. A marketing
- * purpose, evidence or legacy consent key has no field in the composer, and a
+ * The approval is bound to the content, so an edit is a new send. The composer
+ * has no field for a marketing purpose, evidence or a legacy consent key. A
  * message that has gone or been withdrawn has nothing left to edit.
  */
 export function isEditable(send: ScheduledSend): boolean {
@@ -50,8 +50,8 @@ export function isEditable(send: ScheduledSend): boolean {
  * The composer's opening state for a scheduled message, or nothing when it
  * cannot be written again yet.
  *
- * A reply names a thread and not the record behind it, so the caller passes the
- * links of the thread's email, which is where a reply inherits them from.
+ * A reply names a thread and not the record behind it. The caller passes the
+ * links of the thread's email, because a reply inherits its links from there.
  */
 export function editSeedOf(
   send: ScheduledSend,

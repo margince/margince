@@ -15,10 +15,8 @@ import type { ScheduledSend } from "./scheduledqueue";
  * The approval is bound to the content, so an edit is a new send that passes
  * every gate from the top. The old message is withdrawn only once the new one
  * is accepted, so a refusal leaves the original waiting. Keyed on the message,
- * because the composer reads its seed once, when it mounts.
- *
- * A reply opens once its thread's email has been read, since the record it is
- * filed under is that email's.
+ * because the composer reads its seed once, when it mounts. A reply opens once
+ * its thread's email is read, since it files under that email's record.
  */
 export function EditComposer({
   send,
