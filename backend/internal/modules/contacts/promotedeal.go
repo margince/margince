@@ -17,10 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // QualifyDealInput is what a qualify call asks the deal opener for. Nil
@@ -79,61 +76,31 @@ type PromoteOutcome struct {
 // fails the whole promotion.
 func (s *Store) openQualifiedDeal(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, lead crmcontracts.Lead, contactID ids.ContactID, in *QualifyDealInput) (*ids.UUID, error) {
 	if in == nil {
-		return nil, nil
+		return nil, nil //nolint:nilnil // Deal creation is optional during lead promotion.
 	}
 	if s.dealOpener == nil {
 		return nil, &DealOpenerNotWiredError{}
 	}
-	deal := *in
-	if strings.TrimSpace(deal.Name) == "" {
-		deal.Name = defaultQualifiedDealName(lead)
-	}
-	deal.OwnerID = idArg[ids.UserKind](lead.OwnerId)
-	deal.Source = "lead:" + leadID.String()
+	deal := qualifiedDealInput(leadID, lead, *in)
 	dealID, err := s.dealOpener.OpenDealForLead(ctx, tx, deal)
 	if err != nil {
 		return nil, fmt.Errorf("open deal for qualified lead: %w", err)
 	}
-	if err := seatContactOnQualifiedDeal(ctx, tx, contactID, dealID, deal.Source); err != nil {
-		return nil, err
+	// The contact becomes a stakeholder on the deal the qualify call opened. It
+	// is the edge the deal page's committee shows, and it stops an undo of the
+	// qualification while the deal is live. The import's contact_ref writes it
+	// through the same function.
+	seated := ids.From[ids.DealKind](dealID)
+	_, err = s.CreateRelationshipTx(ctx, tx, CreateRelationshipInput{
+		Kind:      dealStakeholderKind,
+		ContactID: &contactID,
+		DealID:    &seated,
+		Source:    deal.Source,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("seat the contact on the qualified deal: %w", err)
 	}
 	return &dealID, nil
-}
-
-// seatContactOnQualifiedDeal makes the new contact a stakeholder on the deal
-// the qualify call opened — the same edge the deal page's committee shows,
-// and the edge that stops an undo of the qualification while the deal is
-// live (demote's contact_has_deal rule). The row is written here because both
-// endpoints were minted in this very transaction (no row-scope re-probe can
-// see them yet), but the OBJECT admission is the same CreateRelationship
-// takes: the edge verb, and the anchor's write verb.
-func seatContactOnQualifiedDeal(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, dealID ids.UUID, source string) error {
-	if err := auth.Require(ctx, "relationship", principal.ActionCreate); err != nil {
-		return err
-	}
-	anchorObject, _ := relationshipAnchor(dealStakeholderKind)
-	if err := auth.Require(ctx, anchorObject, principal.ActionUpdate); err != nil {
-		return err
-	}
-	by, err := storekit.CapturedBy(ctx)
-	if err != nil {
-		return err
-	}
-	// The stakeholder edge this writes hangs off the contact, so an archive in
-	// flight must not be outrun — see lockContactForAttach. This is the edge the
-	// race was found on.
-	if err := lockContactForAttach(ctx, tx, contactID); err != nil {
-		return err
-	}
-	row := tx.QueryRow(ctx, `
-		INSERT INTO relationship (kind, contact_id, deal_id, role, source, captured_by)
-		VALUES ('deal_stakeholder', $1, $2, NULL, $3, $4)
-		RETURNING `+relationshipColumns, contactID, dealID, source, by)
-	rel, err := scanRelationship(row)
-	if err != nil {
-		return fmt.Errorf("seat the contact on the qualified deal: %w", err)
-	}
-	return emitRelationshipChange(ctx, tx, "create", nil, rel)
 }
 
 // defaultQualifiedDealName is the deal name when the dialog sends none: the
@@ -149,4 +116,37 @@ func defaultQualifiedDealName(lead crmcontracts.Lead) string {
 		return string(*lead.Email)
 	}
 	return "Qualified lead"
+}
+
+func qualifiedDealInput(leadID ids.LeadID, lead crmcontracts.Lead, in QualifyDealInput) QualifyDealInput {
+	deal := in
+	if strings.TrimSpace(deal.Name) == "" {
+		deal.Name = defaultQualifiedDealName(lead)
+	}
+	deal.OwnerID = idArg[ids.UserKind](lead.OwnerId)
+	deal.Source = "lead:" + leadID.String()
+	return deal
+}
+
+// LeadDealPreviewer shares the deal opener's defaults and admission checks.
+type LeadDealPreviewer interface {
+	PreviewDealForLead(context.Context, pgx.Tx, QualifyDealInput) (QualifyDealInput, error)
+}
+
+func (s *Store) previewQualifiedDeal(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead, in *QualifyDealInput) (*QualifyDealInput, error) {
+	if in == nil {
+		return nil, nil //nolint:nilnil // Deal creation is optional during lead promotion.
+	}
+	if err := requireRelationshipCreate(ctx, anchorDeal); err != nil {
+		return nil, err
+	}
+	previewer, ok := s.dealOpener.(LeadDealPreviewer)
+	if !ok {
+		return nil, &DealOpenerNotWiredError{}
+	}
+	resolved, err := previewer.PreviewDealForLead(ctx, tx, qualifiedDealInput(ids.From[ids.LeadKind](ids.UUID(lead.Id)), lead, *in))
+	if err != nil {
+		return nil, err
+	}
+	return &resolved, nil
 }

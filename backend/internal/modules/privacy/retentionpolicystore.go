@@ -15,6 +15,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -22,7 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -74,6 +74,10 @@ type PolicyInput struct {
 // design — re-targeting a row would silently re-attribute its audit history, so
 // a different scope is a different policy.
 type PolicyPatch struct {
+	// Clear names the wire fields to set to NULL. A JSON null cannot say so:
+	// it decodes to a nil pointer and reads as "not supplied". The handler
+	// reads the raw body for explicit nulls and names them here.
+	Clear       []string
 	RetainDays  *int
 	Action      *string
 	LawfulBasis *string
@@ -84,6 +88,16 @@ type PolicyPatch struct {
 // appears in the refusal, in the audit image and in the patch, and a divergence
 // between those would point an admin at a field their request never carried.
 const fieldRetainDays = "retain_days"
+
+// fieldLawfulBasis is the contract's name for the basis field. It appears in a
+// refusal, in the audit image and in the clear set. A divergence between those
+// would point an admin at a field their request never carried.
+const fieldLawfulBasis = "lawful_basis"
+
+// codeInvalidRetainDays is the refusal code every window complaint carries.
+// A client branching on it reads one value for the floor, the ceiling and a
+// null.
+const codeInvalidRetainDays = "invalid_retain_days"
 
 // PolicyFieldError refuses one field of an authoring request. It implements
 // apperrors.FieldFault, so the refusal classifies as a 422 naming the field on
@@ -130,14 +144,38 @@ func validateRetentionAction(scope RetentionScope, action string) error {
 	}
 }
 
+// retainDaysCeiling is a century, in days.
+//
+// The selectors read a policy as `now() - make_interval(days => retain_days)`,
+// and Postgres answers "timestamp out of range" somewhere past two million
+// days. So a ceiling is owed; this one is not that ceiling.
+//
+// A century is the product line. A record older than that is past any records
+// regime a business answers to. The way to keep records indefinitely is to
+// leave the policy disabled, not to name a window nothing reaches.
+const retainDaysCeiling = 36500
+
 // validateRetainDays refuses a window that would act on a record as soon as it
-// exists. Zero is the dangerous value, not a harmless edge: a 0-day erase policy
-// would empty the scope on the next pass.
+// exists, and one no pass could evaluate.
+//
+// Zero is the dangerous value, not a harmless edge: a 0-day erase policy would
+// empty the scope on the next pass. The ceiling is the opposite failure: the
+// policy saves, and the nightly query errors instead of acting.
 func validateRetainDays(days int) error {
 	if days < 1 {
 		return PolicyFieldError{
-			Field: fieldRetainDays, Code: "invalid_retain_days",
+			Field: fieldRetainDays, Code: codeInvalidRetainDays,
 			Message: "retain_days must be at least 1 — a zero-day window would act on a record the moment it is created",
+		}
+	}
+	if days > retainDaysCeiling {
+		return PolicyFieldError{
+			Field: fieldRetainDays, Code: codeInvalidRetainDays,
+			Message: fmt.Sprintf(
+				"retain_days must be at most %d (a century) — a longer window is one the retention pass "+
+					"cannot evaluate; to keep records indefinitely, leave the policy disabled",
+				retainDaysCeiling,
+			),
 		}
 	}
 	return nil
@@ -166,7 +204,7 @@ func (s *PolicyStore) List(ctx context.Context) ([]Policy, error) {
 	}
 	var out []Policy
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		retainOnly, err := settings.GetTx(ctx, tx, RetainOnly)
+		retainOnly, err := retainOnlyTx(ctx, tx)
 		if err != nil {
 			return err
 		}
@@ -219,7 +257,7 @@ func (s *PolicyStore) Create(ctx context.Context, in PolicyInput) (Policy, error
 	}
 	var out Policy
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		retainOnly, err := settings.GetTx(ctx, tx, RetainOnly)
+		retainOnly, err := retainOnlyTx(ctx, tx)
 		if err != nil {
 			return err
 		}
@@ -261,7 +299,7 @@ func (s *PolicyStore) Update(ctx context.Context, id ids.UUID, patch PolicyPatch
 	}
 	var out Policy
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		retainOnly, err := settings.GetTx(ctx, tx, RetainOnly)
+		retainOnly, err := retainOnlyTx(ctx, tx)
 		if err != nil {
 			return err
 		}
@@ -304,6 +342,12 @@ func applyPatch(current Policy, patch PolicyPatch) Policy {
 	}
 	if patch.LawfulBasis != nil {
 		out.LawfulBasis = patch.LawfulBasis
+	}
+	// An explicit null clears, which the pointer above cannot say. The contract
+	// declares lawful_basis nullable, and accepting a null while leaving the
+	// old basis standing is a success nobody can trust.
+	if slices.Contains(patch.Clear, fieldLawfulBasis) {
+		out.LawfulBasis = nil
 	}
 	if patch.Enabled != nil {
 		out.Enabled = *patch.Enabled

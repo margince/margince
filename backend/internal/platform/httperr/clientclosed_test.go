@@ -6,12 +6,73 @@ package httperr
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
+
+// A caller who leaves closes the connection under the work. A later read on it
+// fails with an error that carries no context error. The request's own
+// cancellation is what says the caller left.
+func TestACallerWhoLeftIsNotAServerFaultWhateverTheErrorSays(t *testing.T) {
+	var logged bytes.Buffer
+	restore := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logged, &slog.HandlerOptions{Level: slog.LevelWarn})))
+	t.Cleanup(func() { slog.SetDefault(restore) })
+
+	ctx, cancel := context.WithCancel(context.Background())
+	req := httptest.NewRequest(http.MethodGet, "/v1/worklist", nil).WithContext(ctx)
+	cancel()
+	rec := httptest.NewRecorder()
+
+	Write(rec, req, errors.New("reading worklist pins: failed to deallocate cached statement(s): conn closed"))
+
+	if rec.Code != statusClientClosedRequest {
+		t.Errorf("a request whose caller left was answered %d, want %d", rec.Code, statusClientClosedRequest)
+	}
+	if logged.Len() != 0 {
+		t.Errorf("a request whose caller left logged at warn or above: %s", logged.String())
+	}
+}
+
+// The line a caller-left request leaves keeps the error, so a real fault that
+// happened beside the cancel can still be found.
+func TestACallerLeftLineKeepsTheCause(t *testing.T) {
+	var logged bytes.Buffer
+	restore := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logged, &slog.HandlerOptions{Level: slog.LevelDebug})))
+	t.Cleanup(func() { slog.SetDefault(restore) })
+
+	ctx, cancel := context.WithCancel(context.Background())
+	req := httptest.NewRequest(http.MethodGet, "/v1/worklist", nil).WithContext(ctx)
+	cancel()
+
+	Write(httptest.NewRecorder(), req, errors.New("conn closed"))
+
+	if !bytes.Contains(logged.Bytes(), []byte("conn closed")) {
+		t.Errorf("the caller-left line dropped the error: %s", logged.String())
+	}
+}
+
+// The server's own deadline ends the request context with DeadlineExceeded:
+// that is its failure to finish, not a caller leaving.
+func TestARequestThatTimedOutIsStillAServerFault(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Nanosecond)
+	defer cancel()
+	<-ctx.Done()
+	req := httptest.NewRequest(http.MethodGet, "/v1/worklist", nil).WithContext(ctx)
+	rec := httptest.NewRecorder()
+
+	Write(rec, req, errors.New("conn closed"))
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Errorf("a timed-out request was answered %d, want 500", rec.Code)
+	}
+}
 
 // A client that abandons a request is not a server fault: the store call
 // returns the canceled context's error and nobody is left to read an answer, so

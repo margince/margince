@@ -52,6 +52,7 @@ type ClaimInput struct {
 	// quotes a slightly different clause of the same promise finds the same
 	// claim. Empty for a human's claim, which is keyed on its exact quote.
 	Locator string
+	Renewal bool
 }
 
 // RecordConversationClaim writes one claim through the audited write shape.
@@ -137,7 +138,7 @@ func activityWithinProject(alias string, projectPos int) string {
 // whose source the caller may not read is not returned, because the claim
 // would otherwise quote a message the reader has no grant for.
 func (s *Store) ClaimsForContact(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, within *ids.ProjectID, limit int) ([]crmcontracts.ConversationClaim, error) {
-	return s.readClaims(ctx, tx, contactID, within, sqlAlwaysVisible, "c.created_at DESC", limit)
+	return s.readClaims(ctx, tx, contactID, within, false, "c.created_at DESC", limit)
 }
 
 // OpenCommitmentsForContact reads the open promises WE made to this contact,
@@ -156,8 +157,7 @@ func (s *Store) ClaimsForContact(ctx context.Context, tx pgx.Tx, contactID ids.C
 // Two spellings of one read is how the two end up disagreeing about which
 // claims exist.
 func (s *Store) OpenCommitmentsForContact(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, within *ids.ProjectID, limit int) ([]crmcontracts.ConversationClaim, error) {
-	const open = `c.kind = 'commitment_ours' AND c.status = 'open' AND NOT c.needs_review`
-	return s.readClaims(ctx, tx, contactID, within, open, "c.due_at ASC NULLS LAST, a.occurred_at ASC, c.id", limit)
+	return s.readClaims(ctx, tx, contactID, within, true, "c.due_at ASC NULLS LAST, a.occurred_at ASC, c.id", limit)
 }
 
 // readClaims is the read both entry points share. `extra` narrows the
@@ -165,7 +165,7 @@ func (s *Store) OpenCommitmentsForContact(ctx context.Context, tx pgx.Tx, contac
 // never anything off a request.
 func (s *Store) readClaims(
 	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, within *ids.ProjectID,
-	extra, order string, limit int,
+	onlyOpen bool, order string, limit int,
 ) ([]crmcontracts.ConversationClaim, error) {
 	// The object grant first, then the audience clause. The clause narrows rows
 	// for a caller already admitted; it asks nobody whether the caller may read
@@ -179,7 +179,13 @@ func (s *Store) readClaims(
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	contactPos := arg(contactID)
-	scope, err := auth.ActivityContentClause(ctx, "a", arg)
+	admission := currentCommitmentAdmission(s.clock(), arg)
+	extra := sqlAlwaysVisible
+	if onlyOpen {
+		extra = `c.kind = 'commitment_ours' AND c.status = 'open' AND NOT c.needs_review AND ` + admission
+	}
+
+	scope, err := claimContentClause(ctx, arg)
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +198,8 @@ func (s *Store) readClaims(
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT c.id, c.kind, c.body, c.source_activity_id, c.source_quote,
-		       a.subject, a.occurred_at, c.status, c.due_at, c.needs_review,
+		       a.subject, a.occurred_at, c.status, c.due_at,
+ (c.needs_review OR (c.kind IN ('commitment_ours','commitment_theirs') AND NOT `+admission+`)),
 		       c.corrected_at, c.task_activity_id
 		FROM conversation_claim c
 		JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
@@ -308,7 +315,7 @@ func (s *Store) CommitmentsTheirsForProjects(ctx context.Context, tx pgx.Tx, pro
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	projectsPos := arg(projectIDs)
 	nowPos := arg(now)
-	activityScope, err := auth.ActivityContentClause(ctx, "a", arg)
+	activityScope, err := claimContentClause(ctx, arg)
 	if err != nil {
 		return nil, false, err
 	}
@@ -338,7 +345,7 @@ func (s *Store) CommitmentsTheirsForProjects(ctx context.Context, tx pgx.Tx, pro
 		  JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
 		  JOIN activity_link l ON l.activity_id = a.id AND l.project_id = ANY($%[1]d)
 		  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
-		 WHERE `+theirPromiseOpen+`
+		 WHERE `+theirPromiseOpen(now, arg)+`
 		   AND c.archived_at IS NULL
 		   AND (%[3]s)
 		 ORDER BY l.project_id,

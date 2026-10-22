@@ -86,10 +86,14 @@ func (s *Service) DecideBundle(ctx context.Context, bundleID ids.UUID, approve b
 		return nil, apperrors.ErrNotFound
 	}
 	p, _ := principal.Actor(ctx)
+	ready, err := s.preflightBundle(ctx, p, bundleID, approve)
+	if err != nil {
+		return nil, err
+	}
 	var members []BundleMember
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		members, err = s.decideBundleInTx(ctx, tx, p, bundleID, approve, reason)
+		members, err = s.decideBundleInTx(ctx, tx, p, bundleID, approve, reason, ready)
 		return err
 	})
 	if err != nil {
@@ -111,8 +115,8 @@ func (s *Service) DecideBundle(ctx context.Context, bundleID ids.UUID, approve b
 // closes everywhere else. And a bundle past the cap must be refused whole rather
 // than applied to a prefix, which is only possible while nothing has been
 // decided yet.
-func (s *Service) decideBundleInTx(ctx context.Context, tx pgx.Tx, p principal.Principal, bundleID ids.UUID, approve bool, reason *string) ([]BundleMember, error) {
-	rows, oversized, err := bundleMembers(ctx, tx, bundleID)
+func (s *Service) decideBundleInTx(ctx context.Context, tx pgx.Tx, p principal.Principal, bundleID ids.UUID, approve bool, reason *string, ready map[ids.ApprovalID]bool) ([]BundleMember, error) {
+	rows, oversized, err := bundleMembers(ctx, tx, bundleID, true)
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +139,7 @@ func (s *Service) decideBundleInTx(ctx context.Context, tx pgx.Tx, p principal.P
 		}
 		// The same preflight a single decision runs, and for the same reason: a
 		// refusal after the commit leaves an approved row nothing can decide again.
-		if approve && s.memberRefusedByPrecheck(ctx, a) {
+		if approve && !ready[a.ID] {
 			out = append(out, BundleMember{Approval: a, Outcome: BundleRefused})
 			continue
 		}
@@ -251,41 +255,18 @@ func (s *Service) releaseDecidedMembers(ctx context.Context, members []BundleMem
 	}
 }
 
-// bundleMembers reads one bundle's rows oldest-first — the order the act staged
-// them, and a deterministic order, so two callers deciding the same bundle at
-// once queue behind each other instead of deadlocking.
-//
-// The rows are LOCKED as they are read, which is what makes membership hold
-// still for the rest of the decision. Without it, a re-proposal joining a member
-// (rebundleJoinedInTx) can move that row onto a fresher act's bundle in the gap
-// between this read and the write — and the decision would then answer the OLD
-// bundle's question by deciding a row that had already become part of the new
-// one, leaving the fresh act's bundle carrying a member nobody decided there.
-// One statement, in one order, so the locks are also taken more safely than the
-// per-member walk would take them.
-//
-// It reads one row past the cap and reports oversized rather than refusing here,
-// so the caller can put the authority question first: a bundle whose existence
-// this human may not learn of must read as absent whatever its size. The extra
-// row is what makes "too large" a fact rather than a truncation nobody is told
-// about.
-func bundleMembers(ctx context.Context, tx pgx.Tx, bundleID ids.UUID) (rows []row, oversized bool, err error) {
+// Decision reads lock membership in the canonical order; preflight reads do not.
+// One extra row detects overflow without revealing a bundle before authorization.
+func bundleMembers(ctx context.Context, tx pgx.Tx, bundleID ids.UUID, lock bool) (rows []row, oversized bool, err error) {
+	locking := ""
+	if lock {
+		locking = " FOR UPDATE"
+	}
 	rows, err = collect(ctx, tx, `SELECT `+columns+` FROM approval
-		WHERE bundle_id = $1 `+lockOrder+` LIMIT $2 FOR UPDATE`,
+		WHERE bundle_id = $1 `+lockOrder+` LIMIT $2`+locking,
 		[]any{bundleID, bundleDecisionCap + 1})
 	if err != nil {
 		return nil, false, err
 	}
 	return rows, len(rows) > bundleDecisionCap, nil
-}
-
-// memberRefusedByPrecheck asks a member's kind whether approving it could run,
-// on the terms runPrecheck applies to a single decision: only for a
-// server-proposed staging, and only for a kind that registered a check.
-func (s *Service) memberRefusedByPrecheck(ctx context.Context, a row) bool {
-	check, ok := s.prechecks[a.Kind]
-	if !ok || !serverProposed(a) {
-		return false
-	}
-	return check(ctx, a.ProposedChange, nil) != nil
 }

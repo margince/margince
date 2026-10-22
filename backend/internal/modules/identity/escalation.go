@@ -312,9 +312,15 @@ func refuseWhileHoldingArchivedRole(ctx context.Context, tx pgx.Tx, userID ids.U
 
 // archivedRoleHolders reports which of these members hold an archived role.
 func archivedRoleHolders(ctx context.Context, tx pgx.Tx, users []ids.UUID) (map[ids.UUID]bool, error) {
-	rows, err := tx.Query(ctx,
+	return usersMatching(ctx, tx,
 		`SELECT DISTINCT ra.user_id FROM role_assignment ra JOIN role r ON r.id = ra.role_id
 		  WHERE ra.user_id = ANY($1) AND r.archived_at IS NOT NULL`, users)
+}
+
+// usersMatching reads the members of users a query selects, as a set. The
+// query takes the user ids as $1 and returns user ids.
+func usersMatching(ctx context.Context, tx pgx.Tx, query string, users []ids.UUID) (map[ids.UUID]bool, error) {
+	rows, err := tx.Query(ctx, query, users)
 	if err != nil {
 		return nil, err
 	}

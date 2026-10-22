@@ -30,6 +30,8 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -79,19 +81,27 @@ func (q controllerMailQueue) QueueConfirmationTx(ctx context.Context, tx pgx.Tx,
 		return ids.UUID{}, errors.New("compose: staging a controller delivery outside workspace context")
 	}
 	subject, body := in.Rendered.Subject, in.Rendered.Body
+	if in.Rendered.Language != "" || in.Rendered.HTMLBody != "" {
+		brand, err := config.StoredApplyTx(ctx, tx, loadedConfig(), identity.Name)
+		if err != nil {
+			return ids.UUID{}, err
+		}
+		in.Rendered.HTMLBody = consent.RenderControllerPresentation(in.Rendered, brand)
+		if brand != "" {
+			body = brand + "\n\n" + body
+		}
+	}
 	outbound := string(crmcontracts.ActivityDirectionOutbound)
 	activity, _, err := q.activities.LogActivityTx(ctx, tx, activities.LogActivityInput{
 		Kind:      string(crmcontracts.ActivityKindEmail),
 		Subject:   &subject,
 		Body:      &body,
 		Direction: &outbound,
+		Source:    systemActor,
 		// The installation writing to somebody about its own obligations is not
 		// that contact engaging, so it stays out of every last_activity_at.
 		Origin: activities.OriginSystemNotice,
-		Links: []activities.ActivityLinkInput{{
-			EntityType: string(crmcontracts.ActivityLinkEntityTypeContact),
-			EntityID:   in.ContactID.UUID,
-		}},
+		Links:  []activities.ActivityLinkInput{controllerMailSubject(in)},
 	})
 	if err != nil {
 		return ids.UUID{}, fmt.Errorf("compose: filing the notice on the timeline: %w", err)
@@ -103,9 +113,11 @@ func (q controllerMailQueue) QueueConfirmationTx(ctx context.Context, tx pgx.Tx,
 		TemplateVersion:  in.Rendered.Version,
 		Subject:          subject,
 		Body:             body,
+		HTMLBody:         in.Rendered.HTMLBody,
 		MessageID:        in.MessageID,
 		PayloadRef:       in.LinkRef,
-		PayloadExpiresAt: &in.ExpiresAt,
+		PayloadExpiresAt: controllerExpiry(in.ExpiresAt),
+		DueAt:            in.DueAt,
 		LinkID:           in.LinkID,
 	}, q.templates)
 	if err != nil {
@@ -125,6 +137,7 @@ func (q controllerMailQueue) QueueConfirmationTx(ctx context.Context, tx pgx.Tx,
 		Context:    in.Category,
 		Subject:    subject,
 		Body:       body,
+		HTMLBody:   in.Rendered.HTMLBody,
 	})
 	if err != nil {
 		return ids.UUID{}, err
@@ -138,4 +151,24 @@ func (q controllerMailQueue) QueueConfirmationTx(ctx context.Context, tx pgx.Tx,
 		return ids.UUID{}, err
 	}
 	return deliveryID, nil
+}
+
+// controllerMailSubject files the notice under the record it was sent to: the
+// lead for a website lead's privacy notice, the contact for everything else.
+func controllerMailSubject(in consent.ConfirmationSend) activities.ActivityLinkInput {
+	if !in.LeadID.IsZero() {
+		return activities.ActivityLinkInput{
+			EntityType: string(crmcontracts.ActivityLinkEntityTypeLead), EntityID: in.LeadID.UUID,
+		}
+	}
+	return activities.ActivityLinkInput{
+		EntityType: string(crmcontracts.ActivityLinkEntityTypeContact), EntityID: in.ContactID.UUID,
+	}
+}
+
+func controllerExpiry(expiry time.Time) *time.Time {
+	if expiry.IsZero() {
+		return nil
+	}
+	return &expiry
 }

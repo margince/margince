@@ -11,10 +11,10 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
@@ -152,20 +152,24 @@ type SendSchedule struct {
 // gate an immediate send passes through.
 // ScheduledSend is one message waiting for its moment.
 type ScheduledSend struct {
-	ID          ids.UUID
-	Status      string
-	ScheduledAt time.Time
-	ScheduledTZ string
-	OriginKind  string
-	Anchor      ids.ActivityID
-	Subject     string
-	Recipients  []string
-	Cc          []string
-	Bcc         []string
-	Body        string
-	ScheduledBy ids.UUID
-	ActivityID  ids.UUID
-	HeldReason  string
+	frozen          scheduledPayload
+	PayloadVersion  int
+	PrincipalKind   string
+	additionalLinks []byte
+	ID              ids.UUID
+	Status          string
+	ScheduledAt     time.Time
+	ScheduledTZ     string
+	OriginKind      string
+	Anchor          ids.ActivityID
+	Subject         string
+	Recipients      []string
+	Cc              []string
+	Bcc             []string
+	Body            string
+	ScheduledBy     ids.UUID
+	ActivityID      ids.UUID
+	HeldReason      string
 	// ReviewID is the review standing over this message's refusal, when one
 	// does. Zero on every message nobody refused — and on a held row whose
 	// review has since been answered, which is a row a rep can only cancel or
@@ -223,6 +227,8 @@ const (
 	HeldMissedWindow    = "missed_window"
 	HeldTimerExhausted  = "timer_exhausted"
 	HeldSendRefused     = "send_refused"
+	HeldFollowupSettled = "followup_settled"
+	HeldMeetingCanceled = "meeting_canceled"
 )
 
 // InvalidScheduleError refuses a due moment the server will not accept. It maps
@@ -334,18 +340,21 @@ func (s *Store) scheduleSend(
 
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		prov := provenanceOf(actor)
-		if _, err := tx.Exec(ctx, `
+		// The row's stamps come back from the insert, so the answer to a
+		// scheduling carries the times a later read of the same row shows.
+		if err := tx.QueryRow(ctx, `
 			INSERT INTO scheduled_send
 			  (id, status, scheduled_at, scheduled_tz,
 			   origin_kind, anchor_activity_id, origin_links, also_links,
 			   payload, payload_version, scheduled_by, principal_kind,
 			   agent_actor_id, agent_passport_id, agent_on_behalf_of)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+			RETURNING created_at, updated_at`,
 			row.ID, row.Status, row.ScheduledAt, row.ScheduledTZ,
 			row.OriginKind, nullableAnchor(origin), originLinks, alsoLinks,
 			payload, payloadVersionCurrent, row.ScheduledBy, principalKind(actor),
 			prov.ActorID, prov.PassportID, prov.OnBehalfOf,
-		); err != nil {
+		).Scan(&row.CreatedAt, &row.UpdatedAt); err != nil {
 			return fmt.Errorf("scheduled send: recording the intention: %w", err)
 		}
 		if _, err := storekit.Audit(ctx, tx, "schedule", "scheduled_send", row.ID, nil, map[string]any{
@@ -371,10 +380,10 @@ func validateSchedule(sched SendSchedule, now time.Time) error {
 	if sched.TZ == "" {
 		return &InvalidScheduleError{Field: FieldScheduledTZ, Reason: "is required when scheduling a send"}
 	}
-	// A zone NAME, resolved against the IANA database — never a numeric offset,
-	// which would be frozen against the DST rules of the day it was written
-	// (AC-DS-TZ4).
-	if _, err := time.LoadLocation(sched.TZ); err != nil {
+	// A zone NAME, never a numeric offset, which would freeze the DST rules of
+	// the day it was written (AC-DS-TZ4). "Local" is the server's zone, so it
+	// is refused, and so is a name with spaces around it.
+	if err := values.ZoneName(sched.TZ); err != nil {
 		return &InvalidScheduleError{Field: FieldScheduledTZ, Reason: "is not an IANA time zone name"}
 	}
 	if sched.At.Sub(now) > scheduleCeiling {

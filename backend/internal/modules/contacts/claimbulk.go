@@ -70,7 +70,7 @@ func (s *Store) LockClaimForBulkTx(ctx context.Context, tx pgx.Tx, id ids.UUID) 
 	if err := auth.EnsureVisibleLive(ctx, tx, "contact", contactID); err != nil {
 		return BulkClaim{}, err
 	}
-	if err := auth.EnsureActivityContentVisibleLive(ctx, tx, activityID); err != nil {
+	if err := ensureClaimContentVisible(ctx, tx, id); err != nil {
 		return BulkClaim{}, err
 	}
 	if err := auth.RequireHuman(ctx); err != nil {
@@ -110,10 +110,7 @@ func (s *Store) SetClaimDoneTx(ctx context.Context, tx pgx.Tx, id ids.UUID, done
 	return version, nil
 }
 
-// VisibleClaims answers which of the named claims the caller may see now,
-// through the gates OpenCommitmentsDue reads promises under: the contact and
-// activity read grants, a live contact in scope, and a live message whose
-// content the caller may read. One query for the whole batch.
+// VisibleClaims applies contact and source-content scope to the whole batch.
 func VisibleClaims(ctx context.Context, tx pgx.Tx, named []ids.UUID) (map[ids.UUID]bool, error) {
 	out := make(map[ids.UUID]bool, len(named))
 	err := auth.Require(ctx, "contact", principal.ActionRead)
@@ -132,7 +129,7 @@ func VisibleClaims(ctx context.Context, tx pgx.Tx, named []ids.UUID) (map[ids.UU
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	idsPos := arg(named)
-	activityScope, err := auth.ActivityContentClause(ctx, "a", arg)
+	activityScope, err := claimContentClause(ctx, arg)
 	if err != nil {
 		return nil, err
 	}

@@ -62,6 +62,32 @@ var withheldWith = map[string]map[string][]string{
 	},
 }
 
+// DealBaseValueInputs are the masks a deal's base-currency value answers to.
+// The value is converted from the amount and the currency, so a mask on
+// either withholds it. Beside the visible amount, the base value gives the
+// rate away, and the rate gives the masked currency away.
+func DealBaseValueInputs() []string {
+	return []string{DealAmountMinor, DealCurrency}
+}
+
+// derivedColumns maps a stored column computed from maskable fields to those
+// fields. Such a column is no mask's subject and never a wire field name, so it
+// is kept out of withheldWith. A reader printing raw columns asks DerivedInputs.
+var derivedColumns = map[string]map[string][]string{
+	Deal: {
+		"amount_minor_base": DealBaseValueInputs(),
+		"fx_rate_to_base":   DealBaseValueInputs(),
+	},
+}
+
+// DerivedInputs answers the maskable fields the object's stored column is
+// computed from, and whether it is computed from any. The column goes null
+// wherever any of them is withheld.
+func DerivedInputs(object, column string) ([]string, bool) {
+	inputs, ok := derivedColumns[object][column]
+	return inputs, ok
+}
+
 // Maskable is the sorted set of fields an administrator may name on the
 // object, and the catalog the database's maskable_field table offers.
 func Maskable(object string) []string {

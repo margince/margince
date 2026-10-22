@@ -22,11 +22,14 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 type Service struct {
+	preview             func(context.Context, crmcontracts.Approval) (*crmcontracts.ApprovalPreview, error)
+	assigneeCanHoldWork func(context.Context, pgx.Tx, ids.UserID) (bool, error)
 	// db binds the workspace this store runs for (ADR-0091 §9 step 3).
 	db *database.DB
 	// now is the service's clock: both expiry windows (staging TTL,
@@ -92,10 +95,7 @@ const (
 	approvalKeyStatus = "status"
 	// entityApproval is what almost every row and event from this module is
 	// about: the staged approval itself, never the record it proposes changing.
-	entityApproval = "approval"
-	// entitySigningKey is the exception — the key the tokens are signed with,
-	// which is a subject of its own and not an approval.
-	entitySigningKey    = "signing_key"
+	entityApproval      = "approval"
 	approvalKeyRedeemed = "redeemed"
 	approvalKeyBundle   = "bundle_id"
 	approvalKeyKind     = "kind"

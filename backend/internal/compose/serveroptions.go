@@ -24,8 +24,8 @@ import (
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
-	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/mailer"
 )
@@ -56,21 +56,11 @@ func WithOperatorMail(m mailer.Mailer) Option {
 	}
 }
 
-// WithDealRoomInviteMail wires the operator relay into Deal Room invitations.
-//
-// It rides the SAME mailer as password reset: both are product-originated
-// transactional mail configured once, and a separate relay would let an
-// installation deliver one and silently not the other. The link base arrives
-// through WithPublicBaseURL, because a buyer link carries a live credential and
-// its origin must never come from a request Host.
-//
-// NOT WIRED BY ANY ROLE YET, deliberately: the link points at a buyer screen the
-// SPA does not serve, so a recipient would land on the not-found page having
-// spent their one credential. Until that screen exists the invite response hands
-// the raw credential to the seller, who passes it on.
+// WithDealRoomInviteMail shares the account relay and installation language.
+// The configured public origin keeps personal links independent of request headers.
 func WithDealRoomInviteMail(m mailer.Mailer) Option {
-	return func(s *Server, _ *pgxpool.Pool) {
-		s.dealroomsHandlers = s.WithInviteMailer(m)
+	return func(s *Server, pool *pgxpool.Pool) {
+		s.dealroomsHandlers = s.WithInviteMailer(m).WithMailLanguage(func(ctx context.Context) string { return string(identity.BaseLanguageForPrompt(ctx, pool)) }).WithInviteContext(func(ctx context.Context) (string, string, error) { return roomInviteIdentity(ctx, pool) })
 	}
 }
 
@@ -86,6 +76,7 @@ func WithDealRoomInviteMail(m mailer.Mailer) Option {
 func WithMCPResource(resource string) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
 		s.authHandlers = s.WithMCPResource(resource)
+		s.mcpResource = resource
 		s.mcpAllowedOrigin = httpserver.ConfiguredOrigin(resource)
 	}
 }
@@ -149,7 +140,7 @@ func WithBlobstore(store blobstore.Store) Option {
 		s.knowledgeHandlers = knowledgeWithBlobstore(s.knowledgeHandlers, store)
 		// Erasure must reach the attachment bytes, not only the rows, so the
 		// DSR erase path gets a blob-aware eraser (Art. 17).
-		s.consentHandlers = s.WithEraser(privacy.NewEraser(InstallationDB(pool)).WithBlobstore(store))
+		s.consentHandlers = s.WithEraser(privacy.NewEraser(InstallationDB(pool)).WithCountry(identity.CountryForDecision).WithBlobstore(store))
 		// The controller's release on the retention surface is an erasure too,
 		// and reaches the same bytes.
 		s.privacyHandlers = s.privacyHandlers.WithBlobstore(store)
@@ -173,6 +164,14 @@ func WithBlobstore(store blobstore.Store) Option {
 		// it cannot keep — the same refusal the endpoint that serves the bytes
 		// already gives.
 		s.companyHandlers.blob = store
+	}
+}
+
+// WithImportJobs queues an import's commit and undo for the worker role,
+// through the insert-only runner, in the transaction that moves the run.
+func WithImportJobs(inserter *jobs.Runner) Option {
+	return func(s *Server, _ *pgxpool.Pool) {
+		s.queue = &importEnqueuer{runner: inserter}
 	}
 }
 
@@ -205,7 +204,8 @@ func WithKeyvault(vault keyvault.Vault) Option {
 		// seal a key. Wired here rather than in the AI block so a role that
 		// composes no vault serves 501 on those routes instead of recording a
 		// reference to a blob nothing wrote.
-		keys := ai.NewProviderKeyStore(NewSettingsStore(pool), vault, s.log)
+		sealed := WithVault(StoredConfig(pool), vault, s.log)
+		keys := ai.NewProviderKeyStore(sealed)
 		s.voiceHandlers = s.WithProviderKeys(keys)
 		// The routing store gets the same vault, for the ONE read that calls a
 		// vendor rather than describing it: asking a vendor what it serves needs
@@ -218,12 +218,12 @@ func WithKeyvault(vault keyvault.Vault) Option {
 		// surface has no store to upgrade, and reaching through the nil one is
 		// the panic that says so at boot rather than at the read.
 		if s.aiRoutingHandlers.store != nil {
-			s.aiRoutingHandlers.store = s.aiRoutingHandlers.store.WithVault(vault)
+			s.aiRoutingHandlers.store = s.aiRoutingHandlers.store.WithSealer(vaultSealer(vault, s.log))
 		}
 		// The sync lists each vendor's models with the key sealed here; guarded
 		// like the store above, for a role that composed no AI surface.
 		if s.priceCatalogues.broker != nil {
-			s.voiceHandlers = s.WithPriceSync(newAIPriceSync(pool, vault, config.FromOS, s.log, s.priceCatalogues))
+			s.voiceHandlers = s.WithPriceSync(newAIPriceSync(pool, vault, s.log, s.priceCatalogues))
 		}
 		// The connector OAuth apps ride the same reasoning: each client SECRET is
 		// sealed, so the surface exists only where there is somewhere to seal it.
@@ -234,7 +234,7 @@ func WithKeyvault(vault keyvault.Vault) Option {
 		// reporting no app and no URLs to register — and it would do so only on
 		// the option orders where keyvault happens to run last, which nothing
 		// holds.
-		s.connectorAppHandlers.store = connectorApps
+		s.connectorAppHandlers.store = connectorApps.WithUnitApps(composedUnitApp)
 		// And the connect transport resolves the STORED app per request, so an
 		// app set through Settings works without restarting the api. The worker
 		// resolves it the same way for the sync poll's token refresh, which is
@@ -246,7 +246,7 @@ func WithKeyvault(vault keyvault.Vault) Option {
 		// vault does — a setup answer composed from two of the three stores
 		// would report a step unconfigured for the wrong reason.
 		s.installationSetupHandlers = installationSetupHandlers{
-			routing:       ai.NewRoutingStore(NewSettingsStore(pool), config.FromOS),
+			routing:       ai.NewRoutingStore(NewSettingsStore(pool), sealed),
 			providerKeys:  keys,
 			connectorApps: connectorApps,
 		}
@@ -293,7 +293,7 @@ func WithKeyvault(vault keyvault.Vault) Option {
 // what the workspace's numbers mean.
 func WithAgentVolume(meter *agentvolume.Meter) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
-		s.volumeMeter.RebindFrom(meter.WithCostCeiling(newPassportShareCeiling(pool, meter.Window())))
+		s.volumeMeter.RebindFrom(meter.WithCostCeiling(newPassportShareCeiling(pool)))
 	}
 }
 
@@ -385,6 +385,13 @@ func WithPublicBaseURL(base string) Option {
 		s.publicOrigin = s.originStatus
 		s.rebuildToolRegistry(pool)
 	}
+}
+
+// WithAPIBaseURL sets the API's own external base, for a deployment that
+// serves the API on a different origin than the SPA. Where a passport calls
+// the API is read from it first (agentAPIOrigin).
+func WithAPIBaseURL(base string) Option {
+	return func(s *Server, _ *pgxpool.Pool) { s.apiBaseURL = base }
 }
 
 // WithDelivery wires the machinery an accepted send is staged for

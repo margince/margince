@@ -11,9 +11,9 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -28,6 +28,9 @@ const (
 // Handlers is the module's transport slice; compose embeds it so the
 // generated consent stubs are shadowed by real code.
 type Handlers struct {
+	// locks reports the settings a boot source sets on each settings response;
+	// nil leaves the field out.
+	locks  func(surface []config.Any) *[]crmcontracts.SettingLock
 	store  *Store
 	eraser Eraser
 	// The Art. 15 assembler, injected the same way and for the same reason as
@@ -38,11 +41,13 @@ type Handlers struct {
 	// like every other installation setting, and consent may not write another
 	// module's table — so the store that owns it is injected rather than the
 	// row being written from here.
-	settings *settings.Store
+	settings *config.Config
+	names    RecordNames
 }
 
-// WithSettings hands the handlers the store that owns installation settings.
-func (h Handlers) WithSettings(s *settings.Store) Handlers {
+// WithSettings hands the handlers the configuration the controller
+// particulars are read and saved through, under the boot locks it holds.
+func (h Handlers) WithSettings(s *config.Config) Handlers {
 	h.settings = s
 	return h
 }

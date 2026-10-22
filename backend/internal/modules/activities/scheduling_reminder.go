@@ -6,15 +6,15 @@ package activities
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/emailview"
+	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
@@ -104,15 +104,9 @@ func (s *Store) meetingReminderInput(ctx context.Context, row invitationRow) (Se
 		return SendEmailInput{}, err
 	}
 	zone := hours.Location
-	subject, template := "Meeting reminder: ", "Your meeting starts at %s (%s).\n\n%s\n\nReschedule or cancel: %s"
-	switch s.footerLanguage(ctx, row.Appointment.Description, row.Appointment.Subject) {
-	case textlang.German:
-		subject, template = "Terminerinnerung: ", "Dein Termin beginnt am %s (%s).\n\n%s\n\nVerschieben oder absagen: %s"
-	case textlang.Vietnamese:
-		subject, template = "Nhắc cuộc hẹn: ", "Cuộc hẹn của bạn bắt đầu lúc %s (%s).\n\n%s\n\nĐổi lịch hoặc hủy: %s"
-	}
-	body := fmt.Sprintf(template, row.Appointment.Start.In(zone).Format("2006-01-02 15:04 MST"), zone.String(), row.Appointment.Location, link)
-	return SendEmailInput{Recipients: row.Appointment.Attendees, Subject: subject + row.Appointment.Subject, Body: body, ConsentPurpose: "transactional", Context: commsauthz.CategoryRequestedFollowup, Evidence: commsauthz.Evidence{ActivityID: row.ID}}, nil
+	words := mailcopy.For(string(s.footerLanguage(ctx, row.Appointment.Description, row.Appointment.Subject)))
+	message := words.MeetingMessage(row.Appointment.Subject, row.Appointment.Description, row.Appointment.Location, link, row.Appointment.Start.In(zone), row.Appointment.End.In(zone))
+	return SendEmailInput{Recipients: row.Appointment.Attendees, Subject: message.Title, Body: message.Text, HTMLBody: emailview.Render(message), ConsentPurpose: "transactional", Context: commsauthz.CategoryRequestedFollowup, Evidence: commsauthz.Evidence{ActivityID: row.ID}}, nil
 }
 
 func (s *Store) markMeetingReminderUnavailable(ctx context.Context, observed invitationRow) error {

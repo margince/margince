@@ -5,14 +5,15 @@ import {
   QueryClient,
   type QueryKey,
 } from "@tanstack/react-query";
-import { isRecordRead } from "../screens/activitykeys";
-import { logUnexpectedError, ProblemError } from "../screens/common";
-import { ENTITY_NAME_KEY } from "../screens/entityref";
+import { ENTITY_NAME_KEY } from "../components/entityref";
+import { isRecordRead } from "../lib/activitykeys";
 import {
   ConnectivityError,
   connectivityNow,
   subscribeConnectivity,
-} from "./connectivity";
+} from "../lib/connectivity";
+import { logUnexpectedError, ProblemError } from "../lib/problem";
+import { isLiveWorkRead } from "../lib/workkeys";
 
 // The data layer's parameters (architecture/frontend, FE-PARAM-1..5). The
 // library's defaults are not this product's: they hold nothing back from the
@@ -72,7 +73,7 @@ const LIVE_RECORD_MS = 60_000;
 // the workspace's AI budget on an open tab. Its key is the status card's, not
 // the deal record's, which is what keeps it out.
 export function liveInterval(query: { queryKey: QueryKey }): number | false {
-  return isRecordRead(query.queryKey) && LIVE_RECORD_MS;
+  return isLiveRead(query.queryKey) && LIVE_RECORD_MS;
 }
 
 // "always" and not `true`, which is the same word meaning something weaker:
@@ -82,7 +83,13 @@ export function liveInterval(query: { queryKey: QueryKey }): number | false {
 // above is priced against — the return is what covers the reader who leaves —
 // so the return has to actually read.
 export function liveOnReturn(query: { queryKey: QueryKey }): "always" | false {
-  return isRecordRead(query.queryKey) && "always";
+  return isLiveRead(query.queryKey) && "always";
+}
+
+// Decisions and receipt controls can change in another tab or a worker.
+// Their current state must refresh just like the records they act on.
+function isLiveRead(key: QueryKey): boolean {
+  return isRecordRead(key) || isLiveWorkRead(key);
 }
 
 // FE-PARAM-2. Two retries, and only for a failure the server reported as its
@@ -149,11 +156,17 @@ export function retryQuery(failureCount: number, error: Error): boolean {
   // minute — is very likely still running. Retrying twice more starts up to
   // three of them, and the reader is told in the same breath that the first
   // may still be working. Their own retry is a decision; this one is not.
-  const gaveUpWaiting = problemCodeOf(error) === "gateway_unavailable";
+  const code = problemCodeOf(error);
+  // An unreadable host calendar is settled until the host repairs it. Each
+  // repeat is another provider call and another warn line. An anonymous page
+  // causes them as often as the host's own.
+  const needsTheHost = code === "calendar_unavailable";
+  const gaveUpWaiting = code === "gateway_unavailable";
   return (
     status !== null &&
     status >= 500 &&
     !gaveUpWaiting &&
+    !needsTheHost &&
     !SETTLED_SERVER_REFUSALS.has(status) &&
     failureCount < MAX_RETRIES
   );
@@ -245,6 +258,8 @@ export function createQueryClient(): QueryClient {
         // coming back to one is exactly when the cached answer is wrong, and
         // exactly when the reader acts on it.
         refetchOnWindowFocus: liveOnReturn,
+        refetchOnMount: (query) =>
+          isLiveWorkRead(query.queryKey) ? "always" : true,
       },
       // Reads wait out an outage and rerun when it clears. A write never
       // waits: a paused one would run on reconnect, after the reader moved on.

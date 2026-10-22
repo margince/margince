@@ -42,8 +42,10 @@ type PrivacyInformation struct {
 	// the acquisition alike. Nil only where there is no evidence row at all.
 	AcquiredAt *time.Time
 	// Purposes are what the installation uses this contact's data for, by
-	// published name.
-	Purposes []string
+	// published name. PurposeKeys holds each one's key at the same index, so a
+	// page can name the purposes the product seeds in its reader's language.
+	Purposes    []string
+	PurposeKeys []string
 	// Rights are the codes a page renders in its own language.
 	Rights []string
 }
@@ -77,7 +79,7 @@ func subjectRights() []string {
 func (s *Store) assembleDisclosure(
 	ctx context.Context, contactID ids.ContactID,
 ) (PrivacyInformation, error) {
-	out := PrivacyInformation{Rights: subjectRights(), Purposes: []string{}}
+	out := PrivacyInformation{Rights: subjectRights(), Purposes: []string{}, PurposeKeys: []string{}}
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx, `
 			SELECT kind, coalesce(occurred_at, captured_at)
@@ -94,24 +96,58 @@ func (s *Store) assembleDisclosure(
 		} else if err != nil {
 			return fmt.Errorf("consent: reading how this contact was obtained: %w", err)
 		}
-		rows, err := tx.Query(ctx, `
-			SELECT label FROM consent_purpose
-			 WHERE archived_at IS NULL
-			 ORDER BY label`)
-		if err != nil {
-			return fmt.Errorf("consent: reading what this installation uses data for: %w", err)
-		}
-		defer rows.Close()
-		for rows.Next() {
-			var label string
-			if err := rows.Scan(&label); err != nil {
-				return err
-			}
-			out.Purposes = append(out.Purposes, label)
-		}
-		return rows.Err()
+		return readDisclosedPurposes(ctx, tx, &out)
 	})
 	return out, err
+}
+
+// assembleLeadDisclosure is assembleDisclosure for a website lead. Only a lead
+// read off a company's public website holds a notice link. So that is its
+// source, dated when the lead was captured.
+func (s *Store) assembleLeadDisclosure(ctx context.Context, leadID ids.LeadID) (PrivacyInformation, error) {
+	out := PrivacyInformation{
+		Rights: subjectRights(), Purposes: []string{}, PurposeKeys: []string{},
+		AcquiredAs: acquiredFromAPublicSource,
+	}
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var capturedAt time.Time
+		if err := tx.QueryRow(ctx, `SELECT created_at FROM lead WHERE id = $1`, leadID).
+			Scan(&capturedAt); err != nil {
+			return fmt.Errorf("consent: reading when this lead was obtained: %w", err)
+		}
+		out.AcquiredAt = &capturedAt
+		return readDisclosedPurposes(ctx, tx, &out)
+	})
+	return out, err
+}
+
+// acquiredFromAPublicSource mirrors contacts.AcquiredPublicOrBusinessSource:
+// a company's public website is such a source.
+//
+// Held by: TestThePublicSourceAcquisitionIsSpelledTheSameOnBothSides
+// (backend/gates/acquisitionvocabulary_test.go)
+const acquiredFromAPublicSource = "public_or_business_source"
+
+// readDisclosedPurposes fills in what the installation uses data for, which a
+// contact's and a lead's disclosure state alike.
+func readDisclosedPurposes(ctx context.Context, tx pgx.Tx, out *PrivacyInformation) error {
+	rows, err := tx.Query(ctx, `
+		SELECT key, label FROM consent_purpose
+		 WHERE archived_at IS NULL
+		 ORDER BY label`)
+	if err != nil {
+		return fmt.Errorf("consent: reading what this installation uses data for: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var key, label string
+		if err := rows.Scan(&key, &label); err != nil {
+			return err
+		}
+		out.Purposes = append(out.Purposes, label)
+		out.PurposeKeys = append(out.PurposeKeys, key)
+	}
+	return rows.Err()
 }
 
 // acquiredUnknownLegacy mirrors contacts.AcquiredUnknownLegacy, which this
@@ -142,6 +178,9 @@ func (s *Store) PrivacyInformationFor(
 		// serve the Art. 14 page to somebody whose mail described something
 		// else. The handler checks too; a second check costs nothing.
 		return PrivacyInformation{}, apperrors.ErrNotFound
+	}
+	if !ref.LeadID.IsZero() {
+		return s.assembleLeadDisclosure(ctx, ref.LeadID)
 	}
 	return s.assembleDisclosure(ctx, ref.ContactID)
 }

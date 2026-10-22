@@ -26,7 +26,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -98,6 +100,48 @@ func writeDisagreements(stdout io.Writer, report []consent.Disagreement) error {
 	return nil
 }
 
+// databaseCommand is one operator command that runs against the installation
+// and exits instead of starting the worker.
+type databaseCommand func(
+	ctx context.Context, pool *pgxpool.Pool, resolveVault func() (keyvault.Vault, error),
+	settings *config.Config, args []string, stdout io.Writer,
+) error
+
+// databaseCommands are dispatched by name. The boot reads the same names to keep
+// a command and its flags away from the worker's flag parse.
+var databaseCommands = map[string]databaseCommand{
+	"authz-disagreement": poolOnly(runAuthzDisagreement),
+	"deal-key-names":     poolOnly(runDealKeyNames),
+	"replay-erasures":    runReplayErasures,
+	"reopen-parked":      poolOnly(runReopenParked),
+}
+
+// poolOnly adapts a command that needs only the pool.
+func poolOnly(run func(context.Context, *pgxpool.Pool, []string, io.Writer) error) databaseCommand {
+	return func(ctx context.Context, pool *pgxpool.Pool, _ func() (keyvault.Vault, error), _ *config.Config, args []string, stdout io.Writer) error {
+		return run(ctx, pool, args, stdout)
+	}
+}
+
+// databaseCommandOf names the database command args start with, if any.
+func databaseCommandOf(args []string) (databaseCommand, bool) {
+	if len(args) == 0 {
+		return nil, false
+	}
+	command, ok := databaseCommands[args[0]]
+	return command, ok
+}
+
+// workerFlags is the part of the command line the worker's own flag parse reads.
+// A database command takes its settings from the environment and files; its
+// name and flags are its own, and that parse refuses both.
+func workerFlags(args []string) []string {
+	if _, ok := databaseCommandOf(args); ok {
+		return nil
+	}
+	return args
+}
+
 // runDatabaseSubcommand dispatches the subcommands that need a database, and
 // reports whether it handled the arguments.
 //
@@ -106,18 +150,12 @@ func writeDisagreements(stdout io.Writer, report []consent.Disagreement) error {
 // these read or write the installation's own rows and must run after the role
 // and release assertions — a report against a schema this binary does not agree
 // with is a report about something else, and a write against one corrupts it.
-func runDatabaseSubcommand(ctx context.Context, pool *pgxpool.Pool, args []string, stdout io.Writer) (bool, error) {
-	if len(args) == 0 {
+func runDatabaseSubcommand(
+	ctx context.Context, pool *pgxpool.Pool, resolveVault func() (keyvault.Vault, error), settings *config.Config, args []string, stdout io.Writer,
+) (bool, error) {
+	command, ok := databaseCommandOf(args)
+	if !ok {
 		return false, nil
 	}
-	switch args[0] {
-	case "authz-disagreement":
-		return true, runAuthzDisagreement(ctx, pool, args[1:], stdout)
-	case "deal-key-names":
-		return true, runDealKeyNames(ctx, pool, args[1:], stdout)
-	}
-	if args[0] == "reopen-parked" {
-		return true, runReopenParked(ctx, pool, args[1:], stdout)
-	}
-	return false, nil
+	return true, command(ctx, pool, resolveVault, settings, args[1:], stdout)
 }

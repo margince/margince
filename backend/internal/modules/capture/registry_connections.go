@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -191,6 +192,11 @@ type ConnectionView struct {
 	// rather than a missing value: a mailbox that never chose moves with the
 	// default, and one that did keeps its answer whatever the default becomes.
 	SignatureEnrichEnabled *bool
+
+	// HistoryBaseline is nil when the owner chose none.
+	HistoryBaseline *HistoryBaseline
+
+	CanBackfill bool // supportsBackfill, asked of this provider's connector
 }
 
 // Connections lists the CALLING human's own standing connections in the
@@ -206,6 +212,7 @@ func (r *Registry) Connections(ctx context.Context) ([]ConnectionView, error) {
 		rows, err := tx.Query(ctx, `
 			SELECT c.id, c.provider, c.status, c.sync_cursor, c.watch_expires_at, c.provider_scopes,
 			       c.account_label, c.signature_enrich_enabled, c.mail_posture,
+			       c.history_baseline_date, c.history_baseline_tz, c.history_baseline_set_by, c.history_baseline_set_at,
 			       t.id, t.name, t.archived_at IS NOT NULL,
 			       s.last_synced_at, s.last_error_class, s.next_sync_at, s.failing_since
 			FROM capture_connection c
@@ -227,13 +234,16 @@ func (r *Registry) Connections(ctx context.Context) ([]ConnectionView, error) {
 			var tagID *ids.UUID
 			var tagName *string
 			var tagArchived *bool
+			var baseline historyBaselineColumns
 			if err := rows.Scan(&v.ID, &v.Provider, &v.Status, &v.Cursor, &v.WatchExpiresAt, &v.ProviderScopes,
 				&v.AccountLabel, &v.SignatureEnrichEnabled, &v.MailPosture,
+				&baseline.date, &baseline.timezone, &baseline.setBy, &baseline.setAt,
 				&tagID, &tagName, &tagArchived,
 				&v.LastSyncedAt, &v.LastErrorClass, &v.NextSyncDueAt, &v.FailingSince); err != nil {
 				return err
 			}
 			v.ContextTag = contextTagOf(tagID, tagName, tagArchived)
+			v.HistoryBaseline = baseline.baseline()
 			out = append(out, v)
 		}
 		if err := rows.Err(); err != nil {
@@ -247,6 +257,7 @@ func (r *Registry) Connections(ctx context.Context) ([]ConnectionView, error) {
 				return err
 			}
 			out[i].Backfill = run
+			out[i].CanBackfill = r.canBackfill(out[i].Provider)
 		}
 		return nil
 	})
@@ -438,11 +449,9 @@ func (r *Registry) DueConnections(ctx context.Context, name string) ([]DueConnec
 			-- But the cost of the join is one predicate and the cost of
 			-- missing a row is that a former colleague's mail keeps arriving,
 			-- so the poll asks the question too. Same condition
-			-- seatLoginAddressTx reads one file over, and spelled here for
-			-- the same reason it is spelled there: capture cannot import
-			-- identity (ADR-0054 §3).
+			-- seatLoginAddressTx reads one file over.
 			JOIN app_user u ON u.id = c.user_id
-			 AND u.status = 'active' AND u.archived_at IS NULL
+			 AND `+workforce.LiveMemberSQL("u")+`
 			WHERE c.provider = $1 AND c.status IN ('connected','error') AND c.archived_at IS NULL
 			  AND COALESCE(s.next_sync_at, now()) <= now()`, name)
 		if err != nil {

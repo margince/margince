@@ -5,13 +5,13 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
+import { meFixture } from "../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
-} from "../screens/story-utils";
+} from "../testing/story-utils";
 import { AccountMenu } from "./account";
-import { meFixture } from "./mefixture";
 // The strip's own sheet, loaded because THIS file builds a `.topbar` by hand and
 // imports nothing that would pull it in. `.storybook/preview.tsx` loads the
 // chrome sheets a story reaches by class rather than by module — but its list was
@@ -84,15 +84,13 @@ function stubSession(user: Partial<SessionUser> = {}) {
  * drop offset is computed from `--topbarH` too, so it lands wrong in the same
  * breath.
  *
- * All THREE of the bar's tracks are rendered, and the middle one is why: the
- * strip is `minmax(0, 1fr) auto minmax(0, 1fr)`, so a frame that supplied only a
- * lead and a trail put the trail in the MIDDLE track and left the third one
- * empty — the block then sat near the centre of the bar, which is the one thing
- * about its position these frames are for. The slot is the search's own, left
- * empty: what the trail needs from it is its width, and a live field here would
- * be a second component in a frame about this one. Below 1100px, where `fe-uat`
- * captures, the real slot is a 36px glyph and this one is 0px — so the block in
- * the captured frames sits about a glyph's width right of where it really does.
+ * All THREE of the bar's tracks are rendered, and the middle one is why. The
+ * search holds the middle track, so the trail stands at the bar's end edge.
+ * That edge is what these frames are about. The slot is left empty: the trail
+ * needs only its width. A live field would be a second component in a frame
+ * about this one. Below 1100px, where `fe-uat` captures, the real slot is a
+ * 36px glyph and this one is 0px. So the captured block sits about a glyph's
+ * width right of where it really does.
  */
 function TopBarTrail({ children }: Readonly<{ children: ReactNode }>) {
   return (

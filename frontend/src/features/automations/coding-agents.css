@@ -1,0 +1,22 @@
+/* A coding agent's recipe. `pre-wrap` keeps a multi-line recipe on its lines,
+   and `break-all` stops a long base URL from widening the card. */
+.agents-guide {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.agents-guide > p {
+  margin: 0;
+}
+
+.agents-guide-command {
+  display: block;
+  align-self: stretch;
+  padding: var(--space-3);
+  border-radius: var(--r-sm);
+  background: var(--bgInset);
+  white-space: pre-wrap;
+  word-break: break-all;
+}

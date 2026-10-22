@@ -30,12 +30,17 @@ import (
 // names to their declared enum, or — for an array property — its items' enum.
 type schemaNode struct {
 	Properties map[string]schemaProperty `yaml:"properties"`
+	// Type is read for a query parameter whose schema is a component; Enum for a
+	// property that names an enum component by $ref.
+	Type any      `yaml:"type"`
+	Enum []string `yaml:"enum"`
 }
 
 // schemaProperty is one property's declaration: a scalar's own enum, or an
 // array's items' enum. Which one carries the vocabulary depends on the
 // property, so the reader picks (see closedEnum).
 type schemaProperty struct {
+	Ref   string   `yaml:"$ref"`
 	Enum  []string `yaml:"enum"`
 	Items struct {
 		Enum []string `yaml:"enum"`
@@ -62,6 +67,7 @@ type vocabulary struct {
 	recordType []string
 	tier       []string
 	scope      []string
+	servedBy   []string
 }
 
 func readVocabulary(schemas map[string]schemaNode) (vocabulary, error) {
@@ -74,6 +80,7 @@ func readVocabulary(schemas map[string]schemaNode) (vocabulary, error) {
 	var v vocabulary
 	for field, target := range map[string]*[]string{
 		"access": &v.access, "record_type": &v.recordType, "tier": &v.tier, "scope": &v.scope,
+		"served_by": &v.servedBy,
 	} {
 		prop, ok := declared.Properties[field]
 		if !ok || len(prop.Enum) == 0 {
@@ -124,7 +131,11 @@ func closedEnum(schemas map[string]schemaNode, schema, field string, enum func(s
 			"components.schemas.%s is missing: %s.%s is held equal to it, and without it the check passes "+
 				"by default instead of holding the two vocabularies together", schema, vocabularySchema, field)
 	}
-	values := enum(declared.Properties[field])
+	prop := declared.Properties[field]
+	if prop.Ref != "" {
+		prop.Enum = schemas[strings.TrimPrefix(prop.Ref, "#/components/schemas/")].Enum
+	}
+	values := enum(prop)
 	if len(values) == 0 {
 		return nil, fmt.Errorf(
 			"components.schemas.%s.%s declares no enum — the vocabulary must be closed to be checkable against %s",
@@ -148,6 +159,7 @@ func (v vocabulary) violations(policies []policy) []string {
 			{"x-mcp-tool.record_type", p.RecordType, v.recordType},
 			{"x-mcp-tool.tier", p.Tier, v.tier},
 			{"x-mcp-tool.scope", p.Scope, v.scope},
+			{"x-mcp-tool.served_by", p.ServedBy, v.servedBy},
 		} {
 			if check.value == "" || contains(check.allowed, check.value) {
 				continue
@@ -177,6 +189,8 @@ func renderVocabulary(v vocabulary) string {
 			"agentRecordType is the record an operation targets; the zero value means it declares none.", v.recordType},
 		{"agentScope", "scope",
 			"agentScope is the passport cap an operation consumes. Unlike the others it has no zero\n// value in practice: every tool operation declares one, so the gate never has to invent it.", v.scope},
+		{"agentServedBy", "servedBy",
+			"agentServedBy says how an operation relates to its MCP tool. registry: the handler runs the tool,\n// which admits the call. The zero value means the gate admits a call the tool also serves.", v.servedBy},
 	} {
 		fmt.Fprintf(&b, "\n// %s\n//\n// Values are the closed set declared by components.schemas.%s in\n"+
 			"// api/crm.yaml; a value outside it fails generation.\ntype %s string\n\nconst (\n",

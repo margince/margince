@@ -50,42 +50,29 @@ func (s *Store) CreateProduct(ctx context.Context, in CreateProductInput) (crmco
 	if err := auth.Require(ctx, "product", principal.ActionCreate); err != nil {
 		return crmcontracts.Product{}, err
 	}
-	name, err := httperr.RequireNonBlank("name", in.Name)
-	if err != nil {
-		return crmcontracts.Product{}, err
-	}
-	in.Name = name
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return crmcontracts.Product{}, err
 	}
-
-	unit := "unit"
-	if in.Unit != nil && *in.Unit != "" {
-		unit = *in.Unit
-	}
-	taxRate := "0.00"
-	if in.DefaultTaxRate != nil {
-		taxRate = formatPct(*in.DefaultTaxRate)
-	}
-	active := in.Active == nil || *in.Active
-	// Settled before the transaction opens, so a half-stated classification
-	// earns a field to fix rather than a constraint violation naming a schema
-	// object the caller has never heard of.
-	if err := validBillingShape(in.BillingModel, in.BillingIntervalMonths); err != nil {
+	plan, err := prepareProductCreation(in)
+	if err != nil {
 		return crmcontracts.Product{}, err
 	}
+	in = plan.Input
 
 	var out crmcontracts.Product
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
+		if err := refuseClaimedProductSKU(ctx, tx, in.SKU); err != nil {
+			return err
+		}
 		id := ids.New[ids.ProductKind]()
 		_, err := tx.Exec(ctx,
 			`INSERT INTO product (id, name, sku, description, unit, unit_price_minor,
 			                      currency, default_tax_rate, active, source, captured_by,
 			                      billing_model, billing_interval_months)
 			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
-			id, in.Name, in.SKU, in.Description, unit,
-			in.UnitPriceMinor, in.Currency, taxRate, active, in.Source, by,
+			id, in.Name, in.SKU, in.Description, *in.Unit,
+			in.UnitPriceMinor, in.Currency, plan.TaxRate, *in.Active, in.Source, by,
 			in.BillingModel, in.BillingIntervalMonths)
 		if err != nil {
 			if storekit.IsUniqueViolation(err) {
@@ -121,7 +108,9 @@ type UpdateProductInput struct {
 	Classified            bool
 	BillingModel          *string
 	BillingIntervalMonths *int
-	IfVersion             *int64
+	// Clear are the fields the caller sent as an explicit null.
+	Clear     []string
+	IfVersion *int64
 }
 
 func (s *Store) UpdateProduct(ctx context.Context, id ids.ProductID, in UpdateProductInput) (crmcontracts.Product, error) {
@@ -139,6 +128,9 @@ func (s *Store) UpdateProduct(ctx context.Context, id ids.ProductID, in UpdatePr
 			return err
 		}
 		if p.Empty() {
+			if err := storekit.EnsureIfMatch(ctx, tx, "product", id.UUID, in.IfVersion); err != nil {
+				return err
+			}
 			out = current
 			return nil
 		}
@@ -159,10 +151,34 @@ func (s *Store) UpdateProduct(ctx context.Context, id ids.ProductID, in UpdatePr
 	return out, err
 }
 
-// buildProductPatch folds the caller's sparse product edit into a patch —
-// every set field carries its before/after image for the audit trail.
+// descriptionColumn and billingIntervalColumn are named because more than one
+// writer spells each.
+const (
+	descriptionColumn     = "description"
+	billingIntervalColumn = "billing_interval_months"
+)
+
+// clearableProductColumns are the product's independently nullable columns.
+//
+// The billing classification is absent, because product_billing_shape ties
+// billing_model to billing_interval_months.
+//
+// Clearing one of them alone names a state the CHECK refuses. `not_specified`
+// moves the pair together and stays the way to say nobody has classified it.
+func clearableProductColumns(current crmcontracts.Product) map[string]storekit.Clearable {
+	return map[string]storekit.Clearable{
+		"sku":             {Column: "sku", Current: current.Sku},
+		descriptionColumn: {Column: descriptionColumn, Current: current.Description},
+	}
+}
+
+// buildProductPatch folds the caller's sparse product edit into a patch. Every
+// set field carries its before/after image for the audit trail.
 func buildProductPatch(current crmcontracts.Product, in UpdateProductInput) (*storekit.Patch, error) {
 	p := storekit.NewPatch()
+	if err := storekit.ApplyClears(p, in.Clear, clearableProductColumns(current)); err != nil {
+		return nil, err
+	}
 	if in.Name != nil {
 		name, err := httperr.RequireNonBlank("name", *in.Name)
 		if err != nil {
@@ -177,16 +193,33 @@ func buildProductPatch(current crmcontracts.Product, in UpdateProductInput) (*st
 		p.Set("description", current.Description, *in.Description)
 	}
 	if in.Unit != nil {
-		p.Set("unit", current.Unit, *in.Unit)
+		unit, err := httperr.RequireNonBlank("unit", *in.Unit)
+		if err != nil {
+			return nil, err
+		}
+		p.Set("unit", current.Unit, canonicalUnit(unit))
 	}
 	if in.UnitPriceMinor != nil {
+		if err := checkPrice(*in.UnitPriceMinor); err != nil {
+			return nil, err
+		}
 		p.Set("unit_price_minor", current.UnitPriceMinor, *in.UnitPriceMinor)
 	}
 	if in.Currency != nil {
+		if err := checkCurrency(*in.Currency); err != nil {
+			return nil, err
+		}
 		p.Set("currency", current.Currency, *in.Currency)
 	}
 	if in.DefaultTaxRate != nil {
-		p.Set("default_tax_rate", current.DefaultTaxRate, formatPct(*in.DefaultTaxRate))
+		if err := checkFigure(defaultTaxLimit, wireDecimal(*in.DefaultTaxRate)); err != nil {
+			return nil, err
+		}
+		// The column is numeric(…, 2) and the row reads back as a float, so the
+		// two are compared as the same two-decimal text the write binds.
+		if sent := formatPct(*in.DefaultTaxRate); sent != formatPct(current.DefaultTaxRate) {
+			p.Set("default_tax_rate", current.DefaultTaxRate, sent)
+		}
 	}
 	if in.Active != nil {
 		p.Set("active", current.Active, *in.Active)
@@ -213,12 +246,17 @@ func buildProductPatch(current crmcontracts.Product, in UpdateProductInput) (*st
 			return nil, err
 		}
 		p.Set("billing_model", currentModel, in.BillingModel)
-		p.Set("billing_interval_months", currentMonths, in.BillingIntervalMonths)
+		p.Set(billingIntervalColumn, currentMonths, in.BillingIntervalMonths)
 	}
 	return p, nil
 }
 
 func (s *Store) ArchiveProduct(ctx context.Context, id ids.ProductID) (crmcontracts.Product, error) {
+	return s.ArchiveProductAt(ctx, id, nil)
+}
+
+// ArchiveProductAt keeps a stale review from retiring a changed product.
+func (s *Store) ArchiveProductAt(ctx context.Context, id ids.ProductID, ifVersion *int64) (crmcontracts.Product, error) {
 	if err := auth.Require(ctx, "product", principal.ActionDelete); err != nil {
 		return crmcontracts.Product{}, err
 	}
@@ -227,8 +265,9 @@ func (s *Store) ArchiveProduct(ctx context.Context, id ids.ProductID) (crmcontra
 		if _, err := readProduct(ctx, tx, id, storekit.LiveOnly); err != nil {
 			return err
 		}
-		if _, err := tx.Exec(ctx,
-			`UPDATE product SET archived_at = now() WHERE id = $1 AND archived_at IS NULL`, id); err != nil {
+		patch := storekit.NewPatch()
+		patch.Set("archived_at", nil, time.Now().UTC())
+		if err := patch.ApplyGuarded(ctx, tx, "product", id.UUID, ifVersion); err != nil {
 			return fmt.Errorf("archive product: %w", err)
 		}
 		if _, err := storekit.Audit(ctx, tx, "archive", "product", id.UUID, nil, nil); err != nil {

@@ -1,0 +1,38 @@
+# Empfangsbestätigung: Beschäftigteninformation und IT-Nutzungsrichtlinie
+
+> Vorlage. Auszufüllen, **bevor** das Postfach verbunden wird, zusammen mit der
+> Aushändigung der [Beschäftigteninformation](mitarbeiterinformation.md). Dieses
+> Blatt ersetzt keine Einwilligung: Es belegt nur, dass informiert wurde. Die
+> [Einwilligung](einwilligung-email-erfassung.md) ist ein eigenes Dokument und
+> nur bei erlaubter Privatnutzung erforderlich.
+
+**Verantwortliche Stelle (Art. 4 Nr. 7 DSGVO):** [Unternehmen, Anschrift]
+**Beschäftigte Person:** [Name] · **Postfach:** [E-Mail-Adresse]
+
+## Ich bestätige
+
+1. **Die Beschäftigteninformation** in der Version [Version] am [Datum] erhalten
+   zu haben.
+2. **Die IT-Nutzungsrichtlinie** in der Version [Version] zur Kenntnis genommen
+   zu haben, einschließlich der darin getroffenen Regelung zur privaten Nutzung
+   des dienstlichen Postfachs.
+3. **Gelegenheit zu Rückfragen** gehabt zu haben, gegenüber [Kontakt].
+
+Ort, Datum: ________________  Unterschrift: ________________
+
+## Hinweise für die durchführende Stelle
+
+- **Vor der Verbindung.** Art. 13 DSGVO verlangt die Information
+  zum Zeitpunkt der Erhebung. Ein Blatt, das nach dem ersten Abruf
+  unterschrieben wird, belegt eine Information, die zu spät kam.
+- **Je Person und je Version.** Ändert sich, was das System tut, wird die
+  Beschäftigteninformation neu ausgehändigt und neu bestätigt, denn eine Bestätigung
+  deckt nur die Fassung, die sie benennt.
+- **Österreich:** Dieses Blatt trägt dort mehr als den Nachweis. Besteht kein
+  Betriebsrat, ist eine Betriebsvereinbarung nicht möglich, und die Einführung
+  eines zur Kontrolle geeigneten Systems bedarf der Zustimmung jeder betroffenen
+  Person einzeln (§ 10 AVRAG, § 96 Abs. 1 Z 3 ArbVG). Dann ist dieses Blatt um
+  eine ausdrückliche Zustimmungserklärung zu ergänzen; die Bestätigung des
+  Empfangs allein genügt dafür nicht.
+- **Margince prüft nichts davon.** Das System verbindet ein Postfach ohne
+  Rücksicht darauf, ob dieses Blatt existiert.

@@ -3,14 +3,7 @@
 
 package compose
 
-// The weekly retrospective's scheduled pass.
-//
-// It ticks every six hours rather than once a week, and that is the schedule
-// being correct rather than lazy: the Monday it aims at is the INSTALLATION's
-// local one, so a tick that crosses the review hour in every zone the setting
-// can name is what makes one cadence work everywhere. uq_weekly_review_user_week
-// collapses the extra ticks into one review, and the same property backfills a
-// Monday the worker was down for.
+// Hourly measurement keeps the last closed reporting week ready for personal mail windows.
 
 import (
 	"context"
@@ -47,13 +40,6 @@ import (
 // enough that a wedged provider costs one rep their remark rather than a team
 // their retrospective.
 const narrateBudget = 40 * time.Second
-
-// reviewHour is the local hour on Monday from which a rep's week is measured.
-//
-// Late enough that the week it closes is genuinely over in the installation's
-// own zone, early enough that the review is waiting when the first contact
-// opens Margince.
-const reviewHour = 6
 
 // WeeklyReviewGenerateArgs is the fleet-wide dispatcher.
 type WeeklyReviewGenerateArgs struct{}
@@ -118,10 +104,6 @@ func (w *weeklyGenerateWorker) measureWorkspace(
 	sysCtx := principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system:weekly-review",
 	})
-	ready, err := w.reviewWindowOpen(sysCtx, now)
-	if err != nil || !ready {
-		return err
-	}
 	due, err := w.repsDueTheirReview(sysCtx, wsID, now)
 	if err != nil {
 		return err
@@ -233,6 +215,12 @@ func (w *weeklyGenerateWorker) narrate(ctx context.Context, review weekly.Review
 		// Monday: the deterministic review is the product either way.
 		return
 	}
+	if !weekly.NarrativeCovered(review) {
+		if err := w.engine.Narrate(ctx, review.ID, "", now); err != nil {
+			w.log.WarnContext(ctx, "weekly deterministic fallback could not be recorded", "cause", err)
+		}
+		return
+	}
 	in := narrative.Input{
 		WeekStart: review.LocalWeekStart.Format(time.DateOnly),
 		Counts: narrative.Counts{
@@ -293,7 +281,7 @@ func (w *weeklyGenerateWorker) narrate(ctx context.Context, review weekly.Review
 }
 
 // repsDueTheirReview lists the workspace's active full-seat humans whose local
-// Monday has reached reviewHour and who hold no review for the closed week.
+// reporting week has closed and who hold no review for that period.
 func (w *weeklyGenerateWorker) repsDueTheirReview(
 	ctx context.Context, wsID ids.UUID, now time.Time,
 ) ([]ids.UUID, error) {

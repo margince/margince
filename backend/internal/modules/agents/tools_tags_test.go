@@ -52,7 +52,7 @@ type mergeTagArgs struct {
 	source, target ids.UUID
 }
 
-func (s stubTags) CreateTag(_ context.Context, name string, color *string) (Tag, error) {
+func (s stubTags) CreateTag(_ context.Context, name string, color, _ *string) (Tag, error) {
 	if s.created != nil {
 		*s.created = createTagArgs{name: name, color: color}
 	}
@@ -77,6 +77,10 @@ func (s stubTags) UpdateTag(_ context.Context, tagID ids.UUID, edit TagEdit) (Ta
 	return out, nil
 }
 
+func (s stubTags) ArchiveTag(_ context.Context, tagID ids.UUID) (Tag, error) {
+	return Tag{TagID: tagID, Archived: true}, nil
+}
+
 func (s stubTags) TaggableTypes() []string { return s.taggable }
 
 // Both schemas advertise whatever the seam answers — the enum is the seam's
@@ -95,9 +99,9 @@ func TestTheTaggingSchemasAdvertiseTheSeamsVocabulary(t *testing.T) {
 	}
 }
 
-func (s stubTags) ListTags(_ context.Context, includeArchived bool) ([]Tag, bool, error) {
+func (s stubTags) ListTags(_ context.Context, q TagQuery) ([]Tag, bool, error) {
 	if s.listedArchived != nil {
-		*s.listedArchived = includeArchived
+		*s.listedArchived = q.IncludeArchived
 	}
 	return s.vocabulary, s.capped, nil
 }

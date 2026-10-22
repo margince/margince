@@ -28,7 +28,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -194,7 +194,7 @@ func WithGoogleSignIn(cfg GoogleSignInConfig) Option {
 		// them: RedirectBase is this deployment's own externally-reachable
 		// origin. What an incomplete config withholds is the ROUTE, not the URL
 		// the route will answer on once the operator finishes.
-		if base := signInRedirectBase(cfg.RedirectBase); base != "" {
+		if base := apiV1Base(cfg.RedirectBase); base != "" {
 			s.addRedirectURI(capture.AppProviderGoogle, crmcontracts.ConnectorAppRedirectUriPurposeSignIn,
 				identity.SignInRedirectURI(base, googleProviderKey))
 		}
@@ -210,7 +210,7 @@ func WithGoogleSignIn(cfg GoogleSignInConfig) Option {
 			config: identity.OIDCProviderConfig{Key: googleProviderKey, Label: googleProviderLabel},
 			source: source.provider,
 		}, identity.OIDCRoutes{
-			RedirectBase: signInRedirectBase(cfg.RedirectBase),
+			RedirectBase: apiV1Base(cfg.RedirectBase),
 			PostLoginURL: cfg.PostLoginURL,
 			FailureURL:   cfg.FailureURL,
 		}, cfg.StateKey)
@@ -252,7 +252,7 @@ func enabledOidcProviders(pool *pgxpool.Pool, svc *identity.Service, configured 
 		}
 		readCtx := principal.SystemActing(
 			principal.WithWorkspaceID(ctx, wsID.UUID), enabledOidcProvidersReadActor)
-		chosen, err := settings.Get(readCtx, NewSettingsStore(pool), identity.EnabledOidcProviders)
+		chosen, err := config.StoredVal(readCtx, StoredConfig(pool), identity.EnabledOidcProviders)
 		if err != nil {
 			return nil, fmt.Errorf("reading the enabled sign-in providers: %w", err)
 		}

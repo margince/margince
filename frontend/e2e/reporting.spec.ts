@@ -1,13 +1,13 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
-import { meFixture } from "../src/app/mefixture";
+import { meFixture } from "../src/testing/mefixture";
 import {
   reportingStoryCatalog,
   reportingStoryEvaluation,
   reportingStoryFramework,
   reportingStoryScope,
-} from "../src/screens/reporting.fixtures";
-import { forecastEvaluation } from "../src/screens/reporting.scenarios";
+} from "../src/testing/reporting.fixtures";
+import { forecastEvaluation } from "../src/features/analytics/reporting.scenarios";
 import { mockApi } from "./seed";
 
 test.use({ locale: "en-GB" });

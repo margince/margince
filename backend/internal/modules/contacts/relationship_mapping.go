@@ -21,18 +21,32 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
+)
+
+// The wire names of the two nullable dates a patch may clear.
+const (
+	wireStartedAt = "started_at"
+	wireEndedAt   = "ended_at"
 )
 
 // relationshipCreateInput maps the contract create body onto the store input.
 // Every endpoint the body declares travels, including project_id: which pair a
 // kind needs is the rel_*_shape CHECKs' rule, and dropping a field here turns
 // their refusal into a lie about what the caller sent.
-func relationshipCreateInput(req crmcontracts.CreateRelationshipRequest) CreateRelationshipInput {
+func relationshipCreateInput(req crmcontracts.CreateRelationshipRequest) (CreateRelationshipInput, error) {
+	source, err := httperr.RequireNonBlank("source", req.Source)
+	if err != nil {
+		return CreateRelationshipInput{}, err
+	}
 	in := CreateRelationshipInput{
-		Kind:   string(req.Kind),
-		Role:   req.Role,
-		Source: req.Source,
+		ReferencesFromRequest: true,
+		Kind:                  string(req.Kind),
+		Role:                  req.Role,
+		Source:                source,
 		// Passed through as the pointer, not collapsed to a bool: the store
 		// decides the flag only for a caller who omitted it, and an omitted
 		// field and an explicit false are different requests.
@@ -56,14 +70,14 @@ func relationshipCreateInput(req crmcontracts.CreateRelationshipRequest) CreateR
 	if req.EndedAt != nil {
 		in.EndedAt = &req.EndedAt.Time
 	}
-	return in
+	return in, nil
 }
 
 // relationshipUpdateInput maps the contract patch onto the store input. The
 // patch carries no endpoints at all — an edge's ends are what it IS, so moving
 // one is a new edge and an archive, never an update — which is why this takes
 // the version pin the create mapper has no use for.
-func relationshipUpdateInput(req crmcontracts.UpdateRelationshipRequest, ifVersion *int64) UpdateRelationshipInput {
+func relationshipUpdateInput(req crmcontracts.UpdateRelationshipRequest, ifVersion *int64, cleared []string) (UpdateRelationshipInput, error) {
 	in := UpdateRelationshipInput{
 		Role:             req.Role,
 		IsCurrentPrimary: req.IsCurrentPrimary,
@@ -80,7 +94,23 @@ func relationshipUpdateInput(req crmcontracts.UpdateRelationshipRequest, ifVersi
 	if req.EndedAt != nil {
 		in.EndedAt = &req.EndedAt.Time
 	}
-	return in
+	// A role with nothing visible in it is a cleared role, not an empty title.
+	if in.Role != nil && !values.HasVisibleText(*in.Role) {
+		in.Role, in.ClearRole = nil, true
+	}
+	for _, field := range cleared {
+		switch field {
+		case fieldRole:
+			in.ClearRole = true
+		case wireStartedAt:
+			in.ClearStartedAt = true
+		case wireEndedAt:
+			in.ClearEndedAt = true
+		default:
+			return UpdateRelationshipInput{}, &storekit.NotClearableError{Field: field}
+		}
+	}
+	return in, nil
 }
 
 // wireRelationship renders one edge for the wire. Every endpoint column the row

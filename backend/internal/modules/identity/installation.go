@@ -15,10 +15,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/identity/internal/password"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -43,6 +46,9 @@ var ErrMultipleWorkspaces = errors.New("identity: more than one active workspace
 // every binary of this installation must agree on it.
 const installationLockKey = int64(0x4d61726761_0001) // "Marga"+1
 
+// countryUnchosen is the refusal code of a claim that chose no jurisdiction.
+const countryUnchosen = "required"
+
 // InstallationBootstrap is the creation input for the singleton company.
 //
 // It arrives one of two ways and never both: from the deployment
@@ -52,10 +58,14 @@ const installationLockKey = int64(0x4d61726761_0001) // "Marga"+1
 // company retires every setup token — so neither can correct the other
 // afterwards.
 type InstallationBootstrap struct {
-	CompanyName   string
-	BaseCurrency  string
-	BaseLanguage  string
-	Timezone      string
+	CompanyName  string
+	BaseCurrency string
+	BaseLanguage string
+	Timezone     string
+	// Country is the jurisdiction the installation runs under. Nil means the
+	// input did not state one and nothing is seeded; a pointer to "" is the
+	// explicit choice of no pack.
+	Country       *string
 	AdminEmail    string
 	AdminName     string
 	AdminPassword string
@@ -108,7 +118,7 @@ func (s *Service) BootstrapInstallation(ctx context.Context, create func() (Inst
 		if err != nil {
 			return err
 		}
-		wsID, err = createInstallation(ctx, tx, in, originConfigured, seed, &discarded)
+		wsID, err = createInstallation(ctx, tx, s.config, in, originConfigured, seed, &discarded)
 		created = err == nil
 		return err
 	})
@@ -197,7 +207,8 @@ const (
 // untouched error paths into lines that read as changed to anything comparing
 // against the previous revision. The values it collects are a second OUTCOME of
 // a successful create, not a second result of the call.
-func createInstallation(ctx context.Context, tx pgx.Tx, in InstallationBootstrap, origin provisioningOrigin, seed func(ctx context.Context, tx pgx.Tx) error, discarded *[]string) (ids.WorkspaceID, error) {
+func createInstallation(ctx context.Context, tx pgx.Tx, c *config.Config, in InstallationBootstrap, origin provisioningOrigin, seed func(ctx context.Context, tx pgx.Tx) error, discarded *[]string) (ids.WorkspaceID, error) {
+	in = in.underBootValues(c)
 	boot := BootstrapInput{
 		WorkspaceName: in.CompanyName,
 		AdminEmail:    in.AdminEmail,
@@ -211,6 +222,9 @@ func createInstallation(ctx context.Context, tx pgx.Tx, in InstallationBootstrap
 	currency, language, err := resolveBasis(in, origin)
 	if err != nil {
 		return ids.WorkspaceID{}, err
+	}
+	if origin == originClaimed && in.Country == nil {
+		return ids.WorkspaceID{}, settings.InvalidValue{Setting: Country.Key(), Code: countryUnchosen, Reason: "choose a jurisdiction, or no jurisdiction pack"}
 	}
 	hash, err := password.Hash(boot.AdminPassword)
 	if err != nil {
@@ -229,11 +243,12 @@ func createInstallation(ctx context.Context, tx pgx.Tx, in InstallationBootstrap
 	// by a caller: normalize() and the currency default above are the only
 	// place these values are resolved, and a second derivation elsewhere would
 	// drift from them (the columns that used to carry them are gone).
-	dropped, err := seedInstallationIdentity(ctx, tx, installationIdentity{
+	dropped, err := seedInstallationIdentity(ctx, tx, c, installationIdentity{
 		name:     boot.WorkspaceName,
 		zone:     boot.Timezone,
 		currency: currency,
 		language: language,
+		country:  in.Country,
 	})
 	if err != nil {
 		return ids.WorkspaceID{}, err
@@ -316,7 +331,10 @@ func resolveBasis(in InstallationBootstrap, origin provisioningOrigin) (currency
 	currency, language = in.BaseCurrency, in.BaseLanguage
 	if origin == originClaimed {
 		for _, ask := range []struct {
-			entry *settings.Entry[string]
+			entry interface {
+				Key() string
+				ValidateJSON(json.RawMessage) error
+			}
 			value string
 		}{
 			{BaseCurrency, currency},
@@ -341,6 +359,21 @@ func resolveBasis(in InstallationBootstrap, origin provisioningOrigin) (currency
 	return currency, language, nil
 }
 
+// underBootValues replaces what a boot source sets, so the bootstrap writes
+// and reports the value every reader answers.
+func (in InstallationBootstrap) underBootValues(c *config.Config) InstallationBootstrap {
+	if name, ok := config.BootVal(c, Name); ok {
+		in.CompanyName = name
+	}
+	if language, ok := config.BootVal(c, BaseLanguage); ok {
+		in.BaseLanguage = language
+	}
+	if country, ok := config.BootVal(c, Country); ok {
+		in.Country = &country
+	}
+	return in
+}
+
 // installationIdentity is what the installation IS: the four values seeded
 // together at bootstrap. Named fields rather than four positional strings,
 // because three of them are same-typed and a transposed pair would seed a
@@ -350,6 +383,7 @@ type installationIdentity struct {
 	zone     string
 	currency string
 	language string
+	country  *string
 }
 
 // seedInstallationIdentity writes the settings rows that ARE the
@@ -362,22 +396,24 @@ type installationIdentity struct {
 // new workspace beside the old settings and every value the operator supplied is
 // discarded — which is #863. What should happen then is undecided; this only
 // makes sure the caller can say it happened.
-func seedInstallationIdentity(ctx context.Context, tx pgx.Tx, id installationIdentity) (discarded []string, err error) {
-	for _, seed := range []struct {
-		entry *settings.Entry[string]
-		value string
-	}{
-		{Name, id.name},
-		{Timezone, id.zone},
-		{BaseCurrency, id.currency},
-		{BaseLanguage, id.language},
-	} {
-		stored, err := settings.SeedValue(ctx, tx, seed.entry, seed.value)
+func seedInstallationIdentity(ctx context.Context, tx pgx.Tx, boot *config.Config, id installationIdentity) (discarded []string, err error) {
+	seeds := map[string]func() (bool, error){
+		Name.Key():         func() (bool, error) { return config.SeedTx(ctx, tx, boot, Name, id.name) },
+		Timezone.Key():     func() (bool, error) { return settings.SeedValue(ctx, tx, Timezone, id.zone, nil) },
+		BaseCurrency.Key(): func() (bool, error) { return settings.SeedValue(ctx, tx, BaseCurrency, id.currency, nil) },
+		BaseLanguage.Key(): func() (bool, error) { return config.SeedTx(ctx, tx, boot, BaseLanguage, id.language) },
+	}
+	if id.country != nil {
+		seeds[Country.Key()] = func() (bool, error) { return config.SeedTx(ctx, tx, boot, Country, *id.country) }
+	}
+	for _, key := range slices.Sorted(maps.Keys(seeds)) {
+		stored, err := seeds[key]()
 		if err != nil {
 			return nil, err
 		}
-		if !stored {
-			discarded = append(discarded, seed.entry.Key())
+		// A boot-set key is neither seeded nor reported.
+		if _, locked := boot.Locked(key); !stored && !locked {
+			discarded = append(discarded, key)
 		}
 	}
 	return discarded, nil

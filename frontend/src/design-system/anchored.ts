@@ -3,10 +3,10 @@
 
 // Putting a portalled panel where its trigger is.
 //
-// Its own module because two controls need it and neither owns it: the
-// overflow menu (atoms.tsx) and the popover (popover.tsx) both hang a fixed
-// panel off a button, and a hook living inside one of them would make the
-// other import a menu to borrow arithmetic.
+// Its own module because two controls need it and neither owns it. The
+// overflow menu (overflowmenu.tsx) and the popover (popover.tsx) both hang a
+// fixed panel off a button. A hook inside one of them would make the other
+// import a menu to borrow arithmetic.
 
 import { type RefObject, useEffect, useState } from "react";
 

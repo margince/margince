@@ -37,6 +37,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // digestWindowSQL is how much of a seat's queue one morning considers: still
@@ -221,7 +223,31 @@ func (s *Store) DigestStillDue(ctx context.Context, user ids.UserID, w Window) (
 // to produce a second one, and nothing ever releases it.
 func (s *Store) ClaimDigestRun(ctx context.Context, user ids.UserID, day time.Time) (bool, error) {
 	var claimed bool
-	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		claimed, err = s.ClaimDigestRunTx(ctx, tx, user, day)
+		return err
+	})
+	return claimed, err
+}
+
+// ClaimDigestRunTx shares the original digest identity with a combined edition.
+func (s *Store) ClaimDigestRunTx(ctx context.Context, tx pgx.Tx, user ids.UserID, day time.Time) (bool, error) {
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		return false, apperrors.ErrPermissionDenied
+	}
+	if actor.Type != principal.PrincipalSystem {
+		seat, err := actingSeat(ctx, "claiming a digest")
+		if err != nil {
+			return false, err
+		}
+		if seat != user.UUID {
+			return false, apperrors.ErrPermissionDenied
+		}
+	}
+	var claimed bool
+	claim := func() error {
 		tag, txErr := tx.Exec(ctx, `
 			INSERT INTO notification_digest_run (user_id, digest_date)
 			VALUES ($1, $2)
@@ -240,7 +266,8 @@ func (s *Store) ClaimDigestRun(ctx context.Context, user ids.UserID, day time.Ti
 			map[string]any{digestRunField: nil},
 			map[string]any{digestRunField: day.Format(time.DateOnly)})
 		return txErr
-	}); err != nil {
+	}
+	if err := claim(); err != nil {
 		return false, fmt.Errorf("notices: claiming the seat's morning digest: %w", err)
 	}
 	return claimed, nil
@@ -255,7 +282,7 @@ func (s *Store) ClaimDigestRun(ctx context.Context, user ids.UserID, day time.Ti
 // find out why a message did not arrive would bury the relay failures it exists
 // for.
 func (s *Store) DigestFailed(ctx context.Context, user ids.UserID, day time.Time, cause string) error {
-	cause = truncate(cause, maxMailErrorRunes)
+	cause = textcut.Runes(cause, maxMailErrorRunes)
 	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		tag, txErr := tx.Exec(ctx, `
 			UPDATE notification_digest_run SET mail_error = $3
@@ -359,7 +386,7 @@ func unreadInWindow(ctx context.Context, tx pgx.Tx, user ids.UserID, w Window) (
 	window := digestWindowSQL(arg(w.from()), arg(w.Morning))
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT notice.id, notice.kind, notice.subject, notice.body,
-		       notice.target_type, notice.target_id, notice.created_at, notice.origin
+		       notice.target_type, notice.target_id, notice.created_at, notice.origin, coalesce(notice.dedupe_key,'')
 		  FROM notice
 		 WHERE notice.recipient_user_id = $%d
 		   AND %s
@@ -371,16 +398,21 @@ func unreadInWindow(ctx context.Context, tx pgx.Tx, user ids.UserID, w Window) (
 	var held []Notice
 	for rows.Next() {
 		var n Notice
+		var noticeKey string
 		// Both halves are nullable and the table pairs them, so either arriving
 		// alone is a row the constraint should have refused.
 		var targetType *string
 		var targetID *ids.UUID
 		if scanErr := rows.Scan(&n.ID, &n.Kind, &n.Subject, &n.Body,
-			&targetType, &targetID, &n.CreatedAt, &n.Origin); scanErr != nil {
+			&targetType, &targetID, &n.CreatedAt, &n.Origin, &noticeKey); scanErr != nil {
 			return nil, scanErr
 		}
 		if targetType != nil && targetID != nil {
 			n.Target = Target{Type: *targetType, ID: *targetID}
+		}
+		if approval, ok := approvalOfNoticeKey(n.Kind, noticeKey); ok {
+			typed := ids.From[ids.ApprovalKind](approval)
+			n.ApprovalID = &typed
 		}
 		held = append(held, n)
 	}

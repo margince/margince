@@ -153,7 +153,7 @@ func readContactEmployers(ctx context.Context, tx pgx.Tx, contactIDs []ids.UUID)
 		return out, err
 	}
 
-	rows, err := tx.Query(ctx, `SELECT rel.contact_id, company.id, company.display_name`+from, args...)
+	rows, err := tx.Query(ctx, `SELECT rel.contact_id, company.id, company.display_name, company.logo_object_key`+from, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -161,10 +161,15 @@ func readContactEmployers(ctx context.Context, tx pgx.Tx, contactIDs []ids.UUID)
 	for rows.Next() {
 		var contactID, companyID ids.UUID
 		var name string
-		if err := rows.Scan(&contactID, &companyID, &name); err != nil {
+		var logoKey *string
+		if err := rows.Scan(&contactID, &companyID, &name, &logoKey); err != nil {
 			return nil, err
 		}
-		out[contactID] = crmcontracts.ContactEmployer{CompanyId: openapi_types.UUID(companyID), CompanyName: name}
+		out[contactID] = crmcontracts.ContactEmployer{
+			CompanyId:   openapi_types.UUID(companyID),
+			CompanyName: name,
+			LogoUrl:     LogoURL(companyID, logoKey, LogoWide),
+		}
 	}
 	return out, rows.Err()
 }

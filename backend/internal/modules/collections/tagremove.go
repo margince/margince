@@ -133,7 +133,7 @@ func removeTagTx(
 	}
 	return auditTagLink(ctx, tx, tagID, tagRemoved, linkImage{
 		EntityType: entityType, EntityID: entityID, RowID: &rowID, RowCreatedAt: &createdAt, TagAssignment: &kept,
-	})
+	}, nil)
 }
 
 // CheckTagChange refuses a tag verb before any record is tried: no read grant

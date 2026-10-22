@@ -75,9 +75,13 @@
   background: var(--bgHover);
   color: var(--textPrimary);
 }
+/* The view in use takes the pressed filter pill's neutral pair
+   (filterpills.css): it says where the reader is, and the accent is kept for
+   the action on the same row. */
 .lt-vtab.on {
-  background: var(--accentLight);
-  color: var(--accentText);
+  background: var(--bgChip);
+  box-shadow: inset 0 0 0 1px var(--borderStrong);
+  color: var(--textPrimary);
 }
 
 /* The count and the verbs wrap as ONE item, so a row that cannot hold the
@@ -516,7 +520,7 @@
 }
 
 /* THE VIEW RAIL SCROLLS from the width the header stops holding its row — the
-   same 1100px at which the verbs fold into one menu (app/viewport.ts
+   same 1100px at which the verbs fold into one menu (lib/viewport.ts
    NARROW_MAX_WIDTH), not the phone breakpoint. It used to be the phone block's
    alone, so between the two the rail kept its full intrinsic width on a row
    that does not wrap: the lead queue's eight tabs pushed the count and the
@@ -571,6 +575,7 @@
  * makes the pinned identity column worth having. min-width keeps it filling the
  * surface when the columns do not need that much. */
 .lt-table {
+  --lt-grip-w: 10px;
   width: 100%;
   min-width: var(--lt-floor, 0);
   /* The colgroup decides the widths, and fixed layout is what makes it
@@ -585,8 +590,8 @@
   border-spacing: 0;
 }
 
-/* With explicit widths in play a cell clips rather than growing a row: the row
- * rhythm survives a column narrowed past its content. */
+/* With explicit widths in play a body cell clips rather than growing a row: the
+ * row rhythm survives a column narrowed past its content. A header wraps. */
 .lt-table th,
 .lt-table td {
   overflow: hidden;
@@ -656,7 +661,9 @@
   padding: var(--space-2) var(--space-3);
   background: var(--bgElevated);
   border-bottom: 1px solid var(--borderSubtle);
-  white-space: nowrap;
+  /* A label longer than its column wraps, and the column keeps its width. */
+  hyphens: auto;
+  overflow-wrap: anywhere;
 }
 
 /* A 44px row: enough that two rows cannot be mistaken for one, which is the
@@ -763,6 +770,12 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* A row's "…" menu column: the cell lets the trigger's focus ring past its
+ * exact-fit edge. */
+.lt-table td.lt-rowmenu {
+  overflow: visible;
+}
+
 /* The identity column stays put while the rest scrolls sideways: with enough
  * columns to need scrolling, a row whose name has scrolled away is a row you
  * can no longer tell apart. It carries its own background because the cells it
@@ -825,17 +838,28 @@
   background: var(--bgHover);
 }
 
-/* Compact tightens the row, so the chips in it come down to match: a 28px mark
- * against a 20px row is what makes one row taller than its neighbours.
+/* A chip comes down to 20px wherever a 28px mark would make its row taller
+ * than its neighbours: every cell of a compact table, and a chip beside a value
+ * (an owner, an employer) after the identity cell at either density.
  *
- * This is the ONE avatar size a prop cannot carry — density is the table's
- * decision and the chip arrives already built from a caller's cell renderer,
- * which knows nothing about it. It is also the only place a chip is drawn below
- * `Avatar`'s smallest rung: the scale starts at `sm`, so this 20 belongs to the
- * dense table and to nothing else. */
-.lt-table.dense .avatar {
+ * This is the ONE avatar size a prop cannot carry — the row height is the
+ * table's decision and the chip arrives already built from a caller's cell
+ * renderer, which knows nothing about it. It is also the only place a chip is
+ * drawn below `Avatar`'s smallest rung: the scale starts at `sm`, so this 20
+ * belongs to the table and to nothing else. */
+.lt-table.dense .avatar,
+.lt-table td:not(.lt-identity) .avatar {
   width: 20px;
   height: 20px;
+}
+
+/* The value beside such a chip ends in an ellipsis, as a bare value does: the
+ * cell's own `text-overflow` never reaches the text of a flex item. */
+.lt-table td:not(.lt-identity) .avatar-row > :not(.avatar) {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Compact: the rows tighten, the type does not. Shrinking the text too would
@@ -857,7 +881,7 @@
   position: absolute;
   top: 0;
   right: 0;
-  width: 10px;
+  width: var(--lt-grip-w);
   height: 100%;
   padding: 0;
   border: 0;
@@ -898,18 +922,24 @@
   padding: 0;
   border: 0;
   background: transparent;
+  /* A wrapped label keeps the column's edge, not a button's centre. */
+  text-align: inherit;
+  /* The arrow's slot may reach into the cell's end padding up to the grip, so a
+   * label that fits is never broken for an arrow hidden until the column sorts. */
+  margin-inline-end: calc(var(--lt-grip-w) - var(--space-3));
   cursor: pointer;
 }
 .lt-sort:hover {
   color: var(--textPrimary);
 }
 .lt-sort.on {
-  color: var(--accentText);
+  color: var(--textPrimary);
 }
 
 /* The arrow occupies its slot at all times and only becomes visible on the
  * sorted column, so clicking a header never nudges the other headers sideways. */
 .lt-arrow {
+  flex-shrink: 0;
   visibility: hidden;
   transition: transform var(--dur-state) var(--ease-in-out);
 }
@@ -996,11 +1026,12 @@
   background: var(--bgHover);
   color: var(--textPrimary);
 }
+/* The page in view, in the pressed filter pill's neutral pair: a filled
+   accent here read as the pager's one action. */
 .lt-pager button.on {
-  background: var(--accent);
-  /* A filled control, so it takes the control foreground: dark mode lightens
-     the accent fill, and the non-control token goes thin against it. */
-  color: var(--textOnAccentControl);
+  background: var(--bgChip);
+  box-shadow: inset 0 0 0 1px var(--borderStrong);
+  color: var(--textPrimary);
 }
 .lt-pager button:disabled {
   cursor: default;
@@ -1136,6 +1167,23 @@
   /* A number in a stack belongs beside its label, not against the far edge. */
   .lt-table td.lt-num {
     text-align: left;
+  }
+
+  /* The "…" sits beside the card's heading rather than on a labelled line. */
+  .lt-table tbody tr:has(> td.lt-rowmenu) {
+    position: relative;
+  }
+  .lt-table tbody td.lt-rowmenu {
+    position: absolute;
+    top: var(--space-2);
+    right: var(--space-2);
+    padding: 0;
+  }
+  .lt-table td.lt-rowmenu::before {
+    content: none;
+  }
+  .lt-table tr:has(> td.lt-rowmenu) td.lt-identity {
+    padding-right: calc(var(--controlHeight) + var(--space-2));
   }
 
   /* Cards are already tight; the density control governs the desktop grid. */
@@ -1427,4 +1475,48 @@
 .lt-pager button:active:not(:disabled) {
   background-color: var(--bgInset);
   transition-duration: var(--dur-tap);
+}
+
+/* ---- a list standing straight in a Panel ---- */
+
+/* One band of the pane, as a bleed `DataTable` is: text starts at the pane's
+   gutter and the rows run to its edges. No column rules: a list in a card is
+   read across its few columns, and the grid is for the full-page lists. */
+.panel > .lt :is(.lt-head, .lt-caption, .lt-tools, .lt-agg, .lt-foot),
+.panel > .lt > :is(p, .lt-emptyline) {
+  padding-inline: var(--padPanel);
+}
+/* Sized by its rows, so no vertical bar can come and the gutter kept for one
+   would leave the table short of the pane's end edge. */
+.panel > .lt .lt-scroll {
+  scrollbar-gutter: auto;
+}
+.panel > .lt .lt-table :is(th, td) {
+  border-right: 0;
+}
+@media (min-width: 721px) {
+  .panel > .lt .lt-table :is(th, td):first-child {
+    padding-inline-start: var(--padPanel);
+  }
+  .panel > .lt .lt-table :is(th, td):nth-last-child(2) {
+    padding-inline-end: var(--padPanel);
+  }
+}
+@media (max-width: 720px) {
+  .panel > .lt .lt-table tbody tr {
+    padding-inline: var(--padPanel);
+  }
+  .panel > .lt .lt-table tbody td.lt-rowmenu {
+    right: var(--padPanel);
+  }
+}
+
+/* An empty short list says so in one sentence, a band of the surface like its
+   caption, on the surface's own ground. */
+.lt-emptyline {
+  padding: var(--space-3) var(--space-4);
+}
+.lt-emptyline > .empty {
+  padding: 0;
+  background: none;
 }

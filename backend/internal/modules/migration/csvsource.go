@@ -4,16 +4,18 @@
 package migration
 
 import (
+	"bytes"
 	"context"
-	"encoding/csv"
 	"errors"
 	"fmt"
 	"io"
 	"log/slog"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 )
 
 // The objects a delimited file may carry.
@@ -29,9 +31,11 @@ import (
 // `contact` bypasses nothing. It runs the same identity ladder every other contact
 // create runs, and an email already belonging to someone else refuses the row.
 const (
-	ObjectLead    = "lead"
-	ObjectCompany = "company"
-	ObjectContact = "contact"
+	ObjectLead     = "lead"
+	ObjectCompany  = "company"
+	ObjectContact  = "contact"
+	ObjectDeal     = "deal"
+	ObjectActivity = "activity"
 	// ConnectorCSV is the direct migrate-in connector this source serves
 	// (UC-E11-03). The column's CHECK also admits salesforce — the DDL is the
 	// chapter's pinned arrival shape — but it gets its Go constant when that
@@ -45,40 +49,58 @@ const (
 // a table nobody chose.
 var ErrObjectNotInSource = errors.New("object is not in this import source")
 
-// errPageFull stops a walk once the requested page is complete. Internal, and
-// never returned to a caller: a page that filled is a success, and reading the
-// remaining rows to discover that would make every page cost a whole file.
-var errPageFull = errors.New("page full")
-
 // SkippedLine is one row the source could not deliver, named by the line a
 // human would open the file to.
 type SkippedLine struct {
 	Line   int
 	Reason string
+	Why    Reason
 }
 
 // CSVSource reads an uploaded delimited file out of the blobstore as a
 // migration Source.
 //
-// Why the bytes are durable rather than streamed: Source.Rows pages by absolute
-// offset and the engine's checkpoint resumes at one, so the file must be
-// re-readable after the request that uploaded it is long gone. Re-opening and
-// skipping to the offset is O(rows) per page, which the 10 MB body cap bounds —
-// and the file's own order IS the deterministic ordering the resume contract
-// requires, with no cursor to store or invalidate.
+// The bytes are durable rather than streamed. Source.Rows pages by absolute
+// offset and a resume starts at one, so the file is read again long after its
+// upload. The file's own order is the ordering the resume contract requires.
+//
+// One source reads its stored file once and keeps the bytes. A page that starts
+// where the last one ended reads on from there. Any other offset walks from the
+// top.
 type CSVSource struct {
 	blobs     blobstore.Store
 	key       string
 	object    string
 	mapping   map[string]string
 	sourceKey string
+	// zip, when it names an entry, makes the bytes one file of a stored ZIP
+	// instead of the blob itself.
+	zip ZipPart
+
+	// body is the stored file's bytes, read on first use.
+	body []byte
+	// rows is the file's row count once Counts has walked it; body is fixed by then.
+	rows *int
+	// cursor is where the last page of Rows stopped.
+	cursor *rowCursor
 
 	// skipped accumulates rows no page could deliver. One source is walked by
 	// one request — the engine pages sequentially and the prediction pass runs
 	// before it — so this needs no lock, and giving it one would suggest a
 	// concurrency the rest of the type does not actually support.
 	skipped []SkippedLine
+
+	// observe hears where each page of Rows ended; nil hears nothing.
+	observe RowsRead
 }
+
+// RowsRead hears that a source has delivered its object's rows up to the
+// given position. An error it answers ends the read with that error.
+type RowsRead func(ctx context.Context, object string, delivered int) error
+
+// ObserveRows sets what hears each page of Rows end, so a reader can report
+// how far a walk of the file has come.
+func (s *CSVSource) ObserveRows(observe RowsRead) { s.observe = observe }
 
 // NewCSVSource binds one uploaded file to one object and one mapping.
 // sourceKeyColumn names the column that identifies a row for idempotent upsert
@@ -88,20 +110,30 @@ func NewCSVSource(blobs blobstore.Store, key, object string, mapping map[string]
 	return &CSVSource{blobs: blobs, key: key, object: object, mapping: mapping, sourceKey: sourceKeyColumn}
 }
 
+// NewZipPartSource binds one entry of a stored ZIP to one object and mapping.
+func NewZipPartSource(blobs blobstore.Store, part ZipPart, object string, mapping map[string]string, sourceKeyColumn string) *CSVSource {
+	s := NewCSVSource(blobs, part.Key, object, mapping, sourceKeyColumn)
+	s.zip = part
+	return s
+}
+
 // Objects fixes the import order. One upload is one object, so there is one.
 func (s *CSVSource) Objects() []string { return []string{s.object} }
 
 // Counts reports how many rows the file holds, for the run's progress figure.
 func (s *CSVSource) Counts(ctx context.Context) (map[string]int, error) {
-	rows := 0
-	err := s.walk(ctx, func(int, []string, map[string]int) error {
-		rows++
-		return nil
-	})
-	if err != nil {
-		return nil, err
+	if s.rows == nil {
+		rows := 0
+		err := s.walk(ctx, func(int, []string, map[string]int) error {
+			rows++
+			return nil
+		})
+		if err != nil {
+			return nil, err
+		}
+		s.rows = &rows
 	}
-	return map[string]int{s.object: rows}, nil
+	return map[string]int{s.object: *s.rows}, nil
 }
 
 // Skipped reports the rows no page could deliver, with the line to open and the
@@ -117,16 +149,69 @@ func (s *CSVSource) Rows(ctx context.Context, object string, offset, limit int) 
 	if object != s.object {
 		return nil, fmt.Errorf("%w: this source carries %q, not %q", ErrObjectNotInSource, s.object, object)
 	}
+	if s.cursor == nil || s.cursor.delivered > offset {
+		cursor, err := s.openCursor(ctx)
+		if err != nil {
+			return nil, err
+		}
+		s.cursor = cursor
+	}
 	out := make([]Row, 0, limit)
-	delivered := 0
-	// Rebuilt per call, and every call re-walks the file from the top, so this
-	// sees the whole file whatever page is being served. It is not run state and
-	// must not become any: a resumed run walks the same rows again on purpose.
-	claimed := map[string]int{}
-	err := s.walk(ctx, func(line int, record []string, index map[string]int) error {
-		row, ok := s.rowFrom(line, record, index)
+	for len(out) < limit {
+		row, ok, err := s.cursor.next(s)
+		if err != nil {
+			s.cursor = nil
+			return nil, err
+		}
 		if !ok {
-			return nil
+			break
+		}
+		if s.cursor.delivered > offset {
+			out = append(out, row)
+		}
+	}
+	if s.observe != nil {
+		if err := s.observe(ctx, s.object, s.cursor.delivered); err != nil {
+			return nil, err
+		}
+	}
+	return out, nil
+}
+
+// rowCursor is one walk of the file, positioned after the last row it
+// delivered.
+type rowCursor struct {
+	file  openFile
+	index map[string]int
+	// claimed holds the source keys the walk has met, with their lines. It is the
+	// walk's own, because a walk sees every row before the one it serves.
+	claimed   map[string]int
+	delivered int
+	done      bool
+}
+
+func (s *CSVSource) openCursor(ctx context.Context) (*rowCursor, error) {
+	file, err := s.open(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &rowCursor{file: file, index: headerIndex(file.header), claimed: map[string]int{}}, nil
+}
+
+// next is the walk's next deliverable row, or false at the end of the file.
+func (c *rowCursor) next(s *CSVSource) (Row, bool, error) {
+	for !c.done {
+		line, record, err := c.file.next()
+		if errors.Is(err, io.EOF) {
+			c.done = true
+			break
+		}
+		if err != nil {
+			return Row{}, false, err
+		}
+		row, ok := s.rowFrom(line, record, c.index)
+		if !ok {
+			continue
 		}
 		// A source key is a row's IDENTITY — what re-import matches on and what
 		// undo finds a created row by. Two rows claiming one identity is a
@@ -138,29 +223,25 @@ func (s *CSVSource) Rows(ctx context.Context, object string, offset, limit int) 
 		// row's record; the report deduplicated by the same key, so two refusals
 		// arrived as one skip and a phantom `unchanged`, and the four counts
 		// stopped summing to rows_read.
-		if first, seen := claimed[row.ExternalID]; seen {
-			s.skip(line, fmt.Sprintf(
-				"the %q value %q is already used by line %d; each row needs its own, because it is "+
-					"what a re-import matches on and what an undo finds this row by",
-				s.sourceKey, row.ExternalID, first))
-			return nil
+		if first, seen := c.claimed[row.ExternalID]; seen {
+			s.skip(line, Why(ReasonRowKeyRepeated,
+				"column", s.sourceKey, "value", row.ExternalID, "line", strconv.Itoa(first)))
+			continue
 		}
-		claimed[row.ExternalID] = line
-		position := delivered
-		delivered++
-		if position < offset {
-			return nil
-		}
-		out = append(out, row)
-		if len(out) == limit {
-			return errPageFull
-		}
-		return nil
-	})
-	if err != nil && !errors.Is(err, errPageFull) {
-		return nil, err
+		c.claimed[row.ExternalID] = line
+		c.delivered++
+		return row, true, nil
 	}
-	return out, nil
+	return Row{}, false, nil
+}
+
+// identityOf is the spelling a row's key travels under: an email folds as the
+// contact store keys it, any other key is kept.
+func (s *CSVSource) identityOf(external string) string {
+	if s.mapping[s.sourceKey] == "email" {
+		return correspondence.Fold(external)
+	}
+	return external
 }
 
 // rowFrom builds one Row from one record, or reports why it cannot. A row with
@@ -184,13 +265,13 @@ func (s *CSVSource) rowFrom(line int, record []string, index map[string]int) (Ro
 		external = strings.TrimSpace(record[at])
 	}
 	if external == "" {
-		s.skip(line, fmt.Sprintf("the %q column is empty, so this row cannot be identified for re-import or undo", s.sourceKey))
+		s.skip(line, Why(ReasonRowKeyEmpty, "column", s.sourceKey))
 		return Row{}, false
 	}
-	return Row{ExternalID: external, Fields: fields, LastSyncedAt: time.Time{}, Line: line}, true
+	return Row{ExternalID: s.identityOf(external), Fields: fields, LastSyncedAt: time.Time{}, Line: line}, true
 }
 
-func (s *CSVSource) skip(line int, reason string) {
+func (s *CSVSource) skip(line int, why Reason) {
 	for _, already := range s.skipped {
 		if already.Line == line {
 			// A page re-read after a resume walks the same rows again; the
@@ -198,7 +279,7 @@ func (s *CSVSource) skip(line int, reason string) {
 			return
 		}
 	}
-	s.skipped = append(s.skipped, SkippedLine{Line: line, Reason: reason})
+	s.skipped = append(s.skipped, SkippedLine{Line: line, Reason: why.English(), Why: why})
 }
 
 // Header names the file's own columns, and reads no further.
@@ -219,7 +300,7 @@ func (s *CSVSource) Header(ctx context.Context) ([]string, error) {
 // at the first data record, and the header it just read.
 type openFile struct {
 	body    io.ReadCloser
-	records *csv.Reader
+	records recordReader
 	header  []string
 	key     string
 }
@@ -230,12 +311,16 @@ type openFile struct {
 // mapping check needs only the names — and both must frame it identically, or
 // the check accepts a column the walk then cannot find.
 func (s *CSVSource) open(ctx context.Context) (openFile, error) {
-	body, _, err := s.blobs.Get(ctx, s.key)
+	body, err := s.openBody(ctx)
 	if err != nil {
-		return openFile{}, fmt.Errorf("import source %q: %w", s.key, err)
+		return openFile{}, err
 	}
-	file := openFile{body: body, records: csv.NewReader(body), key: s.key}
-	file.records.TrimLeadingSpace = true
+	records, err := newRecordReader(body)
+	if err != nil {
+		openFile{body: body, key: s.key}.close(ctx)
+		return openFile{}, err
+	}
+	file := openFile{body: body, records: records, key: s.key}
 	header, err := file.records.Read()
 	if err != nil {
 		file.close(ctx)
@@ -250,6 +335,37 @@ func (s *CSVSource) open(ctx context.Context) (openFile, error) {
 	}
 	file.header = header
 	return file, nil
+}
+
+// openBody is the stored file, or the one entry of a stored ZIP, read from the
+// store once per source.
+func (s *CSVSource) openBody(ctx context.Context) (io.ReadCloser, error) {
+	if s.body == nil {
+		stored, err := s.storedBody(ctx)
+		if err != nil {
+			return nil, err
+		}
+		body, err := io.ReadAll(stored)
+		if cerr := stored.Close(); cerr != nil {
+			slog.WarnContext(ctx, "closing the import source", "key", s.key, "err", cerr)
+		}
+		if err != nil {
+			return nil, fmt.Errorf("%w: %v", ErrSourceUnreadable, err)
+		}
+		s.body = body
+	}
+	return io.NopCloser(bytes.NewReader(s.body)), nil
+}
+
+func (s *CSVSource) storedBody(ctx context.Context) (io.ReadCloser, error) {
+	if s.zip.Entry == "" {
+		body, _, err := s.blobs.Get(ctx, s.key)
+		if err != nil {
+			return nil, fmt.Errorf("import source %q: %w", s.key, err)
+		}
+		return body, nil
+	}
+	return openZipEntry(ctx, s.blobs, s.zip)
 }
 
 // close releases the stored file. A close error cannot change what was already
@@ -270,30 +386,43 @@ func (s *CSVSource) walk(ctx context.Context, visit func(line int, record []stri
 		return err
 	}
 	defer file.close(ctx)
-
-	// Indexed by the header EXACTLY as the file spells it, because that is the
-	// key ProfileCSV published and the mapping was therefore written against.
-	// Trimming here instead would make a header like "Email " unresolvable:
-	// its mapped fields would vanish, and a row keyed on it would be skipped.
-	index := make(map[string]int, len(file.header))
-	for i, name := range file.header {
-		index[name] = i
-	}
-
+	index := headerIndex(file.header)
 	for {
-		record, err := file.records.Read()
+		line, record, err := file.next()
 		if errors.Is(err, io.EOF) {
 			return nil
 		}
-		// The reader's own position, not a counter: a quoted field may span
-		// several lines, and a disclosure that named the Nth record would send
-		// a human to the wrong line of their file.
-		line, _ := file.records.FieldPos(0)
 		if err != nil {
-			return fmt.Errorf("%w: line %d: %v", ErrSourceUnreadable, line, err)
+			return err
 		}
 		if err := visit(line, record, index); err != nil {
 			return err
 		}
 	}
+}
+
+// headerIndex maps each column to its position, by the header as the file
+// spells it. That is the key ProfileCSV published and the mapping was
+// written against. Trimming here would make a header like "Email " unresolvable.
+func headerIndex(header []string) map[string]int {
+	index := make(map[string]int, len(header))
+	for i, name := range header {
+		index[name] = i
+	}
+	return index
+}
+
+// next reads one data record and the file line it starts on.
+func (f openFile) next() (int, []string, error) {
+	record, err := f.records.Read()
+	if errors.Is(err, io.EOF) {
+		return 0, nil, io.EOF
+	}
+	// The reader's own position, not a counter. A quoted field may span
+	// several lines, and the Nth record is then not line N+1.
+	line, _ := f.records.FieldPos(0)
+	if err != nil {
+		return line, nil, fmt.Errorf("%w: line %d: %v", ErrSourceUnreadable, line, err)
+	}
+	return line, record, nil
 }

@@ -18,7 +18,7 @@ coverage-extensions.out
 # ships the placeholder, the approval lock, and the FIRST-PARTY units
 # enabled by default (extensions/de and extensions/vn, the German and
 # Vietnamese jurisdiction packs; extensions/openchannel, the reference
-# connector — presence under extensions/ IS the enablement, so a unit
+# connector; extensions/finance-demo, the demonstration accounting source — presence under extensions/ IS the enablement, so a unit
 # missing from the un-ignore list below is a unit no clone of this
 # repository has).
 /build/composition/
@@ -40,6 +40,7 @@ coverage-extensions.out
 !/extensions/.gitkeep
 !/extensions/approvals.lock
 !/extensions/de
+!/extensions/finance-demo
 !/extensions/openchannel
 !/extensions/vn
 # A unit's installed frontend dependencies. Its package.json and the workspace
@@ -166,6 +167,7 @@ workspace/
 # `go build ./tools/<name>` run from backend/ drops the same binary at
 # /backend/<name> instead, which is the spelling a session reaches for when it
 # is already in backend/ — so both are listed for the tools that have hit it.
+/backend/gen-agentpolicy
 /backend/gen-aitasks
 /backend/tools/gen-aitasks/gen-aitasks
 /backend/tools/gen-aitasks/gen-aitasks.exe
@@ -175,6 +177,8 @@ workspace/
 /backend/tools/gen-stubs/gen-stubs.exe
 /backend/tools/gen-agentpolicy/gen-agentpolicy
 /backend/tools/gen-agentpolicy/gen-agentpolicy.exe
+/backend/tools/gen-queryenums/gen-queryenums
+/backend/tools/gen-queryenums/gen-queryenums.exe
 /backend/tools/gen-recordfields/gen-recordfields
 /backend/tools/gen-recordfields/gen-recordfields.exe
 /backend/tools/gen-perfdoc/gen-perfdoc
@@ -223,9 +227,11 @@ dump.rdb
 /backend/tools/gen-agentpolicy/gen-agentpolicy
 /backend/tools/gen-aitasks/gen-aitasks
 /backend/tools/gen-composition/gen-composition
-/backend/tools/gen-configschema/gen-configschema
+/backend/tools/gen-config/gen-config
+/backend/gen-config
 /backend/tools/gen-jobs/gen-jobs
 /backend/tools/gen-payloads/gen-payloads
+/backend/tools/gen-queryenums/gen-queryenums
 /backend/tools/gen-perfdoc/gen-perfdoc
 /backend/tools/gen-recordfields/gen-recordfields
 /backend/tools/gen-stubs/gen-stubs

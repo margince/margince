@@ -7,7 +7,11 @@ package contactdraft
 // is grounded in. Its own file rather than input.go's tail: the fold is a long
 // read of a 360, and these six methods are a contract with draftcore.
 
-import "github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
+import (
+	"slices"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
+)
 
 // The draftcore.Input contract: what the shared writer needs of a folded
 // record, and nothing about what this one is grounded in.
@@ -37,11 +41,32 @@ func (in Input) GreetingNames() (string, string) {
 	return in.Recipient.FirstName, in.Recipient.LastName
 }
 
-// Addresses is where the draft goes: the recipient's own, when the record
-// carries one.
-func (in Input) Addresses() []string {
-	if in.Recipient.Email == "" {
-		return nil
+// CoRecipientNames are the further readers' names, which a greeting may name
+// beside the recipient's.
+func (in Input) CoRecipientNames() []string {
+	names := make([]string, 0, len(in.AlsoTo))
+	for _, other := range in.AlsoTo {
+		names = append(names, other.Name)
 	}
-	return []string{in.Recipient.Email}
+	return names
+}
+
+// Addresses is where the draft goes: the recipient's own, then each further
+// recipient's, skipping a contact with no address and an address twice.
+func (in Input) Addresses() []string {
+	var out []string
+	for _, address := range append([]string{in.Recipient.Email}, coAddresses(in.AlsoTo)...) {
+		if address != "" && !slices.Contains(out, address) {
+			out = append(out, address)
+		}
+	}
+	return out
+}
+
+func coAddresses(others []CoRecipientIn) []string {
+	out := make([]string, 0, len(others))
+	for _, other := range others {
+		out = append(out, other.Email)
+	}
+	return out
 }

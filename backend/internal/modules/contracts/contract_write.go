@@ -69,20 +69,24 @@ func (s *Store) CreateContract(ctx context.Context, in CreateContractInput) (crm
 		if err != nil {
 			return err
 		}
-		out, err = createContractTx(ctx, tx, in, by, today, active)
+		out, err = createContractTx(ctx, tx, in, by, today, active, true)
 		return err
 	})
 	return out, err
 }
 
-func createContractTx(ctx context.Context, tx pgx.Tx, in CreateContractInput, by string, asOf time.Time, active []fieldcatalog.Column) (crmcontracts.Contract, error) {
+func createContractTx(ctx context.Context, tx pgx.Tx, in CreateContractInput, by string, asOf time.Time, active []fieldcatalog.Column, fromRequest bool) (crmcontracts.Contract, error) {
 	// Naming the counterparty is a read of it, and naming a deal is a read of
 	// that deal — both are client-supplied references to row-scoped records, so
 	// a caller may not hang an agreement off something it cannot see.
-	if err := auth.EnsureLinkTarget(ctx, tx, companyTable, in.CompanyID.UUID); err != nil {
-		return crmcontracts.Contract{}, err
+	companyProbe := auth.EnsureLinkTarget(ctx, tx, companyTable, in.CompanyID.UUID)
+	if fromRequest {
+		companyProbe = auth.NameMissingReference("company_id", companyProbe)
 	}
-	if err := ensureLinksVisible(ctx, tx, dealRef(in.DealID), projectRef(in.ProjectID)); err != nil {
+	if companyProbe != nil {
+		return crmcontracts.Contract{}, companyProbe
+	}
+	if err := ensureLinksVisible(ctx, tx, fromRequest, dealRef(in.DealID), projectRef(in.ProjectID)); err != nil {
 		return crmcontracts.Contract{}, err
 	}
 	if err := ensureLinksShareCompany(ctx, tx, in.CompanyID.UUID,
@@ -91,13 +95,16 @@ func createContractTx(ctx context.Context, tx pgx.Tx, in CreateContractInput, by
 	}
 
 	id := ids.New[ids.ContractKind]()
-	cfCols, cfHolders, args := storekit.InsertFragments(active, in.CustomFields, []any{
+	cfCols, cfHolders, args, err := storekit.InsertFragments(active, in.CustomFields, []any{
 		id, in.CompanyID, in.DealID, in.ProjectID, in.ContractNumber, in.Title,
 		in.ValueMinor, in.Currency, in.ValueBasis, in.StartsOn, in.EndsOn, in.RenewalOn,
 		in.AutoRenew, in.NoticePeriodDays, in.PaymentTermDays, in.SignedOn, in.Source, by,
 		in.ArrMinor,
 	})
-	_, err := tx.Exec(ctx,
+	if err != nil {
+		return crmcontracts.Contract{}, err
+	}
+	_, err = tx.Exec(ctx,
 		`INSERT INTO contract (id, company_id, deal_id, project_id, contract_number, title,
 		                       value_minor, currency, value_basis, starts_on, ends_on, renewal_on,
 		                       auto_renew, notice_period_days, payment_term_days, signed_on,
@@ -140,7 +147,7 @@ func createContractTx(ctx context.Context, tx pgx.Tx, in CreateContractInput, by
 // UpdateContract applies a partial patch. Status is absent by design: it moves
 // through ChangeStatus, so a correction to a term can never silently activate
 // an agreement.
-func (s *Store) UpdateContract(ctx context.Context, id ids.ContractID, in crmcontracts.UpdateContractRequest, ifVersion *int64) (crmcontracts.Contract, error) {
+func (s *Store) UpdateContract(ctx context.Context, id ids.ContractID, in crmcontracts.UpdateContractRequest, cleared []string, ifVersion *int64) (crmcontracts.Contract, error) {
 	active, err := s.catalogColumns(ctx)
 	if err != nil {
 		return crmcontracts.Contract{}, err
@@ -166,7 +173,7 @@ func (s *Store) UpdateContract(ctx context.Context, id ids.ContractID, in crmcon
 		// cannot see — and because the company arm of the visibility
 		// predicate enforces capture privacy while the deal arm does not,
 		// moving the anchor would strip that boundary from the row for good.
-		if err := ensureLinksVisible(ctx, tx, uuidRef(dealTable, in.DealId), uuidRef(projectTable, in.ProjectId)); err != nil {
+		if err := ensureLinksVisible(ctx, tx, true, uuidRef(dealTable, in.DealId), uuidRef(projectTable, in.ProjectId)); err != nil {
 			return err
 		}
 		anchor, err := anchorOf(existing)
@@ -183,12 +190,24 @@ func (s *Store) UpdateContract(ctx context.Context, id ids.ContractID, in crmcon
 		if err := refuseRepricingAFrozenContract(existing, in); err != nil {
 			return err
 		}
-		patch := contractPatch(existing, in)
+		patch, err := contractPatch(existing, in, cleared)
+		if err != nil {
+			return err
+		}
 		// The cf_* values travel in the request's extension bag, so they are
 		// patched from it rather than from a named field. Without this a PATCH
 		// carrying custom fields succeeds and changes nothing.
-		storekit.SetCustomFieldPatch(patch, active, in.AdditionalProperties, existing.AdditionalProperties)
+		// A stale version answers 409 before a refused custom field answers 422.
+		if err := storekit.EnsureIfMatch(ctx, tx, contractTable, id.UUID, ifVersion); err != nil {
+			return err
+		}
+		if err := storekit.SetCustomFieldPatch(patch, active, in.AdditionalProperties, existing.AdditionalProperties); err != nil {
+			return err
+		}
 		if patch.Empty() {
+			if err := storekit.EnsureIfMatch(ctx, tx, contractTable, id.UUID, ifVersion); err != nil {
+				return err
+			}
 			// The unchanged row still leaves the store, so it is masked like
 			// any other answer. It is re-read WITH the catalog rather than
 			// reusing the pre-image: writableContract reads with nil columns,
@@ -354,12 +373,64 @@ func refuseRepricingAFrozenContract(existing crmcontracts.Contract, in crmcontra
 	}
 }
 
+// The clear map, the field assignment and the list's sort all write these two
+// columns.
+const (
+	startsOnColumn = "starts_on"
+	endsOnColumn   = "ends_on"
+)
+
+// clearableContractColumns are the contract's nullable columns, by the request
+// field that names each.
+//
+// A field absent from this map is refused rather than cleared, because the
+// column is NOT NULL.
+//
+// `title`, `auto_renew` and `value_basis` are the contract itself, not details
+// of it.
+//
+// Money is a trio. contract_money_currency_pair ties `currency` to
+// `value_minor` and `arr_minor`, so clearing one of them alone is a refusal the
+// CHECK states rather than one this map can.
+func clearableContractColumns(current crmcontracts.Contract) map[string]storekit.Clearable {
+	return map[string]storekit.Clearable{
+		"deal_id":            {Column: "deal_id", Current: current.DealId},
+		"project_id":         {Column: "project_id", Current: current.ProjectId},
+		"contract_number":    {Column: "contract_number", Current: current.ContractNumber},
+		"value_minor":        {Column: "value_minor", Current: current.ValueMinor},
+		"arr_minor":          {Column: "arr_minor", Current: current.ArrMinor},
+		"currency":           {Column: "currency", Current: current.Currency},
+		startsOnColumn:       {Column: startsOnColumn, Current: current.StartsOn},
+		endsOnColumn:         {Column: endsOnColumn, Current: current.EndsOn},
+		"signed_on":          {Column: "signed_on", Current: current.SignedOn},
+		"renewal_on":         {Column: "renewal_on", Current: current.RenewalOn},
+		"notice_period_days": {Column: "notice_period_days", Current: current.NoticePeriodDays},
+		"payment_term_days":  {Column: "payment_term_days", Current: current.PaymentTermDays},
+	}
+}
+
+// contractPatch is the field-by-field update, plus the explicit nulls.
+//
 // contractPatch turns the decoded body into a patch. The generated request
 // struct IS the allowlist — a field it does not carry cannot be set, and a key
 // the client misspelled is refused by the decoder before it reaches here, so
 // there is no second list to keep in step with the contract.
-func contractPatch(existing crmcontracts.Contract, in crmcontracts.UpdateContractRequest) *storekit.Patch {
+//
+// A field the caller sent as null is CLEARED rather than skipped. An absent
+// field means "leave it alone" and a null means "empty it", and reading both
+// off one nil pointer left a nullable column unclearable.
+func contractPatch(existing crmcontracts.Contract, in crmcontracts.UpdateContractRequest, cleared []string) (*storekit.Patch, error) {
 	patch := storekit.NewPatch()
+	if err := storekit.ApplyClears(patch, cleared, clearableContractColumns(existing)); err != nil {
+		return nil, err
+	}
+	setContractFields(patch, existing, in)
+	return patch, nil
+}
+
+// setContractFields assigns every field the request named, which is a list
+// rather than a decision: the clearing above is what reads the nulls.
+func setContractFields(patch *storekit.Patch, existing crmcontracts.Contract, in crmcontracts.UpdateContractRequest) {
 	if in.DealId != nil {
 		patch.Set("deal_id", existing.DealId, *in.DealId)
 	}
@@ -384,14 +455,20 @@ func contractPatch(existing crmcontracts.Contract, in crmcontracts.UpdateContrac
 	if in.ValueBasis != nil {
 		patch.Set("value_basis", string(existing.ValueBasis), string(*in.ValueBasis))
 	}
+	setContractTermFields(patch, existing, in)
+}
+
+// setContractTermFields assigns the dates and the renewal terms, which is
+// where most of the contract's fields are.
+func setContractTermFields(patch *storekit.Patch, existing crmcontracts.Contract, in crmcontracts.UpdateContractRequest) {
 	if in.StartsOn != nil {
-		patch.Set("starts_on", existing.StartsOn, in.StartsOn.Time)
+		patch.SetDate(startsOnColumn, storekit.PlainDate(existing.StartsOn), storekit.PlainDate(in.StartsOn))
 	}
 	if in.EndsOn != nil {
-		patch.Set("ends_on", existing.EndsOn, in.EndsOn.Time)
+		patch.SetDate(endsOnColumn, storekit.PlainDate(existing.EndsOn), storekit.PlainDate(in.EndsOn))
 	}
 	if in.RenewalOn != nil {
-		patch.Set("renewal_on", existing.RenewalOn, in.RenewalOn.Time)
+		patch.SetDate("renewal_on", storekit.PlainDate(existing.RenewalOn), storekit.PlainDate(in.RenewalOn))
 	}
 	if in.AutoRenew != nil {
 		patch.Set("auto_renew", existing.AutoRenew, *in.AutoRenew)
@@ -403,7 +480,6 @@ func contractPatch(existing crmcontracts.Contract, in crmcontracts.UpdateContrac
 		patch.Set("payment_term_days", existing.PaymentTermDays, *in.PaymentTermDays)
 	}
 	if in.SignedOn != nil {
-		patch.Set("signed_on", existing.SignedOn, in.SignedOn.Time)
+		patch.SetDate("signed_on", storekit.PlainDate(existing.SignedOn), storekit.PlainDate(in.SignedOn))
 	}
-	return patch
 }

@@ -45,6 +45,10 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 		return invited, false, counterpartyDecision{}, err
 	}
 	fields.OccurredAt = defaultOccurredAt(fields.OccurredAt)
+	fields.DurationSeconds = StorableDuration(fields.DurationSeconds)
+	if fields.judged, err = judgeEnvelopeTx(ctx, tx, rec, fields); err != nil {
+		return datasource.EntityRef{}, false, counterpartyDecision{}, err
+	}
 	// Whose credential carried this record, asked ONCE and carried to both the
 	// birth decision and this seat's import row — the two readers of it, and the
 	// same argument the birth decision makes for itself below.
@@ -239,7 +243,7 @@ func (s *Sink) finishNewActivity(
 	// owner is known — every consumer downstream sees an activity whose
 	// captured_by reads `connector:gmail` and cannot recover the human behind
 	// it. The participant rows are the record of that fact.
-	if err := stampCaptureParticipants(ctx, tx, id, actorUserID(ctx), fields.Kind, fields.Direction, rec.Counterparty); err != nil {
+	if err := stampMessageEnds(ctx, tx, id, actorUserID(ctx), fields, rec.Counterparty); err != nil {
 		return counterpartyDecision{}, err
 	}
 	// Everyone else who was in it — the CCs, the meeting's organizer and
@@ -395,6 +399,11 @@ func (s *Sink) upsertActivity(
 		if err := storekit.StampFields(ctx, tx, "activity", id.UUID, captureSource(rec), rec.CapturedBy, stamps); err != nil {
 			return ids.ActivityID{}, false, err
 		}
+		if rec.Counterparty.SentByOwner() {
+			if err := repairStrangerFactsTx(ctx, tx, rec.Counterparty.Email); err != nil {
+				return ids.ActivityID{}, false, err
+			}
+		}
 		return id, true, nil
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
@@ -425,8 +434,10 @@ func (s *Sink) upsertActivity(
 // defaultOccurredAt fills a provider payload that carried no timestamp:
 // capture time is the honest fallback — better a coarse "when we saw
 // it" than a zero time sorting the record to the beginning of history.
+// A stamp outside the storable range is no timestamp either: no zone can
+// render it.
 func defaultOccurredAt(occurredAt time.Time) time.Time {
-	if occurredAt.IsZero() {
+	if occurredAt.IsZero() || !datasource.InstantInRange(occurredAt) {
 		return time.Now().UTC()
 	}
 	return occurredAt
@@ -438,13 +449,14 @@ func capturedActivityInsert(ctx context.Context, rec connector.NormalizedRecord,
 	args := []any{
 		fields.Kind, nullableString(fields.ChannelProvider), nullableString(fields.Subject), nullableString(fields.Body), occurredAt, nullableString(fields.Direction),
 		rec.NaturalKey.SourceSystem, rec.NaturalKey.SourceID, captureSource(rec), capturedByFor(ctx, rec), nullableString(rec.ThreadKey), nullableString(correspondence.Fold(rec.Counterparty.Email)),
-		rec.Counterparty.SentByOwner(), rec.Counterparty.ListUnsubscribe, audience, nullableString(audienceReason), fields.HasCalendarPart, meetingHostUserID(ctx, fields.Kind), nullableString(string(textlang.DetectFirst(fields.Body, fields.Subject))), nullableID(rec.StoredOriginal), fields.DurationSeconds,
+		rec.Counterparty.SentByOwner(), rec.Counterparty.ListUnsubscribe, audience, nullableString(audienceReason), fields.HasCalendarPart, meetingHostUserID(ctx, fields.Kind), nullableString(string(textlang.DetectFirst(fields.Body, fields.Subject))), nullableID(rec.StoredOriginal), fields.DurationSeconds, nullableID(fields.SentByColleague), nullableString(fields.CalendarMethod),
+		fields.judged.foreignLink, fields.judged.senderWasStranger, inboundSenderAuthenticated(rec, fields),
 	}
 	placeholders := make([]string, len(args))
 	for i := range args {
 		placeholders[i] = fmt.Sprintf("$%d", i+1)
 	}
-	query := `INSERT INTO activity(kind,channel_provider,subject,body,occurred_at,direction,source_system,source_id,source,captured_by,thread_key,counterparty_email,counterparty_outbound_attested,bulk_mail_attested,audience,audience_reason,has_calendar_part,host_user_id,language,raw_capture_id,duration_seconds)
+	query := `INSERT INTO activity(kind,channel_provider,subject,body,occurred_at,direction,source_system,source_id,source,captured_by,thread_key,counterparty_email,counterparty_outbound_attested,bulk_mail_attested,audience,audience_reason,has_calendar_part,host_user_id,language,raw_capture_id,duration_seconds,sent_by_colleague,calendar_method,foreign_link,sender_was_stranger,inbound_sender_authenticated)
  VALUES (` + strings.Join(placeholders, ",") + `) ON CONFLICT(source_system,source_id) WHERE source_system IS NOT NULL AND source_id IS NOT NULL DO NOTHING RETURNING id`
 	return query, args
 }

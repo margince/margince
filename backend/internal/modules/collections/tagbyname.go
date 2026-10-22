@@ -92,6 +92,9 @@ type TagSummary struct {
 	Name     string
 	Color    string
 	Archived bool
+	// CarriedBy is how many records the caller can see carry the word, when
+	// the read asked for it.
+	CarriedBy *int
 }
 
 // TagIsLive answers whether this id names a word that can still be applied.

@@ -4,9 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Info } from "lucide-react";
 import type { CSSProperties } from "react";
+import { expect, within } from "storybook/test";
+import { formatMoney } from "../format/format";
 import { Badge, StatCard } from "./atoms";
 import { FactList } from "./factlist";
 import { IconAction } from "./iconaction";
+import { StatStrip } from "./statstrip";
 
 // StatCard — one reading with the basis it was drawn from.
 //
@@ -88,12 +91,8 @@ export const ReadingsWithADoor: Story = {
 };
 
 // Every shape a reading takes, at the ONE size and in the ONE face they all
-// draw in — read down the column and no tile is bigger than its neighbour.
-//
-// The two clamps are what keeps that true when the copy does not cooperate: a
-// label runs to one line and a detail to two, so a reading whose basis is a
-// paragraph cannot make its own card the tallest in the row. Both are visible
-// here, cut mid-sentence on purpose.
+// draw in. A long label wraps whole; only a detail is clamped, to two lines,
+// so a basis that is a paragraph cannot set the row's height.
 export const ReadingsAtOneSize: Story = {
   name: "Readings — tones, clamps and the alert tile",
   render: () => (
@@ -111,8 +110,7 @@ export const ReadingsAtOneSize: Story = {
         detail="Last inbound 12 Jun · last outbound 3 Jul · nobody here has replied since the renewal was raised, and the champion left in April"
       />
       {/* A label longer than the card is wide, with the source badge and the
-          receipt chip beside it: the NAME clamps to one line and the two chips
-          keep their place at the end of the row. */}
+          receipt chip beside it: the name wraps and the chips keep their place. */}
       <StatCard
         label="Net invoiced across every subsidiary, last twelve months"
         value="€1.2m"
@@ -150,6 +148,51 @@ export const ReadingsAtOneSize: Story = {
       />
     </div>
   ),
+};
+
+// German in a compact record strip. Compounds break at a syllable, a figure in
+// words wraps at its spaces, and an amount keeps to one line.
+export const LongGermanReadings: Story = {
+  render: () => (
+    <div lang="de" style={{ maxWidth: "44rem" }}>
+      <StatStrip density="compact">
+        <StatCard
+          label="Wahrscheinlichkeitsbereinigter Wert"
+          value={formatMoney(850000, "EUR", "de")}
+          detail="E-Mail · 13. Okt. 2026"
+        />
+        <StatCard
+          label="Umsatz · 12 Monate"
+          value="Kein Wert"
+          detail="Wird synchronisiert"
+        />
+        <StatCard label="Nächster Termin" value="Kein Termin geplant" />
+        <StatCard label="Anstehende Termine" value="Nicht verbunden" />
+        <StatCard
+          label="Ohne Kategorie"
+          value={formatMoney(3700000, "EUR", "de")}
+        />
+      </StatStrip>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByText("Kein Termin geplant");
+    const whole = canvasElement.querySelectorAll<HTMLElement>(
+      ".stat-card-label-text, .stat-card-value",
+    );
+    expect(whole).toHaveLength(10);
+    for (const text of whole) {
+      expect(text.scrollWidth).toBeLessThanOrEqual(text.clientWidth);
+      expect(text.scrollHeight).toBeLessThanOrEqual(text.clientHeight);
+    }
+    for (const figure of canvasElement.querySelectorAll(".stat-card-value")) {
+      if (/\d/.test(figure.textContent ?? "")) {
+        const lines = document.createRange();
+        lines.selectNodeContents(figure);
+        expect(lines.getClientRects()).toHaveLength(1);
+      }
+    }
+  },
 };
 
 // A glyph verb in the source slot beside a tile without one: the square takes

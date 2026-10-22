@@ -73,6 +73,10 @@ type runnerEnv struct {
 // must still put in front of a human.
 const stagingSpecName = "e2e_staging_agent"
 
+// enrichDomains gives an enrich target the page the call reads. A company with
+// no domain has nothing to read, so the call is refused before it is staged.
+var enrichDomains = []integration.AnyMap{{"domain": "enrich-target.example", "is_primary": true}}
+
 // stagingSpec resolves the catalog for the 🟡 tests: the shipped entries
 // unchanged, plus the one above.
 func stagingSpec(name string) (runner.AgentSpec, bool) {
@@ -281,7 +285,7 @@ func TestRunnerConfirmationRequiredSuspendApproveResume(t *testing.T) {
 	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := re.Call(t, "POST", "/v1/companies", integration.AnyMap{"source": "manual", "display_name": "Unknown Co"}, nil, &contact); status != http.StatusCreated {
+	if status := re.Call(t, "POST", "/v1/companies", integration.AnyMap{"source": "manual", "display_name": "Unknown Co", "domains": enrichDomains}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create company → %d", status)
 	}
 
@@ -339,7 +343,7 @@ func TestRunnerConfirmationRequiredRejectionReplansWithoutEffect(t *testing.T) {
 	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := re.Call(t, "POST", "/v1/companies", integration.AnyMap{"source": "manual", "display_name": "Keep Me"}, nil, &contact); status != http.StatusCreated {
+	if status := re.Call(t, "POST", "/v1/companies", integration.AnyMap{"source": "manual", "display_name": "Keep Me", "domains": enrichDomains}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create company → %d", status)
 	}
 
@@ -428,7 +432,7 @@ func TestRunnerResumeIsClaimedSoARedeliveryIsANoOp(t *testing.T) {
 	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := re.Call(t, "POST", "/v1/companies", integration.AnyMap{"source": "manual", "display_name": "Resume Once"}, nil, &contact); status != http.StatusCreated {
+	if status := re.Call(t, "POST", "/v1/companies", integration.AnyMap{"source": "manual", "display_name": "Resume Once", "domains": enrichDomains}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create company → %d", status)
 	}
 
@@ -561,6 +565,7 @@ func TestASuspendedRunWhoseAuthorityDiesIsClosedRatherThanParkedForever(t *testi
 	if status := re.Call(t, "POST", "/v1/companies", integration.AnyMap{
 		"source":       "manual",
 		"display_name": "Authority Dies Parked",
+		"domains":      enrichDomains,
 	}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create company → %d", status)
 	}
@@ -622,6 +627,7 @@ func TestATerminalWriteThatFailsLeavesTheRunResumable(t *testing.T) {
 	if status := re.Call(t, "POST", "/v1/companies", integration.AnyMap{
 		"source":       "manual",
 		"display_name": "Close Failed Retriable",
+		"domains":      enrichDomains,
 	}, nil, &company); status != http.StatusCreated {
 		t.Fatalf("create company → %d", status)
 	}

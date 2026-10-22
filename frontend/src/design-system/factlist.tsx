@@ -60,7 +60,7 @@ export function FactList({
           <dd className="factlist-value">
             {fact.value}
             {fact.note !== undefined && (
-              <small className="factlist-note">{fact.note}</small>
+              <small className="factlist-note t-caption">{fact.note}</small>
             )}
           </dd>
         </div>

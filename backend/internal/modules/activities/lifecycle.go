@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -24,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 type UpdateActivityInput struct {
@@ -48,21 +48,34 @@ type UpdateActivityInput struct {
 	// honest thing to hold it against.
 	MeetingStatus *string
 	IfVersion     *int64
+	// CustomFields are the patch's cf_ values; a null clears one. customColumns
+	// are the active fields they are checked and written against.
+	CustomFields  map[string]any
+	customColumns []fieldcatalog.Column
 }
 
+const archiveReasonKey = "reason"
+
+// UpdateActivity keeps an authorized edit and its audit in one transaction.
 func (s *Store) UpdateActivity(ctx context.Context, id ids.ActivityID, in UpdateActivityInput) (crmcontracts.Activity, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	at := s.now()
 	in.recordedAt = &at
+	if err := s.readPatchColumns(ctx, &in); err != nil {
+		return crmcontracts.Activity{}, err
+	}
 	var out crmcontracts.Activity
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		var err error
 		out, err = updateActivityInTx(ctx, tx, id, in)
 		return err
 	})
-	return out, err
+	if err != nil {
+		return out, err
+	}
+	return out, s.attachCustomValues(ctx, &out)
 }
 
 // updateActivityInTx is UpdateActivity's transactional body, shared with the
@@ -81,6 +94,12 @@ func updateActivityInTx(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, in UpdateActivityInput,
 ) (crmcontracts.Activity, error) {
 	current, held, err := admitActivityPatch(ctx, tx, id, &in)
+	if err == nil {
+		err = storekit.CheckCustomValues(in.customColumns, in.CustomFields)
+	}
+	if err == nil {
+		err = withCustomValuesOf(ctx, tx, in.customColumns, &current)
+	}
 	if err != nil {
 		return crmcontracts.Activity{}, err
 	}
@@ -120,11 +139,12 @@ func updateActivityInTx(
 		  done_at = CASE
 		    WHEN $%[8]d IS TRUE AND NOT is_done THEN now()
 		    WHEN $%[8]d IS FALSE THEN NULL
-		    ELSE done_at END
+		    ELSE done_at END%[14]s
 		WHERE id = $%[1]d`,
 		row, arg(in.Subject), arg(in.Body), arg(in.OccurredAt), arg(in.DueAt),
 		arg(in.RemindAt), arg(in.AssigneeID), done, arg(in.MeetingStatus), arg(in.DurationSeconds),
-		arg(in.clears("due_at")), arg(in.clears("remind_at")), arg(in.clears("assignee_id"))),
+		arg(in.clears("due_at")), arg(in.clears("remind_at")), arg(in.clears("assignee_id")),
+		customAssignments(in.customColumns, in.CustomFields, arg)),
 		args...); err != nil {
 		return crmcontracts.Activity{}, err
 	}
@@ -132,6 +152,9 @@ func updateActivityInTx(
 	// and a transcript body is renormalized on the way in, so the row is the
 	// only place that says what this write actually stored.
 	out, err := readActivity(ctx, tx, id, storekit.LiveOnly)
+	if err == nil {
+		err = withCustomValuesOf(ctx, tx, in.customColumns, &out)
+	}
 	if err != nil {
 		return crmcontracts.Activity{}, err
 	}
@@ -146,26 +169,58 @@ func updateActivityInTx(
 	}); err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	before, after := storekit.ChangedColumns(activityColumnImage(current), activityColumnImage(out))
+	before, after := storekit.ChangedColumns(customFieldImage(activityColumnImage(current), current, in.customColumns),
+		customFieldImage(activityColumnImage(out), out, in.customColumns))
 	auditID, err := storekit.AuditWithTrail(ctx, tx, in.Trail, "activity", id.UUID, before, after)
 	if err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventActivityUpdated{
-		ChangedFields: activityUpdatedChangedFields(in),
-	}); err != nil {
+	updated := crmcontracts.PublicEventActivityUpdated{ChangedFields: activityUpdatedChangedFields(in)}
+	updated.Imported, updated.ImportRunId = storekit.ImportMark(ctx)
+	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, updated); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	return out, nil
 }
 
-// changesNothing is true when the patch names no field to set, and no clear of
-// a field that holds a value. That is a form saved untouched: writing it would
-// bump the version and audit an empty change set.
+// changesNothing is true when every field the patch names already holds the
+// sent value, and no clear names a field that holds one. That is a form saved
+// untouched: writing it would bump the version and audit an empty change set.
 func (in UpdateActivityInput) changesNothing(current crmcontracts.Activity) bool {
-	return in.Subject == nil && in.Body == nil && in.OccurredAt == nil && in.DurationSeconds == nil &&
-		in.DueAt == nil && in.RemindAt == nil && in.AssigneeID == nil && in.IsDone == nil &&
-		in.MeetingStatus == nil && !in.clearsAValue(current)
+	return !in.movesAField(current) && !in.clearsAValue(current) && !in.changesCustom(current)
+}
+
+// movesAField compares each sent field with the row, the way a patch does.
+func (in UpdateActivityInput) movesAField(current crmcontracts.Activity) bool {
+	p := storekit.NewPatch()
+	if in.Subject != nil {
+		p.Set("subject", current.Subject, *in.Subject)
+	}
+	if in.Body != nil {
+		p.Set("body", current.Body, *in.Body)
+	}
+	if in.OccurredAt != nil {
+		p.Set("occurred_at", current.OccurredAt, *in.OccurredAt)
+	}
+	if in.DurationSeconds != nil {
+		p.Set("duration_seconds", current.DurationSeconds, *in.DurationSeconds)
+	}
+	if in.DueAt != nil {
+		p.Set("due_at", current.DueAt, *in.DueAt)
+	}
+	if in.RemindAt != nil {
+		p.Set("remind_at", current.RemindAt, *in.RemindAt)
+	}
+	if in.AssigneeID != nil {
+		p.Set("assignee_id", current.AssigneeId, *in.AssigneeID)
+	}
+	if in.IsDone != nil {
+		p.Set("is_done", current.IsDone, *in.IsDone)
+	}
+	if in.MeetingStatus != nil {
+		p.Set("meeting_status", current.MeetingStatus, *in.MeetingStatus)
+	}
+	return !p.Empty()
 }
 
 // clearsAValue is true when a null names a field that currently holds one.
@@ -226,6 +281,11 @@ func admitActivityPatch(
 			return crmcontracts.Activity{}, held, err
 		}
 		in.Subject = &subject
+	}
+	if !held && (in.Subject != nil || in.Body != nil) {
+		if err := CheckEntryHasContent(string(current.Kind), firstSet(in.Subject, current.Subject), firstSet(in.Body, current.Body)); err != nil {
+			return crmcontracts.Activity{}, held, err
+		}
 	}
 	// The kind the ROW carries, not one the patch names — a patch cannot
 	// change a kind. Without this a note could be given `held` and read back
@@ -310,7 +370,7 @@ func (s *Store) RefuseArchiveActivity(ctx context.Context, id ids.ActivityID) er
 			return err
 		}
 		if !held {
-			return nil
+			return refuseActiveInvitationPatch(ctx, tx, id.UUID)
 		}
 		_, err = tx.Exec(ctx, `UPDATE activity SET archived_at = archived_at WHERE id = $1`, id.UUID)
 		return err
@@ -328,35 +388,45 @@ func (s *Store) RefuseArchiveActivity(ctx context.Context, id ids.ActivityID) er
 // it is never LESS guarded than the bare statement it replaces. The gone and
 // already-archived cases keep answering ErrNotFound, which is the same
 // existence-hiding answer as before.
-func (s *Store) ArchiveActivity(ctx context.Context, id ids.ActivityID, ifVersion *int64) (crmcontracts.Activity, error) {
+func (s *Store) ArchiveActivity(
+	ctx context.Context, id ids.ActivityID, ifVersion *int64, opts ...ArchiveOption,
+) (crmcontracts.Activity, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionDelete); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	var out crmcontracts.Activity
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = archiveActivityInTx(ctx, tx, id, ifVersion)
+		out, err = archiveActivityInTx(ctx, tx, id, ifVersion, collectArchiveOptions(opts))
 		return err
 	})
-	return out, err
+	if err != nil {
+		return out, err
+	}
+	return out, s.attachCustomValues(ctx, &out)
 }
 
 // ArchiveActivityTx is ArchiveActivity inside a caller-opened transaction, for
 // a bulk undo that retires the tasks its change filed in one commit.
-func (s *Store) ArchiveActivityTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVersion *int64) error {
+func (s *Store) ArchiveActivityTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVersion *int64, opts ...ArchiveOption) error {
 	if err := auth.Require(ctx, "activity", principal.ActionDelete); err != nil {
 		return err
 	}
-	_, err := archiveActivityInTx(ctx, tx, id, ifVersion)
+	_, err := archiveActivityInTx(ctx, tx, id, ifVersion, collectArchiveOptions(opts))
 	return err
 }
 
-func archiveActivityInTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVersion *int64) (crmcontracts.Activity, error) {
+func archiveActivityInTx(
+	ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVersion *int64, o archiveOptions,
+) (crmcontracts.Activity, error) {
 	held, err := lockActivityForWrite(ctx, tx, id.UUID)
 	if err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	if err := auth.EnsureActivityWritableIn(ctx, tx, id.UUID, !held); err != nil {
+		return crmcontracts.Activity{}, err
+	}
+	if err := refuseIfTouched(ctx, tx, id, o); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	if err := refuseActiveInvitationPatch(ctx, tx, id.UUID); err != nil {
@@ -380,52 +450,18 @@ func archiveActivityInTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVe
 	if err := p.ApplyGuardedIn(ctx, tx, "activity", id.UUID, pin, activityArchivedFilter(held)); err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	auditID, err := storekit.Audit(ctx, tx, "archive", "activity", id.UUID, nil, nil)
+	var evidence map[string]any
+	if o.reason != "" {
+		evidence = map[string]any{archiveReasonKey: o.reason, "rule_version": o.ruleVersion}
+	}
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, "archive", "activity", id.UUID, p.Before(), p.After(), evidence)
 	if err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventActivityArchived{}); err != nil {
+	archived := crmcontracts.PublicEventActivityArchived{}
+	archived.Imported, archived.ImportRunId = storekit.ImportMark(ctx)
+	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, archived); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	return readActivity(ctx, tx, id, storekit.IncludeArchived)
-}
-
-// activityUpdatedChangedFields projects the patch's touched/untouched decisions
-// onto activity.updated's BOUNDED changed_fields struct. body carries a presence
-// flag, never the content — bodies can be large and are never echoed onto the
-// wire.
-//
-// It reads the REQUEST while the audit image reads the row, and the two are not
-// interchangeable: an event announces which fields a caller asked to change, an
-// audit image records what the row then held.
-func activityUpdatedChangedFields(in UpdateActivityInput) crmcontracts.PublicEventActivityChangedFields {
-	var fields crmcontracts.PublicEventActivityChangedFields
-	if in.Subject != nil {
-		fields.Subject = in.Subject
-	}
-	if in.Body != nil {
-		bodyTouched := true
-		fields.Body = &bodyTouched
-	}
-	if in.OccurredAt != nil {
-		fields.OccurredAt = in.OccurredAt
-	}
-	if in.DueAt != nil {
-		fields.DueAt = in.DueAt
-	}
-	if in.RemindAt != nil {
-		fields.RemindAt = in.RemindAt
-	}
-	if in.AssigneeID != nil {
-		assignee := openapi_types.UUID(in.AssigneeID.UUID)
-		fields.AssigneeId = &assignee
-	}
-	if in.IsDone != nil {
-		fields.IsDone = in.IsDone
-	}
-	if in.MeetingStatus != nil {
-		status := crmcontracts.PublicEventActivityChangedFieldsMeetingStatus(*in.MeetingStatus)
-		fields.MeetingStatus = &status
-	}
-	return fields
 }

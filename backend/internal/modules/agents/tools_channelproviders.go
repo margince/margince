@@ -59,7 +59,7 @@ var listChannelProvidersCopy = toolCopy{
 	Limits: "It reports what the installation composed, not what this workspace has connected. " +
 		"supplies_transport=false means the transport cannot carry an outbound message at all, so a reply on it " +
 		"will be refused however the conversation was captured.",
-	Instead: "To read the messages themselves, use search_records on activities and filter by channel_provider.",
+	Instead: "To read the messages themselves, use list_records on activity and filter by channel_provider.",
 	Retain: "Carry the `provider` value verbatim: log_activity requires it as channel_provider whenever kind is " +
 		"\"message\", and a value not in this list fails a foreign key. Use `label` only for display.",
 }
@@ -73,14 +73,17 @@ func (t listChannelProviders) Spec() mcp.ToolSpec {
 		Name: "list_channel_providers", Title: "List messaging transports", Version: toolVersionV1,
 		Description:   listChannelProvidersCopy.render(),
 		Instead:       listChannelProvidersCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp:    "listChannelProviders",
 		InputSchema:  schema(`{"type":"object","properties":{},"additionalProperties":false}`),
 		OutputSchema: schemaFor[ChannelProviderResult](),
 	}
 }
 
-func (t listChannelProviders) Handle(ctx context.Context, _ json.RawMessage) (json.RawMessage, error) {
+func (t listChannelProviders) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
+	if err := decodeNoArguments(in); err != nil {
+		return nil, err
+	}
 	entries, err := t.directory.ChannelProviders(ctx)
 	if err != nil {
 		return nil, err

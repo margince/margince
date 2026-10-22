@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -21,7 +22,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/calendarbacking"
-	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
@@ -116,17 +116,7 @@ func (c commsAdapter) DraftEmail(ctx context.Context, anchor ids.UUID, intent st
 	if err != nil {
 		return "", "", err
 	}
-	answering := activities.DraftContext{
-		Band:     convstate.BandFresh,
-		Threaded: activities.IsMailThread(activity.Kind, activity.Direction),
-	}
-	if activity.Subject != nil {
-		answering.Topic = *activity.Subject
-	}
-	if activity.Body != nil {
-		answering.Body = *activity.Body
-	}
-	subject, body := activities.DeterministicEmailDraft(answering, intent)
+	subject, body := c.store.FloorDraft(ctx, anchor, activity)
 	return subject, body, nil
 }
 
@@ -163,6 +153,14 @@ func (c commsAdapter) SendCompanyEmail(
 func (c commsAdapter) send(
 	ctx context.Context, origin activities.SendOrigin, in agents.SendEmailArgs,
 ) (agents.SendEmailResult, error) {
+	// A tool call that leaves a string out decodes to "", and the HTTP door
+	// refuses the missing keys, so this door refuses the blank ones.
+	if strings.TrimSpace(in.Subject) == "" {
+		return agents.SendEmailResult{}, &activities.RequiredFieldError{Field: activities.FieldSubject}
+	}
+	if strings.TrimSpace(in.Body) == "" {
+		return agents.SendEmailResult{}, &activities.RequiredFieldError{Field: activities.FieldBody}
+	}
 	// FIRST, before the message is composed or a consent decision is recorded:
 	// a record this installation no longer holds is not one to file a send
 	// against, and the staging gate that already said so ran before the
@@ -330,6 +328,7 @@ func (c commsAdapter) BookMeeting(ctx context.Context, in agents.BookMeetingArgs
 	}
 	booked := activities.BookMeetingInput{
 		Host: ids.From[ids.UserKind](hostID), Start: in.Start, End: in.End, Subject: in.Subject,
+		LinksFromRequest: true,
 	}
 	for _, l := range in.Links {
 		booked.Links = append(booked.Links, activities.ActivityLinkInput{

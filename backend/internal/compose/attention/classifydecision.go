@@ -14,44 +14,46 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// classifyDecision: a staged proposal or a duplicate pair.
-//
-// The split is what keeps the queue honest. A decision about a SEND blocks
-// customer work and sits at level 5; contact hygiene — capturing a counterparty,
-// merging two records — is level 6 and never outranks a customer, however many
-// of them are waiting. That is the whole answer to a queue of 188 identical
-// contact questions burying an unanswered buyer.
 func classifyDecision(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	level, consequence, why := levelRoutine, crmcontracts.WorklistItemConsequence("data_drifts"), "routine"
+	if item.Kind != nil {
+		switch *item.Kind {
+		case "advance_deal", "progress_deal", "stage_progression":
+			level, consequence, why = levelAgreed, valueNone, ""
+		}
+	}
 	if blocksCustomerWork(item) {
 		level, consequence, why = levelBlocking, "work_blocked", "blocks_customer_work"
 	}
+	if item.Staged != nil && item.Staged.AccountTermination != nil && *item.Staged.AccountTermination {
+		level, consequence, why = levelWaiting, "work_blocked", "account_termination"
+	}
 	row := base(item, level, "decisions", consequence)
-	row.Because = []crmcontracts.WorklistReason{reason(crmcontracts.WorklistReasonKind(why), nil)}
+	if why != "" {
+		row.Because = []crmcontracts.WorklistReason{reason(crmcontracts.WorklistReasonKind(why), nil)}
+	}
 	// The two facts a routine contact decision is grouped by, from the typed
 	// field the feed fills out of the staged payload — the verdict engine
 	// already decided who the address belongs to, and deriving it again here
 	// would put one decision in two groups across two reads.
 	facts := stagedFactsOf(item)
 	return ranked{
-		item: row,
-		// NOBODY, until somebody takes it. A duplicate pair and a staged
-		// approval are read under the caller's ROW SCOPE — a team-scoped reader
-		// sees their whole team's — so the read is not bound to one contact and
-		// "whoever is reading" would be the very inference this field exists to
-		// refuse: it would name a manager as the owner of every pair on their
-		// team, and each rep as the owner of the same pair when they looked.
-		//
-		// These queues have no owner column. Saying so is the honest answer and
-		// the one the unassigned scope is for; a claim endpoint is what would
-		// change it, and none exists yet.
-		ownerRef:      unassigned(),
+		item:          row,
+		ownerRef:      decisionOwner(item),
 		occurredAt:    occurredOf(item, asOf),
 		machineSender: facts.MachineSender,
 		knownCompany:  facts.KnownCompany,
 	}
+}
+
+func decisionOwner(item crmcontracts.AttentionItem) ownerRef {
+	if item.RequestedDeciderId != nil {
+		return ownedBy(ids.UUID(*item.RequestedDeciderId))
+	}
+	return unassigned()
 }
 
 // stagedFactsOf reads what the feed already worked out about a contact
@@ -80,9 +82,7 @@ func stagedFactsOf(item crmcontracts.AttentionItem) StagedFacts {
 // a customer is waiting on, as opposed to tidying the database.
 //
 // The list is the approval kinds whose SUBJECT is an outbound act. A kind absent
-// here is treated as hygiene, which is the safe direction: mislabelling a merge
-// as urgent costs a reader their attention, while the reverse costs them only a
-// place in a queue they are working through anyway.
+// here does not assert that somebody outside is waiting on the decision.
 func blocksCustomerWork(item crmcontracts.AttentionItem) bool {
 	if item.Kind == nil {
 		return false
@@ -110,4 +110,17 @@ func blocksCustomerWork(item crmcontracts.AttentionItem) bool {
 	default:
 		return false
 	}
+}
+
+func accountTerminationPreview(approval crmcontracts.Approval) bool {
+	if approval.Kind != "lifecycle_change" || approval.RequestedDeciderId == nil ||
+		approval.Preview == nil || approval.Preview.State != "ready" {
+		return false
+	}
+	for _, change := range approval.Preview.Changes {
+		if change.Field == "lifecycle" && change.After.Text == string(crmcontracts.CompanyLifecycleFormerCustomer) {
+			return true
+		}
+	}
+	return false
 }

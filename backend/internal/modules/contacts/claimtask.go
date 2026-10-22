@@ -29,75 +29,113 @@ type ClaimOnTask struct {
 // task an extracted commitment became settle together, and this is the claim
 // half of that question.
 func (s *Store) OpenClaimsOnTask(ctx context.Context, taskID ids.UUID) ([]ClaimOnTask, error) {
-	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
-		return nil, err
-	}
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	taskPos := arg(taskID)
-	scope, err := auth.ScopeClauseFor(ctx, "contact", "pr", arg)
+	claims, err := s.ClaimsOnTasks(ctx, []ids.UUID{taskID})
 	if err != nil {
 		return nil, err
 	}
-	if scope == "" {
-		scope = sqlAlwaysVisible
-	}
-	var out []ClaimOnTask
-	err = s.tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, fmt.Sprintf(`
-			SELECT c.id, c.contact_id, c.source_activity_id FROM conversation_claim c
-			  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
-			 WHERE c.task_activity_id = $%d AND c.status = 'open' AND c.archived_at IS NULL
-			   AND (%s)
-			 ORDER BY c.id`, taskPos, scope), args...)
-		if err != nil {
-			return fmt.Errorf("read the claims on a task: %w", err)
+	var open []ClaimOnTask
+	for _, claim := range claims {
+		if claim.Status == "open" {
+			open = append(open, claim.ClaimOnTask)
 		}
-		out, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (ClaimOnTask, error) {
-			var c ClaimOnTask
-			err := row.Scan(&c.ID, &c.Contact, &c.Source)
-			return c, err
-		})
+	}
+	return open, nil
+}
+
+// ClaimSettlement binds replay to the source identity and original settlement time.
+type ClaimSettlement struct {
+	TaskID   *ids.UUID
+	Status   string
+	At       time.Time
+	SourceID ids.UUID
+	Locator  string
+}
+
+// ReadClaimSettlement uses the audit time so later edits cannot renew completion.
+func (s *Store) ReadClaimSettlement(ctx context.Context, claimID, settlement ids.UUID) (*ClaimSettlement, error) {
+	var out *ClaimSettlement
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		out, err = s.ReadClaimSettlementTx(ctx, tx, claimID, settlement)
 		return err
 	})
 	return out, err
 }
 
-// ClaimTask is the task a claim became, the claim's status, and when the
-// settlement recorded by the audit row settlement was made, by the database's
-// clock. The claim's own updated_at is no stand-in: a merge or a correction
-// moves it after the settlement. No task when the claim never became one, is
-// gone, or settlement is not an audit row about this claim.
-func (s *Store) ClaimTask(ctx context.Context, claimID, settlement ids.UUID) (*ids.UUID, string, time.Time, error) {
+// ReadClaimSettlementTx locks the claim while its settlement retires related work.
+//
+//nolint:nilnil // A missing audit-linked claim has no settlement to apply.
+func (s *Store) ReadClaimSettlementTx(ctx context.Context, tx pgx.Tx, claimID, settlement ids.UUID) (*ClaimSettlement, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
-		return nil, "", time.Time{}, err
+		return nil, err
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	claimPos, auditPos := arg(claimID), arg(settlement)
 	scope, err := auth.ScopeClauseFor(ctx, "contact", "pr", arg)
 	if err != nil {
-		return nil, "", time.Time{}, err
+		return nil, err
 	}
 	if scope == "" {
 		scope = sqlAlwaysVisible
 	}
-	var task *ids.UUID
-	var status string
-	var changed time.Time
-	err = s.tx(ctx, func(tx pgx.Tx) error {
-		err := tx.QueryRow(ctx, fmt.Sprintf(`
-			SELECT c.task_activity_id, c.status, a.occurred_at FROM conversation_claim c
-			  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
-			  JOIN audit_log a ON a.id = $%d AND a.after->>'%s' = c.id::text
-			 WHERE c.id = $%d AND c.archived_at IS NULL AND (%s)`, auditPos, claimIDKey, claimPos, scope), args...).Scan(&task, &status, &changed)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil
-		}
-		return err
-	})
-	if err != nil {
-		return nil, "", time.Time{}, fmt.Errorf("read the task a claim became: %w", err)
+	out := &ClaimSettlement{}
+	err = tx.QueryRow(ctx, fmt.Sprintf(`
+		SELECT c.task_activity_id, c.status, a.occurred_at, c.source_activity_id, c.evidence_fingerprint
+		  FROM conversation_claim c
+		  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
+		  JOIN audit_log a ON a.id = $%d AND a.after->>'%s' = c.id::text
+		 WHERE c.id = $%d AND c.archived_at IS NULL AND (%s)
+		   FOR UPDATE OF c`, auditPos, claimIDKey, claimPos, scope), args...).Scan(&out.TaskID, &out.Status, &out.At, &out.SourceID, &out.Locator)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
 	}
-	return task, status, changed, nil
+	if err != nil {
+		return nil, fmt.Errorf("read the claim settlement: %w", err)
+	}
+	if err := auth.EnsureActivityContentVisibleLive(ctx, tx, out.SourceID); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// TaskClaimsSettledTx checks all recipients without exposing hidden claims.
+// Omitting a recipient outside the caller's scope could incorrectly complete their work.
+func (s *Store) TaskClaimsSettledTx(ctx context.Context, tx pgx.Tx, taskID ids.UUID) (bool, error) {
+	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+		return false, err
+	}
+	if err := auth.EnsureActivityContentVisibleLive(ctx, tx, taskID); err != nil {
+		return false, err
+	}
+	args := []any{taskID}
+	return claimsSettledTx(ctx, tx, fmt.Sprintf("task_activity_id = $%d", len(args)), args)
+}
+
+// PromiseClaimsSettledTx also covers recipient claims whose task is still awaiting approval.
+func (s *Store) PromiseClaimsSettledTx(ctx context.Context, tx pgx.Tx, sourceID ids.UUID, locator string) (bool, error) {
+	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+		return false, err
+	}
+	if err := auth.EnsureActivityContentVisibleLive(ctx, tx, sourceID); err != nil {
+		return false, err
+	}
+	args := []any{sourceID}
+	where := fmt.Sprintf("source_activity_id = $%d", len(args))
+	args = append(args, locator)
+	where += fmt.Sprintf(" AND evidence_fingerprint = $%d", len(args))
+	return claimsSettledTx(ctx, tx, where, args)
+}
+
+func claimsSettledTx(ctx context.Context, tx pgx.Tx, where string, args []any) (bool, error) {
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
+		return false, err
+	}
+	var settled bool
+	err := tx.QueryRow(ctx, `SELECT NOT EXISTS (SELECT 1 FROM conversation_claim
+ WHERE `+where+` AND status = 'open' AND archived_at IS NULL)`, args...).Scan(&settled)
+	if err != nil {
+		return false, fmt.Errorf("read whether recipient obligations are settled: %w", err)
+	}
+	return settled, nil
 }

@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/modules/agents/apps"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -52,9 +53,9 @@ func (t updateRecord) Spec() mcp.ToolSpec {
 		Instead:       updateRecordCopy.Instead,
 		RequiredScope: principal.ScopeWrite,
 		Tier:          mcp.TierAutoExecute,
-		OpenAPIOp:     "updateContact/updateCompany/updateDeal/updateLead/updateActivity/updateProject/updateRelationship",
+		OpenAPIOp:     "updateContact/updateCompany/updateDeal/updateLead/updateActivity/updateProject/updateRelationship/updateProduct/updateOfferTemplate/updateOffer",
 		InputSchema: schema(`{"type":"object","required":["record_type","id","fields"],"properties":{
-			"record_type":{"type":"string","enum":["contact","company","deal","lead","activity","project","relationship"]},
+			"record_type":{"type":"string","enum":["contact","company","deal","lead","activity","project","relationship","product","offer_template","offer"]},
 			"id":{"type":"string","format":"uuid"},
 			"fields":{"type":"object","description":` + jsonString("Only sent fields change. Fields a human last edited are not applied: they are staged for approval and named in the result's staged_approval. "+recordFieldsDescription) + `},
 			"if_version":{"type":"integer","description":"Optimistic-concurrency guard: the last-seen record version"},
@@ -132,6 +133,12 @@ func (t updateRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 	}
 	if len(split.Conflicts) == 0 {
 		return t.apply(ctx, args, args.Fields)
+	}
+	// The residue meets the REST split's refusals before any half applies.
+	if err := NewPatchCall(t.p, t.language, PatchCommand{
+		RecordType: args.RecordType, ID: args.ID, Fields: split.Staged,
+	}).Guards(ctx); err != nil {
+		return nil, err
 	}
 	if t.staging == nil {
 		return nil, fmt.Errorf("fields %s were last edited by a human, and this surface has no approvals engine to stage the overwrite: %w",
@@ -213,7 +220,7 @@ func splitStagingNote(conflicts []string, id ids.ApprovalID, state stagedState) 
 	}
 	who := "once a human approves it"
 	if state.Releasable {
-		who = "once the user says yes, release it with decide_approval (or they approve it in the CRM)"
+		who = "once the user says yes, release it with decide_approvals (or they approve it in the CRM)"
 	}
 	return fmt.Sprintf(
 		"fields %s were last edited by a human and were NOT applied; staged as approval %s — %s, call update_record with exactly the replay arguments plus \"approval_id\": %q",
@@ -281,11 +288,18 @@ func (t updateRecord) applyRecord(ctx context.Context, args updateRecordArgs, pa
 	if err != nil {
 		return wireRecord{}, err
 	}
+	// A null in the patch means clear, read by the rule the REST door uses.
+	// The record store clears it or refuses it by name.
+	nulls, err := httperr.NullKeysOf(patch)
+	if err != nil {
+		return wireRecord{}, err
+	}
 	ref, err := t.p.Update(ctx, datasource.UpdateInput{
 		Ref:       datasource.EntityRef{Type: datasource.EntityType(args.RecordType), ID: args.ID},
 		Patch:     patch,
 		Source:    ToolSource,
 		IfVersion: pin,
+		Clear:     nulls,
 	})
 	if err != nil {
 		return wireRecord{}, err

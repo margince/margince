@@ -55,6 +55,17 @@ func (h Handlers) OAuthRouter() http.Handler {
 }
 
 func (h Handlers) oauthRegister(w http.ResponseWriter, r *http.Request) {
+	methods, err := h.registrationMethods(r.Context())
+	if err != nil {
+		oauthError(w, http.StatusServiceUnavailable, oauthErrTemporarilyUnavailable,
+			"client registration settings could not be read")
+		return
+	}
+	// Switched off, the endpoint answers as a server that never had one.
+	if !methods.Dynamic {
+		http.NotFound(w, r)
+		return
+	}
 	// The bound is httperr's and the answer RFC 7591's `{"error": …}`. A member
 	// map, because the struct decode refuses the unknown keys §2 says to ignore.
 	var members map[string]json.RawMessage
@@ -168,36 +179,54 @@ func (h Handlers) validateAuthorize(r *http.Request, q url.Values) (authorizeReq
 	// caller chose the URL, so a detailed answer here — "connection refused",
 	// "not JSON", "203 bytes over" — is a probe of the deployment's network
 	// with this server as the prober, reported back to the prober.
-	if err := h.svc.resolveCIMDClient(r.Context(), req.ClientID); err != nil && !errors.Is(err, errNotCIMD) {
-		return authorizeRequest{}, "invalid_client", "unknown client_id"
-	}
 	ctx := r.Context()
+	methods, err := h.registrationMethods(ctx)
+	if err != nil {
+		return authorizeRequest{}, oauthErrTemporarilyUnavailable, "client registration settings could not be read"
+	}
+	// Checked before resolution, so a switched-off method fetches nothing.
+	if !methods.MetadataDocument && cimdClientID(req.ClientID) == nil {
+		return authorizeRequest{}, oauthErrUnauthorizedClient, refusedMethodDescription
+	}
+	if err := h.svc.resolveCIMDClient(ctx, req.ClientID); err != nil && !errors.Is(err, errNotCIMD) {
+		return authorizeRequest{}, oauthErrInvalidClient, "unknown client_id"
+	}
 	err = h.svc.db.Tx(ctx, func(tx pgx.Tx) error {
-		var uris []string
+		var (
+			uris       []string
+			createdVia string
+		)
 		// A disabled or deleted client reads as UNKNOWN, deliberately: the same
 		// answer an unregistered client_id gets, so the refusal tells an
 		// attacker nothing about whether a client exists and has been switched
 		// off.
 		err := tx.QueryRow(ctx,
-			`SELECT c.client_name, c.redirect_uris FROM oauth_client c
+			`SELECT c.client_name, c.redirect_uris, c.created_via FROM oauth_client c
 			  WHERE c.client_id = $1 AND `+liveClientPredicate,
-			req.ClientID).Scan(&req.ClientName, &uris)
+			req.ClientID).Scan(&req.ClientName, &uris, &createdVia)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return errUnknownClient
 		}
 		if err != nil {
 			return err
 		}
+		// The redirect is checked first: an unregistered URI is answered to the
+		// caller, so it never reaches the consent screen, not even to be refused.
 		if !slices.ContainsFunc(uris, func(registered string) bool {
 			return redirectURIMatches(registered, req.RedirectURI)
 		}) {
 			return errRedirectMismatch
 		}
+		if !methods.admits(createdVia) {
+			return errMethodOff
+		}
 		return nil
 	})
 	switch {
 	case errors.Is(err, errUnknownClient):
-		return authorizeRequest{}, "invalid_client", "unknown client_id"
+		return authorizeRequest{}, oauthErrInvalidClient, "unknown client_id"
+	case errors.Is(err, errMethodOff):
+		return authorizeRequest{}, oauthErrUnauthorizedClient, refusedMethodDescription
 	case errors.Is(err, errRedirectMismatch):
 		// Never redirect to an unregistered URI — answer the caller.
 		return authorizeRequest{}, "invalid_request", "redirect_uri is not registered for this client"
@@ -230,7 +259,17 @@ func (h Handlers) oauthConsentRedirect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	req, oauthCode, detail := h.validateAuthorize(r, r.URL.Query())
-	if oauthCode != "" {
+	switch oauthCode {
+	case "":
+	case oauthErrUnauthorizedClient:
+		// The human is in a browser, not the client, so a switched-off method
+		// is said on the screen, in their own language.
+		refuseToConsentScreen(w, r, r.URL.Query(), consentErrorMethodOff)
+		return
+	case oauthErrTemporarilyUnavailable:
+		oauthError(w, http.StatusServiceUnavailable, oauthCode, detail)
+		return
+	default:
 		oauthError(w, http.StatusBadRequest, oauthCode, detail)
 		return
 	}
@@ -282,6 +321,10 @@ func (h Handlers) oauthAuthorize(w http.ResponseWriter, r *http.Request) {
 	// refusal in the human's own language, and the specific code is a client
 	// developer's vocabulary, delivered on the GET where a client developer looks.
 	req, refusal, _ := h.validateAuthorize(r, url.Values(r.PostForm))
+	if refusal == oauthErrUnauthorizedClient {
+		refuseToConsentScreen(w, r, url.Values(r.PostForm), consentErrorMethodOff)
+		return
+	}
 	if refusal != "" {
 		refuseToConsentScreen(w, r, url.Values(r.PostForm), consentErrorInvalid)
 		return
@@ -294,7 +337,7 @@ func (h Handlers) oauthAuthorize(w http.ResponseWriter, r *http.Request) {
 	// forgery — and mints nothing: no grant, no code.
 	if r.PostForm.Get("deny") != "" {
 		clearConsentCookie(w)
-		redirectToClient(w, r, req, url.Values{oauthParamError: {"access_denied"}})
+		h.redirectToClient(w, r, req, url.Values{oauthParamError: {"access_denied"}})
 		return
 	}
 
@@ -317,13 +360,16 @@ func (h Handlers) oauthAuthorize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	clearConsentCookie(w)
-	redirectToClient(w, r, req, url.Values{"code": {code}})
+	h.redirectToClient(w, r, req, url.Values{"code": {code}})
 }
 
 var (
 	errUnknownClient    = errors.New("oauth: unknown client")
 	errRedirectMismatch = errors.New("oauth: redirect mismatch")
+	errMethodOff        = errors.New("oauth: registration method switched off")
 )
+
+const refusedMethodDescription = "an admin has turned off this way of registering a client"
 
 // oauthError is the RFC 6749 §5.2 error shape.
 func oauthError(w http.ResponseWriter, status int, code, description string) {
@@ -360,7 +406,7 @@ func parseOAuthScopes(raw string) (scopes []string, offline bool, err error) {
 			continue
 		}
 		if !validScopes[principal.Scope(sc)] {
-			return nil, false, fmt.Errorf("scope %q is not one of read|draft|write|send|enrich", sc)
+			return nil, false, fmt.Errorf("scope %q is not one of %s", sc, passportScopeList())
 		}
 		scopes = append(scopes, sc)
 	}

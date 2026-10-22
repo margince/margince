@@ -1,0 +1,352 @@
+import { useId, useMemo, useState } from "react";
+import { usePublishSelection } from "../../app/attention";
+import { EntityRef } from "../../components/entityref";
+import {
+  Badge,
+  Button,
+  EmptyState,
+  Modal,
+  SearchField,
+  Skeleton,
+  TableScroll,
+} from "../../design-system/atoms";
+import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
+import { ErrorLine } from "../../design-system/errorline";
+import { Heading } from "../../design-system/heading";
+import { forReader } from "../../format/collate";
+import { formatNumber } from "../../format/format";
+import { type Locale, useLocale, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
+import { incompleteGraph } from "../records/record360";
+import { type StrengthBucket, useCompanyGraph } from "./companygraph";
+
+// Comparing a chosen few colleagues against the account's contacts.
+//
+// The compact coverage on each contact row answers "who should make this call".
+// This answers the other question — "where are we thin" — and it is the one that
+// tempts a contact × every-colleague matrix. With a forty-contact sales team that
+// matrix is 40 columns wide and nobody reads it.
+//
+// So the reader CHOOSES the colleagues to compare, up to a handful, and the grid
+// is that selection wide. Which is also the honest shape: comparing everyone is
+// not a question anybody has, and a grid that answers it is a grid that answers
+// nothing.
+//
+// Two things it will not do. It never shows message content — the cell says the
+// band and the reader opens the contact for the rest, so the grid cannot become
+// a way to read a colleague's mail. And a grid built from an incomplete graph
+// says so, because "no connection" and "the read was capped before it got here"
+// are different claims and only one of them means nobody has tried.
+
+// The two fields this surface actually reads, rather than a whole 360 contact.
+//
+// Narrowed because the caller changed: the roster card this used to sit inside
+// is gone, and the account's contact list feeds it now. Naming the fields makes
+// both shapes fit and stops a future field on the 360 card reading as a
+// dependency this comparison does not have.
+type Contact = Readonly<{ contact_id: string; full_name: string }>;
+
+// How many colleagues can stand in the grid at once. Beyond this the columns
+// stop being scannable, which is the failure the whole surface exists to avoid.
+const COLUMN_CAP = 8;
+
+const BAND_LABELS: Record<StrengthBucket, MessageKey> = {
+  strong: "co.routeIn.bandBadge.strong",
+  moderate: "co.routeIn.bandBadge.some",
+  weak: "co.routeIn.bandBadge.faint",
+  none: "co.routeIn.bandBadge.unknown",
+};
+
+export function CoverageExplorer({
+  companyId,
+}: Readonly<{ companyId: string }>) {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  // Opened once, mounted from then on. The grid reads the company graph, so it
+  // must not mount with the page — and it must not unmount when the dialog
+  // closes either, because the dialog is still on screen while it leaves and an
+  // emptied one is what the reader would watch go.
+  const [everOpened, setEverOpened] = useState(false);
+  const titleId = useId();
+  return (
+    <>
+      <button
+        type="button"
+        className="link-button"
+        onClick={() => {
+          setEverOpened(true);
+          setOpen(true);
+        }}
+      >
+        {t("acctCoverage.open")}
+      </button>
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        labelledBy={titleId}
+        intent="drawer"
+      >
+        <DrawerHead>
+          <Heading size="large" id={titleId} className="t-h2">
+            {t("acctCoverage.title")}
+          </Heading>
+        </DrawerHead>
+        <DrawerBody>
+          {everOpened && <CoverageGrid companyId={companyId} />}
+        </DrawerBody>
+      </Modal>
+    </>
+  );
+}
+
+// One colleague's edges to this account's contacts, keyed by contact.
+type ColleagueCoverage = {
+  id: string;
+  label: string;
+  bands: Map<string, StrengthBucket>;
+};
+
+function CoverageGrid({ companyId }: Readonly<{ companyId: string }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  // Read only when somebody opens the explorer: a graph query on every company
+  // page load is what the on-demand route-in read already avoids.
+  const query = useCompanyGraph(companyId);
+  const graph = Array.isArray(query.data?.nodes) ? query.data : undefined;
+  const [contactFilter, setContactFilter] = useState("");
+  const [selected, setSelected] = useState<readonly string[]>([]);
+  // The agent surface reports what the reader is doing, and a selection is the
+  // clearest statement of it a screen can make (app/attention.tsx).
+  usePublishSelection(selected.length);
+
+  const colleagues = useMemo(
+    () => colleaguesFrom(graph, locale),
+    [graph, locale],
+  );
+
+  if (query.isPending) {
+    return <Skeleton width="100%" height={120} />;
+  }
+  // A failed read is unavailable, never "nobody is connected": the two call for
+  // opposite next moves and only a read that succeeded can make the second claim.
+  if (query.isError || !graph) {
+    return <ErrorLine>{t("co.section.unavailable")}</ErrorLine>;
+  }
+  if (colleagues.length === 0) {
+    return (
+      <EmptyState>
+        {t(
+          incompleteGraph(graph)
+            ? "acctCoverage.noneButPartial"
+            : "acctCoverage.noneAtAll",
+        )}
+      </EmptyState>
+    );
+  }
+
+  const shown = selected.length > 0 ? selected : defaultSelection(colleagues);
+  // The account's contacts as the GRAPH knows them, narrowed by this grid's own
+  // search box. Not the caller's rows: the Contacts tab's list is filtered and
+  // paged, and a coverage comparison built from a page reports the team as
+  // covering nobody the moment a reader narrows the list — a false claim, not
+  // a smaller one.
+  const rows = accountContacts(graph).filter((contact) =>
+    contact.full_name
+      .toLowerCase()
+      .includes(contactFilter.trim().toLowerCase()),
+  );
+
+  return (
+    <div className="coverage-body">
+      <SearchField
+        value={contactFilter}
+        aria-label={t("acctCoverage.findContact")}
+        placeholder={t("acctCoverage.findContact")}
+        onChange={(event) => setContactFilter(event.target.value)}
+      />
+      {/* The columns are a choice, not a default view of everybody. Colleagues
+          with no edge to this account are absent entirely rather than offered
+          as empty columns. */}
+      <div className="coverage-colleagues">
+        {colleagues.map((colleague) => {
+          const on = shown.includes(colleague.id);
+          const full = shown.length >= COLUMN_CAP && !on;
+          return (
+            <Button
+              key={colleague.id}
+              disabled={full}
+              // aria-pressed, not a glyph: a toggle's state belongs in the
+              // control's semantics, where a screen reader can hear it, rather
+              // than in a character prepended to its label.
+              aria-pressed={on}
+              onClick={() =>
+                setSelected(
+                  on
+                    ? shown.filter((id) => id !== colleague.id)
+                    : [...shown, colleague.id],
+                )
+              }
+            >
+              {colleague.label}
+            </Button>
+          );
+        })}
+      </div>
+      {shown.length >= COLUMN_CAP && (
+        <p className="t-caption">
+          {t("acctCoverage.columnCap", {
+            cap: formatNumber(COLUMN_CAP, locale),
+          })}
+        </p>
+      )}
+      {/* `TableScroll` rather than a wrapper of this screen's own: an
+          N-colleague matrix runs past the panel's right edge, and the box that
+          scrolls sideways — keyboard-reachable, and announced as a named region
+          only while it is actually holding something past that edge — is one
+          spelling for every table in the product (atoms.tsx).
+          No screen-owned overflow class beside it: below 720px the rows become
+          block cards with nothing left to run past the edge, so TableScroll's
+          own rule already shows no scrollbar there — and an override would have
+          been the same specificity as TableScroll's, winning only if this
+          screen's stylesheet happened to load second. */}
+      <TableScroll label={t("acctCoverage.title")}>
+        <table className="table coverage-table">
+          <thead>
+            <tr>
+              <th>{t("acctCoverage.contact")}</th>
+              {shown.map((id) => (
+                <th key={id}>
+                  {colleagues.find((colleague) => colleague.id === id)?.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((contact) => (
+              <tr key={contact.contact_id}>
+                <th scope="row">
+                  {/* A new tab: following the name in place would close the
+                      coverage the reader is comparing. */}
+                  <EntityRef
+                    kind="contact"
+                    id={contact.contact_id}
+                    name={contact.full_name}
+                    newTab
+                  />
+                </th>
+                {shown.map((id) => {
+                  const colleague = colleagues.find((c) => c.id === id);
+                  const band = colleague?.bands.get(contact.contact_id);
+                  return (
+                    // The column header travels with the cell twice over: as
+                    // data-label, which the narrow layout renders as visible
+                    // text, and as an aria-label, which carries the same fact to
+                    // a screen reader. The CSS turns rows into cards at 720px,
+                    // and display:block strips the table roles a screen reader
+                    // would otherwise navigate by — so each cell has to be
+                    // self-describing rather than relying on a header row that
+                    // no longer exists in the accessibility tree.
+                    <td
+                      key={id}
+                      data-label={colleague?.label}
+                      aria-label={colleague?.label}
+                    >
+                      {/* No band is UNTRIED, not zero. The cell says so in words
+                        rather than leaving a blank a reader has to interpret. */}
+                      {band ? (
+                        <Badge tone={band === "strong" ? "success" : undefined}>
+                          {t(BAND_LABELS[band])}
+                        </Badge>
+                      ) : (
+                        <span>{t("acctCoverage.untried")}</span>
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </TableScroll>
+      {rows.length === 0 && (
+        <EmptyState>{t("acctCoverage.noMatch")}</EmptyState>
+      )}
+      {/* The graph caps its rings and withholds groups the caller may not read,
+          so a grid built from it can be narrower than the account really is. A
+          reader told "nobody covers this contact" would stop looking. */}
+      {incompleteGraph(graph) && (
+        <p className="t-caption">{t("acctCoverage.partial")}</p>
+      )}
+    </div>
+  );
+}
+
+// colleaguesFrom inverts the graph's edges into one row per colleague.
+//
+// Only colleagues with at least one edge to a contact ON THIS ACCOUNT appear: an
+// empty column is a name the reader has to rule out, and the default is to hide
+// what has nothing to say.
+/** accountContacts is every contact the account's graph names. */
+function accountContacts(
+  graph: ReturnType<typeof useCompanyGraph>["data"],
+): Contact[] {
+  if (!graph || !Array.isArray(graph.nodes)) {
+    return [];
+  }
+  return graph.nodes
+    .filter((node) => node.kind === "contact")
+    .map((node) => ({ contact_id: node.id, full_name: node.label }));
+}
+
+function colleaguesFrom(
+  graph: ReturnType<typeof useCompanyGraph>["data"],
+  locale: Locale,
+): ColleagueCoverage[] {
+  if (!graph || !Array.isArray(graph.nodes)) {
+    return [];
+  }
+  // The account's contacts, taken from the GRAPH rather than from whatever the
+  // caller had loaded. The caller is now a filtered, paged list, and a coverage
+  // comparison built from a page answers a question nobody asked: filter the
+  // list to one contact and the grid would report the whole team as covering
+  // nobody, which is a false claim rather than a narrower one.
+  const onAccount = new Set(
+    accountContacts(graph).map((contact) => contact.contact_id),
+  );
+  const labels = new Map(graph.nodes.map((node) => [node.id, node.label]));
+  const byColleague = new Map<string, ColleagueCoverage>();
+  for (const edge of graph.edges) {
+    if (edge.kind !== "in_contact_with" || !onAccount.has(edge.to)) {
+      continue;
+    }
+    const label = labels.get(edge.from);
+    // An edge naming a node the payload did not send is dropped rather than
+    // shown as an identifier: the caps that trimmed the node list are the
+    // reason, and a column the reader cannot put a name to is not a column.
+    if (!label) {
+      continue;
+    }
+    const entry = byColleague.get(edge.from) ?? {
+      id: edge.from,
+      label,
+      bands: new Map<string, StrengthBucket>(),
+    };
+    if (edge.strength_bucket) {
+      entry.bands.set(edge.to, edge.strength_bucket);
+    }
+    byColleague.set(edge.from, entry);
+  }
+  // Widest coverage first, then by name — `forReader`, because these are
+  // colleagues' names and a reader scans them as an alphabet: theirs.
+  return [...byColleague.values()].sort(
+    (a, b) =>
+      b.bands.size - a.bands.size || forReader(a.label, b.label, locale),
+  );
+}
+
+// The grid opens on the colleagues who cover the most of this account, because
+// an empty grid asks the reader to guess whom to compare before they have seen
+// anything.
+function defaultSelection(colleagues: readonly ColleagueCoverage[]): string[] {
+  return colleagues.slice(0, Math.min(4, colleagues.length)).map((c) => c.id);
+}

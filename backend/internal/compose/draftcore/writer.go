@@ -92,6 +92,9 @@ type Input interface {
 	// GreetingNames are the first and last name a greeting-line repair looks
 	// for. Both, because the register decides which one opens the message.
 	GreetingNames() (first, last string)
+	// CoRecipientNames are the further readers a greeting may also name.
+	// Any at all makes the floor greet the group.
+	CoRecipientNames() []string
 	// Addresses is where the draft is sent, empty when the record holds none.
 	Addresses() []string
 	// Threaded says whether this draft continues an existing subject line.
@@ -223,8 +226,7 @@ func writeChecked(
 	if err != nil {
 		return Draft{}, err
 	}
-	first, last := in.GreetingNames()
-	served.Body = draftcheck.EnsureGreeting(served.Body, envelope, first, last)
+	served.Body = draftcheck.EnsureGreeting(served.Body, envelope, groundsOf(in))
 	return served, nil
 }
 
@@ -391,7 +393,7 @@ func groundsOf(in Input) draftcheck.Grounds {
 	first, last := in.GreetingNames()
 	return draftcheck.Grounds{
 		Booked: in.Booked(), Met: draftcheck.IntentNamesMeeting(in.Steering()),
-		FirstName: first, LastName: last,
+		FirstName: first, LastName: last, CoRecipients: in.CoRecipientNames(),
 	}
 }
 

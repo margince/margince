@@ -45,7 +45,7 @@ func anonymizeLeadTwins(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		WITH wiped AS (
-		  UPDATE lead SET full_name = 'Anonymized Lead', email = NULL, title = NULL,
+		  UPDATE lead SET full_name = 'Anonymized Lead', email = NULL, phone = NULL, title = NULL,
 		    company_name = NULL, candidate_company_key = NULL, linkedin_url = NULL,
 		    disqualify_note = NULL, score_override_reason = NULL, source_author_name = NULL,
 		    archived_at = coalesce(archived_at, now())%s
@@ -83,6 +83,11 @@ func anonymizeLeadTwins(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 		  -- suppression above there is no address arm to add — a vouch is
 		  -- always written against a contact or lead id, never a bare address.
 		  DELETE FROM communication_override
+		  WHERE lead_id IN (SELECT id FROM wiped)
+		), leadlinks AS (
+		  -- A website lead's privacy-notice link carries the address it was
+		  -- sent to, and an anonymize fires no cascade.
+		  DELETE FROM confirm_token
 		  WHERE lead_id IN (SELECT id FROM wiped)
 		), leadcredentials AS (
 		  DELETE FROM withdrawal_credential

@@ -10,10 +10,11 @@ import {
   useRef,
   useState,
 } from "react";
-import { useFoldedViewport } from "../app/viewport";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
-import { problemMessageOf } from "../screens/common";
+import { isImeCommit } from "../lib/imecommit";
+import { problemMessageOf } from "../lib/problem";
+import { useFoldedViewport } from "../lib/viewport";
 import { useActiveOptionVisible } from "./anchoredpopup";
 import { Button, type ButtonVariant, SearchField } from "./atoms";
 import { ErrorLine } from "./errorline";
@@ -223,7 +224,7 @@ function ListSearch({
       return;
     }
     const row = rows[active];
-    if (event.key === "Enter" && row) {
+    if (event.key === "Enter" && !isImeCommit(event) && row) {
       event.preventDefault();
       pick(row);
     }

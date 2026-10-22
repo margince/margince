@@ -13,17 +13,21 @@ import (
 	"net/http"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 type Handlers struct {
+	// locks reports the settings a boot source sets on each settings response;
+	// nil leaves the field out.
+	locks func(surface []config.Any) *[]crmcontracts.SettingLock
 	store *Store
-	// settings writes the follow-up window; nil refuses both its endpoints.
-	settings *settings.Store
+	// settings reads and writes the follow-up window; nil refuses both its
+	// endpoints.
+	settings *config.Config
 	// emailDrafter is the compose-owned optional model drafting seam. Nil
 	// preserves the deterministic draft, so an AI outage or unconfigured
 	// deployment never blocks a user from preparing a reply.
@@ -58,6 +62,9 @@ type Handlers struct {
 	// (OPS-CFG-12), injected by WithUploadLimit. Zero refuses every upload,
 	// which is the honest reading of "nobody has said" for a bound.
 	uploadLimit int64
+	// fileCeiling, when set, bounds the uploaded file itself below uploadLimit,
+	// and refuses a larger one in its own words (WithFileCeiling).
+	fileCeiling FileCeiling
 	// colleagues names the addresses that are ours by DOMAIN rather than by
 	// seat, so addressing a reply can skip a co-worker who has no login. The
 	// domains live in capture, which this module may not import, so compose
@@ -120,6 +127,9 @@ func pageInfo(p storekit.Page) crmcontracts.PageInfo {
 // writeStoreErr maps this module's typed store errors onto the wire
 // codes the contract names, then falls through to the sentinel registry.
 func writeStoreErr(w http.ResponseWriter, r *http.Request, err error) {
+	// Every scheduling door reaches the calendar seam, and a host whose
+	// connection is gone answers it with the refused-connection sentinel.
+	err = unconnectedAsRefusal(err)
 	// An activity carries at most one project link (PROJ-AC-15), enforced by
 	// a PARTIAL unique index on activity_id alone — which relink's ON CONFLICT
 	// target cannot see, so a second project raises 23505 instead of being

@@ -22,7 +22,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -72,7 +75,7 @@ func briefRevenueNorm(ctx context.Context, tx pgx.Tx, now time.Time, base string
 		)
 		SELECT count(*), percentile_cont(%v) WITHIN GROUP (ORDER BY base_value::double precision)
 		FROM sized WHERE base_value IS NOT NULL`,
-		briefBaseValueSQL(fmt.Sprintf("$%d", asOfPos), fmt.Sprintf("$%d", basePos), "d"),
+		deals.BaseValueSQL(fmt.Sprintf("$%d", asOfPos), fmt.Sprintf("$%d", basePos), "d"),
 		summable, briefRevenueNormPercentile), args...).Scan(&valued, &p90)
 	if err != nil {
 		return 0, err
@@ -121,7 +124,7 @@ func briefCandidates(ctx context.Context, tx pgx.Tx, userID ids.UUID, now time.T
 	// this fold already has, and scores its floor for the same reason a missing
 	// FX rate does: the factor floors rather than guessing.
 	baseValue, err := auth.MaskedExpressionSQL(ctx, "deal", "amount_minor", "d",
-		briefBaseValueSQL(fmt.Sprintf("$%d", asOfPos), fmt.Sprintf("$%d", basePos), "d"), arg)
+		deals.BaseValueSQL(fmt.Sprintf("$%d", asOfPos), fmt.Sprintf("$%d", basePos), "d"), arg)
 	if err != nil {
 		return err
 	}
@@ -172,13 +175,17 @@ func briefCandidates(ctx context.Context, tx pgx.Tx, userID ids.UUID, now time.T
 	// Applied before the cap, the ranking competes among the deals this contact
 	// can actually move. Access to a colleague's deal is not responsibility for
 	// it; the team view is where breadth belongs.
+	identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
+	if err != nil {
+		return err
+	}
 	q += fmt.Sprintf(`
 		  AND (d.owner_id = $%d
 		       OR EXISTS (
 			SELECT 1 FROM activity a
 			JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = d.id
 			WHERE a.kind = 'task' AND NOT a.is_done
-			  AND a.archived_at IS NULL AND a.assignee_id = $%d))`, userPos, userPos)
+			  AND a.archived_at IS NULL AND a.assignee_id = $%d AND %s))`, userPos, userPos, activities.CurrentTaskClause("a", now, identities, arg))
 	q += " ORDER BY d.id"
 
 	rows, err := tx.Query(ctx, q, args...)

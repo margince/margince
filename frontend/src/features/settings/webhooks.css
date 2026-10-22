@@ -1,0 +1,76 @@
+/* Outbound webhook subscriptions (Settings → Integrations). The sheet lives
+ * beside the screen that draws it, and every class it names is declared here —
+ * a class written on an element no stylesheet declares is a rule a reader
+ * expects from the name and never gets. */
+
+/* A subscription is now a `SettingRow`: the target URL is its label, the state
+ * and event set its value, the verbs its control, and the last-updated line its
+ * description. So the identity line, the updated line and every interval
+ * between them come from settingrow.css — this sheet keeps only what is this
+ * card's own content and nothing about where a row sits. */
+
+/* A target URL is one long token, and a chat webhook's carries a token of its
+ * own. One line cut with an ellipsis keeps the row readable and the page from
+ * scrolling sideways; the full URL is the title. */
+.webhook-target {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* The row's current answer: its state, then every event type it takes. The
+ * measure is a ceiling rather than a width — a subscription taking twenty event
+ * types must wrap inside the right column instead of pushing the label out of
+ * it, which is what an uncapped badge run does to the one-x column the whole
+ * row language exists to hold. */
+.webhook-answer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  min-width: 0;
+  max-width: 20rem;
+}
+
+/* The row's verbs. They wrap: three buttons of nowrap text plus an overflow do
+ * not fit a phone, and the row above them already wrapped, so the one that did
+ * not was what pushed the card sideways. */
+.webhook-row-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--gapActions);
+  min-width: 0;
+}
+
+/* The deliveries table, in the stacked row under the subscription it belongs
+ * to. That row owns the interval above it, so this only has to let the table
+ * shrink. */
+.webhook-deliveries-panel {
+  min-width: 0;
+}
+
+/* The two delivery groups: dead-lettered first, then the rest. */
+.webhook-deliveries-group + .webhook-deliveries-group {
+  margin-top: var(--space-3);
+}
+
+/* The one-time secret reveal. The secret is destroyed when this dialog
+ * closes, so the copy affordance is the primary act here and the dismissal is
+ * not — the caution below states that in words as well. */
+.webhook-secret-caution {
+  margin-top: var(--space-2);
+  color: var(--dangerText);
+}
+
+/* Last-updated line, then the row's verbs on their own line under it. */
+.webhook-row-description {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}

@@ -105,6 +105,7 @@ type receivedHit struct {
 	webhookID string
 	timestamp string
 	signature string
+	header    http.Header
 	body      []byte
 }
 
@@ -126,6 +127,7 @@ func newReceiver(t *testing.T, status int) *receiver {
 			webhookID: req.Header.Get(webhooks.HeaderWebhookID),
 			timestamp: req.Header.Get(webhooks.HeaderWebhookTimestamp),
 			signature: req.Header.Get(webhooks.HeaderWebhookSignature),
+			header:    req.Header.Clone(),
 			body:      body,
 		})
 		code := r.status
@@ -231,14 +233,14 @@ func TestNewWebhookDelivererBuildsFromKey(t *testing.T) {
 	log := slog.New(slog.NewTextHandler(os.Stderr, nil))
 
 	valid := base64.StdEncoding.EncodeToString(make([]byte, webhooks.WebhookKeyBytes))
-	d, err := compose.NewWebhookDeliverer(we.pool, valid, log)
+	d, err := compose.NewWebhookDeliverer(we.pool, valid, "", log)
 	if err != nil || d == nil {
 		t.Fatalf("NewWebhookDeliverer(valid) returned a nil factory: err=%v", err)
 	}
-	if _, err := compose.NewWebhookDeliverer(we.pool, "not base64!!!", log); err == nil {
+	if _, err := compose.NewWebhookDeliverer(we.pool, "not base64!!!", "", log); err == nil {
 		t.Fatal("NewWebhookDeliverer must reject a non-base64 key")
 	}
-	if _, err := compose.NewWebhookDeliverer(we.pool, base64.StdEncoding.EncodeToString(make([]byte, 16)), log); err == nil {
+	if _, err := compose.NewWebhookDeliverer(we.pool, base64.StdEncoding.EncodeToString(make([]byte, 16)), "", log); err == nil {
 		t.Fatal("NewWebhookDeliverer must reject a wrong-length key")
 	}
 }
@@ -657,12 +659,18 @@ func (we *webhookEnv) seedProduct(t *testing.T, name string) ids.UUID {
 // driven against a known approval subject.
 func (we *webhookEnv) insertApproval(t *testing.T, id ids.UUID, targetType *string, targetID *ids.UUID) {
 	t.Helper()
+	decider := ids.NewV7()
+	we.execInWorkspace(t,
+		`INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Decider')`,
+		decider, "decider-"+decider.String()+"@webhooks.test")
 	we.execInWorkspace(t, `
 		INSERT INTO approval (id, kind, proposed_by, target_entity_type, target_entity_id,
-		                      summary, proposed_change, diff_hash, expires_at)
+		                      summary, proposed_change, diff_hash, expires_at,
+		                      requested_decider_id, requested_decider_source)
 		VALUES ($1, 'advance_deal', 'agent:test', $2, $3,
-		        'staged change', '{}'::jsonb, 'sha256:test', now() + interval '1 day')`,
-		id, targetType, targetID)
+		        'staged change', '{}'::jsonb, 'sha256:test', now() + interval '1 day',
+		        $4, 'record_owner')`,
+		id, targetType, targetID, decider)
 }
 
 // execInWorkspace runs one statement on an owner tx and commits it. It answers
@@ -717,7 +725,7 @@ func TestWebhookRetryThenDeadLetterThenReplay(t *testing.T) {
 	// spent and the delivery is dead-lettered.
 	for range 8 {
 		now = now.Add(64 * time.Second) // beyond the largest backoff gap
-		if err := deliverer.SweepOnce(webhookSweepCtx(we.wsID)); err != nil {
+		if err := deliverer.SweepOnce(context.Background()); err != nil {
 			t.Fatalf("sweep: %v", err)
 		}
 	}

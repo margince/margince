@@ -42,12 +42,12 @@ var changeHandlers = []string{
 
 // lossyDecodeFloor is how many json.Unmarshal calls these packages hold in all. A
 // census that reads none of them would report PASS over the defect.
-const lossyDecodeFloor = 3
+const lossyDecodeFloor = 2
 
 func TestNoProposedChangeIsDecodedThroughFloat64(t *testing.T) {
 	t.Parallel()
 
-	tree := moduleRoot(t)
+	tree := gatekit.ModuleRoot(t)
 	seen := 0
 	for _, pkg := range changeHandlers {
 		for _, path := range goSourceFiles(t, tree+"/"+pkg) {

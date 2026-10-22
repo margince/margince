@@ -88,11 +88,9 @@ may_call:
   # kind is refused BY NAME with the whole set, so composing straight away and
   # reading the refusal is the cheaper correct path. Requiring the lookup would
   # score the better route as a failure.
-  - describe_report_blocks
-  - describe_report_vocabulary
+  - read_workspace
   - run_report
   - query_workspace
-  - list_pipelines
   - search_records
 
 must_mention:
@@ -133,7 +131,7 @@ must_not_mention:
   # green.
   - "(?:cannot|can not|can'?t|could not|couldn'?t|unable to|not able to|no way to|there is no way to)[^.;!?\n]{0,30}(?:compose|produce|generate|build|create|assemble|put)[^.;!?\n]{0,30}(?:report|document|summary|section|board pack)|no (way|means|tool|support) to (compose|produce|generate|build) (a |the )?(report|document)|(does not|doesn'?t) support (composing|producing|building|generating) (a |)(report|document)|(?:report|document|compos\w+)[^.;!?\n]{0,30}(?:is|are)[^.;!?\n]{0,15}(?:(?:not |un)(?:available|supported|possible)|beyond)"
   # And it must not report the block grammar instead of the report: a run that
-  # spends its turn on describe_report_blocks and hands back the kinds has
+  # spends its turn on describe_vocabulary and hands back the kinds has
   # answered a question nobody asked.
   - "the available block (kinds|types) are|here are the block (kinds|types)"
 

@@ -6,11 +6,12 @@ The 3 tables owned by `approvals`, as the migrations build them. [Back to the en
 
 ## approval
 
-30 columns · primary key `(id)` · referenced by 3 foreign keys
+34 columns · primary key `(id)` · referenced by 4 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
+| `acknowledged_effect_failed_at` | `timestamp with time zone` |  |  |
 | `bundle_id` | `uuid` |  | The act that staged this proposal together with its siblings: today, a website read's company facts and the leads it published. |
 | `co_target_entity_id` | `uuid` |  |  |
 | `co_target_entity_type` | `text` |  |  |
@@ -20,9 +21,10 @@ The 3 tables owned by `approvals`, as the migrations build them. [Back to the en
 | `decided_by` | `uuid` |  | Points at `app_user.id`. |
 | `decided_by_system` | `boolean`, default `false` | yes |  |
 | `decision_reason` | `text` |  |  |
-| `diff_hash` | `text` | yes | Hash of the staged proposed_change; the minted approval_token is bound to this hash so a token cannot authorize a different effect. |
+| `diff_hash` | `text` | yes | Hash of the staged proposed_change. |
 | `effect_failed_at` | `timestamp with time zone` |  | When the work an APPROVED decision released failed to run. |
 | `effect_failure` | `text` |  | The sentence a reader is shown about that failure, written for them and never copied from the executor's error. |
+| `effect_ran_at` | `timestamp with time zone` |  |  |
 | `evidence` | `jsonb` |  | Per-claim evidence (snippet + source id) backing the proposal. |
 | `expires_at` | `timestamp with time zone` | yes | When the staged action expires unactioned (mirrors approval.requested.expires_at). |
 | `kind` | `text` | yes | Examples: coldstart \| send_email \| advance_deal \| promote_lead \| overnight \| deal_follow_up \| commitment_task. |
@@ -30,6 +32,8 @@ The 3 tables owned by `approvals`, as the migrations build them. [Back to the en
 | `passport_id` | `uuid` |  | Points at `passport.id`. |
 | `proposed_by` | `text` | yes | agent:<id> / connector:<n> that staged this. |
 | `proposed_change` | `jsonb` | yes | The staged diff/payload that will execute on approve. |
+| `requested_decider_id` | `uuid` |  | The member explicitly asked to decide, independent of who has permission to approve. |
+| `requested_decider_source` | `text` |  |  |
 | `staged_by_connection` | `uuid` |  | Points at `oauth_grant.id`. |
 | `status` | `text`, default `'pending'::text` | yes | One of `pending`, `approved`, `rejected`, `expired`. |
 | `summary` | `text` |  | One-line description of the proposed change. |
@@ -48,6 +52,7 @@ The 3 tables owned by `approvals`, as the migrations build them. [Back to the en
 | `decided_by` | `app_user` | deleting the parent keeps this row and clears the link |
 | `on_behalf_of` | `app_user` | deleting the parent keeps this row and clears the link |
 | `passport_id` | `passport` | deleting the parent keeps this row and clears the link |
+| `requested_decider_id` | `app_user` | deleting the parent keeps this row and clears the link |
 | `staged_by_connection` | `oauth_grant` | deleting the parent keeps this row and clears the link |
 
 **Rules**
@@ -55,6 +60,8 @@ The 3 tables owned by `approvals`, as the migrations build them. [Back to the en
 - `approval_co_target_whole`: `CHECK ((((co_target_entity_type IS NULL) AND (co_target_entity_id IS NULL) AND (co_target_version IS NULL)) OR ((co_target_entity_type IS NOT NULL) AND (co_target_entity_id IS NOT NULL) AND (co_target_version IS NOT NULL))))`
 - `approval_decided`: `CHECK ((((status = 'pending') AND (decided_at IS NULL)) OR (status = 'expired') OR ((status = ANY (ARRAY['approved', 'rejected'])) AND (decided_at IS NOT NULL))))`
 - `approval_effect_failure_is_stated`: `CHECK (((effect_failed_at IS NULL) = (effect_failure IS NULL)))`
+- `approval_pending_names_decider`: `CHECK (((status <> 'pending') OR ((requested_decider_id IS NOT NULL) AND (requested_decider_source IS NOT NULL))))`
+- `approval_requested_decider_source_check`: `CHECK ((requested_decider_source = ANY (ARRAY['payload_owner', 'on_behalf_of', 'stager', 'record_owner'])))`
 - `approval_status_check`: `CHECK ((status = ANY (ARRAY['pending', 'approved', 'rejected', 'expired'])))`
 - `approval_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
@@ -114,18 +121,22 @@ The 3 tables owned by `approvals`, as the migrations build them. [Back to the en
 
 - `trg_approval_autonomy_policy_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at()`
 
-## signing_key
+## approval_preference
 
-5 columns · primary key `(kid)` · referenced by 0 foreign keys
+3 columns · primary key `(user_id, kind)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `kid` | `text` | yes |  |
-| `private_key` | `bytea` | yes |  |
-| `public_key` | `bytea` | yes |  |
-| `retired_at` | `timestamp with time zone` |  |  |
-| `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
+| `kind` | `text` | yes | A kind the server permits this reader to mute. |
+| `muted` | `boolean`, default `false` | yes |  |
+| `user_id` | `uuid` | yes | Points at `app_user.id`. |
+
+**Points at**
+
+| Columns | Table | When the parent goes |
+|---|---|---|
+| `user_id` | `app_user` | deleting the parent deletes this row |
 
 **Indexes**
 
-- `signing_key_pkey`: `unique, btree (kid)`
+- `approval_preference_pkey`: `unique, btree (user_id, kind)`

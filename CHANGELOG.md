@@ -12,6 +12,106 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
 
 ### Added
 
+- An extension unit's job tick or bus delivery can read one deal (`rt.Deals().Get`) and the
+  colleagues it names (`rt.Deals().Responsible`). It can ask whether a colleague may read named fields of the deal under their own grants and masks
+  (`rt.Authority().CanRead`), and read colleagues' addresses (`rt.Directory().Emails`). Each refuses
+  with `extension.ErrAttendedRead` anywhere else. A unit declares the reads it makes in
+  `Extension.SystemReads`; an undeclared one answers `extension.ErrUndeclaredRead`, and the list is
+  published in the unit's `manifest.generated.json`. Under `MARGINCE_ENV=dev`,
+  `extension.OutboundClient` also reaches loopback, so a unit can talk to a provider stand-in on
+  the developer's machine; every other posture is unchanged. A unit builds its provider requests
+  with `extension.NewRequest`, which names the installation as `margince-extension/1.0`, and
+  `DealSummary.AmountDisplay` prints the amount with the currency's own decimals.
+- Background data corrections run in bounded worker batches, with durable progress, pause,
+  resume and retry in System health. The first correction recognizes provable older mailbox
+  history and closes the related outstanding privacy notices. Schema upgrades do not wait for
+  the correction. A migration rewrite guard and an append-only task registry check keep future
+  corrections on the same path.
+
+- A mailbox can set a date its automatic commitment suggestions start from.
+  Mail that mailbox delivered on an earlier local day suggests no automatic
+  commitments for its owner; the mail stays captured and searchable, and the
+  promise is listed for review. The setting is on the mailbox's settings and in
+  **Import old emails**, through `PUT /connectors/{provider}/history-baseline`,
+  and `CaptureConnection.history_baseline` shows it. Changing or clearing the
+  date completes and deletes nothing.
+- **Gemini through work or school can connect.** An admin registers an AI
+  tool's OAuth client on a new Settings → **MCP** page, for a tool such as
+  Gemini Enterprise or Copilot Studio "Manual". Each such client gets a client
+  secret, which the tool must send. The secret is shown once and stored as a
+  hash. The same list
+  shows every client, including the ones tools registered themselves, and an
+  admin can disable, enable, rotate or delete each one. Two switches, and
+  `mcp.client_registration` in the deployment file, turn off self-registration
+  (DCR) or published identities (CIMD) for new sign-ins; connections already
+  made keep renewing. The connection token lifetime moves to the same page
+  from Sign-in and apps. Sign-in replies now carry `iss` (RFC 9207). A data reset
+  now keeps AI tool connections, and no longer fails while one exists.
+
+- A custom field can stay out of create forms. Each custom field has a
+  **In create forms** setting, on by default, so every existing field
+  keeps showing. Turned off, the field leaves the dialogs that create a record
+  and stays on the record page, where it can still be edited. Settings →
+  **Fields** shows and changes it, and the custom-field API takes
+  `show_in_create` on create and update, so an import can create a field that
+  only keeps a value from a previous system.
+
+- Recipient email summaries name results and unfinished work, use the member's
+  saved language and suppress empty weeks. Team priorities follow the worklist's
+  ranking across members. Product mail shares explicit sections and actions;
+  buyer and privacy messages use formal German and state precise link expiry.
+  Contacts can correct details without selecting optional marketing consent.
+
+- **MCP tools match the API.** An MCP tool takes every
+  filter, sort and option its REST route takes. `read_view` reads a route's
+  views, such as a company's 360 or a deal's status. `change_record_parts`
+  changes an offer's lines, a company's facts and profile fields, and a
+  project's companies and stakeholders; it replaces `change_offer`.
+  `list_records` also lists products, offers, commissions, partners, activities
+  and deal rooms. A route with no tool rule is refused to an agent.
+
+- **Extension sign-in to a vendor.** A unit declares `OAuthApps` (authorize
+  URL, token URL, scopes). An admin stores the app's client ID and secret on
+  **Settings → Sign-in and apps**, beside the Google and Microsoft apps. The
+  unit's screen starts the sign-in at `POST /v1/ext-oauth/{provider}/connect`.
+  The callback keeps the tokens sealed for the workspace, and the unit reads a
+  live access token with `Runtime.OAuthAccessToken`. A new
+  `GET /v1/installation/oauth-apps` lists every vendor the build serves.
+- **Core release in the account menu.** An image built with `CORE_VERSION`
+  set shows two lines at the foot of the account menu: the instance release and
+  the core release. A build without it keeps the single version line.
+- **One jurisdiction per installation.** An admin chooses the law the
+  installation follows at first setup, in `workspace.country` in
+  `margince.yaml`, or on **Settings → Governance → Jurisdiction**. It sets how
+  long business mail is kept, the due date of a privacy request and the rules
+  for sales mail. The page shows what the choice changes and lists the pack's
+  documents to read and download; the German employee notices moved there from
+  `docs/compliance`. A privacy request filed by hand now gets its due date
+  worked out, and a later date than the law allows is refused. **On upgrade**,
+  a stored country is kept. An installation with no stored country and no
+  `workspace.country` in its file stays unset, keeping mail for the longest
+  built-in floor, until an admin chooses the law. Boot
+  refuses a stored jurisdiction the build carries no pack for.
+- **Accounting sources come from extension units.** Settings → Integrations
+  has an **Accounting source** card: an admin connects a source, sees its sync
+  state, and links the source's customers to companies. The core ships no
+  accounting connector. A unit declares a `FinanceSource` on
+  `backend/pkg/extension`, with its records in `pkg/extension/accounting`, and
+  `docs/how-to/add-an-extension.md` shows how to write one. The demo source moves
+  out of the core into `extensions/finance-demo`, keeps its `offline_demo`
+  name, and lists a fixed set of demo customers. A company may now hold several
+  accounting customers, so a company merge keeps both ledgers on the survivor.
+  A relinked customer's invoices move to the new company on the next sync.
+- **The Margince skill for AI tools.** Settings → Agents → **Agent passports**
+  shows two ways to use a passport. **In your AI tool** has **Download skill**,
+  and **In your own code** has a curl, Python and JavaScript example that reads
+  the passport from `MARGINCE_PASSPORT`. `GET /v1/agent-bundle` (session only)
+  answers `margince-skill.zip`: one `margince/` folder with `README.md`,
+  `SKILL.md`, `INDEX.md` and an `openapi.yaml` that keeps only the operations a
+  passport can call. The API address in it, and `api_base_url` on
+  `GET /v1/passports`, is `MARGINCE_API_BASE_URL`, else
+  `MARGINCE_PUBLIC_BASE_URL`, else the request's own origin. The
+  **Connected agents** card is now **Connected MCP clients**.
 - AI provider health. A provider that is out of credit, rejecting its key,
   unreachable or degraded is marked on Settings → AI models and in the new
   **AI provider status** card under System health. A blocked provider is skipped
@@ -67,6 +167,10 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
 
 ### Removed
 
+- **The approval token.** An approved call is redeemed by its approval's id.
+  The `approval_token` field and the server's signing key are gone; a client
+  that sent a token sends the `approval_id` the approval answered.
+
 - **A company no longer carries a `classification`.** Use `lifecycle` (where an
   account stands with us, one value at a time) and `relationship_types` (what the
   company is to us, possibly several things at once). Nothing wrote the old field,
@@ -79,6 +183,61 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
 
 ### Changed
 
+- **A new installation's retention rules destroy no record because of its
+  age.** Stored message originals are erased after 90 days (was 730). Call
+  transcripts and contacts with no consent and no deal start with no rule:
+  transcripts are archived with all other activity after 1095 days, and a
+  contact's data is destroyed only by an erasure request. An admin can still
+  add either rule. On an existing installation, an upgrade turns off the
+  transcript-erase and contact-anonymize rules where they still hold the
+  starting values; a rule an admin changed stays as it is. The originals'
+  window there stays as set, because a shorter one would erase originals on
+  the next pass that no admin chose to erase.
+- **Settings → Agents is now Settings → AI access, and it starts with
+  connecting your AI tool.** The **Connect your AI tool** card asks **Which AI
+  do you use?** (Claude, ChatGPT, Microsoft Copilot or Gemini) and **Whose plan
+  is it?** (**My company’s** or **My own**), then shows the steps for that one
+  case. A company plan gets **Download guide for your admin**, a file with the
+  admin's steps and the Margince address; your own plan gets **Copy address**.
+  Copilot outside work and Gemini through work or
+  school cannot connect, and the card says so. **Your connections** lists each
+  connected tool. **For developers**, closed until opened, holds three tabs:
+  **API keys** (passports), **Coding agents** (Claude Code, Codex and
+  Antigravity, in place of Gemini CLI) and **Agent rules** (the tool list,
+  **Autonomy tiers** and **Automatic changes**). The
+  page keeps its address, `#/settings/agents`.
+
+- **Some reads are for humans only.** These answer a signed-in human only,
+  through the API or MCP: the installation, capture and integration settings,
+  the morning digest, a backfill's progress, exchange rates, AI model prices,
+  and a contact's or company's access and consent.
+
+- **`search_records` ranks as the app's search does.** The MCP tool and
+  `GET /v1/search` run one engine, so a query answers the same records in the
+  same order through both. It needs words in `q`; `list_records` lists without
+  them. It searches contacts, companies, deals, leads and projects, and
+  products, offer templates or activity when named. It takes `with_employees`
+  and `per_type` as the route does. A project, product or activity carries its
+  key, SKU or opening text in `match.snippet`, and a contact found through its
+  employer names that company in `match.works_at`. A page holds at most 25
+  records, 20 by default, `per_type` included, and its `coverage` and `notes` say when more match or
+  a record could not be read back. Both doors refuse a `q` of more than 32
+  words. The `record_name` of `catch_me_up_on` and `prep_for_meeting` resolves
+  on the same engine, so it names the record `search_records` finds for those
+  words. Partners are no longer searched by name, and a cursor from the old
+  search no longer resumes.
+
+- **The company graph names its signal route.** In `GET /companies/{id}/graph`,
+  `intro_path` is now `signal_route`. It is the contact the account's most recent
+  open signal proposes. A node's `intro_path` flag is now `on_signal_route`, and
+  `groups_omitted` names `signal_route`. Who should introduce us is still answered
+  by `GET /companies/{id}/intro-paths`.
+- **The handoff reads the project page.** `prepare_handoff` and
+  `GET /projects/{id}/handoff` take deals, stakeholders and open tasks from the
+  project page's own read, cut at the page's 25 rows. A list the caller may not
+  read is named in the new `sections_omitted`. It no longer fails the handoff or
+  counts as empty. A caller without the contact grant gets the stakeholder seats
+  with no names. The clock's own reminders stay out of the open commitments.
 - Analytics uses one reporting implementation across the web, API, MCP and workers.
   The old performance screen and rollout switch are removed. Existing
   `analytics.performance_enabled` configuration is accepted but ignored.
@@ -113,6 +272,28 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
 
 ### Fixed
 
+- Old conversation history no longer creates fresh commitment tasks without current evidence.
+  Promises with future deadlines remain eligible, and human-edited work is preserved.
+  Graph and IMAP retain provider arrival times, and replies join sent mail before its mailbox copy arrives.
+
+- **An approval reads the same on every door.** A write held for approval over
+  REST now opens with the sentence the tool door shows, naming the records it
+  changes, such as the two tags a merge folds together. Each field of the
+  request that the sentence does not show follows it as `field=value`, so a
+  blind-copy recipient, an attachment or a close reason stays on the card. A
+  record create, update or logged activity follows its sentence with the values
+  it sets, because that sentence names only the fields. A call with no sentence,
+  or one that names a record by its id, keeps the REST line.
+- **A create must name its source.** A lead, a relationship, a note, a task, an offer,
+  a product, a custom field and a signal are refused with a 422 naming `source` when
+  it is absent or blank, as a contact, a company and a deal already were. So are a
+  deal room, and the invitation or document added to one.
+- **An archived contact's unanswered message leaves the Worklist.** It no longer
+  shows under "Customer waiting", in the queue's count, in a record's waiting
+  filter or in the reply classifier's backlog. Restoring the contact brings it
+  back. Only the contacts the reader can see count: a message filed under a
+  second visible contact who is not archived stays, and its row names that
+  contact.
 - **The contacts-without-consent retention rule acts again** on older installations.
   An installation seeded before the record was renamed kept the rule under the old
   `person/no_consent_no_deal` scope. The nightly evaluator has no selector for it,

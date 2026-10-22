@@ -1,0 +1,15 @@
+/* SPDX-License-Identifier: BUSL-1.1 */
+/* SPDX-FileCopyrightText: 2026 Gradion */
+
+/* The page's verb keeps its own width; the head (shell.css) decides whether it
+   stands beside the name or wraps under it. */
+.pagehead-action {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gapActions);
+}
+.pagehead-action:empty {
+  display: none;
+}

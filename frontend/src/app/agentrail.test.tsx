@@ -1,78 +1,61 @@
 /** @vitest-environment happy-dom */
-
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-  QueryClient,
-  QueryClientProvider,
-  useMutation,
-} from "@tanstack/react-query";
-import {
-  act,
-  cleanup,
-  render as rtlRender,
-  screen,
-  waitFor,
-} from "@testing-library/react";
-import userEvent, { type UserEvent } from "@testing-library/user-event";
-import type { ReactNode, RefObject } from "react";
+import { QueryClient, useMutation } from "@tanstack/react-query";
+import { act, cleanup, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { useEffect } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import {
-  beginModelCall,
-  endModelCall,
-  modelCallsInFlight,
-} from "../api/model-inflight";
+import { endModelCall, modelCallsInFlight } from "../api/model-inflight";
 import type { components } from "../api/schema";
-import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { meFixture } from "../testing/mefixture";
+import { stubPhoneViewport } from "../testing/shellharness";
 import {
   AGENT_EDGE_STILL,
   clearAgentEdge,
   currentAgentEdge,
 } from "./agent-edge-signal";
-import { AgentRail } from "./agentrail";
+import {
+  block,
+  CONNECTED,
+  emptyPage,
+  jsonResponse,
+  LICENSE,
+  OPERATOR,
+  openPanel,
+  PROFILE,
+  panel,
+  ROUTE,
+  render,
+  settlesOnLine,
+  stubAgentRailApi,
+} from "./agentrail.testkit";
 import { VOCABULARY } from "./agentrail-copy";
-import { type GrantSpec, meFixture } from "./mefixture";
-import type { Route } from "./router";
-import { stubPhoneViewport } from "./testing/shellharness";
 
-// The agent section at the foot of the workspace rail reads every one of its
-// facts off the wire (approvals, connectors, AI posture, licence entitlement,
-// the served model, the month's spend, the account's own suggestions) —
-// nothing left standing in for a read that has not answered.
-// Every case here proves the section draws exactly what the API said, and
-// never a number nobody computed.
-//
-// The state derivation is load-bearing enough to earn cases of its own: red is
-// for the tool not being reachable at all (no model bound, or a source it
-// cannot get to), amber is for a run that stalled or settled degraded, and a
-// transient tool failure colours nothing — that precision is the whole point of
-// moving off the eight-state vocabulary.
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+  // The in-flight count is module state. It is reset here the way
+  // clearAgentEdge resets its sibling signal. Otherwise a case failing between
+  // begin and end would start every later case in this file at "working".
+  while (modelCallsInFlight() > 0) {
+    endModelCall();
+  }
+  // The frame case spies on Element.prototype.getBoundingClientRect, which every
+  // later case in this file shares. Restored here rather than there: a spy left
+  // on a prototype is the kind of leak whose failure names a case that is fine.
+  vi.restoreAllMocks();
+  vi.useRealTimers();
+});
 
-type Connector = components["schemas"]["CaptureConnection"];
 type Candidate = components["schemas"]["DedupeCandidate"];
+
 type Approval = components["schemas"]["Approval"];
+
 type AiCallSummary = components["schemas"]["AiCallSummary"];
-type AssistantProfile = components["schemas"]["AssistantProfile"];
-type LicenseEntitlement = components["schemas"]["LicenseEntitlement"];
-
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
-const emptyPage = { has_more: false, next_cursor: null };
-
-const CONNECTED: Connector = {
-  id: "018f3a1b-0000-7000-8000-0000000000c1",
-  provider: "gmail",
-  status: "connected",
-  scopes: ["https://www.googleapis.com/auth/gmail.readonly"],
-};
 
 const CANDIDATE = (id: string): Candidate => ({
   id,
@@ -117,8 +100,6 @@ const AI_CALL: AiCallSummary = {
   decision_attempted: false,
 };
 
-const OPERATOR: GrantSpec = { ai_diagnostics: ["read"], license: ["read"] };
-
 /** A month with one priced line and one the server could not price. */
 const PRICED_USAGE = {
   days: [
@@ -146,140 +127,6 @@ const PRICED_USAGE = {
   budget: { monthly_tokens: 0, spent_tokens: 0, band: "normal" },
 };
 
-const PROFILE = (state: AssistantProfile["state"]): AssistantProfile => ({
-  name: "Margince",
-  kind: "ai",
-  state,
-  inference_mode:
-    state === "development"
-      ? "development"
-      : state === "unconfigured"
-        ? "none"
-        : "cloud",
-  providers: [],
-});
-
-const LICENSE = (state: LicenseEntitlement["state"]): LicenseEntitlement => ({
-  state,
-  seats_used: 1,
-  over_limit: false,
-  checked_at: "2026-08-01T09:00:00Z",
-});
-
-const EMPTY_USAGE = {
-  days: [],
-  budget: { monthly_tokens: 0, spent_tokens: 0, band: "normal" as const },
-};
-
-const COMPANY_360_VIEW = {
-  as_of: "2026-08-01T09:00:00Z",
-  company: {
-    id: "o-1",
-    display_name: "Brandt Automotive GmbH",
-    captured_by: "human:u1",
-    source: "manual",
-    version: 1,
-    created_at: "2026-06-01T08:00:00Z",
-    updated_at: "2026-06-01T08:00:00Z",
-  },
-  sections_omitted: [],
-  contacts: { data: [], page: emptyPage },
-  deals: {
-    data: [],
-    page: emptyPage,
-    won_lifetime: { amount_minor: 0, currency: "EUR" },
-    lost_count: 0,
-  },
-  activities: { data: [], page: emptyPage },
-  next_steps: { data: [], page: emptyPage },
-  pending_approvals: { data: [], page: emptyPage },
-  tags: [],
-  since_last_visit: {
-    baseline_at: "2026-05-30T09:00:00Z",
-    new_activities: 0,
-    deal_stage_moves: 0,
-    pending_proposals: 0,
-  },
-};
-
-type FetchRoutes = {
-  connectors?: () => Response | Promise<Response>;
-  dedupe?: () => Response | Promise<Response>;
-  approvals?: () => Response | Promise<Response>;
-  aiCalls?: () => Response | Promise<Response>;
-  aiUsage?: () => Response | Promise<Response>;
-  me?: () => Response | Promise<Response>;
-  profile?: () => Response | Promise<Response>;
-  license?: () => Response | Promise<Response>;
-  agentActivity?: () => Response | Promise<Response>;
-};
-
-// Routes every hook the section depends on by pathname, the way
-// company360.test.tsx does for its own composite read. The healthy default
-// answers every source as connected, every queue empty, the seat allowed to
-// read the runtime and the licence, the AI posture as configured and the
-// licence as valid — each test overrides only the one route its case is
-// about. Returns the stubbed fetch mock itself, so a case that needs to prove
-// a request was never MADE (the 360 read off a company page) has something to
-// inspect.
-function stubAgentRailApi(routes: FetchRoutes = {}) {
-  const fetchMock = vi.fn(async (request: Request) => {
-    const pathname = new URL(request.url).pathname;
-    if (pathname.endsWith("/connectors")) {
-      return routes.connectors
-        ? routes.connectors()
-        : jsonResponse({ data: [CONNECTED] });
-    }
-    if (pathname.endsWith("/dedupe/candidates")) {
-      return routes.dedupe
-        ? routes.dedupe()
-        : jsonResponse({ data: [], page: emptyPage });
-    }
-    if (pathname.endsWith("/approvals")) {
-      return routes.approvals
-        ? routes.approvals()
-        : jsonResponse({ data: [], page: emptyPage });
-    }
-    if (pathname.endsWith("/ai/calls")) {
-      return routes.aiCalls
-        ? routes.aiCalls()
-        : jsonResponse({
-            data: [],
-            page: emptyPage,
-            payload_capture_enabled: false,
-            tasks: [],
-          });
-    }
-    if (pathname.endsWith("/ai/usage")) {
-      return routes.aiUsage ? routes.aiUsage() : jsonResponse(EMPTY_USAGE);
-    }
-    if (pathname.endsWith("/me/ai-activity")) {
-      return routes.agentActivity
-        ? routes.agentActivity()
-        : jsonResponse({ running: [], recent: [], faults: [] });
-    }
-    if (pathname.endsWith("/me")) {
-      return routes.me
-        ? routes.me()
-        : jsonResponse(meFixture({ allow: OPERATOR }));
-    }
-    if (pathname.endsWith("/assistant/profile")) {
-      return routes.profile
-        ? routes.profile()
-        : jsonResponse(PROFILE("configured"));
-    }
-    if (pathname.endsWith("/installation/license")) {
-      return routes.license ? routes.license() : jsonResponse(LICENSE("valid"));
-    }
-    if (pathname.endsWith("/360")) {
-      return jsonResponse({ state: "ready", view: COMPANY_360_VIEW });
-    }
-    return jsonResponse({ data: [], page: emptyPage });
-  });
-  vi.stubGlobal("fetch", fetchMock);
-  return fetchMock;
-}
-
 /** A pending write, held open so `useIsMutating` reports it for the life of
  *  the test — the only way to reach `working` from outside the component. */
 function PendingWrite() {
@@ -294,89 +141,6 @@ function PendingWrite() {
   }, []);
   return null;
 }
-
-function render(
-  route: Route,
-  options: Readonly<{
-    client?: QueryClient;
-    children?: ReactNode;
-    bar?: RefObject<HTMLElement | null>;
-  }> = {},
-) {
-  const client =
-    options.client ??
-    new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
-  return rtlRender(
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">
-        {options.children}
-        <AgentRail route={route} bar={options.bar} />
-      </LocaleProvider>
-    </QueryClientProvider>,
-  );
-}
-
-const ROUTE: Route = { screen: "deals" };
-
-const block = (container: HTMLElement) => {
-  const el = container.querySelector(".arblock");
-  if (!el) throw new Error("no .arblock in the rendered tree");
-  return el;
-};
-
-const openPanel = async (user: UserEvent, container: HTMLElement) => {
-  const trigger = container.querySelector(".arhit");
-  if (!trigger) throw new Error("no .arhit trigger in the rendered tree");
-  await user.click(trigger);
-};
-
-// The panel is portalled to document.body once open, so its content is never
-// found inside the render container.
-const panel = () => {
-  const el = document.querySelector(".arloose");
-  if (!el) throw new Error("no .arloose panel on the document");
-  return el;
-};
-
-/**
- * The state's own resting line, once the ticker has finished naming the
- * mount-time reads.
- *
- * Every query the section holds starts a `useAgentTicker` line the moment it
- * fetches (agentrail-ticker.ts), and that line outlives its own request by
- * `LINGER_MS` (1400ms) so a fast read is still readable. A case that asserts
- * the state's own line has to wait past that window, or it is really
- * asserting about the ticker's last word instead.
- */
-// Named so it does NOT begin with `waitFor`: scripts/test-budget.ts treats that
-// prefix as a library waiter and stops being able to fold the budget inside a
-// local helper that wears it.
-async function settlesOnLine(container: HTMLElement, expected: string) {
-  await waitFor(
-    () =>
-      expect(container.querySelector(".arline")?.textContent).toBe(expected),
-    { timeout: 3000 },
-  );
-}
-
-afterEach(() => {
-  cleanup();
-  vi.unstubAllGlobals();
-  vi.unstubAllEnvs();
-  // The in-flight count is module state, reset here the way clearAgentEdge
-  // resets its sibling signal: a case failing between begin and end would
-  // otherwise start every later case in this file at "working".
-  while (modelCallsInFlight() > 0) {
-    endModelCall();
-  }
-  // The frame case spies on Element.prototype.getBoundingClientRect, which every
-  // later case in this file shares. Restored here rather than there: a spy left
-  // on a prototype is the kind of leak whose failure names a case that is fine.
-  vi.restoreAllMocks();
-  vi.useRealTimers();
-});
 
 describe("AgentRail", () => {
   // The resting line is a rotation of TRUE readings, and an installation with a
@@ -472,7 +236,7 @@ describe("AgentRail", () => {
     stubAgentRailApi({
       connectors: () =>
         jsonResponse(
-          { code: "internal_error", title: "internal error", status: 500 },
+          { code: "internal", title: "internal error", status: 500 },
           500,
         ),
     });
@@ -766,7 +530,7 @@ describe("AgentRail", () => {
           data: [AI_CALL],
           page: emptyPage,
           payload_capture_enabled: false,
-          tasks: [AI_CALL.task],
+          ...{ tasks: [AI_CALL.task], task_options: [{ task: AI_CALL.task }] },
         }),
     });
     const { container } = render(ROUTE);
@@ -903,463 +667,5 @@ describe("AgentRail", () => {
       if (documentedDefaults.has(state)) continue;
       expect(css).toContain(`data-core-state="${state}"`);
     }
-  });
-
-  // Work THIS TAB DID NOT START. Everything above moves the Core because a
-  // query in this browser fetched; these cases cover the overnight runner,
-  // reported through /me/ai-activity, plus the two invariants that must
-  // hold alongside it: operator vocabulary stays out of the reader's line, and
-  // the surface never invents a sentence for a kind it has no copy for.
-
-  /** One run as the WIRE spells it — a JSON body, not a typed literal, because
-   *  a kind that is off the contract is exactly what one of these cases sends. */
-  const RUN = (over: Readonly<Record<string, unknown>> = {}) => ({
-    id: "019f7e65-fbf7-7114-b114-40af4af63a01",
-    kind: "morning_brief",
-    state: "running",
-    // Relative: the resting line ages a settled run out (agentrail-resting.ts).
-    started_at: new Date(Date.now() - 60_000).toISOString(),
-    ...over,
-  });
-
-  const withRuns = (...running: readonly unknown[]) =>
-    stubAgentRailApi({
-      agentActivity: () => jsonResponse({ running, recent: [], faults: [] }),
-    });
-
-  /** A run that has SETTLED. The read puts these in `recent` and never in
-   *  `running` (compose/agentactivity `recentSQL` vs `runningSQL`), and
-   *  `degrade_reason` and `summary` are written alongside the terminal status —
-   *  so this is the only shape those two fields ever arrive in. */
-  // Faults are DERIVED from the settled rows here exactly as the server derives
-  // them: a run that failed a minute ago is in both arms, because both
-  // statements about it are true. A stub that carried a failed run in `recent`
-  // alone would be describing a server that does not exist.
-  const faultsAmong = (rows: readonly unknown[]) =>
-    rows.filter((row) => {
-      const state = (row as { state?: string }).state;
-      return state === "failed" || state === "degraded";
-    });
-
-  const withSettled = (...recent: readonly unknown[]) =>
-    stubAgentRailApi({
-      agentActivity: () =>
-        jsonResponse({ running: [], recent, faults: faultsAmong(recent) }),
-    });
-
-  // The case this arm exists for: a fault that has already been pushed out of
-  // `recent` by ten later successes, and is still unacknowledged.
-  const withEvictedFault = (fault: unknown, settled: readonly unknown[]) =>
-    stubAgentRailApi({
-      agentActivity: () =>
-        jsonResponse({ running: [], recent: settled, faults: [fault] }),
-    });
-
-  const BRIEF_RUNNING = "Preparing Morning brief…";
-  const BRIEF_FAILED = "Morning brief failed";
-
-  const runLines = () =>
-    [...panel().querySelectorAll(".arrunline")].map((el) => el.textContent);
-
-  // The work a contact ASKS for, which is the case the rail was silent on until
-  // the router could say `running`. Asserted at RENDER and not against the map:
-  // the copy existing is not the claim — the claim is that a live summarize
-  // reaches the reader's own line, in their own words, through the same feed
-  // the overnight run uses.
-  //
-  // NAMED, because that is the line that answers the reader: the server sends
-  // the record the summary is about as `subject_label`, and the rail says
-  // "about Acme" rather than "about this company" — which was wrong for a
-  // contact or a meeting and told a rep nothing for a company.
-  it("names the record a summary is about while it is still being written", async () => {
-    withRuns(RUN({ kind: "summarize", subject_label: "Acme" }));
-    const { container } = render(ROUTE);
-    await settlesOnLine(container, "Summarizing Acme…");
-  });
-
-  // The name is the way to the record. A company's name goes to the company,
-  // a contact's to the contact, through the same address every other link in
-  // the app uses for that record — and following it is leaving for the
-  // record, not opening the panel.
-  it.each([
-    ["company", "Acme", "#/companies/"],
-    ["contact", "Ana Roth", "#/contacts/"],
-  ])(
-    "links the %s a summary is about to its record",
-    async (subjectType, name, page) => {
-      const id = "019f7e65-fbf7-7114-b114-40af4af63a77";
-      withRuns(
-        RUN({
-          kind: "summarize",
-          subject_label: name,
-          subject_type: subjectType,
-          subject_id: id,
-        }),
-      );
-      const user = userEvent.setup();
-      const { container } = render(ROUTE);
-      await settlesOnLine(container, `Summarizing ${name}…`);
-      const link = container.querySelector(".arline a");
-      expect(link?.textContent).toBe(name);
-      expect(link?.getAttribute("href")).toBe(`${page}${id}`);
-      if (!link) throw new Error("no record link in the line");
-      await user.click(link);
-      expect(document.querySelector(".arloose")).toBeNull();
-    },
-  );
-
-  // A record with no page of its own — a meeting is an activity, and the
-  // timeline has no screen for one — keeps its name as a word. So does a
-  // kind this build has never heard of, which is what an older tab gets from
-  // a newer server: the sentence is still true, and it points nowhere rather
-  // than somewhere wrong.
-  it.each([
-    ["a meeting", "activity"],
-    ["a kind this build does not know", "constellation"],
-  ])("names %s as text rather than a link", async (_what, subjectType) => {
-    withRuns(
-      RUN({
-        kind: "summarize",
-        subject_label: "the cutover review",
-        subject_type: subjectType,
-        subject_id: "019f7e65-fbf7-7114-b114-40af4af63a77",
-      }),
-    );
-    const { container } = render(ROUTE);
-    await settlesOnLine(container, "Summarizing the cutover review…");
-    expect(container.querySelector(".arline a")).toBeNull();
-  });
-
-  // The panel restates the line and lists the live runs, and the name is the
-  // way to the record there too: a reader who opened the panel to see which
-  // account is ready should not have to go back to the rail to reach it.
-  it("links the record in the panel's head and in its list of live runs", async () => {
-    const id = "019f7e65-fbf7-7114-b114-40af4af63a77";
-    withRuns(
-      RUN({
-        kind: "account_scan",
-        subject_label: "Brandt Automotive",
-        subject_type: "company",
-        subject_id: id,
-      }),
-    );
-    const user = userEvent.setup();
-    const { container } = render(ROUTE);
-    await settlesOnLine(
-      container,
-      "Analyzing the history of Brandt Automotive…",
-    );
-    await openPanel(user, container);
-    const links = [...panel().querySelectorAll("a")].filter(
-      (a) => a.getAttribute("href") === `#/companies/${id}`,
-    );
-    expect(links.map((a) => a.textContent)).toEqual([
-      "Brandt Automotive",
-      "Brandt Automotive",
-    ]);
-  });
-
-  // An occurrence that arrived without a name — an older server, or a record
-  // with no name to give — falls back to a line that names NO record, rather
-  // than guessing at one.
-  it("names no record for a summary that carried no name", async () => {
-    withRuns(RUN({ kind: "summarize" }));
-    const { container } = render(ROUTE);
-    await settlesOnLine(container, "Writing summary…");
-  });
-
-  it("moves the Core to working when a server run is live and this tab is idle", async () => {
-    withRuns(RUN());
-    const { container } = render(ROUTE);
-    await waitFor(() =>
-      expect(block(container).getAttribute("data-core-state")).toBe("working"),
-    );
-  });
-
-  it("names the run in the rail line", async () => {
-    withRuns(RUN());
-    const { container } = render(ROUTE);
-    await settlesOnLine(container, BRIEF_RUNNING);
-  });
-
-  // The window the feed cannot cover. The projection is written from an event
-  // the router publishes, so between the press of "Draft with AI" and the read
-  // that first carries the occurrence there is a live model call and an orb at
-  // rest, which for a task that runs in seconds was most of the run, and at
-  // the idle cadence was the whole of it.
-  it("moves the Core to working while this tab holds a model call open", async () => {
-    withRuns();
-    const { container } = render(ROUTE);
-    await waitFor(() =>
-      expect(block(container).getAttribute("data-core-state")).toBe("idle"),
-    );
-
-    act(() => {
-      beginModelCall();
-    });
-    await waitFor(() =>
-      expect(block(container).getAttribute("data-core-state")).toBe("working"),
-    );
-
-    act(() => {
-      endModelCall();
-    });
-  });
-
-  // The feed is the only thing that may NAME the work, so the moment it carries
-  // the occurrence it outranks the bare fact that a request is open. Both are
-  // true here at once, and the sentence has to be the run's own.
-  it("lets the feed name the work as soon as it carries the run", async () => {
-    withRuns(RUN());
-    const { container } = render(ROUTE);
-    act(() => {
-      beginModelCall();
-    });
-
-    await settlesOnLine(container, BRIEF_RUNNING);
-
-    act(() => {
-      endModelCall();
-    });
-  });
-
-  // ONE line under the orb. While this tab is fetching something it can name,
-  // that sentence is the orb's line; the agent's own sentence has the slot
-  // back once the read settles. Both are true at the same moment here — an
-  // overnight brief is running, and this tab is fetching its own sources — and
-  // the reader sees one status at a time, never two stacked.
-  it("gives the tool's named read the orb's one line, then hands it back", async () => {
-    vi.useFakeTimers();
-    stubAgentRailApi({
-      agentActivity: () =>
-        jsonResponse({ running: [RUN()], recent: [], faults: [] }),
-    });
-    const { container } = render(ROUTE);
-    // Inside the ticker's LINGER_MS, so the mount-time reads it named are still
-    // standing while the agent's own line has answered. WHICH of them is newest
-    // is a race between stubs and no part of the claim: that the tool's
-    // sentence holds the one slot, and nothing sits under it, is the claim.
-    await act(() => vi.advanceTimersByTimeAsync(300));
-    const inFlight = container.querySelector(".arline")?.textContent;
-    expect(inFlight).toBeTruthy();
-    expect(inFlight).not.toBe(BRIEF_RUNNING);
-    expect(container.querySelectorAll(".arwords > span").length).toBe(1);
-    // Past every linger the mount reads can hold, the agent's line is back.
-    await act(() => vi.advanceTimersByTimeAsync(2500));
-    expect(container.querySelector(".arline")?.textContent).toBe(BRIEF_RUNNING);
-  });
-
-  // A fault keeps the line while reads are in flight: the colour and the
-  // caption are about the same thing, and an amber orb captioned with a read
-  // would tell a reader the read is the fault. Proven by the caption standing
-  // still across the window the case above shows the tool taking.
-  it("never lets a read caption a fault", async () => {
-    vi.useFakeTimers();
-    withRuns(RUN({ state: "stalled" }));
-    const { container } = render(ROUTE);
-    await act(() => vi.advanceTimersByTimeAsync(300));
-    expect(block(container).getAttribute("data-core-state")).toBe("warning");
-    const inFlight = container.querySelector(".arline")?.textContent;
-    await act(() => vi.advanceTimersByTimeAsync(2500));
-    expect(container.querySelector(".arline")?.textContent).toBe(inFlight);
-  });
-
-  // The colour and the sentence are always about the SAME thing. A run that
-  // failed unread and a second one still in flight are true at once, and the
-  // failure outranks the live run, so the live run's sentence must not caption
-  // it: a red orb captioned "I'm writing your morning brief" tells a reader the
-  // brief is the fault.
-  it("never captions a state with a run that did not cause it", async () => {
-    window.localStorage.removeItem("margince.agent.faults-seen");
-    const failed = RUN({
-      id: "019f7e65-fbf7-7114-b114-40af4af63c01",
-      state: "failed",
-    });
-    stubAgentRailApi({
-      agentActivity: () =>
-        jsonResponse({ running: [RUN()], recent: [failed], faults: [failed] }),
-    });
-    const { container } = render(ROUTE);
-    await waitFor(() =>
-      expect(block(container).getAttribute("data-core-state")).toBe("error"),
-    );
-    expect(container.querySelector(".arline")?.textContent).toBe(BRIEF_FAILED);
-  });
-
-  // Opening the panel acknowledges EVERY fault the read reported, at once.
-  // Clearing only the fault the orb happened to show would leave the colour up
-  // after the reader had already turned to the report.
-  it("clears every fault the panel delivered, not one per open", async () => {
-    window.localStorage.removeItem("margince.agent.faults-seen");
-    withSettled(
-      RUN({ id: "019f7e65-fbf7-7114-b114-40af4af63c01", state: "failed" }),
-      RUN({ id: "019f7e65-fbf7-7114-b114-40af4af63c02", state: "degraded" }),
-    );
-    const user = userEvent.setup();
-    const { container } = render(ROUTE);
-    await waitFor(() =>
-      expect(block(container).getAttribute("data-core-state")).toBe("error"),
-    );
-    await openPanel(user, container);
-    await waitFor(() =>
-      expect(block(container).getAttribute("data-core-state")).toBe("idle"),
-    );
-  });
-
-  // The other half of the live vocabulary, and the half that had no producer at
-  // all until the lane came off the KIND of work: evidence arriving is `ingest`,
-  // reasoning over evidence already held is `working` (ai-activity-orb.ts).
-  it("moves the Core to ingest when the live run is evidence arriving", async () => {
-    withRuns(RUN({ kind: "document_extract" }));
-    const { container } = render(ROUTE);
-    await waitFor(() =>
-      expect(block(container).getAttribute("data-core-state")).toBe("ingest"),
-    );
-  });
-
-  // The crawl a contact starts from a company page, reported by the dossier row
-  // itself rather than by the settled model calls it makes — which is what lets
-  // the orb hold `ingest` for the whole read instead of resting between calls.
-  // The line names the company, because the source sent its name.
-  it("moves the Core to ingest while a company website is being read, and names the company", async () => {
-    withRuns(RUN({ kind: "site_read", subject_label: "Acme" }));
-    const { container } = render(ROUTE);
-    await waitFor(() =>
-      expect(block(container).getAttribute("data-core-state")).toBe("ingest"),
-    );
-    await settlesOnLine(container, "Reading the Acme website…");
-  });
-
-  // A run past the lease its own source declared. The server derives it, so a
-  // worker that died without saying so cannot go on being displayed as busy —
-  // and amber is right for it, because the work may yet land and there is
-  // nothing for the reader to do but know.
-  it("moves the Core to warning for a run past its own lease", async () => {
-    withRuns(RUN({ state: "stalled" }));
-    const { container } = render(ROUTE);
-    await waitFor(() =>
-      expect(block(container).getAttribute("data-core-state")).toBe("warning"),
-    );
-  });
-
-  // The overnight case, which is the whole reason a fault is acknowledged rather
-  // than decayed: a run fails at four in the morning and the contact it ran for
-  // is asleep, so whatever the orb does at 04:12 is seen by nobody. It holds
-  // until the panel has actually been opened.
-  it("holds a failed run on the Core until the panel has been opened", async () => {
-    // Acknowledgement is remembered per browser, so the case owns its own id and
-    // its own storage: sharing either would make this test's verdict depend on
-    // which of its neighbours ran first.
-    window.localStorage.removeItem("margince.agent.faults-seen");
-    withSettled(
-      RUN({ id: "019f7e65-fbf7-7114-b114-40af4af63b02", state: "failed" }),
-    );
-    const user = userEvent.setup();
-    const { container } = render(ROUTE);
-    await waitFor(() =>
-      expect(block(container).getAttribute("data-core-state")).toBe("error"),
-    );
-    await openPanel(user, container);
-    await waitFor(() =>
-      expect(block(container).getAttribute("data-core-state")).toBe("idle"),
-    );
-  });
-
-  // THE DEFECT THIS ARM EXISTS FOR. The overnight run fails at four, and by the
-  // time its owner looks, ten later runs have settled — so it is gone from
-  // `recent`, which keeps the newest ten of any outcome. Read from there, the
-  // orb released a fault nobody had ever seen: the product knew its overnight
-  // work failed and stopped saying so.
-  it("holds a failed run the day's later successes have pushed out of recent", async () => {
-    window.localStorage.removeItem("margince.agent.faults-seen");
-    const overnight = RUN({
-      id: "019f7e65-fbf7-7114-b114-40af4af63b03",
-      state: "failed",
-    });
-    // Ten settled runs, none of them the fault — the shape `recent` has by
-    // mid-morning on any working day.
-    const later = Array.from({ length: 10 }, (_, i) =>
-      RUN({ id: `019f7e65-fbf7-7114-b114-40af4af640${10 + i}`, state: "done" }),
-    );
-    withEvictedFault(overnight, later);
-    const user = userEvent.setup();
-    const { container } = render(ROUTE);
-
-    await waitFor(() =>
-      expect(block(container).getAttribute("data-core-state")).toBe("error"),
-    );
-    // And it still clears the ordinary way, so the arm changed where the fault
-    // is read from and nothing about how it is answered.
-    await openPanel(user, container);
-    await waitFor(() =>
-      expect(block(container).getAttribute("data-core-state")).toBe("idle"),
-    );
-  });
-
-  // Above the counts, because a run happening right now outranks a queue that
-  // has been waiting since yesterday.
-  it("lists running work in the panel under its own heading", async () => {
-    withRuns(RUN());
-    const user = userEvent.setup();
-    const { container } = render(ROUTE);
-    await openPanel(user, container);
-    await waitFor(() => expect(runLines()).toEqual([BRIEF_RUNNING]));
-    const headings = [...panel().querySelectorAll(".arsect h3")].map(
-      (el) => el.textContent,
-    );
-    expect(headings[0]).toBe("Running now");
-    expect(headings).toContain(en["agent.panel.needsYou"]);
-  });
-
-  // `degrade_reason` is server-authored operator vocabulary and untranslated.
-  // The reader's surfaces carry the localized line and nothing else, so the
-  // raw token reaches no surface at all.
-  it("keeps the degrade reason out of the line and out of the panel", async () => {
-    const reason = "brief_partial: crm_read_timeout";
-    const stopped = "Morning brief stopped partway";
-    withSettled(RUN({ state: "degraded", degrade_reason: reason }));
-    const user = userEvent.setup();
-    const { container } = render(ROUTE);
-    await settlesOnLine(container, stopped);
-    expect(container.querySelector(".arline")?.textContent).not.toContain(
-      reason,
-    );
-    await openPanel(user, container);
-    expect(panel().textContent).not.toContain(reason);
-  });
-
-  // A kind the copy map has never heard of produces NOTHING: no fallback
-  // sentence, no raw message key, no de-underscored token. The run is still
-  // real, so the orb still moves — only the words are missing.
-  it("renders no line for a kind it has no copy for", async () => {
-    withRuns(RUN({ kind: "telepathic_prospecting" }));
-    const user = userEvent.setup();
-    const { container } = render(ROUTE);
-    await waitFor(() =>
-      expect(block(container).getAttribute("data-core-state")).toBe("working"),
-    );
-    await openPanel(user, container);
-    expect(runLines()).toEqual([]);
-    expect(panel().textContent).not.toContain("Running now");
-    expect(panel().textContent).not.toContain("agent.activity");
-    expect(panel().textContent).not.toContain("telepathic_prospecting");
-  });
-
-  // A settled run reaches the reader twice: the resting rotation says what the
-  // agent has just got done, the recap lists the day's. It reaches the RUNNING
-  // section in neither case. The two bounds differ — agentrail.resting.test.tsx
-  // holds the rotation's.
-  it("reads a run that finished today in the resting line and in the recap, never as live work", async () => {
-    withSettled(RUN({ state: "done" }));
-    const user = userEvent.setup();
-    const { container } = render(ROUTE);
-    await settlesOnLine(container, "Morning brief ready");
-    expect(block(container).getAttribute("data-core-state")).toBe("idle");
-    await openPanel(user, container);
-    expect(runLines()).toEqual([]);
-    expect(panel().textContent).not.toContain("Running now");
-    expect(
-      panel().querySelector(".aritem:not(.arempty)")?.textContent,
-    ).toContain("Morning brief ready");
   });
 });

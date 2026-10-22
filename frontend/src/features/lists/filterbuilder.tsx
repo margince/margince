@@ -1,0 +1,312 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+// The predicate builder: the visual half of the filter tree
+// (AC-filters-and-views-3/4).
+//
+// Every edit goes through segmentpredicate's immutable operations and every
+// choice offered comes from the server's vocabulary. That pairing is the whole
+// design: the tree module knows what a filter IS, the vocabulary knows what a
+// filter MAY SAY, and this file knows only how to draw the two. It invents no
+// field, no operator, and no value type of its own — which is why a clause it
+// builds cannot be one the engine refuses as unknown.
+//
+// Each word between two conditions is its own switch; filterjoins.ts holds
+// how a mixed row is stored. A run of "and" in an "or" row is drawn as a box.
+// A nested group shows its join in its head too, because one condition has
+// no word between rows.
+
+import { Fragment } from "react";
+import { Button, SegmentedControl } from "../../design-system/atoms";
+import { useT } from "../../i18n";
+import "./filterbuilder.css";
+import type { VocabularyField } from "../../lib/filterdata";
+import {
+  addToGroup,
+  type Group,
+  isGroup,
+  type Node,
+  newGroup,
+  removeNode,
+  rootGroup,
+  toggleJoin,
+} from "../../lib/segmentpredicate";
+import { ClauseRow, firstClause } from "./filterclause";
+import { flipConnector, groupDepth, isRun, rowStart } from "./filterjoins";
+import { ownGroup } from "./filterproposal";
+
+export type FilterBuilderProps = Readonly<{
+  tree: Node;
+  onChange: (next: Node) => void;
+  fields: readonly VocabularyField[];
+  /** The clause the reader's last edit brought, which takes focus. */
+  arrived?: string | null;
+}>;
+
+/** The builder's root: one group, drawn with the recursive renderer below. */
+export function FilterBuilder({
+  tree,
+  onChange,
+  fields,
+  arrived = null,
+}: FilterBuilderProps) {
+  if (!isGroup(tree)) {
+    // The root is always a group — a bare leaf has no join to draw, and every
+    // operation in segmentpredicate assumes a group root.
+    return null;
+  }
+  return (
+    <div className="filter-builder">
+      <GroupNode
+        group={tree}
+        fields={fields}
+        depth={1}
+        onChange={onChange}
+        tree={tree}
+        arrived={arrived}
+        row={{ owner: tree.id, offset: 0 }}
+      />
+    </div>
+  );
+}
+
+type NodeProps = Readonly<{
+  fields: readonly VocabularyField[];
+  depth: number;
+  /** The whole tree, because every edit is expressed against its root. */
+  tree: Node;
+  onChange: (next: Node) => void;
+}>;
+
+/**
+ * Where a group's words sit in a row: the group that owns the row, and how
+ * many of its conditions come first. An "and" run's words belong to the row
+ * of the "or" group around it.
+ */
+type RowPlace = Readonly<{ owner: string; offset: number }>;
+
+/**
+ * One group: its conditions with the join between them, and the ways to grow
+ * it. The root draws no box; a nested group is an inset box, because a join
+ * word between two rows needs a visible scope to say which rows it joins.
+ */
+function GroupNode({
+  group,
+  fields,
+  depth,
+  tree,
+  onChange,
+  arrived,
+  row,
+}: NodeProps &
+  Readonly<{ group: Group; arrived: string | null; row: RowPlace }>) {
+  const t = useT();
+  const nested = depth > 1;
+  const rows = (
+    <>
+      <div className="filter-group-children">
+        {group.children.map((child, index) => (
+          <Fragment key={child.id}>
+            {index > 0 && (
+              <Connector
+                join={group.join}
+                owner={row.owner}
+                index={row.offset + rowStart(group, index) - 1}
+                tree={tree}
+                onChange={onChange}
+              />
+            )}
+            {isGroup(child) ? (
+              <GroupNode
+                group={child}
+                fields={fields}
+                depth={depth + 1}
+                tree={tree}
+                onChange={onChange}
+                arrived={arrived}
+                row={
+                  isRun(child, group)
+                    ? {
+                        owner: row.owner,
+                        offset: row.offset + rowStart(group, index),
+                      }
+                    : { owner: child.id, offset: 0 }
+                }
+              />
+            ) : (
+              <ClauseRow
+                leafID={child.id}
+                field={child.field}
+                op={child.op}
+                value={child.value}
+                proposed={child.proposed}
+                arrived={child.id === arrived}
+                fields={fields}
+                tree={tree}
+                onChange={onChange}
+              />
+            )}
+          </Fragment>
+        ))}
+        {/* Said rather than left blank: an empty group compiles to a shape
+            the engine refuses, so the count stops until it holds a row. */}
+        {nested && group.children.length === 0 && (
+          <p className="filter-group-empty t-sub">{t("filters.emptyGroup")}</p>
+        )}
+      </div>
+      <GroupFoot
+        group={group}
+        fields={fields}
+        depth={depth}
+        tree={tree}
+        onChange={onChange}
+      />
+    </>
+  );
+  if (!nested) {
+    return <div className="filter-group">{rows}</div>;
+  }
+  // A fieldset named by its join, so a screen reader hears where the group's
+  // conditions start and end, and whose "Remove group" each control is.
+  return (
+    <fieldset
+      className="filter-group filter-group-box"
+      aria-label={t(
+        group.join === "and" ? "filters.group.all" : "filters.group.any",
+      )}
+    >
+      <div className="filter-group-head">
+        <SegmentedControl<Group["join"]>
+          options={["and", "or"]}
+          value={group.join}
+          labels={{
+            and: t("filters.group.all"),
+            or: t("filters.group.any"),
+          }}
+          label={t("filters.group.match")}
+          onChange={(next) => {
+            if (next !== group.join) {
+              onChange(switchJoin(tree, group.id));
+            }
+          }}
+        />
+        <Button
+          variant="ghost"
+          onClick={() => onChange(removeNode(tree, group.id))}
+        >
+          {t("filters.removeGroup")}
+        </Button>
+      </div>
+      {rows}
+    </fieldset>
+  );
+}
+
+/**
+ * The word between two conditions, which is also the switch for that word
+ * alone. A flip that would nest past the engine's bound is not offered.
+ */
+function Connector({
+  join,
+  owner,
+  index,
+  tree,
+  onChange,
+}: Readonly<{
+  join: Group["join"];
+  owner: string;
+  index: number;
+  tree: Node;
+  onChange: (next: Node) => void;
+}>) {
+  const t = useT();
+  const and = join === "and";
+  const word = t(and ? "filters.join.and" : "filters.join.or");
+  const flipped = flipConnector(rootGroup(tree), owner, index);
+  return (
+    <div className="filter-connector">
+      <Button
+        variant="ghost"
+        // The name opens with the word on the button, so a reader who says
+        // "click or" reaches it (WCAG 2.5.3), and goes on to say what it does.
+        aria-label={t(and ? "filters.connector.and" : "filters.connector.or", {
+          word,
+          other: t(and ? "filters.join.or" : "filters.join.and"),
+        })}
+        disabled={groupDepth(flipped.tree) > MAX_GROUP_DEPTH}
+        // The reader regrouped these rows, so their proposed rows are theirs.
+        onClick={() => onChange(ownGroup(flipped.tree, flipped.scope))}
+      >
+        {word}
+      </Button>
+    </div>
+  );
+}
+
+/**
+ * Flips one group's join. A group joined the other way is a group the reader
+ * rewrote, so its proposed rows are theirs now, as an edited row is.
+ */
+function switchJoin(tree: Node, groupID: string): Node {
+  return ownGroup(rootGroup(toggleJoin(tree, groupID)), groupID);
+}
+
+/**
+ * How a group grows: another condition, or a nested group of the opposite
+ * join. The nested group arrives holding a condition, because an empty one
+ * stops the count until it is filled.
+ *
+ * Depth stops the offer at the engine's nesting bound: a fifth level would be
+ * a tree the server refuses with `filter_too_deep`.
+ */
+function GroupFoot({
+  group,
+  fields,
+  depth,
+  tree,
+  onChange,
+}: NodeProps & Readonly<{ group: Group }>) {
+  const t = useT();
+  const nested = depth > 1;
+  // A group beside nothing would only wrap the whole filter in one more box,
+  // so the offer waits for the first condition.
+  const canNest = group.children.length >= 1 && depth < MAX_GROUP_DEPTH;
+  return (
+    <div className="filter-group-foot">
+      <Button
+        variant="link"
+        onClick={() =>
+          onChange(addToGroup(tree, group.id, firstClause(fields)))
+        }
+      >
+        {t(nested ? "filters.addToGroup" : "filters.addClause")}
+      </Button>
+      {canNest && (
+        <Button
+          variant="link"
+          onClick={() =>
+            onChange(
+              addToGroup(
+                tree,
+                group.id,
+                newGroup(group.join === "and" ? "or" : "and", [
+                  firstClause(fields),
+                ]),
+              ),
+            )
+          }
+        >
+          {t(nested ? "filters.addGroupToGroup" : "filters.addGroup")}
+        </Button>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The engine's nesting bound. The tree module does not enforce it — the server
+ * does, and this is the UI's copy of a number whose authority is
+ * `storekit.PredicateMaxDepth`. It stops OFFERING what would be refused; the
+ * refusal itself stays the server's.
+ */
+const MAX_GROUP_DEPTH = 4;

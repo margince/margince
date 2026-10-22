@@ -81,6 +81,19 @@ func TestValidate_PicklistOptionWithInvalidUTF8Rejected(t *testing.T) {
 	}
 }
 
+func TestValidate_PicklistOptionWithNoVisibleTextRejected(t *testing.T) {
+	// A null member of the options list decodes to "".
+	for _, option := range []string{"", "  "} {
+		errs := Validate(FieldSpec{
+			Object: "deal", Label: "Route", Type: TypePicklist,
+			Options: []string{"direct", option}, Source: "manual",
+		})
+		if !hasFieldError(errs, "options", "invalid_characters") {
+			t.Errorf("option %q: expected options/invalid_characters, got %+v", option, errs)
+		}
+	}
+}
+
 func TestValidate_RequiresSource(t *testing.T) {
 	errs := Validate(FieldSpec{Object: "deal", Label: "X", Type: TypeText})
 	if !hasFieldError(errs, "source", "required") {
@@ -346,9 +359,9 @@ func TestFieldTypes_AgreesWithThePortsClosedSet(t *testing.T) {
 // its cf_* columns and a contract shape that carries them — is derived in
 // fieldobjects_test.go rather than restated here.
 func TestFieldObjects_IsTheExplicitTargetSet(t *testing.T) {
-	want := []string{"contact", "company", "deal", "lead", "project", "contract"}
+	want := []string{"contact", "company", "deal", "lead", "project", "activity", "contract"}
 	if len(FieldObjects) != len(want) {
-		t.Fatalf("FieldObjects = %v, want %v — activity and relationship are excluded for want of "+
+		t.Fatalf("FieldObjects = %v, want %v — relationship is excluded for want of "+
 			"wire carriage and store wiring; see the engine's own comment", FieldObjects, want)
 	}
 	for i, w := range want {

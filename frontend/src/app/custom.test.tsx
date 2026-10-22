@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import { Users } from "lucide-react";
 import { describe, expect, it } from "vitest";
 import type { MessageKey } from "../i18n/en";
+import { isScreen, parseHash } from "../lib/router";
 import {
   buildRegistry,
   CUSTOM_SCREEN,
@@ -16,7 +17,6 @@ import {
   findCustomScreen,
   resolveCustomLabel,
 } from "./custom";
-import { isScreen, parseHash } from "./router";
 import { navEntryHref } from "./subnav";
 
 // The fork seam, from both ends.
@@ -68,13 +68,11 @@ describe("upstream ships the seam empty", () => {
 
 // The reading half, driven over a registry a fork would produce.
 //
-// The registry itself cannot be faked: `import.meta.glob` is resolved by Vite at
-// build time from a literal, so there is no way to point it at a fixture. What
-// the readers take instead is the registry as an argument — the shape
-// app/extensions.ts uses, and for its stated reason: upstream's is empty by
-// construction, so a reader closed over the module binding could only ever be
-// exercised on its miss path, and every answer it gave a fork would be one
-// nothing here had ever run.
+// The registry itself cannot be faked. `import.meta.glob` is resolved by Vite at
+// build time from a literal, so it cannot point at a fixture. The readers take
+// the registry as an argument instead, as lib/extensions.ts does. Upstream's
+// registry is empty by construction. A reader closed over the module binding
+// could only run its miss path, so its answers to a fork would be untested.
 describe("a fork's screen reaches the rail, the palette and the router", () => {
   const warranty: CustomNavScreen & CustomPaletteScreen = {
     key: "warranty",
@@ -204,16 +202,16 @@ describe("the glob and the documented layout are the same layout", () => {
   const pattern = /import\.meta\.glob<[^>]*>\(\s*"([^"]+)"/.exec(source)?.[1];
 
   it("globs the directory a fork is told to write in", () => {
-    // The DIRECTORY, not just that some directory exists: a glob pointed at
-    // `../screens/other/*/screen.tsx` would pass a file-name check, because the
-    // README's example ends in `screen.tsx` too — and a fork following the
-    // README would put its screens somewhere nothing looks.
+    // The directory, not just that some directory exists. A glob pointed at
+    // `../other/*/screen.tsx` would pass a file-name check, because the
+    // README's example ends in `screen.tsx` too. A fork following the README
+    // would then put its screens where nothing looks.
     expect(pattern).toBeDefined();
     const readme = readFileSync(
-      fileURLToPath(new URL("../screens/custom/README.md", import.meta.url)),
+      fileURLToPath(new URL("../custom/README.md", import.meta.url)),
       "utf8",
     );
-    const documented = /(src\/screens\/[a-z-]+)\/[a-z-]+\/[a-z-]+\.tsx/.exec(
+    const documented = /(src\/[a-z-]+)\/[a-z-]+\/[a-z-]+\.tsx/.exec(
       readme,
     )?.[1];
     if (documented === undefined || pattern === undefined) {
@@ -246,13 +244,11 @@ describe("the glob and the documented layout are the same layout", () => {
 
   it("globs the file name the README tells a fork to write", () => {
     const readme = readFileSync(
-      fileURLToPath(new URL("../screens/custom/README.md", import.meta.url)),
+      fileURLToPath(new URL("../custom/README.md", import.meta.url)),
       "utf8",
     );
     // The path in the README's own worked example, which is what a fork copies.
-    const documented = /src\/screens\/custom\/[a-z-]+\/([a-z-]+\.tsx)/.exec(
-      readme,
-    )?.[1];
+    const documented = /src\/custom\/[a-z-]+\/([a-z-]+\.tsx)/.exec(readme)?.[1];
     if (documented === undefined || pattern === undefined) {
       throw new Error(
         "the README names no screen file, or custom.ts globs none",

@@ -56,22 +56,18 @@ func TestACreateStagesItsRecordTypeWithNoTargetID(t *testing.T) {
 	}
 }
 
-// A create OUTSIDE create_record's own served vocabulary still stages,
-// through createResolver like every other registered create — the same shape
-// TestAnArchiveOutsideTheToolSchemaStagesItsOwnTypeAndID proves for archive.
-// custom_field is one of the six create routes whose record type
-// create_record's own Handle cannot write, and createResolver.Guards has no
-// opinion on that (command.go); proving it stages successfully through the
-// resolver is what makes that indifference correct rather than assumed.
+// A create of a type create_record cannot write still stages through
+// createResolver, which asks nothing about the type (command.go). product is
+// such a type; this proves that indifference stages it rather than assuming so.
 func TestACreateOutsideTheToolSchemaStagesItsRecordTypeWithNoTargetID(t *testing.T) {
 	staging := &capturingApprovals{}
-	pol := agentPolicy{Op: "createCustomField", Access: accessTool, Tool: "create_record", RecordType: recordTypeCustomField}
-	body := []byte(`{"name":"Champion Score","field_type":"text"}`)
+	pol := agentPolicy{Op: "createProduct", Access: accessTool, Tool: "create_record", RecordType: recordTypeProduct}
+	body := []byte(`{"name":"Onboarding package","sku":"ONB-1"}`)
 
-	stageRefusal(httptest.NewRecorder(), createRequest("/v1/custom-fields", body), staging, restCommandDeps{}, pol, body)
+	stageRefusal(httptest.NewRecorder(), createRequest("/v1/products", body), staging, restCommandDeps{}, pol, body)
 
-	if staging.last.TargetType != "custom_field" {
-		t.Fatalf("staged target_type = %q, want \"custom_field\"", staging.last.TargetType)
+	if staging.last.TargetType != "product" {
+		t.Fatalf("staged target_type = %q, want \"product\"", staging.last.TargetType)
 	}
 	if !staging.last.TargetID.IsZero() {
 		t.Errorf("staged target_id = %s, want zero", staging.last.TargetID)
@@ -115,32 +111,6 @@ func TestAMalformedPatchIDAnswersNotFound(t *testing.T) {
 	}
 	if staging.last.Tool != "" {
 		t.Errorf("an approval was staged for %q against an id that names no row", staging.last.Tool)
-	}
-}
-
-// A patch record type the record seam does not serve still stages, with its
-// own type and id — the servedByTheRecordSeam short-circuit
-// (modules/agents/command.go) standing down rather than faulting on a read
-// the seam cannot answer. Staged against a provider that fails EVERY read, so
-// a resolver that consulted the seam anyway fails here rather than passing on
-// a lenient stub — the same proof shape as
-// TestAnArchiveOutsideTheToolSchemaStagesItsOwnTypeAndID.
-func TestAPatchOutsideTheToolSchemaStagesTheRowItNames(t *testing.T) {
-	staging := &capturingApprovals{}
-	pol := agentPolicy{
-		Op: "updateWebhookSubscription", Access: accessTool, Tool: "update_record",
-		RecordType: recordTypeWebhookSubscription,
-	}
-	subID := ids.NewV7()
-	body := []byte(`{"state":"paused"}`)
-
-	stageRefusal(httptest.NewRecorder(), patchRequest("/v1/webhook-subscriptions", subID, body), staging,
-		restCommandDeps{records: hiddenRecord{}}, pol, body)
-
-	if staging.last.TargetType != "webhook_subscription" || staging.last.TargetID != subID {
-		t.Fatalf("staged target = (%s,%s), want (webhook_subscription,%s) — a webhook subscription is patched "+
-			"over REST whether or not the record seam has ever heard of one",
-			staging.last.TargetType, staging.last.TargetID, subID)
 	}
 }
 

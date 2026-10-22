@@ -5,11 +5,11 @@ import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import { useMe } from "../screens/common";
-import { useCan } from "./capability";
-import { useLicensePosture } from "./license-posture";
+import { useCan } from "../lib/capability";
+import { useLicensePosture } from "../lib/license-posture";
+import { useMe } from "../lib/session";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { LicenseBanner } from "./licensebanner";
-import { type GrantSpec, meFixture } from "./mefixture";
 
 type LicenseState = components["schemas"]["LicenseEntitlement"]["state"];
 

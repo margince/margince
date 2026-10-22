@@ -10,7 +10,6 @@ package deals
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -222,43 +221,18 @@ func (s *Store) ListStages(ctx context.Context, pipelineID *ids.PipelineID, arch
 		return nil, err
 	}
 	var out []crmcontracts.Stage
-	err := s.Tx(ctx, func(tx pgx.Tx) error {
+	err := s.Tx(ctx, func(tx pgx.Tx) (err error) {
 		var args []any
-		arg := func(v any) int { args = append(args, v); return len(args) }
 		where := predicateAlways
 		if pipelineID != nil {
-			where = storekit.SQLf("pipeline_id = $%d", arg(*pipelineID))
+			args = append(args, *pipelineID)
+			where = storekit.SQLf("s.pipeline_id = $%d", len(args))
 		}
 		if archived == storekit.LiveOnly {
-			where += " AND archived_at IS NULL"
+			where += " AND s.archived_at IS NULL"
 		}
-		rows, err := tx.Query(ctx, storekit.SQLf(
-			`SELECT id FROM stage WHERE %s ORDER BY pipeline_id, position`, where,
-		), args...)
-		if err != nil {
-			return err
-		}
-		var stageIDs []ids.StageID
-		for rows.Next() {
-			var id ids.StageID
-			if err := rows.Scan(&id); err != nil {
-				rows.Close()
-				return err
-			}
-			stageIDs = append(stageIDs, id)
-		}
-		rows.Close()
-		if err := rows.Err(); err != nil {
-			return err
-		}
-		for _, id := range stageIDs {
-			stage, err := readStage(ctx, tx, id, storekit.IncludeArchived)
-			if err != nil {
-				return err
-			}
-			out = append(out, stage)
-		}
-		return nil
+		out, err = readStages(ctx, tx, where, args)
+		return err
 	})
 	return out, err
 }
@@ -317,6 +291,11 @@ func (s *Store) UpdateStage(ctx context.Context, id ids.StageID, in UpdateStageI
 		}
 		if err := refuseFlipUnderDecidedDeals(ctx, tx, id, current.semantic, in.Semantic); err != nil {
 			return err
+		}
+		if in.Position != nil && *in.Position != current.position {
+			if err := refuseMovingAGatedLadder(ctx, tx, pipelineID); err != nil {
+				return err
+			}
 		}
 		// An update naming no field changes nothing, and an audit row for it
 		// would record a transition that never happened.
@@ -396,27 +375,6 @@ func stageUpdatedPayload(pipelineID ids.PipelineID, in UpdateStageInput) crmcont
 		Semantic:       in.Semantic,
 		WinProbability: committedWinProbability(in),
 	}
-}
-
-func readStage(ctx context.Context, tx pgx.Tx, id ids.StageID, archived storekit.ArchivedFilter) (crmcontracts.Stage, error) {
-	q := `SELECT id, pipeline_id, name, position, semantic, win_probability, created_at, updated_at, archived_at
-	      FROM stage WHERE id = $1`
-	if archived == storekit.LiveOnly {
-		q += ` AND archived_at IS NULL`
-	}
-	var out crmcontracts.Stage
-	var stageID, pipelineID ids.UUID
-	err := tx.QueryRow(ctx, q, id).Scan(&stageID, &pipelineID, &out.Name, &out.Position,
-		&out.Semantic, &out.WinProbability, &out.CreatedAt, &out.UpdatedAt, &out.ArchivedAt)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return crmcontracts.Stage{}, apperrors.ErrNotFound
-	}
-	if err != nil {
-		return crmcontracts.Stage{}, err
-	}
-	out.Id = openapi_types.UUID(stageID)
-	out.PipelineId = openapi_types.UUID(pipelineID)
-	return out, nil
 }
 
 // codeTerminalStageHoldsOpenDeals is what a semantic flip answers when the

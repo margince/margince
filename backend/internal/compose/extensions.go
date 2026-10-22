@@ -12,8 +12,10 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
+	"github.com/margince/margince/backend/internal/shared/ports/compliancedocs"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
+	"github.com/margince/margince/backend/internal/shared/ports/subjectrightsrules"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -32,6 +34,9 @@ func RegisterExtensions(exts []extension.Extension, verbs []extension.Verb, jobD
 		return err
 	}
 	if err := validateVerbSet(verbs); err != nil {
+		return err
+	}
+	if err := preflightEntryObjects(exts, verbs); err != nil {
 		return err
 	}
 	// Do every fallible step before applying anything, so the whole
@@ -69,6 +74,10 @@ func RegisterExtensions(exts []extension.Extension, verbs []extension.Verb, jobD
 		for _, r := range e.Messaging {
 			messagingrules.Register(r)
 		}
+		for _, r := range e.SubjectRights {
+			subjectrightsrules.Register(r)
+		}
+		compliancedocs.Register(e.Documents)
 	}
 	// After the jurisdiction packs, and still in the apply phase: the RBAC
 	// vocabulary is validate-then-apply inside RegisterRbacObjects itself (a set
@@ -189,6 +198,7 @@ func validateExtensionSet(exts []extension.Extension) error {
 	namespaces := make(map[string]extension.Name, len(exts))
 	packCodes := make(map[jurisdiction.Code]extension.Name, len(exts))
 	messagingCodes := make(map[jurisdiction.Code]extension.Name, len(exts))
+	subjectRightsCodes := make(map[jurisdiction.Code]extension.Name, len(exts))
 	// Which provider each unit has claimed — a fact about the composed SET, so
 	// it is accumulated across the loop rather than asked of one declaration.
 	//
@@ -201,6 +211,8 @@ func validateExtensionSet(exts []extension.Extension) error {
 	// Which mounted anonymous path each unit has asked for — a fact about the
 	// composed SET, accumulated across the loop for claimedProviders' reason.
 	inboundMounts := make(map[string]extension.Name)
+	financeProviders := make(map[string]extension.Name)
+	oauthApps := make(map[string]extension.Name)
 	for _, e := range exts {
 		if err := e.Name.Validate(); err != nil {
 			return fmt.Errorf("compose: %w", err)
@@ -224,6 +236,12 @@ func validateExtensionSet(exts []extension.Extension) error {
 		if err := preflightMessagingRules(e, messagingCodes); err != nil {
 			return err
 		}
+		if err := preflightSubjectRights(e, subjectRightsCodes); err != nil {
+			return err
+		}
+		if err := preflightDocuments(e); err != nil {
+			return err
+		}
 		if err := preflightTools(e); err != nil {
 			return err
 		}
@@ -239,16 +257,28 @@ func validateExtensionSet(exts []extension.Extension) error {
 		if err := preflightSubscriptions(e); err != nil {
 			return err
 		}
+		if err := preflightSystemReads(e); err != nil {
+			return err
+		}
 		if err := preflightIngress(e); err != nil {
 			return err
 		}
 		if err := preflightChannels(e, claimedProviders); err != nil {
 			return err
 		}
+		if err := preflightFinanceSources(e, financeProviders); err != nil {
+			return err
+		}
 		if err := preflightInbound(e); err != nil {
 			return err
 		}
 		if err := reserveInboundMounts(e, inboundMounts); err != nil {
+			return err
+		}
+		if err := preflightSurfaces(e); err != nil {
+			return err
+		}
+		if err := preflightOAuthApps(e, oauthApps); err != nil {
 			return err
 		}
 	}

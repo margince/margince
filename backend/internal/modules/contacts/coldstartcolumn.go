@@ -50,28 +50,9 @@ func applyUnclaimedCompanyColumn(ctx context.Context, tx pgx.Tx, companyID ids.C
 	if !ok {
 		return false, fmt.Errorf("contacts: %q is not a coldstart-fillable column", column)
 	}
-	authority := fillUnclaimed
-	if column == columnDescription {
-		held, err := descriptionHeldByHuman(ctx, tx, companyID)
-		if err != nil {
-			return false, err
-		}
-		if held {
-			return false, nil
-		}
-		authority = replaceStanding
-		// The same bound the form applies, for the same reason: the header is
-		// one rendering of a longer field, and a value too long for the line is
-		// a value to shorten rather than a write to drop. A read-back that
-		// skipped it left the header blank on exactly the companies whose site
-		// said the most.
-		value = headerLine(value)
-	}
-	// Nothing to fill. Writing "" here would satisfy the fill arm's own
-	// WHERE legal_name IS NULL once and never again: the column would read as
-	// answered while holding nothing, and no later read could correct it.
-	if value == "" {
-		return false, nil
+	authority, value, err := unclaimedCompanyColumn(ctx, tx, companyID, column, value)
+	if err != nil || value == "" {
+		return false, err
 	}
 	tag, err := tx.Exec(ctx, write.statementFor(authority), companyID, value)
 	if err != nil {
@@ -80,12 +61,23 @@ func applyUnclaimedCompanyColumn(ctx context.Context, tx pgx.Tx, companyID ids.C
 	return tag.RowsAffected() == 1, nil
 }
 
-// carriesCompanyName reports whether this apply could write a name column, and so
-// whether it owes the company-name lock.
-//
-// Presence of the field is the test, because that is what the loop in
-// applyEvidenceFieldsWithOverwrite acts on: writeCompanyColumn's overwrite arm
-// matches on IS DISTINCT FROM, so an apply that clears legal_name to "" still
-// writes the row — taking its row lock — and still reaches the re-check, which
-// wants the name lock. Anything narrower than presence lets that apply take the
-// two in the order that deadlocks against a human rename.
+func unclaimedCompanyColumn(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, column, value string) (companyWriteAuthority, string, error) {
+	authority := fillUnclaimed
+	if column == columnDescription {
+		held, err := descriptionHeldByHuman(ctx, tx, companyID)
+		if err != nil {
+			return 0, "", err
+		}
+		if held {
+			return 0, "", nil
+		}
+		authority = replaceStanding
+		// The company header uses the same bounded text as the human form.
+		value = headerLine(value)
+	}
+	// An empty string must not permanently claim an unanswered column.
+	if value == "" {
+		return 0, "", nil
+	}
+	return authority, value, nil
+}

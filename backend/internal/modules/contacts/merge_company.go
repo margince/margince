@@ -11,6 +11,7 @@ package contacts
 import (
 	"context"
 	"fmt"
+	"maps"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -50,7 +51,7 @@ func (s *Store) MergeCompany(ctx context.Context, sourceID, targetID ids.Company
 	var out crmcontracts.Company
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = mergeCompanyTx(ctx, tx, sourceID, targetID, ifVersion, active)
+		out, err = s.mergeCompanyTx(ctx, tx, sourceID, targetID, ifVersion, active)
 		return err
 	})
 	return out, err
@@ -64,7 +65,7 @@ func (s *Store) MergeCompany(ctx context.Context, sourceID, targetID ids.Company
 // write and this merge together. The dedupe queue is the one that needs it: it
 // marks a candidate 'merged' and then merges, and two transactions there leave
 // a candidate claiming a merge that never happened (#1970).
-func mergeCompanyTx(
+func (s *Store) mergeCompanyTx(
 	ctx context.Context, tx pgx.Tx, sourceID, targetID ids.CompanyID, ifVersion *int64, active []fieldcatalog.Column,
 ) (crmcontracts.Company, error) {
 	// A merge fills the survivor's legal_name from the record it retires
@@ -86,26 +87,18 @@ func mergeCompanyTx(
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
-	// AFTER the pair lock, so the answer cannot change under the merge, and
-	// before anything is relinked. Either endpoint: merging the anchor away
-	// retires it, and merging a customer INTO it folds their contacts, deals
-	// and history onto the installation's own company with no way to tell
-	// them apart afterwards.
-	// Neither direction is open when one side is the anchor, so neither
-	// message may point at the other direction as the way out: archiving the
-	// duplicate is the only move that actually works.
-	if err := refuseIfAnchor(ctx, tx, sourceID, "id", "it cannot be merged into another company. Archive the duplicate instead, and edit this one on the company page"); err != nil {
-		return crmcontracts.Company{}, err
-	}
-	if err := refuseIfAnchor(ctx, tx, targetID, "target_id", "nothing can be merged into it. Archive the duplicate instead, and edit this one on the company page"); err != nil {
-		return crmcontracts.Company{}, err
-	}
-	if err := refuseWhenBothCarryProjects(ctx, tx, sourceID, targetID); err != nil {
+	if err := companyMergeAllowed(ctx, tx, sourceID, targetID); err != nil {
 		return crmcontracts.Company{}, err
 	}
 	targetIsPartner, err := relinkCompanyAssociations(ctx, tx, sourceID, targetID)
 	if err != nil {
 		return crmcontracts.Company{}, err
+	}
+	if err := s.carryGrantsTx(ctx, tx, "company", sourceID.UUID, targetID.UUID); err != nil {
+		return crmcontracts.Company{}, fmt.Errorf("carry the merged-away company's grants: %w", err)
+	}
+	if err := archiveMergedAway(ctx, tx, "company", sourceID.UUID, targetID.UUID); err != nil {
+		return crmcontracts.Company{}, fmt.Errorf("retire merged-away company: %w", err)
 	}
 	filled, err := fillCompanySurvivorship(ctx, tx, src, tgt, targetIsPartner, tgtLock)
 	if err != nil {
@@ -144,12 +137,9 @@ func mergeCompanyTx(
 // edges, activity/list/tag rows, and the deal/hierarchy/partner references
 // — and reports whether the survivor ends up holding a partner row.
 func relinkCompanyAssociations(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.CompanyID) (bool, error) {
-	if _, err := relinkDemotingPrimary(ctx, tx, `
-		UPDATE company_domain a SET company_id = $2,
-		  is_primary = a.is_primary AND NOT EXISTS (
-		    SELECT 1 FROM company_domain b
-		    WHERE b.company_id = $2 AND b.is_primary AND b.archived_at IS NULL)
-		WHERE a.company_id = $1 AND a.archived_at IS NULL`, sourceID.UUID, targetID.UUID); err != nil {
+	if _, err := relinkDemotingPrimary(ctx, tx,
+		`UPDATE company_domain a SET company_id = @target, is_primary = `+mergeDomainPrimary+` WHERE `+mergeCompanyDomainSource,
+		sourceID.UUID, targetID.UUID); err != nil {
 		return false, fmt.Errorf("relink domains: %w", err)
 	}
 	if err := relinkCompanyEdges(ctx, tx, sourceID, targetID); err != nil {
@@ -177,26 +167,9 @@ func relinkCompanyAssociations(ctx context.Context, tx pgx.Tx, sourceID, targetI
 // extension row with nothing saying it is a partner, which is exactly the
 // half-state the enforced invariant exists to make impossible.
 func fillCompanySurvivorship(ctx context.Context, tx pgx.Tx, src, tgt crmcontracts.Company, targetIsPartner bool, tgtLock storekit.RowLock) (map[string]any, error) {
-	p := storekit.NewPatch()
-	fillString(p, fieldLegalName, tgt.LegalName, src.LegalName)
-	fillString(p, "description", tgt.Description, src.Description)
-	fillString(p, "industry", tgt.Industry, src.Industry)
-	// The postal address moves as ONE block, on the same rule as the contact
-	// merge (buildSurvivorshipPatch): a survivor with no address at all takes
-	// the retired record's whole address, and a survivor that has one keeps
-	// every line of it. Filling line by line would build an address that
-	// neither company ever had — this city with that postcode — which is worse
-	// than the blank it replaced, because it looks deliberate.
-	if tgt.Address == nil && src.Address != nil {
-		p.Set("address_line1", nil, src.Address.Line1)
-		p.Set("address_line2", nil, src.Address.Line2)
-		p.Set("address_city", nil, src.Address.City)
-		p.Set("address_region", nil, src.Address.Region)
-		p.Set("address_postal_code", nil, src.Address.PostalCode)
-		p.Set("address_country", nil, src.Address.Country)
-	}
+	p := buildCompanySurvivorshipPatch(tgt, src)
 	if targetIsPartner {
-		if err := ensureCompanyRelationshipType(ctx, tx, ids.CompanyID{UUID: ids.UUID(tgt.Id)},
+		if _, err := ensureCompanyRelationshipType(ctx, tx, ids.CompanyID{UUID: ids.UUID(tgt.Id)},
 			relationshipTypePartner, "system", "system:merge"); err != nil {
 			return nil, err
 		}
@@ -206,18 +179,13 @@ func fillCompanySurvivorship(ctx context.Context, tx pgx.Tx, src, tgt crmcontrac
 			return nil, fmt.Errorf("apply survivorship fill: %w", err)
 		}
 	}
-	// An inherited description arrives with its author still attached. Without
-	// this the survivor holds a contact's sentence that field_provenance says
-	// nobody wrote, and the next site read of the survivor replaces it — the
-	// merge would quietly strip a human's claim on words it did not change.
-	// The RETIRED record's author is carried across, not the contact running the
-	// merge: a merge moves a value, it does not author one.
-	if _, inherited := p.After()["description"]; inherited {
-		if err := carryDescriptionAuthor(ctx, tx,
-			ids.CompanyID{UUID: ids.UUID(src.Id)},
-			ids.CompanyID{UUID: ids.UUID(tgt.Id)}); err != nil {
-			return nil, err
-		}
+	// An inherited value arrives with its author still attached. Without this
+	// the survivor holds a sentence that field_provenance says nobody wrote, and
+	// the next site read replaces it. The retired record's author is carried,
+	// not the contact running the merge: a merge moves a value, it authors none.
+	if err := carryFieldAuthors(ctx, tx,
+		ids.CompanyID{UUID: ids.UUID(src.Id)}, ids.CompanyID{UUID: ids.UUID(tgt.Id)}, p.After()); err != nil {
+		return nil, err
 	}
 	return p.After(), nil
 }
@@ -226,12 +194,9 @@ func fillCompanySurvivorship(ctx context.Context, tx pgx.Tx, src, tgt crmcontrac
 // write shape — audit row plus company.merged event in the one
 // transaction — then returns the reloaded survivor.
 func finalizeCompanyMerge(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.CompanyID, filled map[string]any, active []fieldcatalog.Column) (crmcontracts.Company, error) {
-	if err := archiveMergedAway(ctx, tx, "company", sourceID.UUID, targetID.UUID); err != nil {
-		return crmcontracts.Company{}, fmt.Errorf("retire merged-away company: %w", err)
-	}
 	auditID, err := storekit.Audit(ctx, tx, "merge", "company", sourceID.UUID,
 		map[string]any{auditKeyMergedInto: nil},
-		map[string]any{auditKeyMergedInto: targetID, auditKeyFilled: filled})
+		map[string]any{auditKeyMergedInto: targetID, auditKeyFilled: filledColumns(filled)})
 	if err != nil {
 		return crmcontracts.Company{}, fmt.Errorf("audit company merge: %w", err)
 	}
@@ -240,6 +205,13 @@ func finalizeCompanyMerge(ctx context.Context, tx pgx.Tx, sourceID, targetID ids
 		MergedIntoId: openapi_types.UUID(targetID.UUID),
 	}); err != nil {
 		return crmcontracts.Company{}, fmt.Errorf("emit company.merged: %w", err)
+	}
+	before := map[string]any{auditKeyMergedFrom: nil}
+	after := map[string]any{auditKeyMergedFrom: sourceID.UUID}
+	maps.Copy(before, heldNothing(filled))
+	maps.Copy(after, filled)
+	if _, err := storekit.Audit(ctx, tx, "merge", "company", targetID.UUID, before, after); err != nil {
+		return crmcontracts.Company{}, fmt.Errorf("audit company merge on the survivor: %w", err)
 	}
 	out, err := readCompany(ctx, tx, targetID, storekit.LiveOnly, active)
 	if err != nil {

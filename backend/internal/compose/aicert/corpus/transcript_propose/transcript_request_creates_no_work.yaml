@@ -1,0 +1,28 @@
+{
+  "name": "transcript_request_creates_no_work",
+  "task": "transcript_propose",
+  "site": "next_steps",
+  "source": "hand_authored",
+  "sanitized_by": "hand_authored/codex",
+  "fixture": [
+    "Mira: Please send the proposal. Nobody has agreed to take that task yet."
+  ],
+  "expect": {
+    "outcome": "accepted",
+    "answer": [
+      {
+        "optional": true,
+        "line": 1,
+        "due_date": "",
+        "meaning": {
+          "state": "request",
+          "condition": "",
+          "deadline_precision": "none",
+          "deadline_quote": ""
+        }
+      }
+    ],
+    "judge": "none",
+    "judge_none_reason": "No one agreed to do work. Omission is valid; a reported reading must preserve the absence of a commitment and cannot invent a deadline."
+  }
+}

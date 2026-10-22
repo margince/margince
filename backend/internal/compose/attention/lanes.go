@@ -23,8 +23,9 @@ import (
 // CountPending is separate because the lane is bounded and the count is not: a
 // reader with forty decisions is told forty, then shown the nine worth a sitting.
 type Approvals interface {
+	PendingInScope(ctx context.Context, in ApprovalQuery, named []ids.ApprovalID) (map[ids.ApprovalID]bool, error)
 	ListWire(ctx context.Context, in ApprovalQuery) ([]crmcontracts.Approval, error)
-	CountPending(ctx context.Context) (int, error)
+	CountPending(ctx context.Context, in ApprovalQuery) (int, error)
 }
 
 // MachineSender answers whether an address belongs to a sending system rather
@@ -49,8 +50,11 @@ type StagedFacts struct {
 // the engine's own input on purpose: the feed reads one page of one status and
 // takes no part in choosing scope, which stays the engine's to decide.
 type ApprovalQuery struct {
-	Status string
-	Limit  int
+	RequestedForReader bool
+	RequestedForOwners []ids.UUID
+	OnlyUnassigned     bool
+	Status             string
+	Limit              int
 }
 
 // Duplicates is the dedupe queue, read through the contacts module. Every method
@@ -162,6 +166,8 @@ type Tasks interface {
 
 // Task is one piece of agreed work.
 type Task struct {
+	SourceActivityID       *ids.UUID
+	Recipients             []crmcontracts.WorklistPromiseRecipient
 	LeadResponseEscalation bool
 	ID                     ids.UUID
 	Subject                string
@@ -243,8 +249,9 @@ type FailedEffects interface {
 
 // FailedEffect is one approved decision whose promised work never happened.
 type FailedEffect struct {
-	ID   ids.UUID
-	Kind string
+	ID      ids.UUID
+	Kind    string
+	Summary *string
 	// Sentence is the server's own line about what did not run, written for
 	// the reader when the failure was recorded.
 	Sentence string
@@ -253,6 +260,7 @@ type FailedEffect struct {
 	// and the card offers `open` only when it did.
 	TargetType string
 	TargetID   ids.UUID
+	Retryable  bool // approving once more would run the work again
 }
 
 // DSRs reads the data-subject requests nobody has resolved, soonest legal
@@ -298,6 +306,9 @@ type NoticeCase struct {
 	DueAt     time.Time
 	// OpenedAt is when the duty was recorded; see classifyLegalDeadline.
 	OpenedAt time.Time
+	// Acquisition is the evidence the deadline was computed from, nil when none
+	// resolves, so a card never shows a bare date as authoritative.
+	Acquisition *crmcontracts.NoticeAcquisition
 }
 
 // Briefing is the overnight brief's queue for the acting rep, best-ranked
@@ -379,6 +390,7 @@ type Commitments interface {
 // checkable against what was actually written, and a card that showed only the
 // paraphrase would be asking the reader to trust the extractor.
 type Commitment struct {
+	ActivityID  ids.UUID
 	ID          ids.UUID
 	ContactID   ids.UUID
 	Body        string
@@ -418,6 +430,7 @@ type DealFacts interface {
 // DealFigures is what a card needs to state a deal's commercial case: what it
 // is worth, when it was meant to land, and who answers for it.
 type DealFigures struct {
+	Closed               bool
 	CloseDateProvisional *bool
 	ForecastCategory     *string
 	StageID              ids.UUID
@@ -446,11 +459,12 @@ type Notices interface {
 
 // UnreadNotice is one line still waiting to be seen.
 type UnreadNotice struct {
-	Origin  *crmcontracts.NoticeOrigin
-	ID      ids.UUID
-	Kind    string
-	Subject string
-	Body    string
+	ApprovalID *ids.ApprovalID
+	Origin     *crmcontracts.NoticeOrigin
+	ID         ids.UUID
+	Kind       string
+	Subject    string
+	Body       string
 	// Target names the record the notice is about, when it names one. Empty
 	// type means it names none — a capture backlog, a coach's word — and the
 	// row then carries no subject, which is what it carried before any notice
@@ -458,39 +472,4 @@ type UnreadNotice struct {
 	TargetType string
 	TargetID   ids.UUID
 	CreatedAt  time.Time
-}
-
-// Introductions is the asks waiting on THIS reader to answer — a colleague
-// wanting them to open a door.
-//
-// Per-user like Notices, and for the same reason: the ask names one colleague,
-// so there is no wider tier for it to widen to. The `team` and `all` scopes
-// reach shared record-bearing work, not the question of whose favour somebody
-// else asked for.
-//
-// Without this lane an ask reached its colleague only if they happened to open
-// that contact's Network tab, so one nobody went looking for expired unanswered
-// — which reads to the requester exactly like a refusal.
-type Introductions interface {
-	Pending(ctx context.Context, limit int) ([]PendingIntroduction, error)
-}
-
-// PendingIntroduction is one colleague's ask, as the queue draws it.
-//
-// It names the CONTACT the introduction would be to, which is what the
-// colleague is deciding about. No display name travels: resolving one is a read
-// of that contact's record, and fillSubjectLabels already makes it under the
-// reader's own grants (labels.go). A name carried here would be a second,
-// ungated answer to the question that pass exists to ask.
-type PendingIntroduction struct {
-	ID        ids.UUID
-	ContactID ids.UUID
-	// Reason is the requester's own sentence for why the ask is worth making,
-	// written by them at the time. Never composed here: this queue puts no
-	// words in a colleague's mouth.
-	Reason      string
-	RequestedAt time.Time
-	// DueAt is when the ask lapses. It is what this lane orders by, so the one
-	// about to expire is the one a reader sees first.
-	DueAt time.Time
 }

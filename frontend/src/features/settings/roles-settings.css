@@ -1,0 +1,163 @@
+/* Every colour reads a design token and every gap the --space-* scale. */
+
+.roles-drawer-sub {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-block-start: var(--space-2);
+}
+
+.roles-drawer-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+}
+
+.roles-drawer-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.roles-drawer-body {
+  container: roles-drawer / inline-size;
+}
+
+.roles-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.roles-detail > p {
+  margin: 0;
+}
+
+/* The pinned first column matches the drawer's ground, not the page's, and
+   starts on the line the labels above it start on. */
+.roles-drawer-body .table-scroll-sticky > table > * > tr > :first-child {
+  padding-inline-start: 0;
+  background: var(--bgElevated);
+}
+
+/* A phone sheet fits all four verbs beside the names when the cells give up
+   their side padding, so no column hides past the edge. */
+@container roles-drawer (width < 36rem) {
+  .roles-drawer-body .grant-matrix > * > tr > :first-child {
+    padding-inline-end: var(--space-2);
+  }
+
+  .roles-drawer-body .grant-matrix > * > tr > :not(:first-child) {
+    padding-inline: var(--space-1);
+  }
+
+  .roles-drawer-body .grant-row-head {
+    min-inline-size: 6.5rem;
+  }
+}
+
+/* Where the grid fits, its header stays in view. A box that scrolls sideways
+   would hold the header to itself, so here the box lets the grid out. */
+@container roles-drawer (width >= 21rem) {
+  .roles-drawer-body .table-scroll:has(> .grant-matrix) {
+    overflow: visible;
+  }
+
+  .roles-drawer-body .grant-matrix > thead > tr > th {
+    position: sticky;
+    /* Up through the body's top padding, so no row shows above the header. */
+    top: calc(var(--space-5) * -1);
+    z-index: 2;
+    background: var(--bgElevated);
+    /* A collapsed border stays with the table, so the rule rides the cell. */
+    box-shadow: inset 0 -1px var(--borderStrong);
+  }
+}
+
+.roles-grants {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.roles-grants > .table-scroll {
+  align-self: stretch;
+}
+
+/* The three row scopes, each a radio over its one-line explanation. */
+.roles-scope {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.roles-scope-option {
+  display: flex;
+  flex-direction: column;
+}
+
+/* The row is one press target, so the button carries the row's inset and the
+   row none: pointing anywhere in it aims at the role. Specific enough to
+   outrank the section interval a first row after a body takes. */
+.panel > .panel-row.roles-row {
+  padding: 0;
+  container-type: inline-size;
+}
+
+.roles-row-press {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  inline-size: 100%;
+  padding: var(--space-3) var(--padPanel);
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.roles-row-press:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.roles-row-press[aria-current="true"] {
+  background: var(--bgInset);
+  box-shadow: inset 3px 0 var(--textPrimary);
+}
+
+.roles-row-press > .cell-stack {
+  flex: 1;
+  min-inline-size: 0;
+}
+
+.roles-row-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.roles-row-go {
+  flex: none;
+  color: var(--textSecondary);
+}
+
+/* A narrow row gives the name the width: the count stands over the badge. */
+@container (width < 30rem) {
+  .roles-row-facts {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--space-1);
+  }
+}

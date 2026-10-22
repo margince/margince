@@ -8,9 +8,9 @@ import {
   useMemo,
   useState,
 } from "react";
-import { STORAGE_KEYS, writeStored } from "../app/storage";
 import { pluralCategory } from "../format/plural";
 import { useDateTimePreferences } from "../format/preferences";
+import { STORAGE_KEYS, writeStored } from "../lib/storage";
 import { de } from "./de";
 import { en, type MessageKey } from "./en";
 import {
@@ -363,6 +363,13 @@ export function usePlural() {
 }
 
 export type PluralTranslator = ReturnType<typeof usePlural>;
+
+/** The reader's translators and locale, for a helper outside a component. */
+export type Words = Readonly<{
+  t: Translator;
+  plural: PluralTranslator;
+  locale: Locale;
+}>;
 
 /** `pluralKey` bound to the reader's locale, for a caller that carries keys. */
 export function usePluralKey() {

@@ -13,6 +13,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -24,6 +25,9 @@ import (
 // refusal nothing recognises and nothing reports.
 const codeRequired = "required"
 
+// codeInvalidEnum is the house code for a value outside a contract picklist.
+const codeInvalidEnum = "invalid_enum"
+
 // RequiredFieldError maps to 422 on both surfaces.
 type RequiredFieldError struct{ Field string }
 
@@ -32,6 +36,19 @@ func (e *RequiredFieldError) Error() string { return e.Field + " is required" }
 // FieldFault names the missing required field, on every surface.
 func (e *RequiredFieldError) FieldFault() (field, code, message string) {
 	return e.Field, codeRequired, e.Error()
+}
+
+// InvalidKindError maps to 422. It names the field the caller can correct,
+// which the generic constraint net cannot: a constraint name is schema.
+type InvalidKindError struct{ Kind string }
+
+func (e *InvalidKindError) Error() string {
+	return "activity kind " + e.Kind + " is not a kind this timeline carries"
+}
+
+// FieldFault refuses a kind outside the contract's list.
+func (e *InvalidKindError) FieldFault() (field, code, message string) {
+	return fieldKind, codeInvalidEnum, e.Error()
 }
 
 // ReservedMailIdentityError refuses a client write into the mail identity.
@@ -184,6 +201,7 @@ func activityUpdateInput(req crmcontracts.UpdateActivityRequest, ifVersion *int6
 		// mismatch with the same MeetingStatusKindError create raises.
 		MeetingStatus: meetingStatusArg(req.MeetingStatus),
 		IfVersion:     ifVersion,
+		CustomFields:  req.AdditionalProperties,
 	}
 }
 
@@ -278,9 +296,14 @@ func refuseReservedProvenance(req crmcontracts.CreateActivityRequest, adm proven
 }
 
 func logActivityInput(req crmcontracts.CreateActivityRequest, adm provenanceAdmission) (LogActivityInput, error) {
-	if req.Kind == "" {
-		return LogActivityInput{}, &RequiredFieldError{Field: "kind"}
+	if err := checkKind(string(req.Kind)); err != nil {
+		return LogActivityInput{}, err
 	}
+	source, err := httperr.RequireNonBlank("source", req.Source)
+	if err != nil {
+		return LogActivityInput{}, err
+	}
+	req.Source = source
 	if err := refuseReservedProvenance(req, adm); err != nil {
 		return LogActivityInput{}, err
 	}
@@ -326,6 +349,10 @@ func logActivityInput(req crmcontracts.CreateActivityRequest, adm provenanceAdmi
 	if err := importedProvenanceFrom(req, &in); err != nil {
 		return LogActivityInput{}, err
 	}
+	if err := refuseNonCustomKeys(req.AdditionalProperties); err != nil {
+		return LogActivityInput{}, err
+	}
+	in.CustomFields = req.AdditionalProperties
 	// The task create's own rule, held on this door too: a task is its subject.
 	// Last, so a refusal of a field the caller sent wins over a missing subject.
 	if in.Kind == string(crmcontracts.CreateActivityRequestKindCreateActivityRequestKindTask) {
@@ -339,18 +366,21 @@ func logActivityInput(req crmcontracts.CreateActivityRequest, adm provenanceAdmi
 		}
 		in.Subject = &subject
 	}
+	if err := CheckEntryHasContent(in.Kind, in.Subject, in.Body); err != nil {
+		return LogActivityInput{}, err
+	}
 	return in, nil
 }
 
-// optionalFieldsFrom carries the create wire's optional fields onto the input,
-// with the two kind rules that only apply when their field is present: a
-// request acceptance belongs to a task, a meeting status to a meeting.
-//
-// Apart from logActivityInput because they are one group — every branch here is
-// "the caller said nothing, so leave it alone" — and holding them beside the
-// required fields put more of one function in a reader's head than the mapping
-// itself needed.
+// optionalFieldsFrom carries the create wire's optional fields onto the input.
+// The kind rules apply only when their field is present: a request acceptance
+// belongs to a task, a host to a meeting. The meeting status and
+// duration rules are the pieces of CheckKindFields, asked where they were.
+// Every branch here means "the caller said nothing, so leave it alone".
 func optionalFieldsFrom(req crmcontracts.CreateActivityRequest, in *LogActivityInput) error {
+	if err := followUpFieldsFrom(req, in); err != nil {
+		return err
+	}
 	if req.RequestActivityId != nil {
 		if string(req.Kind) != string(crmcontracts.ActivityKindTask) {
 			return &RequestAcceptanceFieldError{Field: "request_activity_id", Message: "Only a task can accept a request."}
@@ -369,10 +399,10 @@ func optionalFieldsFrom(req crmcontracts.CreateActivityRequest, in *LogActivityI
 		d := string(*req.Direction)
 		in.Direction = &d
 	}
+	if err := checkMeetingStatusKind(in.Kind, meetingStatusOf(req.MeetingStatus)); err != nil {
+		return err
+	}
 	if req.MeetingStatus != nil {
-		if in.Kind != string(crmcontracts.ActivityKindMeeting) {
-			return &MeetingStatusKindError{Kind: in.Kind}
-		}
 		m := string(*req.MeetingStatus)
 		in.MeetingStatus = &m
 	}
@@ -392,6 +422,14 @@ func optionalFieldsFrom(req crmcontracts.CreateActivityRequest, in *LogActivityI
 		}
 		in.HostUserID = idArg[ids.UserKind](req.HostUserId)
 	}
+	if req.AttendeeUserIds != nil {
+		if in.Kind != KindMeeting && in.Kind != string(crmcontracts.ActivityKindCall) {
+			return &KindFieldError{Field: fieldAttendeeUserIDs, Only: "a meeting or call"}
+		}
+		for _, attendee := range *req.AttendeeUserIds {
+			in.AttendeeUserIDs = append(in.AttendeeUserIDs, ids.From[ids.UserKind](ids.UUID(attendee)))
+		}
+	}
 	if req.Links != nil {
 		for _, link := range *req.Links {
 			in.Links = append(in.Links, ActivityLinkInput{
@@ -404,20 +442,13 @@ func optionalFieldsFrom(req crmcontracts.CreateActivityRequest, in *LogActivityI
 }
 
 // importedProvenanceFrom takes what an importer keeps with a record it carried
-// across: the source system's own copy, how long it took, and the message's own
-// identity and addresses.
-//
-// All of it was accepted on the wire and dropped before the store, which is the
-// defect this path closes.
+// across. That is the source system's own copy, how long it took, and the
+// message's own identity and addresses. Its kind is judged by the rule CheckKindFields holds.
 func importedProvenanceFrom(req crmcontracts.CreateActivityRequest, in *LogActivityInput) error {
 	in.Raw = req.Raw
-	if req.DurationSeconds != nil {
-		// The contract promises field_not_valid_for_kind for this, and only the
-		// two kinds that occupy a span of time have a duration to state.
-		if in.Kind != KindMeeting && in.Kind != string(crmcontracts.ActivityKindCall) {
-			return &KindFieldError{Field: fieldDurationSeconds, Only: "a meeting or call"}
-		}
-		in.DurationSeconds = req.DurationSeconds
+	if err := checkDurationKind(in.Kind, req.DurationSeconds); err != nil {
+		return err
 	}
+	in.DurationSeconds = req.DurationSeconds
 	return mailIdentityFrom(req, in)
 }

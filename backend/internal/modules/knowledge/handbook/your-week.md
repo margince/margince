@@ -6,9 +6,27 @@ The **Weekly** view of **Home** looks back on a closed week and plans the next o
 
 ## The weekly review
 
-The weekly review in Margince is on **Home → Weekly**. Margince writes it once, on the Monday after
-the week it covers, and marks it **Frozen**. You cannot make it again: the counts are what they
-were.
+The weekly review in Margince is on **Home → Weekly**, and reads as a report. Margince writes it
+once, on the Monday after the week it covers, and marks it **Frozen**. You cannot make it again: the
+counts are what they were.
+
+Its title is the week it covers. Above it are the calendar week and when the report was frozen.
+Beside the title, the two arrows **Earlier week** and **Later week** step through the weeks that have
+a report. Under it, a card holds what Margince wrote about the week, marked as written by AI. The
+report's parts are:
+- **At a glance**: four figures. Deals won shows what they were worth; the other three show their
+  share as a bar. Each shows its change on the week before, where there is one.
+- **Closed deals**: the deals won and lost, each with what it closed at, and a bar of won against
+  lost.
+- **Pipeline movement**: the deals that changed stage, and the stage each reached.
+- **Forecast**: one table of the forecast for the week, month and quarter.
+- **Figures**: every figure beside the week before, and the scorecard.
+- **Observations**: what worked in the week and what did not, where Margince found something.
+- **The week ahead**: your plan for this week.
+
+**Closed deals**, **Pipeline movement**, **Observations** and **The week ahead** are left out when
+they hold nothing. **Forecast** and **Figures** are always there. The last line says when the next report
+comes.
 
 If there is none yet: "No weekly review yet. The first one is created on the Monday after your first
 full week."
@@ -33,9 +51,6 @@ showing a change from nothing.
 - A meeting has a next step only when a task linked to it was made before the week ended. A task on
   the same contact is not enough.
 
-Behind a button sit more parts: a scorecard, the forecast and how the week moved it, and the
-observations.
-
 ### What the review will not claim
 The weekly review counts recorded work, and says plainly where the record is short.
 - It counts the work you hold, even for a manager. Owners and team members are fixed when the review
@@ -43,15 +58,16 @@ The weekly review counts recorded work, and says plainly where the record is sho
 - An older review keeps the rules it was made with. One from before tasks completed were counted
   shows no figure, not a zero.
 - With nothing to coach on, it says no priority was found. It says nothing about how hard someone worked.
-- A team total is left out when a member's week is missing, or is in another currency.
 - A view against an earlier week names that week, which may not be the week just before.
 
 ### The scorecard
 
-**Leads and meetings**: leads moved on, recorded replies (with how many missed the target), meetings
-held (with booked and missed meetings under them).
+The **Weekly scorecard** is one table. Each row has a count and what the count rests on.
 
-**Deals** shows stage moves on and back, and the middle value of the days a deal spent in the stage
+For leads and meetings it shows leads moved on, how many replies missed the target, and meetings
+held (with booked and missed meetings beside them).
+
+For deals it shows stage moves on and back, and the middle value of the days a deal spent in the stage
 it left. It shows how many open deals have a next step, and how many have more than one contact. It
 shows how many have a close date that is not a guess. And it shows forecast moves up against moves
 down.
@@ -63,9 +79,9 @@ Two rows appear only when a count is not complete:
 
 Margince cannot count deals touched by a deletion for the week. It lists them on their own.
 
-### Observations to review
+### Observations
 
-**Observations to review** holds at most four observations. Each names the deals it was read from,
+**Observations** holds at most four observations. Each names the deals it was read from,
 and each has a tag: **Positive outcome**, **Unsuccessful outcome**, **Pattern**, or **Experiment**.
 
 Each carries a warning: the observations show links in recorded work, and do not show what made the
@@ -81,7 +97,7 @@ observations or the written summary, and says so.
 ## Planning a week
 
 **This week’s commitments**, on **Home → Weekly**, is your plan for the week: what you said you will
-do, and what you need to do it. A commitment with a **Due date** joins your Worklist and **Focus**
+do, and what you need to do it. A commitment with a **Due date** joins your Worklist and **First**
 on that day, in the company's time zone. Done ones, ones due later and ones with no date stay out.
 
 Each commitment has a name, and can have a linked record and a due date. Ticking one marks it but
@@ -124,36 +140,3 @@ that, ask them yourself as well.
 know about the request; nothing built in does that.)
 
 A lead may answer a commitment and nothing else. A lead cannot close it, change its words or drop it.
-
-## The team's week
-
-A team's week in Margince is on **Home → Weekly** with the scope set to
-**Team**. A lead looking at a team sees the same week from the other side. It shows reply rates,
-meetings with a recorded next step, commitments kept, won and lost, and how many members were
-counted.
-
-**Monday agenda** has one line per teammate, the most urgent first. Each line gives the reason it is
-there:
-- **Help requested**: they asked for help
-- **Response targets missed**
-- **Plan commitments missed**
-- **Deal recovery**: deals at risk
-- **Strong week**: worth copying
-- **Follow-up evidence missing**: meetings with no next step
-- **No priority identified**: a quiet week
-
-**Copy agenda** copies it in one press.
-
-The page carries two notes about missing data:
-
-- Where member data is missing, it says for how many team members, and how many members the numbers
-  cover. It is never hidden behind a button.
-- Where nobody was measured, it says there is no member data for this week, so nothing is measured.
-  The page does not show a row of 0s.
-
-A team's week is for the team's lead, and for a role that looks after every team (Admin and
-Management, as they come). Reaching every record is not enough. A read-only seat sees the whole
-company and its team's live work on Morning, and is still not offered the team's week. The week's
-picker lists the teams you lead, or every team if your role looks after them all. A seat that may
-open no team's week sees that this is not theirs. A lead asking about a team they are not on gets
-**not found**.

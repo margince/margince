@@ -22,7 +22,7 @@ ROOT_SCRIPT_GATES := check-craft-doc test-dev-isolation test-dev-dsn test-dev-en
   test-laneorder check-image-pins check-host-ports ci-doc-parity \
   make-target-parity contract-breaking-check contract-frontend-drift \
   test-contract-frontend-drift migration-versions test-migration-versions \
-  test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length rls-store-path \
+  test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-test-budget rls-store-path \
   comment-budget test-comment-budget comment-density \
   check-extension-modules \
   no-jurisdiction test-no-jurisdiction \
@@ -30,7 +30,7 @@ ROOT_SCRIPT_GATES := check-craft-doc test-dev-isolation test-dev-dsn test-dev-en
   test-changelog-sections test-dev-postgres-container test-e2e-llm-check \
   test-release-version-stamped test-closing-declaration test-release-patch-base \
   test-published-tag \
-  test-craft-review test-release-tag-version
+  test-craft-review test-release-tag-version test-release-license-stamped
 
 # How wide the gate fan-out runs: the machine's online core count, so a 4-core
 # CI runner and an 18-core laptop each get the width they have without anybody
@@ -66,7 +66,7 @@ MINIO_PORT ?= 29000
 # answer lands in its own assignment so `set -e` sees the refusal — a helper
 # called inside another command's argument would fail unnoticed.
 
-.PHONY: help install dev-fresh check check-all check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture bench-dispatch bench-daily bench-daily-clean perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-reset verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check perfdoc e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-unit-merge fe-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows fitness-jurisdiction storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-renovate-liveness test-ci-verdict test-merge-verdict test-review-coverage test-laneorder secret-scan test-secret-scan test-sbom-sign test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations check-extension-modules contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length comment-budget test-comment-budget comment-density comment-stats comment-stats-pin slop-trend rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze changelog-sections test-changelog-sections test-release-tag-version test-release-version-stamped test-closing-declaration test-release-patch-base test-published-tag test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check sbom-gate
+.PHONY: help install dev-fresh check check-all check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture bench-dispatch bench-daily bench-daily-clean perfdoc config-gen lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed gen-types gen-types-check drift composition check-composition check-static test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs clean vuln vendor-live tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-reset verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check perfdoc e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-compiler-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-unit-merge fe-clock-drift backend-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows fitness-jurisdiction storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-renovate-liveness test-ci-verdict test-merge-verdict test-review-coverage test-laneorder secret-scan test-secret-scan test-sbom-sign test-sbom-census test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations check-extension-modules contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-budget test-input-census test-test-budget comment-budget test-comment-budget comment-density comment-stats comment-stats-pin slop-trend rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze changelog-sections test-changelog-sections test-release-tag-version test-release-license-stamped test-release-version-stamped test-closing-declaration test-release-patch-base test-published-tag test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-census sbom-validate sbom-sign sbom-check sbom-gate
 # Bare `make` lists every command instead of running the first target.
 .DEFAULT_GOAL := help
 
@@ -147,39 +147,31 @@ check-backend:
 	PHASE_TIMER_OWNED=1 $(MAKE) -C backend check
 	@[ -n "$$PHASE_TIMER_OWNED" ] || bash scripts/phase-timer.sh report
 
-## check — the full merge gate: both halves. Spelled as recipe lines rather than
-## prerequisites because it owns the timing ledger, and a prerequisite would
-## record a phase before the reset. check-fe needs `make install` first.
+## check — the full merge gate: both halves, plus the craft bar CI's
+## craftsmanship job holds. Spelled as recipe lines rather than prerequisites
+## because it owns the timing ledger, and a prerequisite would record a phase
+## before the reset. check-fe needs `make install` first.
 check:
 	@bash scripts/phase-timer.sh reset
+	@bash scripts/phase-timer.sh start "craft static (strict)"
+	@$(MAKE) craft-static
+	@bash scripts/phase-timer.sh stop
 	@PHASE_TIMER_OWNED=1 $(MAKE) check-backend
 	@PHASE_TIMER_OWNED=1 $(MAKE) check-fe
 	@bash scripts/phase-timer.sh report
 
-## check-all — `check` plus the integration lane, which is what a change touching
-## backend Go actually has to pass. `check` reaches the integration lane NOT AT
-## ALL: its `test` target is `go test ./...`, and every integration file carries
-## `//go:build integration`, so the lane's packages compile into nothing and a
-## green `check` says nothing about them.
+## check-all — `check` plus the integration lane. `check` reaches that lane
+## NOT AT ALL: its `test` target is `go test ./...`, and every integration file
+## carries `//go:build integration`, so the lane's packages compile into nothing.
 ##
-## Its own target rather than folding the lane into `check`, because `check` is
-## what a docs or frontend change runs and that is most changes: the lane takes
-## minutes and needs Postgres up, so paying it on a README edit would train
-## everybody to skip the gate that also holds the security cases.
-##
-## The pre-push hook DOES run the lane, for a push that changes backend Go or
-## SQL — a migration is the likeliest thing of all to redden it.
-## It did not until 2026-09-12, and the reason it gave had expired: parallel
-## sessions were said to share one test template, so a hook would have them
-## rebuilding each other's schema mid-run. scripts/lib-testdb.sh has derived a
-## template per linked worktree since 2026-08-24 (_testdb_worktree_slug), which
-## is two weeks before that reasoning was written down.
-##
-## What is still shared: two shells in the SAME worktree, and the primary
-## checkout. The hook skips rather than blocks when pg_isready says Postgres is
-## not ready, because a push blocked on a stopped stack gets the hook disabled.
+## Optional, not the shipping loop: CI runs the whole lane, sharded, on every
+## non-draft backend PR, and a contributor runs `make test-it DIR=<pkg>` for the
+## packages a change touches. This target is for wanting the whole lane locally.
 check-all:
 	@bash scripts/phase-timer.sh reset
+	@bash scripts/phase-timer.sh start "craft static (strict)"
+	@$(MAKE) craft-static
+	@bash scripts/phase-timer.sh stop
 	@PHASE_TIMER_OWNED=1 $(MAKE) check-backend
 	@PHASE_TIMER_OWNED=1 $(MAKE) check-fe
 	@bash scripts/phase-timer.sh start "backend: integration lane (real Postgres)"
@@ -291,7 +283,7 @@ dev-sweep:
 dev-logs:
 	@bash scripts/dev-logs.sh
 
-build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture bench-dispatch bench-daily bench-daily-clean perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down migrate-create run psql redis-cli tidy clean vuln tools tools-go infra-logs infra-reset:
+build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture bench-dispatch bench-daily bench-daily-clean perfdoc config-gen lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed drift composition check-composition check-static test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down migrate-create run psql redis-cli tidy clean vuln vendor-live tools tools-go infra-logs infra-reset:
 	$(MAKE) -C backend $@
 
 ## check-fe — the frontend half of the gate (part of `make check`). Fails loudly
@@ -319,6 +311,10 @@ gen-types-check: drift
 ## fe-lint — Biome lint the frontend.
 fe-lint:
 	cd frontend && pnpm install --frozen-lockfile && pnpm lint
+## fe-compiler-lint — the React Compiler's rules (eslint-plugin-react-hooks),
+## ratcheted per file and rule via frontend/scripts/compiler-lint-waivers.txt.
+fe-compiler-lint:
+	cd frontend && pnpm install --frozen-lockfile && pnpm lint:compiler
 ## fe-build — production build of the web app.
 fe-build:
 	cd frontend && pnpm install --frozen-lockfile && pnpm build
@@ -490,6 +486,7 @@ frontend-check:
 	$(MAKE) fe-drift
 	$(MAKE) fe-file-length
 	$(MAKE) fe-lint
+	$(MAKE) fe-compiler-lint
 	$(MAKE) fe-unit
 	$(MAKE) fe-build
 
@@ -513,6 +510,7 @@ fe-ds-gates:
 	frontend/scripts/check-ds-spacing-roles.sh
 	bash frontend/scripts/check-ds-spacing-roles.test.sh
 	frontend/scripts/check-space-tokens.sh
+	bash frontend/scripts/check-space-tokens.test.sh
 	frontend/scripts/check-contract-fetch.sh
 	bash frontend/scripts/check-contract-fetch.test.sh
 	bash frontend/scripts/check-ext-frontend-walk.test.sh
@@ -615,6 +613,14 @@ fe-clock-drift:
 	cd frontend && pnpm install --frozen-lockfile && \
 		FE_CLOCK_SKEW_DAYS=$(FE_CLOCK_SKEW_DAYS) pnpm exec vitest run
 
+## backend-clock-drift — the same suites at a moved clock, required to reach the
+## same verdict. BACKEND_CLOCK_SKEW names the applier beside the amount
+## (`machine:200` in CI, `database:200` or `fixture:200` locally) and has no
+## default, because the three do not compose; internal/shared/clockskew says
+## what each reaches. Not in `make check`: time passing breaks these, not a diff.
+backend-clock-drift:
+	@BACKEND_CLOCK_SKEW=$(BACKEND_CLOCK_SKEW) ./scripts/backend-clock-drift.sh
+
 ## fe-quality — every leg of the frontend gate EXCEPT the unit suite and the
 ## bundle, which CI runs beside this one. Needs Go: the composed lane composes.
 fe-quality: fe-typecheck-composed
@@ -622,6 +628,7 @@ fe-quality: fe-typecheck-composed
 	$(MAKE) fe-drift
 	$(MAKE) fe-file-length
 	$(MAKE) fe-lint
+	$(MAKE) fe-compiler-lint
 	$(MAKE) fe-test-ext
 
 ## fe-bundle — the production bundle plus the Storybook catalog, the two legs
@@ -690,7 +697,7 @@ fe-typecheck-composed: composition
 	@[ -f build/composition-frontend/schema.d.ts ] || { echo "fe-typecheck-composed: pnpm gen:composed-types produced no schema.d.ts — the composed lane would silently typecheck against the committed contract" >&2; exit 1; }
 	cd frontend && pnpm exec tsc -p tsconfig.composed.json
 	# And the composed lane's TESTS, which no other project compiles: the app
-	# and node projects exclude src/screens/ext/ (it cannot typecheck there),
+	# and node projects do not include extensions/ (it cannot typecheck there),
 	# and tsconfig.composed.json excludes *.test.*. Without this line a unit
 	# screen's test fixtures are checked by nothing, since vitest transpiles
 	# without typechecking.
@@ -710,24 +717,26 @@ fe-typecheck-composed: composition
 ## `ci` aggregate), and a type error therefore still fails the merge. What the
 ## two share is `build:bundle`, so the app this suite exercises cannot quietly
 ## become a different artefact from the one that ships.
+## E2E_ARGS reaches `playwright test`; CI passes `--shard=i/n` there.
 frontend-e2e:
-	cd frontend && pnpm install --frozen-lockfile && pnpm e2e
+	cd frontend && pnpm install --frozen-lockfile && pnpm e2e $(E2E_ARGS)
 
 ## bench-mobile — MOBILE-AC-2: record open p95 under the 300ms PERCEIVED budget
-## on a throttled Fast-3G profile at 390px (MOBILE-PARAM-2). A measurement run
-## BY HAND, like the backend bench-* targets: `pnpm e2e` does not collect this
-## spec and this target collects nothing else. It is the ONLY place that budget
-## is asserted: throttled p95 is the harder of the two conditions, so a budget
-## that holds here holds unthrottled by construction.
+## on a throttled Fast-3G profile at 390px (MOBILE-PARAM-2). Run by hand and by
+## the weekly scheduled job, which proposes the record as a pull request:
+## `pnpm e2e` does not collect this spec and this target collects nothing else.
+## It is the ONLY place that budget is asserted: throttled p95 is the harder of
+## the two conditions, so a budget that holds here holds unthrottled by
+## construction.
+BENCH_RENDER ?= 1
 bench-mobile:
 	cd frontend && pnpm install --frozen-lockfile && pnpm build && \
 		MARGINCE_BENCH_MOBILE=1 MARGINCE_BENCH_RECORD=1 pnpm exec playwright test
-	@$(MAKE) --no-print-directory perfdoc
+	@if [ -n "$(BENCH_RENDER)" ]; then $(MAKE) --no-print-directory perfdoc; fi
 
-## bench-mobile-check — the same measurement, writing NOTHING: what the weekly
-## scheduled workflow runs. The budget gets a heartbeat without a machine
-## publishing its own numbers, which is the rule bench-perf-check states and the
-## reason that target exists beside bench-perf.
+## bench-mobile-check — the same measurement, writing NOTHING: a check run by
+## hand without touching the published page, as bench-perf-check is beside
+## bench-perf.
 ##
 ## MARGINCE_BENCH_RECORD is CLEARED rather than left unset, for the reason
 ## spelled out on bench-perf-check: "writes nothing" must be a property of the
@@ -736,9 +745,7 @@ bench-mobile:
 ## rewrite the published record from a runner's numbers.
 ##
 ## perfdoc is not run here either. It re-renders the published page from the
-## COMMITTED records, so a machine that has recorded nothing has nothing to
-## re-render — and running it would only restate the last human's measurement
-## under this run's name.
+## COMMITTED records, so a run that recorded nothing has nothing to re-render.
 bench-mobile-check:
 	cd frontend && pnpm install --frozen-lockfile && pnpm build && \
 		MARGINCE_BENCH_MOBILE=1 MARGINCE_BENCH_RECORD= pnpm exec playwright test
@@ -763,6 +770,7 @@ E2E_SHOT_DIR ?= /tmp/e2e-company
 ## deterministic — each scenario runs three times and passes at two, because one
 ## bad run is the weather and two is a defect. Never touches :8080; it boots,
 ## seeds and tears down its own DEV_SLUG stack.
+## A scenario stops once its verdict is settled; E2E_LLM_ALL_RUNS=1 makes every run.
 ## SCENARIO=<name> runs one. E2E_LLM_KEEP=1 leaves the stack up.
 ##
 ## THE CANDIDATE IS CHOSEN: E2E_LLM_CANDIDATE=claude|gpt|mistral, each pinned
@@ -861,7 +869,8 @@ storybook:
 ## changed story the build didn't register, or on a changed component with no
 ## story. Artifact: .tmp/fe-uat/manifest.json. Deliberately NOT in `make check`
 ## — it is the fe-only UAT lane a coordinator runs instead of the full stack.
-## Optional: ARGS="--allow-missing".
+## Optional: ARGS="--allow-missing"; ARGS="--all-stories" renders every story
+## the build registers instead of the diff's (scheduled.yml runs it daily).
 fe-uat:
 	cd frontend && pnpm install --frozen-lockfile && pnpm build && \
 		pnpm exec playwright install chromium >/dev/null 2>&1 && \
@@ -901,8 +910,8 @@ fe-edge-padding:
 ## hand-written Go file, and they are green because the backlog was cleared to
 ## arm them. The comment checks read Go and TypeScript and judge only the lines
 ## added since origin/main, so old comments improve as files are touched; with
-## no origin/main the gate fails instead of judging nothing. The pre-push hook
-## runs the same bar over the files a push changes.
+## no origin/main the gate fails instead of judging nothing. `make check` runs
+## it locally.
 ##
 ## extensions/ and fixtures/ are their own Go modules, so `./...` never reaches
 ## them and the bar has to name them: a first-party unit ships the same product,
@@ -917,7 +926,7 @@ craft-static: test-craft-pin
 ## this branch's diff to an external model API and get a reading of what a
 ## syntax tree cannot see. It calls a paid API, so nothing calls it for you —
 ## no hook, no CI job, no prerequisite. `make craft-static` is the arm that is
-## enforced and it is the one that blocks a push.
+## enforced, by `make check` and CI's craftsmanship job.
 ##
 ##   ANTHROPIC_API_KEY=... make craft-review              # vs origin/main
 ##   ANTHROPIC_API_KEY=... BASE=<ref> make craft-review
@@ -1016,6 +1025,17 @@ test-secret-scan:
 test-sbom-sign:
 	@./scripts/test-sbom-sign.sh
 
+## test-sbom-census — prove `sbom-census` refuses an SBOM that lists fewer npm
+## packages than the lockfiles resolve: one with only the first YAML document,
+## one without it, one that swaps a package or a version for another, and one
+## that misses a second lockfile. It also refuses a document that resolves
+## nothing or declares another lockfileVersion, and a lockfile that is empty or
+## does not parse. The YAML reader is the real pinned one, because reading every
+## document is what is under test, so this needs Docker and network; the
+## license-gate job runs it.
+test-sbom-census:
+	@./scripts/test-sbom-census.sh
+
 ## test-api-entrypoint — prove the container entrypoint writes the bootstrap
 ## credential ONLY onto an unprovisioned installation, retires a spent one, and
 ## refuses to start when it cannot tell which it is. Every failure on that path
@@ -1075,7 +1095,9 @@ test-disk-headroom:
 ## trap is armed for every `up` rather than only for a stack that claims a port,
 ## it follows TERM with KILL, and it spares a stack that was already up. The
 ## failure it replaces was an api or a Vite outliving the run on the PRIMARY
-## stack, which the next `make dev` reported as a port already in use.
+## stack, which the next `make dev` reported as a port already in use. It also
+## proves a process that dies during boot ends the readiness wait at once and
+## is reported with its own last log lines.
 test-dev-cleanup:
 	@./scripts/test-dev-cleanup.sh
 
@@ -1251,6 +1273,31 @@ go-file-length:
 fe-file-length:
 	@./scripts/check-fe-file-length.sh
 
+## test-budget — no unit-test package takes over 120 s, read from a `go test`
+## log; slower packages keep a ceiling in scripts/test-budget-waivers.txt that
+## may shrink, never grow. CI-only: it needs a CI runner's timings, so it is not
+## in check-backend. Usage: make test-budget LOG=<file>
+test-budget:
+	@./scripts/check-test-budget.sh $(LOG)
+
+## test-input-census — every cached unit-test package that reads a file outside
+## its module also reads that file's tree digest, or a replayed pass outlives an
+## edit to it. Judged on a real run, since such paths are mostly built at run
+## time; a failing test does not decide it. CI's backend-lint job and
+## cache-warm both run it.
+test-input-census:
+	@set -e; logs="$$(mktemp -d)"; trap 'rm -rf "$$logs"' EXIT; \
+	if ! TESTLOG_DIR="$$logs" $(MAKE) -C backend -k test-cached test-extensions TEST_EXEC="$(CURDIR)/scripts/testlog-exec.sh"; then \
+	  echo "test-input-census: a test failed under the census; its inputs are judged all the same" >&2; \
+	fi; \
+	./scripts/ci-stable-mtimes.sh --names > "$$logs/names.tsv"; \
+	cd backend && GOWORK="$(CURDIR)/go.work" go run ./tools/check-test-inputs -logs "$$logs" -names "$$logs/names.tsv"
+
+## test-test-budget — the budget gate's own test, run by check-backend because
+## the gate itself runs only on CI, where a refusal that stopped firing reads green.
+test-test-budget:
+	@bash ./scripts/check-test-budget.test.sh
+
 ## test-fe-file-length — the length gate's own test, a separate target like
 ## every other gate-plus-test pair here. The RATCHET is what it holds: a waived
 ## file that grew, one that came back under the cap with its entry standing,
@@ -1261,7 +1308,7 @@ test-fe-file-length:
 	@./scripts/check-fe-file-length.test.sh
 
 ## comment-budget — a change may not add more comment lines than the code they
-## explain. Diff-scoped against origin/main, Go only; `doc.go` and generated
+## explain. Diff-scoped against origin/main, Go and TypeScript; `doc.go` and generated
 ## files are exempt. The counterweight to the function ceiling, which does not
 ## count comment lines at all.
 comment-budget:
@@ -1314,7 +1361,7 @@ rls-store-path:
 ## from a run that never reached the model: a refused credential is named as
 ## one, and a genuinely bad answer is still a finding. It also holds the judged
 ## half offline, against verdicts a real judge gave the committed fixtures: a
-## judge that agreed with everything fails 22 of these cases, and a judge that
+## judge that agreed with everything fails every defect fixture, and a judge that
 ## cannot be reached is a stop rather than a pass.
 test-e2e-llm-check:
 	@./scripts/test-e2e-llm-check.sh
@@ -1380,6 +1427,12 @@ test-published-tag:
 test-release-tag-version:
 	@./scripts/release-tag-version.test.sh
 
+## test-release-license-stamped — the LICENSE release check's own test: the
+## Change Date and Licensed Work line each release must carry, and what it
+## refuses. Its one caller is a tag push, like the tag reader's.
+test-release-license-stamped:
+	@./scripts/release-license-stamped.test.sh
+
 ## no-jurisdiction — pack-boundary fitness gate: no country-specific
 ## regulatory identifier (XRechnung/ZUGFeRD/DATEV/…) or ISO-3166 code appears
 ## in core CODE — Go AND SQL — only in the jurisdiction seam
@@ -1437,11 +1490,11 @@ check-extension-modules:
 pkg-freeze:
 	@./scripts/check-pkg-freeze.sh
 
-## hooks — install the repo's git hooks (the pre-push craft-static gate).
+## hooks — install the repo's git hooks (the pre-commit gofmt + license gate).
 ## Run once after cloning.
 hooks:
 	git config core.hooksPath .githooks
-	@echo "installed: core.hooksPath=.githooks (pre-push runs craft static on changed backend files)"
+	@echo "installed: core.hooksPath=.githooks (pre-commit runs gofmt + the license-header gate)"
 
 # --- Desktop build (macOS arm64) ---
 # The self-contained folder a non-technical user runs with no Docker: a
@@ -1559,7 +1612,7 @@ desktop-win-dist:
 # comments — bump tag and digest together. Override SYFT/GRANT/COSIGN to use
 # host binaries (e.g. `make sbom SYFT=syft GRANT=grant`).
 SBOM_DIR     := sboms
-SYFT_IMAGE   ?= anchore/syft@sha256:1288ea4c8b38767b4e620c1e312c8cb26b6e887a99b4f07ab6cd19fc6f225026 # v1.50.0
+SYFT_IMAGE   ?= anchore/syft@sha256:0356562f495d432056237fbea5cbc2d4839c9c75cd500784a66de2e7cc95ca7c # v1.54.0
 GRANT_IMAGE  ?= anchore/grant@sha256:172463611795f43b77302cdfbd7b3f81295492a7330e0820cfe41c3674920237 # v0.6.8
 COSIGN_IMAGE ?= gcr.io/projectsigstore/cosign@sha256:c77247c92f4dfea851c70555738226498393e34e2f9ca83cb959e51c230e4ad7 # v2.4.3
 # Per-format validators (sbom-validate). No single tool covers all three, so:
@@ -1627,6 +1680,7 @@ sbom:
 	@$(MAKE) sbom-normalize
 	@$(MAKE) sbom-supplement
 	@$(MAKE) sbom-parity
+	@$(MAKE) sbom-census
 	@$(MAKE) sbom-validate
 	@echo "wrote $(SBOM_FILES)"
 
@@ -1637,9 +1691,8 @@ sbom:
 ## lives in sbom-schemas/license-supplement.json (key = purl without version,
 ## so every pinned action version matches — and that directory is in the
 ## license gate's classifier scope, so editing the map re-runs the gate); it
-## sets the license on the CycloneDX doc the gate reads and on the SPDX 2.2 doc, so both
-## license-bearing SBOMs agree; syft v1.50 emits no per-package license in SPDX
-## 3.0, so there is nothing to supplement there. SonarSource's action is left
+## sets the license on the CycloneDX doc the gate reads and on the SPDX 2.2 doc,
+## and leaves the SPDX 3.0 doc as syft wrote it. SonarSource's action is left
 ## unset on purpose — it is LGPL-3.0-only and ignored in .grant.yaml, not shipped.
 ## Idempotent; keep the map in step with the workflows and the SPDX-tools deps.
 sbom-supplement:
@@ -1659,7 +1712,7 @@ sbom-supplement:
 ## Both filters are idempotent, so re-running (or a future syft that already emits
 ## relative names / no directories) is a no-op. The zero SHA1 is syft's directory
 ## placeholder; a real file always carries a non-zero SHA-256/512 alongside it. That
-## placeholder is the only signal syft gives — v1.50 labels every SPDX element,
+## placeholder is the only signal syft gives — v1.54 labels every SPDX element,
 ## directories included, software_fileKind == "file", so the kind field cannot single
 ## a directory out; the empty name / lone zero SHA1 pair is what distinguishes them.
 sbom-normalize:
@@ -1686,6 +1739,24 @@ sbom-parity:
 	  else \
 	    echo "FAIL: SBOM file sets differ — see the diff above"; exit 1; \
 	  fi
+
+## sbom-census — the license gate's coverage check: every package a committed
+## pnpm-lock.yaml resolves must be an npm component of the CycloneDX SBOM,
+## because grant judges only what the SBOM lists. A scanner that reads the first
+## YAML document of the lockfile and stops lists pnpm's own binaries and none of
+## the web app, and that SBOM passes parity, validation and grant alike.
+## scripts/sbom-census.sh reads every document with a YAML reader that shares no
+## code with syft. It fails on a package the SBOM lacks, and on a document that
+## resolves nothing or declares a lockfile version neither reader was checked
+## against. `make sbom` runs it after parity; its verdict goes to stderr, which
+## sbom-gate keeps.
+##
+## An empty SBOM_LOCKFILES reads every pnpm-lock.yaml committed at HEAD, the
+## tree `make sbom` scanned; scripts/test-sbom-census.sh points it at planted files.
+SBOM_LOCKFILES ?=
+sbom-census:
+	@test -f $(SBOM_DIR)/margince.cdx.json || { echo "FAIL: no SBOM found — run 'make sbom' first"; exit 1; }
+	@./scripts/sbom-census.sh $(SBOM_PYTHON_IMAGE) $(SBOM_SCHEMA_DIR)/spdx-tools-requirements.txt $(SBOM_DIR)/margince.cdx.json $(SBOM_LOCKFILES)
 
 ## sbom-validate — conformance gate: each SBOM must validate against its own format,
 ## so a syft bump, a config change, or a normalization filter that emitted a malformed
@@ -1762,7 +1833,7 @@ sbom-check:
 
 # SBOM_GATE_ATTEMPTS is how many times the scan-and-judge pair may run before a
 # denial is believed. Three: enough that two independent registry failures have
-# to coincide, few enough that a real denial costs six minutes rather than an
+# to coincide, few enough that a real denial costs three scans rather than an
 # afternoon.
 SBOM_GATE_ATTEMPTS ?= 3
 

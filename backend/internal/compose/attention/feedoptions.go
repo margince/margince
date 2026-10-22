@@ -146,17 +146,6 @@ func (s *Service) WithOverdueLoad(o OverdueLoad) *Service {
 	return s
 }
 
-// WithPromiseLoad binds the board's counting reader for commitments due.
-//
-// The board REFUSES without it, as it does for the other three counts. Here the
-// zero would be worse than elsewhere: an installation that extracts no claims
-// would report a team that promised nothing, when the truth is that nobody was
-// listening.
-func (s *Service) WithPromiseLoad(p PromiseLoad) *Service {
-	s.promiseLoad = p
-	return s
-}
-
 // WithPins binds the reader's own pinned rows — an option for the reason
 // WithWaiting is one.
 //
@@ -165,6 +154,13 @@ func (s *Service) WithPromiseLoad(p PromiseLoad) *Service {
 // answer: an installation with no pin store has none.
 func (s *Service) WithPins(p Pins) *Service {
 	s.pins = p
+	return s
+}
+
+// WithDone binds the reader's own Done set. Unbound, no row is hidden as done
+// and every Done is refused as not found.
+func (s *Service) WithDone(d DoneStore) *Service {
+	s.marked.store = d
 	return s
 }
 

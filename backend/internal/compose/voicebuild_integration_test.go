@@ -25,11 +25,14 @@ import (
 	"github.com/riverqueue/river/rivertype"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -216,7 +219,7 @@ func TestVoiceBuildRunsToAnActiveVersion(t *testing.T) {
 	if err != nil || !claimed {
 		t.Fatalf("claim: %v claimed=%v", err, claimed)
 	}
-	if err := worker.run(ctx, build.ID, input); err != nil {
+	if err := worker.run(ctx, build.ID, input, voiceCopyFor(identity.BaseLanguageForPrompt(ctx, worker.pool))); err != nil {
 		t.Fatalf("run: %v", err)
 	}
 
@@ -288,7 +291,7 @@ func TestVoiceBuildDefersOnBudgetAndTheSweepFindsItWhenDue(t *testing.T) {
 	if err != nil || !claimed {
 		t.Fatalf("claim: %v claimed=%v", err, claimed)
 	}
-	runErr := worker.run(ctx, build.ID, input)
+	runErr := worker.run(ctx, build.ID, input, voiceCopyFor(identity.BaseLanguageForPrompt(ctx, worker.pool)))
 	if !errors.Is(runErr, ai.ErrBudgetDeferred) {
 		t.Fatalf("run under budget exhaustion = %v, want the sentinel", runErr)
 	}
@@ -323,7 +326,7 @@ func TestVoiceBuildDefersOnBudgetAndTheSweepFindsItWhenDue(t *testing.T) {
 	if err != nil || !claimed {
 		t.Fatalf("re-claim: %v claimed=%v", err, claimed)
 	}
-	if err := healthy.run(ctx, build.ID, input); err != nil {
+	if err := healthy.run(ctx, build.ID, input, voiceCopyFor(identity.BaseLanguageForPrompt(ctx, healthy.pool))); err != nil {
 		t.Fatalf("resumed run: %v", err)
 	}
 	finished, err := env.store.GetBuild(env.owner, env.profile.ID, build.ID)
@@ -363,17 +366,18 @@ func TestVoiceBuildRecordsFailureEvenWhenTheWorkContextIsSpent(t *testing.T) {
 }
 
 func TestVoiceBuildStarterCorpusActivatesUnevaluated(t *testing.T) {
+	for _, tc := range []struct{ language, explanation string }{{"en", "too small"}, {"de", "zu klein"}, {"vi", "quá nhỏ"}} {
+		t.Run(tc.language, func(t *testing.T) { voiceStarterLanguage(t, tc.language, tc.explanation) })
+	}
+}
+
+func voiceStarterLanguage(t *testing.T, language, explanation string) {
 	quote := "Starter quote for a thin corpus."
 	env, build := seedVoiceBuild(t, quote, 2)
-	ctx := env.workerCtx(t)
+	integration.SetBaseLanguage(env.e.Admin(), t, env.e.Pool, language)
 	worker := newVoiceBuildWorker(env.e.Pool, &scriptedBuildBrain{judgeScore: 0.9, quote: quote}, slog.New(slog.DiscardHandler))
-
-	input, claimed, err := env.store.ClaimBuild(ctx, env.profile.ID, build.ID, time.Minute)
-	if err != nil || !claimed {
-		t.Fatalf("claim: %v claimed=%v", err, claimed)
-	}
-	if err := worker.run(ctx, build.ID, input); err != nil {
-		t.Fatalf("run: %v", err)
+	if err := worker.Work(t.Context(), voiceBuildJob(env, build)); err != nil {
+		t.Fatal(err)
 	}
 	finished, err := env.store.GetBuild(env.owner, env.profile.ID, build.ID)
 	if err != nil {
@@ -389,7 +393,19 @@ func TestVoiceBuildStarterCorpusActivatesUnevaluated(t *testing.T) {
 	if active.Evaluation["candidate_median_voice_score"] != nil {
 		t.Fatalf("median = %v, want null when evaluation could not run", active.Evaluation["candidate_median_voice_score"])
 	}
-	if len(active.ReviewReasons) == 0 || !strings.Contains(active.ReviewReasons[0], "too small") {
+
+	raw, err := json.Marshal(active.Evaluation)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var evaluation crmcontracts.VoiceProfileEvaluation
+	if err := json.Unmarshal(raw, &evaluation); err != nil {
+		t.Fatal(err)
+	}
+	if evaluation.ReviewReasonDetails == nil || len(*evaluation.ReviewReasonDetails) != 1 || (*evaluation.ReviewReasonDetails)[0].Code != "too_small" || (*evaluation.ReviewReasonDetails)[0].Text != active.ReviewReasons[0] {
+		t.Fatal("persisted typed reason differs from stored prose")
+	}
+	if len(active.ReviewReasons) == 0 || !strings.Contains(active.ReviewReasons[0], explanation) {
 		t.Fatalf("review reasons = %v, must state that evaluation did not run", active.ReviewReasons)
 	}
 }
@@ -466,20 +482,26 @@ func TestVoiceBuildWorkSnoozesWhileAnotherClaimIsLive(t *testing.T) {
 }
 
 func TestVoiceBuildWorkWithoutABrainFailsClosed(t *testing.T) {
-	env, build := seedVoiceBuild(t, "Brainless quote.", 6)
-	worker := newVoiceBuildWorker(env.e.Pool, nil, slog.New(slog.DiscardHandler))
-	if err := worker.Work(context.Background(), voiceBuildJob(env, build)); err != nil {
-		t.Fatalf("Work: %v", err)
-	}
-	finished, err := env.store.GetBuild(env.owner, env.profile.ID, build.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if finished.Status != "failed" || finished.StatusCode == nil || *finished.StatusCode != "model_unavailable" {
-		t.Fatalf("brainless build = %+v, want failed/model_unavailable", finished)
-	}
-	if finished.StatusDetail == nil || !strings.Contains(*finished.StatusDetail, "AI provider") {
-		t.Fatalf("detail = %v, must tell the operator what to configure", finished.StatusDetail)
+	for _, tc := range []struct{ language, explanation string }{{"en", "AI provider"}, {"de", "KI-Anbieter"}, {"vi", "nhà cung cấp AI"}} {
+		t.Run(tc.language, func(t *testing.T) {
+			env, build := seedVoiceBuild(t, "Brainless quote.", 6)
+			integration.SetBaseLanguage(env.e.Admin(), t, env.e.Pool, tc.language)
+			worker := newVoiceBuildWorker(env.e.Pool, nil, slog.New(slog.DiscardHandler))
+			if err := worker.Work(context.Background(), voiceBuildJob(env, build)); err != nil {
+				t.Fatalf("Work: %v", err)
+			}
+			integration.SetBaseLanguage(env.e.Admin(), t, env.e.Pool, "en")
+			finished, err := env.store.GetBuild(env.owner, env.profile.ID, build.ID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if finished.Status != "failed" || finished.StatusCode == nil || *finished.StatusCode != "model_unavailable" {
+				t.Fatalf("brainless build = %+v, want failed/model_unavailable", finished)
+			}
+			if finished.StatusDetail == nil || !strings.Contains(*finished.StatusDetail, tc.explanation) {
+				t.Fatalf("detail = %v, must retain the language written at failure", finished.StatusDetail)
+			}
+		})
 	}
 }
 
@@ -492,7 +514,7 @@ func TestVoiceDraftReadsAndLearningSignals(t *testing.T) {
 	if err != nil || !claimed {
 		t.Fatalf("claim: %v claimed=%v", err, claimed)
 	}
-	if err := worker.run(ctx, build.ID, input); err != nil {
+	if err := worker.run(ctx, build.ID, input, voiceCopyFor(identity.BaseLanguageForPrompt(ctx, worker.pool))); err != nil {
 		t.Fatalf("run: %v", err)
 	}
 
@@ -791,12 +813,12 @@ func TestVoiceBuildOnAnUnconfiguredInstallationNamesTheSetting(t *testing.T) {
 	if err != nil || !claimed {
 		t.Fatalf("claim: %v claimed=%v", err, claimed)
 	}
-	runErr := worker.run(ctx, build.ID, input)
+	runErr := worker.run(ctx, build.ID, input, voiceCopyFor(identity.BaseLanguageForPrompt(ctx, worker.pool)))
 	if runErr == nil {
 		t.Fatal("the stand-in cannot produce a profile, so the run must fail")
 	}
 	if err := worker.fail(ctx, build.ID, *input.Build.StartedAt,
-		failureStatusCode(runErr), ai.SafeVoiceBuildFailure(runErr)); err != nil {
+		failureStatusCode(runErr), ai.SafeVoiceBuildFailure(runErr, textlang.English)); err != nil {
 		t.Fatalf("recording the failure: %v", err)
 	}
 
@@ -820,5 +842,38 @@ func TestVoiceBuildOnAnUnconfiguredInstallationNamesTheSetting(t *testing.T) {
 	}
 	if strings.Contains(*finished.StatusDetail, "your samples") {
 		t.Fatalf("nothing blames the corpus for a missing setting: %s", *finished.StatusDetail)
+	}
+}
+
+// A build that stops running mid-run ends the worker at the next stage. It
+// asks the model nothing more and writes nothing over the row that stopped it.
+func TestAVoiceBuildThatStopsRunningEndsItsWorker(t *testing.T) {
+	quote := "A quote for a build that is stopped."
+	env, build := seedVoiceBuild(t, quote, 6)
+	scripted := &scriptedBuildBrain{judgeScore: 0.9, quote: quote}
+	calls, stopped := 0, false
+	worker := newVoiceBuildWorker(env.e.Pool, brainFunc(func(ctx context.Context, req model.Request) (model.Response, error) {
+		calls++
+		if !stopped {
+			stopped = true
+			env.e.WsExec(t, `UPDATE voice_build SET archived_at = now() WHERE id = $1`, build.ID)
+		}
+		return scripted.Complete(ctx, req)
+	}), slog.New(slog.DiscardHandler))
+
+	if err := worker.Work(context.Background(), voiceBuildJob(env, build)); err != nil {
+		t.Fatalf("Work on a build that stopped running: %v", err)
+	}
+	callsAtStop := calls
+	if status := env.e.WsScalar(t, `SELECT status FROM voice_build WHERE id = $1`, build.ID); status != "running" {
+		t.Errorf("the stopped build reads %q, want the row left as the stop left it", status)
+	}
+	if n := env.e.WsCount(t, `SELECT count(*) FROM voice_profile_version WHERE voice_profile_id = $1`, env.profile.ID); n != 0 {
+		t.Errorf("the stopped build activated %d version(s), want none", n)
+	}
+	if callsAtStop > 1 {
+		// The first call is the derive the stop interrupted; every later one is
+		// an evaluation nobody will record.
+		t.Errorf("the worker made %d model calls after the build stopped, want none past the first", callsAtStop-1)
 	}
 }

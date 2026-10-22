@@ -26,10 +26,13 @@ runtime from the first day:
    tier cannot ship.
 4. `tools/gen-aitasks` builds the **AI task contract**
    (`backend/api/ai-tasks.yaml`, the task, tier and ladder table) into
-   `internal/modules/ai/tasks_gen.go`. `tools/gen-configschema` reads the tier
+   `internal/modules/ai/tasks_gen.go`. `tools/gen-config` reads the tier
    names from there into the routing shape in `config/margince.schema.json`.
    So the runtime's task registry and the operator's config check both derive
    from that contract.
+5. `tools/gen-queryenums` lists every query parameter, on any method, that the
+   contract closes to a string enum (`internal/compose/queryenums_gen.go`). The
+   server answers 422 for a value outside the enum, so no handler needs its own check.
 
 ## Drift is merge-blocking
 

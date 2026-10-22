@@ -36,7 +36,7 @@ type ListContactsInput struct {
 	OwnerID *ids.UserID
 	// OwnerTeamID narrows to a team's rows; Unassigned to the unowned queue.
 	// Both narrow the caller's row scope and never widen it — see
-	// listFilters.ownershipClause, which also refuses two of them at once.
+	// storekit.OwnershipClause, which also refuses two of them at once.
 	OwnerTeamID     *ids.TeamID
 	Unassigned      *bool
 	IncludeArchived bool
@@ -62,6 +62,9 @@ type ListContactsInput struct {
 	CompanyID *ids.CompanyID
 	// Membership narrows to one list's members (list_id).
 	Membership storekit.ListMemberFilter
+	// MemberOf is the list a seam caller narrowed to; the provider resolves it
+	// into Membership before the read.
+	MemberOf *ids.UUID
 }
 
 // contactListFields is the contact list's core sortable vocabulary —
@@ -71,7 +74,7 @@ var contactListFields = map[string]storekit.SortField{
 	createdAtColumn:    storekit.Column(storekit.KindTimestamp),
 	updatedAtColumn:    storekit.Column(storekit.KindTimestamp),
 	contactNameColumn:  storekit.Column(fieldcatalog.TypeText),
-	ownerIDColumn:      storekit.Column(storekit.KindUUID),
+	ownerIDColumn:      storekit.OwnerNameSort(contactEntity),
 	lastActivityColumn: storekit.Column(storekit.KindTimestamp),
 	// The Company header, by the employer the row prints.
 	contactEmployerField: {Kind: fieldcatalog.TypeText, Expr: orderByCurrentEmployer},
@@ -188,10 +191,8 @@ func contactCommonFilters(in ListContactsInput) listFilters {
 		Cursor:          in.Cursor,
 		CustomFilters:   in.CustomFilters,
 		nameColumn:      contactNameColumn,
-		identifier: storekit.Identifier{
-			Table: "contact_email", FK: contactFK, Column: emailColumn,
-		},
-		Membership: in.Membership,
+		identifier:      storekit.ContactEmails,
+		Membership:      in.Membership,
 	}
 }
 
@@ -201,7 +202,7 @@ func (s *Store) ListContacts(ctx context.Context, in ListContactsInput) ([]crmco
 	shared := contactCommonFilters(in)
 	return listPage(ctx, s, in.Sort, in.Limit, listPageSpec[crmcontracts.Contact]{
 		entity:  contactEntity,
-		columns: contactColumns,
+		columns: func(context.Context, func(any) int) (string, error) { return contactColumns, nil },
 		fields:  contactListFields,
 		filters: func(ctx context.Context, active []fieldcatalog.Column, sorted *storekit.ListSort, arg func(any) int) ([]string, error) {
 			where, err := shared.clauses(ctx, active, sorted, arg)

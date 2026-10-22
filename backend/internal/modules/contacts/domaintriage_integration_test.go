@@ -252,11 +252,12 @@ func TestResolvingADomainNobodyAskedAboutIsRefused(t *testing.T) {
 
 	// Nothing opened a question for this domain, so there is no verdict to
 	// settle. Creating rows anyway would be a company nobody's mail justified.
+	// A missing row is a 404 for the caller; a bare error would be a 500.
 	if _, err := e.store.ResolveDomainTriage(ctx, ResolveDomainTriageInput{
 		Domain: "unasked.test", Status: DomainCompany, Source: DomainSourceSiteRead,
 		DossierName: "Unasked Ltd", SeedURL: "https://unasked.test",
-	}); err == nil {
-		t.Fatal("resolving a domain with no open question must refuse, not create")
+	}); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("resolving a domain with no open question = %v, want ErrNotFound", err)
 	}
 }
 
@@ -479,7 +480,7 @@ func TestAHumanAdmissionOutranksEveryLaterMachineRefusal(t *testing.T) {
 
 	// The next newsletter from that domain tries to refuse it again.
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		return e.store.SuppressBulkSenderDomainTx(ctx, tx, "mckinsey.example", "judged newsletter")
+		return e.store.SuppressBulkSenderDomainTx(ctx, tx, "mckinsey.example", "newsletter")
 	}); err != nil {
 		t.Fatalf("machine suppression: %v", err)
 	}
@@ -556,7 +557,7 @@ func TestClaimingASuppressedDomainForACompanyLiftsTheRefusal(t *testing.T) {
 	}
 	// And the refusal cannot come back on the next newsletter from them.
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		return e.store.SuppressBulkSenderDomainTx(ctx, tx, "mckinsey.example", "judged newsletter")
+		return e.store.SuppressBulkSenderDomainTx(ctx, tx, "mckinsey.example", "newsletter")
 	}); err != nil {
 		t.Fatalf("machine suppression: %v", err)
 	}
@@ -591,7 +592,7 @@ func TestUnblockingADomainReopensTheCompanyQuestion(t *testing.T) {
 	// A newsletter arrives first: the contact lands, the domain is refused.
 	e.openTriage(ctx, t, "insights@mckinsey.example", "", "mckinsey.example")
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		return e.store.SuppressBulkSenderDomainTx(ctx, tx, "mckinsey.example", "judged a newsletter")
+		return e.store.SuppressBulkSenderDomainTx(ctx, tx, "mckinsey.example", "newsletter")
 	}); err != nil {
 		t.Fatalf("machine suppression: %v", err)
 	}
@@ -638,7 +639,7 @@ func TestTheBlockedDomainListShowsWhatDecidedEachRefusal(t *testing.T) {
 		t.Fatalf("block: %v", err)
 	}
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		return e.store.SuppressBulkSenderDomainTx(ctx, tx, "saasweekly.example", "judged a newsletter")
+		return e.store.SuppressBulkSenderDomainTx(ctx, tx, "saasweekly.example", "newsletter")
 	}); err != nil {
 		t.Fatalf("machine suppression: %v", err)
 	}
@@ -671,7 +672,7 @@ func TestUnblockingStampsTheHumanAnswerableForTheDomain(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		return e.store.SuppressBulkSenderDomainTx(ctx, tx, "ownerless.example", "judged a newsletter")
+		return e.store.SuppressBulkSenderDomainTx(ctx, tx, "ownerless.example", "newsletter")
 	}); err != nil {
 		t.Fatalf("machine suppression: %v", err)
 	}
@@ -934,4 +935,55 @@ func TestReopeningStampsTheHumanAnswerableForTheDomain(t *testing.T) {
 	if *owner != e.rep {
 		t.Errorf("owner = %v, want the acting human %v", *owner, e.rep)
 	}
+}
+
+// A dossier already bound to another company refuses a second bind, rather
+// than leaving the caller holding a read that describes somebody else.
+//
+// The bind guards on `company_id IS NULL`, and the decline was silent: the
+// caller was told it owned a dossier that names a different company.
+func TestADossierBoundElsewhereRefusesASecondBind(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	e.openTriageFirst(ctx, t, "anna@twobind.test", "Anna Behr", "twobind.test")
+	readID := e.startTriageRead(ctx, t, "twobind.test")
+
+	// Real companies, because company_id is a foreign key: a random uuid would
+	// make this a test about referential integrity.
+	mine := seedNamedCompany(ctx, t, e, "Twobind GmbH", "twobind.test")
+	theirs := seedNamedCompany(ctx, t, e, "Otherbind GmbH", "otherbind.test")
+
+	// The first bind takes the dossier.
+	if err := e.store.db.Tx(ctx, func(tx pgx.Tx) error {
+		return bindTriageDossier(ctx, tx, readID, mine)
+	}); err != nil {
+		t.Fatalf("the first bind: %v", err)
+	}
+	// Binding it again to the same company is a replayed verdict, which the
+	// guard turns away and which is safe.
+	if err := e.store.db.Tx(ctx, func(tx pgx.Tx) error {
+		return bindTriageDossier(ctx, tx, readID, mine)
+	}); err != nil {
+		t.Errorf("replaying the same bind → %v, want nil", err)
+	}
+	// Binding it to a different company is the wrong belief, and is refused.
+	err := e.store.db.Tx(ctx, func(tx pgx.Tx) error {
+		return bindTriageDossier(ctx, tx, readID, theirs)
+	})
+	if !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("binding a taken dossier elsewhere → %v, want ErrConflict", err)
+	}
+}
+
+// seedNamedCompany creates one company through the writer that makes them.
+func seedNamedCompany(ctx context.Context, t *testing.T, e *dedupeEnv, name, domain string) ids.CompanyID {
+	t.Helper()
+	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
+		DisplayName: name, Source: "manual",
+		Domains: []CompanyDomainInput{{Domain: domain, IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatalf("seeding %s: %v", name, err)
+	}
+	return ids.From[ids.CompanyKind](ids.UUID(company.Id))
 }

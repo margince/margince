@@ -43,7 +43,7 @@ func runtimeFor(ctx context.Context, unit, version, via string, deps extensionRu
 // call. Nothing else about the tick changes: the actor on callCtx is still the
 // one every capability and every policy sees.
 func jobRuntimeFor(ctx context.Context, unit, version, via string, deps extensionRuntimeBinding) *callRuntime {
-	return unattendedRuntimeFor(ctx, unit, version, via, deps)
+	return systemReaderFor(ctx, unit, version, via, deps)
 }
 
 // deliveryRuntimeFor mints the Runtime for one BUS DELIVERY — a subscription
@@ -56,7 +56,16 @@ func jobRuntimeFor(ctx context.Context, unit, version, via string, deps extensio
 // which auth.Require does not check at all — so the unattended flag is what
 // keeps the governed core port shut for a caller nothing else would refuse.
 func deliveryRuntimeFor(ctx context.Context, unit, version, via string, deps extensionRuntimeBinding) *callRuntime {
-	return unattendedRuntimeFor(ctx, unit, version, via, deps)
+	return systemReaderFor(ctx, unit, version, via, deps)
+}
+
+// systemReaderFor is an unattended Runtime that also answers the system reads.
+// A finance read and a channel send are unattended too, but what they return
+// reaches the administrator or rep who asked, so they answer none.
+func systemReaderFor(ctx context.Context, unit, version, via string, deps extensionRuntimeBinding) *callRuntime {
+	rt := unattendedRuntimeFor(ctx, unit, version, via, deps)
+	rt.systemReads = true
+	return rt
 }
 
 // sendRuntimeFor mints the Runtime for one outbound TRANSMISSION on a unit's
@@ -73,7 +82,14 @@ func sendRuntimeFor(ctx context.Context, unit, version, via string, deps extensi
 	return unattendedRuntimeFor(ctx, unit, version, via, deps)
 }
 
-// unattendedRuntimeFor is what each of those three is: a Runtime for an
+// financeRuntimeFor mints the Runtime for one read of a unit's accounting
+// source. Unattended: a source only reads, so nothing it does needs the
+// governed core port, whether the sweep or an administrator's connect asked.
+func financeRuntimeFor(ctx context.Context, unit, version, via string, deps extensionRuntimeBinding) *callRuntime {
+	return unattendedRuntimeFor(ctx, unit, version, via, deps)
+}
+
+// unattendedRuntimeFor is what each of those is: a Runtime for an
 // invocation with nobody behind it. They stay separate NAMES because the call
 // sites are the distinct kinds of unattended work and a reader at any one of
 // them should see which it is — but the behaviour is one fact, spelled here, so

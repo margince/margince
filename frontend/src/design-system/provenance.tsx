@@ -3,7 +3,7 @@
 
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
-import { type Translator, useT } from "../i18n";
+import { isMessageKey, type Translator, useT } from "../i18n";
 import { Badge } from "./atoms";
 import "./trust.css";
 
@@ -17,11 +17,11 @@ import "./trust.css";
 // carries and which four screens render without staging anything at all.
 
 // Provenance is an agent (`agent:capture`), a connector (`connector:gmail`), a
-// job the installation ran itself (`system:contact_auto_enrich`), a human, or a
-// buyer — the shapes captured_by can take, plus the honest last arm for a row
-// that records none of them. A reader has to be able to tell WHICH KIND of
-// thing produced a value, so each is its own arm: a scheduled sweep announced
-// as an AI agent misdescribes both.
+// job the installation ran itself (`system:contact_auto_enrich`), a human or a
+// buyer. Those are the shapes captured_by can take. An import is one more arm,
+// and the last arm is a row that records none of them. A reader has to tell
+// which kind of thing produced a value, so each is its own arm. A scheduled
+// sweep announced as an AI agent misdescribes both.
 //
 // `buyer` is the contact on the other side of a Deal Room: outside the
 // company, holding no seat and named in no member directory. It is its own
@@ -31,15 +31,19 @@ import "./trust.css";
 // Nothing to name today: a Deal Room participant resolves to no display name on
 // the read path, so the tag says the kind, the way `agent` and `system` do.
 //
+// `import` is read from the record's `source` stamp, because captured_by on an
+// imported row names only the administrator who ran the import. It reads
+// "Imported from <upload name>", or "Imported" when the upload has no name.
+//
 // `human` carries whether that human is the reader. "Typed by you" over a
 // colleague's entry is a false statement about who to ask, and it was also
 // what an unattributed row said: the two cases a reader most needs kept apart
 // both read as their own handiwork.
 //
-// `agent` and `system` name the actor only when the wire named it. Neither is
-// required, because the id behind an agent may be a passport uuid and there are
-// no record lookups here to resolve it: an unnamed tag says the kind and stops,
-// which is more than an identifier tells a reader and all of it is true.
+// `agent` and `system` name the actor only when the wire named it. A passport
+// uuid has no lookup here, so an unnamed tag says the kind and stops. The agent
+// arm carries `agent`, words a caller chose, or `job`, the principal's name
+// read through the catalogue.
 //
 // `author` is who wrote it in the system a row was MIGRATED OUT OF, and it
 // outranks every other reading of the human arm. An import runs as one
@@ -49,11 +53,14 @@ import "./trust.css";
 // correspondence. The author is the only field on the row that knows better,
 // so where it is present it is what the tag says.
 export type Provenance =
-  | { kind: "agent"; agent?: string }
+  | { kind: "agent"; agent?: string; job?: string }
   | { kind: "connector"; connector: string }
   | { kind: "system"; job?: string }
   | { kind: "human"; self: boolean; userId?: string; author?: SourceAuthor }
   | { kind: "buyer" }
+  // A row the CSV importer wrote. `uploadName` is what the administrator called
+  // the upload, never the record's `source` stamp that carries it.
+  | { kind: "import"; uploadName?: string }
   | { kind: "unknown" };
 
 // Who wrote an imported row where it came from, as the contract reports it.
@@ -96,23 +103,62 @@ export function provenanceLabel(
   renderUser: ((userId: string) => ReactNode) | undefined,
 ): ReactNode {
   switch (provenance.kind) {
-    case "agent":
-      return provenance.agent
-        ? t("trust.agentTag", { agent: provenance.agent })
-        : t("trust.agentUnnamed");
-    case "system":
-      return provenance.job
-        ? t("trust.systemTag", { job: provenance.job })
-        : t("trust.systemUnnamed");
+    case "agent": {
+      const agent =
+        provenance.agent ??
+        (provenance.job &&
+          (jobLabel("agentJob", provenance.job, t) ??
+            extensionJobLabel(provenance.job)));
+      return agent ? t("trust.agentTag", { agent }) : t("trust.agentUnnamed");
+    }
+    case "system": {
+      const job = provenance.job && jobLabel("systemJob", provenance.job, t);
+      return job ? t("trust.systemTag", { job }) : t("trust.systemUnnamed");
+    }
     case "connector":
       return t("trust.connectorTag", { connector: provenance.connector });
     case "buyer":
       return t("trust.typedByBuyer");
+    case "import":
+      return importLabel(provenance, t);
     case "unknown":
       return t("trust.sourceUnknown");
     case "human":
       return humanLabel(provenance, t, renderUser);
   }
+}
+
+/**
+ * The import arm in words. Exported for a reader that shows a record's source
+ * as plain text (a lead's Source fact) rather than as a tag.
+ */
+export function importLabel(
+  provenance: Extract<Provenance, { kind: "import" }>,
+  t: Translator,
+): string {
+  return provenance.uploadName
+    ? t("trust.importedFrom", { uploadName: provenance.uploadName })
+    : t("trust.imported");
+}
+
+/**
+ * jobLabel names a system pass or an agent by its words in the catalogue, never
+ * by its key. Every system principal the backend binds has a `systemJob.<name>`
+ * message and every core agent principal an `agentJob.<name>` one, held by
+ * backend/gates/frontendjoblabels_test.go and frontendagentlabels_test.go. Hyphens read as underscores
+ * (`system:lead-sla-scan`). A name with no message gets no label, and the tag
+ * names only the kind.
+ */
+function jobLabel(
+  family: "systemJob" | "agentJob",
+  job: string,
+  t: Translator,
+): string | undefined {
+  const pass = family === "systemJob" ? job.split(":")[0] : job;
+  const name = pass?.replaceAll("-", "_");
+  // Each family spelled whole, so the orphan-key sweep sees both prefixes.
+  const key = family === "systemJob" ? `systemJob.${name}` : `agentJob.${name}`;
+  return isMessageKey(key) ? t(key) : undefined;
 }
 
 // How a row somebody typed reads, which is four different answers rather than
@@ -145,4 +191,20 @@ function humanLabel(
   ) : (
     t("trust.typedByHuman")
   );
+}
+
+/**
+ * The core catalogue cannot know the jobs an extension unit declares. So an
+ * extension dispatcher (`agent:ext_openchannel_drain`) is named by its unit
+ * and job in words. The prefix mirrors the backend's extension.NamespacePrefix,
+ * and frontendagentlabels_test.go holds the two together.
+ */
+const EXTENSION_JOB_PREFIX = "ext_";
+
+function extensionJobLabel(job: string): string | undefined {
+  if (!job.startsWith(EXTENSION_JOB_PREFIX)) {
+    return undefined;
+  }
+  const words = job.slice(EXTENSION_JOB_PREFIX.length).replaceAll("_", " ");
+  return words.trim() || undefined;
 }

@@ -61,7 +61,10 @@ const (
 // its sets in is the module's business, and naming files here would make this
 // gate break on a rename that changed nothing about the vocabulary.
 var filterSetModules = []string{
+	"internal/modules/activities",
+	"internal/modules/commissions",
 	"internal/modules/contacts",
+	"internal/modules/dealrooms",
 	"internal/modules/deals",
 	"internal/modules/projects",
 }
@@ -76,42 +79,6 @@ var filterSetModules = []string{
 var unofferedSeamFilters = gatekit.Waive(map[string]string{
 	"company.id": "a screen's batch read of companies it already holds ids for; an agent reads a " +
 		"company by id through read_record, and a second route to the same answer is prompt text for nothing",
-})
-
-// deferredSeamFilters are the gaps this gate found on the day it landed: a
-// filter both halves carry that the seam does not name, and that SHOULD be
-// offered rather than refused.
-//
-// A separate set from the one above because they are different facts. Above is
-// "an agent may not have this"; here is "an agent should have this and does
-// not yet", and collapsing them would let a decision look like a backlog.
-//
-// WHY THEY ARE NOT SIMPLY ADDED HERE. Each one enters the runner's system
-// prompt: list_records' input schema is rendered into it, so a filter name is
-// model-visible text. Measured on this tree, offering all eleven moves the
-// published catalog from 24,331 to 24,389 tokens — comfortably inside the
-// headroom, and beside the point. What it also does is move the prompt, which
-// takes one certification site's best record out of `current` and owes the
-// paid lane that re-earns it. #828's ruling narrows that ticket to the gate for
-// exactly this reason — "a gate is not a model-visible change and owes no paid
-// lane" — so the gate lands and names what it found, and the offering rides the
-// certification pass that can pay for it.
-//
-// Every one of these is an ordinary narrowing dial the store already binds on
-// its HTTP surface, and none discloses a row an agent could not already reach
-// by enumerating: narrowing returns a subset of what listing returns.
-var deferredSeamFilters = gatekit.Waive(map[string]string{
-	"contact.company_id":    "the employer narrowing; #828 offers it with the certification pass",
-	"contact.owner_team_id": "the team arm of the ownership dial; #828",
-	"contact.unassigned":    "the unowned-queue arm of the ownership dial; #828",
-	"company.industry":      "free-text industry on the record; #828",
-	"company.size_band":     "the contract's size enum; #828",
-	"company.owner_team_id": "the team arm of the ownership dial; #828",
-	"company.unassigned":    "the unowned-queue arm of the ownership dial; #828",
-	"lead.source":           "where the lead came from; #828",
-	"lead.sla_state":        "the first-response state (formulas §18); #828",
-	"lead.owner_team_id":    "the team arm of the ownership dial; #828",
-	"lead.unassigned":       "the unowned-queue arm of the ownership dial; #828",
 })
 
 func TestEveryDeclaredFilterTheStoreBindsIsOfferedToTheSeam(t *testing.T) {
@@ -131,7 +98,7 @@ func TestEveryDeclaredFilterTheStoreBindsIsOfferedToTheSeam(t *testing.T) {
 				continue
 			}
 			subject := recordType + "." + filter
-			if unofferedSeamFilters.Waived(t, subject) || deferredSeamFilters.Waived(t, subject) {
+			if unofferedSeamFilters.Waived(t, subject) {
 				continue
 			}
 			t.Errorf("%s declares the %q filter and the seam does not offer it — an agent asked to narrow by it "+
@@ -142,11 +109,7 @@ func TestEveryDeclaredFilterTheStoreBindsIsOfferedToTheSeam(t *testing.T) {
 		}
 	}
 	unofferedSeamFilters.AssertAllMatched(t)
-	// A deferred entry that stopped being a gap is a stale claim about the
-	// seam: it would read as "still owed" beside a filter the seam now offers.
-	deferredSeamFilters.AssertAllMatched(t)
-	t.Logf("seam filters: %d record type(s) judged, %d deferred, %d ratified",
-		len(declared), len(deferredSeamFilters.Subjects()), len(unofferedSeamFilters.Subjects()))
+	t.Logf("seam filters: %d record type(s) judged, %d ratified", len(declared), len(unofferedSeamFilters.Subjects()))
 }
 
 // declaredRecordFilters reads the contract half: listRecordFilters, generated

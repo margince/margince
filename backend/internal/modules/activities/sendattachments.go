@@ -159,7 +159,7 @@ func boundAttachmentIDs(attachmentIDs []ids.UUID) ([]ids.UUID, error) {
 	return unique, nil
 }
 
-// resolveAttachments turns the caller's ids into the snapshot the delivery
+// PreviewSendAttachments turns the caller's ids into the snapshot the delivery
 // keeps.
 //
 // It refuses the whole send when one file cannot be resolved rather than
@@ -167,7 +167,7 @@ func boundAttachmentIDs(attachmentIDs []ids.UUID) ([]ids.UUID, error) {
 // than the sender attached is a message nobody is told is wrong — the same
 // reasoning the dispatcher's carriage gate applies later, applied here at the
 // first point where the difference is visible.
-func (s *Store) resolveAttachments(ctx context.Context, attachmentIDs []ids.UUID) ([]OutboundFile, error) {
+func (s *Store) PreviewSendAttachments(ctx context.Context, attachmentIDs []ids.UUID) ([]OutboundFile, error) {
 	if len(attachmentIDs) == 0 {
 		return nil, nil
 	}

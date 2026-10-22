@@ -142,8 +142,18 @@ func offerSentPayload(current crmcontracts.Offer, rate string) crmcontracts.Publ
 		DealId:       current.DealId,
 		Revision:     current.Revision,
 		GrossMinor:   current.GrossMinor,
+		Currency:     &current.Currency,
 		FxRateToBase: rate,
 		ValidUntil:   current.ValidUntil,
+	}
+}
+
+// offerAcceptedPayload builds the offer.accepted wire payload; the amount
+// travels with its currency so a receiver can print it.
+func offerAcceptedPayload(current crmcontracts.Offer) crmcontracts.PublicEventOfferAccepted {
+	return crmcontracts.PublicEventOfferAccepted{
+		OfferId: current.Id, DealId: current.DealId, Revision: current.Revision,
+		GrossMinor: current.GrossMinor, Currency: &current.Currency,
 	}
 }
 
@@ -225,10 +235,7 @@ func (s *Store) AcceptOffer(ctx context.Context, id ids.OfferID, ifVersion *int6
 		if err != nil {
 			return fmt.Errorf("audit offer accept: %w", err)
 		}
-		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventOfferAccepted{
-			OfferId: current.Id, DealId: current.DealId, Revision: current.Revision,
-			GrossMinor: current.GrossMinor,
-		}); err != nil {
+		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, offerAcceptedPayload(current)); err != nil {
 			return fmt.Errorf("emit offer.accepted: %w", err)
 		}
 		// The paired deal.updated carries the FULL set of deal columns the sync
@@ -389,6 +396,9 @@ func (s *Store) RegenerateOffer(ctx context.Context, id ids.OfferID) (crmcontrac
 // N+1 and N+2, not collide on the unique (workspace, number, revision)
 // key.
 func nextOfferRevision(ctx context.Context, tx pgx.Tx, wsID ids.UUID, offerNumber string) (int, error) {
+	if err := requireReadCommitted(ctx, tx); err != nil {
+		return 0, err
+	}
 	if _, err := tx.Exec(ctx,
 		`SELECT pg_advisory_xact_lock(hashtextextended('offer_revision:' || $1::text || ':' || $2, 0))`,
 		wsID, offerNumber); err != nil {

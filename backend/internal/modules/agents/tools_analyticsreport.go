@@ -43,6 +43,8 @@ func (t composeAnalyticsReport) Spec() mcp.ToolSpec {
 		// exist. Nothing is stored and no record moves, so a write scope would
 		// claim an authority this never uses.
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		Unlisted:  true,
+		OpenAPIOp: "renderAnalyticsReport",
 		// The block vocabulary is NOT restated here. `kind` is left an open
 		// string in the schema and closed by the validator, which refuses an
 		// unknown kind BY NAME with the set — the same trade run_report makes
@@ -51,7 +53,7 @@ func (t composeAnalyticsReport) Spec() mcp.ToolSpec {
 		// than the one round trip it saves.
 		InputSchema: schema(`{
 			"type": "object",
-			"description": "Discover pipeline and stage IDs with list_pipelines.",
+			"description": "Discover pipeline and stage IDs with ` + pipelinesSource + `.",
 			"required": ["blocks"],
 			"additionalProperties": false,
 			"properties": {

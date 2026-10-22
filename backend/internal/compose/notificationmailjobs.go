@@ -24,7 +24,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -34,6 +33,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/emailview"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/platform/mailer"
@@ -108,6 +108,7 @@ func notificationMailOpts() *river.InsertOpts {
 
 // notificationMailWorker mails one claimed notice.
 type notificationMailWorker struct {
+	now     func() time.Time
 	pool    *pgxpool.Pool
 	db      *database.DB
 	notices *notices.Store
@@ -219,22 +220,35 @@ func (w *notificationMailWorker) deliver(ctx context.Context, attempt notices.Em
 		return
 	}
 
-	// The installation's own language, not the reader's. A colleague reads
-	// their Worklist in it and then this line about the same card, so an
-	// English message to a German installation is the product changing language
-	// on its way out of the browser. BaseLanguageForPrompt answers English on
-	// any failure and logs it, which is the right trade here too: a message in
-	// the wrong language beats no message, and the claim is already spent.
-	words := mailcopy.For(identity.BaseLanguageForPrompt(ctx, w.pool))
+	seatCtx, live, scopeErr := seatContext(ctx, identity.NewService(w.pool), noticeWorkspace(ctx), attempt.Recipient.UUID)
+	if scopeErr != nil {
+		w.recordMailFailure(ctx, attempt.Notice.ID, "recipient authority could not be read")
+		return
+	}
+	if !live {
+		return
+	}
+	attempt, current, readErr := refreshApprovalNotice(seatCtx, w.pool, attempt, mailNow(w.now))
+	if readErr != nil {
+		w.recordMailFailure(ctx, attempt.Notice.ID, "approval could not be read")
+		return
+	}
+	if !current {
+		return
+	}
+	words := recipientMailCopy(seatCtx, w.pool)
 
 	// Bounded like the two digests' sends are: the wall clock the kind declares
 	// covers the whole job, and one unreachable relay must not spend all of it
 	// holding a River worker.
 	bounded, cancel := context.WithTimeout(ctx, notificationMailBudget)
 	defer cancel()
-	if err := w.mail.Mailer.Send(bounded, address,
-		notificationMailSubject(attempt.Notice, words),
-		notificationMailBody(attempt.Notice, w.mail.PublicBaseURL, words)); err != nil {
+	message := notificationMessage(attempt.Notice, notificationBase(attempt, w.mail.PublicBaseURL), words)
+	if attempt.ApprovalID != nil {
+		message.AppendContent(approvalMailAction(attempt, w.mail.PublicBaseURL, words))
+	}
+	message.AppendContent(routineFooterContent(w.mail.PublicBaseURL, words))
+	if err := mailer.SendProduct(bounded, w.mail.Mailer, address, notificationMailSubject(attempt.Notice, words), message); err != nil {
 		// LOGGED AND RECORDED, never retried. The attempt is spent; what is
 		// left to do is make the absence answerable.
 		w.log.WarnContext(ctx, "the notice was attempted and did not go out",
@@ -309,20 +323,41 @@ func notificationMailSubject(notice notices.Notice, words mailcopy.Copy) string 
 	return words.NotificationSubject + mailcopy.OneLine(notice.Subject)
 }
 
-// notificationMailBody is the message itself: why it arrived, what is waiting,
+// notificationMessage is the message itself: why it arrived, what is waiting,
 // and where to answer it.
 //
 // EVERY interpolated value goes through OneLine. mailer.Send refuses line
 // breaks in the recipient and the subject, which are the header fields; the
 // body is the sender's to keep honest, and a notice's subject and body are
 // written by producers that bound their length and not their structure.
-func notificationMailBody(notice notices.Notice, base string, words mailcopy.Copy) string {
-	var b strings.Builder
-	b.WriteString(words.NotificationIntro + "\n\n")
-	b.WriteString(mailcopy.OneLine(notice.Subject) + "\n")
-	if notice.Body != "" {
-		b.WriteString(mailcopy.OneLine(notice.Body) + "\n")
+func notificationMessage(notice notices.Notice, base string, words mailcopy.Copy) emailview.Message {
+	var body emailview.Content
+	body.Paragraph(words.NotificationIntro)
+	body.Heading(mailcopy.OneLine(notice.Subject))
+	body.Paragraph(mailcopy.Snippet(notice.Body, 600))
+	body.Action(words.NotificationOpen, mailcopy.Destination(base, mailcopy.WorklistFragment))
+	return body.Message(notificationMailSubject(notice, words), string(words.Language), words.NotificationPreview)
+}
+
+func noticeWorkspace(ctx context.Context) ids.UUID {
+	workspace, ok := principal.WorkspaceID(ctx)
+	if !ok {
+		return ids.Nil
 	}
-	mailcopy.Link(&b, base, mailcopy.WorklistFragment, words.NotificationOpen)
-	return b.String()
+	return workspace
+}
+
+func approvalMailAction(attempt notices.EmailAttempt, base string, words mailcopy.Copy) emailview.Content {
+	var body emailview.Content
+	if attempt.ApprovalID != nil {
+		body.Action(words.NotificationOpen, mailcopy.Destination(base, mailcopy.RecordFragment(notices.TargetApproval, attempt.ApprovalID.String())))
+	}
+	return body
+}
+
+func notificationBase(attempt notices.EmailAttempt, base string) string {
+	if attempt.ApprovalID != nil {
+		return ""
+	}
+	return base
 }

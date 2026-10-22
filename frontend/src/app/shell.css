@@ -112,7 +112,7 @@
   transition: --railW var(--dur-move) var(--ease-out);
 }
 /* The frame every screen sits in, INCLUDING the rail-less auth surface — which
-   sizes itself in dvh for a reason (screens/auth.css: on iOS, 100vh subtracts the
+   sizes itself in dvh for a reason (features/sign-in/auth.css: on iOS, 100vh subtracts the
    browser chrome from the wrong side and the primary action lands under the
    keyboard). A 100vh ancestor silently defeats that: the child asks for the
    visible viewport while the parent is sized to the larger one, so the document
@@ -257,7 +257,7 @@
 }
 /* Except where the page's body is the settings stack, which takes a narrower
    measure than the page's — so there the page's measure IS that stack's, read
-   from the one token both sheets read (--settingsColumn, screens/settings.css).
+   from the one token both sheets read (--settingsColumn, features/settings/settings.css).
    Plus the gutter on each side, because that is padding these boxes carry and
    the stack inside them does not.
 
@@ -375,6 +375,7 @@
      Nothing in the expanded state needs to paint outside the panel; the tooltips
      that do belong to the collapsed one, which opts out of clipping below. */
   overflow-x: hidden;
+  container: rail / inline-size;
 }
 /* The collapsed panel must NOT clip: its tooltips sit outside the 56px box, and
    each label clips itself.
@@ -525,7 +526,7 @@
   width: 32px;
   height: 32px;
 }
-/* What stands here is the square badge (app/shell.tsx picks it), so it is
+/* What stands here is the square badge (app/shellrail.tsx picks it), so it is
    centred rather than flush left: the wide mark's left alignment is what lines
    a wordmark up with the labels beside it, and a square has nothing to line up
    with. An installation that uploaded no badge lands its wide mark here, and
@@ -728,7 +729,7 @@
 }
 
 /* Not clipped: the collapsed tooltip sits outside
-   the row's box on purpose, and the label does its own ellipsis, so a clip here
+   the row's box on purpose, and the label keeps to its own box, so a clip here
    only ever hides something that is meant to be seen. */
 .rail .navitem {
   position: relative;
@@ -736,14 +737,16 @@
   align-items: center;
   gap: var(--space-2);
   flex: 1;
+  /* A one-line label clips with an ellipsis instead of widening the row. */
+  min-width: 0;
   /* 32px rows: ten places read at a glance in a column a laptop still fits.
      Past the 24x24 floor of WCAG 2.2 2.5.8 (AA) at 34x32 expanded and 32x32
      collapsed; the 44px targets of 2.5.5 (AAA) are the phone bar's, where a
      thumb is the pointer. */
   min-height: 32px;
-  /* The inset the label is positioned off: 8 + the 18px glyph + the 8px gap is
-     the 34px `.navlabel` stands at, so the two cannot drift apart. */
-  padding: 0 var(--space-2);
+  /* The block inset is the air around a wrapped label; a one-line row stays at
+     the 32px floor, so its glyph and label do not move. */
+  padding: var(--space-1) var(--space-2);
   border-radius: var(--r-sm);
   /* A pointer-tracked highlight reads as lag past ~200ms; Carbon times this
      class of change at 70–110ms. */
@@ -769,28 +772,25 @@
   padding: 0;
   justify-content: center;
 }
-/* A pointer resting on a row takes the accent wash the current row is painted
+/* A pointer resting on a row takes the inset ground the current row is painted
    in, one step quieter: hover and current are then one gesture read at two
    strengths rather than two unrelated tints. */
 .rail .navitem:hover {
-  background: color-mix(in srgb, var(--accentLight) 50%, transparent);
+  background: color-mix(in srgb, var(--bgInset) 50%, transparent);
   color: var(--textPrimary);
 }
 /* The current row is one more pane on the glass: the pane's ground with the
    pane's hairline as an EDGE, which is what makes it a surface with a boundary
    rather than a smudge, and quieter than hover's tint so the two states are
    never the same gesture read twice.
-   Three signals, because a ground alone is colour-only (WCAG 1.4.1, Level A):
-   the accent wash, semibold weight, and the accent on the glyph. The INK stays
-   neutral: the accent as 14px text measures under the 4.5:1 AA needs on the
-   dark theme, and weight does not rescue that below 18.66px. The glyph is where
-   the accent goes, and at 3:1 non-text (1.4.11) it clears. */
+   A ground alone is colour-only (WCAG 1.4.1, Level A), so semibold weight
+   goes with it. All of it is neutral: the current row says where the reader
+   is, and the accent is for the action. The opaque inset ground rather than
+   the chip fill, because the row's caption ink does not clear AA on the chip. */
 .rail .navitem.active {
-  background: var(--accentLight);
+  background: var(--bgInset);
   color: var(--textPrimary);
-}
-.rail .navitem.active svg {
-  color: var(--accentText);
+  font-weight: var(--fontWeightMedium);
 }
 /* One icon size in both states. Animating the glyph's box relayouts the whole
    sidebar every frame, and a resizing icon is the jitter — 18px reads correctly
@@ -800,26 +800,37 @@
   height: 18px;
   flex: none;
 }
-/* The label collapses its width and fades instead of unmounting, so expanding
-   and collapsing is one continuous movement. */
+/* The label fades instead of unmounting, so expanding and collapsing is one
+   continuous movement. A name longer than the row wraps and the row grows. */
 .rail .navlabel {
+  flex: 1;
+  min-width: 0;
+  opacity: 1;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  pointer-events: none;
+  transition: opacity var(--dur-state) var(--ease-in-out);
+}
+/* Out of flow while collapsed, so the glyph stays centred in its 32px square.
+   The 34px is the inset the expanded label stands at: 8 + the 18px glyph + 8. */
+.rail.collapsed .navlabel {
   position: absolute;
   left: 34px;
   right: 10px;
   top: 50%;
   transform: translateY(-50%);
-  opacity: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  pointer-events: none;
-  transition: opacity var(--dur-state) var(--ease-in-out);
-}
-.rail .navitem:has(.count) .navlabel {
-  right: 38px;
-}
-.rail.collapsed .navlabel {
   opacity: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+/* While the column widens the label keeps one line, so it never stacks a word
+   per line; 216px is under the open rail's 239px less a classic scrollbar. */
+@container rail (width < 216px) {
+  .rail .navlabel {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 .rail .navitem .count {
   display: inline-flex;
@@ -977,10 +988,15 @@
  * cap is applied to this element and to `.wrap` by one declaration above
  * (--pageMeasure), so the name starts and ends exactly where the content under
  * it does at every width. An uncapped page needs nothing more than the gutter,
- * because there the content is the full column too. */
+ * because there the content is the full column too.
+ *
+ * A page's verb (PageHeadAction) stands beside the name while the name keeps
+ * 16rem, and wraps under it on a phone rather than squeezing it. */
 .pagetitle {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
+  gap: var(--space-3) var(--space-4);
   flex: none;
   width: 100%;
   /* No top padding: the scroller carries the air under the strip for every
@@ -991,17 +1007,13 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  flex: 1;
+  flex: 1 1 16rem;
   min-width: 0;
 }
 /* The heading and its scope badge on one line, the badge baseline-aligned with
    the heading's text rather than centred on its box — a display-size heading is
-   tall enough that centring reads as floating.
-   `flex-wrap` is the last resort, not the usual behaviour. At phone width the
-   heading holds the SectionSwitcher, which takes `flex: 1` and absorbs the
-   remaining width, so its own label ellipsizes and the badge stays beside it.
-   The badge only drops to its own line when even the ellipsized name plus the
-   badge cannot fit. */
+   tall enough that centring reads as floating. A name too long to share the
+   row puts the badge on the next line; the name itself wraps, never clips. */
 .pagetitle-head {
   display: flex;
   align-items: baseline;
@@ -1026,53 +1038,31 @@
   margin: 0;
   max-width: 68ch;
 }
-/* The heading IS the switcher at phone width: the h1 carries no type of its own
-   there, because the control inside it brings the page's name at the size the
-   control draws it — and it hands the control the whole row, because what it
-   switches is the whole page and at 390px the thumb wants the row rather than
-   the six characters of "Audit log". */
+/* The heading is the switcher at phone width: the control inside the h1 takes
+   the heading's own type, so the page reads as titled rather than as a form. */
 .pageswitchhead {
   display: flex;
   min-width: 0;
-  /* The switcher takes the row, which is what the comment above asks for. It
-     used to be the title's only child and got the width for free; inside
-     `.pagetitle-head` it is a flex ITEM beside the scope badge, and without this
-     it would size to its own text — a short page name would leave the switcher
-     stranded mid-row, and a long one would push the badge to a line of its
-     own while the label ellipsized. */
-  flex: 1;
 }
 .pageswitchhead > .pageswitch {
-  flex: 1;
   min-width: 0;
 }
 
 /* ===== the section switcher (phone width only) =====
- * At phone width the sidebar is a bar of four destinations, so a section's own
- * entries are reached from here. It stands AS the page's heading — the control
- * names the page and opens the others, and a heading repeating that name above
- * it would be the page named twice. Rendered only at that width (app/shell.tsx
- * asks app/viewport.ts), so it needs no media query of its own — but it is a
- * phone control, which is why it takes the 44px target WCAG 2.5.5 asks for
- * rather than the compact row rhythm the sidebar uses under a pointer. */
-/* Full width, because what it switches is the whole page: a pill hugging its own
-   label read as one more chip in the head, and at 390px the thumb wants the
-   whole row rather than the six characters of "Audit log". The chevron sits at
-   the far end for the same reason — the gap between name and glyph is the
-   affordance that says the row opens. */
+ * The 44px target WCAG 2.5.5 asks of a phone control; the negative inset keeps
+ * the name on the page gutter while the pressed ground reaches past it. */
 .pageswitch {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  width: 100%;
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--space-1);
   min-height: 44px;
-  padding: 0 var(--space-3);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-md);
-  background: var(--bgElevated);
+  margin-inline: calc(-1 * var(--space-2));
+  padding: calc((44px - 1lh) / 2) var(--space-2); /* ds:ignore the block inset is derived from the 44px target, not a rhythm step */
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
   color: var(--textPrimary);
-  font-family: var(--fontFamilyBody);
+  font: inherit;
   text-align: left;
   cursor: pointer;
 }
@@ -1084,15 +1074,18 @@
 .pageswitch:active {
   background: var(--bgInset);
 }
-/* A settings entry's name is copy, not user data, but the column is 390px wide
-   and the pill must never widen the page: it clips itself instead. */
+/* The column is 390px wide and the control must never widen the page, so a
+   long name wraps and the heading grows. */
 .pageswitch > span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  min-width: 0;
+  overflow-wrap: break-word;
+  hyphens: auto;
 }
+/* One line of the name tall, so the chevron centres on the first line. */
 .pageswitch svg {
   flex: none;
+  block-size: 1lh;
+  color: var(--textSecondary);
 }
 
 /* The list inside the sheet: the section's groups and their entries, which are
@@ -1125,15 +1118,12 @@
 .sectionpickgroup a svg {
   flex: none;
 }
-/* The entry the reader came from, in the same signals the sidebar's rows use —
-   a tint and the accent on the glyph — because a tint alone is colour-only
-   (WCAG 1.4.1). */
+/* The entry the reader came from, on the inset ground the sidebar's current
+   row uses. */
 .sectionpickgroup a[aria-current="page"] {
-  background: var(--accentLight);
+  background: var(--bgInset);
   color: var(--textPrimary);
-}
-.sectionpickgroup a[aria-current="page"] svg {
-  color: var(--accentText);
+  font-weight: var(--fontWeightMedium);
 }
 
 /* ===== ⌘K palette ===== */
@@ -1338,7 +1328,7 @@
  * nav and content reflows — the BODY never scrolls horizontally; wide
  * content scrolls inside its own container.
  *
- * 700px is the same breakpoint `PHONE_MAX_WIDTH` names in app/viewport.ts, which
+ * 700px is the same breakpoint `PHONE_MAX_WIDTH` names in lib/viewport.ts, which
  * is where the components that must KNOW the width read it — the bar renders the
  * destinations at this width even on a section route, and that is a decision in
  * TypeScript rather than a layout a stylesheet can make. A sheet cannot read that
@@ -1417,13 +1407,11 @@
     border-radius: var(--r-lg);
     box-shadow: var(--shadow-pop);
   }
-  /* The current cell takes the accent tint rather than the desktop row's grey
-     one — the same signal `.railmore.active` below already uses for a
-     destination that lives in the sheet, so the bar has ONE way of saying "this
-     one", whichever cell is carrying it. The weight and the accent glyph from
-     the desktop rule still apply, so the state keeps its three signals. */
+  /* The current cell takes the inset ground without the desktop row's edge —
+     the same signal `.railmore.active` below uses for a destination that lives
+     in the sheet, so the bar has ONE way of saying "this one". */
   .rail .navitem.active {
-    background: var(--accentLight);
+    background: var(--bgInset);
     border-color: transparent;
   }
   /* The layer the sheet sits on. It fades in rather than appearing, because the
@@ -1491,8 +1479,7 @@
      — without it a phone inherits whatever the desktop was left in. */
   .rail .navlabel,
   .rail.collapsed .navlabel,
-  .rail .railmore .navlabel,
-  .rail .navitem:has(.count) .navlabel {
+  .rail .railmore .navlabel {
     display: none;
   }
   /* Only the primary destinations ride the bar; the rest live in the sheet. */
@@ -1551,10 +1538,9 @@
   /* A destination inside the More sheet is still the current one; without this
      the closed bar shows no active tab at all on those routes. */
   .rail .railmore.active {
-    color: var(--accentText);
-  }
-  .rail .railmore.active {
-    background: var(--accentLight);
+    color: var(--textPrimary);
+    font-weight: var(--fontWeightMedium);
+    background: var(--bgInset);
     border-radius: var(--r-md);
   }
 
@@ -1680,13 +1666,10 @@
     height: 20px;
   }
   .rail.sheetopen .navlabel,
-  .rail.sheetopen.collapsed .navlabel,
-  .rail.sheetopen .navitem:has(.count) .navlabel {
+  .rail.sheetopen.collapsed .navlabel {
     display: block;
-    /* The collapse animation fades the label out (`.rail.collapsed .navlabel`)
-       as well as taking its width, and `display: block` alone does not put the
-       ink back: a reader whose desktop rail was left collapsed opened the sheet
-       to ten unlabelled glyphs. */
+    /* `.rail.collapsed .navlabel` hides the label out of flow, and a desktop
+       rail left collapsed must not open the sheet to unlabelled glyphs. */
     opacity: 1;
     position: static;
     left: auto;
@@ -1694,6 +1677,7 @@
     top: auto;
     transform: none;
     max-width: none;
+    white-space: normal;
     text-align: left;
   }
   /* The count is a trailing figure in a list row, not a badge pinned to a tab. */
@@ -1912,8 +1896,9 @@
 }
 
 .settingssearch-hit {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: var(--space-2);
   /* The anatomy's block inset, so a hit here is the row a menu draws; the
      inline inset is the list's own, since a hit carries two lines rather than
      one and an optical menu inset would crowd the second. */
@@ -1921,6 +1906,15 @@
   border-radius: var(--r-sm);
   color: var(--textPrimary);
   text-decoration: none;
+}
+
+/* The page's own glyph, centred on its name line as in the rail. */
+.settingssearch-hit > svg {
+  align-self: center;
+  color: var(--textSecondary);
+}
+.settingssearch-hit > .t-caption {
+  grid-column: 2;
 }
 
 /* One state for keyboard and pointer, because the list tracks one active

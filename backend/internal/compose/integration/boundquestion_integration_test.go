@@ -27,6 +27,7 @@ import (
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/mailcopy"
 )
 
 // grantedProof is what one proof row records about the wording.
@@ -210,5 +211,40 @@ func TestALinkThatPinnedNoQuestionStillRecordsTheGrant(t *testing.T) {
 	}
 	if proof.text != "Yes, send me occasional product news." {
 		t.Errorf("the fallback did not record what the client sent: %q", proof.text)
+	}
+}
+
+// A German link records the German question, filled with the purpose's stored
+// label. The page shows that same sentence (frontend/src/features/privacy/confirm.test.tsx),
+// so what the proof says the subject read is what they read.
+func TestAGermanConsentLinkRecordsTheSentenceThePageShows(t *testing.T) {
+	c := setupConsent(t)
+	if status := c.Call(t, "PATCH", "/v1/installation/settings",
+		AnyMap{"base_language": "de"}, nil, nil); status != http.StatusOK {
+		t.Fatalf("switching the installation to German → %d", status)
+	}
+	if status := c.Call(t, "POST", "/v1/contacts/"+c.contactID+"/consent/double-opt-in",
+		AnyMap{"purpose_id": c.purposes["marketing_email"]}, nil, nil); status >= 400 {
+		t.Fatalf("minting the double-opt-in link → %d", status)
+	}
+	token := confirmLinkToken(t, c.AppEnv)
+	var receipt crmcontracts.ConfirmSubmissionReceipt
+	if s := publicCall(t, c.AppEnv, "POST", "/v1/public/confirm/"+token, AnyMap{
+		"marketing_choice":  "granted",
+		"marketing_wording": "whatever the client says",
+	}, nil, &receipt); s != http.StatusOK {
+		t.Fatalf("spending the consent link → %d, want 200", s)
+	}
+
+	var label string
+	if err := c.Owner.QueryRow(context.Background(),
+		`SELECT label FROM consent_purpose WHERE key = 'marketing_email'`).Scan(&label); err != nil {
+		t.Fatalf("reading the purpose label: %v", err)
+	}
+	words := mailcopy.For("de")
+	want := strings.ReplaceAll(words.ConfirmSubscriptionAsk, "{purpose}", label) + "\n" +
+		words.ConfirmSubscriptionConfirm
+	if got := readGrantedProof(t, c, "consent_link").text; got != want {
+		t.Errorf("the German grant recorded\n  %q\nwant the sentence the page shows\n  %q", got, want)
 	}
 }

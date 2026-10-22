@@ -1,0 +1,314 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import type { components } from "../../api/schema";
+import { Button, Skeleton } from "../../design-system/atoms";
+import { ErrorLine } from "../../design-system/errorline";
+import { Heading } from "../../design-system/heading";
+import { formatMoney, formatNumber } from "../../format/format";
+import { useLocale, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
+import {
+  type ImportWindow,
+  isLiveRun,
+  useBackfillRun,
+} from "../../lib/backfill-run";
+import { useDrawsImportRun } from "../../lib/import-onscreen";
+import { problemMessageOf } from "../../lib/problem";
+import { ImportWindowPicker } from "../../mail-history/window-picker";
+import "./onboarding-backread.css";
+import { BackreadRun } from "./onboarding-backread.run";
+
+/**
+ * The last act of onboarding: a mailbox is connected, so the flow asks how far
+ * back to read it, starts the read, and shows what it found. Without this step
+ * a fresh install knows nothing about relationships the user already has, which
+ * is the empty-install problem the whole wizard exists to solve.
+ *
+ * Connecting and reading are two operations and the surface keeps them apart:
+ * the grant is already given, this spends budget on history. So the scope is
+ * previewed before the spend (ADR-0020) and the read is explicitly started.
+ *
+ * Three honesty rules run through every render here:
+ *
+ *  - `BackfillStatus` requires only `state`. Every count, the window and the
+ *    denominator are optional, so each is absent-until-present: a tally with no
+ *    count is omitted, never drawn as a 0 that looks like a finding.
+ *  - progress is a fraction only when the server gave a denominator. Without
+ *    `estimated_messages` the line is an open count and no percentage exists.
+ *  - the run is a server-side job, so leaving is always available: the user can
+ *    walk into the app with the read still going, and it keeps going.
+ */
+
+export type BackfillStatus = components["schemas"]["BackfillStatus"];
+
+type BackfillPreview = components["schemas"]["BackfillPreview"];
+
+export type BackfillCounts = NonNullable<BackfillStatus["counts"]>;
+
+type Provider = components["schemas"]["CaptureConnection"]["provider"];
+
+// The contract pins v1 estimates to USD minor units and leaves `currency`
+// optional, so USD is the documented fallback rather than a guess. The symbol
+// itself is never spelled here — Intl derives it from the code and the locale.
+const FALLBACK_CURRENCY = "USD";
+
+// The template-ready `{detail}` value for a mutation that may or may not
+// have failed — `null` while it hasn't, the failure's reader-safe text once it
+// has. Pulled out of the component itself so each of the three mutations'
+// error handling reads as one call, not a ternary. It only derives text, so it
+// stays safe to call from render as many times as render runs; keeping the raw
+// failure readable is the client's mutation sink's job (app/queryclient.ts).
+function safeDetail(
+  isError: boolean,
+  error: unknown,
+  t: (key: MessageKey) => string,
+): string | null {
+  if (!isError) {
+    return null;
+  }
+  return problemMessageOf(error, t, t("ob.backread.detailUnavailable"));
+}
+
+export type OnboardingBackreadProps = Readonly<{
+  provider: Provider;
+  /** The run row already embedded in the `GET /connectors` roster row — seeds
+   *  the first render, so returning to a read in progress shows it immediately
+   *  and never offers to start a second one. */
+  initial?: BackfillStatus;
+  /** Leave the backread. The mailbox is connected on every path through this
+   *  surface, and a read that is running keeps running; what closes is the
+   *  dialog, so the reader lands back on the connect surface — where LinkedIn
+   *  still waits and the step's own way onward stands. */
+  onDone: () => void;
+  /** Hold the start verb while a decision ABOUT this mailbox is still being
+   *  written — the posture, today. A read that begins first imports under the
+   *  answer the write was about to replace. */
+  disabled?: boolean;
+}>;
+
+export function OnboardingBackread({
+  provider,
+  initial,
+  disabled,
+  onDone,
+}: OnboardingBackreadProps) {
+  const t = useT();
+  const importRun = useBackfillRun({ provider, initial });
+  const { status, preview, start, cancel } = importRun;
+  const selected = importRun.window;
+
+  // This step draws the run in full, so the shell's capture chip stands down
+  // for as long as it is on screen rather than gauging the same import twice.
+  useDrawsImportRun(isLiveRun(status.data?.state));
+
+  // `preview.data`/`preview.error` are the mutation's LAST result, which
+  // survives past the render where `selected` changes to a window nobody has
+  // previewed yet. `preview.variables` is the window that result actually
+  // belongs to, so it gates what scope is shown: a stale estimate for the old
+  // window is withheld rather than shown as though it answered the new pick,
+  // and until THIS selection's own count settles the scope says it is still
+  // counting rather than standing empty.
+  //
+  // Start does not wait on it. The window is the consent — it is what the
+  // reader picked and what bounds the run — while the estimate only describes
+  // that window, and counting a large mailbox takes seconds. A verb held shut
+  // for those seconds gives no reason for being shut, so it reads as a broken
+  // button at the one moment the reader is least sure anything is working.
+  const previewForSelection = preview.variables === selected;
+  const previewSettled = previewForSelection && !preview.isPending;
+
+  if (status.data === undefined) {
+    // A failed status read must not trap anyone in the wizard: capture itself
+    // is unaffected, so the honest answer is the missing view plus the exit.
+    return status.isError ? (
+      <section className="ob-backread">
+        <ErrorLine>{t("backfill.statusUnavailable")}</ErrorLine>
+        <div className="ob-backread-acts">
+          {/* Every exit from this surface waits on `disabled`: a decision
+              about the mailbox still being written (the posture) needs this
+              dialog mounted to show its refusal, and closing it mid-write
+              would leave that refusal with nowhere to land. */}
+          <Button
+            variant="primary"
+            disabled={disabled}
+            onClick={() => onDone()}
+          >
+            {t("ob.conv.connect.dialogDone")}
+          </Button>
+        </div>
+      </section>
+    ) : (
+      <div className="ob-backread">
+        <Skeleton width="70%" />
+        <Skeleton width="45%" />
+      </div>
+    );
+  }
+
+  if (importRun.isSetup) {
+    return (
+      <BackreadSetup
+        selected={selected}
+        onSelect={importRun.setWindow}
+        // Gated on settled, not just on-selection: react-query already clears
+        // `data` while a mutation is pending, but this does not depend on
+        // that — the old window's estimate stays withheld on our own terms
+        // even if a future call resolves pending differently.
+        preview={previewSettled ? preview.data : undefined}
+        previewProblem={
+          previewForSelection
+            ? safeDetail(preview.isError, preview.error, t)
+            : null
+        }
+        counting={!previewSettled}
+        starting={start.isPending}
+        held={disabled}
+        startProblem={safeDetail(start.isError, start.error, t)}
+        onStart={() => importRun.begin(selected)}
+        onDone={onDone}
+      />
+    );
+  }
+
+  const run = status.data;
+  return (
+    <BackreadRun
+      run={run}
+      cancelling={cancel.isPending}
+      cancelProblem={safeDetail(cancel.isError, cancel.error, t)}
+      held={disabled}
+      onCancel={() => cancel.mutate()}
+      onRestart={() => importRun.restart(run)}
+      onDone={onDone}
+    />
+  );
+}
+
+// The window pick and the consent it carries. The read-only note sits ABOVE
+// the start button on purpose: it is what makes the button safe to press, and a
+// reassurance read after the click is a reassurance nobody read.
+function BackreadSetup({
+  selected,
+  onSelect,
+  preview,
+  previewProblem,
+  counting,
+  starting,
+  startProblem,
+  held,
+  onStart,
+  onDone,
+}: Readonly<{
+  selected: ImportWindow;
+  onSelect: (pick: ImportWindow) => void;
+  preview: BackfillPreview | undefined;
+  previewProblem: string | null;
+  /** A decision about this mailbox is still being written; the read must not
+   *  begin ahead of it. Separate from `starting`, which also drives the verb's
+   *  own copy — a button reading "starting…" when nothing started is a lie. */
+  held?: boolean;
+  /** THIS selection's estimate has not settled yet (found or failed), so the
+   *  scope is still being counted. It is a sentence in the scope panel, never
+   *  a hold on the start: see the note in `OnboardingBackread`. */
+  counting: boolean;
+  starting: boolean;
+  startProblem: string | null;
+  onStart: () => void;
+  onDone: () => void;
+}>) {
+  const t = useT();
+
+  return (
+    <section className="ob-backread">
+      <Heading size="medium" className="ob-backread-h t-h3">
+        {t("ob.backread.heading")}
+      </Heading>
+      <ImportWindowPicker
+        value={selected}
+        onChange={onSelect}
+        preview={preview}
+      />
+      <BackreadScope
+        preview={preview}
+        problem={previewProblem}
+        counting={counting}
+      />
+      <p>{t("ob.backread.note")}</p>
+      <div className="ob-backread-acts">
+        <Button variant="primary" disabled={starting || held} onClick={onStart}>
+          {t("ob.backread.start")}
+        </Button>
+        <Button disabled={held} onClick={() => onDone()}>
+          {t("ob.backread.skip")}
+        </Button>
+      </div>
+      {startProblem !== null && (
+        <ErrorLine>
+          {t("ob.backread.startFailed", { detail: startProblem })}
+        </ErrorLine>
+      )}
+    </section>
+  );
+}
+
+// What the selected window would touch. An estimate still being counted, and an
+// estimator that failed, are each stated here and neither stands in the way of
+// the start: not knowing the size of the mailbox yet is a reason to say so,
+// never a reason to refuse the read.
+function BackreadScope({
+  preview,
+  problem,
+  counting,
+}: Readonly<{
+  preview: BackfillPreview | undefined;
+  problem: string | null;
+  counting: boolean;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  // Absent when no model rate applied to this window — an unpriced estimate
+  // says nothing about cost rather than saying zero.
+  const cost =
+    preview?.estimated_cost_minor === undefined
+      ? null
+      : formatMoney(
+          preview.estimated_cost_minor,
+          preview.currency ?? FALLBACK_CURRENCY,
+          locale,
+        );
+
+  return (
+    <div className="ob-backread-scope" aria-live="polite">
+      {counting && <p>{t("ob.backread.estimating")}</p>}
+      {preview && (
+        <p className="ob-backread-estimate">
+          {t(
+            preview.estimate_is_floor
+              ? "ob.backread.estimateAtLeast"
+              : "ob.backread.estimate",
+            {
+              messages: formatNumber(preview.estimated_messages, locale),
+            },
+          )}
+        </p>
+      )}
+      {preview?.estimate_quality === "heuristic" && (
+        <p className="t-caption">{t("ob.backread.estimateHeuristic")}</p>
+      )}
+      {cost !== null && (
+        <p className="ob-backread-cost">
+          {t("ob.backread.estimateCost", { cost })}
+        </p>
+      )}
+      {preview?.estimate_is_floor && cost !== null && (
+        <p className="t-caption">{t("backfill.costFloorNote")}</p>
+      )}
+      {problem !== null && (
+        <ErrorLine>
+          {t("ob.backread.estimateFailed", { detail: problem })}
+        </ErrorLine>
+      )}
+    </div>
+  );
+}

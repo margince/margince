@@ -46,7 +46,7 @@ func captureSettingsCtx(e *integration.SearchEnv, grant principal.ObjectGrant) c
 
 func TestCaptureSettingsStore(t *testing.T) {
 	e := integration.SetupSearch(t)
-	store := capturemod.NewSettings(compose.NewSettingsStore(e.Pool))
+	store := capturemod.NewSettings(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 
 	admin := captureSettingsCtx(e, principal.ObjectGrant{Read: true, Update: true})
 	rep := captureSettingsCtx(e, principal.ObjectGrant{Read: true})
@@ -123,7 +123,7 @@ func TestCaptureSettingsStore(t *testing.T) {
 // none of them.
 func TestTheWebsiteReadingLimitsAreSettingsOnlyTheUpdateGrantChanges(t *testing.T) {
 	e := integration.SetupSearch(t)
-	store := capturemod.NewSettings(compose.NewSettingsStore(e.Pool))
+	store := capturemod.NewSettings(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	admin := captureSettingsCtx(e, principal.ObjectGrant{Read: true, Update: true})
 	rep := captureSettingsCtx(e, principal.ObjectGrant{Read: true})
 

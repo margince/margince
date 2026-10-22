@@ -5,10 +5,7 @@ package reporting
 
 import (
 	"context"
-	"crypto/sha256"
 	"crypto/subtle"
-	"encoding/hex"
-	"encoding/json"
 	"strconv"
 	"strings"
 	"time"
@@ -27,14 +24,24 @@ func (s *Service) Catalog(ctx context.Context) (crmcontracts.ReportingCatalog, e
 	if err := auth.Require(ctx, "report_definition", principal.ActionRead); err != nil {
 		return crmcontracts.ReportingCatalog{}, err
 	}
-	out, err := s.evaluator.Catalog(ctx)
-	canSchedule := auth.Allows(ctx, "report_schedule", principal.ActionCreate) || auth.Allows(ctx, "report_schedule", principal.ActionUpdate)
-	if err != nil || !canSchedule {
-		return out, err
-	}
-	err = s.store.db.Tx(ctx, func(tx pgx.Tx) error {
+	var out crmcontracts.ReportingCatalog
+	err := s.store.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		out, err = s.evaluator.Catalog(ctx, s.statusCopy(ctx, tx).Lang())
+		if err != nil {
+			return err
+		}
+		canSchedule := auth.Allows(ctx, "report_schedule", principal.ActionCreate) || auth.Allows(ctx, "report_schedule", principal.ActionUpdate)
+		if !canSchedule {
+			return nil
+		}
 		ready, err := scheduleReady(ctx, tx)
 		out.ScheduleReady = &ready
+		if err != nil || !ready {
+			return err
+		}
+		days, err := editionRetentionDays(ctx, tx)
+		out.EditionRetentionDays = &days
 		return err
 	})
 	return out, err
@@ -65,6 +72,14 @@ func (s *Service) evaluateSelection(ctx context.Context, tx pgx.Tx, selection cr
 }
 
 func (s *Service) evaluateAt(ctx context.Context, tx pgx.Tx, selection crmcontracts.ReportingSelection, framework crmcontracts.ReportingFramework, at time.Time) (Evaluation, error) {
+	// Every door derives the blocks from a layout, so the charts drawn are the
+	// ones the layout places.
+	deriveLayoutBlocks(&selection)
+	// A selection with no charts serialises the same whichever door built it,
+	// so the evaluation key does not depend on nil versus empty.
+	if selection.Blocks == nil {
+		selection.Blocks = []crmcontracts.ReportingBlockKind{}
+	}
 	if err := s.validateSelection(ctx, selection); err != nil {
 		return Evaluation{}, err
 	}
@@ -75,13 +90,8 @@ func (s *Service) evaluateAt(ctx context.Context, tx pgx.Tx, selection crmcontra
 	if err := s.applyTargets(ctx, tx, &out.Result); err != nil {
 		return Evaluation{}, err
 	}
-	raw, err := json.Marshal(out)
-	if err != nil {
-		return Evaluation{}, err
-	}
-	digest := sha256.Sum256(raw)
-	out.Result.EvaluationKey = hex.EncodeToString(digest[:])
-	return out, nil
+	out.Result.EvaluationKey, err = evaluationKey(out)
+	return out, err
 }
 
 // EvaluateReport pins the requested definition revision before evaluation.
@@ -99,7 +109,7 @@ func (s *Service) EvaluateReport(ctx context.Context, id ids.UUID, revision *int
 		if revision != nil {
 			chosen = *revision
 		}
-		selection, frameworkID, err := s.reportRevision(ctx, tx, report, chosen)
+		selection, frameworkID, err := s.evaluableRevision(ctx, tx, report, chosen)
 		if err != nil {
 			return err
 		}
@@ -222,9 +232,15 @@ func (s *Service) checkedEvaluation(ctx context.Context, tx pgx.Tx, selection cr
 		return Evaluation{}, err
 	}
 	if subtle.ConstantTimeCompare([]byte(expectation.Key), []byte(evaluation.Result.EvaluationKey)) != 1 {
-		return Evaluation{}, apperrors.ErrVersionSkew
+		return Evaluation{}, errEvidenceStale
 	}
 	return evaluation, nil
+}
+
+// errEvidenceStale refuses evidence or an export asked of figures that changed since
+// the report was read. The generic skew sentence speaks of a lost write, and this is a read.
+var errEvidenceStale = &apperrors.VersionSkewError{
+	Message: "The figures changed after this report was read. Reload the report, then try again.",
 }
 
 // EvaluatedReceipt binds an evaluation to its context and captured source values.

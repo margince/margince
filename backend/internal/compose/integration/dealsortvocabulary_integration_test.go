@@ -91,18 +91,19 @@ func TestTheDealsListSortsByTheStatusColumnItDraws(t *testing.T) {
 	assertIDOrder(t, listed("-status"), []ids.UUID{wonDeal, openDeal}, "status descending")
 }
 
-// TestTheDealsListSortsByTheOwnerColumnItDraws: by the owner's id, which sets
-// each colleague's deals together, the way the company and contact lists order
-// their own owner column.
+// TestTheDealsListSortsByTheOwnerColumnItDraws: by the owner's name, which is
+// what the column prints. The seats are named against their id order, so an
+// id sort cannot pass.
 func TestTheDealsListSortsByTheOwnerColumnItDraws(t *testing.T) {
 	e := Setup(t)
 	pipeline, stage, _ := DealFixture(t, e)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, dealCFVPerms)
 
-	// Postgres orders a uuid by its bytes, so the expected order is worked out
-	// here rather than assumed from which rep the harness seeded first.
 	owners := []ids.UUID{e.Rep1, e.Rep2, e.Rep3}
 	slices.SortFunc(owners, func(a, b ids.UUID) int { return bytes.Compare(a[:], b[:]) })
+	for i, name := range []string{"Zed", "Mia", "Anna"} {
+		e.WsExec(t, `UPDATE app_user SET display_name = $2 WHERE id = $1`, owners[i], name)
+	}
 	// Seeded middle, last, first: the default newest-first sort then gives an
 	// order that is neither ascending nor descending, so a pass cannot come
 	// from it.
@@ -111,9 +112,9 @@ func TestTheDealsListSortsByTheOwnerColumnItDraws(t *testing.T) {
 		dealOf[owner] = e.SeedDeal(t, "Owned by "+owner.String(), pipeline, stage, &owner)
 	}
 
-	ascending := []ids.UUID{dealOf[owners[0]], dealOf[owners[1]], dealOf[owners[2]]}
-	assertIDOrder(t, dealsIn(ctx, t, e, "owner_id"), ascending, "owner ascending")
-	descending := slices.Clone(ascending)
+	byName := []ids.UUID{dealOf[owners[2]], dealOf[owners[1]], dealOf[owners[0]]}
+	assertIDOrder(t, dealsIn(ctx, t, e, "owner_id"), byName, "owner ascending")
+	descending := slices.Clone(byName)
 	slices.Reverse(descending)
 	assertIDOrder(t, dealsIn(ctx, t, e, "-owner_id"), descending, "owner descending")
 }

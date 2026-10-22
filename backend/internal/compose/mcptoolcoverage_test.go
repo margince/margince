@@ -341,12 +341,14 @@ func TestAnAnyOfEntryIsReadAsASetAndNotAsAToolName(t *testing.T) {
 }
 
 func TestTheMCPToolCoverageIsPublished(t *testing.T) {
-	specs := servedSurface(t).Specs()
+	specs := offeredSpecs(t)
 
 	cases, err := readE2ELLMCases(e2eLLMScenarioDir, e2eLLMRecordDir)
 	if err != nil {
 		t.Fatalf("reading the use-case lane at %s: %v", e2eLLMScenarioDir, err)
 	}
+	routes := verbRouters(specs)
+	cases = routedCases(cases, routes)
 	// Under-recognition is the one way this page must not break: a reader that
 	// found no case would publish "nothing is driven" and look like a finding
 	// rather than a broken scan.
@@ -364,7 +366,7 @@ func TestTheMCPToolCoverageIsPublished(t *testing.T) {
 	var agentSurface []agentSurfaceRow
 	for _, agent := range mustScheduledAgents() {
 		for _, tool := range agent.Tools {
-			attached[tool] = append(attached[tool], agent.Name)
+			attached[routedName(tool, routes)] = append(attached[routedName(tool, routes)], agent.Name)
 		}
 		agentSurface = append(agentSurface, agentSurfaceRow{Name: agent.Name, Tools: sortedCopy(agent.Tools)})
 	}
@@ -452,7 +454,7 @@ func TestTheMCPToolCoverageIsPublished(t *testing.T) {
 				}
 			}
 		}
-		row.MayCall = permittedCases(cases, spec.Name)
+		row.MayCall = permittedCases(cases, spec.Name, routes)
 		row.MustCall = sortedCopy(row.MustCall)
 		row.MustCallOneOf = sortedCopy(row.MustCallOneOf)
 		row.Driven = len(row.MustCall) > 0
@@ -840,7 +842,7 @@ func caseReaches(c caseRow, tool string) bool {
 }
 
 // permittedCases names the cases that allow a tool without requiring it.
-func permittedCases(cases []caseRow, tool string) []string {
+func permittedCases(cases []caseRow, tool string, routes map[string]string) []string {
 	var out []string
 	for _, c := range cases {
 		if caseReaches(c, tool) {
@@ -850,7 +852,7 @@ func permittedCases(cases []caseRow, tool string) []string {
 		if err != nil {
 			continue
 		}
-		if listHas(toolsInBlock(e2eMayCallBlock, e2eMayCallInline, string(body)), tool) {
+		if listHas(routedNames(toolsInBlock(e2eMayCallBlock, e2eMayCallInline, string(body)), routes), tool) {
 			out = append(out, c.Name)
 		}
 	}

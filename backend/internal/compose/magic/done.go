@@ -35,6 +35,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/auditentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -154,22 +155,22 @@ func doneSince(
 //
 // The count is installation-wide, not the reader's own, so it is a diagnostic: a
 // seat without ai_diagnostics read gets no entry and the query never runs.
-func notShownSince(ctx context.Context, tx pgx.Tx, since time.Time) (map[string]int, error) {
+func notShownSince(ctx context.Context, tx pgx.Tx, since time.Time) (map[string]int, bool, error) {
 	notShown := map[string]int{}
 	if err := auth.Require(ctx, "ai_diagnostics", principal.ActionRead); err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
-			return notShown, nil
+			return notShown, true, nil
 		}
-		return nil, err
+		return nil, false, err
 	}
 	unplaceable, err := unplaceableSince(ctx, tx, since)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	if unplaceable > 0 {
 		notShown[string(crmcontracts.MagicNotShownReasonMagicNotShownUnknownEntityType)] = unplaceable
 	}
-	return notShown, nil
+	return notShown, false, nil
 }
 
 // armOf names the read an entry came from, which is what a cut is recorded
@@ -351,17 +352,17 @@ func admittedActions(bulk bool) []string {
 	return actions
 }
 
-// unplaceableSince counts the admitted machine actions this build cannot place.
+// unplaceableSince counts admitted CRM changes this build cannot place.
+// Infrastructure and configuration audits are not unfinished business work;
+// their writers share the maintenance classification with this read.
 //
 // An entity type absent from every arm above has no table this read knows to
 // join, and therefore no gate it can apply. Such a row is never served — serving
 // it would serve a row this read cannot prove the reader may see — but it is
 // COUNTED, so the receipt can say how much it is not showing.
 //
-// Creates and archives are not counted. They are admitted for the records this
-// page places, and every other kind of row — a tag, a list membership, an
-// approval — is created and archived by the machinery as bookkeeping, which is
-// not a change to a record the reader keeps.
+// Creation and archive of unplaced types include bookkeeping, so only the
+// ordinary change actions contribute to this diagnostic.
 //
 // The count is deliberately coarse: it does not name the types, because naming
 // them would say which kinds of record exist and were touched, which is a fact
@@ -380,8 +381,9 @@ func unplaceableSince(ctx context.Context, tx pgx.Tx, since time.Time) (int, err
 		 WHERE a.occurred_at >= $%d
 		   AND a.actor_type = ANY($%d)
 		   AND a.action = ANY($%d)
+		   AND NOT (a.entity_type = ANY($%d))
 		   AND NOT (a.entity_type = ANY($%d))`,
-		arg(since), arg(machineActors()), arg(admittedActions(false)), arg(placed))
+		arg(since), arg(machineActors()), arg(admittedActions(false)), arg(auditentity.MaintenanceTypes()), arg(placed))
 	var count int
 	if err := tx.QueryRow(ctx, query, args...).Scan(&count); err != nil {
 		return 0, fmt.Errorf("count the machine actions this build cannot place: %w", err)

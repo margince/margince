@@ -34,9 +34,10 @@ const (
 )
 
 type crawlPage struct {
-	URL  string
-	Kind crmcontracts.SiteReadPageKind
-	Text string
+	RedirectChain []string
+	URL           string
+	Kind          crmcontracts.SiteReadPageKind
+	Text          string
 	// Sections preserves the fetched page's heading-delimited evidence.
 	Sections []string
 	// Bytes and FetchDur are observability for the debug report; the

@@ -33,11 +33,12 @@ import (
 // financeEnv is one workspace with a connected offline source and one linked
 // company — the smallest install the sync has anything to do on.
 type financeEnv struct {
-	store    *Store
-	ctx      context.Context
-	ws       ids.UUID
-	company  ids.CompanyID
-	external string
+	store      *Store
+	ctx        context.Context
+	ws         ids.UUID
+	company    ids.CompanyID
+	external   string
+	connection ids.UUID
 }
 
 // setLifecycle moves the fixture account's relationship state, which is the one
@@ -48,6 +49,13 @@ type financeEnv struct {
 // out from under a card that has already been read once.
 func (e *financeEnv) setLifecycle(t *testing.T, state string) {
 	t.Helper()
+	e.ownerExec(t, `UPDATE company SET lifecycle = $2 WHERE id = $1`, e.company, state)
+}
+
+// ownerExec runs one statement as the database owner, for the fixture rows the
+// app role may not write.
+func (e *financeEnv) ownerExec(t *testing.T, statement string, args ...any) {
+	t.Helper()
 	owner, err := pgx.Connect(e.ctx, os.Getenv("MARGINCE_TEST_DSN"))
 	if err != nil {
 		t.Fatalf("owner connection: %v", err)
@@ -57,9 +65,8 @@ func (e *financeEnv) setLifecycle(t *testing.T, state string) {
 			t.Errorf("closing the owner connection: %v", err)
 		}
 	})
-	if _, err := owner.Exec(e.ctx,
-		`UPDATE company SET lifecycle = $2 WHERE id = $1`, e.company, state); err != nil {
-		t.Fatalf("moving the account to %s: %v", state, err)
+	if _, err := owner.Exec(e.ctx, statement, args...); err != nil {
+		t.Fatalf("owner statement %q: %v", statement, err)
 	}
 }
 
@@ -89,11 +96,12 @@ func setupFinance(t *testing.T) *financeEnv {
 	}
 
 	e := &financeEnv{
-		ws:       ids.NewV7(),
-		company:  ids.New[ids.CompanyKind](),
-		external: "ACME-01",
+		ws:         ids.NewV7(),
+		company:    ids.New[ids.CompanyKind](),
+		external:   "ACME-01",
+		connection: ids.NewV7(),
 	}
-	connID := ids.NewV7()
+	connID := e.connection
 	if _, err := owner.Exec(ctx,
 		`INSERT INTO workspace (id) VALUES ($1)`, e.ws); err != nil {
 		t.Fatal(err)
@@ -108,7 +116,7 @@ func setupFinance(t *testing.T) *financeEnv {
 		INSERT INTO finance_connection
 		       (id, provider, status, credential_ref, source, captured_by)
 		VALUES ($1, $2, 'active', 'offline://test', 'system', 'system:test')`,
-		connID, OfflineProviderName); err != nil {
+		connID, fixtureProviderName); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := owner.Exec(ctx, `
@@ -156,43 +164,21 @@ func setupFinance(t *testing.T) *financeEnv {
 	return e
 }
 
-// ledgerSeed is the workspace the GENERATOR is seeded from, and it is a
-// constant rather than this env's workspace on purpose.
-//
-// The generator's seed is sha256(workspace | customer), so passing a freshly
-// minted workspace would draw a different archetype — a different ledger, a
-// different sample, a different open balance — on every run. That is a lottery,
-// not a fixture: the assertions below would be about which archetype came up
-// rather than about what the sync and the formulas do.
-//
-// The workspace the ROWS live in is still e.ws, minted per run so parallel runs
-// do not share a tenant. Nothing but the seed reads this string.
-const ledgerSeed = "finance-integration-ledger"
-
-func (e *financeEnv) provider() Provider {
-	return NewOfflineProvider(ledgerSeed, []SourceCustomer{{ExternalID: e.external}}, offlineEpoch)
-}
+func (e *financeEnv) provider() Provider { return fixtureSource{} }
 
 // summaryAtEpoch reads the card at a clock pinned to the ledger's own epoch.
+// Every figure folds over a window measured back from the store's clock, and
+// the fixture ledger is fixed (see ledgerEpoch). Unpinned, the figures would
+// thin out as the calendar moved past the ledger.
 //
-// Every FIGURE on the card is folded over a window measured back from the
-// store's clock, and the generated ledger is anchored to a fixed date rather
-// than to today (see offlineEpoch). Read at wall-clock time, the assertions
-// over those figures measure how far the calendar has travelled since that
-// epoch: they thin out as the window slides off the ledger and eventually
-// report an empty card. Pinned, they measure the formulas, which is what they
-// are for.
-//
-// The STATE is deliberately not read through here. Staleness is a real
-// comparison between the connection's last_success_at — stamped by the
-// database's clock — and now; pinning one side of it would make the assertion
-// pass for the wrong reason.
+// The state is not read through here: staleness compares the database's
+// last_success_at with now, and pinning one side would pass for the wrong reason.
 func (e *financeEnv) summaryAtEpoch(
 	t *testing.T, companyID ids.CompanyID,
 ) crmcontracts.CompanyFinanceSummary {
 	t.Helper()
 	at := NewStore(e.store.db, e.store.baseCurrency).
-		WithClock(func() time.Time { return offlineEpoch })
+		WithClock(func() time.Time { return ledgerEpoch })
 	out, err := at.SummaryFor(e.ctx, companyID)
 	if err != nil {
 		t.Fatal(err)
@@ -325,15 +311,15 @@ func TestAfterASyncTheCardHasFiguresToShow(t *testing.T) {
 	if *figures.NetInvoiced.AmountMinor <= 0 {
 		t.Fatalf("net invoiced = %d, want a positive figure", *figures.NetInvoiced.AmountMinor)
 	}
-	// The generator leaves an open tail on purpose, because "what do they owe
-	// us" is the reading the card leads with.
+	// The fixture leaves an open tail, because "what do they owe us" is the
+	// reading the card leads with.
 	if figures.OpenBalance == nil || *figures.OpenBalance.AmountMinor <= 0 {
 		t.Fatal("no open balance after a sync; the card's lead reading is empty")
 	}
 	if figures.RecentInvoices == nil || len(*figures.RecentInvoices) == 0 {
 		t.Fatal("no recent invoices after a sync")
 	}
-	// The generator clears the timeliness sample floor, so the payment reading
+	// The fixture clears the timeliness sample floor, so the payment reading
 	// is a figure rather than a refusal.
 	if figures.MedianDaysAfterDue == nil {
 		t.Fatal("no payment-behaviour median after a sync over eighteen months")
@@ -440,13 +426,13 @@ func TestCrossingADueDateDoesNotRewriteTheLedger(t *testing.T) {
 	e := setupFinance(t)
 	ctx, provider := e.ctx, e.provider()
 
-	atEpoch := NewStore(e.store.db, e.store.baseCurrency).WithClock(func() time.Time { return offlineEpoch })
+	atEpoch := NewStore(e.store.db, e.store.baseCurrency).WithClock(func() time.Time { return ledgerEpoch })
 	if _, err := atEpoch.SyncConnection(ctx, provider); err != nil {
 		t.Fatal(err)
 	}
 	// A year later, with the SAME source. Every open invoice is now long past
 	// due, so a status-in-the-hash implementation would rewrite them all.
-	later := NewStore(e.store.db, e.store.baseCurrency).WithClock(func() time.Time { return offlineEpoch.AddDate(1, 0, 0) })
+	later := NewStore(e.store.db, e.store.baseCurrency).WithClock(func() time.Time { return ledgerEpoch.AddDate(1, 0, 0) })
 	second, err := later.SyncConnection(ctx, provider)
 	if err != nil {
 		t.Fatal(err)
@@ -732,7 +718,7 @@ func (e *financeEnv) plantSecondConnection(t *testing.T) ids.UUID {
 			INSERT INTO finance_connection
 			       (id, provider, status, credential_ref, source, captured_by, created_at)
 			VALUES ($1, $2, 'active', 'offline://bystander', 'system', 'system:test', now() - interval '1 day')`,
-			id, OfflineProviderName)
+			id, fixtureProviderName)
 		return err
 	}); err != nil {
 		t.Fatalf("planting the bystander connection: %v", err)
@@ -757,11 +743,10 @@ func (e *financeEnv) connectionStatus(t *testing.T, id ids.UUID) string {
 // is what the money was, read off the row, and the after is what the source now
 // says it is.
 //
-// The offline generator cannot produce this. It is deterministic by design — a
-// source that never changes its mind — so the paths that record a change are
-// unreachable through it. The double below stands at the PROVIDER seam and
-// nowhere else: the store, the SQL, the images and the audit writer under test
-// are all the real ones.
+// The fixture source cannot produce this. It never changes its mind, so the
+// paths that record a change are unreachable through it. The double below
+// stands at the provider seam only. The store, the SQL, the images and the
+// audit writer under test are all the real ones.
 func TestARestatedSourceAuditsTheUpdateWithBothImages(t *testing.T) {
 	e := setupFinance(t)
 	source := restatingSource(e.external)
@@ -820,17 +805,17 @@ func TestARestatedSourceAuditsTheUpdateWithBothImages(t *testing.T) {
 // not left to a reader to notice years later.
 func TestTheMirrorsAuditRowsNameNoGrantTheSweepDoesNotHold(t *testing.T) {
 	e := setupFinance(t)
+	mark := auditWatermark(e.ctx, t, e)
 	if _, err := e.store.SyncConnection(e.ctx, e.provider()); err != nil {
 		t.Fatalf("sync: %v", err)
 	}
 	var rules []string
-	// Unfenced on purpose, unlike the counts above: this asserts a property
-	// EVERY finance audit row must hold, so widening it from this run's rows to
-	// the package's is strictly stronger and cannot produce a false pass.
+	// Fenced to this pass: an administrator's connect or link is a finance
+	// audit row too, and it does name the grant that admitted it.
 	if err := e.store.tx(e.ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(e.ctx, `
 			SELECT array_agg(DISTINCT authorization_rule) FROM audit_log
-			 WHERE entity_type LIKE 'finance\_%'`).Scan(&rules)
+			 WHERE entity_type LIKE 'finance\_%' AND id > $1`, mark).Scan(&rules)
 	}); err != nil {
 		t.Fatalf("reading the mirror's authorization rules: %v", err)
 	}
@@ -842,7 +827,7 @@ func TestTheMirrorsAuditRowsNameNoGrantTheSweepDoesNotHold(t *testing.T) {
 	if err := e.store.tx(e.ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(e.ctx, `
 			SELECT array_agg(DISTINCT actor_type) FROM audit_log
-			 WHERE entity_type LIKE 'finance\_%'`).Scan(&actorTypes)
+			 WHERE entity_type LIKE 'finance\_%' AND id > $1`, mark).Scan(&actorTypes)
 	}); err != nil {
 		t.Fatalf("reading the mirror's actor types: %v", err)
 	}
@@ -906,7 +891,9 @@ type restatingProvider struct {
 	ledger   SourceLedger
 }
 
-func (p *restatingProvider) Name() string { return OfflineProviderName }
+func (p *restatingProvider) Name() string { return fixtureProviderName }
+
+func (p *restatingProvider) Check(context.Context) error { return nil }
 
 func (p *restatingProvider) Customers(context.Context) ([]SourceCustomer, error) {
 	return []SourceCustomer{p.customer}, nil

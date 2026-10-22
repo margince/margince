@@ -441,11 +441,10 @@ func TestADraftIsNotComposedForAnOwnerWhoMayNotReadContacts(t *testing.T) {
 	}
 }
 
-// A deal nobody owns has no authority to compose under. owner_id is nullable
-// and ON DELETE SET NULL clears it when a member is removed, so this is an
-// ordinary state rather than an edge case — and it must degrade to the task
-// proposal rather than falling back to the sweep's own unbounded principal.
-func TestAnUnownedDealGetsTheTaskProposalRatherThanADraft(t *testing.T) {
+// A deal nobody owns has nobody to follow it up. owner_id is nullable, and ON
+// DELETE SET NULL clears it when a member is removed, so this state is ordinary.
+// It stages nothing: no draft under the sweep's own principal, and no task.
+func TestAnUnownedDealGetsNoFollowUp(t *testing.T) {
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Orphaned", e.pipeline, e.open, &e.Rep1)
 	e.seedAnswerableThread(t, deal, "Kickoff")
@@ -460,7 +459,7 @@ func TestAnUnownedDealGetsTheTaskProposalRatherThanADraft(t *testing.T) {
 		t.Errorf("staged %d drafts on an unowned deal, want 0 — there is no "+
 			"authority under which a reply may be composed", n)
 	}
-	if got := e.pendingFollowUps(t, deal); got != 1 {
-		t.Errorf("task proposals = %d, want 1", got)
+	if got := e.pendingFollowUps(t, deal); got != 0 {
+		t.Errorf("task proposals = %d on a deal nobody owns, want 0", got)
 	}
 }

@@ -22,10 +22,13 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -40,13 +43,8 @@ import (
 // become a task without asking.
 const CommitmentTaskKind = "commitment_task"
 
-// CommitmentTaskConfidence is the reading at or above which a promise a named
-// colleague made becomes their task without asking. Below it, down to the
-// extractor's own floor, the promise is proposed instead.
-//
-// It sits inside the gap the certification records show: a plain dated promise
-// is read at 0.9 or more, a soft one at 0.3 or less, and the extractors drop
-// anything under 0.7. TestCommitmentTaskConfidenceSitsInTheCertifiedGap holds it.
+// CommitmentTaskConfidence separates automatic tasks from proposals after semantic admission.
+// Certified firm promises must clear this threshold; confidence cannot admit a non-action.
 const CommitmentTaskConfidence = 0.85
 
 // The claim kinds a commitment is filed under.
@@ -61,11 +59,17 @@ const commitmentIdentityLocator = "locator"
 
 // Commitment is one promise as an extractor hands it to the rule.
 type Commitment struct {
+	Meaning      *commitmentMeaning
+	AsOf         time.Time
+	ReadMessages []ids.UUID
 	// Extractor is the principal id the claim and the task are captured by,
 	// which is what marks the task as the extractor's rather than a human's.
 	Extractor        string
 	SourceActivityID ids.UUID
-	Summary          string
+	// AdmissionSourceID names verified later evidence that renews this same promise.
+	AdmissionSourceID *ids.UUID
+	RenewedAt         *time.Time
+	Summary           string
 	// Quote is the source's own words, shown beside the promise.
 	Quote string
 	// Party is the promiser as the source names them.
@@ -77,34 +81,47 @@ type Commitment struct {
 	// PromisedTo is who one of our promises was made to, so it is filed on
 	// their record as well. Nil when the source does not name exactly one.
 	PromisedTo *ids.ContactID
+	Recipients []ids.ContactID
 	// DueDate is the day the source stated, YYYY-MM-DD, or empty.
 	DueDate    string
 	Confidence float64
-	Links      []activities.ActivityLinkInput
+	// NeedsConfirmation keeps reported promises from assigning work without review.
+	NeedsConfirmation bool
+	Links             []activities.ActivityLinkInput
 	// PrivateTo is the one member the conversation answers to, when it is
 	// private mail. The task is theirs alone to read, and nobody else's to
 	// hold: a promise in mail only they may read is proposed to them.
 	PrivateTo *ids.UUID
 	// Locator identifies the promise across readings; see commitmentLocator.
 	Locator string
+	Span    string
+	parties []commitmentParty
 	// Body says where the task came from, in words a rep can go and check.
-	Body     string
-	Evidence approvals.Evidence
+	Body            string
+	Evidence        approvals.Evidence
+	RenewalEvidence *approvals.Evidence
 }
 
 // CommitmentOutcome is what the rule did with one promise.
-type CommitmentOutcome int
+type CommitmentOutcome string
 
 const (
 	// CommitmentRemembered means it was already a task, already proposed or
-	// refused, or dismissed by a human. Nothing new was written.
-	CommitmentRemembered CommitmentOutcome = iota
+	// refused, dismissed by a human, or nobody is responsible for it. Nothing
+	// new was written.
+	CommitmentRemembered CommitmentOutcome = "remembered"
 	// CommitmentWatched is the customer's promise, filed on their record.
-	CommitmentWatched
+	CommitmentWatched CommitmentOutcome = "watched"
+	// CommitmentRetained records a current promise already represented by work.
+	CommitmentRetained CommitmentOutcome = "retained"
 	// CommitmentTaskWritten is the colleague's task, written directly.
-	CommitmentTaskWritten
+	CommitmentTaskWritten CommitmentOutcome = "task_written"
 	// CommitmentProposed is staged for a human to accept.
-	CommitmentProposed
+	CommitmentProposed CommitmentOutcome = "proposed"
+	// CommitmentPromiserUnassignable is a promise nobody may be asked about. Its
+	// maker is unknown, has left, or does not own the private mail it is in. It
+	// is recorded on its source as a finding, and no work is created for anyone.
+	CommitmentPromiserUnassignable CommitmentOutcome = "promiser_not_assignable"
 )
 
 // commitmentLocator names one promise across readings of one source: the same
@@ -140,36 +157,100 @@ func NewCommitmentDispatcher(pool *pgxpool.Pool, approval *approvals.Service) *C
 func (d *CommitmentDispatcher) DispatchTx(
 	ctx context.Context, tx pgx.Tx, c Commitment, bundleID ids.UUID,
 ) (CommitmentOutcome, ids.UUID, error) {
+	outcome, id, err := d.routeCommitment(ctx, tx, c, bundleID)
+	if err != nil || outcome == CommitmentRemembered || outcome == CommitmentOutcome(activities.CommitmentSourceUnavailable) {
+		return outcome, id, err
+	}
+	evidence := make([]openapi_types.UUID, 0, len(c.ReadMessages))
+	for _, message := range c.ReadMessages {
+		evidence = append(evidence, openapi_types.UUID(message))
+	}
+	decision := crmcontracts.CommitmentAdmission{Locator: c.Locator, Summary: c.Summary, SourceQuote: c.Quote, Outcome: string(outcome), CurrentWork: !outcome.withheld(), RuleVersion: activities.CommitmentAdmissionVersion, EvidenceIds: evidence, EvaluatedAt: c.AsOf}
+	if c.Meaning != nil {
+		decision.Meaning = new(crmcontracts.CommitmentMeaning(*c.Meaning))
+	}
+	if c.AdmissionSourceID != nil {
+		decision.RenewedBy = new(openapi_types.UUID(*c.AdmissionSourceID))
+		decision.RenewedAt = c.RenewedAt
+	}
+	err = activities.RecordCommitmentAdmissionTx(extractorContext(ctx, c.Extractor), tx, ids.From[ids.ActivityKind](c.SourceActivityID), decision)
+	return outcome, id, err
+}
+
+func (d *CommitmentDispatcher) routeCommitment(ctx context.Context, tx pgx.Tx, c Commitment, bundleID ids.UUID) (CommitmentOutcome, ids.UUID, error) {
 	filing := extractorContext(ctx, c.Extractor)
-	if c.Theirs != nil {
-		// Watched only when this reading filed it: one already on their record,
-		// open or dismissed, is remembered.
-		_, created, err := d.fileClaim(filing, tx, c, *c.Theirs, claimKindTheirs)
-		if err != nil || !created {
+	reason, err := d.admission(ctx, tx, c)
+	if err != nil {
+		return CommitmentRemembered, ids.UUID{}, err
+	}
+	if reason == activities.CommitmentSourceUnavailable {
+		return CommitmentOutcome(reason), ids.UUID{}, nil
+	}
+	if reason == activities.CommitmentCurrent {
+		offered, err := d.offeredBefore(ctx, tx, c)
+		if err != nil {
+			return CommitmentRemembered, ids.Nil, err
+		}
+		if offered != nil {
+			return d.reconcilePendingRecipients(ctx, tx, c, *offered, bundleID)
+		}
+	}
+	if c.Theirs == nil {
+		if c.Seat == nil {
+			written, err := d.resolvedWorkBefore(filing, tx, c)
+			if err != nil || written {
+				return CommitmentRemembered, ids.UUID{}, err
+			}
+		}
+		written, err := d.tasks.CommitmentTaskWritten(filing, tx, c.Locator)
+		if err != nil {
 			return CommitmentRemembered, ids.UUID{}, err
 		}
-		return CommitmentWatched, ids.UUID{}, nil
+		if written {
+			outcome, id, err := d.reconcileTaskRecipients(filing, tx, c, reason, bundleID)
+			if err != nil || outcome == CommitmentProposed {
+				return outcome, id, err
+			}
+			return d.renewTask(ctx, tx, c, reason)
+		}
 	}
-	written, err := d.tasks.CommitmentTaskWritten(filing, tx, c.Locator)
-	if err != nil || written {
+	var recorded bool
+	if reason != activities.CommitmentSourceUnavailable {
+		var held bool
+		renewedBy, renewedAt := c.AdmissionSourceID, c.RenewedAt
+		if c.Meaning.withheldOutcome() != "" {
+			renewedBy, renewedAt = nil, nil
+		}
+		held, recorded, err = activities.CommitmentAdmissionStateTx(ctx, tx, ids.From[ids.ActivityKind](c.SourceActivityID), c.Locator, c.AsOf, renewedBy, renewedAt)
+		if err != nil || held {
+			return CommitmentRemembered, ids.UUID{}, err
+		}
+	}
+	if outcome := c.Meaning.withheldOutcome(); outcome != "" {
+		return outcome, ids.UUID{}, nil
+	}
+	if reason != activities.CommitmentCurrent {
+		return d.retainWithheld(ctx, tx, c, reason, recorded)
+	}
+	if c.Theirs != nil {
+		return d.watchCommitment(filing, tx, c, reason)
+	}
+
+	return d.createOurCommitment(ctx, tx, c, bundleID)
+}
+
+func (d *CommitmentDispatcher) createOurCommitment(ctx context.Context, tx pgx.Tx, c Commitment, bundleID ids.UUID) (CommitmentOutcome, ids.UUID, error) {
+	filing := extractorContext(ctx, c.Extractor)
+
+	claimIDs, open, err := d.fileRecipientClaims(filing, tx, c, activities.CommitmentCurrent, false)
+	if err != nil || !open {
 		return CommitmentRemembered, ids.UUID{}, err
 	}
 	var claimID *ids.UUID
-	if c.PromisedTo != nil {
-		claim, _, err := d.fileClaim(filing, tx, c, *c.PromisedTo, claimKindOurs)
-		if err != nil {
-			return 0, ids.UUID{}, err
-		}
-		if claim.Status == crmcontracts.ConversationClaimStatusDismissed {
-			return CommitmentRemembered, ids.UUID{}, nil
-		}
-		id := ids.UUID(claim.Id)
-		claimID = &id
+	if len(claimIDs) == 1 {
+		claimID, claimIDs = &claimIDs[0], nil
 	}
-	offered, err := d.offeredBefore(ctx, tx, c)
-	if err != nil || offered {
-		return CommitmentRemembered, ids.UUID{}, err
-	}
+
 	// Whether the seat can be GIVEN the task, asked before writing one. An automatic
 	// writer may only assign to an active colleague, and most seats on imported mail
 	// never signed in or have left — so a promise sent by one of them reaches the
@@ -179,29 +260,59 @@ func (d *CommitmentDispatcher) DispatchTx(
 	if c.Seat != nil {
 		var err error
 		if holdsWork, err = activities.SeatCanHoldAutomaticWork(ctx, tx, ids.From[ids.UserKind](*c.Seat)); err != nil {
-			return 0, ids.UUID{}, err
+			return CommitmentRemembered, ids.UUID{}, err
 		}
 	}
-	// A seat that cannot be given the task is not NAMED on the proposal either: a
-	// commitment proposal is visible to its seat alone, so one staged for a colleague
-	// who has not arrived or has left waits where nobody can see it. Unnamed, it
-	// reaches whoever reviews the queue, the same way a promise naming nobody does.
-	//
-	// Except on private mail, where propose names the conversation's own owner and
-	// nobody else may be shown it. An owner who has not signed in yet finds it
-	// waiting when they do, which is what an invited colleague's queue is for.
-	if c.Seat != nil && !holdsWork && c.PrivateTo == nil {
-		c.Seat = nil
-	}
-	if holdsWork && c.Confidence >= CommitmentTaskConfidence && mayHoldPrivateTask(c.PrivateTo, *c.Seat) {
+	if !c.NeedsConfirmation && holdsWork && c.Confidence >= CommitmentTaskConfidence && mayHoldPrivateTask(c.PrivateTo, *c.Seat) {
 		task, err := writeCommitmentTask(ctx, tx, d.tasks, d.claims, commitmentTask{
 			Extractor: c.Extractor, Locator: c.Locator, Summary: c.Summary, Body: c.Body,
 			SourceActivityID: c.SourceActivityID, Links: c.Links, DueDate: c.DueDate,
-			Assignee: *c.Seat, ClaimID: claimID, PrivateTo: c.PrivateTo,
+			Assignee: *c.Seat, ClaimID: claimID, ClaimIDs: claimIDs, PrivateTo: c.PrivateTo,
 		})
 		return CommitmentTaskWritten, task, err
 	}
-	return d.propose(ctx, tx, c, claimID, bundleID)
+	return d.propose(ctx, tx, c, holdsWork, claimID, claimIDs, bundleID)
+}
+
+func (d *CommitmentDispatcher) watchCommitment(ctx context.Context, tx pgx.Tx, c Commitment, reason activities.CommitmentAdmissionReason) (CommitmentOutcome, ids.UUID, error) {
+	claim, created, err := d.fileClaim(ctx, tx, c, *c.Theirs, claimKindTheirs, reason)
+	if err != nil || claim.Status != crmcontracts.ConversationClaimStatusOpen {
+		return CommitmentRemembered, ids.UUID{}, err
+	}
+	if !created {
+		return CommitmentRetained, ids.UUID{}, nil
+	}
+	return CommitmentWatched, ids.UUID{}, nil
+}
+
+func (d *CommitmentDispatcher) retainWithheld(ctx context.Context, tx pgx.Tx, c Commitment, reason activities.CommitmentAdmissionReason, recorded bool) (CommitmentOutcome, ids.UUID, error) {
+	filing := extractorContext(ctx, c.Extractor)
+	if reason == activities.CommitmentSourceUnavailable {
+		return CommitmentOutcome(reason), ids.UUID{}, nil
+	}
+	if c.AdmissionSourceID != nil {
+		return CommitmentRemembered, ids.UUID{}, nil
+	}
+	contact, kind := c.PromisedTo, claimKindOurs
+	if c.Theirs != nil {
+		contact, kind = c.Theirs, claimKindTheirs
+	}
+	if !recorded && contact == nil {
+		offered, err := d.offeredBefore(ctx, tx, c)
+		if err != nil || offered != nil {
+			return CommitmentRemembered, ids.UUID{}, err
+		}
+	}
+	if contact != nil {
+		claim, created, err := d.fileClaim(filing, tx, c, *contact, kind, reason)
+		if err != nil || claim.Status == crmcontracts.ConversationClaimStatusDismissed {
+			return CommitmentRemembered, ids.UUID{}, err
+		}
+		if !created && !recorded && claim.Status == crmcontracts.ConversationClaimStatusOpen {
+			return CommitmentRetained, ids.UUID{}, nil
+		}
+	}
+	return CommitmentOutcome(reason), ids.UUID{}, nil
 }
 
 // offeredBefore reports whether this promise was already put to a human, who
@@ -210,34 +321,50 @@ func (d *CommitmentDispatcher) DispatchTx(
 // they may still refuse. The read locks every offer on the source, so a
 // decision landing while this runs is either seen here or waits for this to
 // commit.
-func (d *CommitmentDispatcher) offeredBefore(ctx context.Context, tx pgx.Tx, c Commitment) (bool, error) {
+//
+//nolint:nilnil // No prior matching offer allows the dispatcher to create one.
+func (d *CommitmentDispatcher) offeredBefore(ctx context.Context, tx pgx.Tx, c Commitment) (*approvals.Offer, error) {
 	offers, err := d.approval.OffersForTx(ctx, tx, CommitmentTaskKind, c.SourceActivityID)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 	for _, held := range offers {
-		if !held.Pending() && !held.Rejected() {
+		if !held.Pending() && !held.Rejected() && !held.Approved() {
+			continue
+		}
+		if c.Theirs != nil && held.Rejected() {
 			continue
 		}
 		var offer CommitmentTaskProposal
 		if err := json.Unmarshal(held.Change, &offer); err != nil {
-			return false, fmt.Errorf("compose: unmarshal a commitment proposal: %w", err)
+			return nil, fmt.Errorf("compose: unmarshal a commitment proposal: %w", err)
 		}
 		if offer.Locator == c.Locator {
-			return true, nil
+			if !held.Approved() {
+				return &held, nil
+			}
+			written, err := d.tasks.CommitmentTaskWritten(ctx, tx, c.Locator)
+			if err != nil || written {
+				return nil, err
+			}
+			return &held, nil
+		}
+		if samePromiseBeforeAttributionChanged(c, offer) {
+			return &held, nil
 		}
 	}
-	return false, nil
+	return nil, nil
 }
 
 // fileClaim records the promise on a contact's record, keyed on its locator,
 // and reports whether this call created it.
 func (d *CommitmentDispatcher) fileClaim(
-	ctx context.Context, tx pgx.Tx, c Commitment, contact ids.ContactID, kind string,
+	ctx context.Context, tx pgx.Tx, c Commitment, contact ids.ContactID, kind string, reason activities.CommitmentAdmissionReason,
 ) (crmcontracts.ConversationClaim, bool, error) {
 	in := contacts.ClaimInput{
 		ContactID: contact, Kind: kind, Body: c.Summary, ActivityID: c.SourceActivityID,
 		Quote: c.Quote, Source: c.Extractor, Locator: c.Locator,
+		Renewal: c.AdmissionSourceID != nil && reason == activities.CommitmentCurrent,
 	}
 	if c.DueDate != "" {
 		due, err := commitmentDueInstant(ctx, tx, c.DueDate)
@@ -252,30 +379,51 @@ func (d *CommitmentDispatcher) fileClaim(
 // propose stages the promise for a human. A proposal refused before, or one
 // still waiting, is not staged again: the identity is the locator.
 func (d *CommitmentDispatcher) propose(
-	ctx context.Context, tx pgx.Tx, c Commitment, claimID *ids.UUID, bundleID ids.UUID,
+	ctx context.Context, tx pgx.Tx, c Commitment, holdsWork bool, claimID *ids.UUID, claimIDs []ids.UUID, bundleID ids.UUID,
 ) (CommitmentOutcome, ids.UUID, error) {
-	seat := c.Seat
-	if c.PrivateTo != nil && !mayHoldPrivateTask(c.PrivateTo, derefSeat(seat)) {
-		seat = c.PrivateTo
-	}
-	if seat != nil {
-		ctx = onBehalfOf(ctx, *seat)
-	}
-	raw, err := json.Marshal(CommitmentTaskProposal{
-		SourceActivityID: c.SourceActivityID, Summary: c.Summary, Party: c.Party,
-		SeatID: seat, DueDate: c.DueDate, Links: c.Links, Quote: c.Quote,
-		Locator: c.Locator, ClaimID: claimID, Body: c.Body, PrivateTo: c.PrivateTo,
-	})
+	asked, err := commitmentAskedOf(ctx, tx, c)
 	if err != nil {
-		return 0, ids.UUID{}, fmt.Errorf("compose: marshal commitment proposal: %w", err)
+		return CommitmentRemembered, ids.UUID{}, err
+	}
+	if asked.IsZero() {
+		return CommitmentPromiserUnassignable, ids.UUID{}, nil
+	}
+	// The seat the accepted task lands on: the promiser, when they may hold
+	// work now. An invited promiser decides it and gets the task on sign-in.
+	var seat *ids.UUID
+	if holdsWork {
+		seat = &asked
+	}
+	proposal := CommitmentTaskProposal{
+		SourceActivityID: c.SourceActivityID, Summary: c.Summary, Party: c.Party,
+		SeatID: seat, PromiserSeatID: c.Seat, PromiserUnresolved: c.Seat == nil, DueDate: c.DueDate, Links: c.Links, Quote: c.Quote,
+		Locator: c.Locator, ClaimID: claimID, ClaimIDs: claimIDs, Body: c.Body, PrivateTo: c.PrivateTo,
+	}
+	return d.stageCommitmentProposal(ctx, tx, c, proposal, bundleID, asked)
+}
+
+// stageCommitmentProposal puts one promise to the one colleague asked. With
+// nobody asked it stages nothing: a promise is never left for whoever reads it.
+func (d *CommitmentDispatcher) stageCommitmentProposal(ctx context.Context, tx pgx.Tx, c Commitment, proposal CommitmentTaskProposal, bundleID ids.UUID, asked ids.UUID) (CommitmentOutcome, ids.UUID, error) {
+	if asked.IsZero() {
+		return CommitmentPromiserUnassignable, ids.UUID{}, nil
+	}
+	ctx = onBehalfOf(ctx, asked)
+	raw, err := json.Marshal(proposal)
+	if err != nil {
+		return CommitmentRemembered, ids.UUID{}, fmt.Errorf("compose: marshal commitment proposal: %w", err)
 	}
 	canonical, hash, err := diffhash.Canonical(raw)
 	if err != nil {
-		return 0, ids.UUID{}, fmt.Errorf("compose: canonicalize commitment proposal: %w", err)
+		return CommitmentRemembered, ids.UUID{}, fmt.Errorf("compose: canonicalize commitment proposal: %w", err)
 	}
 	identity, err := json.Marshal(map[string]string{commitmentIdentityLocator: c.Locator})
 	if err != nil {
-		return 0, ids.UUID{}, fmt.Errorf("compose: marshal commitment identity: %w", err)
+		return CommitmentRemembered, ids.UUID{}, fmt.Errorf("compose: marshal commitment identity: %w", err)
+	}
+	evidence := []approvals.Evidence{c.Evidence}
+	if c.RenewalEvidence != nil {
+		evidence = append(evidence, *c.RenewalEvidence)
 	}
 	approvalID, staged, err := d.approval.StageUnlessDeclinedTx(ctx, tx, approvals.StageInput{
 		Kind:           CommitmentTaskKind,
@@ -284,11 +432,14 @@ func (d *CommitmentDispatcher) propose(
 		Identity:       identity,
 		TargetType:     string(recordTypeActivity),
 		TargetID:       c.SourceActivityID,
-		Summary:        c.Summary,
-		Evidence:       []approvals.Evidence{c.Evidence},
+		Summary:        proposal.Summary,
+		Evidence:       evidence,
 		BundleID:       bundleID,
 		JoinPending:    true,
 	})
+	if errors.Is(err, approvals.ErrNoDecider) {
+		return CommitmentRemembered, ids.UUID{}, nil
+	}
 	if err != nil || !staged {
 		return CommitmentRemembered, ids.UUID{}, err
 	}

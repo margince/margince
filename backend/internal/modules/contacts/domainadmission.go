@@ -18,13 +18,12 @@ package contacts
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/freemail"
@@ -85,11 +84,19 @@ func domainSuppressedTx(ctx context.Context, tx pgx.Tx, domain string) (bool, er
 // decision sticky, which is the one thing the stickiness rule exists to stop.
 // Machine callers use SuppressBulkSenderDomainTx, which stamps its own source.
 func (s *Store) SetDomainAdmission(ctx context.Context, domain, admission, reason string) (BlockedDomain, error) {
+	return s.applyDomainAdmission(ctx, domain, admission, statedAdmissionReason(reason))
+}
+
+// KeepDomainAsCompany records the explicit decision to keep a domain question.
+func (s *Store) KeepDomainAsCompany(ctx context.Context, domain string) (BlockedDomain, error) {
+	return s.applyDomainAdmission(ctx, domain, DomainAdmitted, domainAdmissionReason{
+		Text: keptDomainReason, Code: crmcontracts.BlockedDomainReasonCodeKeptAsCompany,
+	})
+}
+
+func (s *Store) applyDomainAdmission(ctx context.Context, domain, admission string, reason domainAdmissionReason) (BlockedDomain, error) {
 	if admission != DomainSuppressed && admission != DomainAdmitted {
 		return BlockedDomain{}, fmt.Errorf("contacts: %q is not a domain admission", admission)
-	}
-	if reason == "" {
-		return BlockedDomain{}, errors.New("contacts: a domain admission needs a reason a human can read")
 	}
 	// Blocking a domain decides that no company will ever exist for it, and
 	// unblocking one lets the next message create it. Both are the company
@@ -125,7 +132,7 @@ func (s *Store) SetDomainAdmission(ctx context.Context, domain, admission, reaso
 // The authority gate is the CALLER's: every caller here asks for at least the
 // company update this decision is, and the composite verb asks for more.
 func recordHumanDomainAdmissionTx(
-	ctx context.Context, tx pgx.Tx, domain, admission, reason string,
+	ctx context.Context, tx pgx.Tx, domain, admission string, reason domainAdmissionReason,
 ) (BlockedDomain, error) {
 	// The decision this write replaces comes back FROM the write, because
 	// "who unblocked this, and what was it before" is the question this
@@ -168,6 +175,7 @@ func recordHumanDomainAdmissionTx(
 	after := map[string]any{
 		auditKeyDomain: stored.Domain, "admission": stored.Admission,
 		"admission_reason": stored.Reason, "admission_source": stored.Source,
+		"admission_reason_code": stored.ReasonCode, "admission_sender_kind": stored.SenderKind,
 	}
 	// A first decision replaces nothing: there was no admission, no reason
 	// and nobody answerable for one. A later decision moved all three, and
@@ -184,94 +192,9 @@ func recordHumanDomainAdmissionTx(
 	return stored, nil
 }
 
-// setDomainAdmissionTx is SetDomainAdmission on the caller's transaction, for
-// the verdict engine, which must record the refusal in the same commit as the
-// verdict that concluded it.
-//
-// It answers the decision it REPLACED — nil when the domain carried none — and
-// whether the sticky rule let this write through at all.
-//
-// The prior decision is read by the upsert ITSELF, in a CTE, under a lock on
-// the domain. The image decides which audit door the caller takes, so a second
-// decision committing between a separate read and this write would leave one
-// row claiming there was nothing before. The CTE alone does not close that: under
-// READ COMMITTED the ON CONFLICT re-check resolves against a row committed after
-// the CTE's snapshot was taken, so the lock is what makes the snapshot the same
-// answer the upsert acts on.
-func setDomainAdmissionTx(ctx context.Context, tx pgx.Tx, domain, admission, reason, source string) (map[string]any, bool, error) {
-	if err := lockDomainAdmissionTx(ctx, tx, domain); err != nil {
-		return nil, false, err
-	}
-	// A domain nobody has decided about carries a row with a NULL admission —
-	// the triage opens one on first contact — so the image is built from the
-	// admission itself rather than from the row's existence.
-	var priorJSON []byte
-	err := tx.QueryRow(ctx, `
-		WITH was AS (
-		  SELECT admission, admission_reason, admission_source
-		    FROM company_domain_disposition WHERE domain = $1
-		)
-		INSERT INTO company_domain_disposition (domain, status, admission, admission_reason, admission_source, admission_at)
-		VALUES (
-		        $1, $2, $3, $4, $5, now())
-		ON CONFLICT (domain) DO UPDATE
-		   SET admission = EXCLUDED.admission,
-		       admission_reason = EXCLUDED.admission_reason,
-		       admission_source = EXCLUDED.admission_source,
-		       admission_at = now(),
-		       -- A refused domain is not waiting on evidence; it has an answer.
-		       -- Only a suppression clears the marker, because admitting one
-		       -- leaves the company question genuinely open again.
-		       pending_reason = CASE WHEN EXCLUDED.admission = 'suppressed'
-		                             THEN NULL ELSE company_domain_disposition.pending_reason END,
-		       -- next_attempt_at means scheduled work, and a refused domain has
-		       -- none: nothing will crawl it while the refusal stands.
-		       next_attempt_at = CASE WHEN EXCLUDED.admission = 'suppressed'
-		                              THEN NULL ELSE company_domain_disposition.next_attempt_at END,
-		       updated_at = now()
-		 -- The sticky rule: an automatic caller may not overwrite a decision a
-		 -- HUMAN made, while a human may overwrite anything. Guarded on the
-		 -- source already stored, not on the value being written, because what
-		 -- must survive is the authority behind the row rather than which way
-		 -- it happened to point.
-		 WHERE company_domain_disposition.admission_source IS DISTINCT FROM $6
-		    OR EXCLUDED.admission_source = $6
-		RETURNING (SELECT jsonb_build_object(
-		             'admission', was.admission,
-		             'admission_reason', coalesce(was.admission_reason, ''),
-		             'admission_source', coalesce(was.admission_source, ''))
-		             FROM was WHERE was.admission IS NOT NULL)`,
-		domain, DomainPending, admission, reason, source, AdmissionSourceHuman).Scan(&priorJSON)
-	switch {
-	case errors.Is(err, pgx.ErrNoRows):
-		// The sticky rule declined this write: a machine may not overwrite a
-		// human's decision. Nothing moved, so there is no prior state to name.
-		return nil, false, nil
-	case err != nil:
-		return nil, false, fmt.Errorf("contacts: recording the admission of %s: %w", domain, err)
-	case priorJSON == nil:
-		return nil, true, nil
-	}
-	var prior map[string]any
-	if err := json.Unmarshal(priorJSON, &prior); err != nil {
-		return nil, false, fmt.Errorf("contacts: reading the decision %s carried before: %w", domain, err)
-	}
-	return prior, true, nil
-}
-
-// lockDomainAdmissionTx serializes every writer of one domain's admission, so
-// the decision a write replaces is read under the same lock that replaces it.
-func lockDomainAdmissionTx(ctx context.Context, tx pgx.Tx, domain string) error {
-	return storekit.LockWriteIdentity(ctx, tx, admissionWriteIdentity, domain)
-}
-
-// admissionWriteIdentity names the write identity a domain's admission
-// decisions serialize on.
-const admissionWriteIdentity = "domain_admission"
-
 // SuppressBulkSenderDomainTx refuses a domain a company because its mail was
-// judged bulk or automated, on the caller's transaction so the refusal commits
-// with the verdict that concluded it.
+// judged bulk or automated, and senderKind names which. It runs on the caller's
+// transaction, so the refusal commits with the verdict that concluded it.
 //
 // A consumer-mail domain is skipped. Nobody's employer is gmail.com, so there
 // is no company to refuse, and recording one would put a mail provider in the
@@ -279,7 +202,7 @@ const admissionWriteIdentity = "domain_admission"
 // workspace's own carve-outs travel with the check, exactly as they do in the
 // ensure path — an admin who declared a shared domain corporate must see it
 // judged that way on both sides.
-func (s *Store) SuppressBulkSenderDomainTx(ctx context.Context, tx pgx.Tx, domain, reason string) error {
+func (s *Store) SuppressBulkSenderDomainTx(ctx context.Context, tx pgx.Tx, domain, senderKind string) error {
 	base, ok := freemail.Hostname(domain)
 	if !ok {
 		return nil
@@ -294,7 +217,7 @@ func (s *Store) SuppressBulkSenderDomainTx(ctx context.Context, tx pgx.Tx, domai
 	// The sticky rule may decline this write, which is the point of it: a
 	// human's decision stands. The verdict engine records its own conclusion
 	// either way, so which happened is not this caller's to report.
-	_, _, err = setDomainAdmissionTx(ctx, tx, base, DomainSuppressed, reason, AdmissionSourceVerdict)
+	_, _, err = setDomainAdmissionTx(ctx, tx, base, DomainSuppressed, domainAdmissionReason{Text: bulkSenderReason(senderKind), Code: crmcontracts.BlockedDomainReasonCodeBulkSender, SenderKind: crmcontracts.BlockedDomainSenderKind(senderKind)}, AdmissionSourceVerdict)
 	return err
 }
 
@@ -311,9 +234,9 @@ func (s *Store) SuppressBulkSenderDomainTx(ctx context.Context, tx pgx.Tx, domai
 // flight, and never touches a SUPPRESSED domain: a refusal is not a question
 // waiting for evidence.
 func reopenWithheldDispositionTx(
-	ctx context.Context, tx pgx.Tx, domain string, ownerID ids.UUID, evidenceAt *time.Time,
+	ctx context.Context, tx pgx.Tx, domain string, ownerID ids.UUID, evidenceAt *time.Time, force bool,
 ) error {
-	if err := recordEvidenceAgeTx(ctx, tx, domain, evidenceAt); err != nil {
+	if err := recordDomainQuestionReader(ctx, tx, domain, ownerID, evidenceAt); err != nil {
 		return err
 	}
 	if _, err := tx.Exec(ctx, `
@@ -321,17 +244,18 @@ func reopenWithheldDispositionTx(
 		   SET pending_reason = NULL,
 		       attempts = 0,
 		       next_attempt_at = now(),
-		       owner_id = COALESCE(owner_id, $2),
+		       owner_id = COALESCE(owner_id, @owner),
 		       updated_at = now()
-		 WHERE domain = $1
-		   AND status = $3
-		   AND admission IS DISTINCT FROM $4
+		 WHERE domain = @domain
+		   AND status = @pending
+		   AND admission IS DISTINCT FROM @suppressed
+           AND (@force OR (pending_reason IS DISTINCT FROM 'forwarded_identity' AND pending_reason IS DISTINCT FROM 'reserved_domain' AND (owner_id IS NULL OR (@evidence::timestamptz IS NOT NULL AND (last_evidence_at IS NULL OR @evidence > last_evidence_at)))))
 		   AND (pending_reason = 'unevidenced' OR pending_reason = 'stale_evidence'
 		        OR next_attempt_at IS NULL OR owner_id IS NULL)`,
-		domain, ownerID, DomainPending, DomainSuppressed); err != nil {
+		pgx.NamedArgs{auditKeyDomain: domain, "owner": ownerID, DomainPending: DomainPending, DomainSuppressed: DomainSuppressed, "force": force, domainEvidenceKey: evidenceAt}); err != nil {
 		return fmt.Errorf("contacts: reopening the withheld question for %s: %w", domain, err)
 	}
-	return nil
+	return recordEvidenceAgeTx(ctx, tx, domain, evidenceAt)
 }
 
 // admitClaimedDomainTx lifts a standing refusal because a human deliberately
@@ -361,11 +285,16 @@ func admitClaimedDomainTx(ctx context.Context, tx pgx.Tx, domain string) error {
 	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE company_domain_disposition
-		   SET admission = $2, admission_source = $3, admission_at = now(),
-		       admission_reason = 'a contact put this domain on a company they created',
+		   SET admission = @admitted, admission_source = @human, admission_at = now(),
+		       admission_reason = @reason,
+		       admission_reason_code = @reason_code, admission_sender_kind = NULL,
+		       admission_reason_coded_at = now(),
 		       updated_at = now()
-		 WHERE domain = $1 AND admission = $4`,
-		base, DomainAdmitted, AdmissionSourceHuman, DomainSuppressed); err != nil {
+		 WHERE domain = @domain AND admission = @suppressed`,
+		pgx.NamedArgs{
+			admissionDomainArg: base, "admitted": DomainAdmitted, admissionHumanArg: AdmissionSourceHuman,
+			DomainSuppressed: DomainSuppressed, admissionReasonArg: claimedDomainReason, "reason_code": string(crmcontracts.BlockedDomainReasonCodeCompanyCreated),
+		}); err != nil {
 		return fmt.Errorf("contacts: admitting the claimed domain %s: %w", base, err)
 	}
 	return nil
@@ -409,18 +338,17 @@ func reopenAdmittedDomainTx(ctx context.Context, tx pgx.Tx, domain string, owner
 // decision time is the database's.
 func readDomainAdmissionTx(ctx context.Context, tx pgx.Tx, domain string) (BlockedDomain, error) {
 	var d BlockedDomain
-	var companyID *ids.UUID
+	var company standingCompany
 	err := tx.QueryRow(ctx, `
-		SELECT id, domain, COALESCE(admission, ''), COALESCE(admission_reason, ''),
-		       COALESCE(admission_source, ''), admission_at, company_id
-		  FROM company_domain_disposition WHERE domain = $1`, domain).
-		Scan(&d.ID, &d.Domain, &d.Admission, &d.Reason, &d.Source, &d.DecidedAt, &companyID)
+		SELECT d.id, d.domain, COALESCE(d.admission, ''), COALESCE(d.admission_reason, ''),
+		       COALESCE(d.admission_source, ''), d.admission_at, d.company_id, c.display_name, `+domainReasonCodeColumns+`
+		  FROM `+domainStandingFrom+` WHERE d.domain = $1`, domain).
+		Scan(&d.ID, &d.Domain, &d.Admission, &d.Reason, &d.Source, &d.DecidedAt, &company.id, &company.name, &d.ReasonCode, &d.SenderKind)
 	if err != nil {
 		return BlockedDomain{}, fmt.Errorf("contacts: reading back the admission of %s: %w", domain, err)
 	}
-	if companyID != nil {
-		typed := ids.From[ids.CompanyKind](*companyID)
-		d.CompanyID = &typed
+	if err := withVisibleCompanyTx(ctx, tx, &d, company); err != nil {
+		return BlockedDomain{}, err
 	}
 	return d, nil
 }

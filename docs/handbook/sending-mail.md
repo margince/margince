@@ -173,8 +173,9 @@ security notice.
 
 ### Why can't I send an email to this contact?
 When Margince will not send an email to a contact, the composer names the reason above the **Send** button. Where there is a fix, it names that too.
-- **Send blocked: no consent**: there is no consent for this purpose. Use **Review consent**, or **Request review** where it is offered.
-- **No recorded reason to contact this recipient**: press **Record reason for contact** and say why, under your name.
+- **Send blocked: no consent**: there is no consent for this purpose. Use **Review consent**, or press **Overrule with a reason** where it is offered.
+- **No recorded reason to contact this recipient**: press **Send**. If Margince refuses, press **Overrule with a reason**.
+- **Overrule with a reason**: write why the message may go and press **Record the overrule**, then press **Send** again. Your reason is recorded on each contact, under your name, and covers that kind of message to them until someone revokes it. It is offered only where Margince itself refused. It is not offered when the contact objected or the address does not accept mail.
 - **Message cannot be sent**: a reason nobody can lift, such as "The recipient objected to marketing."
 - A mailbox connected only to read mail: press **Reconnect your mailbox** and allow sending.
 Also called: email blocked, cannot email customer, send refused.
@@ -250,18 +251,25 @@ You see "Email scheduled. It has not been sent yet." with a link to **Scheduled 
 Also called: send later, delayed send, timed email.
 
 ### How do I cancel or reschedule a scheduled email?
-To cancel or move a scheduled email in Margince, open **Scheduled messages** from the command palette (⌘K or Ctrl+K). Use **Reschedule** or **Withdraw** on the message.
-1. Press ⌘K (Mac) or Ctrl+K, type "Scheduled messages" and open it. The toast shown after you set a send time links there too.
-2. To move it, press **Reschedule**, pick the new time and press **Reschedule**. Only the time can change.
-3. To cancel it, press **Withdraw**, then **Withdraw message** in "Withdraw this message?".
+To cancel or move a scheduled email in Margince, press the clock beside the bell in the top bar. Use **Reschedule**, **Edit** or **Withdraw** on the message.
+1. Press the clock, **Scheduled messages**. Its number counts waiting and held messages, and it changes colour when one is held.
+2. To move it, press **Reschedule**, then **Tomorrow morning**, **Tomorrow afternoon** or **Monday morning**. Or pick a time and press **Move message**. A toast offers **Undo**. Reschedule changes only the time.
+3. To change the words or the recipients, press **Edit**. The composer opens with your message. Press **Schedule send** to replace it. The old message is withdrawn once the new one is accepted. A reply stays in its thread. A message sent for a marketing purpose has no **Edit**; withdraw it and write it again.
+4. To cancel it, press **Withdraw**, then **Withdraw message** in "Withdraw this message?".
 Also called: unschedule, delete a scheduled email, change send time.
 
 The **Scheduled messages** page lists your messages that are set for later and
-not sent yet. Only you can see them. It has no sidebar row. It puts messages in
-three groups: **Held for your action**, **Scheduled** and **Sent or withdrawn**.
+not sent yet. Only you can see them. It has no sidebar row. The toast after you
+set a send time links there, and so does the command palette (⌘K or Ctrl+K).
+
+Waiting messages sit on a timeline, one block for each day. A line above them
+counts down to the next one. **All**, **Held** and **Today** narrow the list.
+Held messages come first, under **Held for your action**. Messages already sent
+or withdrawn wait behind **Sent or withdrawn**.
 
 **Reschedule** changes the time only. Margince checked the text itself, so to
-change the text, withdraw the message and write it again. **Withdraw** warns
+change the text, press **Edit**. A message without **Edit** has to be withdrawn
+and written again. **Withdraw** warns
 that the message will not be sent, nothing reaches the timeline, and sending it
 later means writing it again.
 

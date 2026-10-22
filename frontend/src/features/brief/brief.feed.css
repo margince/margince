@@ -1,0 +1,308 @@
+/* The first section: the row in hand as a card, and the rest of the day's
+   order under it. The row carries its own layout from worklist.row.css; this
+   sheet is the card around it and the ranked list's presses. */
+
+/* ── The first section ────────────────────────────────────────────────────
+ * The page's one raised surface is the card in hand; the section around it is
+ * page ground, headed by its eyebrow with the card's place in the day on the
+ * far edge, and the rest of the morning listed under the card. */
+.brief-first {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.brief-first-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-3);
+}
+.brief-first-head > .t-eyebrow {
+  margin: 0;
+}
+.brief-first-position {
+  margin-inline-start: auto;
+}
+/* The way into the whole queue under the day's order, with the count of what
+   the page left out beside it. */
+.brief-first-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  margin-block-start: var(--space-1);
+}
+.brief-first-foot > p {
+  margin: 0;
+}
+.brief-triage {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-10);
+}
+
+/* ── The card in hand ─────────────────────────────────────────────────────
+ * One thing to answer, drawn whole on its own raised surface: why it is here,
+ * the work, the words, why first, the verbs. The row inside is a `PanelRow`
+ * laid open (`display: contents`), so the card orders the row's parts among
+ * its own without a second row layout.
+ *
+ * Its edge turns slowly through the accent and the agent's indigo, because
+ * the agent put this card first. A reader who asked for less motion gets the
+ * edge at rest. */
+@property --brief-ring-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+.brief-triage-frame {
+  --brief-ring-angle: 0deg;
+  position: relative;
+  isolation: isolate;
+  border-radius: var(--r-lg);
+}
+.brief-triage-frame::before,
+.brief-triage-frame::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.brief-triage-frame::before {
+  inset: -1px;
+  background: conic-gradient(
+    from var(--brief-ring-angle),
+    transparent 0deg,
+    var(--ai) 60deg,
+    transparent 140deg,
+    var(--accent) 220deg,
+    transparent 300deg
+  );
+  opacity: 0.4;
+}
+/* The soft light the card stands in. */
+.brief-triage-frame::after {
+  inset: 8% 4% -10%;
+  background: linear-gradient(90deg, var(--accent), var(--ai));
+  filter: blur(40px);
+  opacity: 0.08;
+}
+.brief-triage-frame:focus {
+  outline: none;
+}
+.brief-triage-frame:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .brief-triage-frame {
+    animation: brief-ring-turn 9s linear infinite;
+  }
+  .brief-triage-lead {
+    animation: brief-card-off-the-stack var(--dur-move) var(--ease-out);
+  }
+}
+@keyframes brief-ring-turn {
+  to {
+    --brief-ring-angle: 360deg;
+  }
+}
+@keyframes brief-card-off-the-stack {
+  from {
+    opacity: 0;
+    transform: translateY(var(--space-2)) scale(0.985);
+  }
+}
+
+.brief-triage-lead {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: var(--space-4);
+  min-width: 0;
+  padding: var(--space-8);
+  border: 0;
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-pop);
+}
+/* THE HEAD: why the row is here, whose it is, where it sits and when, as one
+   caption line split by dots. */
+.brief-triage-lead-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-2);
+  margin: 0;
+}
+.brief-triage-lead-head > * + *::before {
+  content: "·";
+  margin-inline-end: var(--space-2);
+  color: var(--textSecondary);
+}
+.brief-triage-label {
+  color: var(--textPrimary);
+  font-weight: var(--fontWeightMedium);
+}
+.brief-triage-label-now {
+  color: var(--warningText);
+}
+.brief-triage-lead .worklist-row {
+  display: contents;
+}
+.brief-triage-lead .worklist-row::before {
+  content: none;
+}
+.brief-triage-lead .worklist-row-text {
+  width: 100%;
+}
+.brief-triage-lead .worklist-row-acts {
+  justify-content: flex-start;
+  padding-block-start: var(--space-2);
+}
+/* The head already says where the row stands, why and whose it is, so the
+   rank tile, the kind, the message's by-line and its marks draw nothing here. */
+.brief-triage-lead .worklist-rank,
+.brief-triage-lead .worklist-row-kind,
+.brief-triage-lead .emailentry__lead,
+.brief-triage-lead .emailentry__marks {
+  display: none;
+}
+
+/* THE NAME OF THE ROW IN HAND is the page's one headline after the greeting.
+   A waiting message names itself by its subject, at the same rung. */
+.brief-triage-lead p.worklist-row-title,
+.brief-triage-lead .emailentry__subject {
+  font: var(--fontHeadingXXLarge);
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+.brief-triage-lead .worklist-row-context,
+.brief-triage-lead .worklist-row-detail,
+.brief-triage-lead .worklist-row-verdict {
+  font: var(--fontBodyLarge);
+}
+.brief-triage-lead .worklist-row-facts {
+  font: var(--fontBody);
+  color: var(--textPrimary);
+}
+.brief-triage-lead .worklist-row-title > a {
+  overflow: visible;
+  white-space: normal;
+}
+/* A task's name is a button, and a button sets its label in the body face; the
+   headline is one type whichever control draws it. */
+.brief-triage-lead .worklist-row-title > .btn {
+  font: inherit;
+}
+.brief-triage-lead .emailentry {
+  padding: 0;
+}
+/* What the sender wrote, in their words: three lines, because the reader is
+   deciding how to answer and the message is what they are answering. */
+.brief-triage-lead .emailentry__preview {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  font: var(--fontBodyLarge);
+  color: var(--textSecondary);
+  white-space: normal;
+  text-wrap: pretty;
+}
+
+/* ── The rest of the order ─────────────────────────────────────────────────── */
+.brief-triage-queue {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.brief-triage-queue-head {
+  display: block;
+  margin: 0;
+  padding: 0 0 var(--space-1);
+}
+.brief-focus-list {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.brief-focus-list > li {
+  border-block-end: 1px solid var(--borderSubtle);
+}
+
+/* One row is ONE PRESS that puts it in hand: the rank, the name, and whose it
+   is with why on the far edge, the name lit under the pointer. */
+.brief-focus-item {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-4);
+  width: 100%;
+  padding: var(--space-4) var(--space-1);
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: color var(--dur-state) var(--ease-out);
+}
+.brief-focus-item:hover {
+  color: var(--accentText);
+}
+.brief-focus-item:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+}
+.brief-focus-rank {
+  flex: none;
+  min-inline-size: var(--space-4);
+  color: var(--textSecondary);
+}
+.brief-focus-item-title {
+  flex: 1;
+  min-width: 0;
+  font: var(--fontBodyLarge);
+  font-weight: var(--fontWeightMedium);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.brief-focus-item-line {
+  flex: 0 1 auto;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .brief-triage-lead {
+    display: flex;
+    flex-direction: column;
+    padding: var(--space-6);
+  }
+  .brief-triage-lead .worklist-row > * {
+    order: 1;
+  }
+  .brief-triage-lead .worklist-row-acts {
+    order: 2;
+  }
+  /* ds:ignore the phone rung of the same one headline */
+  .brief-triage-lead p.worklist-row-title,
+  .brief-triage-lead .emailentry__subject {
+    font: var(--fontHeadingLarge);
+  }
+  .brief-focus-item {
+    flex-wrap: wrap;
+    row-gap: 0;
+  }
+  .brief-focus-item-line {
+    max-width: none;
+    flex-basis: 100%;
+    padding-inline-start: var(--space-8);
+  }
+}

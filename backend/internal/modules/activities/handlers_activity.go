@@ -15,22 +15,29 @@ import (
 
 func (h Handlers) ListActivities(w http.ResponseWriter, r *http.Request, params crmcontracts.ListActivitiesParams) {
 	in := ListActivitiesInput{
-		Cursor:          params.Cursor,
-		Limit:           params.Limit,
-		Sort:            params.Sort,
-		Query:           params.Q,
-		ThreadKey:       params.ThreadKey,
-		IncludeArchived: params.IncludeArchived != nil && *params.IncludeArchived,
-		AssigneeID:      idArg[ids.UserKind](params.AssigneeId),
-		WithinProjectID: idArg[ids.ProjectKind](params.ProjectId),
-		OccurredAfter:   params.OccurredAfter,
-		OccurredBefore:  params.OccurredBefore,
+		Cursor:           params.Cursor,
+		Limit:            params.Limit,
+		Sort:             params.Sort,
+		Query:            params.Q,
+		ThreadKey:        params.ThreadKey,
+		SourceActivityID: idArg[ids.ActivityKind](params.SourceActivityId),
+		IncludeArchived:  params.IncludeArchived != nil && *params.IncludeArchived,
+		AssigneeID:       idArg[ids.UserKind](params.AssigneeId),
+		WithinProjectID:  idArg[ids.ProjectKind](params.ProjectId),
+		OccurredAfter:    params.OccurredAfter,
+		OccurredBefore:   params.OccurredBefore,
+		CustomFilters:    httperr.CustomFieldFilters(r),
 	}
 	if params.Kind != nil {
 		k := string(*params.Kind)
 		in.Kind = &k
 	}
 	in.ChannelProvider = params.ChannelProvider
+	if err := httperr.RequirePair("entity_type", params.EntityType,
+		"entity_id", params.EntityId); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	if params.EntityType != nil && params.EntityId != nil {
 		et := string(*params.EntityType)
 		// The entity filter targets the polymorphic activity_link seam, so
@@ -39,12 +46,7 @@ func (h Handlers) ListActivities(w http.ResponseWriter, r *http.Request, params 
 		in.EntityType = &et
 		in.EntityID = &id
 	}
-	if params.WaitingReply != nil && *params.WaitingReply {
-		// The instant comes from the store's own clock, not the request, so
-		// the wait and the rest of the page it renders on judge one snapshot.
-		asOf := h.store.now()
-		in.WaitingReplyAsOf = &asOf
-	}
+	in.WaitingReply = params.WaitingReply != nil && *params.WaitingReply
 
 	activities, page, err := h.store.ListActivities(r.Context(), in)
 	if err != nil {
@@ -75,6 +77,10 @@ func (h Handlers) LogActivity(w http.ResponseWriter, r *http.Request, _ crmcontr
 	// A caller who NAMES an invited colleague as a new task's assignee is
 	// allowed to; automatic writers never pass through here.
 	in.invitedAssignee = req.AssigneeId != nil
+	in.LinksFromRequest = true
+	if in.FollowUpTask != nil {
+		in.FollowUpTask.invitedAssignee = req.FollowUpTask.AssigneeId != nil
+	}
 
 	activity, created, err := h.store.LogActivity(r.Context(), in)
 	if err != nil {

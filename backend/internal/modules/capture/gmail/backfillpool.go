@@ -135,6 +135,8 @@ func inOrder[T any](
 	if n == 0 {
 		return nil
 	}
+	// cancel runs in the closure below, which has to wait for the workers
+	// after cancelling them. A bare defer cannot order the two.
 	ctx, cancel := context.WithCancel(ctx)
 	type result struct {
 		v   T

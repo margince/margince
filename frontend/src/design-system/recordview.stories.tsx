@@ -4,8 +4,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Ellipsis } from "lucide-react";
 import { Button } from "./atoms";
-import type { TimelineEntry } from "./composed";
 import { RecordBack, RecordView } from "./recordview";
+import type { TimelineEntry } from "./timelineentry";
 
 const emailEntry: TimelineEntry = {
   id: "a1",
@@ -97,8 +97,8 @@ export const InlineVerbsWiderThanTheHeader: Story = {
       <>
         <Button onClick={() => {}}>E-Mail schreiben</Button>
         <Button onClick={() => {}}>Aktivität erfassen</Button>
-        <Button onClick={() => {}}>Aufgabe anlegen</Button>
-        <Button onClick={() => {}}>Deal anlegen</Button>
+        <Button onClick={() => {}}>Aufgabe erstellen</Button>
+        <Button onClick={() => {}}>Deal erstellen</Button>
         <Button iconOnly aria-label="Weitere Aktionen" onClick={() => {}}>
           <Ellipsis aria-hidden="true" />
         </Button>

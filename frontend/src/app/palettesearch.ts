@@ -16,9 +16,9 @@ import {
   problemFieldErrors,
   problemMessageOf,
   throwProblem,
-} from "../screens/common";
+} from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
 import type { Command } from "./palette";
-import { useRecordZone } from "./recordzone";
 import {
   groupSearchHits,
   SEARCH_GROUP_KEY,
@@ -137,9 +137,8 @@ export function useSearchCommands(query: string): SearchArm {
     return hit.snippet ?? undefined;
   };
   // Every hit with somewhere to go, asked of the one place that knows where
-  // each kind lives. An activity that is not a message has no page and drops
-  // out by answering null; an EMAIL goes to the results screen with that
-  // message open, the one page that already owns its drawer.
+  // each kind lives. An activity goes to the results screen with it open in
+  // its panel, the one page that already owns both drawers.
   // Kept-over hits and failures go once the words change subject: `settled`
   // lags a burst, and another word's answer under the box misleads.
   const answer =

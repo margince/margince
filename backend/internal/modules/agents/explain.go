@@ -45,6 +45,7 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		steppedUp   *StepUpStagedError
 		overQuota   *auth.VolumeExceededError
 		staged      *workflow.StagedApprovalError
+		skew        *apperrors.VersionSkewError
 	)
 	switch {
 	case errors.As(err, &steppedUp):
@@ -95,7 +96,7 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		// Quoting the error whole would have carried the unescaped original
 		// beside the escaped copy.
 		return stagedExplanation(staged)
-	case errors.Is(err, errFileCannotWait):
+	case errors.Is(err, ErrFileCannotWait):
 		return "This call needs a contact's approval, and a file cannot wait for an approval: the approval would " +
 			"keep the file. Nothing was changed. Do not retry; tell the user to attach the file in the Margince app."
 	case errors.Is(err, errFileKindRefused):
@@ -121,6 +122,9 @@ func (s *Dispatcher) explain(tool string, err error) string {
 			"more of it than they lent this credential. (" + err.Error() + ")"
 	case errors.Is(err, apperrors.ErrNotFound):
 		return "No such record in this workspace (or it is outside the acting user's row scope). (" + err.Error() + ")"
+	case errors.As(err, &skew):
+		// Its words name the remedy, a re-stage or a reload, which the generic retry below contradicts.
+		return echoSafe(skew.Message, MaxFaultDetail)
 	case errors.Is(err, apperrors.ErrVersionSkew):
 		return "The record changed since it was read; re-read it and retry with the new version. (" + err.Error() + ")"
 	case errors.Is(err, apperrors.ErrApprovalTokenInvalid):
@@ -148,6 +152,8 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		s.log.Warn("mcp: tool call refused", "tool", tool, "code", "unknown_tool", "err", unknownTool)
 		return unknownTool.Error() + ". Nothing was changed, and no retry will make this name resolve. " +
 			"Call tools/list and use a name from it."
+	case errors.As(err, &badArgs) && badArgs.Code != "":
+		return s.explainClassified(tool, err)
 	case errors.As(err, &badArgs):
 		// The tool surface's own validation refusal: a misspelled argument, a
 		// value outside a closed vocabulary, an empty message body. The agent
@@ -389,13 +395,13 @@ func stagedExplanation(staged *workflow.StagedApprovalError) string {
 		"and report what you DID alongside what is waiting."
 }
 
-// stagedReleasePath says who answers a staged call, and offers decide_approval
-// only to a credential that can use it: a relay offered where the engine would
-// refuse is a dead end the caller finds out about one call later.
+// stagedReleasePath says who answers a staged call. It offers decide_approvals
+// only to a credential that can use it. A relay the engine would refuse is a
+// dead end the caller finds out about one call later.
 func stagedReleasePath(staged *workflow.StagedApprovalError) string {
 	if staged.ReleasableByCaller {
 		return "This change can be undone, so once the user says yes you can release it yourself with " +
-			"decide_approval (list_approvals is the same queue), or they can release it in the CRM."
+			"decide_approvals (list_approvals is the same queue), or they can release it in the CRM."
 	}
 	return "It is not yours to answer: the contact releases it in the CRM (list_approvals shows the same queue)."
 }

@@ -47,7 +47,8 @@ var forecastReadingsCopy = toolCopy{
 		"Empty means nothing was frozen for this population, which includes managed teams.",
 	Retain: "Quote `as_of`, `timezone` and `base_currency` with the number — a total placed " +
 		"in the reader's own zone is a different total — and `eligible_count`, `priced_count` " +
-		"and `fx_missing_count` are the counts `coverage_note` is written from.",
+		"and `fx_missing_count` are the counts `coverage_note` is written from. Every `_minor` " +
+		"figure is in minor units of `base_currency`: 3100000 in EUR is EUR 31,000.",
 }
 
 var forecastMovementCopy = toolCopy{
@@ -68,7 +69,8 @@ var forecastMovementCopy = toolCopy{
 		"where it went.",
 	Retain: "`reopened_or_archived` carries a deal that left the population entirely — " +
 		"archived, or no longer visible to this caller — with its whole prior contribution, so " +
-		"no money disappears without a row that says where it went.",
+		"no money disappears without a row that says where it went. Every `_minor` figure is in " +
+		"minor units of forecast_readings' `base_currency`: 3100000 in EUR is EUR 31,000.",
 }
 
 var forecastInputChecksCopy = toolCopy{
@@ -116,4 +118,29 @@ var dataCoverageCopy = toolCopy{
 		"both are silent on whether it could look — a clean set of findings over sources " +
 		"nobody opened reads as good news and is not. Ask this one when the question is " +
 		"whether to trust the other two.",
+}
+
+var readForecastCopy = toolCopy{
+	Purpose: "Read the forecast under the installation's fiscal calendar and base currency. " +
+		"readings: what a period is expected to close — `won`, `evidence`, `best_case`, `open` and " +
+		"`weighted` — and `snapshots`, the period's frozen states, newest first. movement: why " +
+		"the forecast changed between two snapshots, as named causes that sum to the whole " +
+		"difference. input_summary: whether the inputs are sound enough to quote, and how much " +
+		"of the pipeline last night's check reached. input_exceptions: the open input problems, " +
+		"most material first. input_sources: which connectors the check could read, and how far " +
+		"back.",
+	Limits: "`won` counts deals by the day they ACTUALLY closed. `evidence` is committed pipeline " +
+		"whose close date somebody confirmed. `coverage_note` says what the totals leave out; " +
+		"quote it with any total. movement needs `from` then `to`, both from ONE readings answer's " +
+		"`snapshots`; none listed means nothing was frozen yet. Reading twice and subtracting is " +
+		"not the same answer: it says nothing of where the difference went. In movement, `definition` means the snapshots used different rules and " +
+		"`model` a re-scored probability: neither is sales movement. `checks_incomplete` is not " +
+		"a worse `needs_review`: one says the pipeline has problems, the other that nobody could " +
+		"look. An empty input_exceptions cannot be told from a clean pipeline; input_sources " +
+		"tells them apart, and needs a coverage grant sellers lack.",
+	Instead: "read_reports and find_records with engine query also produce numbers, and neither " +
+		"is the forecast. For a board-pack section, use read_analytics: query with save, then " +
+		"compose.",
+	Retain: "Quote `as_of`, `timezone` and `base_currency` with the number. Every `_minor` figure " +
+		"is in minor units of `base_currency`: 3100000 in EUR is EUR 31,000.",
 }

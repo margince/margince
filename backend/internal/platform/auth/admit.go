@@ -60,15 +60,15 @@ func NewGate(authority authz.Resolver, opts ...GateOption) *Gate {
 
 // Admit decides whether the context's principal may run the action with
 // spec's tier model. resolve supplies the TierResolverInput for dynamic
-// tools — called lazily, only when the spec is TierDynamic, because
+// tools. It is called lazily, only when the spec is TierDynamic, because
 // building it may cost a database read (the target stage's semantic).
 //
-// The decision order is deliberate: scope first (a caller without the
-// verb never learns the tier, and pays no authority read), then the live
-// seat ceiling, then the read bound, then tier. A 🟡 outcome (declared or
-// dynamically resolved) returns ErrRequiresApproval. On admission the returned
-// context carries the principal refreshed with the re-derived authority,
-// so downstream store RBAC runs on current grants.
+// The decision order matters. Scope comes first, so a caller without the verb
+// never learns the tier and pays no authority read. Then the live seat ceiling,
+// the volume ceilings and the tier. A 🟡 outcome (declared or dynamically
+// resolved) returns ErrRequiresApproval. On admission the returned context
+// carries the principal refreshed with the re-derived authority, so downstream
+// store RBAC runs on current grants.
 func (g *Gate) Admit(ctx context.Context, spec mcp.ToolSpec, resolve func() (mcp.TierResolverInput, error)) (context.Context, error) {
 	p, ok := principal.Actor(ctx)
 	if !ok {
@@ -97,7 +97,7 @@ func (g *Gate) Admit(ctx context.Context, spec mcp.ToolSpec, resolve func() (mcp
 	// admitted. Every check below still applies: the seat, the re-derived
 	// RBAC and the volume bounds are not waived by knowing whose seat it is.
 	if !spec.SelfDescribing && !p.Scopes.Has(spec.RequiredScope) {
-		return ctx, fmt.Errorf("gate: %s needs scope %q: %w", spec.Name, spec.RequiredScope, apperrors.ErrScopeExceeded)
+		return ctx, &ScopeRequiredError{Tool: spec.Name, Scope: spec.RequiredScope}
 	}
 
 	// Re-derive the granting human's authority through the seam — never
@@ -265,30 +265,20 @@ func deniedIfGone(what, tool string, err error) error {
 	return fmt.Errorf("gate: %s: resolving %s: %w", tool, what, err)
 }
 
-// AdmitRead applies the READ bound alone, for a call that has no tool spec to
-// admit against — the ADR-0055 REST surface's non-mutating half.
+// AdmitRead applies the calls ceiling alone, for a call that has no tool spec to
+// admit against. It is the non-mutating half of the REST surface.
 //
-// It exists because that path has no tier to resolve and no scope to check
-// against a spec (a GET's authority is the granting human's RBAC at the store),
-// but it does spend the same bound. Without it a Passport that tripped the
-// counter through the MCP door could keep reading the very same records through
-// /v1 — one credential, two doors, one of them unbounded. ADR-0055's whole
-// claim is that those two doors are governed alike.
+// That path has no tier to resolve and no scope to check against a spec. A GET's
+// authority is the granting human's RBAC at the store. It spends the same ceiling
+// a tool call does. A read has no counter of its own, so one request is one call
+// on either door. A Passport suspended through MCP cannot keep reading through
+// /v1.
 //
-// MCP-SESS-CALLS is deliberately NOT applied here. It counts TOOL calls, and a
-// REST GET is not one: charging it would meter the same credential against a
-// ceiling written for a surface this request never touched, and the two doors
-// would then disagree about what a call is. The mutating REST half is bound AND
-// paid — compose/agentgate.go resolves the operation's tool twin, admits against
-// that spec, and charges the same two points the MCP door charges.
+// This half only refuses. The caller charges the call once it is admitted
+// (modules/agents ChargeAdmittedRead), because a gate that could both admit and
+// charge could admit itself.
 //
-// What is NOT closed, stated rather than implied: this read path refuses on the
-// bound and charges nothing back, so a credential that reads only through /v1
-// never accrues toward it. The charge is per RECORD, and no single point on this
-// door knows how many a handler served — see #646, which carries the shape a fix
-// has to take.
-//
-// Non-agents are admitted untouched, exactly as Admit leaves them.
+// Non-agents are admitted untouched, as Admit leaves them.
 func (g *Gate) AdmitRead(ctx context.Context) error {
 	if g == nil || g.volume == nil {
 		return nil
@@ -297,7 +287,7 @@ func (g *Gate) AdmitRead(ctx context.Context) error {
 	if !ok || p.Type != principal.PrincipalAgent {
 		return nil
 	}
-	if reading := g.volume.Read(ctx, agentvolume.Reads); reading.Exceeded {
+	if reading := g.volume.Read(ctx, agentvolume.Calls); reading.Exceeded {
 		return &VolumeExceededError{Reading: reading}
 	}
 	return nil

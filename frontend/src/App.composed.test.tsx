@@ -5,6 +5,7 @@ import {
   memoryStorage,
   renderApp,
   sessionOnlyFetch,
+  teardownApp,
 } from "./testing/appharness";
 
 // The COMPOSED half of the extension-route pair. Its twin,
@@ -50,8 +51,9 @@ beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn(sessionOnlyFetch()));
 });
 
-afterEach(() => {
+afterEach(async () => {
   cleanup();
+  await teardownApp();
   vi.unstubAllGlobals();
   window.location.hash = "";
 });
@@ -60,7 +62,7 @@ describe("extension routes (composed registry)", () => {
   it("renders the unit's screen at #/ext/notes", async () => {
     window.location.hash = "#/ext/notes";
     renderApp();
-    expect(await screen.findByRole("heading", { name: "notes" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Notes" })).toBeTruthy();
     // The published operations, not decoration: this is the whole content of a
     // unit surface at this stage, and a screen that resolved the descriptor and
     // then rendered nothing from it would pass a name-only assertion.
@@ -78,6 +80,6 @@ describe("extension routes (composed registry)", () => {
         "No extension named “crm-hello” is enabled on this installation.",
       ),
     ).toBeTruthy();
-    expect(screen.queryByRole("heading", { name: "notes" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Notes" })).toBeNull();
   });
 });

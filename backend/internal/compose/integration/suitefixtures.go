@@ -154,9 +154,9 @@ func RegisterGoBDFloorPack() {
 	jurisdiction.Register(GoBDFloorPack{})
 }
 
-// SeedRetentionPolicies installs the policy set the retention engine acts on:
-// one row per branch the sweep must take, so a suite asserting an outcome does
-// not also have to state the policy that produced it.
+// SeedRetentionPolicies authors one policy per branch the sweep must take.
+// A suite asserting an outcome then need not state the policy behind it.
+// The transcript-erase and contact-anonymize rows are not shipped defaults.
 func SeedRetentionPolicies(t *testing.T, e *Env) {
 	t.Helper()
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {

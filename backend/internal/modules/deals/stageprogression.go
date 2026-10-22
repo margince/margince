@@ -30,6 +30,9 @@ import (
 // StageProgressionKind is the approval kind a proposed move is staged as.
 const StageProgressionKind = "stage_progression"
 
+// StageApprovalEvidenceKey links an applied stage audit to its original decision.
+const StageApprovalEvidenceKey = "stage_approval_id"
+
 const progressionEntity = "stage_progression_outcome"
 
 // The two audit-image keys this file writes. Constants rather than literals at
@@ -102,6 +105,7 @@ type StageProgressionChange struct {
 
 // ProposedCriterion is one criterion as the card shows it.
 type ProposedCriterion struct {
+	Version     int64               `json:"version"`
 	CriterionID ids.ExitCriterionID `json:"criterion_id"`
 	Key         string              `json:"key"`
 	Label       string              `json:"label"`
@@ -110,6 +114,10 @@ type ProposedCriterion struct {
 	// EvidenceIDs are the ledger rows behind it, so a reviewer can open what
 	// the claim rests on rather than taking the tick on trust.
 	EvidenceIDs []ids.UUID `json:"evidence_ids"`
+	// CitedSourceIDs are the records the card cites for it. They are hashed
+	// with the rest. So when a source stops opening, the next reading
+	// supersedes the card instead of joining it.
+	CitedSourceIDs []ids.UUID `json:"cited_source_ids,omitempty"`
 }
 
 // StageProgressionIdentity is what makes a fresher read supersede a stale card

@@ -296,8 +296,8 @@ func ReleaseUndoableByDestination(tool string, call json.RawMessage) (undoable, 
 // relinkActivityTier. relink_thread is absent on purpose: its approval binds a
 // key, not rows, so one is never undoable.
 var relinkDestinationTools = map[string]bool{
-	"relink_activity":   true,
-	"relink_activities": true,
+	"relink_activity":    true,
+	relinkActivitiesTool: true,
 }
 
 type relinkActivityResolver struct {

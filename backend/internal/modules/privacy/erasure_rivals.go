@@ -41,6 +41,23 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// rivalHeldEmails selects which of the subject's addresses ($2) a different,
+// live contact ($1 is the subject) also holds. The erasure refuses on any such
+// address and the access export drops it, so both read one rule.
+const rivalHeldEmails = `
+	SELECT pe.email FROM contact_email pe
+	  JOIN contact p ON p.id = pe.contact_id
+	 WHERE pe.contact_id <> $1 AND p.archived_at IS NULL AND pe.email = ANY($2)`
+
+// rivalHeldChannelAccounts is the same rule over channel accounts, which
+// travel as the parallel provider ($2) and account ($3) arrays.
+const rivalHeldChannelAccounts = `
+	SELECT pci.provider, pci.channel_user_id FROM contact_channel_identity pci
+	  JOIN contact p ON p.id = pci.contact_id
+	 WHERE pci.contact_id <> $1 AND p.archived_at IS NULL
+	   AND (pci.provider, pci.channel_user_id) IN (
+	         SELECT provider, account FROM unnest($2::text[], $3::text[]) AS t(provider, account))`
+
 // refuseRivalIdentifierHolders reports ErrConflict when a different, live
 // Contact still holds one of the subject's addresses or channel accounts.
 //
@@ -77,12 +94,7 @@ func anotherLiveContactHoldsAnEmail(ctx context.Context, tx pgx.Tx, subject ids.
 		return false, nil
 	}
 	var held bool
-	err := tx.QueryRow(ctx, `
-		SELECT EXISTS (
-		  SELECT 1 FROM contact_email pe
-		    JOIN contact p ON p.id = pe.contact_id
-		   WHERE pe.contact_id <> $1 AND p.archived_at IS NULL AND pe.email = ANY($2))`,
-		subject, emails).Scan(&held)
+	err := tx.QueryRow(ctx, `SELECT EXISTS (`+rivalHeldEmails+`)`, subject, emails).Scan(&held)
 	return held, err
 }
 
@@ -97,13 +109,7 @@ func anotherLiveContactHoldsAChannelAccount(ctx context.Context, tx pgx.Tx, subj
 	}
 	providers, accounts := channelIdentityPairs(identities)
 	var held bool
-	err := tx.QueryRow(ctx, `
-		SELECT EXISTS (
-		  SELECT 1 FROM contact_channel_identity pci
-		    JOIN contact p ON p.id = pci.contact_id
-		   WHERE pci.contact_id <> $1 AND p.archived_at IS NULL
-		     AND (pci.provider, pci.channel_user_id) IN (
-		           SELECT provider, account FROM unnest($2::text[], $3::text[]) AS t(provider, account)))`,
+	err := tx.QueryRow(ctx, `SELECT EXISTS (`+rivalHeldChannelAccounts+`)`,
 		subject, providers, accounts).Scan(&held)
 	return held, err
 }

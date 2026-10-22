@@ -25,6 +25,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -174,17 +175,17 @@ type DemoteLeadCommand struct {
 func NewDemoteLeadCall(records datasource.SystemOfRecordProvider, language baselanguage.Resolver, cmd DemoteLeadCommand) GovernedCall {
 	return bind[DemoteLeadCommand](&demoteLeadResolver{
 		language: language,
-		lead:     anchoredRecord{records: records, entityType: datasource.EntityLead},
+		records:  records,
 	}, cmd)
 }
 
 type demoteLeadResolver struct {
-	lead     anchoredRecord
+	records  datasource.SystemOfRecordProvider
 	language baselanguage.Resolver
 }
 
 func (r *demoteLeadResolver) Subject(ctx context.Context, cmd DemoteLeadCommand) (StageInfo, error) {
-	rec, err := r.lead.row(ctx, cmd.LeadID)
+	rec, err := r.row(ctx, cmd.LeadID)
 	if err != nil {
 		return StageInfo{}, err
 	}
@@ -199,13 +200,25 @@ func (r *demoteLeadResolver) Subject(ctx context.Context, cmd DemoteLeadCommand)
 // Guards refuses a reversal with no reason before it can reach the inbox, and
 // then the lead itself, the same two ways the other lead resolvers do.
 func (r *demoteLeadResolver) Guards(ctx context.Context, cmd DemoteLeadCommand) error {
-	if err := requireDemotionReason(cmd.Reason); err != nil {
+	if err := RequireDemotionReason(cmd.Reason); err != nil {
 		return err
 	}
-	return r.lead.refuse(ctx, cmd.LeadID)
+	rec, err := r.row(ctx, cmd.LeadID)
+	if err != nil {
+		return err
+	}
+	return refuseStagingElsewhere(rec)
 }
 
-// requireDemotionReason admits a reversal that says why.
+func (r *demoteLeadResolver) row(ctx context.Context, id ids.UUID) (datasource.Record, error) {
+	reader, ok := r.records.(datasource.LeadReversalReaderV2)
+	if !ok {
+		return datasource.Record{}, apperrors.ErrUnsupportedBySoR
+	}
+	return reader.ReadLeadForReversal(ctx, id)
+}
+
+// RequireDemotionReason admits a reversal that says why.
 //
 // One function for both doors, for the reason requireGenuineTrigger states: the
 // staging path asks it through Guards and the execution path through
@@ -213,7 +226,7 @@ func (r *demoteLeadResolver) Guards(ctx context.Context, cmd DemoteLeadCommand) 
 // The contract requires the field; asking here is what makes a caller who omits
 // it read a refusal about the reversal rather than a schema complaint from the
 // store.
-func requireDemotionReason(reason string) error {
+func RequireDemotionReason(reason string) error {
 	if strings.TrimSpace(reason) != "" {
 		return nil
 	}
@@ -380,6 +393,8 @@ func (r *advanceDealResolver) Subject(ctx context.Context, cmd AdvanceDealComman
 		TargetType:    string(datasource.EntityDeal),
 		TargetID:      cmd.DealID,
 		TargetVersion: &rec.Version,
+		CoTargetType:  "stage",
+		CoTargetID:    cmd.ToStageID,
 		Summary:       dealMoveSummary(ctx, summaryIn(ctx, r.language), r.stages, rec, semantic),
 	}, nil
 }

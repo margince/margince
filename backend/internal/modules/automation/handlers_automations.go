@@ -17,6 +17,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -46,16 +47,14 @@ func NewHandlers(db *database.DB) Handlers {
 	return Handlers{automations: NewAutomationStore(db)}
 }
 
-// WithFieldCatalog wires the workspace custom-field catalog into the
-// transport's store (see AutomationStore.WithFieldCatalog); compose
-// injects modules/customfields' Service here, the same edge
-// deals.Handlers/contacts.Handlers already wire.
 // WithLists wires the lists seam a list rule's params are checked against.
 func (h Handlers) WithLists(lists Lists) Handlers {
 	h.automations = h.automations.WithLists(lists)
 	return h
 }
 
+// WithFieldCatalog wires the workspace custom-field catalog into the store;
+// compose injects modules/customfields' Service here.
 func (h Handlers) WithFieldCatalog(catalog fieldcatalog.Reader) Handlers {
 	h.automations = h.automations.WithFieldCatalog(catalog)
 	return h
@@ -158,6 +157,12 @@ func (h Handlers) UpdateAutomation(w http.ResponseWriter, r *http.Request, id cr
 	}
 	var req crmcontracts.UpdateAutomationRequest
 	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	// An automation always has a name, params and a status, so a null names
+	// nothing it can be set to.
+	if cleared := httperr.ClearedFields(r); len(cleared) > 0 {
+		httperr.Write(w, r, &storekit.NotClearableError{Field: cleared[0]})
 		return
 	}
 	in := UpdateAutomationInput{Name: req.Name, IfVersion: ifVersion}
@@ -375,7 +380,7 @@ func wireAutomation(a Automation) (crmcontracts.Automation, error) {
 		reason := crmcontracts.AutomationPausedReason(*a.PausedReason)
 		paused = &reason
 	}
-	return crmcontracts.Automation{
+	wire := crmcontracts.Automation{
 		PausedReason: paused,
 		Id:           openapi_types.UUID(a.ID.UUID),
 		Key:          a.Key,
@@ -385,7 +390,15 @@ func wireAutomation(a Automation) (crmcontracts.Automation, error) {
 		Version:      &version,
 		CreatedAt:    a.CreatedAt,
 		UpdatedAt:    a.UpdatedAt,
-	}, nil
+	}
+	if a.Runs != nil {
+		wire.LastRunAt = a.Runs.LastRunAt
+		if outcome := a.Runs.LastOutcome(); outcome != nil {
+			wire.LastRunOutcome = new(crmcontracts.AutomationLastRunOutcome(*outcome))
+		}
+		wire.RunsLast30Days = new(a.Runs.RecentRuns)
+	}
+	return wire, nil
 }
 
 // WithRetryEngine wires the engine a failed run is re-dispatched through.

@@ -10,9 +10,9 @@ package gates
 // Onboarding offers a first-time admin a provider and a model, and the server
 // has to be able to price and serve whatever it offered.
 //
-// The frontend cannot read Go, so `frontend/src/screens/setup-providers.ts` is a
-// declared MIRROR — and this is what makes "mirror" true rather than "two lists
-// that happen to agree today". It compares both directions: a model the screen
+// The frontend cannot read Go, so `frontend/src/lib/setup-providers.ts`
+// is a declared mirror. This test makes it one, not two lists that happen to
+// agree today. It compares both directions: a model the screen
 // offers that SeedModelRates does not price fails, and so does a provider name
 // SelectBrain would not accept.
 //
@@ -31,7 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
-const setupProvidersFile = "../frontend/src/screens/setup-providers.ts"
+const setupProvidersFile = "../frontend/src/lib/setup-providers.ts"
 
 // setupOffer is one entry of the screen's table, as this gate reads it.
 type setupOffer struct {

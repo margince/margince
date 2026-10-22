@@ -43,10 +43,10 @@ func TestASystemMintedTaskDoesNotCountAsTheNextStep(t *testing.T) {
 		}
 	}
 
-	if got := deriveMoment(readerCtx(), now, page("system:time-scan")); got.Rule != crmcontracts.ContactMomentRuleMissingNextStep {
+	if got := momentCopyFor("en").deriveMoment(readerCtx(), now, page("system:time-scan")); got.Rule != crmcontracts.ContactMomentRuleMissingNextStep {
 		t.Errorf("rule = %q: a system reminder was read as an agreed next step", got.Rule)
 	}
-	if got := deriveMoment(readerCtx(), now, page("human:"+ids.NewV7().String())); got.Rule == crmcontracts.ContactMomentRuleMissingNextStep {
+	if got := momentCopyFor("en").deriveMoment(readerCtx(), now, page("human:"+ids.NewV7().String())); got.Rule == crmcontracts.ContactMomentRuleMissingNextStep {
 		t.Error("a task a colleague filed was not counted as the next step")
 	}
 }
@@ -71,7 +71,7 @@ func TestTheNextStepRungNamesTheRecordedSeat(t *testing.T) {
 					Role: tc.role,
 				},
 			}
-			got := deriveMoment(readerCtx(), now, page)
+			got := momentCopyFor("en").deriveMoment(readerCtx(), now, page)
 			if got.Rule != crmcontracts.ContactMomentRuleMissingNextStep {
 				t.Fatalf("rule = %q, want missing_next_step", got.Rule)
 			}

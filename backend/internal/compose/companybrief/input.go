@@ -25,6 +25,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -445,7 +446,7 @@ func (in Input) withoutProfile() Input {
 func (in *Input) foldProfile(fields []crmcontracts.CompanyProfileField) {
 	byField := make(map[string]string, len(fields))
 	for _, field := range fields {
-		value := truncateRunes(strings.TrimSpace(field.Value), briefProfileValueMax)
+		value := profileValue(field.Value)
 		if value == "" {
 			continue
 		}
@@ -458,24 +459,15 @@ func (in *Input) foldProfile(fields []crmcontracts.CompanyProfileField) {
 	}
 }
 
-// truncateRunes cuts at a character boundary. A byte slice through German
-// prose splits the umlaut that straddles the limit, and the broken sequence
-// reaches the reader as the replacement character — from a field whose whole
-// promise is that it shows their own approved words.
-func truncateRunes(value string, limit int) string {
-	if utf8.RuneCountInString(value) <= limit {
+// profileValue cuts one approved statement at a character boundary, so German
+// prose never ends in a split umlaut shown as the replacement character.
+func profileValue(raw string) string {
+	value := strings.TrimSpace(raw)
+	if utf8.RuneCountInString(value) <= briefProfileValueMax {
 		return value
 	}
-	kept := 0
-	for offset := range value {
-		if kept == limit-1 {
-			// The ellipsis says the statement was cut, and counts against the
-			// limit rather than pushing past it. Without it the card shows an
-			// approved sentence that stops mid-thought and reads as though the
-			// author wrote it that way.
-			return value[:offset] + "…"
-		}
-		kept++
-	}
-	return value
+	// The ellipsis says the statement was cut, and counts against the limit
+	// rather than pushing past it. Without it the card shows an approved
+	// sentence that stops mid-thought, as though the author wrote it that way.
+	return textcut.Runes(value, briefProfileValueMax-1) + "…"
 }

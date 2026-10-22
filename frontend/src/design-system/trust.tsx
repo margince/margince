@@ -1,7 +1,9 @@
-import { ArrowRight, ChevronRight } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { ArrowRight } from "lucide-react";
+import { type ReactNode, useRef, useState } from "react";
 import { usePlural, useT } from "../i18n";
 import { Badge } from "./atoms";
+import { ExpanderChevron } from "./disclosure";
+import { type FoldEnds, useFold } from "./fold";
 import "./panel.css"; // StagingCard's box is drawn by the panel-ai family.
 import "./trust.css";
 
@@ -78,14 +80,30 @@ export function toEvidence(raw: unknown): Evidence | null {
   return null;
 }
 
-export function AutonomyDot({ tier }: Readonly<{ tier: "auto" | "confirm" }>) {
+/**
+ * `withLabel` prints the tier's word beside the dot where the dot is the whole
+ * answer. A colour alone tells nothing to a reader who cannot see it apart.
+ */
+export function AutonomyDot({
+  tier,
+  withLabel = false,
+}: Readonly<{ tier: "auto" | "confirm"; withLabel?: boolean }>) {
   const t = useT();
+  const word = tier === "auto" ? t("autonomy.auto") : t("autonomy.confirm");
+  if (withLabel) {
+    return (
+      <span className="autonomy">
+        <span className={`dot dot-${tier}`} aria-hidden="true" />
+        {word}
+      </span>
+    );
+  }
   return (
     <span
       className={`dot dot-${tier}`}
       // NOSONAR: CSS-drawn status glyph (no bitmap); <img> would need a src the design has none of, and .dot styling targets the span
       role="img"
-      aria-label={tier === "auto" ? t("autonomy.auto") : t("autonomy.confirm")}
+      aria-label={word}
     />
   );
 }
@@ -163,6 +181,8 @@ export function EvidenceChip({
   const t = useT();
   const plural = usePlural();
   const [expanded, setExpanded] = useState(false);
+  const fold = useRef<HTMLSpanElement>(null);
+  const snippetShown = useFold(fold, expanded, evidenceEnds);
   const cited = evidence.lines ?? [];
   // Beside the snippet in both forms, never behind the disclosure: the line
   // reference is what makes a claim checkable, and a reader scanning a list of
@@ -187,7 +207,7 @@ export function EvidenceChip({
     recordKind(evidence.source) === null ? undefined : evidence.source;
   if (collapsed) {
     return (
-      <span className="evidence-chip-collapsed">
+      <span className="evidence-chip-collapsed" ref={fold}>
         <button
           type="button"
           className="evidence-chip evidence-chip-toggle"
@@ -198,11 +218,11 @@ export function EvidenceChip({
           })}
           onClick={() => setExpanded((prev) => !prev)}
         >
-          <ChevronRight aria-hidden />
           {shortenSource(evidence.source)}
           {lineRef}
+          <ExpanderChevron />
         </button>
-        {expanded && (
+        {snippetShown && (
           <span className="evidence-chip-snippet">"{evidence.snippet}"</span>
         )}
       </span>
@@ -226,6 +246,17 @@ export function EvidenceChip({
     </span>
   );
 }
+
+const evidenceEnds: FoldEnds = (box) => {
+  const top = box.getBoundingClientRect().top;
+  const bottom = (selector: string) =>
+    box.querySelector(`:scope > ${selector}`)?.getBoundingClientRect().bottom;
+  const shut = (bottom(".evidence-chip-toggle") ?? top) - top;
+  return {
+    shut,
+    open: (bottom(".evidence-chip-snippet") ?? top + shut) - top,
+  };
+};
 
 /**
  * A wire confidence (0..1) as the level `ConfidenceMeter` draws. The ONE
@@ -362,12 +393,14 @@ function DiffSide({
   );
 }
 
-// A governed agent's passport id: an agent's identity, so the provenance tone.
-export function PassportChip({ id }: Readonly<{ id: string }>) {
+// The agent passport a change was made under, by name: an agent's identity,
+// so the provenance tone. The design system has no lookups, so the caller
+// resolves the name; without one the chip says "An agent" and never an id.
+export function PassportChip({ name }: Readonly<{ name?: string }>) {
   const t = useT();
   return (
     <span title={t("history.passport")}>
-      <Badge tone="ai">{id}</Badge>
+      <Badge tone="ai">{name?.trim() || t("history.passportUnnamed")}</Badge>
     </span>
   );
 }

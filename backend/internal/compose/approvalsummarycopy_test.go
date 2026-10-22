@@ -15,12 +15,10 @@ package compose
 
 import (
 	"maps"
-	"reflect"
-	"regexp"
-	"slices"
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy/langcopytest"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -28,6 +26,7 @@ import (
 // contract between the table and the Sprintf that reads it, so it is written
 // down here rather than derived from the English entry it has to hold.
 var approvalSummaryHoles = map[string][]string{
+	"signaturePrivate":             nil,
 	"draftedReplyWaiting":          {"%q"},
 	"counterpartyWorthKeeping":     {"%s"},
 	"companyRename":                {"%s", "%s"},
@@ -57,60 +56,15 @@ var approvalSummaryHoles = map[string][]string{
 	"nestedFields":                 {"%d"},
 }
 
-// formatVerb matches a verb with or without an explicit argument index, so an
-// index reads as a different verb and fails the comparison.
-var formatVerb = regexp.MustCompile(`%(\[\d+\])?[a-zA-Z]`)
-
-// summarySentences reads every string field off one set by name. Walking the
-// struct rather than listing it is what puts a new field under the census the
-// moment it exists.
-func summarySentences(said approvalSummaryCopy) map[string]string {
-	value := reflect.ValueOf(said)
-	sentences := map[string]string{}
-	for i := range value.NumField() {
-		// Exactly string: the set's own textlang.Lang is a string kind and no sentence.
-		if field := value.Field(i); field.Type() == reflect.TypeFor[string]() {
-			sentences[value.Type().Field(i).Name] = field.String()
-		}
-	}
-	return sentences
-}
-
 func TestEveryShippedLanguageWritesItsOwnApprovalSummaries(t *testing.T) {
-	english := summarySentences(approvalSummaryByLang[textlang.English])
-	for name := range english {
-		if _, known := approvalSummaryHoles[name]; !known {
-			t.Errorf("%s has no entry in approvalSummaryHoles, so nothing holds its call site to its holes", name)
-		}
-	}
-	for _, lang := range textlang.Shipped {
-		t.Run(string(lang), func(t *testing.T) {
-			set, ok := approvalSummaryByLang[lang]
-			if !ok {
-				t.Fatalf("the product ships %s and this table has not learned it", lang)
-			}
-			for name, got := range summarySentences(set) {
-				if got == "" {
-					t.Errorf("%s is empty — a blank summary reaches the decider as nothing at all", name)
-					continue
-				}
-				if verbs := formatVerb.FindAllString(got, -1); !slices.Equal(verbs, approvalSummaryHoles[name]) {
-					t.Errorf("%s carries the verbs %v, its call site passes %v: %q",
-						name, verbs, approvalSummaryHoles[name], got)
-				}
-				if lang != textlang.English && got == english[name] {
-					t.Errorf("%s is the English sentence verbatim; the entry exists and the reader still gets English", name)
-				}
-			}
-		})
-	}
+	langcopytest.CensusByLanguage(t, approvalSummaryByLang, approvalSummaryHoles, "acts", "lang")
 }
 
 // The German copy uses the plain hyphen only. A dash belongs to the English
 // sentences, which keep theirs byte for byte.
 func TestTheGermanApprovalSummariesCarryNoDash(t *testing.T) {
 	german := approvalSummaryByLang[textlang.German]
-	sentences := summarySentences(german)
+	sentences := langcopytest.Sentences(t, german, "acts", "lang")
 	for _, words := range []map[string]string{german.acts.verbs, german.acts.recordFrames, german.acts.operations} {
 		maps.Copy(sentences, words)
 	}
@@ -127,7 +81,8 @@ func TestTheGermanApprovalSummariesCarryNoDash(t *testing.T) {
 // The corpus is the policy table's mutating tool routes, not a list: a contract
 // change that makes a new verb stageable fails here rather than printing the
 // English verb on a German card. It runs both ways, so a verb that stops being
-// stageable cannot leave a dead word behind.
+// stageable cannot leave a dead word behind. A registry-served route stages
+// through its tool, as the MCP door does, so its method decides nothing here.
 func TestEveryStageableAgentActHasItsWordsInEveryLanguage(t *testing.T) {
 	for _, lang := range textlang.Shipped {
 		if lang == textlang.English {
@@ -137,7 +92,7 @@ func TestEveryStageableAgentActHasItsWordsInEveryLanguage(t *testing.T) {
 		reachedVerbs, reachedFrames := map[string]bool{}, map[string]bool{}
 		for route, pol := range agentPolicies {
 			method, _, _ := strings.Cut(route, " ")
-			if pol.Access != accessTool || !mutatingMethod(method) {
+			if pol.Access != accessTool || !mutatingMethod(method) || pol.ServedBy == servedByRegistry {
 				continue
 			}
 			if pol.RecordType == "" || !genericVerbs[pol.Tool] {

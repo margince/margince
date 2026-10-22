@@ -227,8 +227,9 @@ func SafeFilename(name string, ordinal int) string {
 
 // truncateFilename cuts to a byte ceiling and marks the cut, so a shortened name
 // is visibly shortened rather than silently different. The ceiling is in BYTES
-// because it is the column's ceiling; the cut backs off to a rune boundary so
-// what is stored is never a broken UTF-8 sequence.
+// because it is the column's ceiling. The cut backs off to a rune boundary, so
+// what is stored is never a broken UTF-8 sequence. It repeats textcut.BytesMarked
+// because this package imports only the standard library.
 func truncateFilename(s string, limit int) string {
 	if len(s) <= limit {
 		return s

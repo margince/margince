@@ -1,11 +1,5 @@
 {
-  "approval": ["decide_approval"],
-  "field-conflict": ["decide_approval", "update_record"],
-  "create-followups": [
-    "merge_records",
-    "decide_duplicate",
-    "apply_tag",
-    "create_tag",
-    "remove_tag"
-  ]
+  "approval": ["decide_approvals"],
+  "field-conflict": ["decide_approvals", "update_record"],
+  "create-followups": ["resolve_duplicates", "change_tags"]
 }

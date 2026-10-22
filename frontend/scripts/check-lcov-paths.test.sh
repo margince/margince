@@ -96,7 +96,7 @@ expect_refusal "a report holding no frontend/src file" \
 # defect as the tooling-only case arriving through the tree the check trusts.
 expect_refusal "a report holding only test files" \
   "$(write_report tests-only.info \
-    "frontend/src/screens/contactprovider.test.tsx" \
+    "frontend/src/features/contacts/contactprovider.test.tsx" \
     "extensions/openchannel/frontend/screen.test.tsx")" \
   "no record under frontend/src"
 

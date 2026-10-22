@@ -21,6 +21,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/providerwait"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 const (
@@ -104,8 +106,8 @@ func (e *deepReadEngine) confirmCompanySiteRead(w http.ResponseWriter, r *http.R
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	if strings.TrimSpace(req.Profile.DisplayName) == "" {
-		httperr.Write(w, r, httperr.Validation("profile.display_name", "empty", "a company needs a name"))
+	if code, why := values.CompanyNameFault(req.Profile.DisplayName); code != "" {
+		httperr.Write(w, r, httperr.Validation("profile.display_name", code, why))
 		return
 	}
 	for _, required := range []struct {
@@ -324,6 +326,7 @@ func companySiteRead(read contacts.SiteRead, compared []contacts.SiteReadCompari
 		DraftVersion: read.DraftVersion, ProposalHash: read.ProposalHash,
 		CreatedAt: read.CreatedAt, UpdatedAt: read.UpdatedAt, PagesRead: &read.PagesRead,
 		StatusDetail: read.StatusDetail, NextAttemptAt: read.NextAttemptAt,
+		DeferralReason: providerwait.Reason(read.Status, read.StatusCode, read.StatusDetail),
 	}
 	attachCompanySiteReadOptionals(&out, read, runtime)
 	return out

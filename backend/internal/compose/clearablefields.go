@@ -30,8 +30,10 @@ import "slices"
 //     one instruction. deal_partner_attribution_pairing admits no row where one
 //     half survived the other, so forgetting either forgets both, and a reversal
 //     of a partner-add names both halves as null.
-//   - a lead's status and score override are absent because they are lifecycle
-//     positions and a sticky decision, not values.
+//   - a lead's status is absent because it is a lifecycle position, not a value.
+//     The score override pair is absent because every entry that sets or ends
+//     an override records score_computed, which no update request can send, so
+//     the evaluator refuses it as not_restorable_by_this_path.
 //   - a contact's full_name and a company's display_name are absent because
 //     a record with no name is not a record anybody can find again.
 //
@@ -42,7 +44,7 @@ var clearableFields = map[string][]string{
 		"legal_name", "description", "industry", "size_band",
 		"linkedin_url", "owner_id", "parent_company_id",
 	},
-	"lead": {"email", "title", "company_name", "candidate_company_key", "project_id", "owner_id"},
+	"lead": {"email", "phone", "title", "company_name", "candidate_company_key", "project_id", "owner_id"},
 	"deal": {
 		"expected_close_date", "forecast_category", "wait_until", "owner_id",
 		"company_id", "project_id", "partner_company_id", "partner_attribution",

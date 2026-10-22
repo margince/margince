@@ -14,15 +14,16 @@ import (
 	"github.com/emersion/go-message/mail"
 )
 
-// extractText returns the message's plain-text body and the files it carried.
+// extractText returns the message's plain-text body, its link hosts and the
+// files it carried.
 //
 // It prefers a text/plain part, rendering text/html to text only when no plain
 // part exists, so an HTML-only newsletter still yields readable text. Attachment parts are collected on the SAME walk: a MIME reader
 // is single-pass, so a second walk would mean holding or re-parsing the whole
 // message to find files this one already stepped over.
-func extractText(reader *mail.Reader) (string, []Part, []PartDrop, bool) {
+func extractText(reader *mail.Reader) walkedBody {
 	var plain, html string
-	calendar := false
+	var calendar calendarPart
 	files := newCollector()
 	for {
 		if files.exhausted() {
@@ -33,7 +34,7 @@ func extractText(reader *mail.Reader) (string, []Part, []PartDrop, bool) {
 			break
 		}
 		part, err := reader.NextPart()
-		if err != nil {
+		if !usablePart(err) {
 			if !errors.Is(err, io.EOF) {
 				// A structural failure ends the walk, so any file after this
 				// point is lost. Recorded rather than passed over: a message
@@ -44,8 +45,10 @@ func extractText(reader *mail.Reader) (string, []Part, []PartDrop, bool) {
 			break
 		}
 		if attached, ok := part.Header.(*mail.AttachmentHeader); ok {
-			calendar = calendar || declaresCalendar(attached)
 			files.take(attached, part.Body)
+			if params, declared := declaresCalendar(attached); declared {
+				calendar.see(params, files.justAdmitted())
+			}
 			continue
 		}
 		inline, ok := part.Header.(*mail.InlineHeader)
@@ -59,7 +62,22 @@ func extractText(reader *mail.Reader) (string, []Part, []PartDrop, bool) {
 	// Everything the sender named has had its claim on the bounds; what was
 	// held back takes what is left.
 	files.settle()
-	return bodyText(plain, html), files.parts, files.drops(), calendar
+	links, linksCut := linkHosts(plain, html)
+	return walkedBody{
+		text: bodyText(plain, html), links: links, linksCut: linksCut,
+		parts: files.parts, drops: files.drops(), calendar: calendar,
+	}
+}
+
+// walkedBody is what one walk over a message's parts found: the text, the
+// hosts its links lead to, its files and its calendar payload.
+type walkedBody struct {
+	text     string
+	links    []string
+	linksCut bool
+	parts    []Part
+	drops    []PartDrop
+	calendar calendarPart
 }
 
 func bodyText(plain, html string) string {
@@ -81,14 +99,21 @@ func isCalendarType(contentType string) bool {
 	return strings.HasPrefix(strings.ToLower(contentType), "text/calendar")
 }
 
-func declaresCalendar(header *mail.AttachmentHeader) bool {
-	declared, _, err := header.ContentType()
+// contentTyped is a part header, attachment or inline alike.
+type contentTyped interface {
+	ContentType() (string, map[string]string, error)
+}
+
+// declaresCalendar reports whether a part declares a calendar payload, with the
+// Content-Type parameters that carry its iCalendar method.
+func declaresCalendar(header contentTyped) (map[string]string, bool) {
+	declared, params, err := header.ContentType()
 	if err != nil {
 		// A malformed Content-Type is no claim at all. Whether this message is
 		// an invitation is then decided by its other parts and its headers.
-		return false
+		return nil, false
 	}
-	return isCalendarType(declared)
+	return params, isCalendarType(declared)
 }
 
 // readInlinePart takes one inline part: a named one is a file, an unnamed one is
@@ -100,9 +125,9 @@ func declaresCalendar(header *mail.AttachmentHeader) bool {
 // has to leave with it.
 func readInlinePart(
 	inline *mail.InlineHeader, body io.Reader, files *collector,
-	plain, html *string, calendar *bool,
+	plain, html *string, calendar *calendarPart,
 ) bool {
-	contentType, _, err := inline.ContentType()
+	contentType, params, err := inline.ContentType()
 	if err != nil {
 		return false
 	}
@@ -111,8 +136,10 @@ func readInlinePart(
 	// Content-Disposition: attachment loses them with nothing recorded — the
 	// sender chose how to render it, not whether we keep it.
 	if name := inlineFilename(inline); name != "" {
-		*calendar = *calendar || isCalendarType(contentType)
 		files.takeInline(inline, name, body)
+		if isCalendarType(contentType) {
+			calendar.see(params, files.justAdmitted())
+		}
 		return true
 	}
 	// An UNNAMED calendar part is the invitation itself. It is read here — the
@@ -125,8 +152,9 @@ func readInlinePart(
 	// twentieth off the cap. The files a contact chose to send are what a rep
 	// opens; the invitation is evidence, and evidence yields.
 	if isCalendarType(contentType) {
-		*calendar = true
-		files.holdCalendar(readBoundedRaw(body))
+		content := readBoundedRaw(body)
+		calendar.see(params, content)
+		files.holdCalendar(content)
 		return true
 	}
 	content, err := readBounded(body)
@@ -135,9 +163,9 @@ func readInlinePart(
 	}
 	switch {
 	case strings.HasPrefix(contentType, "text/plain") && *plain == "":
-		*plain = string(content)
+		*plain = string(toUTF8(content, params["charset"]))
 	case strings.HasPrefix(contentType, "text/html") && *html == "":
-		*html = string(content)
+		*html = string(toUTF8(content, params["charset"]))
 	}
 	return true
 }

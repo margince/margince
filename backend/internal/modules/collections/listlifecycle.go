@@ -13,7 +13,9 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/auditentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -41,7 +43,7 @@ var ErrListArchived = fmt.Errorf("an archived list is read-only: restore it firs
 // UpdateList changes a list's name, purpose, filter, sharing, team or steward,
 // and records the new definition as a revision.
 func (s *Store) UpdateList(ctx context.Context, id ids.ListID, in UpdateListInput) (listRow, error) {
-	if err := s.checkUpdate(ctx, id, in); err != nil {
+	if err := s.checkUpdate(ctx, id, &in); err != nil {
 		return listRow{}, err
 	}
 	var out listRow
@@ -55,6 +57,9 @@ func (s *Store) UpdateList(ctx context.Context, id ids.ListID, in UpdateListInpu
 		}
 		p := listPatch(current, in)
 		if p.Empty() {
+			if err := storekit.EnsureIfMatch(ctx, tx, listObject, id.UUID, in.IfVersion); err != nil {
+				return err
+			}
 			out = current
 			return nil
 		}
@@ -67,7 +72,7 @@ func (s *Store) UpdateList(ctx context.Context, id ids.ListID, in UpdateListInpu
 		if err := writeRevision(ctx, tx, out); err != nil {
 			return err
 		}
-		auditID, err := storekit.Audit(ctx, tx, "update", listObject, id.UUID, p.Before(), p.After())
+		auditID, err := storekit.Audit(ctx, tx, "update", auditentity.List, id.UUID, p.Before(), p.After())
 		if err != nil {
 			return err
 		}
@@ -78,16 +83,21 @@ func (s *Store) UpdateList(ctx context.Context, id ids.ListID, in UpdateListInpu
 	return out, err
 }
 
-// checkUpdate refuses an update before its transaction opens: no version, an
-// unknown sharing, or a filter the list cannot hold. The filter is judged
-// against the list's own record type here because SegmentEngine reads the
-// custom-field catalogue on its own connection.
-func (s *Store) checkUpdate(ctx context.Context, id ids.ListID, in UpdateListInput) error {
+// checkUpdate refuses a bad update before its transaction opens, and trims the
+// name as a new list does. SegmentEngine reads the catalogue on its own connection.
+func (s *Store) checkUpdate(ctx context.Context, id ids.ListID, in *UpdateListInput) error {
 	if err := auth.Require(ctx, listObject, principal.ActionUpdate); err != nil {
 		return err
 	}
 	if in.IfVersion == nil {
 		return &BadInputError{Field: versionField, Reason: "name the version you read, so a change nobody saw is not overwritten"}
+	}
+	if in.Name != nil {
+		name, err := httperr.RequireNonBlank(nameField, *in.Name)
+		if err != nil {
+			return err
+		}
+		in.Name = &name
 	}
 	if in.Sharing != nil {
 		if err := checkSharing(*in.Sharing); err != nil {
@@ -193,13 +203,13 @@ func (s *Store) setArchived(ctx context.Context, id ids.ListID, archive bool) (l
 
 func auditArchiveChange(ctx context.Context, tx pgx.Tx, id ids.ListID, archive bool, p *storekit.Patch) error {
 	if archive {
-		auditID, err := storekit.Audit(ctx, tx, "archive", listObject, id.UUID, nil, nil)
+		auditID, err := storekit.Audit(ctx, tx, "archive", auditentity.List, id.UUID, nil, nil)
 		if err != nil {
 			return err
 		}
 		return storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventListArchived{})
 	}
-	auditID, err := storekit.Audit(ctx, tx, "restore", listObject, id.UUID, p.Before(), p.After())
+	auditID, err := storekit.Audit(ctx, tx, "restore", auditentity.List, id.UUID, p.Before(), p.After())
 	if err != nil {
 		return err
 	}

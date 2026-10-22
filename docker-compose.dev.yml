@@ -50,7 +50,7 @@ services:
   postgres:
     # pgvector ships inside the Postgres image: the search module's hybrid
     # retrieval needs the extension available at migrate time.
-    image: pgvector/pgvector:pg16@sha256:1d533553fefe4f12e5d80c7b80622ba0c382abb5758856f52983d8789179f0fb
+    image: pgvector/pgvector:pg16@sha256:7b822b0aac60967beb1ea5e576b8602c94c300a157d187f385ae3e0da199b90a
     # max_locks_per_transaction sizes the CLUSTER-WIDE lock table, not a
     # per-transaction budget: the instance gets
     # max_locks_per_transaction × (max_connections + max_prepared_transactions)
@@ -188,7 +188,7 @@ services:
     # (docs/reference/system-requirements.md): 7.4 left the BSD license
     # family. renovate.json holds this image below 7.3; digest updates
     # within the 7.2 tag still flow, which is how patch releases arrive.
-    image: redis:7.2@sha256:6461ca4ac0c5c9d81d53685c3bf76aa81f464a9de6cf3a97b80a1da8d1bb1de4
+    image: redis:7.2@sha256:46f15cf64fdef63e483dcda99e74e3d51c017b1175547b6bb874152ee2391aad
     # 64 logical dbs, not the default 16. The integration lane gives each package
     # its own db so two packages can never share one — several of them FLUSHDB
     # between tests, which makes a shared db a silent corruption rather than a
@@ -226,7 +226,7 @@ services:
     # build is the same server under the same `server /data` command. It runs
     # as uid 65532 by default; root keeps an existing volume, written by the
     # old root-run image, readable.
-    image: cgr.dev/chainguard/minio@sha256:bd014394a80898e68c149f2311fdf8d5a2c2f3bb2c33b9327ae6d02b4b065ae1
+    image: cgr.dev/chainguard/minio@sha256:c93745c56fccdaf0e5dcb88999a96a65a136428beb045ef5d546255a80d747a7
     user: "0:0"
     environment:
       MINIO_ROOT_USER: minioadmin

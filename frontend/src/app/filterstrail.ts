@@ -8,10 +8,10 @@ import {
   filtersAddressOf,
   NEW_FILTER_LABEL,
   opensAFocusedFiltersPage,
-} from "../screens/filtersaddress";
-import { useList } from "../screens/lists.queries";
-import { openableTree, useSavedView } from "../screens/savedviews.queries";
-import { type Route, routeHash } from "./router";
+} from "../lib/filtersaddress";
+import { useList } from "../lib/lists.queries";
+import { type Route, routeHash } from "../lib/router";
+import { openableTree, useSavedView } from "../lib/savedviews.queries";
 
 /** The list a page names: one list's own page, or its filter's. */
 function listIdOf(

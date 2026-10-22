@@ -9,7 +9,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -17,7 +16,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -32,7 +30,8 @@ const teamReviewSelect = `
 	       meetings_held, meetings_with_next_step,
 	       commitments_due, commitments_kept,
 	       pipeline_created_minor, pipeline_won_minor, pipeline_lost_minor,
-	       base_currency, reps_unread, numeric_summary
+	       base_currency, reps_unread, numeric_summary,
+	       proposals_accepted, proposals_rejected, auto_change_reversals, coalesce(summary, ''), coalesce(summary_language, 'en')
 	  FROM team_weekly_review`
 
 // memberFrozenWeek is one member's frozen week as the team snapshot folds it.
@@ -63,13 +62,14 @@ func memberWeek(
 		       meetings_held, meetings_with_next_step,
 		       commitments_due, commitments_kept,
 		       pipeline_created_minor, pipeline_won_minor, pipeline_lost_minor, base_currency,
-		       numeric_summary
+		       numeric_summary, proposals_accepted, proposals_rejected
 		  FROM weekly_review WHERE user_id = $1 AND local_week_start = $2`, userID, week).
 		Scan(&c.DealsWon, &c.DealsLost, &c.DealsMoved,
 			&c.LeadsRouted, &c.LeadsAnsweredInTarget, &c.LeadsBreached,
 			&c.MeetingsHeld, &c.MeetingsWithNextStep,
 			&c.CommitmentsDue, &c.CommitmentsKept,
-			&created, &won, &lost, &currency, &numeric)
+			&created, &won, &lost, &currency, &numeric,
+			&c.ProposalsAccepted, &c.ProposalsRejected)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return memberFrozenWeek{}, apperrors.ErrNotFound
 	}
@@ -99,96 +99,6 @@ func memberWeek(
 		return memberFrozenWeek{}, fmt.Errorf("weekly: counting a member's requests: %w", err)
 	}
 	return out, nil
-}
-
-// insertTeamReview writes the snapshot unless this team already has one for the
-// week, reporting which of the two happened.
-func insertTeamReview(ctx context.Context, tx pgx.Tx, review TeamReview) (ids.UUID, bool, error) {
-	c := review.Counts
-	cols, args := insertColumns{}, []any(nil)
-	add := func(name string, value any) {
-		cols = append(cols, name)
-		args = append(args, value)
-	}
-	add("numeric_summary", review.NumericSummary)
-	add("team_id", review.TeamID)
-	add("team_name", review.TeamName)
-	add("local_week_start", review.LocalWeekStart)
-	add("as_of", review.AsOf)
-	add("reps_counted", c.RepsCounted)
-	add("reps_unread", review.RepsUnread)
-	add("deals_won", c.DealsWon)
-	add("deals_lost", c.DealsLost)
-	add("deals_moved", c.DealsMoved)
-	add("leads_routed", c.LeadsRouted)
-	add("leads_answered_in_target", c.LeadsAnsweredInTarget)
-	add("leads_breached", c.LeadsBreached)
-	add("meetings_held", c.MeetingsHeld)
-	add("meetings_with_next_step", c.MeetingsWithNextStep)
-	add("commitments_due", c.CommitmentsDue)
-	add("commitments_kept", c.CommitmentsKept)
-	var created, won, lost *int64
-	var currency *string
-	if review.Money.Known {
-		created, won, lost = &review.Money.CreatedMinor, &review.Money.WonMinor, &review.Money.LostMinor
-		currency = &review.Money.Currency
-	}
-	add("pipeline_created_minor", created)
-	add("pipeline_won_minor", won)
-	add("pipeline_lost_minor", lost)
-	add("base_currency", currency)
-	updates := []string{"generated_at = now()"}
-	for _, col := range cols {
-		updates = append(updates, col+" = EXCLUDED."+col)
-	}
-
-	var id ids.UUID
-	var inserted bool
-	err := tx.QueryRow(ctx, fmt.Sprintf(`
-		INSERT INTO team_weekly_review (%s) VALUES (%s)
-		ON CONFLICT ON CONSTRAINT uq_team_weekly_review_team_week DO UPDATE SET %s
-		WHERE team_weekly_review.reps_counted = 0 AND EXCLUDED.reps_counted > 0
-		RETURNING id, (xmax = 0)`, cols.names(), cols.placeholders(), strings.Join(updates, ", ")), args...).Scan(&id, &inserted)
-	if errors.Is(err, pgx.ErrNoRows) {
-		// The team's week already had a snapshot. The loser of that race is not
-		// an error: the constraint did its job.
-		return ids.Nil, false, nil
-	}
-	if err != nil {
-		return ids.Nil, false, fmt.Errorf("weekly: writing the team's week: %w", err)
-	}
-	after := map[string]any{"local_week_start": review.LocalWeekStart, "reps_counted": review.Counts.RepsCounted}
-	if inserted {
-		if _, err := storekit.Audit(ctx, tx, "create", "team_weekly_review", id, nil, after); err != nil {
-			return ids.Nil, false, err
-		}
-	} else {
-		if _, err := tx.Exec(ctx, `DELETE FROM team_weekly_review_outlook WHERE team_weekly_review_id = $1`, id); err != nil {
-			return ids.Nil, false, fmt.Errorf("weekly: replacing an unmeasured outlook: %w", err)
-		}
-		if _, err := storekit.Audit(ctx, tx, "update", "team_weekly_review", id, map[string]any{"reps_counted": 0}, after); err != nil {
-			return ids.Nil, false, err
-		}
-	}
-	return id, true, nil
-}
-
-// insertTeamReps writes the frozen membership.
-func insertTeamReps(ctx context.Context, tx pgx.Tx, reviewID ids.UUID, reps []TeamRep) error {
-	for _, rep := range reps {
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO team_weekly_review_rep
-			    (team_weekly_review_id, user_id, display_name, deals_won, leads_breached,
-			     meetings_held, commitments_due, commitments_kept, help_requested,
-			     focus_kind, focus_label)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-			reviewID, rep.UserID, rep.DisplayName, rep.DealsWon, rep.LeadsBreached,
-			rep.MeetingsHeld, rep.CommitmentsDue, rep.CommitmentsKept, rep.HelpRequested,
-			rep.FocusKind, rep.FocusLabel); err != nil {
-			return fmt.Errorf("weekly: writing a member's row: %w", err)
-		}
-	}
-	return nil
 }
 
 // mayReadTeam decides whether this caller may open this team's week.
@@ -251,7 +161,7 @@ func (e *Engine) TeamReview(
 		row := tx.QueryRow(ctx, teamReviewSelect+`
 			 WHERE team_id = $1 AND local_week_start = $2`, teamID, week)
 		var err error
-		review, err = scanTeamReview(ctx, tx, row)
+		review, err = e.readTeamReview(ctx, tx, row)
 		return err
 	})
 	if err != nil {
@@ -280,7 +190,7 @@ func (e *Engine) LatestTeamReview(
 		row := tx.QueryRow(ctx, teamReviewSelect+`
 			 WHERE team_id = $1 ORDER BY local_week_start DESC LIMIT 1`, teamID)
 		var err error
-		review, err = scanTeamReview(ctx, tx, row)
+		review, err = e.readTeamReview(ctx, tx, row)
 		return err
 	})
 	if err != nil {
@@ -301,7 +211,9 @@ func scanTeamReview(ctx context.Context, tx pgx.Tx, row pgx.Row) (TeamReview, er
 		&c.LeadsRouted, &c.LeadsAnsweredInTarget, &c.LeadsBreached,
 		&c.MeetingsHeld, &c.MeetingsWithNextStep,
 		&c.CommitmentsDue, &c.CommitmentsKept,
-		&created, &won, &lost, &currency, &review.RepsUnread, &review.NumericSummary); {
+		&created, &won, &lost, &currency, &review.RepsUnread, &review.NumericSummary,
+		&review.Quality.ProposalsAccepted, &review.Quality.ProposalsRejected,
+		&review.Quality.AutoChangeReversals, &review.Summary, &review.Language); {
 	case errors.Is(err, pgx.ErrNoRows):
 		return TeamReview{}, apperrors.ErrNotFound
 	case err != nil:
@@ -327,34 +239,24 @@ func scanTeamReview(ctx context.Context, tx pgx.Tx, row pgx.Row) (TeamReview, er
 	if review.Outlook, err = readOutlookFrom(ctx, tx, teamOutlook, review.ID); err != nil {
 		return TeamReview{}, err
 	}
+	if review.Members, err = readTeamMembers(ctx, tx, review.ID); err != nil {
+		return TeamReview{}, err
+	}
+	if review.Coverage, err = readTeamCoverage(ctx, tx, review.ID); err != nil {
+		return TeamReview{}, err
+	}
 	return review, nil
 }
 
-// readTeamReps reads the frozen membership, ordered as the page draws it.
-//
-// It joins NOTHING. Every word was written when the snapshot was, so a rep
-// renamed or deleted since leaves the row exactly as the week recorded it.
-func readTeamReps(ctx context.Context, tx pgx.Tx, reviewID ids.UUID) ([]TeamRep, error) {
-	rows, err := tx.Query(ctx, `
-		SELECT user_id, display_name, deals_won, leads_breached, meetings_held,
-		       commitments_due, commitments_kept, help_requested, focus_kind, focus_label
-		  FROM team_weekly_review_rep
-		 WHERE team_weekly_review_id = $1
-		 ORDER BY display_name, user_id`, reviewID)
+// readTeamReview is the frozen snapshot plus what needs attention now.
+func (e *Engine) readTeamReview(ctx context.Context, tx pgx.Tx, row pgx.Row) (TeamReview, error) {
+	review, err := scanTeamReview(ctx, tx, row)
 	if err != nil {
-		return nil, fmt.Errorf("weekly: reading the team's members: %w", err)
+		return TeamReview{}, err
 	}
-	defer rows.Close()
-	var out []TeamRep
-	for rows.Next() {
-		var rep TeamRep
-		if err := rows.Scan(&rep.UserID, &rep.DisplayName, &rep.DealsWon,
-			&rep.LeadsBreached, &rep.MeetingsHeld, &rep.CommitmentsDue,
-			&rep.CommitmentsKept, &rep.HelpRequested,
-			&rep.FocusKind, &rep.FocusLabel); err != nil {
-			return nil, err
-		}
-		out = append(out, rep)
+	withheldFromReader(ctx, &review)
+	if err := e.readTeamAttention(ctx, tx, &review); err != nil {
+		return TeamReview{}, err
 	}
-	return out, rows.Err()
+	return review, nil
 }

@@ -9,7 +9,7 @@ Room and the width ladder (sections 8–9) are in [adopt-the-design-surfaces.md]
 
 The company page goes first, because it has the most zones, the most states, and the `e2e` checks that hold it closest. Every
 later page copies what it decides. Files: `companies.tsx` (over the limit: new zones go in new files under
-`screens/company/`), `company360.tsx`, `companyheader.tsx`, `companyrail*.tsx`, `companytoday.tsx`,
+`features/companies/company/`), `company360.tsx`, `companyheader.tsx`, `companyrail*.tsx`, `companytoday.tsx`,
 `companywork.tsx`, `companyrecent.tsx`, `companycommercial.tsx`, `companydossier.tsx`, `companycontacts/`.
 
 ### 3.1 Head
@@ -112,7 +112,7 @@ Files: `contactpage.tsx`, `contact360.ts`, `contactrail.tsx`, `contacttoday.tsx`
 
 ## 5. Deal
 
-Files: `deals.tsx` (over the limit: the page moves to `screens/deal/`), `deal360/*`, `dealstatus.tsx`,
+Files: `deals.tsx` (over the limit: the page moves to `features/deals/`), `deal360/*`, `dealstatus.tsx`,
 `dealroom.tsx`, `dealfiles.tsx`.
 
 - **Head.** Verbs: **Write email (from `DealEmailAside`) · Log activity · more**, all outlined (Archive, Share,
@@ -144,7 +144,7 @@ Files: `deals.tsx` (over the limit: the page moves to `screens/deal/`), `deal360
 
 ## 6. Lead
 
-Files: `leads.tsx` (over the limit: the record moves to `screens/lead/`), `leads.stepper.tsx`,
+Files: `leads.tsx` (over the limit: the record moves to `features/leads/`), `leads.stepper.tsx`,
 `leadsignals.tsx`, `leadvocab.tsx`.
 
 - **Head.** Verbs: **Qualify (primary, `lead.promote` with `promoteIneligible` on the control) · Write email ·

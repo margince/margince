@@ -46,6 +46,7 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/margince/margince/backend/internal/compose/modelfailure"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
 	"github.com/margince/margince/backend/internal/compose/promptvoice"
@@ -347,12 +348,17 @@ func (e *corpusAskEngine) ask(w http.ResponseWriter, r *http.Request, id crmcont
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	state, passages, err := e.store.Retrieve(r.Context(), ids.UUID(id), req.Question, e.embedder)
+	question, err := knowledge.RequireQuestion(req.Question)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	state, passages, err := e.store.Retrieve(r.Context(), ids.UUID(id), question, e.embedder)
 	if err != nil {
 		modelfailure.Write(w, r, err)
 		return
 	}
-	answer := AnswerCorpus(r.Context(), e.lane, state, req.Question, passages,
+	answer := AnswerCorpus(r.Context(), e.lane, state, question, passages,
 		identity.BaseLanguageForPrompt(r.Context(), e.pool), e.log)
 	httperr.WriteJSON(w, http.StatusOK, answer)
 }
@@ -366,13 +372,9 @@ func WithCorpusAsk(embedder vectorkit.Embedder, lane completer, log *slog.Logger
 			embedder = unboundEmbedder{}
 		}
 		if log != nil {
-			identity, _ := embedder.EmbedIdentity()
-			knowledge.WarnIfUngated(log, identity)
+			knowledge.WarnIfUngated(log, embedLaneIdentity(embedder))
 		}
-		s.module = s.module.WithEmbedIdentity(func() string {
-			identity, _ := embedder.EmbedIdentity()
-			return identity
-		})
+		s.module = s.module.WithEmbedIdentity(func() string { return embedLaneIdentity(embedder) })
 		engine := &corpusAskEngine{
 			store:    knowledge.NewStore(InstallationDB(pool)),
 			embedder: embedder,
@@ -382,6 +384,13 @@ func WithCorpusAsk(embedder vectorkit.Embedder, lane completer, log *slog.Logger
 		}
 		s.knowledgeHandlers = knowledgeWithAsk(s.knowledgeHandlers, engine.ask)
 	}
+}
+
+// embedLaneIdentity names the bound embed lane, empty when none is. System
+// health's reindex surface and a corpus's embed_state both decide from it.
+func embedLaneIdentity(embedder vectorkit.Embedder) string {
+	identity, _ := embedder.EmbedIdentity()
+	return identity
 }
 
 // unboundEmbedder stands where an installation composed no embed lane.

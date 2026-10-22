@@ -3,9 +3,11 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
+  formatBytes,
   formatDate,
   formatDateTime,
   formatDayMonth,
+  formatDayRange,
   formatDuration,
   formatMoney,
   formatMoneyCompact,
@@ -127,6 +129,27 @@ describe("a money figure abbreviated for a KPI slot", () => {
   // because "€8,332.00" is what the slot has no room for.
   it("stays exact under ten thousand", () => {
     expect(formatMoneyCompact(833_200, "EUR", "en")).toBe("€8,332");
+  });
+
+  // Rounded to whole units, a one-cent deal reads "€0", the same as a deal
+  // with no value, and the table beside it says €0.01.
+  it("keeps the cents a figure under ten thousand carries", () => {
+    expect(formatMoneyCompact(1, "EUR", "en")).toBe("€0.01");
+    expect(formatMoneyCompact(99_950, "EUR", "en")).toBe("€999.50");
+    expect(formatMoneyCompact(123_456, "EUR", "en")).toBe("€1,234.56");
+  });
+
+  // Rounded half-up, CHF 999,999.99 reads as a million. An abbreviation may
+  // drop digits, but never states more than the record holds.
+  it("never rounds an abbreviated figure up past the record", () => {
+    const plain = (s: string) => s.replace(/\s/g, " ").toLowerCase();
+    expect(plain(formatMoneyCompact(99_999_999, "CHF", "en"))).toBe(
+      "chf 999.9k",
+    );
+    expect(plain(formatMoneyCompact(-99_999_999, "CHF", "en"))).toBe(
+      "-chf 999.9k",
+    );
+    expect(formatMoneyCompact(99_999_999, "CHF", "de")).not.toMatch(/Mio/);
   });
 
   // The scale is the SERVER's ISO table, not Intl's CLDR one. VND carries no
@@ -376,5 +399,33 @@ describe("when a booked meeting happens", () => {
     expect(() => formatTimeRange(start, end, "en", "Etc/GMT-1")).toThrow(
       /IANA/,
     );
+  });
+});
+
+describe("a stored file's size", () => {
+  it("inflects the byte unit with its count", () => {
+    expect(formatBytes(1, "en")).toBe("1 byte");
+    expect(formatBytes(98, "en")).toBe("98 bytes");
+    expect(formatBytes(98, "de")).toBe("98 Byte");
+    expect(formatBytes(98, "vi")).toBe("98 byte");
+  });
+
+  it("steps to kilobytes at a thousand, not before", () => {
+    expect(formatBytes(999, "en")).toBe("999 bytes");
+    expect(formatBytes(1000, "en")).toBe("1 kB");
+    expect(formatBytes(21_400, "de")).toBe("21,4 kB");
+  });
+});
+
+describe("formatDayRange", () => {
+  // One span in each locale's own words, the shared month named once where
+  // the locale does that.
+  it("names a week as one span of days", () => {
+    expect(
+      formatDayRange("2026-06-29", "2026-07-05", "de", "Europe/Berlin"),
+    ).toMatch(/^29\. Juni\s*–\s*5\. Juli$/);
+    expect(
+      formatDayRange("2026-06-29", "2026-07-05", "en", "Europe/Berlin"),
+    ).toMatch(/29 June\s*[–-]\s*5 July/);
   });
 });

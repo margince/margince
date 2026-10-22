@@ -9,6 +9,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -32,12 +33,16 @@ import (
 // the ledger exists to close, so the positions are compared rather than counted.
 func TestEveryStoredObjectWriterDeclaresItsIntent(t *testing.T) {
 	t.Parallel()
-	root := moduleRoot(t)
+	root := gatekit.ModuleRoot(t)
 	puts := map[string]int{}
 	declaring := map[string]int{}
 	helperCalls := map[string]map[string]int{}
 	for _, file := range goSourceFiles(t, root) {
-		rel := strings.TrimPrefix(strings.TrimPrefix(file, root), "/")
+		rel, err := filepath.Rel(root, file)
+		if err != nil {
+			t.Fatalf("spelling %s relative to the module root: %v", file, err)
+		}
+		rel = filepath.ToSlash(rel)
 		if strings.HasSuffix(rel, "_test.go") || strings.HasPrefix(rel, "internal/platform/blobstore/") {
 			continue
 		}
@@ -129,6 +134,7 @@ var putHelpers = gatekit.Waive(map[string]string{
 var putsNoNewObject = gatekit.Waive(map[string]string{
 	"internal/modules/contacts/handlers_companylogo.go:writeBackTrimmedLogo": "writes the trimmed crop back to the SAME key it read, which CompanyLogoKey resolved off the company row — so the object is already referenced and an intent would declare a live mark provisional. The crop is an optimisation of bytes that are already the record's",
 	"internal/modules/privacy/suppressionjournal.go:ExportSuppressions":      "the object IS the record. journalSuppressed reads it back by a key computed from (kind, hash), and no row carries that key or ever will — so an intent would be a key the sweep finds unreferenced one grace period later and deletes the live journal",
+	"internal/modules/privacy/suppressionmanifest.go:advanceJournalManifest": "the manifest IS the record, at one fixed key ReadJournalManifest reads back. No row carries that key, so an intent would let the sweep delete the live manifest one grace period later",
 })
 
 // recordIntentWrapper matches a module's own named wrapper around the ledger.

@@ -44,7 +44,8 @@ func TestADeclaredImporterNamesTheAuthorOnEveryRecordWire(t *testing.T) {
 	}
 	system := "mirror:hubspot"
 	status, activity := postActivity(importer, t, e, crmcontracts.CreateActivityRequest{
-		Kind: "email", Subject: new("Betreff"), SourceSystem: &system, SourceId: new("emails:950"),
+		Source: "manual",
+		Kind:   "email", Subject: new("Betreff"), SourceSystem: &system, SourceId: new("emails:950"),
 		SourceAuthorId: &seat, SourceAuthorName: &name,
 	})
 	if status != http.StatusCreated {
@@ -144,7 +145,8 @@ func TestErasingTheSubjectClearsTheAuthorTheImporterWrote(t *testing.T) {
 		EntityType crmcontracts.CreateActivityRequestLinksEntityType `json:"entity_type"`
 	}{{EntityId: openapi_types.UUID(subject), EntityType: crmcontracts.CreateActivityRequestLinksEntityTypeContact}}
 	status, note := postActivity(importer, t, e, crmcontracts.CreateActivityRequest{
-		Kind: "note", Body: new("about the subject"), SourceSystem: &system, SourceId: new("notes:960"),
+		Source: "manual",
+		Kind:   "note", Body: new("about the subject"), SourceSystem: &system, SourceId: new("notes:960"),
 		SourceAuthorName: &name, Links: &links,
 	})
 	if status != http.StatusCreated {

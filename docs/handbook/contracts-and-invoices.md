@@ -118,7 +118,7 @@ of it must hold:
 
 - the contract is not archived, and is past draft;
 - it carries a **signed date**;
-- it has a live attachment filed under **Contract** or **Legal**, in the
+- it has a live attachment filed under **SOW/Contract** or **NDA/Legal**, in the
   **Current** or **Final** state.
 
 A contract record with no paper on it does not clear the bar.
@@ -146,12 +146,17 @@ nobody has ever invoiced has no money to report.
 
 ### How do I create an invoice?
 You cannot create an invoice in Margince: it has no invoice form, no "New invoice" button and no invoicing API. Invoices exist only in your accounting system, and the company's **Finance** tab shows a read-only mirror of them.
-To bill a customer, raise the invoice in your accounting system. Margince cannot connect a real accounting system yet;
-the only finance source it ships is a demo provider that works offline. So **Recent invoices** on the **Finance** tab shows only its made-up demo invoices, never yours.
+To bill a customer, raise the invoice in your accounting system. It shows under **Recent invoices** on the **Finance** tab once it syncs, if an admin has linked its customer to the company.
 Also called: bill a customer, raise an invoice, send an invoice, credit note.
 
 ### How do I connect my accounting system?
-You cannot connect an accounting system from Margince yet. The **Finance** tab has no connect button, and **Settings** has no finance connector. The only finance source Margince ships is a demo provider that works offline, set up outside the app.
+An admin connects it in **Settings → Integrations**, on the **Accounting source** card. Pick the source and press **Connect**. Margince checks that it can read the source before it saves anything.
+
+The sources on offer are the add-ons your installation was built with. Margince itself ships only a demo source with made-up invoices. If the card reads "No accounting source installed", your installation has no add-on for your accounting system yet.
+
+After the first sync, the card lists the source's customers. Press **Link** on each one and pick its company. A company can have more than one customer in the source. Margince never links them by itself, so a guess never puts money on the wrong company.
+
+The sync runs every six hours. **Sync now** runs it sooner. Margince only reads from the source and never writes to it.
 Until one is connected, the **Finance** card reads "No accounting system connected."
 Also called: connect finance, link accounting, sync invoices, connect a ledger, bookkeeping integration.
 

@@ -125,9 +125,10 @@ func (m *Meter) RungHealthReport(ctx context.Context, bound map[Tier]ModelRef) (
 		// `metering_failed` is a SUCCESS here. It marks a call the model
 		// answered where only the usage-meter write failed (callstore.go), and
 		// callstats.go already treats it as served for exactly that reason.
-		// `output_withheld` and `request_rejected` are outcomes, not failures:
-		// the model was reached and decided. Counting any of the three would
-		// report a responding lane as down (answeredSentinels).
+		// `output_withheld` and `output_rejected` are outcomes: a model was
+		// reached and decided. `request_rejected` is the provider answering that
+		// the request was malformed. Counting any of them would report a
+		// responding lane as down (answeredSentinels).
 		//
 		// Latest is ordered by occurred_at, then attempt, then id: every
 		// attempt of one logical call is written in one transaction and shares

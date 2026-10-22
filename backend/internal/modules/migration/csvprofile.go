@@ -4,12 +4,12 @@
 package migration
 
 import (
-	"encoding/csv"
 	"errors"
 	"fmt"
 	"io"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 )
 
 // The profile's shape, and why it is not just a header list (IEM-WIRE-8): a
@@ -38,7 +38,18 @@ var (
 	// Two columns cannot both own one target, and picking one silently drops
 	// the other's data.
 	ErrHeaderInvalid = errors.New("import source header is unusable")
+	// ErrNotUTF8 reports a file in another encoding, such as a Windows export
+	// saved as Latin-1, whose accents would land as broken text.
+	ErrNotUTF8 = errors.New("import source is not UTF-8")
 )
+
+// CheckUTF8 refuses a file that is not valid UTF-8, naming the fix.
+func CheckUTF8(body []byte) error {
+	if utf8.Valid(body) {
+		return nil
+	}
+	return fmt.Errorf("%w: the file is not saved as UTF-8; save it as CSV UTF-8 and upload it again", ErrNotUTF8)
+}
 
 // Column is one column of an uploaded file, described well enough to map it
 // without opening the file somewhere else.
@@ -55,12 +66,35 @@ type Profile struct {
 	RowsProfiled int
 }
 
+// CountRecords answers how many data rows a file holds, read with the reader
+// the walk uses, so it counts what a run will read.
+func CountRecords(r io.Reader) (int, error) {
+	cr, err := newRecordReader(r)
+	if err != nil {
+		return 0, err
+	}
+	cr.ReuseRecord = true
+	rows := -1
+	for {
+		_, err := cr.Read()
+		if errors.Is(err, io.EOF) {
+			return max(rows, 0), nil
+		}
+		if err != nil {
+			return 0, fmt.Errorf("%w: %v", ErrSourceUnreadable, err)
+		}
+		rows++
+	}
+}
+
 // ProfileCSV reads at most rowLimit data rows and describes the columns it
 // found. It never writes and never decides anything — the mapping is the
 // human's, and this is the evidence they make it on.
 func ProfileCSV(r io.Reader, rowLimit int) (Profile, error) {
-	cr := csv.NewReader(r)
-	cr.TrimLeadingSpace = true
+	cr, err := newRecordReader(r)
+	if err != nil {
+		return Profile{}, err
+	}
 
 	header, err := cr.Read()
 	if errors.Is(err, io.EOF) {
@@ -88,7 +122,7 @@ func ProfileCSV(r io.Reader, rowLimit int) (Profile, error) {
 // profileRows reads up to rowLimit data rows, counting the filled cells per
 // column and keeping the first few values of each. It reports how many rows it
 // actually read, which is the denominator every fill rate is quoted against.
-func profileRows(cr *csv.Reader, columns, rowLimit int) (filled []int, samples [][]string, rows int, err error) {
+func profileRows(cr recordReader, columns, rowLimit int) (filled []int, samples [][]string, rows int, err error) {
 	filled = make([]int, columns)
 	samples = make([][]string, columns)
 	for rows < rowLimit {

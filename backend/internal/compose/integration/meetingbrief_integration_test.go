@@ -47,19 +47,16 @@ func meetingBriefService(e *Env) *meetingbrief.Service {
 // meetingBriefServiceWithoutTeammates is the same service with no membership
 // seam — the composition a deployment that never wired coaching gets.
 func meetingBriefServiceWithoutTeammates(e *Env) *meetingbrief.Service {
+	return meetingBriefServiceAt(e, roomFixedNow)
+}
+
+func meetingBriefServiceAt(e *Env, now time.Time) *meetingbrief.Service {
 	view := contact360.NewService(e.Pool, e.Contacts, e.Deals, e.Projects, consent.NewStore(e.DB()),
-		comms.NewStore(e.DB(), time.Now, activities.NewStore(e.DB())), ai.NewFeedbackStore(e.DB()), func() time.Time { return roomFixedNow })
-	return meetingbrief.NewService(e.Pool, view, e.Contacts, func() time.Time { return roomFixedNow })
+		comms.NewStore(e.DB(), time.Now, activities.NewStore(e.DB())), ai.NewFeedbackStore(e.DB()), func() time.Time { return now })
+	return meetingbrief.NewService(e.Pool, view, e.Contacts, func() time.Time { return now })
 }
 
 // identityTeammates is the membership reader, in the shape the brief takes.
-// The typed id stays inside identity, exactly as compose's own seam does.
-type identityTeammates struct{ svc *identity.Service }
-
-func (t identityTeammates) SharesLiveTeamWithCaller(ctx context.Context, other ids.UUID) (bool, error) {
-	return t.svc.SharesLiveTeamWithCaller(ctx, ids.From[ids.UserKind](other))
-}
-
 // The object grant is checked before any row is read. Without it a reader whose
 // role grants no activity read still reaches a brief describing a meeting, its
 // attendees and their commitments — through a door every sibling read refuses.
@@ -573,12 +570,10 @@ func TestMeetingBriefReportsNoCommitmentFromAnotherEngagement(t *testing.T) {
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
 	promise := func(body string, source ids.UUID) {
 		t.Helper()
-		if _, err := e.Contacts.RecordConversationClaim(rep, contacts.ClaimInput{
+		e.RecordClaim(rep, t, contacts.ClaimInput{
 			ContactID: ContactIDOf(attendee), Kind: "commitment_theirs", Body: body,
 			ActivityID: source, Quote: body, Source: "manual",
-		}); err != nil {
-			t.Fatalf("record claim %q: %v", body, err)
-		}
+		})
 	}
 	promise("send the rack inventory", mail("Rack decommissioning", &migration))
 	promise("confirm the cutover window", mail("ERP cutover plan", &erp))

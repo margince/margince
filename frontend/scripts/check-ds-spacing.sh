@@ -26,12 +26,12 @@
 # scale rather than consuming it: an atom's optical values (.input and .textarea
 # carry `padding: 9px 11px` so the text sits on the same baseline as the label
 # beside it) are deliberately off the 4/8/12/16/24 steps, and rounding them onto
-# the scale would be the regression. Screens consume the scale, so src/screens/
-# and src/app/ are what this gates.
+# the scale would be the regression. Screens consume the scale, so every other
+# folder is what this gates.
 #
 # DIFF-SCOPED, by design: it inspects only the lines THIS branch adds versus the
 # merge-base with origin/main. The large pre-existing backlog of raw px is NOT
-# gated — write it right the first time, exactly like the craft pre-push hook.
+# gated — write it right the first time, exactly like craft static's comment checks.
 # A genuine one-off is waived in-line with a reason, in the file's own comment
 # syntax: `// ds:ignore <reason>` in .tsx, `/* ds:ignore <reason> */` in .css.
 #

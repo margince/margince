@@ -19,6 +19,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -57,14 +58,15 @@ var writesAnActivity = map[crmcontracts.ContactMomentActionKind]bool{
 // reader without the grant opens a form whose save is refused. The destination
 // goes with the state: a blocked verb that still names a surface is a button
 // the client can still route on.
-func Withhold(ctx context.Context, moment *crmcontracts.ContactMoment) {
+func Withhold(ctx context.Context, language string, moment *crmcontracts.ContactMoment) {
+	said := langcopy.For(language)
 	if moment.MayBeDone != nil {
-		withholdDone(ctx, moment)
+		withholdDone(ctx, said, moment)
 	}
 	if auth.Require(ctx, "activity", principal.ActionCreate) == nil {
 		return
 	}
-	reason := "You do not have permission to log activities"
+	reason := said.Say(blockedWords.Log)
 	block := func(action *crmcontracts.ContactMomentAction) {
 		if !writesAnActivity[action.Kind] {
 			return
@@ -99,10 +101,10 @@ func Withhold(ctx context.Context, moment *crmcontracts.ContactMoment) {
 // withholdDone blocks Done on a may-be-done card for a reader who may not
 // write the promise it completes: a task is an activity update, a claim
 // settles under contact update. The endpoint still asks the row's own scope.
-func withholdDone(ctx context.Context, moment *crmcontracts.ContactMoment) {
-	object, reason := "activity", "You do not have permission to complete tasks"
+func withholdDone(ctx context.Context, said langcopy.Spoken, moment *crmcontracts.ContactMoment) {
+	object, reason := "activity", said.Say(blockedWords.Complete)
 	if moment.MayBeDone.PromiseType == crmcontracts.ContactMomentMayBeDonePromiseTypeClaim {
-		object, reason = "contact", "You do not have permission to settle commitments"
+		object, reason = "contact", said.Say(blockedWords.Settle)
 	}
 	if auth.Require(ctx, object, principal.ActionUpdate) == nil {
 		return

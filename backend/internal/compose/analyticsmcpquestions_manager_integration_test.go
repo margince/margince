@@ -23,17 +23,20 @@ import (
 // chosen `source` — seedPricedDeal takes neither, and every case here is
 // management reading a specific rep's real, attributed contribution, not an
 // unclaimed one.
+// lostReason is the recorded reason, and empty for a won deal. Two CHECK
+// constraints bind it to the loss, so the column is set from the status rather
+// than from the caller alone. The table refuses a reason on a won deal.
 func seedClosedOwnedDeal(
-	t *testing.T, e *forecastEnv, name string, amountMinor int64, status, source string, owner ids.UUID,
+	t *testing.T, e *forecastEnv, name string, amountMinor int64, status, source, lostReason string, owner ids.UUID,
 ) {
 	t.Helper()
 	e.seedID(t, `INSERT INTO deal
 		(id, name, pipeline_id, stage_id, owner_id, amount_minor, currency, status, closed_at,
 		 fx_rate_to_base, fx_rate_date, lost_reason, expected_close_date, source, captured_by)
 		VALUES ($1, $2, $3, $4, $5, $6, 'EUR', $7::text, now(), 1, current_date,
-		        CASE WHEN $7::text = 'lost' THEN 'went elsewhere' END,
+		        CASE WHEN $7::text = 'lost' THEN $9::text END,
 		        (now() + interval '30 days')::date, $8, 'human:x')`,
-		name, e.pipeline, e.stages[pipelineTestStage], owner, amountMinor, status, source)
+		name, e.pipeline, e.stages[pipelineTestStage], owner, amountMinor, status, source, lostReason)
 }
 
 // M08 — win rate by deal COUNT and by VALUE, this quarter.
@@ -52,10 +55,10 @@ func proveM08WinRateByCountAndValue(t *testing.T) {
 	// is the right answer to a question about few contacts and the wrong fixture
 	// for a question about arithmetic: every assertion below would read null.
 	for range 6 {
-		seedClosedOwnedDeal(t, e, "Small win", 10_000, "won", "manual", e.Rep1)
+		seedClosedOwnedDeal(t, e, "Small win", 10_000, "won", "manual", "", e.Rep1)
 	}
 	for range 5 {
-		seedClosedOwnedDeal(t, e, "Large loss", 60_000, "lost", "manual", e.Rep1)
+		seedClosedOwnedDeal(t, e, "Large loss", 60_000, "lost", "manual", "went elsewhere", e.Rep1)
 	}
 
 	got, err := askTool(e.wideLensCtx(e.Rep1), t, e,
@@ -109,9 +112,9 @@ func proveM12WonRevenueByLeadSource(t *testing.T) {
 	// engine that ignored the filter would count the losses and report outbound
 	// as the best source in the business.
 	for range 5 {
-		seedClosedOwnedDeal(t, e, "Referral win", 16_000, "won", "referral", e.Rep1)
-		seedClosedOwnedDeal(t, e, "Outbound win", 4_000, "won", "outbound", e.Rep1)
-		seedClosedOwnedDeal(t, e, "Outbound loss", 200_000, "lost", "outbound", e.Rep1)
+		seedClosedOwnedDeal(t, e, "Referral win", 16_000, "won", "referral", "", e.Rep1)
+		seedClosedOwnedDeal(t, e, "Outbound win", 4_000, "won", "outbound", "", e.Rep1)
+		seedClosedOwnedDeal(t, e, "Outbound loss", 200_000, "lost", "outbound", "went elsewhere", e.Rep1)
 	}
 
 	got, err := askTool(e.wideLensCtx(e.Rep1), t, e,
@@ -141,6 +144,63 @@ func proveM12WonRevenueByLeadSource(t *testing.T) {
 	if len(bySource) != 2 {
 		t.Errorf("the answer holds %d sources, want exactly referral and outbound — a third "+
 			"row means the cohort reached deals this fixture did not seed", len(bySource))
+	}
+}
+
+// M11, why are we losing and how many deals support each recorded reason.
+//
+// Grouped by the reason somebody WROTE on the deal. The answer is then the
+// business's own vocabulary, not a status breakdown wearing its name.
+func proveM11LossReasonsByRecordedReason(t *testing.T) {
+	e := setupForecast(t)
+	// Two reasons at different weights, plus a won cohort.
+	//
+	// The won cohort is the discriminator. Two CHECK constraints bind a reason
+	// to the loss, so a won deal carries NULL here. An engine that dropped the
+	// status filter answers a third row of wins under no reason. That row
+	// reads as the commonest thing going wrong in the business.
+	//
+	// Every count clears analyticsquery.DefaultFloor, which is what the sizes
+	// are for rather than realism. A group under the floor is withheld instead
+	// of answered, and a filter excluding between one and the floor is refused
+	// outright. A smaller fixture would prove the floor works and say nothing
+	// about the grouping.
+	for range 7 {
+		seedClosedOwnedDeal(t, e, "Lost on price", 20_000, "lost", "manual", "price", e.Rep1)
+	}
+	for range 5 {
+		seedClosedOwnedDeal(t, e, "Lost to a rival", 30_000, "lost", "manual", "went elsewhere", e.Rep1)
+	}
+	for range 6 {
+		seedClosedOwnedDeal(t, e, "Won anyway", 50_000, "won", "manual", "", e.Rep1)
+	}
+
+	got, err := askTool(e.wideLensCtx(e.Rep1), t, e,
+		`{"entity":"win-loss","group_by":["lost_reason"],"measures":[`+
+			`{"fn":"count","as":"deals"}],`+
+			`"filters":[{"field":"status","op":"eq","value":"lost"}]}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	byReason := map[string]any{}
+	for _, raw := range got.Rows {
+		row := toolRow(t, raw)
+		reason, ok := row["lost_reason"].(string)
+		if !ok {
+			t.Fatalf("a row carries lost_reason %v (%T), want a string: a null bucket here is the won cohort",
+				row["lost_reason"], row["lost_reason"])
+		}
+		byReason[reason] = row["deals"]
+	}
+	if v := byReason["price"]; v != float64(7) {
+		t.Errorf("price = %v, want 7", v)
+	}
+	if v := byReason["went elsewhere"]; v != float64(5) {
+		t.Errorf("went elsewhere = %v, want 5", v)
+	}
+	if len(byReason) != 2 {
+		t.Errorf("the answer holds %d reasons, want exactly the two that were recorded — a third "+
+			"row is the won cohort arriving under no reason", len(byReason))
 	}
 }
 

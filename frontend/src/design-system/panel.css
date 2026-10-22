@@ -15,35 +15,32 @@
 
 /* The header band, and its rule runs the full width of the card.
  *
- * ONE height, and it is fixed: --panel-head-h, whatever the head carries. The
- * head is a title and, optionally, the verbs that act on it — never a
- * description — so a title alone and a title beside a badge or a button draw
- * the same band, and a reader scanning a page of panels reads a column of
- * titles at one interval instead of a ragged one. A floor is what this used
- * to be, and a floor is an invitation: a description raised the band here, two
- * screens then re-spaced it there, and the same card stood at three heights.
- * What does not fit on one band is not header content — a toolbar row or a
- * `PanelBody` under the head is where it belongs.
+ * A floor, not a height. Above 720px the padding leaves room for a --controlHeight
+ * control or a 44px target, so a head holding one stands at 56px; taller grows it.
  *
- * That is the one distinction that decides every rule in this file: a rule
- * dividing the CARD from its content runs edge to edge, and a rule dividing two
- * pieces of the content stops at the padding. The header and the footer are the
- * card's own chrome — the same band every card on every screen of this product
- * draws — so their rules are the first kind. Everything BELOW the header (the
- * body seam, the row hairlines, `SettingList`'s rules) is the second, and stops
- * where the content stops. A page that mixed the two inside one card read as two
- * grids, which is what a sweep of the settings pages showed. */
+ * Its rule divides the CARD from its content, so it runs edge to edge; where a
+ * rule between two pieces of content stops is the seam rule's call, below. */
 .panel-head {
   display: flex;
   align-items: center;
-  /* The band is one row. Wrapping is what a head reached for when its content
-     stopped fitting, and a second row is a second height — the thing this band
-     exists to refuse. */
-  flex-wrap: nowrap;
-  gap: var(--space-3);
-  height: var(--panel-head-h);
-  padding: 0 var(--padPanel);
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  min-height: var(--panel-head-h);
+  padding: var(--space-2) var(--padPanel);
   border-bottom: 1px solid var(--borderSubtle);
+}
+/* A touch target is 44px, which a one-line head holds only on this padding. */
+@media (pointer: coarse) {
+  .panel-head {
+    padding-block: var(--space-1);
+  }
+}
+/* A phone wraps most heads, and a wrapped band reads cramped on less air. A
+ * one-line head with a control stands at 57px here. */
+@media (max-width: 720px) {
+  .panel-head {
+    padding-block: var(--space-3);
+  }
 }
 /* The zone's title in the display face: the one word a reader finds a zone
  * by, so it is set as a heading rather than as a label on a card.
@@ -54,28 +51,23 @@
  * only move ONE node, so a pair of actions splits with one of them still
  * crowding the title.
  *
- * It ends in an ellipsis rather than in a second row: the band's height is
- * fixed, so a title long enough to wrap would otherwise be clipped mid-letter
- * with nothing to say it had been. A record named by a legal entity is the case
- * — the ellipsis is what tells a reader the name goes on, and the full string is
- * still the element's text for a screen reader and for the pointer. */
+ * A compound longer than the line breaks at a syllable, as `.fieldgrid-label`
+ * does. */
 .panel-head .panel-title {
   font-family: var(--fontFamilyHeading);
   color: var(--textPrimary);
   min-width: 0;
   margin-right: auto;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  overflow-wrap: break-word;
+  hyphens: auto;
 }
 
-/* Only the title gives way. A badge, a button or a count is sized by its own
- * words, and a shrunken one reads as a different control — or loses its label
- * to the ellipsis above. `:where()` carries no specificity, so a caller whose
- * action genuinely can give way (a wrapping action strip) says so with an
- * ordinary class of its own and wins without depending on sheet order. */
+/* Only the title shrinks: a squeezed badge or button reads as another control.
+ * Capped at the band, so a wrapping control wraps inside it, not off the pane.
+ * `:where()` adds no specificity: a caller's class wins without sheet order. */
 .panel-head > :where(:not(.panel-title)) {
   flex-shrink: 0;
+  max-width: 100%;
 }
 
 .panel-body {
@@ -101,12 +93,19 @@
 .panel-intro:last-child {
   margin-bottom: 0;
 }
+/* `PanelNotices`: each notice keeps its own width rather than stretching into a banner. */
+.panel-notices {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
 .form-stack > .panel-intro {
   margin-bottom: calc(var(--space-4) - var(--space-3));
 }
-/* A group's head inside the pane: its name at the eyebrow's weight and its verb
-   at the far end, on a shorter interval than a body — it labels the rows under
-   it rather than standing as a block of its own. */
+/* A group's head inside the pane: its name and its verb at the far end, on a
+   shorter interval than a body — it labels the rows under it rather than
+   standing as a block of its own. */
 .panel-grouphead {
   display: flex;
   align-items: center;
@@ -115,43 +114,36 @@
   padding-top: var(--space-4);
   padding-bottom: var(--space-2);
 }
+
+/* THE SEAM RULE: one line between two bands of a pane, edge to edge like the
+ * head's, whatever band stands above. `panelseams.test.tsx` renders the shapes.
+ * A pseudo-element, so a screen can drop one seam without restyling the band. */
+.panel-body + .panel-body::before,
+.panel-row + .panel-body::before,
+.panel > .settinglist-bleed + .panel-body::before,
+.panel > .table-scroll-bleed + .panel-body::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  background: var(--borderSubtle);
+}
 /* No seam between a group's head and the body under it: the head names that
-   body, and a rule between the two cut a label from what it labels. */
+   body, and a rule between the two cut a label from what it labels. The head is
+   itself a `.panel-body`, so this is declared after the seam rule it must beat. */
 .panel-grouphead + .panel-body::before {
   content: none;
 }
-
-/* THE SEAM RULE, and it is one rule: a boundary between two sections of a card
- * is a hairline inset to the card's padding, and a section that wants air
- * instead takes spacing and no line at all. There is no third option, because
- * the third option is
- * what the tree had — twenty-odd independent `border-top: 1px solid
- * var(--borderSubtle)` declarations across the screen sheets, seven of them
- * drawn as `border-bottom` instead, six full-bleed and seven inset by the
- * body's own 20px, with a `:last-child` reset on about half. The same card
- * could therefore show a line that reached its edges above one section and a
- * line that stopped 20px short above the next.
- *
- * Every rule BETWEEN two pieces of content is inset — this seam, the row
- * hairlines, and `SettingList`'s rules between its rows. The header's and the
- * footer's are not: those bands are the card's own chrome, identical on every
- * card in the product, and their rules divide the card from its content rather
- * than the content from itself. A pseudo-element rather than a border, because
- * a border cannot be inset. It is absolutely positioned inside the body it
- * belongs to, so it never becomes a flex item of that body.
- *
- * Declared as adjacency rather than as an opt-in class so a caller cannot
- * forget it, and so two sections that ARE adjacent cannot disagree about
- * whether they are. Two screens had already discovered the same missing rule
- * independently and spelled it themselves, one of them without a reset — which
- * is what a rule the caller has to remember gets you. */
-.panel-body + .panel-body::before,
-.panel-row + .panel-body::before {
-  content: "";
-  position: absolute;
-  inset: 0 var(--padPanel) auto;
-  height: 1px;
-  background: var(--borderSubtle);
+/* The head's bottom interval is the whole gap to what it labels. The body's top
+   padding as well would set the label a seam's distance from its rows. */
+.panel-grouphead + .panel-body:not(.panel-grouphead) {
+  padding-block-start: 0;
+}
+/* Two bleeding blocks meet edge to edge, so a border serves; a pseudo-element
+   inside the table's scroll box would scroll away with the table. */
+.panel > .settinglist-bleed + .table-scroll-bleed,
+.panel > .table-scroll-bleed + .settinglist-bleed {
+  border-top: 1px solid var(--borderSubtle);
 }
 
 /* An empty state inside a card is a SENTENCE, not a stage.
@@ -188,8 +180,15 @@
  * Named by the pane's role rather than by a rung, so a skeleton reserves the
  * space at exactly the x the rows it stands in for will use. */
 .panel > .pending,
-.panel > .empty {
+.panel > .empty,
+.panel > [role="alert"] > .empty {
   padding: var(--padPanel);
+}
+/* Read as the sentence `.panel-body > .empty` is; the plate keeps its ground. */
+.panel > .empty:not(.empty-plate),
+.panel > [role="alert"] > .empty {
+  text-align: left;
+  background: none;
 }
 
 /* A DISCLOSURE standing where full-bleed rows stand is a row of the panel: its
@@ -219,6 +218,35 @@
 .panel > .disclosure > .disclosure-body {
   margin-top: 0;
 }
+/* In a body it bleeds too, so its line is as wide as the seams. First in the
+ * body it gives that line up to the seam above the body, or to the head's. */
+.panel > .panel-body > .disclosure,
+.panel > .panel-body > .disclosure-wrap {
+  margin-inline: calc(-1 * var(--padPanel));
+  padding-inline: var(--padPanel);
+}
+/* With an `action` the wrap draws the line, so it runs over the action too. */
+.panel > .panel-body > .disclosure-wrap {
+  border-top: 1px solid var(--borderSubtle);
+  margin-bottom: var(--space-4);
+}
+.panel > .panel-body > .disclosure-wrap > .disclosure {
+  border-top: 0;
+  margin-bottom: 0;
+}
+.panel > .panel-body > .disclosure:first-child,
+.panel > .panel-body > .disclosure-wrap:first-child {
+  border-top: 0;
+}
+.panel > .panel-body > .disclosure:first-child,
+.panel > .panel-body > .disclosure-wrap:first-child > .disclosure,
+.panel > .panel-body > .disclosure-wrap:first-child > .disclosure-action {
+  padding-top: 0;
+}
+.panel > .panel-body > .disclosure:last-child,
+.panel > .panel-body > .disclosure-wrap:last-child {
+  margin-bottom: 0;
+}
 
 /* A section heading INSIDE a body has a body's padding above it already, so it
  * does not also pay `.section-header`'s own 24px top margin. Unreset, a rule
@@ -242,8 +270,8 @@
 
 /* A hairline row whose CONTENT runs edge to edge, in the panel's own margin
  * rather than the body's — the shape every list inside a panel wants. The rule
- * between two rows is inset to that margin, like every other rule in a card, so
- * a panel of rows and a panel of `SettingRow`s draw their hairlines at one x.
+ * between two rows is inset to that margin. A `record` row's spans the pane, and
+ * so does a first row's under another band, because that rule is a seam.
  * No rule on the first row: the header above it already draws that line.
  *
  * The rule and the hover are TWO shapes, and this one is only the rule. Held
@@ -275,6 +303,20 @@
 .panel-head + .panel-row::before {
   content: none;
 }
+/* record: one row per thing, so it reads as a table row, rule and hover alike. */
+.panel-row-record {
+  transition: background-color var(--dur-state) var(--ease-out);
+}
+.panel-row-record:hover {
+  background: var(--bgHover);
+}
+.panel-row-record::before,
+.panel > :not(.panel-row) + .panel-row::before {
+  inset: 0 0 auto;
+}
+.panel-row-opens {
+  cursor: pointer;
+}
 
 /* The footer band — the card's own chrome, so edge to edge like the header. */
 .panel-foot {
@@ -297,8 +339,11 @@
   padding: 0 var(--padPanel) var(--padPanel);
 }
 /* Directly under the header there is no body above to be spaced off, so the
- * strip pays for its own top interval. */
-.panel-head + .panel-actions {
+ * strip pays for its own top interval; so it does under a list's last row. */
+.panel-head + .panel-actions,
+.panel-row-record + .panel-actions,
+.panel > .settinglist-bleed + .panel-actions,
+.panel > .table-scroll-bleed + .panel-actions {
   padding-top: var(--space-4);
 }
 

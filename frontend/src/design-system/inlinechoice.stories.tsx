@@ -5,7 +5,8 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { expect, screen, userEvent, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
-import { ProblemError } from "../screens/common";
+import { en } from "../i18n/en";
+import { ProblemError } from "../lib/problem";
 import { InlineChoice } from "./inlinechoice";
 
 const meta: Meta = {
@@ -71,7 +72,7 @@ export const RefusedSave: Story = {
       canEdit
       onSave={async () => {
         throw new ProblemError({
-          code: "version_conflict",
+          code: "version_skew",
           detail: "Somebody else changed this record.",
         });
       }}
@@ -86,9 +87,24 @@ export const RefusedSave: Story = {
       await screen.findByRole("option", { name: "Customer" }),
     );
     const refusal = await canvas.findByRole("alert");
-    await expect(refusal).toHaveTextContent(
-      "Somebody else changed this record.",
-    );
+    await expect(refusal).toHaveTextContent(en["common.versionSkew"]);
     await expect(refusal).toHaveClass("field-error");
   },
+};
+
+// A value longer than its column wraps from its start edge, as a cell's text
+// does, not centred as a button's label would be.
+export const WrappingValue: Story = {
+  render: () => (
+    <div style={{ inlineSize: "8rem" }}>
+      <InlineChoice
+        label="Role"
+        value="individual"
+        options={[{ value: "individual", label: "Individual (own records)" }]}
+        render={() => "Individual (own records)"}
+        canEdit
+        onSave={async () => undefined}
+      />
+    </div>
+  ),
 };

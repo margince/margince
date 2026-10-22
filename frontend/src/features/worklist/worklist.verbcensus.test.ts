@@ -1,0 +1,187 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
+import type { WorklistItem } from "./worklist.queries";
+
+// A row claims no verb it cannot perform.
+//
+// The rule is NOT "every row offers something": two rows deliberately offer
+// nothing, because the queue can send a reader somewhere and cannot fix a rule,
+// and a row the server named no verb for is still real work with nothing to
+// press. Drawing a control on either would promise a repair this surface does
+// not perform.
+//
+// What must hold is the other direction. Every verb the contract can send has
+// to be ANSWERED somewhere — routed to a destination, or drawn inline by the
+// component that owns it — or the row draws a button that goes nowhere, which
+// is worse than no button at all.
+//
+// Nothing enforced that. `VERB_DESTINATION` is a partial map on purpose, so a
+// tenth verb added to the contract would simply fall out of it and be silently
+// undrawn, and the six answered inline are named nowhere. This is that list,
+// and it fails rather than drifts.
+
+const SCREENS = join(__dirname);
+
+// Every verb the contract offers, read from the generated types rather than
+// retyped: a census that names its own subjects proves only that they were
+// named.
+type Verb = WorklistItem["actions"][number];
+
+// Where each verb is answered. ROUTED means VERB_DESTINATION carries it to the
+// record the row is about; INLINE names the file that draws its control on the
+// row itself. Exhaustive over the union, so a verb added to `crm.yaml` fails to
+// compile here until somebody says where a reader answers it.
+const ANSWERED_BY = {
+  open: { how: "routed" },
+  complete: { how: "routed" },
+  snooze: { how: "routed" },
+  // Answered on this page, so a link would send the reader where they already
+  // are — except an introduction ask, which routes to the colleague's own
+  // Network tab through decideDestination.
+  decide: { how: "inline", file: "worklist.row.answer.tsx" },
+  merge: { how: "inline", file: "worklist.pair.tsx" },
+  // The BRIEF's three verbs live in worklist.briefverbs.tsx: they post to the
+  // brief's endpoints rather than to an activity's, and that distinction is why
+  // they were split out of the row when it hit the length ceiling.
+  //
+  // `act` is named against the ROW, not that file, and the difference is where
+  // each verb's OFFER is decided. Set-aside and dismiss are drawn and guarded
+  // together inside BriefSetAsides; act is guarded at its placement, because it
+  // is the row's primary slot and the row decides what fills it. This census
+  // reads the guard, so each verb points at the file holding its own.
+  act: { how: "inline", file: "worklist.row.answer.tsx" },
+  set_aside: { how: "inline", file: "worklist.briefverbs.tsx" },
+  dismiss: { how: "inline", file: "worklist.briefverbs.tsx" },
+  acknowledge: { how: "inline", file: "worklist.row.answer.tsx" },
+  // Running a failed rule again acts where the reader is standing. Routing it
+  // would open the automations page, which is where the RULE is fixed — a
+  // different act from re-running the firing that broke.
+  retry: { how: "inline", file: "worklist.row.answer.tsx" },
+  // Answering the buyer opens the composer over the row, through the same
+  // ChannelReplyAction the 360 timelines mount. Routing it would send the
+  // reader to the record to press reply there, which is the hand-off the queue
+  // exists to remove — and the prepared move is this same control rather than
+  // a second one beside it, which is why both live in worklist.reply.tsx.
+  reply: { how: "inline", file: "worklist.reply.tsx" },
+  // Answering an undecided domain acts in place, because the answer IS the
+  // whole act: keeping it creates the company, discarding it writes this
+  // reader's own capture exclusion. Routing either would send the reader to a
+  // settings screen to retype a domain the row is already holding.
+  reopen: { how: "inline", file: "worklist.domainquestion.tsx" },
+  keep: { how: "inline", file: "worklist.domainquestion.tsx" },
+  discard: { how: "inline", file: "worklist.domainquestion.tsx" },
+  // Putting an overnight correction back acts in place, on the receipt that
+  // reported it. It is the one verb this queue draws OUTSIDE the row: the
+  // handled panel is where a change nobody was asked about is told, so it is
+  // also where the way back belongs. Routing it would send the reader to the
+  // deal's history to find the entry themselves.
+  undo: {
+    how: "inline",
+    file: "worklist.receiptundo.tsx",
+    // The receipt is not a queue row and carries no `actions` array, so the
+    // control asks the field that decides it: a receipt with no `undo` is an
+    // approval somebody agreed to, and there is nothing to take back.
+    guardedBy: "if (!undo)",
+  },
+} as const satisfies Record<
+  Verb,
+  { how: "routed" } | { how: "inline"; file: string; guardedBy?: string }
+>;
+
+describe("a row claims no verb it cannot perform", () => {
+  // The row's VERBS, which are their own module: the row decides how a piece
+  // of work reads and worklist.rowverbs.tsx decides what can be done about it,
+  // so the destination map lives there.
+  const verbs = readFileSync(join(SCREENS, "worklist.rowverbs.tsx"), "utf8");
+
+  // The routed verbs, read from VERB_DESTINATION's own body. Read as source
+  // rather than imported, because the map is not exported and exporting it to
+  // satisfy a test would widen the module's surface for the test's convenience.
+  //
+  // SLICED TO THE MAP FIRST, so the pattern does not have to tell one top-level
+  // arrow-valued map from another: VERB_LABEL sits beside it with the same
+  // shape, and a census that told them apart by their parameter name would gain
+  // members the day somebody renamed one.
+  const map = verbs.match(/const VERB_DESTINATION\b[\s\S]*?\n};/)?.[0] ?? "";
+  const routed = new Set(
+    [...map.matchAll(/^ {2}(\w+): /gm)].map(([, verb]) => verb),
+  );
+
+  // A corpus that read NOTHING reports the same silence as one that found
+  // nothing wrong, so the census says out loud that it found its subject.
+  // Today three verbs are routed, so an empty parse would fail the arms below
+  // by accident; that stops the day the last routed verb moves inline, which
+  // the map's own comment anticipates.
+  //
+  // Asserted inside a test rather than at module scope: a bare expect there
+  // aborts the file, and a suite reporting "no tests" reads as a configuration
+  // problem rather than as this census losing the thing it audits.
+  it("finds the destination map it reads as text", () => {
+    expect(
+      map,
+      "VERB_DESTINATION is no longer a top-level const ending in `};` — this " +
+        "census reads it as source and can no longer find it",
+    ).not.toBe("");
+    expect(
+      routed.size,
+      "the destination map parsed as empty, so this census read nothing " +
+        "rather than found nothing",
+    ).toBeGreaterThan(0);
+  });
+
+  it("routes exactly the verbs the destination map claims", () => {
+    const declared = Object.entries(ANSWERED_BY)
+      .filter(([, where]) => where.how === "routed")
+      .map(([verb]) => verb)
+      .sort();
+
+    expect([...routed].sort()).toEqual(declared);
+  });
+
+  // THE CENSUS. A verb answered nowhere is a verb a reader is offered and
+  // cannot use.
+  it("answers every verb the contract can send", () => {
+    const unanswered = Object.entries(ANSWERED_BY).filter(([verb, where]) => {
+      if (where.how === "routed") {
+        return !routed.has(verb);
+      }
+      // GUARDED, not merely mentioned. The named file has to ASK whether the
+      // row offers this verb, in one of the three spellings the call sites use.
+      // A file that merely contains the word satisfies nothing: deleting a
+      // control's condition leaves the verb's name behind in the click handler,
+      // in VERB_LABEL and in the prose, so a mention test stays green over a row
+      // that draws nothing.
+      //
+      // The third spelling is the dispatch table's. ANSWER_BY_SOURCE pairs a
+      // source with the verb that unlocks it and `rowAnswer` asks
+      // `includes(keyed.verb)` once for all of them — so the guard is real and
+      // the verb's name is a `verb:` field rather than a literal argument. The
+      // pattern anchors on that field name, not on the bare word, so a verb
+      // mentioned in a comment beside the table still fails.
+      const source = readFileSync(join(SCREENS, where.file), "utf8");
+      if ("guardedBy" in where) {
+        // A verb the item's `actions` list does not carry. The receipt has no
+        // actions array — it is not a queue row — so its control is guarded on
+        // the field that decides it instead, and this names that field. Same
+        // obligation as the three spellings below: the control must ASK, and
+        // deleting the question must fail here.
+        return !source.includes(where.guardedBy);
+      }
+      return !(
+        source.includes(`offered("${verb}")`) ||
+        source.includes(`includes("${verb}")`) ||
+        source.includes(`verb: "${verb}"`)
+      );
+    });
+
+    expect(
+      unanswered.map(([verb]) => verb),
+      "these verbs reach the row and nothing answers them, so a reader is " +
+        "offered a control that does nothing",
+    ).toEqual([]);
+  });
+});

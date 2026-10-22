@@ -45,11 +45,18 @@ type Registry struct {
 	// supplied value to it, so `minimum`/`maximum` bind the surface instead of
 	// describing an intention.
 	numArgs map[string][]numBound
+	// enumArgs[tool] is the closed vocabulary its schema declares for each text
+	// argument, read off the schema once at registration. Invoke holds a
+	// supplied word to it, so `enum` binds the surface as `minimum` does.
+	enumArgs map[string][]enumArg
 	// requiredArgs[tool] is what that tool's schema says it cannot run without,
 	// read off the schema once at registration. Invoke holds a call to it, so
 	// `required` binds the surface rather than describing an intention that
 	// each handler then re-states in its own words.
 	requiredArgs map[string][]string
+	// typedArgs[tool] is the JSON type its schema declares for each top-level
+	// argument, read off the schema once at registration.
+	typedArgs map[string][]typedArg
 	// unitOwned[tool] is true when an extension unit shipped that tool's
 	// handler, read off the registered tool once (mcp.UnitScopedTool). It is
 	// remembered rather than re-asserted because two decisions depend on it and
@@ -87,6 +94,8 @@ type Registry struct {
 	// seats names the owner every served record row carries (queryowner.go).
 	// Nil leaves owners unnamed but still disclosed.
 	seats SeatNamer
+	// importWait is how long preview_import waits for its test's report.
+	importWait importWait
 }
 
 // NewRegistry builds the tool surface over its approvals engine and admission
@@ -98,10 +107,13 @@ func NewRegistry(approvals Approvals, gate *auth.Gate, opts ...RegistryOption) *
 		specs:        map[string]mcp.ToolSpec{},
 		idArgs:       map[string]idArgSpec{},
 		numArgs:      map[string][]numBound{},
+		enumArgs:     map[string][]enumArg{},
 		requiredArgs: map[string][]string{},
+		typedArgs:    map[string][]typedArg{},
 		unitOwned:    map[string]bool{},
 		approvals:    approvals,
 		gate:         gate,
+		importWait:   defaultImportWait(),
 	}
 	for _, opt := range opts {
 		opt(r)
@@ -120,17 +132,37 @@ var _ mcp.Registry = (*Registry)(nil)
 // (idempotency.go): the claim is taken AFTER admission, so a caller the gate
 // turns away never occupies a key, and the effect is what the claim protects.
 func (r *Registry) Invoke(ctx context.Context, name string, in json.RawMessage) (json.RawMessage, error) {
-	out, _, err := r.InvokeServing(ctx, name, in)
-	return out, err
+	served, err := r.InvokeServed(ctx, name, in)
+	return served.Output, err
+}
+
+// InvokeServed is Invoke for a caller that also needs the tool that ran: the
+// router's target when name is a router. A caller that records the call by
+// tool, or checks its answer against a tool's schema, needs that name and not
+// the one it called.
+func (r *Registry) InvokeServed(ctx context.Context, name string, in json.RawMessage) (Served, error) {
+	target, args, err := r.resolve(name, in)
+	if err != nil {
+		return Served{Tool: name}, err
+	}
+	served := Served{Tool: target}
+	if target != name {
+		served.Router = name
+	}
+	served.Output, served.Records, err = r.InvokeServing(ctx, target, args)
+	return served, err
 }
 
 // InvokeServing is Invoke, plus the number of records the answer handed over.
 //
-// The count exists for exactly one caller: a surface that RECORDS the answer
-// and may serve it again later. What an answer cost is what its replay costs,
-// and only the frame that ran the tool can see it — deriving it afterwards from
-// the envelope's evidence would undercount every answer that hands over more
-// than it can name, making a repeat cheaper than the call.
+// The count exists for one caller: a surface that records the answer and may
+// serve it again later. What an answer cost is what its replay costs, and only
+// the frame that ran the tool can see it. Deriving it afterwards from the
+// envelope's evidence would undercount an answer that hands over more than it
+// can name. A repeat would then cost less than the call.
+//
+// It serves name as given and resolves no router. Callers holding a name a
+// client chose go through InvokeServed; taskexecute holds the stored target.
 func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMessage) (json.RawMessage, int, error) {
 	// The REGISTERED spec, not a fresh Spec() call. The two are the same for a
 	// tool whose spec is a literal, and every tool here is — but the registered
@@ -243,11 +275,10 @@ func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMe
 func (r *Registry) runClaimed(ctx context.Context, t mcp.Tool, spec mcp.ToolSpec, res reserved) (json.RawMessage, int, error) {
 	fresh, attempt, answered, records, err := r.claimFor(ctx, spec, res)
 	if !fresh {
-		// A replay hands over the records the ORIGINAL call was charged for, and
-		// claimFor has already re-proven and re-charged them. The COUNT still
-		// travels: a task settled from a replayed answer must record what that
-		// answer costs, or its own later polls would re-prove the evidence and
-		// charge nothing for it.
+		// A replay hands over the records the original call served, and claimFor
+		// has already re-proven them. The count still travels: a task settled from
+		// a replayed answer must record it, or its later polls would skip the
+		// visibility re-check.
 		return answered, records, err
 	}
 	redeemed, err := r.redeemPresented(ctx, spec, res)
@@ -298,10 +329,16 @@ func (r *Registry) runAndSeal(ctx context.Context, t mcp.Tool, spec mcp.ToolSpec
 	ctx, facts := withEnvelopeFacts(ctx)
 	ctx = agentvolume.WithEffectTally(ctx)
 	noteRowScope(ctx)
+	// Capture privacy is a second boundary with the same failure mode, and it
+	// binds an administrator that row scope does not. Whether it took anything
+	// is a fact about the read, so the report is installed here and read once
+	// the handler has made its reads.
+	ctx, withheld := auth.WithWithheldReport(ctx)
 	out, err := t.Handle(ctx, args)
 	if err != nil {
 		return nil, 0, err
 	}
+	noteCaptureWithheld(ctx, withheld)
 	r.noteCostShare(ctx)
 	sealed, err := sealEnvelope(spec, trace, facts, out)
 	if err != nil {
@@ -313,7 +350,7 @@ func (r *Registry) runAndSeal(ctx context.Context, t mcp.Tool, spec mcp.ToolSpec
 	// other order would spend the window on a result a marshalling failure was
 	// about to discard.
 	served := facts.servedCount()
-	if err := r.chargeAnswer(ctx, spec, served); err != nil {
+	if err := r.chargeAnswer(ctx, spec); err != nil {
 		return nil, 0, err
 	}
 	return sealed, served, nil
@@ -345,9 +382,15 @@ func (r *Registry) tierResolverFor(ctx context.Context, t mcp.Tool, name string,
 	}
 }
 
-// errFileCannotWait answers a confirm-first call that carries a file: staging it
+// ErrFileCannotWait answers a confirm-first call that carries a file: staging it
 // would keep the file's bytes in the approval, so nothing is staged.
-var errFileCannotWait = errors.New("this call carries a file, which cannot wait for an approval")
+var ErrFileCannotWait = errors.New("this call carries a file, which cannot wait for an approval")
+
+// FileCannotWait is that answer on both doors, over the refusal that asked for
+// an approval. So a caller reads one code wherever it sent the file.
+func FileCannotWait(refusal error) error {
+	return fmt.Errorf("%w: %w", ErrFileCannotWait, refusal)
+}
 
 // stageRefusedCall parks a 🟡 call the gate refused as a staged approval, so
 // the human decision the refusal asks for has somewhere to land; a retry
@@ -357,7 +400,7 @@ func (r *Registry) stageRefusedCall(ctx context.Context, t mcp.Tool, tool string
 	stageable, ok := t.(stageableTool)
 	switch {
 	case !ok && t.Spec().MaxArgsBytes > httperr.MaxBodyBytes:
-		return fmt.Errorf("%w: %w", errFileCannotWait, refusal)
+		return FileCannotWait(refusal)
 	case !ok:
 		return refusal
 	}

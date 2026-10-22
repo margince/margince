@@ -18,7 +18,7 @@
 # listing cannot produce it.
 #
 # The verdicts are the CONTACT'S, both of them, spelled in the prompt. That is
-# not politeness: decide_approval's own contract says to take an explicit
+# not politeness: decide_approvals's own contract says to take an explicit
 # approve or reject rather than deciding what they would have wanted, so a
 # scenario that left the verdict to the assistant would be asking it to break
 # the tool it is being measured on.
@@ -46,7 +46,7 @@ prompt: |
 must_call:
   - list_approvals
   - read_approval
-  - decide_approval
+  - decide_approvals
 may_call:
   # The listing names its target by id, so an assistant that wants to tell the
   # contact WHICH company has to look it up. Optional: the two seeded proposals
@@ -56,7 +56,7 @@ may_call:
   - search_records
   - query_workspace
 
-# THE TOOL NAME IS NOT THE ASSERTION. `must_call: decide_approval` passes on one
+# THE TOOL NAME IS NOT THE ASSERTION. `must_call: decide_approvals` passes on one
 # call that approved the wrong thing. Requiring BOTH verdicts means the run made
 # two decisions that disagree with each other, which is only what a run that
 # read the two instructions does — a run that approved everything, or rejected
@@ -66,8 +66,8 @@ may_call:
 # seeded stack and there is nothing a scenario file could compare it to. Which
 # verdict landed on which item is pinned in the prose instead, below.
 must_call_with:
-  - decide_approval.decision=approve
-  - decide_approval.decision=reject
+  - decide_approvals.decision=approve
+  - decide_approvals.decision=reject
 
 must_mention:
   # CRITERION 1, and the sharpest assertion in this case. "Werkzeugbau" sits
@@ -140,6 +140,14 @@ must_not_mention:
   # have to be decided in the web app" — and the first alternative, which needs
   # "you" or "a human" as its subject, walked straight past that one.
   - "(?:you|the user|somebody|a human)[^\n]{0,30}(?:will need to|need to|have to|has to|must)[^\n]{0,30}(?:approve|reject|decide)[^\n]{0,40}(?:in the (?:web )?app|in Margince|in the browser|yourself)|I (?:cannot|can not|can't|am unable to|am not able to) (?:approve|reject|decide)[^\n]{0,30}(?:on your behalf|for you|from here|through (?:this|the) (?:tool|surface|interface|chat)|in this (?:chat|session|conversation)|myself)|(?:approvals?|these|they|it|the queue) (?:have to|has to|must|need to|needs to) be (?:approved|rejected|decided|actioned)[^\n]{0,30}(?:in the (?:web )?app|in Margince|in the browser)"
+
+
+# A verdict changes no record: approving releases the proposer's retry, and
+# the proposer is the seed's passport, which never retries. So the description
+# is not read back, and the owner line cannot see a swapped verdict either. It
+# holds the account against a run that moved it by some other write.
+must_end_with:
+  - company "Taunus Gerätebau GmbH" owner=Sofia Meier
 
 runs: 3
 pass_at: 2

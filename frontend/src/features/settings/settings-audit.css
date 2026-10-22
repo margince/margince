@@ -1,0 +1,92 @@
+/* Three dials a line, two in a narrow column, so a date keeps room for its
+   picker. Fixed tracks and a viewport query: these tracks set the bar's width. */
+.auditlog-dials {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3) var(--space-4);
+  flex: 1 1 100%;
+  min-inline-size: 0;
+}
+@media (width < 64rem) {
+  .auditlog-dials {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.auditlog-time {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.auditlog-who {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+.auditlog-who-via {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.auditlog-who-via svg {
+  inline-size: 14px;
+  block-size: 14px;
+  flex: none;
+}
+/* The kind's glyph in the seat a monogram takes, so names start at one x. */
+.auditlog-face {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  inline-size: 28px;
+  block-size: 28px;
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--bgChip);
+  color: var(--textPrimary);
+}
+.auditlog-face svg {
+  inline-size: 15px;
+  block-size: 15px;
+}
+
+/* What the entry touched takes the spare width, so a name and its id tail
+   share one line beside the actor's caption. */
+.table td:has(> .auditlog-target-cell) {
+  inline-size: 45%;
+}
+.auditlog-target-cell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+.auditlog-id {
+  font-variant-numeric: tabular-nums;
+}
+/* The short id and its copy verb break as one, never between. */
+.auditlog-shortid {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.auditlog-detail-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-inline-size: 0;
+}
+.auditlog-value {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.auditlog-more {
+  padding: var(--space-3) var(--padPanel) var(--padPanel);
+}

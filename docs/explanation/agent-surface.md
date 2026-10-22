@@ -23,22 +23,49 @@ registry, so nothing else has to keep them in line.
 
 Most verbs that change data run on their own (🟢). `enrich` stages for approval (🟡), because the model
 names the URL the server fetches. The reason, and how an installation sets a verb back to 🟡, is in
-[authorization.md](authorization.md#autonomy-tiers--how-agent-actions-are-governed--).
+[authorization.md](authorization.md#autonomy-tiers--how-agent-actions-are-governed---).
 
 A passport is also a REST Bearer credential, and REST governs it as MCP does. On REST too, 🟢 changes
 run on their own and 🟡 ones stage for approval. Both stay inside the current seat and RBAC of the human
 who granted the passport. Every call checks the credential again, so a revoked passport stops on the next tool call,
 not at the next login. What a passport holds: [authorization.md](authorization.md#what-a-passport-is).
 
-**Files reach a record from Surface A only.** `attach_document`
-carries the whole file in its input, and two places keep a call's input. An approval stores it in
-`approval.proposed_change`, and a run stores each step in `agent_run.trace`. So the tool is 🟢 with
-no staging path.
+A route marked `served_by: registry` runs its tool through `Registry.Invoke`, so the tool admits,
+stages and redeems the call as on MCP. On such a route the `Idempotency-Key` and `X-Approval-Token`
+headers become the tool's `idempotency_key` and `approval_id` (`internal/compose/toolroutes.go`), on
+the write routes that declare them. The key is then the tool's, held per caller and tool rather than
+per path. So one key on two records of one tool answers `409`, and a key spent over MCP replays on
+REST.
+
+**Routers.** A client counts tools against one budget for every server it connects, so look-alike tools
+are published as one. A router (`internal/modules/agents/router.go`) is a listed tool that runs as one of
+several hidden tools, picked by an argument: `change_state` with `action: promote` runs as
+`promote_lead`. `Registry.InvokeServed` picks the hidden tool before anything else runs.
+
+So the gate, the approval and its later use, retry keys and MCP Tasks all see the name of the hidden
+tool. That name is the approval kind and the contract verb, and a router changes neither. A hidden tool
+still runs when a client calls it by name; `tools/list` leaves it out. Two are hidden with no router:
+`progress_deal` does what `advance_deal` does, and `relink_activities` what `relink_thread` refuses to.
+`TestThePublishedToolCountStaysUnderItsCeiling` holds the count.
+
+**Files on MCP and REST.** A passport lists a record's files and uploads one over MCP
+(`list_documents`, `attach_document`) or over REST (`listAttachments`, `listCompanyDocuments`,
+`listDealDocuments`, `uploadAttachment`). An upload carries the whole file in its input, and two
+places keep a call's input. An approval stores it in `approval.proposed_change`, and a run stores each
+step in `agent_run.trace`. So an upload is 🟢 with no staging path on MCP or REST, and the REST gate
+refuses to stage one (`internal/compose/agentcommandauto.go`).
+
+MCP and REST take the same upload inputs: the parent record, which may be an `activity`, and an
+optional `contract_id`. The store checks the contract as it checks one a human names.
+
+`agents.AttachLimit` (`internal/modules/agents/tools_documents.go`) sets one file size limit for an
+agent on MCP and REST. It is what one MCP request carries inline, or the operator's attachment limit
+when that is smaller. A human's upload keeps the route's own limit. The routes that fetch, delete
+or hide a file stay human-only, so no tool or route returns a file's contents to an agent.
 
 `TestNoAgentLoopAttachesAToolThatCarriesAFile` (`internal/compose/agentcatalog_test.go`) fails when a
-scheduled agent's tool list names any tool whose input bound is over 1 MiB. An agent can attach a
-file and list a record's files (`list_documents`); no tool can fetch a file or return its contents.
-The size and type bounds are in [configuration.md](../reference/configuration.md#uploads).
+scheduled agent's tool list names any tool whose input bound is over 1 MiB. The size and type bounds
+are in [configuration.md](../reference/configuration.md#uploads).
 
 ## The reason-act-observe loop (Surface B)
 
@@ -113,6 +140,36 @@ choice. `internal/modules/ai/` owns it:
   The catalog itself: [reference/agent-tools.md](../reference/agent-tools.md).
   Connecting: [how-to/connect-an-mcp-client.md](../how-to/connect-an-mcp-client.md);
   making the passport: [how-to/mint-a-passport.md](../how-to/mint-a-passport.md).
+
+## The Margince skill: the contract an AI tool reads
+
+An AI tool that calls the REST API with a passport learns the API from the Margince skill. The API
+serves it as a ZIP at `GET /v1/agent-bundle`; the steps are in
+[how-to/mint-a-passport.md](../how-to/mint-a-passport.md#give-the-passport-to-an-ai-tool). Its
+`openapi.yaml` and `INDEX.md` are cut from `backend/api/crm.yaml` by `backend/tools/gen-agentcontract`,
+which `make gen` runs and `make drift` checks. The cut follows the gate, so the file lists only what a
+passport can reach:
+
+- An operation stays when its `x-agent-access` is neither `human-only` nor `auth-bootstrap`, and its
+  security admits `bearerAuth` alone. Any other operation refuses every passport, so listing it would
+  send an agent to a refusal. The gate lets an agent change data only through an operation with a
+  tool policy, its `x-mcp-tool`. Every such operation outside those two classes has one, because
+  `backend/tools/gen-agentpolicy` refuses to generate without it.
+- Its security keeps only `bearerAuth`, and so does `components.securitySchemes`, because an agent
+  that reads the skill holds a passport and nothing else.
+- A description keeps only its text up to the first blank line. A sentence that reads as a note to
+  the contract's developers is cut, and so is such a note inside `( )`. Such a note is a decision
+  label, a spec path, an `x-*` key, SQL or a storage table name. An agent reads every description as
+  a fact about the API, and those notes are about the build.
+- What the `x-*` keys say about a call is written into its description in words. That is the
+  passport permission it needs, whether it waits for approval, and whether it waits on a model. Then
+  every `x-*` key is stripped.
+- `servers` is left out. The API fills it in when it serves the ZIP, from the address in
+  [configuration.md](../reference/configuration.md#public-base-url), so one build serves every install.
+
+The two guides, `README.md` and `SKILL.md`, are templates in `backend/internal/compose/agentbundle/`.
+`TestTheEmbeddedFilesCarryNoDeveloperNote` there fails when a developer note reaches the generated
+contract or index.
 
 ## Open gaps
 

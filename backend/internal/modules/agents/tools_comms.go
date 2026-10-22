@@ -156,6 +156,7 @@ func RegisterCommsTools(r *Registry, comms Comms, p datasource.SystemOfRecordPro
 	r.Register(sendEmailTool{comms: comms, p: p, language: r.language})
 	r.Register(sendCompanyEmailTool{comms: comms, p: p, language: r.language})
 	r.Register(sendMessageTool{comms: comms, p: p, language: r.language})
+	r.Register(sendOutbound{})
 	r.Register(checkAvailability{comms: comms})
 	r.Register(bookMeetingTool{comms: comms, p: p, language: r.language})
 }
@@ -172,7 +173,7 @@ func (t draftEmailTool) Spec() mcp.ToolSpec {
 		Name: "draft_email", Title: "Draft an email", Version: toolVersionV1,
 		Description:   draftEmailCopy.render(),
 		Instead:       draftEmailCopy.Instead,
-		RequiredScope: principal.ScopeDraft, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeDraft, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "draftEmail",
 		InputSchema: schema(`{"type":"object","properties":{
 			"activity_id":{"type":"string","format":"uuid","description":"The thread replied to; omit and give links for a first message"},
@@ -216,7 +217,7 @@ func (t draftEmailTool) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 		// The same cap and de-duplication send_company_email applies, so a
 		// draft cannot succeed with a link set the advertised follow-on send
 		// would refuse.
-		links, err := uniqueRecordLinks(args.Links)
+		links, err := UniqueRecordLinks(args.Links)
 		if err != nil {
 			return nil, err
 		}
@@ -339,14 +340,14 @@ func (t sendEmailTool) Spec() mcp.ToolSpec {
 		Name: "send_email", Title: "Send an email", Version: toolVersionV1,
 		Description:   sendEmailCopy.render(),
 		Instead:       sendEmailCopy.Instead,
-		RequiredScope: principal.ScopeSend, Tier: mcp.TierAutoExecute, Egress: true,
+		RequiredScope: principal.ScopeSend, Tier: mcp.TierAutoExecute, Egress: true, Unlisted: true,
 		OpenAPIOp: "sendEmail",
 		InputSchema: schema(`{"type":"object","required":["activity_id","to","subject","body"],"properties":{
 			"activity_id":{"type":"string","format":"uuid"},
 			"to":{"type":"array","items":{"type":"string","format":"email"},"minItems":1},
 			"cc":{"type":"array","items":{"type":"string","format":"email"}},
 			"subject":{"type":"string"},
-			"body":{"type":"string"},
+			"body":{"type":"string","minLength":1},
 			"consent_purpose":{"type":"string","description":"Legacy purpose key, optional. communication_context is what the engine decides on; this is read only where the context leaves the question open. Naming neither is allowed and the server resolves what it can from the thread, but a message it cannot place is refused rather than guessed at"},
 			"scheduled_at":{"type":"string","format":"date-time"` + timestampNote + `},
 			"scheduled_tz":{"type":"string","description":"IANA zone name the moment was chosen in (e.g. Europe/Berlin), required with scheduled_at. The send is deferred to that instant: no activity exists until it fires, and every gate re-runs then."},
@@ -427,7 +428,7 @@ func (t sendMessageTool) Spec() mcp.ToolSpec {
 		Name: "send_message", Title: "Reply on a channel conversation", Version: toolVersionV1,
 		Description:   sendMessageCopy.render(),
 		Instead:       sendMessageCopy.Instead,
-		RequiredScope: principal.ScopeSend, Tier: mcp.TierAutoExecute, Egress: true,
+		RequiredScope: principal.ScopeSend, Tier: mcp.TierAutoExecute, Egress: true, Unlisted: true,
 		OpenAPIOp: "sendMessage",
 		InputSchema: schema(`{"type":"object","required":["activity_id","body"],"properties":{
 			"activity_id":{"type":"string","format":"uuid","description":"The captured conversation being replied to"},

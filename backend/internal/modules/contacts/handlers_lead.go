@@ -69,7 +69,7 @@ func (h Handlers) CreateLead(w http.ResponseWriter, r *http.Request, _ crmcontra
 	// reserved mirror: namespace, which is what gives an import its own replay
 	// key. Everyone else gets the client door, an agent carrying that human's
 	// grants included.
-	mapInput := leadCreateInput
+	mapInput := LeadCreationInput
 	if auth.DeclaredImporter(r.Context()) {
 		mapInput = leadCreateInputFromImporter
 	}
@@ -188,20 +188,7 @@ func (h Handlers) PromoteLead(w http.ResponseWriter, r *http.Request, id crmcont
 		return
 	}
 
-	in := PromoteLeadInput{Trigger: string(req.Trigger)}
-	if req.Evidence != nil {
-		in.EvidenceNote = req.Evidence.Note
-		in.EvidenceActivityID = idArg[ids.ActivityKind](req.Evidence.ActivityId)
-	}
-	if req.Deal != nil {
-		in.Deal = &QualifyDealInput{
-			PipelineID: uuidPtrToIDs(req.Deal.PipelineId), StageID: uuidPtrToIDs(req.Deal.StageId),
-			AmountMinor: req.Deal.AmountMinor, Currency: req.Deal.Currency,
-		}
-		if req.Deal.Name != nil {
-			in.Deal.Name = *req.Deal.Name
-		}
-	}
+	in := PromotionRequestInput(req)
 
 	out, err := h.store.QualifyLead(r.Context(), pathID[ids.LeadKind](id), in)
 	if err != nil {
@@ -221,6 +208,7 @@ func (h Handlers) GetLeadSettings(w http.ResponseWriter, r *http.Request) {
 		writeStoreErr(w, r, err)
 		return
 	}
+	out.Locks = h.settingLocks(LeadSettingsSurface()...)
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
@@ -250,6 +238,7 @@ func (h Handlers) UpdateLeadSettings(w http.ResponseWriter, r *http.Request) {
 		writeStoreErr(w, r, err)
 		return
 	}
+	out.Locks = h.settingLocks(LeadSettingsSurface()...)
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 

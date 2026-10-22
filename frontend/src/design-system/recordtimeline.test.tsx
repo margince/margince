@@ -2,6 +2,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
+  fireEvent,
   render,
   renderHook,
   screen,
@@ -10,21 +11,22 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { RecordZoneProvider } from "../app/recordzone";
 import { LocaleProvider, useT } from "../i18n";
-import { LoadMoreButton } from "../screens/common";
-import { withEmailOpener } from "../screens/openemail";
-import { groupChronology } from "../screens/timelinegroups";
+import { withEmailOpener } from "../lib/openemail";
+import { RecordZoneProvider } from "../lib/recordzone";
 import { activityTimeline } from "./activitytimeline";
-import { GroupedTimelineList } from "./composed";
+import { LoadMoreButton } from "./querystates";
 import {
   dayStartIso,
+  NO_TIMELINE_FILTERS,
   TIMELINE_PAGE_SIZE,
   useRecordTimeline,
   useTimelineFilters,
 } from "./recordtimeline";
 import { pickOption } from "./select-testing";
+import { GroupedTimelineList } from "./timeline";
 import { TimelineFilterBar } from "./timelinefilterbar";
+import { groupChronology } from "./timelinegroups";
 
 // The record timeline is exercised the way a record page composes it — the
 // hook, the filter bar, the grouped list and the Load more button together —
@@ -354,6 +356,22 @@ describe("a record timeline you can work in", () => {
       expect(feed.last().searchParams.get("q")).toBe("cutover"),
     );
     expect(screen.getByText(note)).toBeTruthy();
+  });
+
+  it("sends no search on an input method's Enter", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <LocaleProvider initial="en">
+        <TimelineFilterBar value={NO_TIMELINE_FILTERS} onChange={onChange} />
+      </LocaleProvider>,
+    );
+    const search = screen.getByLabelText("Search this timeline");
+    await user.type(search, "cutover");
+
+    fireEvent.keyDown(search, { key: "Enter", keyCode: 229 });
+
+    expect(onChange).not.toHaveBeenCalled();
   });
 
   it("sends a date range as an inclusive start and an exclusive next-day end", async () => {

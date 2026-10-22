@@ -42,9 +42,21 @@ func normalizedPattern(body string, insensitive bool) string {
 // per census.
 func goSplitterTables(t *testing.T) map[string][]string {
 	t.Helper()
-	file, err := gatekit.ParseFile(goSplitter, parser.SkipObjectResolution)
+	out := goSplitterFileTables(t, goSplitter)
+	for name, entries := range goSplitterFileTables(t, "internal/shared/kernel/mailquote/attribution.go") {
+		if _, exists := out[name]; exists {
+			t.Fatalf("duplicate splitter vocabulary %s", name)
+		}
+		out[name] = entries
+	}
+	return out
+}
+
+func goSplitterFileTables(t *testing.T, path string) map[string][]string {
+	t.Helper()
+	file, err := gatekit.ParseFile(path, parser.SkipObjectResolution)
 	if err != nil {
-		t.Fatalf("parsing %s: %v", goSplitter, err)
+		t.Fatalf("parsing %s: %v", path, err)
 	}
 	out := map[string][]string{}
 	for _, decl := range file.Decls {
@@ -63,7 +75,7 @@ func goSplitterTables(t *testing.T) map[string][]string {
 		}
 	}
 	if len(out) == 0 {
-		t.Fatalf("no vocabulary parsed out of %s — a gate that reads nothing agrees with everything", goSplitter)
+		t.Fatalf("no vocabulary parsed out of %s — a gate that reads nothing agrees with everything", path)
 	}
 	return out
 }

@@ -87,9 +87,11 @@ type Service struct {
 	duplicates Duplicates
 	// suggestions is OPTIONAL: an unbound feed shows none (suggestionlane.go).
 	suggestions DealSuggestions
-	tasks       Tasks
-	receipts    Receipts
-	briefing    Briefing
+	// tagSuggestions is OPTIONAL the same way (tagsuggestionlane.go).
+	tagSuggestions TagSuggestions
+	tasks          Tasks
+	receipts       Receipts
+	briefing       Briefing
 	// commitments is OPTIONAL: nil means no commitments lane, and Assemble
 	// leaves the field unset rather than sending an empty array.
 	commitments Commitments
@@ -137,10 +139,11 @@ type Service struct {
 	// walk is the frozen walk THIS request resumes, resolved before the day is
 	// read and carried on a per-request copy. Nil on a first page.
 	walk *worklistsnap.Snapshot
-	// pinned is what THIS request's reader put at the top, resolved once by
-	// readingPins onto a copy of the service. Nil on the shared service, which
-	// is what keeps one reader's override off another's page.
+	// pinned is this request's reader's own pins, resolved once by readingPins
+	// onto a copy of the service. Nil on the shared service.
 	pinned map[RowRef]bool
+	// marked is the Done store, and on a request's copy what its reader marked.
+	marked doneState
 	// bounces is OPTIONAL and per-user exactly as the two above it.
 	bounces Bounces
 	// undelivered is OPTIONAL and per-user for the same reasons: mail that
@@ -211,9 +214,6 @@ type Service struct {
 	// teamLoad refuses without it — and read by nothing else, so a feed
 	// assembled for the ranked queue alone leaves it nil.
 	overdueLoad OverdueLoad
-	// promiseLoad is the board's counting reader for commitments due, required
-	// on the same terms.
-	promiseLoad PromiseLoad
 	// decisionDepth is how many staged decisions a read takes. The lane feed's
 	// page is a prefetch for a surface that answers one at a time; the ranked
 	// queue takes a census, because a batch row that says "10" over a pile of
@@ -236,35 +236,6 @@ type Service struct {
 	// teamRoster is the roster scope=team resolved with, which degradableRoster
 	// answers from rather than asking again; nil under every other scope.
 	teamRoster *rosterRead
-}
-
-// forOwner returns a copy that reads one named contact's queue. Same
-// copy-per-read reason as forReader: a service is shared by every request, and
-// an owner set on it would follow one manager's question onto another reader's
-// page.
-func (s *Service) forOwner(owner ids.UUID) *Service {
-	narrowed := *s
-	narrowed.taskScope = TasksOwnedBy
-	narrowed.taskOwner = owner
-	return &narrowed
-}
-
-// forReader returns a copy of this service that reads only the acting reader's
-// own work. A copy rather than a field mutation: one Service is shared by every
-// request, and a flag set on it would follow one reader's scope onto another
-// reader's page.
-func (s *Service) forReader() *Service {
-	narrowed := *s
-	narrowed.taskScope = TasksMine
-	return &narrowed
-}
-
-// forUnowned returns a copy that reads the work nobody answers for. Same
-// copy-per-read reason as forReader.
-func (s *Service) forUnowned() *Service {
-	narrowed := *s
-	narrowed.taskScope = TasksUnassigned
-	return &narrowed
 }
 
 // NewService binds the feed to its readers.
@@ -349,6 +320,7 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, besi
 			out.Counts.DuplicatesOpen = &open
 		}
 		out.Counts.DealSuggestionsOpen = count.suggestions
+		out.Counts.TagSuggestionsOpen = count.tagSuggestions
 	})
 	beside := besideDay{failed: count.failed, until: until}
 	if err != nil {
@@ -364,14 +336,13 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, besi
 		return crmcontracts.Attention{}, besideDay{}, err
 	}
 
-	// The three OPTIONAL lanes, each bound or absent. optionalLane holds the
-	// shape they share; what differs is the reader and the drawing.
+	// The optional lanes, each bound or absent, and the ones a failure can
+	// degrade rather than fail the day. collect says why they and not these.
+	roll := laneRoll{omitted: omitted}
 	for _, lane := range s.optionalLanes(ctx, asOf, until, &out) {
-		omitted, err = lane.collect(omitted)
-		if err != nil {
-			return crmcontracts.Attention{}, besideDay{}, err
-		}
+		roll = s.collect(ctx, lane, roll)
 	}
+	omitted = roll.omitted
 
 	done, err := s.done(ctx, asOf)
 	omitted, err = fill(omitted, "done_for_you", err, func() { out.DoneForYou = done })
@@ -381,6 +352,9 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, besi
 
 	if len(omitted) > 0 {
 		out.LanesOmitted = &omitted
+	}
+	if len(roll.broken) > 0 {
+		out.LanesFailed = &roll.broken
 	}
 	// Last, over the assembled lanes: every card that names a record gets its
 	// display name under this reader's own grants (labels.go).
@@ -397,8 +371,8 @@ type laneCount struct {
 	duplicates int
 	// suggestions is nil when the reader may not read suggestions at all, or
 	// when the read failed — and then failed names it.
-	suggestions *int
-	failed      []*crmcontracts.WorklistSourceUnavailable
+	suggestions, tagSuggestions *int
+	failed                      []*crmcontracts.WorklistSourceUnavailable
 }
 
 // decisions is the needs_you lane: staged approvals, open duplicate pairs and
@@ -434,11 +408,12 @@ func (s *Service) decisionsToDepth(ctx context.Context, depth int) ([]crmcontrac
 	if err != nil {
 		return nil, laneCount{}, err
 	}
-	staged, err := s.approvals.ListWire(ctx, ApprovalQuery{Status: "pending", Limit: depth})
+	query := s.approvalQuery(depth)
+	staged, err := s.approvals.ListWire(ctx, query)
 	if err != nil {
 		return nil, laneCount{}, err
 	}
-	openStaged, err := s.approvals.CountPending(ctx)
+	openStaged, err := s.approvals.CountPending(ctx, query)
 	if err != nil {
 		return nil, laneCount{}, err
 	}
@@ -469,15 +444,9 @@ func (s *Service) decisionsToDepth(ctx context.Context, depth int) ([]crmcontrac
 	for _, approval := range staged {
 		approvals = append(approvals, approvalItem(approval, s.machine))
 	}
-	suggestions, openSuggested, failed := s.openSuggestionItems(ctx, depth)
-	count := laneCount{items: openPairs + openStaged, duplicates: openPairs, suggestions: openSuggested}
-	if failed != nil {
-		count.failed = append(count.failed, failed)
-	}
-	if openSuggested != nil {
-		count.items += *openSuggested
-	}
-	return interleave(depth, duplicates, approvals, suggestions), count, nil
+	count := laneCount{items: openPairs + openStaged, duplicates: openPairs}
+	suggestions, tagged := s.suggestionLanes(ctx, depth, &count)
+	return interleave(depth, duplicates, approvals, suggestions, tagged), count, nil
 }
 
 // done is the receipt lane: what ran without asking, so a rep can see it and

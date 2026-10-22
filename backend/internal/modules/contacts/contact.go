@@ -79,9 +79,8 @@ type CreateContactInput struct {
 	SourceSystem *string
 	// Author is who wrote it in the system it came from; zero when unknown.
 	Author storekit.SourceAuthorInput
-	// CustomFields carries the request body's extra top-level keys
-	// (additionalProperties); only active cf_* catalog columns land,
-	// drop-on-mismatch (customfields.go).
+	// CustomFields carries the request body's cf_* keys. A key no active catalog
+	// column takes is refused (storekit.CheckCustomValues).
 	CustomFields map[string]any
 }
 
@@ -91,7 +90,7 @@ func (s *Store) CreateContact(ctx context.Context, in CreateContactInput) (crmco
 	if err := auth.Require(ctx, "contact", principal.ActionCreate); err != nil {
 		return crmcontracts.Contact{}, err
 	}
-	by, err := s.readyContactCreate(ctx, in)
+	by, err := s.readyContactCreate(ctx, &in)
 	if err != nil {
 		return crmcontracts.Contact{}, err
 	}
@@ -116,31 +115,35 @@ func (s *Store) CreateContact(ctx context.Context, in CreateContactInput) (crmco
 // transaction — one whose own write must land with this contact or not at all.
 // Same gates in the same order; only the transaction is borrowed.
 //
-// Custom fields are refused rather than dropped: the catalog they are matched
-// against is read in a transaction of its own, which is exactly the second
-// connection this seam exists to avoid taking.
-func (s *Store) CreateContactTx(ctx context.Context, tx pgx.Tx, in CreateContactInput) (crmcontracts.Contact, error) {
+// Custom fields ride on the columns the caller read before it opened the
+// transaction (ActiveCreateColumns); with none, they are refused, never dropped.
+func (s *Store) CreateContactTx(ctx context.Context, tx pgx.Tx, in CreateContactInput, cols CustomColumns) (crmcontracts.Contact, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionCreate); err != nil {
 		return crmcontracts.Contact{}, err
 	}
-	if err := refuseCustomFields(in.CustomFields); err != nil {
+	if err := refuseUncataloguedCustomFields(in.CustomFields, cols); err != nil {
 		return crmcontracts.Contact{}, err
 	}
-	by, err := s.readyContactCreate(ctx, in)
+	by, err := s.readyContactCreate(ctx, &in)
 	if err != nil {
 		return crmcontracts.Contact{}, err
 	}
-	return s.createContactInTx(ctx, tx, in, by, nil)
+	return s.createContactInTx(ctx, tx, in, by, cols.cols)
 }
 
 // readyContactCreate runs what a create settles BEFORE any transaction opens —
 // the contact parse and the captured-by resolution — and answers the
 // attribution the write shape stamps. Both entry points call it, so neither
 // can drift from the other's validation.
-func (s *Store) readyContactCreate(ctx context.Context, in CreateContactInput) (string, error) {
+func (s *Store) readyContactCreate(ctx context.Context, in *CreateContactInput) (string, error) {
 	if err := parseContactContacts(in.Emails, in.Phones); err != nil {
 		return "", err
 	}
+	address, err := checkedAddress(in.Address)
+	if err != nil {
+		return "", err
+	}
+	in.Address = address
 	return storekit.CapturedBy(ctx)
 }
 
@@ -155,11 +158,7 @@ func (s *Store) createContactInTx(ctx context.Context, tx pgx.Tx, in CreateConta
 	}
 	in.OwnerID = owner
 
-	if err := ensureContactEmailsUnclaimed(ctx, tx, in.Emails); err != nil {
-		return crmcontracts.Contact{}, err
-	}
-
-	match, err := manualDedupeContact(ctx, tx, in)
+	match, err := admitAndDedupeContactCreate(ctx, tx, in)
 	if err != nil {
 		return crmcontracts.Contact{}, err
 	}
@@ -179,7 +178,7 @@ func (s *Store) createContactInTx(ctx context.Context, tx pgx.Tx, in CreateConta
 		// The capture paths are unaffected. They carry OwnerScoped on the spec
 		// and still mint an owner-scoped contact where privacy demands one — an
 		// unjudged sender, and an advisor's record among them.
-		Visibility:   visibilityWorkspace,
+		Visibility:   TypedCreateVisibility,
 		FullName:     in.FullName,
 		FirstName:    in.FirstName,
 		LastName:     in.LastName,
@@ -267,6 +266,11 @@ func (s *Store) GetContactTx(ctx context.Context, tx pgx.Tx, id ids.ContactID,
 // when none does — where an address seen on a message becomes a record.
 func (s *Store) EnsureContactByEmail(ctx context.Context, fullName, email, source string) (ids.UUID, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionCreate); err != nil {
+		return ids.Nil, err
+	}
+	// Before the lookup, so a machine-address contact made before the refusal
+	// existed is not handed back either.
+	if err := refuseMachineAddress(email); err != nil {
 		return ids.Nil, err
 	}
 	lookup := func() (ids.UUID, bool, error) {

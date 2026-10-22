@@ -121,14 +121,13 @@ func versionedTables(t *testing.T) map[string]bool {
 // an entry without one is a finding, and one matching no function is
 // stale and fails.
 var unguardedByIDUpdates = gatekit.Waive(map[string]string{
+	"internal/modules/contacts:DisqualifyLead":             "readDisqualifiableLead locks this live lead with storekit.LockRow and checks its optional version pin before the update, in the same leadWrite transaction; the preview shares that reader",
+	"internal/modules/privacy:EraseUntoldLeadTx":           "terminal absolute write: empties the accepted proposal of a website lead whose notice failed, regardless of concurrent state, as the Art. 17 eraser empties a decided approval",
 	"internal/modules/activities:updateActivityInTx":       "held FOR UPDATE via lockActivityForWrite, one hop past what this witness's AST walk follows — see the shared rationale above",
 	"internal/modules/collections:ArchiveSavedView":        "absolute idempotent archive transition; the RETURNING + archived_at IS NULL predicate makes a lost race read as already archived",
 	"internal/modules/collections:ArchiveTag":              "absolute idempotent archive transition; the RETURNING + archived_at IS NULL predicate makes a lost race read as already archived",
 	"internal/modules/contacts:absorbCompanyReferences":    "runs under the merge pair lock (storekit.LockPair on both company rows) taken by MergeCompany",
 	"internal/modules/contacts:bindSiteReadLogo":           "the bind is conditioned on logo_object_key IS NULL AND archived_at IS NULL, and ErrNoRows means the record already wears a mark or was archived, which releases the parked object instead",
-	"internal/modules/deals:ArchiveOffer":                  "runs under the offer row lock taken by visibleOfferLocked, and the write itself is an absolute archive transition",
-	"internal/modules/deals:ArchiveOfferTemplate":          "absolute idempotent archive transition; concurrent archives converge, the visibility pre-read only feeds the response",
-	"internal/modules/deals:ArchiveProduct":                "absolute idempotent archive transition; concurrent archives converge, the visibility pre-read only feeds the response",
 	"internal/modules/deals:markLadderChanged":             "runs only under its callers' lock on the same pipeline row — lockLadder (FOR NO KEY UPDATE), one hop past what this witness's AST walk follows — and the write is the version bump itself, which no version could guard",
 	"internal/modules/deals:movePipeline":                  "runs only inside ReorderPipelines, under lockCatalog's FOR UPDATE on every live pipeline, taken in id order before any move",
 	"internal/modules/deals:recomputeOfferTotals":          "every caller holds the offer row lock via visibleOfferLocked, except createOfferTx where the offer row was inserted in the same transaction",
@@ -164,7 +163,8 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/capture:MarkWithheldFromWorkspaceTx": "withheld_from_workspace = true is a one-way constant, and withholding twice withholds",
 	"internal/modules/comms:ClearPayloadRef":               "payload_ref = NULL after the vault entry is already destroyed, and one clearing is one clearing; the order is what the file explains",
 	"internal/modules/comms:reKey":                         "the re-key writes the provider's own message id and derives the thread key in SQL from the row's current one, so nothing read into Go is written back",
-	"internal/modules/identity:checkCredentials":           "failed_login_count = 0 and locked_until = NULL on a successful sign-in are constants, and two sign-ins clearing one lockout clear it once",
+	"internal/modules/identity:resetLockoutStreak":         "failed_login_count = 0 and locked_until = NULL on a successful sign-in are constants, and two sign-ins clearing one lockout clear it once",
+	"internal/modules/identity:countFailure":               "every caller reads the streak it folds under its own app_user FOR UPDATE in the same transaction (recordFailedLogin, recordFailedChange, lockSecondFactorStreak), one hop past what this witness's AST walk follows",
 	"internal/modules/identity:Authenticate":               "the idle window rolls forward in SQL from now(), never from a value read into Go, so two requests on one session both move it forward",
 	"internal/modules/integrations:applyOneStored":         "applied_at = now() marks one stored row as applied, and the selector that chose it will not choose it again",
 	"internal/modules/integrations:discardClaims":          "claims_unwritten = true and next_attempt_at = NULL are constants naming what the run could not do, not a state this caller read",
@@ -175,7 +175,6 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/contacts:foldGhostInto":              "the fold coalesces every column onto the survivor's own value in SQL, so the new value is computed from the two rows as the statement sees them rather than from a value read into Go; the grouping is held FOR UPDATE by holdsItsGrouping first",
 	"internal/modules/dealrooms:touchSession":              "last_seen_at = now() on a session the visitor already holds, with room_id beside the id as a second key",
 	"internal/modules/identity:SaveMyLocale":               "the member writes their own locale under the live-member predicate that keeps a retired seat from writing at all, and the value is what they chose rather than a state read from the row",
-	"internal/modules/identity:SaveMyDelivery":             "the member's own delivery preferences, written from what they chose under the same live-member predicate",
 	"internal/modules/knowledge:ArchiveCorpus":             "archived_at = now() on the corpus and, set-based, on its chunks and documents; a corpus archived twice is archived",
 	"internal/modules/knowledge:setReindexing":             "the reindex flag is the value the caller chose rather than one it read, and the liveness predicate beside the id only keeps an archived corpus from being marked",
 	"internal/modules/contacts:touchRevertedContact":       "the aggregate bump after a revert removed a child row. RevertProviderFills holds this contact FOR UPDATE from the top of its transaction — LockRow with IncludeArchived, because the contact may be archived — so the guard is the caller's lock rather than a second one here; re-taking it would be the liveness refusal this function exists to avoid",
@@ -192,6 +191,7 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	// storekit.LockRow.
 	"internal/modules/activities:SetAudience":              "held FOR UPDATE via lockActivityForWrite, one hop past what this witness's AST walk follows — see the shared rationale above",
 	"internal/modules/activities:RefuseArchiveActivity":    "held FOR UPDATE via lockActivityForWrite, one hop past what this witness's AST walk follows — see the shared rationale above; this self-touch (SET archived_at = archived_at) never commits, since the trigger it deliberately provokes refuses every write to the held row it runs against",
+	"internal/modules/contacts:DemoteLead":                 "the lead is held FOR UPDATE by lockContactThenLead, which takes the contact first and then the lead, one hop past what this witness's AST walk follows",
 	"internal/modules/activities:finalizeRelinkedActivity": "the row is already held FOR UPDATE by relinkActivityRow, its only caller, from before this function runs — the guard is the caller's lock, held across the whole transaction, not a second one taken here; this witness's AST walk sees neither the caller's lockActivityForWrite (a second hop) nor that this function is only ever reached under it",
 	// This IS a compare-and-set write; what this gate cannot see is the shape it
 	// checks the outcome in. It witnesses RowsAffected on a tx.Exec, and this
@@ -251,11 +251,12 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	// already locked by the patch that changed the address.
 	"internal/modules/contacts:recordGeocodeAfter": "guarded by a re-read rather than a version: the transaction rebuilds the address hash from the live columns and writes nothing unless it still matches what was resolved (addressHashInTx). That is a stronger check than a version pin here — a version would refuse a write whose address is unchanged but whose row was touched for some unrelated reason, and accept one whose address moved without bumping it",
 	"internal/modules/automation:Archive":          "absolute idempotent archive transition; concurrent archives converge, the visibility pre-read only feeds the audit before-image",
+	"internal/modules/approvals:recordEffectRan":   "absolute transition after the work ran: the single-use redemption already admitted exactly one run, and the mark must land whatever the row looks like now",
 
 	// Writes that run UNDER a lock taken by their caller (or a lock the
 	// function's own helper mints) — the guard exists, one frame up.
 	"internal/modules/approvals:applyEditedPayload": "runs only inside decideInTx, after its FOR UPDATE lock on the approval row",
-	"internal/modules/customfields:Rename":          "runs under the catalog row lock minted by lockField (FOR UPDATE before every decision read), with the If-Match version checked under that lock",
+	"internal/modules/customfields:Update":          "runs under the catalog row lock minted by lockField (FOR UPDATE before every decision read), with the If-Match version checked under that lock",
 	"internal/modules/customfields:Retire":          "runs under the catalog row lock minted by lockField (FOR UPDATE before every decision read); the flip is an absolute idempotent transition besides",
 	"internal/modules/customfields:setOptionsInTx":  "runs under the catalog row lock minted by lockPicklistField (FOR UPDATE before every decision read), plus the per-table advisory lock serializeSchemaChange mints",
 	"internal/modules/deals:UpdateOfferLineItem":    "runs under the parent offer's row lock taken by visibleOfferLocked, which serializes every line edit",
@@ -269,7 +270,6 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/privacy:anonymizeSubjectRows":   "terminal absolute write: the erasure overwrites the PII columns regardless of concurrent state, by design",
 	"internal/modules/privacy:archiveActivity":        "terminal absolute write: the retention sweep archives an over-age activity regardless of concurrent state, by design — a concurrent edit does not make the record younger",
 	"internal/modules/privacy:archiveDeal":            "terminal absolute write: the retention sweep archives an over-age lost/won deal regardless of concurrent state, by design",
-	"internal/modules/privacy:eraseActivityContent":   "terminal absolute write: the sweep's activity/erase action empties the body and stamps the tombstone subject regardless of concurrent state, by design",
 	"internal/modules/privacy:anonymizeContactRecord": "terminal absolute write: the sweep's contact/anonymize action overwrites the PII columns regardless of concurrent state, by design",
 
 	// A function the package-level folding attributes a statement to without its

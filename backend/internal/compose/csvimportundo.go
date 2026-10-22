@@ -4,15 +4,12 @@
 package compose
 
 import (
-	"context"
-	"fmt"
 	"net/http"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 // UndoImportRun reverses a completed csv run (IEM-WIRE-9). Mapping.Object is
@@ -26,27 +23,25 @@ func (h importHandlers) UndoImportRun(w http.ResponseWriter, r *http.Request, id
 		return
 	}
 	if run.Mapping == nil {
-		httperr.Write(w, r, fmt.Errorf("import run %s carries no mapping, so it created nothing to undo: %w", run.ID, apperrors.ErrConflict))
+		httperr.Write(w, r, migration.RefuseRun(run.ID, "this import carries no mapping, so it created nothing to undo"))
 		return
 	}
 
-	runs := migration.NewRunStore(h.db)
-	writers := newCSVWriters(h.db, run.ID, run.Mapping)
-	// The reversal outlives the request deliberately, the same reason the
-	// commit does (ApproveImportRun): cancelling it when the browser goes
-	// away must not leave the run `undoing` with rows already reversed and
-	// nothing able to record how far it got.
-	undoCtx, releaseUndo := context.WithTimeout(context.WithoutCancel(ctx), importCommitTimeout)
-	defer releaseUndo()
-	if _, err := runs.Undo(undoCtx, run.ID, writers); err != nil {
-		httperr.Write(w, r, err)
-		return
-	}
-
-	final, err := runs.GetStaged(undoCtx, run.ID)
+	queue, ws, err := h.jobQueue(ctx)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusAccepted, toContractImportRun(final))
+	// Built before the move, so an undo whose writers cannot be built is
+	// refused while the run is still complete.
+	if _, err := newBundleWriters(ctx, h.db, run.ID, run.Mapping, nil); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	undoing, err := migration.NewRunStore(h.db).ClaimUndo(ctx, run.ID, queue.undos(ws))
+	if err != nil {
+		httperr.Write(w, r, h.sessionRefusal(ctx, err))
+		return
+	}
+	httperr.WriteJSON(w, http.StatusAccepted, toContractImportRun(undoing))
 }

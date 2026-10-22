@@ -44,7 +44,7 @@ func (f *triageBrainFake) Complete(_ context.Context, _ model.Request) (model.Re
 // lane's brain.
 func newTriageTestWorker(e *integration.Env, site *fakeSite, extractBrain completer, triage completer) *siteDeepReadWorker {
 	svc := approvals.NewService(e.DB())
-	svc.WithEffect(siteLeadProposalKind, siteLeadAcceptEffect(svc, newCaptureSink(e.Pool, CaptureConfig{})))
+	svc.WithEffect(siteLeadProposalKind, siteLeadAcceptEffect(svc, newCaptureSink(e.Pool, CaptureConfig{}), e.Pool, &siteLeadNoticeLane{}))
 	return &siteDeepReadWorker{
 		pool:        e.Pool,
 		contacts:    e.Contacts,
@@ -54,7 +54,7 @@ func newTriageTestWorker(e *integration.Env, site *fakeSite, extractBrain comple
 		approvals:   svc,
 		authority:   identity.NewService(e.Pool),
 		autoEnrich:  capture.NewAutoEnrichStore(e.DB()),
-		settings:    capture.NewSettings(NewSettingsStore(e.Pool)),
+		settings:    capture.NewSettings(NewSettingsStore(e.Pool), StoredConfig(e.Pool)),
 		log:         slog.New(slog.NewTextHandler(io.Discard, nil)),
 	}
 }

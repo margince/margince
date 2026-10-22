@@ -11,12 +11,10 @@ package agents
 // be truncated in Cause — which is not a style preference but the difference
 // between a caller who can fix their call and one who guesses.
 //
-// FOUR SITES GOT IT WRONG, in two shapes. `promote_lead`'s trigger, a project
-// phase and a relink target named NO vocabulary at all, so an agent was refused
-// against a closed set of a handful and told nothing about it — while the REST
-// twin of the first spelled all four out. `read_import_run`'s object and a list
-// filter's operand put the SET in Cause, where it shares a budget sized for an
-// echo of a caller's own word and neither said which value had been refused.
+// A refusal goes wrong in two shapes. One names no vocabulary at all, so the
+// caller is refused against a closed set it is never shown. The other puts the
+// set in Cause, which shares a budget sized for an echo of the caller's word.
+// That one also never says which value was refused.
 //
 // So this drives each producer twice: once with an ordinary bad value, and once
 // with a flood, because a vocabulary that survives the first and not the second

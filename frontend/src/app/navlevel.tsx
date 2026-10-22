@@ -10,12 +10,13 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useRef,
+  useState,
 } from "react";
 import { Badge } from "../design-system/atoms";
 import { useHoverIntent } from "../design-system/hoverintent";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { navigate, type Route, routeHash } from "../lib/router";
 import {
   currentClaim,
   entryLabel,
@@ -28,7 +29,6 @@ import {
   navLevelRoute,
   railTrail,
 } from "./nav";
-import { navigate, type Route, routeHash } from "./router";
 
 // ONE navigation level, whatever its depth. The rail's ten destinations and the
 // entries of a section drilled into from them render through this, so the two
@@ -75,7 +75,34 @@ type NavWalk = {
   claimAt?: string;
 };
 
-const NavWalkMemory = createContext<RefObject<NavWalk> | undefined>(undefined);
+// Methods over a private record, so a holder of the context calls into the
+// memory and never writes a context value itself.
+export type NavWalkStore = Readonly<{
+  origin: () => Route;
+  remember: (route: Route) => void;
+  claim: (at: string) => void;
+  spend: (at: string) => boolean;
+}>;
+
+function navWalkStore(): NavWalkStore {
+  const walk: NavWalk = { origin: BRIEF };
+  return {
+    origin: () => walk.origin,
+    remember: (route) => {
+      walk.origin = route;
+    },
+    claim: (at) => {
+      walk.claimAt = at;
+    },
+    spend: (at) => {
+      if (walk.claimAt !== at) return false;
+      walk.claimAt = undefined;
+      return true;
+    },
+  };
+}
+
+const NavWalkMemory = createContext<NavWalkStore | undefined>(undefined);
 
 export const NavWalkProvider = NavWalkMemory.Provider;
 
@@ -87,14 +114,11 @@ export const NavWalkProvider = NavWalkMemory.Provider;
  * navigation to return into. No dependency list, because the route is parsed
  * fresh per render and would defeat one anyway.
  */
-export function useNavWalk(
-  route: Route,
-  remembers: boolean,
-): RefObject<NavWalk> {
-  const walk = useRef<NavWalk>({ origin: BRIEF });
+export function useNavWalk(route: Route, remembers: boolean): NavWalkStore {
+  const [walk] = useState(navWalkStore);
   useEffect(() => {
     if (remembers) {
-      walk.current.origin = route;
+      walk.remember(route);
     }
   });
   return walk;
@@ -130,10 +154,12 @@ export function useNavLevel(
   const trail = railTrail(route, section);
   const depth = trail.length - 1;
   const shown = trail[depth];
+  if (shown === undefined)
+    throw new Error("the rail drew no level for this route");
   const parent = depth > 0 ? trail[depth - 1] : undefined;
   // With no shell above it the panel is all there is, so it keeps the walk's
   // memory itself — one lifetime, and no history before it.
-  const own = useRef<NavWalk>({ origin: BRIEF });
+  const [own] = useState(navWalkStore);
   const walk = useContext(NavWalkMemory) ?? own;
 
   // Walking between levels replaces every row in the panel, and an unmounted
@@ -148,8 +174,8 @@ export function useNavLevel(
   // direction that drops focus to <body> without saying so, so they are counted
   // here rather than left to be discovered one at a time.
   const onWalkUp = () => {
-    const target = walkUpTarget(parent, walk.current.origin);
-    walk.current.claimAt = routeHash(target);
+    const target = walkUpTarget(parent, walk.origin());
+    walk.claim(routeHash(target));
     navigate(target);
   };
   const onSelect = useCallback(
@@ -163,7 +189,7 @@ export function useNavLevel(
       // hands its focus on rather than dropping it — to the address it opens,
       // which is the row's own.
       if (entry.children && entry.children.length > 0) {
-        walk.current.claimAt = navEntryHref(shown.path, entry);
+        walk.claim(navEntryHref(shown.path, entry));
       }
     },
     [onNavigate, shown, walk],
@@ -174,10 +200,9 @@ export function useNavLevel(
   // crossed into or out of a section. Every render at any other address finds a
   // claim that is not for it and does nothing.
   useEffect(() => {
-    if (walk.current.claimAt !== routeHash(route)) {
+    if (!walk.spend(routeHash(route))) {
       return;
     }
-    walk.current.claimAt = undefined;
     container.current
       ?.querySelector<HTMLElement>(".navlevel .navwrap .navitem")
       ?.focus();
@@ -189,7 +214,7 @@ export function useNavLevel(
 type TipState = Readonly<{
   collapsed: boolean;
   tip: string | null;
-  onTip: (key: string | null) => void;
+  onTip: (key: string | null, by?: "pointer" | "focus") => void;
 }>;
 
 function NavLevelRow({
@@ -217,7 +242,7 @@ function NavLevelRow({
   // A rail crossed on the way to the work column fired one tip per row it
   // passed, which read as the rail flickering rather than as a page answering.
   const hover = useHoverIntent(
-    () => state.onTip(key),
+    () => state.onTip(key, "pointer"),
     () => state.onTip(null),
   );
   return (
@@ -228,14 +253,13 @@ function NavLevelRow({
       aria-current={active ? currentClaim(level) : undefined}
       onPointerEnter={hover.onPointerEnter}
       onPointerLeave={hover.onPointerLeave}
-      onFocus={() => state.onTip(key)}
+      onFocus={() => state.onTip(key, "focus")}
       onBlur={() => state.onTip(null)}
       onClick={() => onSelect(entry)}
     >
       <entry.icon aria-hidden />
-      {/* The label stays mounted and collapses its width, so the transition is
-          continuous rather than a pop. aria-label carries the accessible name
-          either way. */}
+      {/* The label stays mounted and fades, so the transition is continuous
+          rather than a pop. aria-label carries the accessible name either way. */}
       <span className="navlabel">{label}</span>
       {count !== undefined && count > 0 && (
         // The wrapper only places the figure: trailing in a row, pinned to
@@ -365,7 +389,7 @@ function NavLevelBack({
       ? t("shell.navBackApp")
       : t("shell.navBackTo", { name: t(above) });
   const hover = useHoverIntent(
-    () => state.onTip(BACK_TIP_KEY),
+    () => state.onTip(BACK_TIP_KEY, "pointer"),
     () => state.onTip(null),
   );
   return (
@@ -376,7 +400,7 @@ function NavLevelBack({
       onClick={onWalkUp}
       onPointerEnter={hover.onPointerEnter}
       onPointerLeave={hover.onPointerLeave}
-      onFocus={() => state.onTip(BACK_TIP_KEY)}
+      onFocus={() => state.onTip(BACK_TIP_KEY, "focus")}
       onBlur={() => state.onTip(null)}
     >
       <ChevronLeft aria-hidden />

@@ -21,6 +21,7 @@ package privacy
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -114,23 +115,31 @@ func (s *RetentionService) PurgeActivities(ctx context.Context, ids []ids.UUID, 
 	}
 	destroyed := 0
 	for _, id := range ids {
-		if err := s.purgeOneActivity(ctx, id, reason); err != nil {
+		kept, err := s.purgeOneActivity(ctx, id, reason)
+		if err != nil {
 			return destroyed, fmt.Errorf("privacy: purging a captured message: %w", err)
 		}
-		destroyed++
+		if !kept {
+			destroyed++
+		}
 	}
 	return destroyed, nil
 }
 
 // purgeOneActivity runs the retention module's own activity/erase executor and
-// audits it as an owner's act.
-func (s *RetentionService) purgeOneActivity(ctx context.Context, id ids.UUID, reason PurgeReason) error {
-	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+// audits it as an owner's act. kept reports a message the floor now in force
+// shields, which is left as it is.
+func (s *RetentionService) purgeOneActivity(ctx context.Context, id ids.UUID, reason PurgeReason) (kept bool, err error) {
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// The SAME executor retention runs. It nulls the text, then calls
 		// purgeContentDerivedFrom for the provider original, the vectors, the
 		// attachments, the delivery copies and the field provenance — the list
 		// that used to exist twice and was missing two entries in one copy.
 		if err := s.eraseActivityContent(ctx, tx, id); err != nil {
+			if errors.Is(err, errKeptByFloor) {
+				kept = true
+				return nil
+			}
 			return err
 		}
 		// Audited under `erase`, the same closed verb retention uses, so the
@@ -151,6 +160,7 @@ func (s *RetentionService) purgeOneActivity(ctx context.Context, id ids.UUID, re
 		return storekit.EmitEventForEntity(ctx, tx, auditID, "activity", id,
 			retentionAppliedPayload(crmcontracts.RetentionAppliedErase, nil, nil))
 	})
+	return kept, err
 }
 
 // AnonymiseContacts strips the identifying columns from the named contacts, on an
@@ -167,23 +177,51 @@ func (s *RetentionService) purgeOneActivity(ctx context.Context, id ids.UUID, re
 // reason PurgeActivities shares its own: two ways to anonymise a contact is one
 // way too many, and the one that gets less use is the one that quietly stops
 // covering a column.
-func (s *RetentionService) AnonymiseContacts(ctx context.Context, contacts []ids.UUID, reason PurgeReason) (int, error) {
+//
+// The caller chose the contacts in an earlier transaction, and somebody may
+// have worked on one since. stillPurgeable asks again inside each contact's own
+// transaction, under its row lock, and a contact it refuses is skipped. The
+// count is the contacts actually anonymised.
+func (s *RetentionService) AnonymiseContacts(
+	ctx context.Context, contacts []ids.UUID, reason PurgeReason, stillPurgeable ContactStillPurgeable,
+) (int, error) {
 	if err := requireContactAnonymise(ctx); err != nil {
 		return 0, err
 	}
 	done := 0
 	for _, id := range contacts {
-		if err := s.anonymiseOneContact(ctx, id, reason); err != nil {
+		anonymised, err := s.anonymiseOneContact(ctx, id, reason, stillPurgeable)
+		if err != nil {
 			return done, fmt.Errorf("privacy: anonymising a purged contact: %w", err)
 		}
-		done++
+		if anonymised {
+			done++
+		}
 	}
 	return done, nil
 }
 
-func (s *RetentionService) anonymiseOneContact(ctx context.Context, id ids.UUID, reason PurgeReason) error {
-	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := anonymizeContactRecord(ctx, tx, id, s.eraser.payloads); err != nil {
+// ContactStillPurgeable answers, inside the anonymisation's transaction, whether
+// a contact chosen earlier may still be anonymised.
+type ContactStillPurgeable func(ctx context.Context, tx pgx.Tx, id ids.UUID) (bool, error)
+
+func (s *RetentionService) anonymiseOneContact(
+	ctx context.Context, id ids.UUID, reason PurgeReason, stillPurgeable ContactStillPurgeable,
+) (bool, error) {
+	anonymised := false
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// The lock first, so an edit cannot land between the answer and the scrub.
+		// A tag, list membership or note waits on it too: each writer holds the
+		// contact FOR SHARE, or through activity_link's foreign key.
+		if _, err := tx.Exec(ctx, `SELECT 1 FROM contact WHERE id = $1 FOR UPDATE`, id); err != nil {
+			return err
+		}
+		ok, err := stillPurgeable(ctx, tx, id)
+		if err != nil || !ok {
+			return err
+		}
+		anonymised = true
+		if err := anonymizeContactRecord(ctx, tx, id, s.eraser); err != nil {
 			return err
 		}
 		// The verb spelled as a literal, not through the constant: the audit
@@ -199,6 +237,7 @@ func (s *RetentionService) anonymiseOneContact(ctx context.Context, id ids.UUID,
 		return storekit.EmitEventForEntity(ctx, tx, auditID, "contact", id,
 			retentionAppliedPayload(crmcontracts.RetentionAppliedAnonymize, nil, nil))
 	})
+	return anonymised && err == nil, err
 }
 
 // StatutoryFloorClause is the shield every destructive activity path applies,
@@ -216,16 +255,8 @@ func (s *RetentionService) anonymiseOneContact(ctx context.Context, id ids.UUID,
 // The returned fragment is the POSITIVE form: it is TRUE for an activity
 // aliased `a` that the law still requires this installation to keep. A caller
 // deciding what it may destroy negates it; a caller deciding what to withhold
-// uses it as it stands. It expects the interval and the year-end anchor as the
-// next two positional arguments, in that order; StatutoryFloorArgs supplies
-// them.
-func StatutoryFloorShield(intervalArg, anchorArg int) string {
-	return handelsbriefShielded(intervalArg, anchorArg)
-}
-
-// StatutoryFloorArgs are the two values StatutoryFloorShield's placeholders
-// take, read from the installation's configured retention period: the interval
-// itself, and whether the window is anchored to the end of the calendar year.
-func StatutoryFloorArgs() (interval string, yearEndAnchor bool) {
-	return statutoryFloorArgs()
+// uses it as it stands. It expects the floor policy as the next two positional
+// arguments, in that order; FloorPolicy.ShieldArgs supplies them.
+func StatutoryFloorShield(currentArg, carriedArg int) string {
+	return handelsbriefShielded(currentArg, carriedArg)
 }

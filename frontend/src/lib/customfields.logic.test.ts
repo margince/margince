@@ -1,0 +1,76 @@
+import { describe, expect, it } from "vitest";
+import {
+  apiKey,
+  CF_OBJECTS,
+  columnName,
+  ddlPreview,
+  looksStructural,
+  slug,
+} from "./customfields.logic";
+
+describe("custom-fields logic", () => {
+  // The picker's set IS the contract's, in both directions. A one-way check
+  // would pass while the screen quietly lagged the engine, which is exactly
+  // what happened: project and contract were accepted by the backend and
+  // unnameable here, so the only way to define a field on either was the API.
+  // CfObject is the generated type, so a narrowed list fails to compile and a
+  // widened contract fails here.
+  it("offers every object the custom-field contract admits", () => {
+    const admitted = [
+      "contact",
+      "company",
+      "deal",
+      "lead",
+      "project",
+      "contract",
+      "activity",
+    ] as const;
+    expect([...CF_OBJECTS].sort()).toEqual([...admitted].sort());
+  });
+
+  it("slugs a label to a snake_case identifier", () => {
+    expect(slug("Contract end date")).toBe("contract_end_date");
+    expect(slug("  Budget  ceiling! ")).toBe("budget_ceiling");
+    expect(slug("")).toBe("");
+  });
+
+  it("derives the immutable cf_-prefixed column and api key", () => {
+    expect(columnName("Contract end date")).toBe("cf_contract_end_date");
+    expect(columnName("")).toBe("cf_…");
+    expect(apiKey("company", "Contract end date")).toBe(
+      "company.cf_contract_end_date",
+    );
+  });
+
+  it("renders the pending DDL per object and type", () => {
+    expect(ddlPreview("company", "Contract end date", "date", "EUR")).toBe(
+      "ALTER company ADD COLUMN cf_contract_end_date (date) · backfilled NULL · reversible",
+    );
+    expect(ddlPreview("deal", "Budget ceiling", "currency", "EUR")).toBe(
+      "ALTER deal ADD COLUMN cf_budget_ceiling (numeric · cents · EUR) · backfilled NULL · reversible",
+    );
+  });
+
+  it("flags structural-word labels, passes ordinary ones", () => {
+    expect(looksStructural("Link to parent account")).toBe(true);
+    expect(looksStructural("New relationship")).toBe(true);
+    expect(looksStructural("Lookup to company")).toBe(true);
+    expect(looksStructural("Renewal date")).toBe(false);
+  });
+
+  it("matches bare structural nouns on word boundaries, not as substrings", () => {
+    // Innocent labels that merely embed a structural token as a substring
+    // ("object" in "Objective", "table" in "Notable"/"Portable") are data.
+    expect(looksStructural("Objective score")).toBe(false);
+    expect(looksStructural("Notable accounts")).toBe(false);
+    expect(looksStructural("Portable device")).toBe(false);
+    // The genuine structural requests still refuse.
+    expect(looksStructural("Link to parent account")).toBe(true);
+    expect(looksStructural("New object")).toBe(true);
+    // plural forms are structural too (entity → entities)
+    expect(looksStructural("New objects")).toBe(true);
+    expect(looksStructural("Related tables")).toBe(true);
+    expect(looksStructural("Related entities")).toBe(true);
+    expect(looksStructural("one-to-many mapping")).toBe(true);
+  });
+});

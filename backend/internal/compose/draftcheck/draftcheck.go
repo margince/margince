@@ -29,6 +29,7 @@ import (
 	"unicode"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -235,7 +236,7 @@ func Body(body string, lang textlang.Lang, band convstate.Band, on Grounds) []Fi
 // and a chip is a label rather than a message: it has no greeting, wants no
 // paragraph break, and a finding telling the model to add one would spend the
 // single correction retry on feedback about the wrong thing entirely.
-func Formatting(body string, on Grounds) []Finding {
+func Formatting(body string, lang textlang.Lang, on Grounds) []Finding {
 	var findings []Finding
 	if missingGreeting(body, on.FirstName, on.LastName) {
 		findings = append(findings, Finding{
@@ -245,6 +246,7 @@ func Formatting(body string, on Grounds) []Finding {
 				"first line, then a blank line, then the message",
 		})
 	}
+	findings = append(findings, greetingFindings(strings.TrimSpace(body), lang, on)...)
 	if unbrokenBlock(body) {
 		findings = append(findings, Finding{
 			Rule:   RuleUnbrokenBlock,
@@ -338,11 +340,7 @@ const openingRunes = 240
 
 // opening is the first part of the body, cut on a rune boundary.
 func opening(body string) string {
-	runes := []rune(body)
-	if len(runes) <= openingRunes {
-		return body
-	}
-	return string(runes[:openingRunes])
+	return textcut.Runes(body, openingRunes)
 }
 
 // contains reports whether text holds phrase as whole words.

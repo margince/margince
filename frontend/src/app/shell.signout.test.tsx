@@ -7,8 +7,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "../App";
 import { memoryStorage } from "../testing/appharness";
+import { ignoreSearch, newClient, renderWith } from "../testing/shellharness";
 import { Shell } from "./shell";
-import { ignoreSearch, newClient, renderWith } from "./testing/shellharness";
 
 afterEach(() => {
   cleanup();
@@ -54,7 +54,7 @@ describe("Sign-out (AS-1)", () => {
     await user.click(screen.getByText("Sign out"));
     // POST fired and the ["me"] entry lost its data, so the auth gate
     // re-probes → 401 → login. This bites if useLogout's onSuccess stops
-    // calling resetToSignedOut (screens/common.tsx).
+    // calling resetToSignedOut (lib/session.ts).
     await waitFor(() => expect(loggedOut).toBe(true));
     await waitFor(() => expect(client.getQueryData(["me"])).toBeUndefined());
   });
@@ -83,7 +83,7 @@ describe("Sign-out (AS-1)", () => {
         if (url.endsWith("/v1/me")) {
           meCalls += 1;
           if (loggedOut) {
-            return new Response(JSON.stringify({ code: "unauthenticated" }), {
+            return new Response(JSON.stringify({ code: "unauthorized" }), {
               status: 401,
               headers: { "Content-Type": "application/problem+json" },
             });
@@ -93,7 +93,7 @@ describe("Sign-out (AS-1)", () => {
             { status: 200, headers: { "Content-Type": "application/json" } },
           );
         }
-        return new Response(JSON.stringify({ code: "unavailable" }), {
+        return new Response(JSON.stringify({ code: "service_unavailable" }), {
           status: 503,
           headers: { "Content-Type": "application/problem+json" },
         });

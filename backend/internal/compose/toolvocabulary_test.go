@@ -17,6 +17,7 @@ package compose
 
 import (
 	"encoding/json"
+	"fmt"
 	"slices"
 	"testing"
 
@@ -33,17 +34,17 @@ func TestEveryToolEnumMatchesTheContractItMirrors(t *testing.T) {
 
 	compared := 0
 	for _, spec := range registry.Specs() {
-		for arg, advertised := range advertisedEnums(t, spec.Name, spec.InputSchema) {
+		for _, advertised := range advertisedEnums(t, spec.Name, spec.InputSchema) {
 			for _, op := range backingOperations(spec.Name) {
-				declared, isEnum := contractEnum(t, bodies[op], op, arg)
+				declared, isEnum := contractEnum(bodies[op], advertised.name)
 				if !isEnum {
 					continue // the operation takes no such argument, or takes it open
 				}
 				compared++
-				if !slices.Equal(advertised, declared) {
+				if !slices.Equal(advertised.values, declared) {
 					t.Errorf("%s advertises %v for %s while %s's request body declares %v — a value the "+
 						"REST call accepts and the tool refuses (or the reverse) is the two transports "+
-						"disagreeing about one behaviour", spec.Name, advertised, arg, op, declared)
+						"disagreeing about one behaviour", spec.Name, advertised.values, advertised.name, op, declared)
 				}
 			}
 		}
@@ -86,9 +87,9 @@ func requestBodiesByOperation(doc *openapi3.T) map[string]*openapi3.Schema {
 }
 
 // contractEnum reads one property's declared vocabulary, reporting whether the
-// operation declares that property as a closed set at all.
-func contractEnum(t *testing.T, body *openapi3.Schema, operation, member string) ([]string, bool) {
-	t.Helper()
+// operation declares that property as a closed set at all. Each member is
+// spelled with its JSON type, so a string "3" and a number 3 differ.
+func contractEnum(body *openapi3.Schema, member string) ([]string, bool) {
 	if body == nil {
 		return nil, false
 	}
@@ -96,44 +97,64 @@ func contractEnum(t *testing.T, body *openapi3.Schema, operation, member string)
 	if !declared || prop.Value == nil || len(prop.Value.Enum) == 0 {
 		return nil, false
 	}
-	values := make([]string, 0, len(prop.Value.Enum))
-	for _, v := range prop.Value.Enum {
-		// A nullable enum carries null as its "unset" member (logActivity's
-		// direction does). That is the absence of a value, not one of them, and
-		// a tool expresses the same thing by omitting the argument — so it is
-		// not part of the vocabulary being compared.
-		if v == nil {
-			continue
-		}
-		s, isString := v.(string)
-		if !isString {
-			t.Fatalf("%s.%s carries a non-string enum member %v", operation, member, v)
-		}
-		values = append(values, s)
-	}
-	slices.Sort(values)
-	return values, true
+	// A nullable enum carries null as its "unset" member (logActivity's
+	// direction does). A tool expresses that by omitting the argument, so null
+	// is not part of the vocabulary being compared.
+	return enumMembers(slices.DeleteFunc(slices.Clone(prop.Value.Enum), func(v any) bool { return v == nil })), true
 }
 
-// advertisedEnums answers every closed vocabulary a tool's own schema declares.
-func advertisedEnums(t *testing.T, tool string, inputSchema json.RawMessage) map[string][]string {
+// toolEnum is one closed vocabulary a tool's schema declares, at any depth.
+type toolEnum struct {
+	name   string
+	values []string
+}
+
+// advertisedEnums answers every closed vocabulary a tool's own schema declares,
+// nested ones included: an offer line's billing interval sits under `line`.
+func advertisedEnums(t *testing.T, tool string, inputSchema json.RawMessage) []toolEnum {
 	t.Helper()
-	var doc struct {
-		Properties map[string]struct {
-			Enum []string `json:"enum"`
-		} `json:"properties"`
-	}
-	if err := json.Unmarshal(inputSchema, &doc); err != nil {
+	var enums []toolEnum
+	if err := collectEnums(inputSchema, &enums); err != nil {
 		t.Fatalf("%s: input schema is not readable: %v", tool, err)
 	}
-	enums := map[string][]string{}
-	for name, prop := range doc.Properties {
-		if len(prop.Enum) == 0 {
-			continue
-		}
-		values := slices.Clone(prop.Enum)
-		slices.Sort(values)
-		enums[name] = values
-	}
 	return enums
+}
+
+func collectEnums(schema json.RawMessage, into *[]toolEnum) error {
+	var doc struct {
+		Properties map[string]json.RawMessage `json:"properties"`
+	}
+	if err := json.Unmarshal(schema, &doc); err != nil {
+		return err
+	}
+	for name, raw := range doc.Properties {
+		var prop struct {
+			Enum []any `json:"enum"`
+		}
+		if err := json.Unmarshal(raw, &prop); err != nil {
+			return err
+		}
+		if len(prop.Enum) > 0 {
+			*into = append(*into, toolEnum{name: name, values: enumMembers(prop.Enum)})
+		}
+		if err := collectEnums(raw, into); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// enumMembers spells each member with its JSON type, sorted.
+func enumMembers(members []any) []string {
+	out := make([]string, 0, len(members))
+	for _, v := range members {
+		switch v.(type) {
+		case string:
+			out = append(out, fmt.Sprintf("%q", v))
+		default:
+			out = append(out, fmt.Sprintf("%v", v))
+		}
+	}
+	slices.Sort(out)
+	return out
 }

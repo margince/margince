@@ -268,6 +268,9 @@ func (s *Store) ReorderStages(ctx context.Context, pipelineID ids.PipelineID, st
 			return err
 		}
 		if moves := placements(order); len(moves) > 0 {
+			if err := refuseMovingAGatedLadder(ctx, tx, pipelineID); err != nil {
+				return err
+			}
 			if err := writeStageOrder(ctx, tx, pipelineID, ladder, moves); err != nil {
 				return err
 			}

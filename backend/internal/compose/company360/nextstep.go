@@ -56,7 +56,8 @@ func noNextStepSuggestion(
 		return nil
 	}
 	open := in.open
-	evidence := openDealEvidence(companyID, open.Open)
+	said := suggestionCopyFor(in.language)
+	evidence := said.openDealEvidence(companyID, open.Open)
 	step := recommendedNextStep(companyID, in)
 	// The digest over EVERY open deal rides the fingerprint, so closing one or
 	// opening another re-raises this rather than leaving a dismissal in force
@@ -64,7 +65,7 @@ func noNextStepSuggestion(
 	// no card listed, which a fingerprint built from a fetched page would miss.
 	out := &crmcontracts.Company360Suggestion{
 		Kind:        suggestNoNextStep,
-		Reason:      noNextStepReason(open),
+		Reason:      said.noNextStepReason(open),
 		Fingerprint: fingerprint(string(suggestNoNextStep), open.OpenDigest, evidence),
 		Evidence:    evidence,
 		// The ask IS the step, in the words the button will write. It used to
@@ -105,13 +106,13 @@ func recommendedNextStep(companyID ids.CompanyID, in suggestionInputs) nextStep 
 	if len(open.Open) == 1 && open.OpenCount == 1 {
 		deal := open.Open[0]
 		return nextStep{
-			body:   TaskBody("Agree the next step on "+strconv.Quote(deal.Name), "deal", deal.ID),
+			body:   TaskBody(fmt.Sprintf(suggestionCopyFor(in.language).Say(suggestionWords.NextDeal), deal.Name), "deal", deal.ID),
 			dealID: &deal.ID,
 		}
 	}
-	subject := "Agree the next step with this account"
+	subject := suggestionCopyFor(in.language).Say(suggestionWords.NextAccount)
 	if in.companyName != "" {
-		subject = "Agree the next step with " + in.companyName
+		subject = fmt.Sprintf(suggestionCopyFor(in.language).Say(suggestionWords.NextNamedAccount), in.companyName)
 	}
 	return nextStep{body: TaskBody(subject, "company", companyID.UUID)}
 }
@@ -145,7 +146,7 @@ const namedDeals = 3
 // on an account with one open deal it is also worse writing than the deal's own
 // name. Past the cap it stays a count: the reader is being told there is no
 // next step, not being handed the pipeline.
-func noNextStepReason(open pipeline) string {
+func (said suggestionCopy) noNextStepReason(open pipeline) string {
 	names := make([]string, 0, namedDeals)
 	for _, deal := range open.Open {
 		if len(names) == namedDeals {
@@ -154,20 +155,22 @@ func noNextStepReason(open pipeline) string {
 		names = append(names, strconv.Quote(deal.Name))
 	}
 	switch {
+	case len(names) == 0 && open.OpenCount == 1:
+		return said.Say(suggestionWords.NextSingle)
 	case len(names) == 0:
 		// The count survived a read the names did not. Rare, and the advice is
 		// still true: something is open and nothing says what happens next.
-		return fmt.Sprintf("%d deals are open here and no task says what happens next.", open.OpenCount)
+		return fmt.Sprintf(said.Say(suggestionWords.NextCount), open.OpenCount)
 	case open.OpenCount == 1:
-		return fmt.Sprintf("%s is open and no task says what happens next.", names[0])
+		return fmt.Sprintf(said.Say(suggestionWords.NextOne), names[0])
 	case open.OpenCount > len(names):
 		return fmt.Sprintf(
-			"%d deals are open here, including %s, and no task says what happens next.",
+			said.Say(suggestionWords.NextSome),
 			open.OpenCount, strings.Join(names, ", "),
 		)
 	default:
 		return fmt.Sprintf(
-			"%s are open and no task says what happens next.", strings.Join(names, ", "),
+			said.Say(suggestionWords.NextAll), strings.Join(names, ", "),
 		)
 	}
 }
@@ -178,7 +181,7 @@ func noNextStepReason(open pipeline) string {
 // The company stands in when the deals did not survive the read. The
 // suggestion is dismissible and its dismissal is keyed on this list, so an
 // empty one would key every account's dismissal alike.
-func openDealEvidence(
+func (said suggestionCopy) openDealEvidence(
 	companyID ids.CompanyID, deals []openDeal,
 ) []crmcontracts.CompanyBriefEvidence {
 	if len(deals) == 0 {
@@ -196,7 +199,7 @@ func openDealEvidence(
 			EntityType: crmcontracts.CompanyBriefEvidenceEntityTypeDeal,
 			EntityId:   openapi_types.UUID(deal.ID),
 			Name:       new(deal.Name),
-			Origin:     new(originOpenDeal),
+			Origin:     new(said.Say(suggestionWords.OriginOpenDeal)),
 		})
 	}
 	return out

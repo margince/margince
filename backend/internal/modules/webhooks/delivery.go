@@ -13,6 +13,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/outbound"
@@ -62,6 +63,15 @@ type Deliverer struct {
 	clock    func() time.Time
 	resolver authz.Resolver
 	log      *slog.Logger
+	// publicBaseURL is the app's origin for record links; empty sends none.
+	publicBaseURL string
+}
+
+// WithPublicBaseURL sets the origin that record links in a delivery start
+// from. Without it a delivery carries no link.
+func (d *Deliverer) WithPublicBaseURL(baseURL string) *Deliverer {
+	d.publicBaseURL = strings.TrimRight(baseURL, "/")
+	return d
 }
 
 // NewDeliverer wires the delivery engine. A nil clock defaults to the wall
@@ -91,10 +101,6 @@ func (d *Deliverer) HandleEvent(ctx context.Context, env kevents.Envelope) error
 	if err != nil {
 		return fmt.Errorf("webhooks: mapping envelope %s to the public wire shape: %w", env.EventID, err)
 	}
-	body, err := json.Marshal(wire)
-	if err != nil {
-		return fmt.Errorf("webhooks: marshaling envelope %s: %w", env.EventID, err)
-	}
 	// The tenant is this deliverer's own: the fan-out builds one per workspace
 	// it sweeps, and the envelope carries none (ADR-0091 §6).
 	ws, err := d.store.db.Workspace(ctx)
@@ -106,7 +112,7 @@ func (d *Deliverer) HandleEvent(ctx context.Context, env kevents.Envelope) error
 	if err != nil {
 		return fmt.Errorf("webhooks: matching subscriptions for %s: %w", env.Type, err)
 	}
-	visible := make([]ids.UUID, 0, len(cands))
+	visible := make([]subCandidate, 0, len(cands))
 	var visErr error
 	for _, c := range cands {
 		ok, err := d.ownerCanSee(wsCtx, env, c.ownerID)
@@ -123,10 +129,25 @@ func (d *Deliverer) HandleEvent(ctx context.Context, env kevents.Envelope) error
 			continue
 		}
 		if ok {
-			visible = append(visible, c.id)
+			visible = append(visible, c)
 		}
 	}
-	targets, err := d.store.enqueueForSubscriptions(wsCtx, visible, env.Type, env.EventID, body,
+	// The body, and the name read it needs, only once some owner is due it.
+	var body []byte
+	if len(visible) > 0 {
+		d.humanize(wsCtx, &wire)
+		if body, err = json.Marshal(wire); err != nil {
+			return fmt.Errorf("webhooks: marshaling envelope %s: %w", env.EventID, err)
+		}
+	}
+	rows := renderFor(visible, body)
+	for _, r := range rows {
+		if r.renderError != "" {
+			d.log.Warn("webhooks: parking a delivery whose body could not be rendered",
+				"subscription", r.subID, "event", env.EventID, "reason", r.renderError)
+		}
+	}
+	targets, err := d.store.enqueueForSubscriptions(wsCtx, rows, env.Type, env.EventID,
 		env.Entity.Type, env.Entity.ID)
 	if err != nil {
 		return fmt.Errorf("webhooks: enqueue for %s: %w", env.Type, err)
@@ -217,10 +238,10 @@ func (d *Deliverer) canSee(ctx context.Context, eventType, entityType string, en
 }
 
 // SweepOnce runs ONE workspace's due-retry pass: it claims a bounded batch
-// of parked deliveries whose backoff has elapsed and re-attempts each. The
-// tenant comes from ctx, so this pass never reaches past the workspace its
-// caller bound; the clock is injected, so a test steps the backoff schedule
-// deterministically rather than sleeping through it.
+// of parked deliveries whose backoff has elapsed and re-attempts each. It binds
+// the workspace of its own handle, because the job worker passes a bare queue
+// context. The owner's authority cannot be resolved without one. The clock is
+// injected, so a test steps the backoff schedule rather than sleeping.
 //
 // The due scan failing IS this pass failing. It is the one workspace-level
 // error here, and a caller that recorded success over it would be reporting
@@ -230,48 +251,73 @@ func (d *Deliverer) canSee(ctx context.Context, eventType, entityType string, en
 // and the next pass re-claims it, so one unloadable delivery must not fail
 // the tenant's whole sweep.
 func (d *Deliverer) SweepOnce(ctx context.Context) error {
-	due, err := d.store.dueRetries(ctx, d.clock(), sweepBatch)
+	ws, err := d.store.db.Workspace(ctx)
 	if err != nil {
-		return fmt.Errorf("webhooks: scanning due retries: %w", err)
+		return fmt.Errorf("webhooks: resolving the workspace to sweep: %w", err)
 	}
-	for _, deliveryID := range due {
+	ctx = principal.WithWorkspaceID(ctx, ws.UUID)
+	// One claim per send: a lease taken for the whole batch would run out
+	// before the later rows were sent.
+	for range sweepBatch {
+		deliveryID, claim, ok, err := d.store.claimDueRetry(ctx, d.clock())
+		if err != nil {
+			return fmt.Errorf("webhooks: claiming a due retry: %w", err)
+		}
+		if !ok {
+			return nil
+		}
 		t, err := d.store.loadTarget(ctx, deliveryID)
 		if err != nil {
 			d.log.Warn("webhooks: loading due delivery", "delivery", deliveryID, "err", err)
 			continue
 		}
-		if !d.attemptStillAuthorized(ctx, t) {
+		t.claim = &claim
+		authorized, err := d.attemptStillAuthorized(ctx, t)
+		if err != nil {
+			d.spendUncheckedAttempt(ctx, t, err)
 			continue
 		}
-		d.deliverOnce(ctx, t)
+		if authorized {
+			d.deliverOnce(ctx, t)
+		}
 	}
 	return nil
+}
+
+// visibilityUncheckedReason is what the row says when the owner's access could
+// not be re-checked. Fixed text, because last_error is shown to the operator
+// and the underlying error can carry SQL; the cause goes to the log.
+const visibilityUncheckedReason = "the subscription owner's access could not be re-checked, so this attempt was not sent"
+
+// spendUncheckedAttempt records a failed re-check as a failed attempt that
+// sent nothing. Left untouched, the row keeps its past deadline and is claimed
+// first on every pass, forever. Spending the budget backs it off and ends it in
+// dead_lettered, from where Replay recovers it once the fault is gone.
+func (d *Deliverer) spendUncheckedAttempt(ctx context.Context, t attemptTarget, cause error) {
+	d.log.Error("webhooks: re-checking delivery visibility",
+		"delivery", t.deliveryID, "subscription", t.subID, "err", cause)
+	if err := d.store.recordOutcome(ctx, t, outcome{failure: visibilityUncheckedReason}, d.clock()); err != nil {
+		d.log.Error("webhooks: recording an unchecked delivery attempt", "delivery", t.deliveryID, "err", err)
+	}
 }
 
 // attemptStillAuthorized re-checks one delivery's visibility and parks it when
 // the answer has changed, reporting whether the caller should go on to attempt
 // it.
 //
-// A resolver or query failure is NOT a revocation: it is an outage, and parking
-// the delivery terminally on one would discard a legitimate delivery that
-// nothing is wrong with. Those are logged and the delivery is left parked for
-// the next sweep, which is what a transient failure deserves — the row keeps its
-// retrying status and its backoff.
-func (d *Deliverer) attemptStillAuthorized(ctx context.Context, t attemptTarget) bool {
+// A resolver or query failure is an outage, not a revocation. Parking the
+// delivery as revoked would discard it for good. So the error goes back to the
+// caller, which records it in its own terms.
+func (d *Deliverer) attemptStillAuthorized(ctx context.Context, t attemptTarget) (bool, error) {
 	ok, reason, err := d.stillVisible(ctx, t)
-	if err != nil {
-		d.log.Error("webhooks: re-checking delivery visibility",
-			"delivery", t.deliveryID, "subscription", t.subID, "err", err)
-		return false
-	}
-	if ok {
-		return true
+	if err != nil || ok {
+		return ok, err
 	}
 	if err := d.store.markVisibilityRevoked(ctx, t.deliveryID, reason); err != nil {
 		d.log.Error("webhooks: parking a delivery whose subject left the owner's sight",
 			"delivery", t.deliveryID, "subscription", t.subID, "err", err)
 	}
-	return false
+	return false, nil
 }
 
 // Replay re-attempts a parked (or any) delivery on demand (B-E10.13c). It
@@ -296,15 +342,21 @@ func (d *Deliverer) Replay(ctx context.Context, subID, deliveryID ids.UUID) (Del
 	// would be parked with its reason already destroyed. A replay is the more
 	// dangerous of the two paths — an operator triggers it deliberately, long
 	// after the enqueue decided anything.
-	if !d.attemptStillAuthorized(ctx, t) {
+	authorized, err := d.attemptStillAuthorized(ctx, t)
+	if err != nil {
+		return Delivery{}, fmt.Errorf("webhooks: re-checking delivery %s before replay: %w", deliveryID, err)
+	}
+	if !authorized {
 		return d.store.getDelivery(ctx, deliveryID)
 	}
-	if err := d.store.resetForReplay(ctx, deliveryID); err != nil {
+	claim, err := d.store.resetForReplay(ctx, deliveryID)
+	if err != nil {
 		return Delivery{}, err
 	}
 	// A replay resets attempts to a fresh budget: the operator is
 	// asserting the endpoint is fixed, so the exponential clock restarts.
 	t.priorAttempts = 0
+	t.claim = &claim
 	d.deliverOnce(ctx, t)
 	return d.store.getDelivery(ctx, deliveryID)
 }
@@ -347,7 +399,20 @@ func (d *Deliverer) attempt(ctx context.Context, t attemptTarget) outcome {
 		d.log.Error("webhooks: signing delivery", "subscription", t.subID, "delivery", t.deliveryID, "err", err)
 		return outcome{failure: "signing delivery: " + err.Error()}
 	}
-	req.Header.Set("Content-Type", "application/json")
+	headers, err := d.store.cipher.openHeaders(t.subID, t.headers)
+	if err != nil {
+		d.log.Error("webhooks: unsealing custom headers", "subscription", t.subID, "err", err)
+		return outcome{failure: err.Error()}
+	}
+	// Custom headers first, so the fixed ones below always have the last word.
+	for _, h := range headers {
+		req.Header.Set(h.Name, h.Value)
+	}
+	contentType := t.contentType
+	if contentType == "" {
+		contentType = contentTypeJSON
+	}
+	req.Header.Set("Content-Type", contentType)
 	req.Header.Set("User-Agent", outbound.WebhooksHeader)
 	req.Header.Set(HeaderEvent, t.eventType)
 	req.Header.Set(HeaderWebhookID, t.deliveryID.String())

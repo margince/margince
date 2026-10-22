@@ -122,7 +122,7 @@ func scheduledSendResponse(row ScheduledSend) crmcontracts.ScheduledSend {
 		// The To LINE, derived the way the send derives it. row.Recipients is
 		// the merged consent superset — every To, Cc AND Bcc — so rendering it
 		// raw would put blind copies in a field the rep reads as visible.
-		To:        emailList(toRecipients(row.Recipients, row.Cc, row.Bcc)),
+		To:        emailList(ToRecipients(row.Recipients, row.Cc, row.Bcc)),
 		Version:   row.Version,
 		CreatedAt: row.CreatedAt,
 		UpdatedAt: row.UpdatedAt,

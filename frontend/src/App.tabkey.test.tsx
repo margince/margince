@@ -7,18 +7,19 @@ import {
   memoryStorage,
   renderApp,
   sessionOnlyFetch,
+  teardownApp,
 } from "./testing/appharness";
 
-// A tab inside a record is a VIEW of that record, and the app keys its routed
-// subtree on what the address is ABOUT (app/router.tsx's routeIdentity) so that
+// A tab inside a record is a view of that record. The app keys its routed
+// subtree on what the address is about (lib/router.tsx's routeIdentity), so
 // moving between views is a re-render rather than a remount. What that buys is
 // visible: the record's header, its readings and the tab strip the reader just
 // clicked keep their DOM nodes, so design-system/enter.css plays the arrival
 // animation for the panel that actually changed and for nothing else.
 //
-// It is asserted here rather than in screens/contactpage.test.tsx because the key
-// lives above every screen: that suite mounts the page with a `tab` prop and can
-// never see the router decide.
+// It is asserted here, not in features/contacts/contactpage.test.tsx, because
+// the key lives above every screen. That suite mounts the page with a `tab`
+// prop and can never see the router decide.
 //
 // A second mount is a case of its own below. It was written for a cache leak —
 // the contact page sat at "Loading…" whenever another App suite had mounted
@@ -33,10 +34,8 @@ import {
 // which is two chained reads behind a full shell render — the record itself for
 // the header, then its /360 projection for the tabs. Measured: ~500ms for the
 // file alone, ~700-800ms with one other App suite beside it, against Testing
-// Library's un-overridden one-second default (`ASYNC_UTIL_TIMEOUT_MS`, which
-// vitest.budget.ts records as overridden nowhere). A quarter of a second of
-// headroom is not a budget, and `make check-fe` runs far more than one suite
-// alongside it.
+// Library's own one-second default. A quarter of a second of headroom is not a
+// budget, and `make check-fe` runs far more than one suite alongside it.
 //
 // The read settles. Lifting the waiter to 8s makes a previously-failing run
 // pass, and the instrumented wait completes in ~600ms with a sibling — so it
@@ -119,7 +118,7 @@ function recordHead(): Element {
 // The strip ITSELF, from the component that draws the tabs — not the slot the
 // page chrome reserves for it.
 //
-// `.record-tabs` in composed.tsx is that slot: a wrapper the record head puts
+// `.record-tabs` in recordview.tsx is that slot: a wrapper the record head puts
 // around whatever tabs it is handed. The tabs live inside it under
 // `recordtabs.tsx`'s own classes, and a query for `.record-tabs button` matches
 // nothing at all. This file asked for the wrapper and for buttons inside it, so
@@ -173,8 +172,9 @@ beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn(contactFetch()));
 });
 
-afterEach(() => {
+afterEach(async () => {
   cleanup();
+  await teardownApp();
   vi.unstubAllGlobals();
   window.location.hash = "";
 });

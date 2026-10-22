@@ -37,11 +37,21 @@ type Colleague struct {
 	Email       string   `json:"email"`
 	SeatType    string   `json:"seat_type"`
 	IsAgent     bool     `json:"is_agent"`
+	// Status is set on a widened roster only, where a seat may not be active.
+	Status string `json:"status,omitempty"`
+}
+
+// ColleagueQuery narrows the roster. The two widenings are GET /users' own,
+// under its rules: inactive seats only for a member administrator.
+type ColleagueQuery struct {
+	Q               string
+	IncludeInactive bool
+	IncludeInvited  bool
 }
 
 // ColleagueLister answers the roster. Declared here, implemented in compose,
 // so this module never imports identity.
-type ColleagueLister func(ctx context.Context, q string) (colleagues []Colleague, truncated bool, err error)
+type ColleagueLister func(ctx context.Context, q ColleagueQuery) (colleagues []Colleague, truncated bool, err error)
 
 // RegisterColleaguesTool joins list_colleagues to the surface; a nil lister
 // registers nothing.
@@ -59,10 +69,12 @@ func (t listColleagues) Spec() mcp.ToolSpec {
 		Name: "list_colleagues", Title: "List colleagues", Version: toolVersionV1,
 		Description:   listColleaguesCopy.render(),
 		Instead:       listColleaguesCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "listUsers",
 		InputSchema: schema(`{"type":"object","properties":{
-			"q":{"type":"string","description":"Narrow by name or email; omit for the whole roster"}},
+			"q":{"type":"string","description":"Narrow by name or email; omit for the whole roster"},
+			"include_inactive":{"type":"boolean","description":"Also list deactivated and suspended seats, for a member administrator only"},
+			"include_invited":{"type":"boolean","description":"Also list invited seats that have not signed in yet"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[ListColleaguesResult](),
 	}
@@ -70,12 +82,14 @@ func (t listColleagues) Spec() mcp.ToolSpec {
 
 func (t listColleagues) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
 	var args struct {
-		Q string `json:"q"`
+		Q               string `json:"q"`
+		IncludeInactive bool   `json:"include_inactive"`
+		IncludeInvited  bool   `json:"include_invited"`
 	}
 	if err := decodeArgs(in, &args); err != nil {
 		return nil, err
 	}
-	colleagues, truncated, err := t.list(ctx, args.Q)
+	colleagues, truncated, err := t.list(ctx, ColleagueQuery(args))
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +127,7 @@ const CodeNameMatchedNoColleague = "name_matched_no_colleague"
 // throwing that away because a courtesy read failed hands the caller a tool
 // failure where it had a true answer.
 func attachEveryColleague(ctx context.Context, list ColleagueLister, out *ListColleaguesResult) {
-	everyone, truncated, err := list(ctx, "")
+	everyone, truncated, err := list(ctx, ColleagueQuery{})
 	if err != nil {
 		noteWarning(ctx, CodeRosterUnreadable,
 			"Nobody here is spelled that way. The rest of the roster could not be read to show "+

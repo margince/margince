@@ -32,7 +32,8 @@ func TestSendEmailDerivesUnsubscribeHeadersForAMarketingPurpose(t *testing.T) {
 	linker := stubUnsubscribeLinker{token: testUnsubscribeTok, ok: true}
 
 	sent, err := e.store(linker).SendEmail(
-		e.as(principal.RowScopeAll), FromActivity(anchor), soloSendInput("marketing_email"), stubConsentGate{}, stager)
+		e.as(principal.RowScopeAll), FromActivity(anchor), soloSendInput("marketing_email"), stubConsentGate{}, stager,
+	)
 	if err != nil {
 		t.Fatalf("SendEmail: %v", err)
 	}
@@ -77,7 +78,8 @@ func TestSendEmailDerivesNoUnsubscribeHeadersForATransactionalPurpose(t *testing
 	linker := stubUnsubscribeLinker{token: testUnsubscribeTok, ok: false}
 
 	if _, err := e.store(linker).SendEmail(
-		e.as(principal.RowScopeAll), FromActivity(anchor), sendInput("transactional"), stubConsentGate{}, stager); err != nil {
+		e.as(principal.RowScopeAll), FromActivity(anchor), sendInput("transactional"), stubConsentGate{}, stager,
+	); err != nil {
 		t.Fatalf("SendEmail: %v", err)
 	}
 
@@ -103,7 +105,8 @@ func TestSendEmailRefusesAMultiAddresseeSendThatCarriesAnUnsubscribeToken(t *tes
 
 	// sendInput addresses buyer@ and cc's boss@ — two contacts, one token.
 	_, err := e.store(linker).SendEmail(
-		e.as(principal.RowScopeAll), FromActivity(anchor), sendInput("marketing_email"), stubConsentGate{}, stager)
+		e.as(principal.RowScopeAll), FromActivity(anchor), sendInput("marketing_email"), stubConsentGate{}, stager,
+	)
 	var refusal *SharedUnsubscribeTokenError
 	if !errors.As(err, &refusal) {
 		t.Fatalf("multi-addressee marketing send → %v, want a SharedUnsubscribeTokenError", err)
@@ -132,7 +135,8 @@ func TestSendEmailRefusesAMarketingSendWithNoConfiguredPublicBaseURL(t *testing.
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws))).WithUnsubscribe(stubUnsubscribeLinker{token: testUnsubscribeTok, ok: true})
 
 	_, err := store.SendEmail(
-		e.as(principal.RowScopeAll), FromActivity(anchor), soloSendInput("marketing_email"), stubConsentGate{}, stager)
+		e.as(principal.RowScopeAll), FromActivity(anchor), soloSendInput("marketing_email"), stubConsentGate{}, stager,
+	)
 	if err == nil || !strings.Contains(err.Error(), "public base URL is not configured") {
 		t.Fatalf("marketing send with no public base URL → %v, want a refusal naming the missing configuration", err)
 	}
@@ -153,7 +157,8 @@ func TestSendEmailRefusesWhenTheUnsubscribeLinkerFails(t *testing.T) {
 	linkerDown := errors.New("preference store unreachable")
 
 	_, err := e.store(stubUnsubscribeLinker{err: linkerDown}).SendEmail(
-		e.as(principal.RowScopeAll), FromActivity(anchor), soloSendInput("marketing_email"), stubConsentGate{}, stager)
+		e.as(principal.RowScopeAll), FromActivity(anchor), soloSendInput("marketing_email"), stubConsentGate{}, stager,
+	)
 	if !errors.Is(err, linkerDown) {
 		t.Fatalf("send with a failing unsubscribe linker → %v, want the linker's own error", err)
 	}
@@ -172,7 +177,8 @@ func TestSendEmailAcceptsAMultiAddresseeSendThatCarriesNoUnsubscribeToken(t *tes
 	linker := stubUnsubscribeLinker{token: testUnsubscribeTok, ok: false}
 
 	if _, err := e.store(linker).SendEmail(
-		e.as(principal.RowScopeAll), FromActivity(anchor), sendInput("transactional"), stubConsentGate{}, stager); err != nil {
+		e.as(principal.RowScopeAll), FromActivity(anchor), sendInput("transactional"), stubConsentGate{}, stager,
+	); err != nil {
 		t.Fatalf("multi-addressee transactional send → %v, want acceptance", err)
 	}
 	staged := stager.only(t)
@@ -193,7 +199,8 @@ func TestSendEmailCommitsNoActivityWhenStagingFails(t *testing.T) {
 	stager := &recordingStager{err: errors.New("delivery table unavailable")}
 
 	_, err := e.store(stubUnsubscribeLinker{}).SendEmail(
-		e.as(principal.RowScopeAll), FromActivity(anchor), sendInput("transactional"), stubConsentGate{}, stager)
+		e.as(principal.RowScopeAll), FromActivity(anchor), sendInput("transactional"), stubConsentGate{}, stager,
+	)
 	if err == nil {
 		t.Fatal("SendEmail reported success though staging refused")
 	}
@@ -235,7 +242,8 @@ func TestSendEmailRefusesAnAnchorOutsideTheCallersRowScope(t *testing.T) {
 	stager := &recordingStager{}
 
 	_, err := e.store(stubUnsubscribeLinker{}).SendEmail(
-		e.as(principal.RowScopeOwn), FromActivity(anchor), sendInput("transactional"), stubConsentGate{}, stager)
+		e.as(principal.RowScopeOwn), FromActivity(anchor), sendInput("transactional"), stubConsentGate{}, stager,
+	)
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("send anchored to another rep's capture-private contact → %v, want ErrNotFound (existence-hiding)", err)
 	}
@@ -258,7 +266,8 @@ func TestSendEmailAnswersAnUnauthorizedCallerBeforeTheWiringGuards(t *testing.T)
 	// Composed with NO delivery machinery: the wiring guard would fire on this
 	// call if it ran first.
 	_, err := e.store(stubUnsubscribeLinker{}).SendEmail(
-		e.as(principal.RowScopeOwn), FromActivity(anchor), sendInput("transactional"), stubConsentGate{}, nil)
+		e.as(principal.RowScopeOwn), FromActivity(anchor), sendInput("transactional"), stubConsentGate{}, nil,
+	)
 	if errors.Is(err, errNoDeliveryStager) {
 		t.Fatal("an unauthorized caller learned the send path has no delivery machinery wired")
 	}
@@ -274,7 +283,8 @@ func TestSendEmailAnswersAMissingCreateGrantBeforeTheWiringGuards(t *testing.T) 
 	anchor := e.seedAnchor(t, "", "")
 
 	_, err := e.store(stubUnsubscribeLinker{}).SendEmail(
-		e.readOnly(), FromActivity(anchor), sendInput("transactional"), stubConsentGate{}, nil)
+		e.readOnly(), FromActivity(anchor), sendInput("transactional"), stubConsentGate{}, nil,
+	)
 	if errors.Is(err, errNoDeliveryStager) {
 		t.Fatal("a caller with no create grant learned the send path has no delivery machinery wired")
 	}
@@ -291,7 +301,8 @@ func TestSendEmailRefusesAnAuthorizedSendWithNoDeliveryMachinery(t *testing.T) {
 	anchor := e.seedAnchor(t, "", "")
 
 	_, err := e.store(stubUnsubscribeLinker{}).SendEmail(
-		e.as(principal.RowScopeAll), FromActivity(anchor), sendInput("transactional"), stubConsentGate{}, nil)
+		e.as(principal.RowScopeAll), FromActivity(anchor), sendInput("transactional"), stubConsentGate{}, nil,
+	)
 	if !errors.Is(err, errNoDeliveryStager) {
 		t.Fatalf("send with no delivery stager → %v, want errNoDeliveryStager", err)
 	}
@@ -331,7 +342,8 @@ func TestSendEmailThreadsOntoNothingWhenTheAnchorIsNotMail(t *testing.T) {
 	stager := &recordingStager{}
 
 	sent, err := e.store(stubUnsubscribeLinker{}).SendEmail(
-		e.as(principal.RowScopeAll), FromActivity(anchor), sendInput("transactional"), stubConsentGate{}, stager)
+		e.as(principal.RowScopeAll), FromActivity(anchor), sendInput("transactional"), stubConsentGate{}, stager,
+	)
 	if err != nil {
 		t.Fatalf("SendEmail: %v", err)
 	}
@@ -424,7 +436,8 @@ func TestSendEmailRefusesAMessageWhoseAddresseeLineIsEmpty(t *testing.T) {
 			in.Recipients, in.Cc = tc.recipients, tc.cc
 
 			_, err := e.store(stubUnsubscribeLinker{}).SendEmail(
-				e.as(principal.RowScopeAll), FromActivity(anchor), in, stubConsentGate{}, stager)
+				e.as(principal.RowScopeAll), FromActivity(anchor), in, stubConsentGate{}, stager,
+			)
 
 			var refusal *NoRecipientsError
 			if !errors.As(err, &refusal) {
@@ -442,5 +455,30 @@ func TestSendEmailRefusesAMessageWhoseAddresseeLineIsEmpty(t *testing.T) {
 					len(stager.staged), e.outboundCount(t))
 			}
 		})
+	}
+}
+
+// The all-zero id is a named anchor that does not exist, so it is owed the
+// answer every other unknown id gets.
+//
+// The origin told a reply from an account send by whether the anchor was
+// non-zero, and the all-zero id read as no anchor at all. That raised the
+// composition defect meant for a miswired caller, which has no field fault and
+// answers 500.
+func TestSendEmailAnswersTheAllZeroAnchorAsAMissingRecord(t *testing.T) {
+	e := setupSend(t)
+	stager := &recordingStager{}
+
+	_, err := e.store(stubUnsubscribeLinker{}).SendEmail(
+		e.as(principal.RowScopeAll), FromActivity(ids.ActivityID{}), sendInput("transactional"), stubConsentGate{}, stager,
+	)
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("send anchored to the all-zero id → %v, want ErrNotFound", err)
+	}
+	if _, isDefect := errors.AsType[*NoSendOriginError](err); isDefect {
+		t.Error("a named anchor that does not exist answered as a composition defect, which is a 500")
+	}
+	if len(stager.staged) != 0 || e.outboundCount(t) != 0 {
+		t.Fatal("a send refused at the anchor read still staged a delivery or logged an activity")
 	}
 }

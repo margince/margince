@@ -13,7 +13,7 @@
 # the gate takes them from the environment already, and a 12-line ceiling
 # exercises the same comparisons a 500-line one does.
 #
-# Nine properties, each with a planted defect the gate must catch and a
+# Each property plants a defect the gate must catch, with a
 # legitimate shape it must not:
 #
 #   1. A file under the cap passes.                (the control)
@@ -46,6 +46,15 @@ lines() {
   for ((i = 0; i < count; i++)); do echo "const line$i = $i;" >>"$path"; done
 }
 
+# scriptlines writes one under the fake BUILD-SCRIPT root, the second tree the
+# gate walks.
+scriptlines() {
+  local path="$TMP/scripts/$1" count="$2"
+  mkdir -p "$(dirname "$path")"
+  : >"$path"
+  for ((i = 0; i < count; i++)); do echo "const line$i = $i;" >>"$path"; done
+}
+
 # run answers the gate's exit status over the fake tree and a waiver ledger
 # built from the arguments ("<count> <path>" each, paths relative to the root).
 run() {
@@ -53,15 +62,33 @@ run() {
   : >"$waivers"
   local entry
   for entry in "$@"; do
-    # The gate records paths as `find` prints them, which is root-prefixed.
-    echo "${entry% *} $TMP/src/${entry#* }" >>"$waivers"
+    # The gate records paths as `find` prints them, which is root-prefixed. An
+    # entry naming `scripts/…` is frozen under the build-script root, which is
+    # how the ratchet is reached in the tree the gate learned second.
+    local path="${entry#* }"
+    case "$path" in
+      scripts/*) echo "${entry% *} $TMP/${path}" >>"$waivers" ;;
+      *) echo "${entry% *} $TMP/src/${path}" >>"$waivers" ;;
+    esac
   done
   FE_FILE_LINE_CAP=10 FE_TEST_FILE_LINE_CAP=20 \
-    FE_FILE_LENGTH_ROOT="$TMP/src" FE_FILE_LENGTH_WAIVERS="$waivers" \
+    FE_FILE_LENGTH_ROOT="$TMP/src" FE_FILE_LENGTH_SCRIPTS_ROOT="$TMP/scripts" \
+    FE_FILE_LENGTH_WAIVERS="$waivers" \
     bash "$GATE" >/dev/null 2>&1
 }
 
-reset() { rm -rf "$TMP/src"; mkdir -p "$TMP/src"; }
+reset() { rm -rf "$TMP/src" "$TMP/scripts"; mkdir -p "$TMP/src" "$TMP/scripts"; }
+
+# report answers what the gate SAID, for the cases where the refusal and the
+# reason are different claims.
+report() {
+  local waivers="$TMP/waivers.txt"
+  : >"$waivers"
+  FE_FILE_LINE_CAP=10 FE_TEST_FILE_LINE_CAP=20 \
+    FE_FILE_LENGTH_ROOT="$TMP/src" FE_FILE_LENGTH_SCRIPTS_ROOT="$TMP/scripts" \
+    FE_FILE_LENGTH_WAIVERS="$waivers" \
+    bash "$GATE" 2>&1
+}
 
 # 1. The control. Without it every refusal below could be the fixture failing
 # to build a tree at all.
@@ -125,10 +152,79 @@ if run "30 screens/deleted.tsx"; then
   fail "a waiver naming a file that no longer exists passed"
 fi
 
+# 10. The build-script tree is counted at all. The gate read frontend/src and
+# nothing else, so a file here grew to a thousand lines with no gate to say so.
+reset
+scriptlines "lib/layout.ts" 15
+if run; then fail "a build script over the cap passed — the second tree is not being counted"; fi
+
+# 11. Plain ESM, which is half of what the build scripts are written in.
+reset
+scriptlines "build-apps.mjs" 15
+if run; then fail "an .mjs build script over the cap passed — the extension list missed it"; fi
+
+# 12. A test spelled .mjs takes the wider ceiling, as its .ts twin does.
+reset
+scriptlines "fe-uat.test.mjs" 15
+if ! run; then fail "a .mjs test between the two caps was refused the wider ceiling"; fi
+
+# 13. A waived build script AT its frozen count passes. This is the pair's
+# load-bearing half: a ledger entry whose file the gate never walks reads as an
+# entry for a deleted file, which fails for its own reason and would let the
+# growth case below pass over a tree nobody counted.
+reset
+scriptlines "lib/layout.ts" 30
+if ! run "30 scripts/lib/layout.ts"; then
+  fail "a waived build script at its frozen count was refused — the ledger does not reach this tree"
+fi
+
+# 14. The ratchet reaches the second tree. One line more than the ledger
+# records, which is what freezing a current size is worth.
+reset
+scriptlines "lib/layout.ts" 31
+if run "30 scripts/lib/layout.ts"; then
+  fail "a waived build script grew past its frozen count and passed"
+fi
+
+# 15. A root that is not there is NAMED. `find` already refuses it, by erroring
+# on the missing path and failing the pipeline, so the refusal is not what this
+# asks about: an operator reading `find: no such file` has to work out that a
+# census just went uncounted. The gate says which root it could not read.
+reset
+lines "screens/small.tsx" 5
+rm -rf "$TMP/scripts"
+# Captured rather than piped: the gate exits non-zero here, and under pipefail
+# that status would be the pipeline's however the grep went.
+said="$(report)"
+if ! grep -q "is not a directory, so this census would read short" <<<"$said"; then
+  fail "a missing root is refused without being named, leaving the reader to infer that a tree went uncounted"
+fi
+
+# 16. The seeder refuses a report it cannot read a count off. It calls the gate
+# to learn the population, and the gate's refusal for a missing root carries the
+# same prefix as its over-cap summary, so a guard that looked only for that
+# prefix would freeze an empty ledger and call it the baseline.
+reset
+lines "screens/big.tsx" 30
+rm -rf "$TMP/scripts"
+ledger="$TMP/seeded.txt"
+: >"$ledger"
+if FE_FILE_LINE_CAP=10 FE_TEST_FILE_LINE_CAP=20 \
+  FE_FILE_LENGTH_ROOT="$TMP/src" FE_FILE_LENGTH_SCRIPTS_ROOT="$TMP/scripts" \
+  FE_FILE_LENGTH_WAIVERS="$ledger" \
+  bash "$SCRIPT_DIR/seed-fe-file-length-waivers.sh" >/dev/null 2>&1; then
+  fail "the seeder froze a baseline from a census that never ran"
+fi
+if grep -qE "^[0-9]+ " "$ledger"; then
+  fail "the seeder wrote entries from a report it could not read a count off"
+fi
+
 if [[ "$FAILURES" -ne 0 ]]; then
   echo "" >&2
   echo "check-fe-file-length.test.sh: $FAILURES case(s) failed" >&2
   exit 1
 fi
 
-echo "PASS — check-fe-file-length.sh holds on all 12 cases"
+# Counted from the numbered properties below rather than written down, because
+# a total somebody keeps in step by hand is a total that stops being true.
+echo "PASS — check-fe-file-length.sh holds on all $(grep -c '^# [0-9][0-9]*\.' "$0") properties"

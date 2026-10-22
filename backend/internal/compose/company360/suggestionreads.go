@@ -35,8 +35,10 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // lastMessage is the newest two-way exchange on an account, as the no-reply
@@ -147,7 +149,7 @@ func oneLine(text string) string {
 // Reachability is activities.CompanyLinkedActivityExists, the same walk
 // nextStepsSection uses.
 func hasOpenTask(
-	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, opts AssembleOptions,
+	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time, opts AssembleOptions,
 ) (bool, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
@@ -159,13 +161,17 @@ func hasOpenTask(
 	if activityScope == "" {
 		activityScope = scopeAll
 	}
+	identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
+	if err != nil {
+		return false, err
+	}
 	var scheduled bool
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
 		SELECT EXISTS (
 		  SELECT 1 FROM activity a
 		  WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL AND %[1]s
-		    AND %[2]s`+opts.projectScope(arg)+`)`,
-		activityScope, activities.CompanyLinkedActivityExists(companyPos)), args...).Scan(&scheduled)
+		    AND %[2]s AND %[3]s`+opts.projectScope(arg)+`)`,
+		activityScope, activities.CompanyLinkedActivityExists(companyPos), activities.CurrentTaskClause("a", now, identities, arg)), args...).Scan(&scheduled)
 	if err != nil {
 		return false, fmt.Errorf("read whether anything is scheduled on the account: %w", err)
 	}
@@ -179,6 +185,7 @@ func hasOpenTask(
 // gatherers would let the two disagree about what a suggestion IS, and then a
 // dismissal would silently match nothing.
 type suggestionInputs struct {
+	language textlang.Lang
 	// timeline and pipeline are the two grants that decide which rules run at
 	// all. They are the object grants, which is exactly what makes a 360 section
 	// absent — row scope narrows a section, it does not withhold it.
@@ -203,14 +210,14 @@ type suggestionInputs struct {
 	// relationship is over. Filled from the shared signal read, so the
 	// contradiction rule and the health section count one query between them.
 	contractEnded bool
-	// contractEndedSaid and contractEndedAt are that signal's own sentence and
-	// the instant it was read — the words the contradiction is checked
-	// against, carried on the citation rather than paraphrased in the reason.
-	contractEndedSaid string
-	contractEndedAt   time.Time
-	open              pipeline
-	contractStrip     contractStrip
-	scheduled         bool
+	// Current source evidence supports the conflict; legacy signals retain
+	// a summary without claiming a source date or link.
+	contractEndedSaid   string
+	contractEndedAt     time.Time
+	contractEndedSource ids.UUID
+	open                pipeline
+	contractStrip       contractStrip
+	scheduled           bool
 }
 
 // advisable reports whether this caller can be advised at all. Neither input
@@ -235,12 +242,12 @@ func (in suggestionInputs) advisable() bool { return in.timeline || in.pipeline 
 func gatherSuggestionInputs(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time,
 	facts signalFacts, heading companyHeading, baseCurrency string,
-	opts AssembleOptions,
+	opts AssembleOptions, language textlang.Lang,
 ) (suggestionInputs, error) {
 	timeline := auth.ReadGranted(ctx, "activity")
 	pipeline := auth.ReadGranted(ctx, "deal")
 	contractsGranted := auth.ReadGranted(ctx, "contract")
-	in := suggestionInputs{timeline: timeline, pipeline: pipeline, contracts: contractsGranted}
+	in := suggestionInputs{timeline: timeline, pipeline: pipeline, contracts: contractsGranted, language: language}
 	if in.contracts {
 		strip, err := readContractStrip(ctx, tx, companyID, now, baseCurrency)
 		if err != nil {
@@ -254,7 +261,7 @@ func gatherSuggestionInputs(
 			return suggestionInputs{}, err
 		}
 		in.newest, in.hasNewest = newest, found
-		scheduled, err := hasOpenTask(ctx, tx, companyID, opts)
+		scheduled, err := hasOpenTask(ctx, tx, companyID, now, opts)
 		if err != nil {
 			return suggestionInputs{}, err
 		}
@@ -270,6 +277,7 @@ func gatherSuggestionInputs(
 	in.contractEnded = facts.ContractEnded
 	in.contractEndedSaid = facts.ContractEndedSaid
 	in.contractEndedAt = facts.ContractEndedAt
+	in.contractEndedSource = facts.ContractEndedSource
 	in.lifecycle = heading.lifecycle
 	in.companyName = heading.name
 	return in, nil

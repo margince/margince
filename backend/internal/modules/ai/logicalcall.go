@@ -71,6 +71,14 @@ func (lc *logicalCall) append(c Call) {
 	lc.attempts = append(lc.attempts, c)
 }
 
+// markTerminal files sentinel on the terminal attempt, for an outcome decided
+// after the attempt was recorded. A sentinel the attempt already carries stands.
+func (lc *logicalCall) markTerminal(sentinel string) {
+	if n := len(lc.attempts); n > 0 && lc.attempts[n-1].ErrorSentinel == "" {
+		lc.attempts[n-1].ErrorSentinel = sentinel
+	}
+}
+
 // terminal returns the attempt the caller's outcome came from — the last
 // one appended. Panics on an empty logicalCall: flush never calls this on
 // one (it checks len(attempts) first), and a caller reaching this on an

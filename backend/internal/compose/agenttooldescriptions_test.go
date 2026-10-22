@@ -23,6 +23,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 
@@ -166,9 +167,9 @@ func TestTheDescriptionRulesFailOnTheDefectsTheyDescribe(t *testing.T) {
 // true.
 func TestTheOperatorConsoleServesTheTextAnMCPClientIsServed(t *testing.T) {
 	registry := NewRegistry(nil, SendPath{})
-	specs := registry.Specs()
+	specs := slices.DeleteFunc(registry.Specs(), func(spec mcp.ToolSpec) bool { return spec.Unlisted })
 	listed := toolsListDescriptions(t, registry)
-	served := agentToolsFromSpecs(specs)
+	served := listedAgentTools(registry)
 	if len(served) != len(specs) {
 		t.Fatalf("the console serves %d tools, the registry holds %d", len(served), len(specs))
 	}
@@ -351,6 +352,10 @@ func toolOverBudget(spec mcp.ToolSpec) string {
 // where the drift actually happened.
 func TestNoSingleToolTakesMoreOfTheWindowThanItsShare(t *testing.T) {
 	for _, spec := range servedSurface(t).Specs() {
+		// A router never enters a run's window: no allowlist may name one.
+		if len(spec.Actions) > 0 {
+			continue
+		}
 		if over := toolOverBudget(spec); over != "" {
 			t.Error(over)
 		}

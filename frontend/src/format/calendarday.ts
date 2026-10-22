@@ -58,6 +58,9 @@ export function isRealCalendarDay(day: string): boolean {
     return false;
   }
   const [year, month, dayOfMonth] = match.slice(1).map(Number);
+  if (year === undefined || month === undefined || dayOfMonth === undefined) {
+    return false;
+  }
   return (
     month >= 1 &&
     month <= 12 &&
@@ -218,4 +221,24 @@ export function middayInstant(day: string, zone: string): string {
   return new Date(
     utcNoon.getTime() - (shown.getTime() - wanted.getTime()),
   ).toISOString();
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * The ISO 8601 week number of a `yyyy-mm-dd` day. A week runs Monday to
+ * Sunday, and week 1 is the one holding the year's first Thursday.
+ */
+export function isoWeekOf(day: string): number {
+  const thursday = (at: number) =>
+    at + (3 - ((new Date(at).getUTCDay() + 6) % 7)) * DAY_MS;
+  const own = thursday(
+    Date.UTC(
+      Number(day.slice(0, 4)),
+      Number(day.slice(5, 7)) - 1,
+      Number(day.slice(8, 10)),
+    ),
+  );
+  const first = thursday(Date.UTC(new Date(own).getUTCFullYear(), 0, 4));
+  return 1 + Math.round((own - first) / (7 * DAY_MS));
 }

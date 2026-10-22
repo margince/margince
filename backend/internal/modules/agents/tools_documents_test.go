@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"log/slog"
 	"maps"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -104,6 +105,30 @@ func TestAttachDocumentHandsTheStoreTheDecodedFileAndItsRecord(t *testing.T) {
 	}
 }
 
+// contract_id reaches the store as the agreement to file against, and its
+// absence files against none.
+func TestAttachDocumentFilesAgainstTheContractItNames(t *testing.T) {
+	contract := ids.NewV7()
+	for _, tc := range []struct {
+		name string
+		args map[string]any
+		want *ids.UUID
+	}{
+		{"named", map[string]any{"contract_id": contract.String()}, &contract},
+		{"absent", nil, nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			docs := &fakeDocuments{}
+			if _, err := documentsRegistry(docs).Invoke(docsCtx(), "attach_document", attachCall(t, tc.args)); err != nil {
+				t.Fatalf("attach_document: %v", err)
+			}
+			if got := docs.attached[0].ContractID; !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("the store was handed contract %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
 // Every refusal names the argument to change, and none reaches the store.
 func TestAttachDocumentRefusesWhatItCannotStore(t *testing.T) {
 	cases := map[string]struct {
@@ -117,8 +142,9 @@ func TestAttachDocumentRefusesWhatItCannotStore(t *testing.T) {
 		"a word, not a type":    {map[string]any{"content_type": "pdf"}, "content_type"},
 		"an unparsable type":    {map[string]any{"content_type": "application/pdf; ="}, "content_type"},
 		"a blank filename":      {map[string]any{"filename": "  "}, "filename"},
-		"a record without docs": {map[string]any{"entity_type": "activity"}, "entity_type"},
-		"an unknown argument":   {map[string]any{"contract_id": ids.NewV7().String()}, ""},
+		"a record without docs": {map[string]any{"entity_type": "relationship"}, "entity_type"},
+		"an unknown argument":   {map[string]any{"folder_id": ids.NewV7().String()}, ""},
+		"a contract not an id":  {map[string]any{"contract_id": "the MSA"}, ""},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {

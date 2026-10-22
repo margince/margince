@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/commissions"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/continuity"
 	"github.com/margince/margince/backend/internal/modules/contracts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/dealrooms"
@@ -41,8 +42,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/modules/weeklyplan"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
-	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 )
 
@@ -57,7 +56,10 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// note): active cf_* deal columns ride deal payloads on both surfaces.
 	dealsH := deals.NewHandlers(InstallationDB(pool), DealsInstallation()).
 		WithFieldCatalog(customfields.NewService(pool, nil)).
-		WithSuggestionEffects(dealSuggestionEffects{})
+		WithSuggestionEffects(dealSuggestionEffects{}).
+		WithSettings(StoredConfig(pool)).
+		WithLocks(loadedLocks).
+		WithLegalReviewDocuments(legalReviewDocuments{store: activities.NewStore(InstallationDB(pool))})
 	// Bootstrap happens at boot from deployment configuration
 	// (EnsureInstallation, A107/ADR-0061) — the HTTP surface only ever
 	// serves the already-bound singleton company.
@@ -66,8 +68,9 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// dedicated settings-store handle rather than the one the settings HANDLERS
 	// hold: both are stateless readers over the same rows, and the login service
 	// is composed here while that store is assembled elsewhere.
-	authPolicy := identity.NewInstallationSettings(InstallationDB(pool), NewSettingsStore(pool))
+	authPolicy := identity.NewInstallationSettings(InstallationDB(pool), NewSettingsStore(pool), StoredConfig(pool))
 	identitySvc := identity.NewService(pool).
+		WithConfig(StoredConfig(pool)).
 		WithRequireSSO(authPolicy.SSOEnforced).
 		WithRequireMFA(authPolicy.MFARequired).
 		WithGroupRoleMap(authPolicy.GroupRoleMap)
@@ -87,9 +90,10 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	loadChannelProviderDirectoryOrLog(pool, log)
 	// Said once, where an operator reads it: whether this build knows what the
 	// law requires it to keep.
-	announceStatutoryFloor(log)
+	announceStatutoryFloorFrom(pool, log)
 
 	srv := newServer(pool, log, authH, dealsH)
+	srv.views = &viewDoor{}
 	for _, opt := range opts {
 		opt(&srv, pool)
 	}
@@ -109,11 +113,22 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// first_run for it rather than only for a role that wired one. Reuses
 	// identitySvc — see its own comment below for why the process holds one.
 	srv.authHandlers = srv.WithFirstRunFn(srv.firstRunAnswer(identitySvc))
+	srv.publishClientRegistration(pool, identitySvc)
+	// After the option loop, because the two bases and the trusted proxies
+	// arrive by options in any order.
+	agentOrigin := agentAPIOrigin{api: srv.apiBaseURL, public: srv.send.PublicBaseURL, proxies: srv.trustedProxies}
+	srv.agentBundleHandlers = newAgentBundleHandlers(agentOrigin, srv.connectorURL(), log)
+	srv.authHandlers = srv.WithAgentAPIBase(agentOrigin.baseFor)
+	// The meter pointer WithAgentVolume rebound, so the list reads the counters
+	// the gate charges.
+	srv.authHandlers = srv.WithPassportUsage(srv.volumeMeter)
+	srv.afterSave = srv.volumeMeter.ForgetPolicy
 	// After the option loop, so /me's answer and the endpoints' gate resolve one
 	// rollout value whether or not WithCompanyContextRollout ran.
 	srv.publishCompanyContextAvailability()
 
 	api := contractAPI(srv, pool, identitySvc)
+	srv.views.api = api
 	// ONE identity.Service for the whole process: contractAPI's admission
 	// gate and the connector's authenticate closure share this instance, so
 	// they share its singleton cache and its clock.
@@ -142,7 +157,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 	// The compiled-in ceilings, taken from the deployment-config defaults rather
 	// than restated here: one place resolves a default, so no composition can
 	// disagree with the file about what "unconfigured" means.
-	limits := deployconfig.Config{}.EffectiveUploads()
+	limits := DefaultUploadLimits()
 	// ONE introductions store for the two surfaces that read it: the ask's own
 	// handlers, and the Network tab asking which routes are already spoken
 	// for. Two stores would be two clocks, and an ask could be born already
@@ -177,7 +192,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// reconcile, the drift sweep, the reindex pass — answer nobody and are
 		// deliberately left unbounded here.
 		searchHandlers: search.NewHandlers(
-			InstallationDB(pool).Bounded(database.CallerPredicateBudget),
+			rankedSearchDB(pool),
 			collections.CountTagReachBatch, activities.EmailSummariesByIDBatch, contacts.LivePartnerCompaniesBatch,
 			contacts.CompanyLogoURLsBatch),
 		// Constructed, not merely embedded: the handler carries no nil-pool
@@ -189,6 +204,10 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		},
 		extensionIngestHealthHandlers: extensionIngestHealthHandlers{
 			pool: pool, now: func() time.Time { return time.Now().UTC() },
+		},
+		recoveryHealthHandlers: recoveryHealthHandlers{
+			ledger: continuity.NewStore(InstallationDB(pool)),
+			now:    func() time.Time { return time.Now().UTC() },
 		},
 		consentHandlers:     newConsentHandlers(pool),
 		collectionsHandlers: newCollectionsHandlers(pool),
@@ -216,9 +235,11 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// the purger above is not: a role that forgot it would answer 404 to a
 		// controller placing a litigation hold, which reads as "no such record"
 		// rather than as "this installation cannot hold one".
-		privacyHandlers: privacy.NewHandlers(InstallationDB(pool), NewSettingsStore(pool)).
+		privacyHandlers: privacy.NewHandlers(InstallationDB(pool), StoredConfig(pool)).WithLocks(loadedLocks).
+			WithCountry(identity.CountryForDecision).
 			WithRawCapturePurger(RawCapturePurgerFor(InstallationDB(pool))).
-			WithLegalHoldWriter(NewLegalHoldSeam(pool)),
+			WithLegalHoldWriter(NewLegalHoldSeam(pool)).
+			WithRecordLabeler(newAttentionNames(InstallationDB(pool))),
 		// The fieldcatalog seam lets renewal_reminder's preview validate a
 		// draft/stored (object, date_field) pair against the workspace's own
 		// live custom-field catalog before ever building SQL around it — the
@@ -231,7 +252,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		automationHandlers: automation.NewHandlers(InstallationDB(pool)).
 			WithFieldCatalog(customfields.NewService(pool, nil)).
 			WithRetryEngine(NewWorkflowEngine(InstallationDB(pool))),
-		voiceHandlers: ai.NewHandlers(InstallationDB(pool), NewSeatBudget(pool)).
+		voiceHandlers: ai.NewHandlers(InstallationDB(pool), NewSeatBudget(pool)).WithLocks(loadedLocks).
 			WithVoiceKnownSpeakers(voiceKnownSpeakers(pool)),
 		// The names seam is the WEB surface's: a reader reading "explain this
 		// number" meets the deals by name, while the MCP provider leaves it
@@ -258,8 +279,8 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// The assurance surface reads what last night's pass found. Its scan
 		// is a job rather than a request, so the handler set is a read.
 		assuranceHandlers: assurance.NewHandlers(
-			assurance.NewStore(InstallationDB(pool)),
-			AssuranceExceptions,
+			assurance.NewStore(InstallationDB(pool)).WithSignalDecision(DecideAssuranceSignal),
+			AssuranceExceptionsIn,
 			func() time.Time { return time.Now().UTC() },
 		),
 		// One assembler, shared with the test that drives this handler: the
@@ -304,16 +325,15 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		webhooksHandlers: newWebhookHandlers(pool, nil, log),
 		log:              log,
 		dealsStore:       deals.NewStore(InstallationDB(pool), DealsInstallation()),
-		// Fail-closed until WithAgentVolume Rebinds it: a role serving the agent
-		// surface with no Redis cannot tell whether an agent has passed its
-		// read bound, and answers that it has.
+		// Fail-closed until WithAgentVolume rebinds it. A role serving the agent surface
+		// with no Redis cannot tell whether an agent passed its ceilings, so it says yes.
 		volumeMeter: agentvolume.New(nil, agentvolume.Limits{}, agentvolume.DefaultWindow),
 	}
 	// After the literal, because the decision path takes the SAME meter pointer
 	// the gate and the registry take: a step-up refused against one counter and
 	// released into another would read, from the human's side, as an approval
 	// that did nothing.
-	srv.approvalsHandlers = approvalsHandlersWithEffects(pool, srv.volumeMeter, log)
+	srv.approvalsHandlers, srv.siteLeadNotices = approvalsHandlersWithEffects(pool, connectionReleaser{meter: srv.volumeMeter, pool: pool}, log)
 	srv.wireSurfaces(pool, log)
 	// toolRegistry backs ListAgentTools AND the MCP tool transport.
 	//

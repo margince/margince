@@ -30,6 +30,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/shared/ports/retrieval"
 )
 
 // A role with NO contact grant gets no contact hits — search must not
@@ -432,6 +434,34 @@ func searchSeat(e *SearchEnv, teams []ids.UUID, scope principal.RowScope, grants
 	})
 }
 
+// A word still being typed reaches records by prefix, and mail only once it is
+// whole. "contr" finds the contact and no mail; "contract" finds the mail.
+func TestAFragmentFindsRecordsByPrefixAndMailOnlyAsAWholeWord(t *testing.T) {
+	e := SetupSearch(t)
+	contact := e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Contreras Vega', 'manual', 'human:x')`)
+	mail := e.SeedID(t, `INSERT INTO activity (id, kind, subject, body, language, source, captured_by)
+		VALUES ($1, 'note', 'Renewal', 'The contract renews in March.', 'en', 'manual', 'human:x')`)
+	found := func(query string) map[ids.UUID]bool {
+		page, err := e.Store.Search(e.Admin(), search.Input{Query: query, Types: []string{"contact", "activity"}})
+		if err != nil {
+			t.Fatalf("searching %q: %v", query, err)
+		}
+		hits := map[ids.UUID]bool{}
+		for _, hit := range page.Hits {
+			hits[hit.ID] = true
+		}
+		return hits
+	}
+
+	typing := found("contr")
+	if !typing[contact] || typing[mail] {
+		t.Fatalf("\"contr\" found %v, want the contact by prefix and not the mail", typing)
+	}
+	if finished := found("contract"); !finished[mail] {
+		t.Fatalf("\"contract\" found %v, want the mail that says it", finished)
+	}
+}
+
 func TestSearchRankedCursorWalksAllHitsOnce(t *testing.T) {
 	e := SetupSearch(t)
 	want := map[string]bool{}
@@ -535,6 +565,56 @@ func TestSearchFindsTheCatalogByNameAndSku(t *testing.T) {
 	}
 	if page.Hits[0].Snippet != "KAR-9910" {
 		t.Errorf("product excerpt is %q, want the sku that tells two variants apart", page.Hits[0].Snippet)
+	}
+}
+
+// A lead found by its company's name shows that company beside its name.
+// Without it the reader meets a name with no reason it answered the search.
+func TestALeadHitShowsTheCompanyItNames(t *testing.T) {
+	e := SetupSearch(t)
+	named := e.SeedID(t, `INSERT INTO lead (id, full_name, company_name, email, source, captured_by)
+	                      VALUES ($1, 'Jonas Becker', 'Lübeck Shipyards', 'jonas@shipyards.test', 'manual', 'human:x')`)
+	companyOnly := e.SeedID(t, `INSERT INTO lead (id, company_name, email, source, captured_by)
+	                            VALUES ($1, 'Lübeck Ferries', 'info@ferries.test', 'manual', 'human:x')`)
+
+	page, err := e.Store.Search(e.Admin(), search.Input{Query: "lübeck", Types: []string{"lead"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	snippets := map[ids.UUID]string{}
+	for _, hit := range page.Hits {
+		snippets[hit.ID] = hit.Snippet
+	}
+	if len(snippets) != 2 {
+		t.Fatalf("searching the company name → %+v, want both leads", page.Hits)
+	}
+	if got := snippets[named]; got != "Lübeck Shipyards" {
+		t.Errorf("the named lead's excerpt is %q, want the company it was found by", got)
+	}
+	// Titled by the company already; the excerpt would only repeat the title.
+	if got := snippets[companyOnly]; got != "" {
+		t.Errorf("the company-only lead's excerpt is %q, want none", got)
+	}
+}
+
+// The company beside a lead is shown whatever matched. An agent citing it as
+// the text that ranked a lead found by name would quote words the query never
+// touched.
+func TestALeadsCompanyIsNotRetrievalEvidence(t *testing.T) {
+	e := SetupSearch(t)
+	lead := e.SeedID(t, `INSERT INTO lead (id, full_name, company_name, email, source, captured_by)
+	                     VALUES ($1, 'Jonas Becker', 'Lübeck Shipyards', 'jonas@shipyards.test', 'manual', 'human:x')`)
+
+	found, err := search.NewRetriever(e.Store, nil).Search(e.Admin(),
+		retrieval.Query{Text: "becker", EntityTypes: []datasource.EntityType{"lead"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(found.Hits) != 1 || found.Hits[0].Ref.ID != lead || len(found.Hits[0].Evidence) != 1 {
+		t.Fatalf("retrieving the lead by name → %+v, want the one lead with one excerpt", found.Hits)
+	}
+	if got := found.Hits[0].Evidence[0].Snippet; got != "Jonas Becker" {
+		t.Errorf("the lead's evidence is %q, want the name that ranked it", got)
 	}
 }
 

@@ -26,6 +26,8 @@ import (
 	"io"
 	"strings"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // VCardEntry is one card, reduced to what a contact record holds. Every field is
@@ -98,9 +100,16 @@ func (e *TooManyCardsError) FieldFault() (field, code, message string) {
 // that refuses, because the reader has no way to notice the contact who is
 // missing.
 func ParseVCards(r io.Reader) ([]VCardEntry, error) {
-	lines, err := unfoldVCardLines(io.LimitReader(r, vcardMaxBytes+1))
+	raw := &countingReader{r: io.LimitReader(r, vcardMaxBytes+1)}
+	lines, err := unfoldVCardLines(raw)
 	if err != nil {
 		return nil, err
+	}
+	// The line scanner drops the carriage return of a CRLF line, so its own
+	// count is short by one byte per line. The bytes actually read are the
+	// bound: one past it means the file was cut, and a prefix is not the file.
+	if raw.n > vcardMaxBytes {
+		return nil, fmt.Errorf("contacts: the vCard file exceeds %d bytes", vcardMaxBytes)
 	}
 	var out []VCardEntry
 	var current *VCardEntry
@@ -155,13 +164,28 @@ func ParseVCards(r io.Reader) ([]VCardEntry, error) {
 	return out, nil
 }
 
+// countingReader counts the bytes that pass through it.
+type countingReader struct {
+	r io.Reader
+	n int
+}
+
+func (c *countingReader) Read(p []byte) (int, error) {
+	n, err := c.r.Read(p)
+	c.n += n
+	return n, err
+}
+
 // unfoldVCardLines joins continuation lines, which is the first thing any vCard
 // reader must do: a long value is split across lines and the continuations are
 // marked by a leading space or tab, so a parser reading raw lines sees half an
 // address and a fragment.
 func unfoldVCardLines(r io.Reader) ([]string, error) {
 	scanner := bufio.NewScanner(r)
-	scanner.Buffer(make([]byte, 0, 64*1024), 1<<20)
+	// A line may be as long as the file may be. An embedded photo on one unfolded
+	// line imports as it does folded. A file past the bound is refused below in
+	// the product's words, not the scanner's.
+	scanner.Buffer(make([]byte, 0, 64*1024), vcardMaxBytes+2)
 	var lines []string
 	// The line under construction is built in ONE builder rather than by
 	// re-appending to the slice's last element: `lines[n-1] += x` copies the
@@ -284,7 +308,8 @@ func applyVCardProperty(entry *VCardEntry, name string, params []string, raw str
 }
 
 // parseVCardRevision reads REV, the card's own statement of when it was last
-// revised, and nil when it states none or states one this reader cannot parse.
+// revised. It is nil when the card states none, or one this reader cannot
+// parse or store.
 //
 // It matters because a card carries no other date, and the import needs one:
 // dating a card from the moment the request ran makes a re-upload of the same
@@ -310,7 +335,7 @@ func parseVCardRevision(value string) *time.Time {
 		time.RFC3339, "2006-01-02T15:04:05Z07", "2006-01-02T15:04:05Z0700",
 	} {
 		if at, err := time.Parse(layout, v); err == nil {
-			return &at
+			return storableRevision(at)
 		}
 	}
 	// Zoneless forms are read as UTC, which is a GUESS — the card states a wall
@@ -323,10 +348,17 @@ func parseVCardRevision(value string) *time.Time {
 		"20060102T150405", "2006-01-02T15:04:05", "20060102", "2006-01-02",
 	} {
 		if at, err := time.Parse(layout, v); err == nil {
-			return &at
+			return storableRevision(at)
 		}
 	}
 	return nil
+}
+
+func storableRevision(at time.Time) *time.Time {
+	if !datasource.InstantInRange(at) {
+		return nil
+	}
+	return &at
 }
 
 // decodeVCardValue undoes the two encodings a real-world card carries: the

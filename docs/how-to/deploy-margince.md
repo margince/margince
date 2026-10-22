@@ -72,6 +72,28 @@ The worker does not schedule River's nightly index rebuild, which needs the inde
 fetches slow down, rebuild the index as `margince_owner`, for example
 `REINDEX INDEX CONCURRENTLY river_job_prioritized_fetching_index`.
 
+## Get a license token
+
+Outside `dev` and `test` mode, `cmd/api` and `cmd/worker` need a license token to start, even for
+one seat. A dev stack needs none.
+
+To get a token:
+
+- For up to 3 seats for your own company, ask for a free token with the
+  [free license form](https://dist.margince.com/free-license). It lasts one year.
+- For more seats, see the prices on [margince.com](https://margince.com).
+- To host Margince for other companies, you need a hosting partner contract with Gradion.
+
+To give the token to Margince, do one of these on both `cmd/api` and `cmd/worker`:
+
+- Mount it as a secret file. In the `margince.yaml` each one reads, set `license.token` to
+  `${file:/run/secrets/margince-license}`.
+- Set `MARGINCE_LICENSE`. A container that sets it needs no `license:` block.
+
+After the first boot, the api's `/metrics`, read with the `--metrics-token` bearer credential,
+reports `margince_license_posture{state="valid"} 1`. What each posture does at boot is in
+[License](../reference/configuration.md#license).
+
 ## Set the environment
 
 The images bake in **no** instance configuration. All settings come from the runtime environment,
@@ -82,11 +104,12 @@ and the binaries resolve every flag from a `MARGINCE_*` env fallback. Set at lea
 - `MARGINCE_REDIS`, `MARGINCE_CONFIG` and `MARGINCE_PUBLIC_BASE_URL`, in the
   [cmd/api table](../reference/configuration.md#cmdapi-the-http-process-role).
 
-The annotated env template is [`.env.example`](../../.env.example).
+The annotated env template is [`.env.example`](../../.env.example). To check the configuration before a
+rollout, and to see which settings the app shows as locked, read
+[change-a-setting.md](change-a-setting.md).
 
 Do **not** set `MARGINCE_ENV=dev` in a deployed environment. It decides which license authorities are
-honoured, and whether the installation may run unlicensed at all. With no license configured,
-`cmd/api` and `cmd/worker` refuse to boot unless the environment says non-production (see
+honoured, and lets the installation run with no license (see
 [License](../reference/configuration.md#license)).
 
 ## Write the first-boot config
@@ -99,17 +122,18 @@ On the first boot against an empty database the api bootstraps the company + adm
 2. Set its `password_file` to `secrets/admin-password`, where the entrypoint writes the password.
 3. Set `MARGINCE_ADMIN_PASSWORD`. The example config's default path differs, so step 2 matters.
 4. To enable AI, declare the binding under `seeds.ai_routing`. Put each provider's key in under
-   Settings → AI → Model provider keys.
+   Settings → AI → AI models → Providers.
 5. Keep the `mcp` block only if you serve the MCP connector. It then needs
    `MARGINCE_PUBLIC_BASE_URL`, or the api refuses to boot.
 6. Leave `operations:` commented out, as the example ships it.
 7. Decide the retention posture before first boot, if the installation must keep everything (below).
+8. Choose the country: set `workspace.country` (below).
 
 The path in step 2 is `/app/secrets/admin-password`, because the api's working dir is `/app`.
 
 The AI binding in `seeds.ai_routing` is consumed at first boot, and the database is authoritative
 afterwards. An installation already running is rebound under Settings → AI instead. The conventional
-key variable (`GEMINI_API_KEY`, …) is read once, to seal a key into the vault on first boot. There is
+key variable (`GEMINI_API_KEY`, …) sets that key at boot and locks it in Settings. There is
 no routing file to mount for the api and the worker's serving role.
 
 The DB-less lanes still read one explicitly (`worker siteread`, `worker aitask` and the certification
@@ -123,11 +147,43 @@ Uncommenting `operations.allow_data_reset` arms `POST /v1/admin/reset-data`. It 
 installation's tenant data back to its first-boot state, and shows the "Reset data" button to every
 admin seat. A deployed installation leaves it off.
 
+### Choose the country
+
+`workspace.country` names the country whose legal rules the installation follows, as a two-letter
+code in small letters (`de`, `vn`). The build must carry a pack for it: `extensions/de` and
+`extensions/vn` ship in this repo. The api and the worker both refuse to boot on a code with no
+pack, and the log names the codes the build carries.
+
+The country sets three things:
+
+- how long business mail is kept before anything may delete it (the retention floor);
+- the due date of a data-subject request;
+- the rules for sales mail.
+
+```yaml
+workspace:
+  country: de
+```
+
+Leave it out, and the admin who claims the installation picks it on the setup screen. Until a
+country is set, Margince keeps mail for the longest time any built-in pack asks for. A request is
+then due in one calendar month. The admin changes it later on the Jurisdiction settings page, which
+also lists the documents the pack ships, such as the German employee notices.
+
+A change to a country with a shorter floor keeps the old floor for mail already held, until that
+mail's window closes. A change needs both the installation-settings and the retention-policy grant.
+
 ### Keep everything, if you must
 
-By default the shipped storage-limitation ladder runs. A meeting transcript and an AI payload are
-erased after a year, which supports the storage-limitation obligation of `Art. 5(1)(e)`. Whether a
-year is the right period is each installation's call, and the rules are editable.
+By default the shipped storage-limitation ladder runs, which supports the storage-limitation
+obligation of `Art. 5(1)(e)`. No policy in it deletes a record because it is old. Each one archives,
+and you can restore an archived record. Or it erases a second copy, or data built from a record. The
+stored copy of each message goes after 90 days, AI call payloads after 365 days and the daily
+deal-risk rows after 90 days.
+
+Transcripts and contacts with no consent and no deal start with no rule; an admin authors one where
+the installation needs it. Whether a period is right is each installation's call, and the rules are editable. The
+full list is in the [retention handbook page](../handbook/retention-exports-and-deletion.md).
 
 An unconverted lead is archived after a year (taken off every list, kept restorable). Author
 `anonymize` for that policy where the lead's identity must not be kept. The [compliance
@@ -238,6 +294,12 @@ reconcile them into an existing company. Past that point the credential grants n
 at rest. The entrypoint stops writing the file once a company exists and says so on stderr if the
 variable is still set.
 
+**Set the country after an upgrade.** An upgrade seeds `workspace.country` from `margince.yaml`
+once, when the installation has no stored country. A stored country is kept, even when the file
+has none. With no country in either place, it stays unset: the longest built-in floor and the
+one-month request deadline apply. Choose the country on the
+Jurisdiction settings page. Editing the file afterwards changes nothing.
+
 **Set up outbound mail.** It needs the worker and an SMTP relay. `cmd/worker` transmits what the api
 stages. Mail the installation writes itself (privacy notice, confirm links, password reset,
 invitations) needs the `email:` relay and never uses a rep's mailbox:
@@ -256,3 +318,10 @@ DSN and a shell, though, so prefer the set-password link for that.
 **Restart the api after a missed MCP view.** If the api booted while the web tier was down, it logs
 the views it is without. Restart it once the web tier is up. The setting that removes this dependency,
 and its cost, is in [MCP App views read at boot](../explanation/self-hosting.md#mcp-app-views-read-at-boot).
+
+## Data tasks
+
+After an upgrade, the worker seeds and runs the release's data tasks. Watch Settings → System health
+or run `margince-migrate data-tasks status --dsn "$DSN"`. A paused or failed correction holds later
+tasks; review its status before resuming or retrying. Data tasks do not run on API
+startup. See [Background data corrections](../explanation/data-tasks.md).

@@ -156,8 +156,9 @@ func (k ExtensionKind) validate() error {
 	return nil
 }
 
-// extensionKind answers the registered kind for one verb.
-func extensionKind(verb string) (ExtensionKind, bool) {
+// RegisteredExtensionKind answers the registered kind for one verb, so the
+// review display and the decision read one registry.
+func RegisteredExtensionKind(verb string) (ExtensionKind, bool) {
 	extensionKinds.mu.RLock()
 	defer extensionKinds.mu.RUnlock()
 	kind, ok := extensionKinds.byRaw[verb]

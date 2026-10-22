@@ -18,8 +18,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -183,7 +183,7 @@ func refuseSharedWithoutOptInTx(ctx context.Context, tx pgx.Tx, posture string) 
 	if posture != PostureShared {
 		return nil
 	}
-	allowed, err := settings.ApplyTx(ctx, tx, SharedPostureAllowed)
+	allowed, err := config.StoredApplyTx(ctx, tx, config.Bound(), SharedPostureAllowed)
 	if err != nil {
 		return fmt.Errorf("capture: reading the shared-posture opt-in: %w", err)
 	}

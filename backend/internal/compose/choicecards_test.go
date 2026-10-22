@@ -12,9 +12,9 @@ import (
 )
 
 // A choice card that no tool offers is a card nobody is shown, and the tests
-// that draw it stay green. Both directions are held here: every view the build
-// declares is named by a tool, and every tool a view may ask its host to run is a
-// registered, agent-reachable tool the model can also see.
+// that draw it stay green. Both directions are held here. Every view the build
+// declares is named by a tool. Every tool a view may ask its host to run is
+// registered, reachable by an agent, and offered to the model.
 
 func TestEveryDeclaredCardIsOfferedByATool(t *testing.T) {
 	offered := map[string]bool{}
@@ -45,15 +45,24 @@ func TestEveryToolACardActsThroughIsRegisteredAndVisibleToTheModel(t *testing.T)
 			reachable[pol.Tool] = true
 		}
 	}
+	registry := NewRegistry(nil, SendPath{})
 	registered := map[string]mcp.ToolSpec{}
-	for _, spec := range NewRegistry(nil, SendPath{}).Specs() {
+	for _, spec := range registry.Specs() {
 		registered[spec.Name] = spec
+	}
+	for _, spec := range registry.Specs() {
+		if targets, isRouter := registry.RouteTargets(spec.Name); isRouter {
+			reachable[spec.Name] = !slices.ContainsFunc(targets, func(target string) bool { return !reachable[target] })
+		}
 	}
 	for name := range actions {
 		spec, ok := registered[name]
 		if !ok {
 			t.Errorf("a card acts through %q, which no tool registers", name)
 			continue
+		}
+		if spec.Unlisted {
+			t.Errorf("a card acts through %q, which tools/list never offers, so a host holds no tool by that name to run", name)
 		}
 		if !reachable[name] {
 			t.Errorf("a card acts through %q, which the contract does not declare for agents: a view would hold a door the model cannot", name)

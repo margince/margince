@@ -31,8 +31,8 @@ func seedProvisionalCompany(t *testing.T, e *integration.Env, name, nameSource s
 	company := ids.NewV7()
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO company (id, display_name, name_source, source, captured_by)
-			VALUES ($1, $2, $3, 'gmail:seed', 'connector:gmail')`, company, name, nameSource)
+			INSERT INTO company (id, display_name, name_source, source, captured_by, owner_id)
+			VALUES ($1, $2, $3, 'gmail:seed', 'connector:gmail', $4)`, company, name, nameSource, e.AdminUser)
 		return err
 	})
 	if err != nil {
@@ -76,7 +76,7 @@ func seedDossierName(t *testing.T, e *integration.Env, company ids.UUID, legalNa
 	t.Helper()
 	e.WsExec(t, `
 		INSERT INTO company_profile_field (company_id, field, value, evidence_snippet, source_url, confidence, source, captured_by)
-		VALUES ($1, 'legal_name', $2, $2, 'https://gitex.example', 0.9, 'site_read', 'agent:siteread')`,
+		VALUES ($1, 'legal_name', $2, $2, 'https://gitex.example', 0.9, 'site_read', 'connector:siteread')`,
 		company, legalName)
 }
 

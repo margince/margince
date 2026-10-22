@@ -1,0 +1,11 @@
+name: mail_same_named_promiser_unresolved
+task: signal_extract
+site: thread_events
+source: hand_authored
+sanitized_by: hand_authored/codex
+fixture: [{"direction": "outbound", "subject": "Next steps", "sent": "2026-09-07", "body": "Alex agreed to send the pricing by Friday.", "participants": [{"key": "mira", "kind": "seat", "role": "from", "name": "Mira Chen", "address": ""}, {"key": "alex_one", "kind": "seat", "role": "to", "name": "Alex Lee", "address": ""}, {"key": "alex_two", "kind": "contact", "role": "to", "name": "Alex Lee", "address": ""}]}]
+expect:
+  outcome: accepted
+  answer: [{"kind": "commitment_made", "message": 1, "promiser": ""}]
+  rubric: "Identify the promiser from the quoted clause. The expected reference is empty because the named participant is ambiguous. Direction and CC membership alone do not assign a promise."
+  bands: {certified_min: 70, degraded_min: 50, floor: 40}

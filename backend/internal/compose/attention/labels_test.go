@@ -117,12 +117,12 @@ func TestAnUnboundFeedSendsSubjectsUnnamed(t *testing.T) {
 // Every lane's subjects reach the pass — enumerated from the same answer the
 // wire carries, so a lane the pass skipped would fail here by existing.
 func TestEveryLanesSubjectsAreNamed(t *testing.T) {
-	contact, deal := ids.NewV7(), ids.NewV7()
-	names := &stubNames{labels: map[ids.UUID]string{contact: "Dana Weiss", deal: "Fleet retrofit GmbH"}}
+	contact, deal, evidence := ids.NewV7(), ids.NewV7(), ids.NewV7()
+	names := &stubNames{labels: map[ids.UUID]string{contact: "Dana Weiss", deal: "Fleet retrofit GmbH", evidence: "Pricing call"}}
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
 		&stubCommitments{rows: []Commitment{{
-			ID: ids.NewV7(), ContactID: contact, Body: "a promise", Quote: "q",
+			ID: ids.NewV7(), ContactID: contact, ActivityID: evidence, Body: "a promise", Quote: "q",
 			OccurredAt: readInstant, DueAt: readInstant,
 		}}},
 		stubAtRisk{rows: []RiskyDeal{{DealID: deal, Name: "Fleet retrofit", QuietDays: 19}}},
@@ -132,6 +132,17 @@ func TestEveryLanesSubjectsAreNamed(t *testing.T) {
 	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
+	}
+	if out.Commitments == nil || len(*out.Commitments) != 1 {
+		t.Fatal("expected one commitment")
+	}
+	source := (*out.Commitments)[0].SourceRecord
+	if source == nil || ids.UUID(source.Id) != evidence || source.Label == nil || *source.Label != "Pricing call" {
+		t.Fatalf("source evidence = %+v", source)
+	}
+	work := classifyCommitment((*out.Commitments)[0], readInstant).item
+	if work.SourceRecord != source || work.Subject == nil || ids.UUID(work.Subject.Id) != contact {
+		t.Fatal("worklist lost the evidence or its counterparty")
 	}
 	for name, lane := range map[string]*[]crmcontracts.AttentionItem{
 		"commitments": out.Commitments, "at_risk": out.AtRisk, "relationship_decay": out.RelationshipDecay,

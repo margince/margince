@@ -1,0 +1,56 @@
+/* Deal360 — the deal page's written briefing. Tokens only. */
+
+.deal360-warning {
+  color: var(--warningText);
+}
+
+.deal360-move-reason {
+  margin: 0 0 var(--space-3);
+}
+
+.deal360-evidence {
+  margin: var(--space-3) 0 0;
+  padding-left: var(--space-4);
+}
+
+.deal360-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+/* Deal360 leads the page, so it needs room to breathe above the tabs. */
+.deal360-lead {
+  margin-bottom: var(--space-4);
+}
+
+/* The full briefing, folded. Closed by default: the head and the strip above
+   answer the scanning read, and the prose is for the reader who wants it. */
+.deal360-fold > summary {
+  cursor: pointer;
+  padding: var(--space-2) var(--space-4);
+}
+
+.deal360-fold > summary:hover {
+  color: var(--textPrimary);
+}
+
+/* The one FREE-TEXT fact on the deal's identity line: how a deal was won when
+   no contract carried it, in the words a contact typed.
+
+   BOUNDED IN WIDTH, NOT IN CONTENT. It wraps rather than clipping, because the
+   fact exists to be read: a clip with the rest in a `title` needs a mouse, and
+   a clip with no `title` at all is simply unreadable — the contact checking the
+   words they just typed is exactly who this is for, and both spellings failed
+   them. The server bounds the value at 500 characters, so wrapping cannot cost
+   more than a few lines and .identity-line already wraps.
+
+   `anywhere` because the value is free text: an unbroken 400-character token is
+   a thing a contact can type, and without it that one would push the line wider
+   than the column instead of wrapping inside the max-width. */
+.deal-close-detail {
+  max-width: 22rem;
+  overflow-wrap: anywhere;
+}

@@ -213,6 +213,9 @@ func stageOneLinkedInMatch(ctx context.Context, svc *approvals.Service, said app
 		Summary: fmt.Sprintf(said.linkedInLooksLike,
 			m.ConnectionName, employerOrPlaceholder(said, m.ConnectionCompany), m.ContactName),
 	})
+	if errors.Is(err, approvals.ErrNoDecider) {
+		return false, nil
+	}
 	return proposed, err
 }
 

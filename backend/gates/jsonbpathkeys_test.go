@@ -65,7 +65,7 @@ var jsonbStoredStructs = []jsonbStoredStruct{{
 
 func TestASQLPathNamesAKeyItsStructWrites(t *testing.T) {
 	t.Parallel()
-	root := moduleRoot(t)
+	root := gatekit.ModuleRoot(t)
 	statements := sqlStatementsUnder(t, root)
 	for _, stored := range jsonbStoredStructs {
 		keys := jsonKeysOf(t, root, stored)

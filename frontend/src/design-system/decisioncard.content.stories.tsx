@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, within } from "storybook/test";
 import type { DecisionCardLabels } from "./decisioncard";
 import {
   DecisionContent,
@@ -182,6 +183,17 @@ export const EvidenceCollapsed: Story = {
       ]}
     />
   ),
+  play: async ({ canvasElement }) => {
+    const toggle = within(canvasElement).getByRole("button", {
+      name: /^Evidence from/,
+    });
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await userEvent.click(toggle);
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
+    await expect(
+      within(canvasElement).getByText(/shall we sync next week/),
+    ).toBeVisible();
+  },
 };
 
 // An evidence row whose snippet came back EMPTY draws no chip. The field is

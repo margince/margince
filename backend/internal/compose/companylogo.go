@@ -33,6 +33,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/imagenorm"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // The in-memory/spill threshold for the upload parse, deliberately far below
@@ -157,9 +158,9 @@ func (h companyHandlers) writeCompany(w http.ResponseWriter, r *http.Request) {
 // the file part, decoded as an image and re-encoded as this server's own PNG.
 // It writes the refusal itself and reports whether the caller may continue.
 func decodeCompanyLogoUpload(w http.ResponseWriter, r *http.Request) (png []byte, filename string, ok bool) {
-	// upload:route /v1/company/logo, /v1/company/logo/icon — the ceiling this
-	// parse runs under is granted to both paths in compose.uploadCeilings, and
-	// TestEveryMultipartParseNamesItsRoute holds them together.
+	// upload:route /v1/company/logo, /v1/company/logo/icon, /v1/legal-entities/{id}/logo
+	// The ceiling this parse runs under is granted to every path in compose.uploadCeilings,
+	// and TestEveryMultipartParseNamesItsRoute holds them together.
 	//nolint:gosec // G120 wants a bound here, and the bound is the route ceiling the chassis already applied: this argument is only the in-memory/spill threshold.
 	if err := r.ParseMultipartForm(companyLogoSpillBytes); err != nil {
 		httperr.WriteMultipartRefusal(w, r, err, companyLogoUploadBytes)
@@ -191,6 +192,20 @@ func decodeCompanyLogoUpload(w http.ResponseWriter, r *http.Request) (png []byte
 	}
 	img, err := imagenorm.Decode(source)
 	if err != nil {
+		if errors.Is(err, imagenorm.ErrSVGTextNotOutlined) {
+			httperr.Write(w, r, &httperr.DetailedError{
+				Status: http.StatusUnprocessableEntity, Code: "svg_text_not_outlined",
+				Detail: "the SVG draws its words as text, which this server cannot render; convert the text to outlines in your design tool, or upload a PNG",
+			})
+			return nil, "", false
+		}
+		if errors.Is(err, imagenorm.ErrSVGNotDrawable) {
+			httperr.Write(w, r, &httperr.DetailedError{
+				Status: http.StatusUnprocessableEntity, Code: "svg_not_drawable",
+				Detail: "the SVG has parts this server cannot draw, such as embedded images; export it as a PNG",
+			})
+			return nil, "", false
+		}
 		if errors.Is(err, imagenorm.ErrUnsupported) {
 			httperr.Write(w, r, &httperr.DetailedError{
 				Status: http.StatusUnsupportedMediaType, Code: "unsupported_media_type",
@@ -217,11 +232,8 @@ func boundedFilename(name string) string {
 	// Cut by RUNE. A byte cut through a multi-byte character leaves a fragment
 	// that is not text at all, and the name is stored as a string and rendered
 	// back to a contact.
-	runes := []rune(strings.TrimSpace(name))
-	if len(runes) > companyLogoNameMax {
-		return string(runes[:companyLogoNameMax])
-	}
-	return string(runes)
+	// The conversion re-encodes a broken byte as U+FFFD whether or not the cut happens.
+	return textcut.Runes(string([]rune(strings.TrimSpace(name))), companyLogoNameMax)
 }
 
 // collectLogoObject deletes bytes nothing references any more, through the same

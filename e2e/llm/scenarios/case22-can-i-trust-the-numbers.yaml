@@ -47,9 +47,7 @@ must_call:
 may_call:
   # The nightly run's own record and its open findings, both legitimate
   # neighbours of this question and neither a substitute for it.
-  - forecast_input_checks
-  - list_input_checks
-  - forecast_readings
+  - read_forecast
   - run_report
   - query_workspace
 

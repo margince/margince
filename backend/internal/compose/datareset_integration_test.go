@@ -12,11 +12,15 @@ import (
 	"io"
 	"log/slog"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
@@ -24,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // TestSweepWorkspaceDataClearsDomainKeepsIdentity is the reset engine's core
@@ -35,8 +40,15 @@ func TestSweepWorkspaceDataClearsDomainKeepsIdentity(t *testing.T) {
 
 	e.SeedContact(t, "Alice", nil)
 	e.SeedCompany(t, "Acme", nil)
+	engine, err := newDataTaskEngine(e.Pool, "test", func() time.Time { return clocktest.Now(t) })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.Seed(principal.SystemActing(ctx, "system:test")); err != nil {
+		t.Fatal(err)
+	}
 
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		tables, err := resetTargetTables(ctx, tx)
 		if err != nil {
 			return err
@@ -47,6 +59,16 @@ func TestSweepWorkspaceDataClearsDomainKeepsIdentity(t *testing.T) {
 		t.Fatalf("sweep: %v", err)
 	}
 
+	expectedSteps := 0
+	for _, task := range dataTaskCatalog(e.Pool, func() time.Time { return clocktest.Now(t) }) {
+		expectedSteps += len(task.Steps)
+	}
+	if expectedSteps == 0 {
+		t.Fatal("correction catalog is empty")
+	}
+	if got := e.WsCount(t, "SELECT count(*) FROM data_task_run"); got != expectedSteps {
+		t.Fatalf("reset erased correction progress: %d", got)
+	}
 	if got := e.WsCount(t, "SELECT count(*) FROM contact"); got != 0 {
 		t.Errorf("contact count after sweep = %d, want 0", got)
 	}
@@ -451,19 +473,15 @@ func TestResetKeepsTheDeploymentCredentialsSealedBeforeIt(t *testing.T) {
 
 	vault := resetTestVault(t, e)
 	wsID := ids.From[ids.WorkspaceKind](e.WS)
-	// Sealed through the real boot path, not by hand. No seeded role holds
-	// license:update — that is the point of the entry — so a hand-written row
-	// would need a principal the product never uses, and would prove nothing
-	// about the row the product actually writes.
-	cfg, err := deployconfig.Parse([]byte("version: 1\nlicense:\n  token: ${env:LICENSE_TOKEN}\n"))
+	// Recorded as an earlier release's boot recorded it: the boot's own system
+	// actor, through the settings store. No seeded role holds license:update,
+	// so a human principal would prove nothing about the row the product wrote.
+	sealed, err := vault.Put(ctx, wsID, []byte("a license token"))
 	if err != nil {
-		t.Fatalf("parsing the deployment file: %v", err)
-	}
-	source := SealedLicenseTokenSource(context.Background(), e.Pool, vault, cfg,
-		config.Static(map[string]string{"LICENSE_TOKEN": "a license token"}),
-		slog.New(slog.NewTextHandler(io.Discard, nil)))
-	if _, err := source(); err != nil {
 		t.Fatalf("sealing the credential under test: %v", err)
+	}
+	if err := settings.Set(bootCtx(context.Background(), e.WS, secretSealActor), NewSettingsStore(e.Pool), identity.LicenseTokenRef, string(sealed)); err != nil {
+		t.Fatalf("recording the credential under test: %v", err)
 	}
 	ref, err := settings.Get(bootCtx(context.Background(), e.WS, secretSealActor), NewSettingsStore(e.Pool), identity.LicenseTokenRef)
 	if err != nil {
@@ -490,5 +508,90 @@ func TestResetKeepsTheDeploymentCredentialsSealedBeforeIt(t *testing.T) {
 	}
 	if _, err := vault.Get(ctx, wsID, keyvault.Ref(ref)); err != nil {
 		t.Errorf("the sealed license did not survive the reset (Get returned %v) — the ref survived but points at nothing", err)
+	}
+}
+
+// An AI tool's connection survives a reset as its passport does. A kept
+// passport holds a RESTRICT key onto its grant, so a swept grant stops the
+// whole sweep.
+func TestAResetKeepsAConnectedAITool(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.Admin()
+	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `INSERT INTO oauth_client (client_id, client_name, redirect_uris, created_via)
+			VALUES ('reset-kept', 'Gemini', ARRAY['https://x.example/cb'], 'admin')`); err != nil {
+			return err
+		}
+		var grantID ids.UUID
+		if err := tx.QueryRow(ctx, `INSERT INTO oauth_grant (client_id, user_id, scopes)
+			VALUES ('reset-kept', $1, ARRAY['read']) RETURNING id`, e.AdminUser).Scan(&grantID); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, `INSERT INTO oauth_refresh_token (grant_id, token_hash, expires_at)
+			VALUES ($1, 'reset-refresh', now() + interval '1 day')`, grantID); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, `INSERT INTO passport (token_hash, granted_by, on_behalf_of, scopes, expires_at, oauth_grant_id)
+			VALUES ('reset-passport', $1, $1, ARRAY['read'], now() + interval '1 hour', $2)`, e.AdminUser, grantID); err != nil {
+			return err
+		}
+		tables, err := resetTargetTables(ctx, tx)
+		if err != nil {
+			return err
+		}
+		return sweepWorkspaceData(ctx, tx, tables)
+	})
+	if err != nil {
+		t.Fatalf("a reset with a connected AI tool: %v", err)
+	}
+	for table, query := range map[string]string{
+		"oauth_client":        `SELECT count(*) FROM oauth_client WHERE client_id = 'reset-kept'`,
+		"oauth_grant":         `SELECT count(*) FROM oauth_grant WHERE client_id = 'reset-kept'`,
+		"oauth_refresh_token": `SELECT count(*) FROM oauth_refresh_token WHERE token_hash = 'reset-refresh'`,
+	} {
+		if got := e.WsCount(t, query); got != 1 {
+			t.Errorf("%s rows after a reset = %d, want the connection kept", table, got)
+		}
+	}
+}
+
+// A provider key and a connector app's secret are sealed settings too, and
+// their rows survive a reset. Their blobs must survive with them: the purge
+// reads every sealed setting's ref, or it deletes credentials the installation
+// still names.
+func TestResetKeepsTheSealedSettingsItsRowsStillName(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.Admin()
+	vault := resetTestVault(t, e)
+	sealing := WithVault(StoredConfig(e.Pool), vault, slog.New(slog.DiscardHandler))
+
+	if err := config.Save(ctx, sealing, ai.GeminiKey, "a gemini key"); err != nil {
+		t.Fatalf("saving the provider key: %v", err)
+	}
+	apps := capture.NewConnectorAppStore(NewSettingsStore(e.Pool), vault, nil)
+	if err := apps.Set(ctx, capture.AppProviderGoogle, "1234-abc.apps.googleusercontent.com", "a client secret", ""); err != nil {
+		t.Fatalf("saving the connector app: %v", err)
+	}
+
+	h := dataResetHandlers{
+		pool:             e.Pool,
+		seeds:            deployconfig.Seeds{},
+		dataResetAllowed: true,
+		log:              slog.New(slog.NewTextHandler(io.Discard, nil)),
+		vault:            vault,
+	}
+	if _, err := h.run(ctx, "Authz"); err != nil {
+		t.Fatalf("run: %v", err)
+	}
+
+	if key, err := config.StoredVal(ctx, sealing, ai.GeminiKey); err != nil || key != "a gemini key" {
+		t.Errorf("the provider key reads %q %v after the reset, want the sealed key", key, err)
+	}
+	app, held, err := apps.Credentials(ctx, capture.AppProviderGoogle)
+	if err != nil || !held || app.ClientSecretRef != "a client secret" {
+		t.Errorf("the connector app reads held=%v %v after the reset, want its sealed secret", held, err)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM vault_secret`); n != 2 {
+		t.Errorf("%d sealed blobs after the reset, want the 2 the rows still name", n)
 	}
 }

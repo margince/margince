@@ -66,11 +66,8 @@ func (h Handlers) IssuePassport(w http.ResponseWriter, r *http.Request) {
 }
 
 // ListPassports implements (GET /passports): passport metadata for the
-// Settings list. Tokens are never re-disclosed. Two contract fields answer as
-// absent because nothing stores them: agent_id has no storage at all (the
-// A1/local path has no agent-connection table), and last_used_at has a column
-// that nothing writes yet — its debounced stamp on the authenticated /mcp path
-// arrives with the per-workspace admin surface.
+// Settings list. Tokens are never re-disclosed. agent_id answers as absent
+// because nothing stores it (the A1/local path has no agent-connection table).
 //
 // `connection` is the field that tells the two kinds of row apart — a passport
 // the human minted directly, and the credential a client received after the
@@ -89,13 +86,27 @@ func (h Handlers) ListPassports(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, err)
 		return
 	}
+	now := time.Now()
+	usage := h.liveUsage(r.Context(), rows, now)
 	data := make([]crmcontracts.PassportSummary, 0, len(rows))
 	for _, p := range rows {
-		data = append(data, passportSummary(p))
+		summary := passportSummary(p)
+		if u, ok := usage[p.UsageSubject()]; ok && p.live(now) {
+			wire := toAgentUsage(u)
+			summary.Usage = &wire
+		}
+		data = append(data, summary)
 	}
+	apiBase := ""
+	if h.agentAPIBase != nil {
+		apiBase = h.agentAPIBase(r)
+	}
+	// api_base_url may be this request's own Host, which a shared cache must not replay.
+	w.Header().Set("Cache-Control", "no-store")
 	httperr.WriteJSON(w, http.StatusOK, struct {
-		Data []crmcontracts.PassportSummary `json:"data"`
-	}{Data: data})
+		Data       []crmcontracts.PassportSummary `json:"data"`
+		APIBaseURL string                         `json:"api_base_url"`
+	}{Data: data, APIBaseURL: apiBase})
 }
 
 // passportSummary is the store row as the wire carries it. A function rather
@@ -106,11 +117,12 @@ func (h Handlers) ListPassports(w http.ResponseWriter, r *http.Request) {
 // case rather than proving through a database.
 func passportSummary(p PassportRow) crmcontracts.PassportSummary {
 	summary := crmcontracts.PassportSummary{
-		Id:        openapi_types.UUID(p.ID.UUID),
-		Scopes:    p.Scopes,
-		CreatedAt: p.CreatedAt,
-		ExpiresAt: &p.ExpiresAt,
-		RevokedAt: p.RevokedAt,
+		Id:         openapi_types.UUID(p.ID.UUID),
+		Scopes:     p.Scopes,
+		CreatedAt:  p.CreatedAt,
+		ExpiresAt:  &p.ExpiresAt,
+		RevokedAt:  p.RevokedAt,
+		LastUsedAt: p.LastUsedAt,
 	}
 	// A passport may carry no label at all (the column is nullable); the wire
 	// field is a required string, so NULL becomes "" rather than failing.

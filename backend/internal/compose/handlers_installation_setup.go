@@ -44,11 +44,10 @@ type installationSetupHandlers struct {
 	// envConnectorApp records that this PROCESS was composed with a connector
 	// OAuth app from its environment, for either vendor.
 	//
-	// It is part of the answer because it is part of what the connect transport
-	// resolves: the stored app wins, and the environment is the fallback. An
-	// installation that exports a pair has a working mail integration, so
-	// reporting its step unconfigured would tell an operator to go and store an
-	// app the process already resolves.
+	// It is part of the answer because the connect transport resolves it: the
+	// environment's app wins, and the stored one answers otherwise. An
+	// installation that exports a pair has a working mail integration. To report
+	// its step unconfigured would send an operator to store an app it has.
 	//
 	// The two are not two sources of truth for STORAGE — the setting is the only
 	// place a write lands. They are one honest reading of a two-source

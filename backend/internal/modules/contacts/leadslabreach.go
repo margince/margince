@@ -22,6 +22,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -60,7 +61,7 @@ func (s *Store) ScanLeadSLA(ctx context.Context, now time.Time) ([]SLABreach, er
 	}
 	var breaches []SLABreach
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		policy, err := loadLeadSLAPolicy(ctx, tx)
+		policy, err := loadLeadSLAPolicy(ctx, tx, s.bootConfig())
 		if err != nil {
 			return err
 		}
@@ -180,7 +181,7 @@ func markBreach(ctx context.Context, tx pgx.Tx, b SLABreach, now time.Time) erro
 		// installation has not said who runs the queue, and the breach stays
 		// where it was rather than being addressed to somebody who did not
 		// agree to it; the unassigned view is what surfaces those.
-		target, configured, err := unassignedEscalationTarget(ctx, tx)
+		target, configured, err := unassignedEscalationTarget(ctx, tx, config.Bound())
 		if err != nil {
 			return err
 		}

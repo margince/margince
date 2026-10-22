@@ -1,0 +1,26 @@
+{
+  "scenario": "case49_who_can_introduce_us",
+  "criteria": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "gpt:cli",
+  "effort": "reasoning medium",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": false,
+  "usage": {
+    "input_tokens": 131283,
+    "output_tokens": 7084,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 1117696,
+    "runs_measured": 2,
+    "runs_costed": 0,
+    "cost_usd": null
+  }
+}

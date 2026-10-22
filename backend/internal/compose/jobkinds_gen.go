@@ -11,7 +11,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "43ff15b9efb446fba9e1fba276c36f256e3565597e60f9f48a27c00c24334daf"
+const jobContractHash = "299ce67b6a9b6376b279b8522a295deda69cfe3f0089b740a32b36f632f5c92f"
 
 // declaredJobArgs is every args type api/jobs.yaml declares, and nothing
 // else. A job kind the file has never heard of cannot satisfy it, so it
@@ -32,6 +32,7 @@ type declaredJobArgs interface {
 		AIPriceSyncSweepArgs |
 		ApprovalAutoApplyArgs |
 		ApprovalExpiryArgs |
+		ApprovalNoticeReconcileArgs |
 		AssuranceRunArgs |
 		AssuranceSweepArgs |
 		BriefGenerateArgs |
@@ -54,11 +55,14 @@ type declaredJobArgs interface {
 		ScheduledSendRecoveryArgs |
 		SendEmailArgs |
 		CompanyNamePromotionArgs |
+		DataTaskReconcileArgs |
+		DataTaskRunArgs |
 		DealScoutArgs |
 		DocumentExtractArgs |
 		EmbedDriftSweepArgs |
 		EmbedReindexArgs |
 		EmploymentImportSweepArgs |
+		FinanceSyncArgs |
 		FinanceSyncSweepArgs |
 		FollowUpReconcileArgs |
 		ForecastSnapshotSweepArgs |
@@ -72,6 +76,10 @@ type declaredJobArgs interface {
 		GraphWatchArgs |
 		GraphWatchRenewArgs |
 		IdempotencyRetentionArgs |
+		ImportCommitArgs |
+		ImportRunSweepArgs |
+		ImportUndoArgs |
+		ImportValidateArgs |
 		IntroExpiryArgs |
 		KnowledgeIngestArgs |
 		LinkReconcileArgs |
@@ -93,6 +101,8 @@ type declaredJobArgs interface {
 		SiteDeepReadArgs |
 		StageEvidenceReadArgs |
 		StoredObjectReapArgs |
+		SuppressionJournalArgs |
+		TagScoutArgs |
 		TechnicalEnrichBackfillArgs |
 		TechnicalEnrichCompanyArgs |
 		TelegramIngestArgs |
@@ -103,6 +113,7 @@ type declaredJobArgs interface {
 		VCardIngestArgs |
 		VoiceBuildArgs |
 		VoiceBuildRetryArgs |
+		WaitingHorizonRefreshArgs |
 		WebhookRetryArgs |
 		WeeklyReviewGenerateArgs
 }
@@ -137,6 +148,8 @@ var (
 	_ jobs.FleetWide = CaptureTraceSweepArgs{}
 	_ jobs.FleetWide = CloseDateSweepArgs{}
 	_ jobs.FleetWide = CompanyNamePromotionArgs{}
+	_ jobs.FleetWide = DataTaskReconcileArgs{}
+	_ jobs.FleetWide = DataTaskRunArgs{}
 	_ jobs.FleetWide = DealScoutArgs{}
 	_ jobs.FleetWide = EmbedDriftSweepArgs{}
 	_ jobs.FleetWide = EmbedReindexArgs{}
@@ -161,6 +174,8 @@ var (
 	_ jobs.FleetWide = RiskVerdictSweepArgs{}
 	_ jobs.FleetWide = SignalScanArgs{}
 	_ jobs.FleetWide = StoredObjectReapArgs{}
+	_ jobs.FleetWide = SuppressionJournalArgs{}
+	_ jobs.FleetWide = TagScoutArgs{}
 	_ jobs.FleetWide = TelegramPollSweepArgs{}
 	_ jobs.FleetWide = TimeScanArgs{}
 	_ jobs.FleetWide = VoiceBuildRetryArgs{}
@@ -178,10 +193,14 @@ var (
 	_ jobs.WorkspaceScoped = ScheduledSendArgs{}
 	_ jobs.WorkspaceScoped = SendEmailArgs{}
 	_ jobs.WorkspaceScoped = DocumentExtractArgs{}
+	_ jobs.WorkspaceScoped = FinanceSyncArgs{}
 	_ jobs.WorkspaceScoped = FxRateRefreshArgs{}
 	_ jobs.WorkspaceScoped = GeocodeCompanyArgs{}
 	_ jobs.WorkspaceScoped = GmailWatchRenewArgs{}
 	_ jobs.WorkspaceScoped = GraphWatchRenewArgs{}
+	_ jobs.WorkspaceScoped = ImportCommitArgs{}
+	_ jobs.WorkspaceScoped = ImportUndoArgs{}
+	_ jobs.WorkspaceScoped = ImportValidateArgs{}
 	_ jobs.WorkspaceScoped = KnowledgeIngestArgs{}
 	_ jobs.WorkspaceScoped = SendNotificationEmailArgs{}
 	_ jobs.WorkspaceScoped = ProviderRunSubmitArgs{}

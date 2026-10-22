@@ -292,16 +292,9 @@ func walkedAnyGo(t *testing.T, root string) bool {
 	return found
 }
 
-// sendsThroughTheRelay reports whether a file calls the relay.
-//
-// It matches the CALL alone, deliberately, and an earlier draft of this gate
-// that also required the file to name mailer.Mailer is why the rule is written
-// down: identity/reset.go declares its field in handlers.go next door and
-// references the package not once, so requiring both halves silently dropped a
-// live sender from the corpus. A census that can fail short has already failed,
-// and the arity guard below is what keeps this looser match honest.
+// Transport internals are not callers; the census checks their public entrypoints at every consumer.
 func sendsThroughTheRelay(path string, file *ast.File) bool {
-	if strings.HasSuffix(path, "_test.go") {
+	if strings.HasSuffix(path, "_test.go") || strings.HasPrefix(path, "internal/platform/mailer/") {
 		return false
 	}
 	return callsSendOnAMailerField(file)
@@ -322,7 +315,7 @@ func callsSendOnAMailerField(file *ast.File) bool {
 			return true
 		}
 		sel, ok := call.Fun.(*ast.SelectorExpr)
-		if !ok || sel.Sel.Name != "Send" || len(call.Args) != 4 {
+		if !ok || !relayCall(sel.Sel.Name, len(call.Args)) {
 			return true
 		}
 		found = true
@@ -383,4 +376,19 @@ func relaySendParams(file *ast.File) (count int, found bool) {
 		return false
 	})
 	return count, found
+}
+
+func relayCall(name string, arity int) bool {
+	switch name {
+	case "Send":
+		return arity == 4
+	case "SendIdentified":
+		return arity == 5
+	case "SendProduct":
+		return arity == 5
+	case "SendAlternative":
+		return arity == 6
+	default:
+		return false
+	}
 }

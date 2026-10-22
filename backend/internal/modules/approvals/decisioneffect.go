@@ -22,6 +22,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // effectIsStillOwed reports whether a decision this call could not make was
@@ -57,6 +58,8 @@ import (
 //     a verdict of its own, and re-driving one would apply what nobody released.
 //   - consumed_at IS NULL — the effect never redeemed, which is the whole
 //     signal.
+//   - the redemption window is open — past it every effect's redemption is
+//     refused, so a re-drive could only fail again (redemptionLapsed).
 //   - serverProposed — an agent-minted row reaches no executor at all, so there
 //     is nothing owed. It is also what keeps a step-up out: a staged volume
 //     release always carries the passport whose window it widens, and widening
@@ -69,7 +72,14 @@ func (s *Service) effectIsStillOwed(a row, approve bool, err error) bool {
 	if !errors.As(err, &decided) || !approve || decided.Status != approvalStatusApproved {
 		return false
 	}
-	if a.ConsumedAt != nil || !serverProposed(a) {
+	return s.owesItsEffect(a)
+}
+
+// owesItsEffect is the row half of effectIsStillOwed: unredeemed, server
+// proposed, and of a kind with a registered effect. runPrecheck asks it too,
+// so its status guard lets this row, and no other, through to the re-drive.
+func (s *Service) owesItsEffect(a row) bool {
+	if a.ConsumedAt != nil || !serverProposed(a) || redemptionLapsed(a, s.now()) {
 		return false
 	}
 	_, registered := s.effects[a.Kind]
@@ -97,18 +107,20 @@ func (s *Service) runDecisionEffect(ctx context.Context, id ids.ApprovalID, a ro
 	// (quotarelease.go).
 	if approve && a.Kind == KindVolumeRelease {
 		if err := s.applyVolumeRelease(ctx, a); err != nil {
-			return s.recordEffectFailure(ctx, id,
+			return s.recordEffectFailure(ctx, a,
 				"the agent's window could not be widened, so the approval has not taken effect",
 				fmt.Errorf("approved, but widening the agent's window failed: %w", err))
 		}
+		s.recordEffectRan(ctx, id)
 		return nil
 	}
 	if effect, ok := s.effects[a.Kind]; ok && approve && serverProposed(a) {
-		if err := effect(ctx, id, a.ProposedChange, a.DiffHash); err != nil {
-			return s.recordEffectFailure(ctx, id,
+		if err := effect(releasing(ctx, id), id, a.ProposedChange, a.DiffHash); err != nil {
+			return s.recordEffectFailure(ctx, a,
 				"this was approved, but the work it released did not run",
 				fmt.Errorf("approved, but executing the %s effect failed: %w", a.Kind, err))
 		}
+		s.recordEffectRan(ctx, id)
 	}
 	return nil
 }
@@ -138,20 +150,28 @@ func (s *Service) runDecisionEffect(ctx context.Context, id ids.ApprovalID, a ro
 // tells them nothing at all.
 const failureMarkTimeout = 30 * time.Second
 
-func (s *Service) recordEffectFailure(ctx context.Context, id ids.ApprovalID, reader string, cause error) error {
+func (s *Service) recordEffectFailure(ctx context.Context, a row, reader string, cause error) error {
+	// Another attempt redeemed this approval, so the work is that attempt's to
+	// report. Marking it here would say the work failed while it may have run.
+	if _, lost := errors.AsType[*alreadyRedeemedError](cause); lost {
+		return cause
+	}
+	id := a.ID
 	// Detached from the request's cancellation: an effect that failed BECAUSE
 	// the request was cancelled or timed out is exactly a failure this mark
 	// exists to keep, and writing it through the dead context would lose it.
 	ctx, release := context.WithTimeout(context.WithoutCancel(ctx), failureMarkTimeout)
 	defer release()
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// The IS NULL arm is the CAS: two failures racing on one row keep the
-		// FIRST mark, because that is the one whose timestamp says when the
-		// work was actually lost. Zero rows affected is that race resolved,
-		// not an error.
+		// The CAS is on the outcome this attempt started from: its failure mark
+		// and its last run. Two failures racing from one start keep the first.
+		// A retry that fails again replaces the mark it saw, so a decider who
+		// acknowledged the old one sees the new one. A run since this attempt
+		// started wins over it. Zero rows affected is that race resolved.
 		tag, err := tx.Exec(ctx,
 			`UPDATE approval SET effect_failed_at = now(), effect_failure = $2
-			  WHERE id = $1 AND effect_failed_at IS NULL`, id, reader)
+			  WHERE id = $1 AND effect_failed_at IS NOT DISTINCT FROM $3
+			    AND effect_ran_at IS NOT DISTINCT FROM $4`, id, reader, a.EffectFailedAt, a.EffectRanAt)
 		if err == nil && tag.RowsAffected() == 0 {
 			s.logger().InfoContext(ctx, "approvals: effect failure already marked", "approval_id", id.String())
 		}
@@ -162,6 +182,26 @@ func (s *Service) recordEffectFailure(ctx context.Context, id ids.ApprovalID, re
 			"approval_id", id.String(), "error", err)
 	}
 	return cause
+}
+
+// recordEffectRan marks that the released work ran to the end, and clears a
+// failure an earlier attempt left: that failure is no longer true.
+//
+// Logged and not returned, like the failure mark. The work ran, and an error
+// here would tell the decider it did not.
+func (s *Service) recordEffectRan(ctx context.Context, id ids.ApprovalID) {
+	ctx, release := context.WithTimeout(context.WithoutCancel(ctx), failureMarkTimeout)
+	defer release()
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE approval
+			   SET effect_ran_at = now(), effect_failed_at = NULL, effect_failure = NULL
+			 WHERE id = $1`, id)
+		return err
+	})
+	if err != nil {
+		s.logger().ErrorContext(ctx, "approvals: an approved effect ran and the row could not be marked",
+			"approval_id", id.String(), "error", err)
+	}
 }
 
 // serverProposed reports whether this staging was minted by a SERVER-SIDE
@@ -190,3 +230,23 @@ func serverProposed(a row) bool { return a.PassportID == nil }
 // modify-then-approve edit, the status write, and the write shape. It
 // returns the re-read row so the follow-on effect runs against committed
 // state.
+
+// releasingKey marks the context runDecisionEffect hands a kind's effect, naming
+// the approval that decision released.
+type releasingKey struct{}
+
+func releasing(ctx context.Context, id ids.ApprovalID) context.Context {
+	return context.WithValue(ctx, releasingKey{}, id)
+}
+
+// redeemerFor is who a redemption's passport binding is checked against. A
+// server-proposed row names no passport, and its own decision's effect spends
+// it. An agent that decided it for its human carries a passport the row never
+// named, which binds nothing here. Any other redemption is checked as it came.
+func redeemerFor(ctx context.Context, a row, p principal.Principal) principal.Principal {
+	released, ok := ctx.Value(releasingKey{}).(ids.ApprovalID)
+	if ok && released == a.ID && serverProposed(a) {
+		p.PassportID = ids.UUID{}
+	}
+	return p
+}

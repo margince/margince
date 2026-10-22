@@ -133,13 +133,14 @@ func (s followUpStager) StageFollowUp(ctx context.Context, dealID ids.UUID, summ
 			return stageFollowUpDraft(onBehalfOf(ctx, owner), tx, s.svc, draft.summary,
 				dealID, proposal.EvidenceActivityID.UUID, draft.proposal)
 		}
-		// An unowned deal records nobody, which is what it honestly is: the
-		// proposal stays shared rather than being withheld from everyone.
-		staged := ctx
-		if !owner.IsZero() {
-			staged = onBehalfOf(ctx, owner)
+		// An unowned deal has nobody to follow it up, so nothing is staged.
+		if owner.IsZero() {
+			return nil
 		}
-		_, _, err = s.svc.StageUnlessDeclinedTx(staged, tx, task)
+		_, _, err = s.svc.StageUnlessDeclinedTx(onBehalfOf(ctx, owner), tx, task)
+		if errors.Is(err, approvals.ErrNoDecider) {
+			return nil
+		}
 		return err
 	})
 }
@@ -312,7 +313,7 @@ func NewFollowUpReconciler(pool *pgxpool.Pool, log *slog.Logger) *deals.FollowUp
 	// unreachable from here. It refuses rather than passes if that ever changes.
 	drafter := newCommsAdapter(pool, nil, SendPath{})
 	stager := followUpStager{
-		svc:   approvals.NewService(db),
+		svc:   NewApprovalsService(db),
 		draft: drafter,
 		owner: dealOwnerAuthority{db: db, users: identity.NewServiceFor(db)},
 		pool:  pool,

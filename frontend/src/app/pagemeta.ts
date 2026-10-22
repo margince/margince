@@ -1,8 +1,9 @@
-import { useT } from "../i18n";
+import { useEntityName } from "../components/entityref";
+import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { useEntityName } from "../screens/entityref";
-import { opensAFocusedFiltersPage } from "../screens/filtersaddress";
-import { EXTENSION_SCREEN, findExtension } from "./extensions";
+import { EXTENSION_SCREEN, findExtension, unitTitle } from "../lib/extensions";
+import { opensAFocusedFiltersPage } from "../lib/filtersaddress";
+import type { Route, Screen } from "../lib/router";
 import {
   NAV,
   type NavLevelEntry,
@@ -10,7 +11,6 @@ import {
   recordKindOf,
   reservedPageTitle,
 } from "./nav";
-import type { Route, Screen } from "./router";
 
 // What the chrome knows about a page before the page renders: its name, its
 // one-line description, and which entry of a section it is. The top bar's trail
@@ -107,6 +107,8 @@ export const OFF_RAIL_TITLE_KEYS: Record<string, MessageKey> = {
   // results it had just found.
   tags: "nav.tags",
   lists: "lists.page",
+  // Reached from the deals page and a deal's legal tab, by a reader who reviews.
+  "legal-reviews": "legalReview.queueTitle",
 };
 
 export function resolveTitle(
@@ -189,6 +191,7 @@ export function sectionHead(
  */
 export function useRouteSubject(route: Route): string {
   const t = useT();
+  const { locale } = useLocale();
   const navItem = NAV.find((item) => item.screen === route.screen);
   // A composed unit's page is named by the UNIT, which is not in `NAV` and has
   // no title key: without this the subject fell through to `shell.unknownPage`
@@ -209,7 +212,7 @@ export function useRouteSubject(route: Route): string {
     return name ?? (reading === "failed" ? t("ref.nameLoadFailed") : route.id);
   }
   if (unit) {
-    return unit.name;
+    return unitTitle(unit, locale);
   }
   const reserved = reservedPageTitle(route);
   return reserved

@@ -105,9 +105,11 @@ export function SettingRow({
           {label}
         </span>
         {description !== undefined && (
-          <p className="settingrow-description" id={descriptionId}>
+          // A div, not a paragraph: a row may put its verbs under the name.
+          // A button menu is a block that a <p> cannot hold.
+          <div className="settingrow-description" id={descriptionId}>
             {description}
-          </p>
+          </div>
         )}
       </div>
       <div className="settingrow-control">
@@ -132,11 +134,27 @@ export function SettingRow({
  * the same way.
  */
 export function SettingList({
+  bleed,
   children,
   testId,
-}: Readonly<{ children: ReactNode; testId?: string }>) {
+}: Readonly<{
+  // Spans the pane when standing straight in a `Panel`, inert inside a body.
+  // `records` (one row per thing) takes a table row's hover; `settings` none.
+  bleed?: "settings" | "records";
+  children: ReactNode;
+  testId?: string;
+}>) {
   return (
-    <div className="settinglist" data-testid={testId}>
+    <div
+      className={[
+        "settinglist",
+        bleed ? "settinglist-bleed" : "",
+        bleed === "records" ? "settinglist-records" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      data-testid={testId}
+    >
       {children}
     </div>
   );

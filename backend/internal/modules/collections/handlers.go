@@ -47,14 +47,27 @@ func (h Handlers) ListTags(w http.ResponseWriter, r *http.Request, params crmcon
 	if params.IncludeArchived != nil && *params.IncludeArchived {
 		archived = storekit.IncludeArchived
 	}
-	tags, truncated, err := h.store.ListTags(r.Context(), archived)
+	var tags []tagRow
+	var reach map[ids.TagID]int
+	var truncated bool
+	var err error
+	if params.WithCarriedBy != nil && *params.WithCarriedBy {
+		tags, reach, truncated, err = h.store.ListTagsCarried(r.Context(), archived)
+	} else {
+		tags, truncated, err = h.store.ListTags(r.Context(), archived)
+	}
 	if err != nil {
 		writeErr(w, r, err)
 		return
 	}
 	data := make([]crmcontracts.Tag, 0, len(tags))
 	for _, t := range tags {
-		data = append(data, wireTag(t))
+		tag := wireTag(t)
+		if reach != nil {
+			carriedBy := reach[t.ID]
+			tag.CarriedBy = &carriedBy
+		}
+		data = append(data, tag)
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.TagListResponse{Data: data, Page: crmcontracts.PageInfo{HasMore: truncated}})
 }
@@ -71,7 +84,7 @@ func (h Handlers) CreateTag(w http.ResponseWriter, r *http.Request) {
 		c := string(*req.Color)
 		color = &c
 	}
-	tag, err := h.store.CreateTag(r.Context(), req.Name, color, tagDescriptionOrNone(req.Description))
+	tag, err := h.store.CreateTag(r.Context(), req.Name, color, TagDescriptionOrNone(req.Description))
 	if err != nil {
 		writeErr(w, r, err)
 		return

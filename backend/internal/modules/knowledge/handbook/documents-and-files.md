@@ -13,7 +13,7 @@ Margince holds files in three different places, for three different reasons:
 ### How do I upload a document?
 To upload a document in Margince, such as a customer's signed contract, open the company, contact or deal. Choose its **Documents** tab and click **Add document**.
 1. On a company, set **About** to **This company** or **A deal** and pick the deal.
-2. Choose a **Category** (a signed contract takes **Contract**); **Title** is optional.
+2. Choose a **Category** (a signed contract takes **SOW/Contract**); **Title** is optional.
 3. Drop the file on **File**, or click to choose one, and click **Upload**.
 Without write access the button is not shown. The contract record itself is added on its own, see [Contracts and invoices](contracts-and-invoices.md).
 Also called: attach a file, add an attachment, add a PDF, upload a contract document.
@@ -22,7 +22,7 @@ Also called: attach a file, add an attachment, add a PDF, upload a contract docu
 To attach or upload a file to a contact in Margince, open the contact, choose its **Documents** tab and click **Add document**.
 1. Open **Contacts** in the sidebar and open the contact.
 2. Choose the **Documents** tab, then **Add document**.
-3. Pick a **Category** (**Contract**, **Offer**, **Legal** or **Other**); **Title** is optional.
+3. Pick a **Category** (**SOW/Contract**, **Proposal/Offer**, **NDA/Legal** or **Other**); **Title** is optional.
 4. Drop the file on **File**, or click to choose one, and click **Upload**.
 The file then shows under **Documents**; click its title to download it. On an archived contact, or one you may not edit, **Add document** is turned off.
 Also called: upload a file to a contact, add an attachment to a contact, store a CV.
@@ -31,10 +31,19 @@ Also called: upload a file to a contact, add an attachment to a contact, store a
 To upload a PDF to a deal in Margince, open the deal, choose its **Documents** tab and click **Add document** in the **Files** panel.
 1. Open **Deals** in the sidebar and open the deal.
 2. Choose the **Documents** tab, then **Add document**.
-3. Choose a **Category** such as **Offer** or **Contract**, and a **Title** if you like.
+3. Choose a **Category** such as **Proposal/Offer** or **SOW/Contract**, and a **Title** if you like.
    Drop the PDF on **File**, and click **Upload**.
 A file on a deal can be read for deal fields, and can be added to the deal's [Deal Room](deal-rooms.md).
 Also called: attach a proposal to a deal, add a file to an opportunity.
+
+### How do I attach a file to a meeting or call?
+To attach a file to a meeting, call or note in Margince, add it while you log the activity.
+1. In the **Log activity** form, drop the files on **Attach files**, or click it to choose them.
+2. Choose **Log**. The files are uploaded once the activity is logged.
+If a file is refused, a message names it and says why. The others are still attached.
+
+If an upload does not finish, Margince checks the activity's files first, so no message asks you to add a file that is already there. To add a file later, press **Files** on the activity in the record's History, then **Add document**. The activity panel that opens from search or the worklist lists the same files under **Files**. The size limit and the file kinds are the same as for any document. Whoever may read the activity may open its files.
+Also called: attach a document to a meeting, add a file to a call, meeting attachments.
 
 ### What is the maximum file size for an upload?
 The largest document you can upload in Margince is **25 MB by default**. Whoever runs your installation can change it to anything between 1 MB and 100 MB.
@@ -72,9 +81,9 @@ file it against the deal.
 
 Every document carries a category:
 
-- **Contract**
-- **Offer**
-- **Legal**
+- **SOW/Contract**
+- **Proposal/Offer**
+- **NDA/Legal**
 - **Email attachment**
 - **Message attachment**
 - **Other**
@@ -165,12 +174,12 @@ You create document sets at **Settings → Knowledge**, and you ask them from
 **Ask your documents**.
 
 ### How do I create a knowledge base I can ask questions?
-To create a knowledge base in Margince, open **Settings → Knowledge** and fill the **New document set** form under **Document sets**.
+To create a knowledge base in Margince, open **Settings → Knowledge** and click **New document set** in the **Document sets** head.
 1. Open the account menu at the top right, choose **Settings**, then **Knowledge**.
-2. Under **New document set**, fill **Name** and **What this set covers** (both required).
+2. Click **New document set**, and fill **Name** and **What this set covers** (both required).
    Write one real sentence: it is shown to anyone whose question the set does not cover.
-3. Click **Create set**.
-4. On the new set, click **Show documents** and drop one or more files on **Add document**.
+3. Click **Create**.
+4. Click the new set's row to open its documents, and drop one or more files on **Add document**.
    Then click **Add document** (or **Add {count} documents**).
 Also called: knowledge base, FAQ, handbook, document library, corpus.
 
@@ -219,23 +228,33 @@ you always know whether an AI model was used.
 Each document in a set moves through a visible state as it is taken in:
 
 - **Queued**
-- **Indexing…**
-- **Searchable**
-- **Could not be read**, with "Why this file could not be read"
+- **Importing…**
+- **Could not be read**, with the reason under it
 
-The set shows how much of it can be searched: "{documents} documents ·
-{embedded} of {total} passages searchable". It may be read again after a change
+A document that was read shows no badge.
+
+The set's row shows how many documents it holds and one badge for whether it
+can be searched: **Searchable**, **Indexing**, **Not searchable** or
+**Reindexing**. Open the set to see the figures: "{embedded} of {total}
+passages searchable". When some passages cannot be searched, the open set says
+why:
+
+- **Not searchable**: "No embedding model is set up, so no passage can be
+  searched."
+- **Indexing**: "Passages are still being indexed."
+
+It may be read again after a change
 to how text is indexed. Then it says "Reindexing this set", and that no data was
 lost. A question asked while that runs gets the answer that the set is not ready,
 and is not answered from part of the set.
 
 ### Removing things from a document set
 
-**Archive set**: "Archive this document set? The set and its documents are no
-longer searchable. Nothing is deleted."
+**Archive set**, in the set's **…** (**Actions**) menu: "Archive {name}? The set and its
+documents are no longer searchable. Nothing is deleted."
 
-**Delete** a document: "Delete this document? The file, its extracted text and
-its search index are permanently deleted."
+**Delete**, in a document's **…** (**Actions**) menu: "Delete {name}? The file, its extracted
+text and its search index are permanently deleted."
 
 ### Who can see which sets exist
 Not everyone can see which document sets exist. If they are not yours to see,

@@ -188,6 +188,7 @@ func derivedTimeoutConstants() map[string]time.Duration {
 	return map[string]time.Duration{
 		"agentSchedulerPassTimeout":   agentSchedulerPassTimeout,
 		"deepReadTimeout":             deepReadTimeout,
+		"importSliceTimeout":          importSliceTimeout,
 		"privacyRetentionPassTimeout": privacyRetentionPassTimeout,
 		"telegramPollJobTimeout":      telegramPollJobTimeout,
 		"voiceBuildTimeout":           voiceBuildTimeout,

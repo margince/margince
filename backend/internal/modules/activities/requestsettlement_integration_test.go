@@ -359,6 +359,21 @@ func TestAReopenedReminderOutranksASettledVerdict(t *testing.T) {
 		t.Error("a request whose reminder somebody reopened does not read as outstanding — " +
 			"the machine's settled verdict is overruling whoever took the work back")
 	}
+	for index, verdict := range []string{RequestUnsure, RequestSettled} {
+		replyTo(t, e, request, "The delivery is complete.", requestInstant.Add(time.Duration(index+3)*time.Hour))
+		candidate, found := repliedIDs(t, e, asOf)[request]
+		if !found || !candidate.TaskHumanReopened {
+			t.Fatal("later evidence lost the human reopening")
+		}
+		if err := store.SettleRequest(asClassifier(e), RequestSettlementInput{
+			Request: candidate, Verdict: verdict, Confidence: 0.95, DecidedBy: "test-model",
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if _, _, done, _ := taskFor(t, e, request); done {
+			t.Fatal("a later verdict completed work a human reopened")
+		}
+	}
 }
 
 // A stranger cannot make our reply to somebody else answer their message.
@@ -384,6 +399,38 @@ func TestAForgedThreadIsNotSettledByOurReplyToSomebodyElse(t *testing.T) {
 		t.Fatal("a message that forged its way onto another customer's thread was offered " +
 			"for settlement by our reply to that customer — the conversation read would " +
 			"then hand the real customer's mail to the model as the stranger's context")
+	}
+}
+
+// A colleague's answer, held as a copy in another seat's mailbox, settles the
+// request; the same reply with nobody named as its author does not.
+//
+// sent_by_colleague is written by capture alone, a module this package cannot
+// call, so the fixture stamps it on a row the real writer logged.
+func TestAColleaguesCopiedReplyOffersTheRequest(t *testing.T) {
+	e := setupLoad(t)
+	request := seedEmailRequest(t, e, "Answered by a colleague", "commitment", OwedVerdictAsksUs)
+	var key string
+	if err := e.owner.QueryRow(e.as(), `SELECT thread_key FROM activity WHERE id = $1`, request).Scan(&key); err != nil {
+		t.Fatal(err)
+	}
+	subject, body, direction := "Re: request", "Answering while my colleague is away.", "outbound"
+	at := requestInstant.Add(time.Hour)
+	reply, _, err := storeKnowing(e).LogActivity(asClassifier(e), LogActivityInput{
+		Kind: "email", Subject: &subject, Body: &body, Direction: &direction,
+		ThreadKey: key, Source: "test", OccurredAt: &at, CounterpartyEmail: requestCounterparty,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := repliedIDs(t, e, requestInstant.Add(48*time.Hour))[request]; ok {
+		t.Fatal("an unattested reply that names no colleague settled the request — a typed From would then do the same")
+	}
+	if _, err := e.owner.Exec(e.as(), `UPDATE activity SET sent_by_colleague = $1 WHERE id = $2`, e.other, reply.Id); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := repliedIDs(t, e, requestInstant.Add(48*time.Hour))[request]; !ok {
+		t.Fatal("a colleague's reply on the customer's thread did not offer the request for settlement")
 	}
 }
 

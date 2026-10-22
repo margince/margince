@@ -1,0 +1,24 @@
+{
+  "scenario": "case59_file_it_on_the_meeting_and_the_contract",
+  "criteria": [
+    1,
+    2
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "claude:cli",
+  "effort": "thinking off",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": true,
+  "usage": {
+    "input_tokens": 24,
+    "output_tokens": 3778,
+    "cache_creation_input_tokens": 32932,
+    "cache_read_input_tokens": 637270,
+    "runs_measured": 2,
+    "runs_costed": 2,
+    "cost_usd": 0.2333
+  }
+}

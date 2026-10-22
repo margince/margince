@@ -30,3 +30,6 @@ By opening this PR, you confirm that you are **accountable** for this change. Yo
 **explain every line** in it, whether a human or an AI wrote it. See
 [CONTRIBUTING.md](/CONTRIBUTING.md) and the
 [Code of Conduct](/CODE_OF_CONDUCT.md).
+
+If you are not on the Margince team, a check asks you to accept
+[CLA.md](/CLA.md) before this PR can merge. You accept each version of it once, and it covers every later change.

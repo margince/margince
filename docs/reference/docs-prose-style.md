@@ -133,7 +133,7 @@ uses the plain word where one exists: "use", not "utilize"; "to", not "in order 
 No sentence in it runs over 25 words, and it cites no section of a document a reader cannot open, such
 as `ADR-0091 §8`. A bare decision number may stay as a label.
 
-`craft static` checks these on the lines added since `origin/main`, in the pre-push hook and in CI
+`craft static` checks these on the lines added since `origin/main`, in `make check` and in CI
 (`make craft-static`). It also notes, without blocking, a comment block over 6 lines and a Go function
 whose comments run over 6 lines and outnumber its code lines. Comments a change does not touch are left alone, so the tree improves
 file by file, and `make comment-stats` fails a change that makes the whole tree's numbers worse.

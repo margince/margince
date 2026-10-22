@@ -1,0 +1,64 @@
+/* SPDX-License-Identifier: BUSL-1.1
+ * SPDX-FileCopyrightText: 2026 Gradion */
+
+/* The expanded call's detail card. Every block in it is a bare element under
+ * the preflight reset, so the interval rides on the card, at `.form-stack`'s
+ * own step, whichever of its payload branches renders. */
+.aicalls-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.aicalls-time {
+  font-variant-numeric: tabular-nums;
+}
+
+/* A broker's model id is one unbreakable string, and it is what would widen the
+ * table past its card. */
+.aicalls-model {
+  overflow-wrap: anywhere;
+}
+.aicalls-task {
+  inline-size: min(100%, 20rem);
+}
+
+/* Seven columns share the settings column, so inner cells give up a third of
+   their padding; the outer ones keep the pane's. */
+.aicalls-card > .table-scroll > .table > * > tr > :is(th, td) {
+  padding-inline: var(--space-2);
+}
+
+/* Folded, every call keeps one shape: how long ago and the model on line two,
+   the figures on line three. The exact moment stays in the time's title. */
+@container table-fold (width < 36rem) {
+  .aicalls-card .aicalls-time {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .aicalls-card td:has(> .aicalls-model-line) {
+    flex: 1 1 0%;
+  }
+  .aicalls-card td:is(:has(> time), :has(> .aicalls-model-line)) {
+    align-self: baseline;
+  }
+  /* One run of text, so a long rung wraps under the model, not past it. */
+  .aicalls-model-line > .cell-stack {
+    display: inline;
+  }
+  .aicalls-model-line > .cell-stack > * {
+    margin-inline-end: var(--space-2);
+  }
+  .aicalls-card td:has(.aicalls-figure) {
+    order: 5;
+  }
+  .aicalls-card tr:not(.datatable-detail)::before {
+    content: "";
+    flex-basis: 100%;
+    order: 4;
+  }
+}

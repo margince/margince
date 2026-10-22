@@ -37,31 +37,28 @@
 }
 
 /* Everything between the icon and the dismiss: the words, then the verbs on the
- * heading's own line — a card's shape rather than a paragraph's. */
+ * heading's own line — a card's shape rather than a paragraph's.
+ *
+ * The verbs drop BELOW the words when the CARD is too narrow for both, not the
+ * window: a rail on a desktop screen is as narrow as a phone. It wraps rather
+ * than asking a container query, because size containment would collapse every
+ * callout a caller sizes to its content. */
 .callout-body {
   display: flex;
   flex: 1;
+  flex-wrap: wrap;
   align-items: flex-start;
-  gap: var(--space-4);
+  gap: var(--space-3) var(--space-4);
   min-inline-size: 0;
 }
 
-/* At phone width the verbs drop BELOW the words instead: a column at the end of
- * a 390px row leaves neither half a measure anybody can read. */
-@media (max-width: 640px) {
-  .callout-body {
-    flex-direction: column;
-    gap: var(--space-3);
-  }
-}
-
 /* The words as a COLUMN — title over body — inside the row that puts them
- * beside the verbs. Not redundant with `.callout-body`: that one is the row
- * (and the column below 640px), this one is what keeps the title and its prose
- * stacked and absorbing the free width while the verbs stay their own size. */
+ * beside the verbs. Not redundant with `.callout-body`: that one is the row,
+ * this one keeps the title over its prose and takes the free width. The basis
+ * is the narrowest measure that still reads as a line; below it the verbs wrap. */
 .callout-copy {
   display: flex;
-  flex: 1 1 auto;
+  flex: 1 1 15rem;
   flex-direction: column;
   gap: var(--space-1);
   min-inline-size: 0;
@@ -105,6 +102,11 @@
   display: flex;
   flex: none;
   flex-wrap: wrap;
+  /* A row of verbs wider than the card wraps inside it instead of overflowing. */
+  max-inline-size: 100%;
+  /* Wrapped onto a line of their own, the verbs keep the card's end edge. Beside
+   * the words the copy takes the free width first, so this margin is zero. */
+  margin-inline-start: auto;
   gap: var(--gapActions);
   align-items: center;
   /* The verbs end where the card ends, and a second line of them hugs the same

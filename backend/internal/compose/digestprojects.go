@@ -18,9 +18,11 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -115,13 +117,17 @@ func digestNewCommitments(ctx context.Context, tx pgx.Tx, since, until time.Time
 	if content == "" {
 		content = sqlUnnarrowed
 	}
+	identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
+	if err != nil {
+		return nil, err
+	}
 	rows, err := tx.Query(ctx, `
 		SELECT p.id, p.name, p.key, count(*)::int
 		  FROM activity a
 		  JOIN activity_link al ON al.activity_id = a.id AND al.entity_type = 'project'
 		  JOIN project p ON p.id = al.project_id AND p.archived_at IS NULL
 		 WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL
-		   AND a.created_at >= $1 AND a.created_at <= $2 AND `+scope+` AND `+content+`
+		   AND a.created_at >= $1 AND a.created_at <= $2 AND `+scope+` AND `+content+` AND `+activities.CurrentTaskClause("a", until, identities, arg)+`
 		 GROUP BY p.id, p.name, p.key
 		 ORDER BY count(*) DESC, p.name, p.id`, args...)
 	if err != nil {

@@ -45,13 +45,9 @@ func dealProvider(e *Env) *deals.Provider {
 	return deals.NewProvider(e.DB(), installseam.Deals())
 }
 
-// An agent that names a key is REFUSED, not quietly obeyed with a different
-// key. The create body carries custom fields, so a stray `key` would otherwise
-// land in that bag and be dropped in silence — and an agent told its create
-// succeeded would believe it chose the matcher that files a company's mail.
-//
-// The refusal is what stops that: a key an agent could choose is a key it could
-// point at every bracketed mention of a common word.
+// An agent that names a key is refused and told the key is not its to set. A
+// key an agent could choose is a key it could point at every bracketed mention
+// of a common word.
 func TestTheAgentSeamCannotChooseAProjectsKey(t *testing.T) {
 	e := Setup(t)
 	p := projectProvider(e)
@@ -140,21 +136,16 @@ func TestProjectThroughTheAgentSeam(t *testing.T) {
 	}
 }
 
-// The create contract carries additionalProperties, so an unrecognised key is
-// a CUSTOM-FIELD candidate rather than a refusal — it lands only if the
-// workspace catalog has a matching column, and is dropped otherwise.
-//
-// That makes one thing worth pinning hard: a key naming a real project column
-// the contract does not accept must not reach that column. `phase` moves only
-// through advanceProjectPhase, which is what keeps a move, its history row and
-// its event in one transaction — so the agent seam must not be a side door
-// onto it.
+// Only cf_ keys may ride in the create body's extension map. A key naming a
+// project column the contract does not accept is refused by name. `phase` moves
+// only through advanceProjectPhase, which keeps the move, its history row and its
+// event in one transaction. The agent seam must not reach it.
 func TestTheAgentSeamCannotSetPhaseThroughAnUnrecognisedField(t *testing.T) {
 	e := Setup(t)
 	p := projectProvider(e)
 	company := e.SeedCompany(t, "Strict GmbH", nil)
 
-	created, err := p.Create(e.Admin(), datasource.CreateInput{
+	_, err := p.Create(e.Admin(), datasource.CreateInput{
 		EntityType: datasource.EntityProject,
 		Fields: map[string]any{
 			"name": "Typo carrier", "company_id": company.String(),
@@ -162,17 +153,11 @@ func TestTheAgentSeamCannotSetPhaseThroughAnUnrecognisedField(t *testing.T) {
 		},
 		Source: "agent",
 	})
-	if err != nil {
-		t.Fatalf("create through the seam: %v", err)
+	if err == nil || !strings.Contains(err.Error(), `unknown field "phase"`) {
+		t.Fatalf("create naming phase answered %v, want a refusal naming the field", err)
 	}
-	if n := e.WsCount(t, `SELECT count(*) FROM project WHERE id = $1 AND phase = 'initiative'`,
-		created.ID); n != 1 {
-		t.Fatal("an unrecognised `phase` field reached the column — the seam is a side door around advanceProjectPhase")
-	}
-	// And the history says the same: one birth row, no transition.
-	if n := e.WsCount(t, `SELECT count(*) FROM project_phase_history WHERE project_id = $1`,
-		created.ID); n != 1 {
-		t.Fatalf("%d phase-history rows for a project that never advanced", n)
+	if n := e.WsCount(t, `SELECT count(*) FROM project WHERE name = 'Typo carrier'`); n != 0 {
+		t.Fatalf("%d projects were written by a refused create", n)
 	}
 }
 

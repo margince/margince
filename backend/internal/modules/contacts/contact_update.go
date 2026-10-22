@@ -52,9 +52,8 @@ type UpdateContactInput struct {
 	Phones    []ContactPhoneInput
 	IfVersion *int64
 	Source    string
-	// CustomFields carries the request body's extra top-level keys
-	// (additionalProperties); only active cf_* catalog columns land,
-	// drop-on-mismatch (customfields.go).
+	// CustomFields carries the request body's cf_* keys. A key no active catalog
+	// column takes is refused (storekit.CheckCustomValues).
 	CustomFields map[string]any
 }
 
@@ -104,7 +103,24 @@ func (s *Store) updateContactInTx(
 	if err != nil {
 		return out, err
 	}
-	storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties)
+	// The If-Match check comes first. The replace-sets write child rows before the
+	// guarded write could refuse a stale version. A stale version also answers 409
+	// before a refused custom field answers 422.
+	if err := storekit.EnsureIfMatch(ctx, tx, "contact", id.UUID, in.IfVersion); err != nil {
+		return out, err
+	}
+	if err := storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties); err != nil {
+		return out, err
+	}
+	setsChanged, err := applyContactReplaceSets(ctx, tx, id, current, in, active)
+	if err != nil {
+		return out, err
+	}
+	if setsChanged {
+		// A replace-set changes no column on the row, so this bump carries the
+		// version guard and the audit row.
+		p.Set("updated_at", current.UpdatedAt, time.Now().UTC())
+	}
 	if p.Empty() {
 		return current, nil
 	}
@@ -117,24 +133,6 @@ func (s *Store) updateContactInTx(
 			return out, &RequiredFieldError{Field: filterOwnerID}
 		}
 		return out, fmt.Errorf("apply contact patch: %w", err)
-	}
-	if in.Social != nil {
-		if err := replaceContactSocial(ctx, tx, workspaceID(ctx), id, in.Social); err != nil {
-			return out, err
-		}
-	}
-
-	if in.Emails != nil || in.Phones != nil {
-		by, err := storekit.CapturedBy(ctx)
-		if err != nil {
-			return out, err
-		}
-		if err := replaceContactEmails(ctx, tx, workspaceID(ctx), id, in.Source, by, in.Emails); err != nil {
-			return out, err
-		}
-		if err := replaceContactPhones(ctx, tx, id, in.Source, by, in.Phones); err != nil {
-			return out, err
-		}
 	}
 	// AFTER the addresses are replaced, never before: the cohort pass
 	// selects the correspondence to attach by reading this contact's live
@@ -208,26 +206,8 @@ func buildContactPatch(current crmcontracts.Contact, in UpdateContactInput) (*st
 	if err := storekit.ApplyClears(p, in.Clear, clearableContactColumns(current)); err != nil {
 		return nil, err
 	}
-	if in.Address != nil {
-		cur := addressColumns(current.Address)
-		p.Set("address_line1", cur.Line1, in.Address.Line1)
-		p.Set("address_line2", cur.Line2, in.Address.Line2)
-		p.Set("address_city", cur.City, in.Address.City)
-		p.Set("address_region", cur.Region, in.Address.Region)
-		p.Set("address_postal_code", cur.PostalCode, in.Address.PostalCode)
-		p.Set("address_country", cur.Country, in.Address.Country)
-	}
-	if in.Social != nil || in.Emails != nil || in.Phones != nil {
-		// The relation replacement rides the contact row's version
-		// bump (updated_at below), so If-Match still guards it and
-		// the audit row still records the transition.
-		//
-		// Emails and Phones are in this condition for a second reason:
-		// without it a row whose ONLY change is an address or a number
-		// hits p.Empty() below and returns having written nothing, so a
-		// corrected export would report success and drop every such edit
-		// in the file.
-		p.Set("updated_at", current.UpdatedAt, time.Now().UTC())
+	if err := setAddress(p, current.Address, in.Address, in.Trail); err != nil {
+		return nil, err
 	}
 	return p, nil
 }

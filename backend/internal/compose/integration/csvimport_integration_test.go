@@ -17,13 +17,10 @@ package integration
 // the customer sees is the list, not the table.
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"io"
 	"maps"
-	"mime/multipart"
 	"net/http"
+	"net/url"
 	"path"
 	"strconv"
 	"strings"
@@ -33,6 +30,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 )
 
@@ -43,6 +41,8 @@ type importColumnDTO struct {
 }
 
 type importProfileDTO struct {
+	RunID            string            `json:"run_id"`
+	RowCount         int               `json:"row_count"`
 	SourceRef        string            `json:"source_ref"`
 	Object           string            `json:"object"`
 	Columns          []importColumnDTO `json:"columns"`
@@ -57,6 +57,12 @@ type importRunDTO struct {
 	Connector  string `json:"connector"`
 	Object     string `json:"object"`
 	Checkpoint int    `json:"checkpoint"`
+	Error      string `json:"error"`
+	Version    int    `json:"version"`
+	// Released is the run's source_released.
+	Released     bool   `json:"source_released"`
+	OnBrokenLink string `json:"on_broken_link"`
+	SupersededBy string `json:"superseded_by"`
 }
 
 type importDispositionDTO struct {
@@ -70,6 +76,10 @@ type importDispositionDTO struct {
 type importIssueDTO struct {
 	Line   int    `json:"line"`
 	Reason string `json:"reason"`
+	File   string `json:"file"`
+	Kind   string `json:"kind"`
+	Column string `json:"column"`
+	Value  string `json:"value"`
 }
 
 type importLinksDTO struct {
@@ -91,6 +101,11 @@ type importReportDTO struct {
 	Issues        []importIssueDTO     `json:"issues"`
 	SourceKeyUsed string               `json:"source_key_used"`
 	Mapping       map[string]string    `json:"mapping"`
+	Parts         []struct {
+		File     string `json:"file"`
+		Object   string `json:"object"`
+		RowsRead int    `json:"rows_read"`
+	} `json:"parts"`
 }
 
 type leadListDTO struct {
@@ -107,59 +122,15 @@ func setupImportApp(t *testing.T) *apptest.AppEnv {
 	return e
 }
 
-// setupImportAppWithStore hands the suite the same object store the server
-// holds, so a scenario can make an uploaded file disappear the way a retention
-// sweep or an operator would.
+// setupImportAppWithStore hands the suite the object store the server holds.
+// A scenario can then make an uploaded file disappear, as a retention sweep or
+// an operator would. Its import jobs run when a scenario drains them.
 func setupImportAppWithStore(t *testing.T) (*apptest.AppEnv, blobstore.Store) {
 	t.Helper()
 	store := blobstore.NewMemory()
 	e := apptest.SetupAppWithOptions(t, compose.WithBlobstore(store))
 	e.BootstrapWorkspace(t)
 	return e, store
-}
-
-// uploadCSV posts one file to the upload operation and returns the profile.
-func uploadCSV(t *testing.T, e *apptest.AppEnv, object, body string) (importProfileDTO, int) {
-	t.Helper()
-	var buf bytes.Buffer
-	form := multipart.NewWriter(&buf)
-	if err := form.WriteField("object", object); err != nil {
-		t.Fatalf("writing the object field: %v", err)
-	}
-	part, err := form.CreateFormFile("file", "estate.csv")
-	if err != nil {
-		t.Fatalf("creating the file part: %v", err)
-	}
-	if _, err := part.Write([]byte(body)); err != nil {
-		t.Fatalf("writing the file part: %v", err)
-	}
-	if err := form.Close(); err != nil {
-		t.Fatalf("closing the form: %v", err)
-	}
-
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, e.TS.URL+"/v1/imports/sources", &buf)
-	if err != nil {
-		t.Fatalf("building the upload: %v", err)
-	}
-	req.Header.Set("Content-Type", form.FormDataContentType())
-	//nolint:bodyclose // apptest.CloseBody closes it in the deferred call below, which the checker cannot follow across the helper.
-	resp, err := e.Client.Do(req)
-	if err != nil {
-		t.Fatalf("uploading: %v", err)
-	}
-	defer apptest.CloseBody(t, resp)
-
-	raw, err := io.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatalf("reading the upload response: %v", err)
-	}
-	var profile importProfileDTO
-	if len(raw) > 0 && resp.StatusCode == http.StatusOK {
-		if err := json.Unmarshal(raw, &profile); err != nil {
-			t.Fatalf("decoding %q: %v", raw, err)
-		}
-	}
-	return profile, resp.StatusCode
 }
 
 // createRunOnDuplicate is createRunWithMapping for a run that names a duplicate
@@ -170,20 +141,20 @@ func createRunOnDuplicate(t *testing.T, e *apptest.AppEnv, object, sourceRef str
 ) (importRunDTO, int) {
 	t.Helper()
 	var run importRunDTO
-	status := e.Call(t, http.MethodPost, "/v1/imports", map[string]any{
+	status := testCall(t, e, "/v1/imports", map[string]any{
 		"connector": "csv", "object": object, "source_ref": sourceRef,
 		"mapping": mapping, "on_duplicate": onDuplicate,
-	}, nil, &run)
+	}, &run)
 	return run, status
 }
 
 func createRunWithMapping(t *testing.T, e *apptest.AppEnv, object, sourceRef string, mapping map[string]string) (importRunDTO, int) {
 	t.Helper()
 	var run importRunDTO
-	status := e.Call(t, http.MethodPost, "/v1/imports", AnyMap{
+	status := testCall(t, e, "/v1/imports", AnyMap{
 		"connector": "csv", "object": object,
 		"source_ref": sourceRef, "mapping": mapping,
-	}, nil, &run)
+	}, &run)
 	return run, status
 }
 
@@ -264,7 +235,7 @@ func TestCSVImportDryRunWritesNothingAndCommitsLeads(t *testing.T) {
 	}
 
 	var approved importRunDTO
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, &approved); status != http.StatusAccepted {
+	if status := importCall(t, e, run.ID, "approve", nil, &approved); status != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", status)
 	}
 	if got := leadCount(t, e); got != 3 {
@@ -291,7 +262,7 @@ func TestCSVImportReRunConvergesAndAnEditedFileUpdates(t *testing.T) {
 
 	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
 	run, _ := createRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
+	if status := importCall(t, e, run.ID, "approve", nil, nil); status != http.StatusAccepted {
 		t.Fatalf("first approve → %d, want 202", status)
 	}
 	if got := leadCount(t, e); got != 3 {
@@ -301,7 +272,7 @@ func TestCSVImportReRunConvergesAndAnEditedFileUpdates(t *testing.T) {
 	// The identical file again: recognized, and nothing created.
 	same, _ := uploadCSV(t, e, "lead", prospectCSV)
 	sameRun, _ := createRunWithMapping(t, e, "lead", same.SourceRef, same.SuggestedMapping)
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+sameRun.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
+	if status := importCall(t, e, sameRun.ID, "approve", nil, nil); status != http.StatusAccepted {
 		t.Fatalf("second approve → %d, want 202", status)
 	}
 	if got := leadCount(t, e); got != 3 {
@@ -315,7 +286,7 @@ func TestCSVImportReRunConvergesAndAnEditedFileUpdates(t *testing.T) {
 		"katherine@johnson.example,Katherine Johnson,Mathematician\n"
 	edited, _ := uploadCSV(t, e, "lead", corrected)
 	editedRun, _ := createRunWithMapping(t, e, "lead", edited.SourceRef, edited.SuggestedMapping)
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+editedRun.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
+	if status := importCall(t, e, editedRun.ID, "approve", nil, nil); status != http.StatusAccepted {
 		t.Fatalf("third approve → %d, want 202", status)
 	}
 
@@ -380,10 +351,10 @@ func TestCSVImportApprovalIsValidOnlyOnce(t *testing.T) {
 
 	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
 	run, _ := createRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
+	if status := importCall(t, e, run.ID, "approve", nil, nil); status != http.StatusAccepted {
 		t.Fatalf("first approve → %d, want 202", status)
 	}
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); status != http.StatusConflict {
+	if status := importCall(t, e, run.ID, "approve", nil, nil); status != http.StatusConflict {
 		t.Fatalf("second approve → %d, want 409", status)
 	}
 }
@@ -408,11 +379,11 @@ func TestCSVImportRefusesAnImpossibleMapping(t *testing.T) {
 	e := setupImportApp(t)
 
 	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
-	status := e.Call(t, http.MethodPost, "/v1/imports", AnyMap{
+	status := testCall(t, e, "/v1/imports", AnyMap{
 		"connector": "csv", "object": "lead",
 		"source_ref": profile.SourceRef,
 		"mapping":    map[string]string{"Email": "email", "Title": "annual_revenue"},
-	}, nil, nil)
+	}, nil)
 	if status != http.StatusUnprocessableEntity {
 		t.Fatalf("an unknown target → %d, want 422", status)
 	}
@@ -428,10 +399,10 @@ func TestCSVImportRefusesAForeignSourceReference(t *testing.T) {
 	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
 	foreign := "11111111-1111-7111-8111-111111111111/import/" + path.Base(profile.SourceRef)
 
-	status := e.Call(t, http.MethodPost, "/v1/imports", AnyMap{
+	status := testCall(t, e, "/v1/imports", AnyMap{
 		"connector": "csv", "object": "lead",
 		"source_ref": foreign, "mapping": profile.SuggestedMapping,
-	}, nil, nil)
+	}, nil)
 	// Not-found, not forbidden: a caller may not learn whether a reference they
 	// were never given exists.
 	if status != http.StatusNotFound {
@@ -450,7 +421,7 @@ func TestCSVImportPredictsUnchangedRatherThanUpdatingEverything(t *testing.T) {
 
 	first, _ := uploadCSV(t, e, "lead", prospectCSV)
 	run, _ := createRunWithMapping(t, e, "lead", first.SourceRef, first.SuggestedMapping)
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
+	if status := importCall(t, e, run.ID, "approve", nil, nil); status != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", status)
 	}
 
@@ -466,15 +437,10 @@ func TestCSVImportPredictsUnchangedRatherThanUpdatingEverything(t *testing.T) {
 	}
 }
 
-// A run whose validation could not finish is recorded as failed. Left in
-// `validating` it would be an orphan: approve refuses it, resume refuses it,
-// and nothing else could ever move it.
-//
-// The two ways staging can fail on the file are asserted together, because they
-// differ in whether a run exists to orphan. A header that cannot be read is
-// caught before the run row is written, so there is nothing to record; a file
-// that breaks PAST its header is only discovered by the walk, which is the case
-// the failed-run record exists for.
+// A test run that could not finish returns its run to the draft, with the
+// reason the importer reads beside the choices they can change. Left in
+// `validating` it would be an orphan nothing could ever move, and `failed`
+// means a commit stopped.
 func TestCSVImportRecordsAValidationThatCouldNotFinish(t *testing.T) {
 	e, store := setupImportAppWithStore(t)
 
@@ -487,36 +453,35 @@ func TestCSVImportRecordsAValidationThatCouldNotFinish(t *testing.T) {
 		strings.NewReader(brokenRows), int64(len(brokenRows)), "text/csv"); err != nil {
 		t.Fatalf("replacing the stored upload: %v", err)
 	}
-	if status := e.Call(t, http.MethodPost, "/v1/imports", AnyMap{
+	// The worker meets the broken row, so the request answers before it does.
+	var refused importRunDTO
+	if status := testCall(t, e, "/v1/imports", AnyMap{
 		"connector": "csv", "object": "lead",
 		"source_ref": profile.SourceRef, "mapping": map[string]string{"Email": "email"},
-	}, nil, nil); status != http.StatusUnprocessableEntity {
-		t.Fatalf("a file that breaks past its header → %d, want 422", status)
+	}, &refused); status != http.StatusAccepted {
+		t.Fatalf("a file that breaks past its header → %d, want 202", status)
+	}
+	if runs := importRuns(t, e); len(runs) != 1 || runs[0].ID != profile.RunID {
+		t.Fatalf("runs = %+v, want only the upload's own", runs)
+	}
+	if refused.Status != "pending" || refused.Error == "" || refused.Error == migration.CauseTestRunStopped {
+		t.Fatalf("run = %+v, want pending with the file's own reason, not the fixed sentence", refused)
 	}
 
-	runs := importRuns(t, e)
-	if len(runs) != 1 {
-		t.Fatalf("runs = %+v, want the one this attempt opened", runs)
-	}
-	if runs[0].Status != "failed" {
-		t.Fatalf("status = %q, want failed — a validating run nothing can move is an orphan", runs[0].Status)
-	}
-
-	// A vanished upload cannot be read at all, so it is refused before a run
-	// row is written. Nothing is left behind to orphan — and a run recorded
-	// against a file that no longer exists could never be resumed anyway.
+	// A vanished upload cannot be read at all, so it is refused before the
+	// test run starts, and its draft is left as it was.
 	second, _ := uploadCSV(t, e, "lead", prospectCSV)
 	if err := store.Delete(context.Background(), second.SourceRef); err != nil {
 		t.Fatalf("removing the stored upload: %v", err)
 	}
-	if status := e.Call(t, http.MethodPost, "/v1/imports", AnyMap{
+	if status := testCall(t, e, "/v1/imports", AnyMap{
 		"connector": "csv", "object": "lead",
 		"source_ref": second.SourceRef, "mapping": second.SuggestedMapping,
-	}, nil, nil); status != http.StatusNotFound {
+	}, nil); status != http.StatusNotFound {
 		t.Fatalf("a vanished upload → %d, want 404", status)
 	}
-	if after := importRuns(t, e); len(after) != 1 {
-		t.Fatalf("runs = %+v, want only the first attempt's: a refusal before staging writes no run", after)
+	if draft := readImportRun(t, e, second.RunID); draft.Status != "pending" || draft.Version != 1 {
+		t.Fatalf("the vanished upload's draft = %+v, want it untouched", draft)
 	}
 }
 
@@ -557,10 +522,10 @@ func TestCSVImportRunNamesWhoOpenedIt(t *testing.T) {
 		ID         string `json:"id"`
 		CapturedBy string `json:"captured_by"`
 	}
-	if status := e.Call(t, http.MethodPost, "/v1/imports", AnyMap{
+	if status := testCall(t, e, "/v1/imports", AnyMap{
 		"connector": "csv", "object": "lead",
 		"source_ref": profile.SourceRef, "mapping": profile.SuggestedMapping,
-	}, nil, &run); status != http.StatusAccepted {
+	}, &run); status != http.StatusAccepted {
 		t.Fatalf("create run → %d, want 202", status)
 	}
 	if run.CapturedBy == "" {
@@ -609,7 +574,7 @@ func TestCSVImportLandsCompaniesWithEveryMappedField(t *testing.T) {
 		t.Fatalf("create run → %d, want 202", status)
 	}
 	before := len(companyList(t, e).Data)
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
+	if status := importCall(t, e, run.ID, "approve", nil, nil); status != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", status)
 	}
 
@@ -648,7 +613,7 @@ func TestCSVImportLandsCompaniesWithEveryMappedField(t *testing.T) {
 	if report.Disposition.Updated != 1 || report.Disposition.Unchanged != 1 {
 		t.Fatalf("prediction = %+v, want exactly the one row that changed", report.Disposition)
 	}
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+editedRun.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
+	if status := importCall(t, e, editedRun.ID, "approve", nil, nil); status != http.StatusAccepted {
 		t.Fatalf("approve corrected → %d, want 202", status)
 	}
 	for _, o := range companyList(t, e).Data {
@@ -666,7 +631,7 @@ func TestCSVImportLandsCompaniesWithEveryMappedField(t *testing.T) {
 func TestCSVImportUploadRefusesWhatItCannotUse(t *testing.T) {
 	e := setupImportApp(t)
 
-	if _, status := uploadCSV(t, e, "deal", prospectCSV); status != http.StatusUnprocessableEntity {
+	if _, status := uploadCSV(t, e, "note", prospectCSV); status != http.StatusUnprocessableEntity {
 		t.Fatalf("an unsupported object → %d, want 422", status)
 	}
 	if _, status := uploadCSV(t, e, "lead", ""); status != http.StatusUnprocessableEntity {
@@ -723,7 +688,7 @@ func TestCSVImportMeetsAnExistingCompanyAndABadSizeBand(t *testing.T) {
 			report.Disposition.Duplicates)
 	}
 
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run2.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
+	if status := importCall(t, e, run2.ID, "approve", nil, nil); status != http.StatusAccepted {
 		t.Fatalf("approve 2 → %d, want 202", status)
 	}
 
@@ -770,7 +735,7 @@ func TestCSVImportMeetsAnExistingCompanyAndABadSizeBand(t *testing.T) {
 	}
 
 	// And the commit must agree with the preview it showed.
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run3.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
+	if status := importCall(t, e, run3.ID, "approve", nil, nil); status != http.StatusAccepted {
 		t.Fatalf("approve 3 → %d, want 202", status)
 	}
 	for _, o := range companyList(t, e).Data {
@@ -800,7 +765,7 @@ func TestCSVImportOfOneAddressColumnKeepsTheRestOfTheAddress(t *testing.T) {
 		"Company": "display_name", "Street": "address.line1", "City": "address.city",
 		"Postal": "address.postal_code", "Country": "address.country",
 	})
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+r1.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
+	if status := importCall(t, e, r1.ID, "approve", nil, nil); status != http.StatusAccepted {
 		t.Fatalf("approve 1 → %d, want 202", status)
 	}
 
@@ -809,7 +774,7 @@ func TestCSVImportOfOneAddressColumnKeepsTheRestOfTheAddress(t *testing.T) {
 	profile, _ := uploadCSV(t, e, "company", partial)
 	run, _ := createRunWithMapping(t, e, "company", profile.SourceRef,
 		map[string]string{"Company": "display_name", "City": "address.city"})
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
+	if status := importCall(t, e, run.ID, "approve", nil, nil); status != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", status)
 	}
 
@@ -877,7 +842,7 @@ func TestCSVImportSkipDuplicatesPreviewsWhatItWillDo(t *testing.T) {
 		t.Errorf("the disposition sums to %d for %d rows read", got, report.RowsRead)
 	}
 
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
+	if status := importCall(t, e, run.ID, "approve", nil, nil); status != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", status)
 	}
 
@@ -902,10 +867,10 @@ func TestCSVImportRefusesAnUnknownDuplicatePolicy(t *testing.T) {
 	e := setupImportApp(t)
 	profile, _ := uploadCSV(t, e, "company", "Company\nInitech\n")
 	// Decoded into nothing: a refusal answers a problem document, not a run.
-	status := e.Call(t, http.MethodPost, "/v1/imports", map[string]any{
+	status := testCall(t, e, "/v1/imports", map[string]any{
 		"connector": "csv", "object": "company", "source_ref": profile.SourceRef,
 		"mapping": map[string]string{"Company": "display_name"}, "on_duplicate": "merge",
-	}, nil, nil)
+	}, nil)
 	if status != http.StatusUnprocessableEntity {
 		t.Fatalf("an unknown on_duplicate → %d, want 422", status)
 	}
@@ -952,7 +917,7 @@ func TestCSVImportCountsTheDuplicatesTheCommitMetNotTheOnesThePreviewPredicted(t
 		t.Fatalf("creating the company between preview and approval → %d, want 201", code)
 	}
 
-	if code := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); code != http.StatusAccepted {
+	if code := importCall(t, e, run.ID, "approve", nil, nil); code != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", code)
 	}
 
@@ -985,4 +950,35 @@ func duplicatesSaid(report importReportDTO) string {
 		return "no"
 	}
 	return strconv.Itoa(*report.Disposition.Duplicates)
+}
+
+func TestRecentImportsListsTheRunsNewestFirstAcrossPages(t *testing.T) {
+	e := setupImportApp(t)
+	first, _ := uploadCSV(t, e, "lead", prospectCSV)
+	oldest, _ := createRunWithMapping(t, e, "lead", first.SourceRef, first.SuggestedMapping)
+	second, _ := uploadCSV(t, e, "lead", prospectCSV)
+	newest, _ := createRunWithMapping(t, e, "lead", second.SourceRef, second.SuggestedMapping)
+	type runPage struct {
+		Data []importRunDTO `json:"data"`
+		Page struct {
+			NextCursor *string `json:"next_cursor"`
+			HasMore    bool    `json:"has_more"`
+		} `json:"page"`
+	}
+	var one runPage
+	if status := e.Call(t, http.MethodGet, "/v1/imports?limit=1", nil, nil, &one); status != http.StatusOK {
+		t.Fatalf("page one → %d", status)
+	}
+	if len(one.Data) != 1 || one.Data[0].ID != newest.ID || one.Data[0].Object != "lead" ||
+		!one.Page.HasMore || one.Page.NextCursor == nil {
+		t.Fatalf("page one = %+v, want %s with its object and a cursor to more", one, newest.ID)
+	}
+	var two runPage
+	path := "/v1/imports?limit=1&cursor=" + url.QueryEscape(*one.Page.NextCursor)
+	if status := e.Call(t, http.MethodGet, path, nil, nil, &two); status != http.StatusOK {
+		t.Fatalf("page two → %d", status)
+	}
+	if len(two.Data) != 1 || two.Data[0].ID != oldest.ID || two.Page.HasMore {
+		t.Fatalf("page two = %+v, want %s and the end of the list", two, oldest.ID)
+	}
 }

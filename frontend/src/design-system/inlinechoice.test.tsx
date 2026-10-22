@@ -10,7 +10,8 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
-import { ProblemError } from "../screens/common";
+import { en } from "../i18n/en";
+import { ProblemError } from "../lib/problem";
 import { InlineChoice } from "./inlinechoice";
 import { InlineText } from "./inlinetext";
 
@@ -91,7 +92,7 @@ describe("editing a value where it is read", () => {
   it("keeps the reader's choice on screen when the save is refused", async () => {
     const onSave = vi.fn(async () => {
       throw new ProblemError({
-        code: "version_conflict",
+        code: "version_skew",
         detail: "Somebody else changed this record.",
       });
     });
@@ -106,7 +107,7 @@ describe("editing a value where it is read", () => {
     // and tell them nothing.
     await waitFor(() =>
       expect(screen.getByRole("alert").textContent).toContain(
-        "Somebody else changed this record.",
+        en["common.versionSkew"],
       ),
     );
     expect(screen.getByRole("combobox")).toBeTruthy();
@@ -210,7 +211,7 @@ describe("editing a value where it is read", () => {
   it("lets Escape back out even once a save has already failed", async () => {
     const onSave = vi.fn(async () => {
       throw new ProblemError({
-        code: "version_conflict",
+        code: "version_skew",
         detail: "Somebody else changed this record.",
       });
     });
@@ -317,6 +318,20 @@ describe("editing free text where it is read", () => {
     await waitFor(() => expect(onSave).toHaveBeenCalledWith("Aerospace"));
   });
 
+  it("commits nothing on an input method's Enter", async () => {
+    const { onSave } = renderText();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Change Industry" }),
+    );
+    const input = screen.getByLabelText("Industry");
+    await userEvent.type(input, "s");
+
+    fireEvent.keyDown(input, { key: "Enter", keyCode: 229 });
+
+    expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Industry")).toHaveValue("Automotives");
+  });
+
   it("commits on losing focus, with no explicit commit press", async () => {
     const { onSave } = renderText();
     await userEvent.click(
@@ -360,7 +375,7 @@ describe("editing free text where it is read", () => {
   it("keeps the input mounted with the typed text on a refused save, rather than pulling focus back", async () => {
     const onSave = vi.fn(async () => {
       throw new ProblemError({
-        code: "version_conflict",
+        code: "version_skew",
         detail: "Somebody else changed this record.",
       });
     });
@@ -373,7 +388,7 @@ describe("editing free text where it is read", () => {
     await userEvent.type(input, "Aerospace{Enter}");
     await waitFor(() =>
       expect(screen.getByRole("alert").textContent).toContain(
-        "Somebody else changed this record.",
+        en["common.versionSkew"],
       ),
     );
     // Still the editor, still the reader's own typed text — a failed save

@@ -39,12 +39,11 @@ must_call:
   - search_records
 may_call:
   - prep_for_meeting
-  - company_coverage
+  - read_relationships
   - catch_me_up_on
   - query_workspace
   - read_record
   - search_context
-  - who_knows
 
 must_mention:
   # Criterion 1: it found the account from a description, not a name.

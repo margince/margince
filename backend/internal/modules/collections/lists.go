@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/auditentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -228,7 +229,7 @@ func (s *Store) ListLists(ctx context.Context, filter ListFilter) ([]listRow, bo
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
-		where := []string{"true"}
+		where := []string{predicateAlways}
 		if len(filter.Sharing) > 0 {
 			where = append(where, fmt.Sprintf("l.sharing = ANY($%d)", arg(filter.Sharing)))
 		}
@@ -310,7 +311,7 @@ func (s *Store) CreateList(ctx context.Context, in CreateListInput) (listRow, er
 		if err := writeRevision(ctx, tx, out); err != nil {
 			return err
 		}
-		auditID, err := storekit.Audit(ctx, tx, "create", listObject, out.ID.UUID, nil, map[string]any{
+		auditID, err := storekit.Audit(ctx, tx, "create", auditentity.List, out.ID.UUID, nil, map[string]any{
 			nameField: out.Name, entityTypeField: out.EntityType, listTypeField: out.ListType, sharingField: out.Sharing,
 		})
 		if err != nil {

@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useEffect, useLayoutEffect, useRef } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 
 // What a dialog owes the keyboard, in one place: Escape closes it, Tab stays
 // inside it, and focus goes in when it opens and back where it came from when
@@ -73,12 +79,12 @@ function firstControlIn(dialog: HTMLElement | null): HTMLElement | null {
 // can operate a surface the dialog is covering.
 function keepTabInside(event: KeyboardEvent, dialog: HTMLElement) {
   const stops = focusableWithin(dialog);
-  if (stops.length === 0) {
+  const [first] = stops;
+  const last = stops.at(-1);
+  if (first === undefined || last === undefined) {
     event.preventDefault();
     return;
   }
-  const first = stops[0];
-  const last = stops[stops.length - 1];
   const active = document.activeElement;
   // Focus already outside the dialog is the case both directions have to
   // catch, not just Shift+Tab: it happens whenever something on the page
@@ -170,6 +176,64 @@ export function coveredByDialog(element: Element | null): boolean {
   const layers = liveDialogs();
   const top = layers[layers.length - 1];
   return top !== undefined && !top.contains(element);
+}
+
+/** As `coveredByDialog`, with the top dialog's opened panels as part of it. */
+export function coveredByLayer(element: Element | null): boolean {
+  const top = liveDialogs().at(-1) ?? null;
+  return (
+    coveredByDialog(element) &&
+    !panelsOpenedFrom(top).some((panel) => panel.contains(element))
+  );
+}
+
+/** The layer a panel portalled out of `anchorRef` joins, so it opens above its
+ * dialog: that dialog's overlay, or the body. `joinLayer` also fills the ref. */
+export function useDialogLayer<T extends HTMLElement>(
+  anchorRef: React.RefObject<T | null>,
+  eager: boolean,
+): {
+  layer: HTMLElement | null;
+  joinLayer: (node: T | null) => void;
+  join: () => void;
+} {
+  // Null until joined: a portal that moves container remounts its children.
+  // Only an eager panel joins at mount; the rest join on the press that opens.
+  const [layer, setLayer] = useState<HTMLElement | null>(null);
+  const joinLayer = useCallback(
+    (node: T | null) => {
+      anchorRef.current = node;
+      if (node && eager) {
+        setLayer(layerOf(node));
+      }
+    },
+    [anchorRef, eager],
+  );
+  const join = useCallback(
+    () => setLayer(layerOf(anchorRef.current)),
+    [anchorRef],
+  );
+  return { layer, joinLayer, join };
+}
+
+function layerOf(node: HTMLElement | null): HTMLElement {
+  return node?.closest<HTMLElement>(".overlay") ?? document.body;
+}
+
+/**
+ * Whether a press landed in a layer above `layer`: a dialog, or a panel opened
+ * from inside `panel`. A popover in `layer` stays open for those presses.
+ */
+export function pressedInLayerAbove(
+  target: Node,
+  layer: HTMLElement | null,
+  panel: HTMLElement | null,
+): boolean {
+  const overlay = target instanceof Element ? target.closest(".overlay") : null;
+  return (
+    (overlay !== null && overlay !== layer) ||
+    panelsOpenedFrom(panel).some((opened) => opened.contains(target))
+  );
 }
 
 function ownsKeyboard(container: HTMLElement | null): boolean {

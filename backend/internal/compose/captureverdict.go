@@ -35,6 +35,11 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/customfields"
+	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/schema"
@@ -64,7 +69,10 @@ type CounterpartyVerdictEngine struct {
 	contacts   *contacts.Store
 	activities *activities.Store
 	approvals  *approvals.Service
-	brain      completer
+	// eraser destroys what hidden noise mail's text left behind when the
+	// redaction stage empties it: the same list every privacy arm runs.
+	eraser *privacy.Eraser
+	brain  completer
 	// triage queues the read that decides whether a domain a verdict just
 	// admitted deserves a company. A `real` answer creates the CONTACT; whether
 	// they have an employer is a separate question this engine does not answer.
@@ -97,16 +105,25 @@ func NewCounterpartyVerdictEngine(
 		pool:       pool,
 		pending:    capture.NewPendingStore(InstallationDB(pool)),
 		contacts:   newCounterpartyStore(pool),
-		activities: activities.NewStore(InstallationDB(pool)),
-		approvals:  approvals.NewService(InstallationDB(pool)),
+		activities: activities.NewStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil)),
+		approvals:  NewApprovalsService(InstallationDB(pool)),
+		eraser:     privacy.NewEraser(InstallationDB(pool)).WithCountry(identity.CountryForDecision).WithRawCapturePurger(RawCapturePurgerFor(InstallationDB(pool))),
 		brain:      brain,
-		triage:     newDomainTriageTrigger(pool, log),
+		triage:     newDomainTriageTrigger(pool, log, lists.SkipReservedDomainProposals),
 		tagFiler:   newConnectorTagFiler(pool),
 		transactional: capture.NewTransactionalList(
 			lists.TransactionalExtra, lists.TransactionalNever),
 		skipReservedDomains: lists.SkipReservedDomainProposals,
 		log:                 log,
 	}
+}
+
+// WithObjectStores returns an engine whose redaction stage also purges the
+// attachment bytes and the one-time link material behind the mail it destroys.
+func (e *CounterpartyVerdictEngine) WithObjectStores(blob blobstore.Store, vault keyvault.Vault) *CounterpartyVerdictEngine {
+	out := *e
+	out.eraser = e.eraser.WithBlobstore(blob).WithPayloadVault(privacyPayloads(vault))
+	return &out
 }
 
 // CanJudge reports whether a model lane was composed for this deployment. An
@@ -278,6 +295,12 @@ func (e *CounterpartyVerdictEngine) judgeOne(
 		return e.applyOwnerDecision(ctx, row, kind)
 	}
 	if addressIsARoleMailbox(row.Email) {
+		return e.applyJudged(ctx, row, capture.KindRoleMailbox, capture.VerdictMeasurement{})
+	}
+	// Google's meeting mail is evidence a meeting took place, and a model's
+	// noise answer would hide every later message from that sender. Settled as
+	// a role mailbox: the mail stays visible and nobody is recorded.
+	if capture.IsGoogleMeetingMail(row.Email, row.SenderAuthenticated) {
 		return e.applyJudged(ctx, row, capture.KindRoleMailbox, capture.VerdictMeasurement{})
 	}
 	// The other address-only refusal, and the one this lane was missing: an

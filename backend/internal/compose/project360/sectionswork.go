@@ -50,11 +50,14 @@ func (a *assembly) readDocuments() error {
 // order a reviewer works it: soonest due first, undated last.
 func (a *assembly) readCommitments() error {
 	tasks, truncated, err := a.svc.activities.ListOpenTasksTx(a.ctx, a.tx, activities.ListOpenTasksInput{
+		AsOf:       a.now,
 		EntityType: &entityTypeProject, EntityID: &a.projectID.UUID, Limit: sectionLimit,
+		ExcludeSystemMinted: a.reading.ExcludeSystemMinted,
 	})
 	if err != nil {
 		return err
 	}
+	a.tasks = tasks
 	data := make([]crmcontracts.Project360Commitment, 0, len(tasks))
 	for _, t := range tasks {
 		item := crmcontracts.Project360Commitment{
@@ -84,6 +87,7 @@ func (a *assembly) readTimeline() error {
 	limit := sectionLimit
 	rows, page, err := activities.ListActivitiesTx(a.ctx, a.tx, activities.ListActivitiesInput{
 		EntityType: &entityTypeProject, EntityID: &a.projectID.UUID, Limit: &limit,
+		Columns: a.cats.activity,
 	})
 	if err != nil {
 		return err

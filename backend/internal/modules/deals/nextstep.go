@@ -37,12 +37,12 @@ import "fmt"
 // callers pass `d.id` and `l.deal_id`) and asOf is the placeholder holding the
 // sweep's clock. Both are compile-time literals at every call site: nothing
 // off a request body is ever formatted in here.
-func OpenNextStepSQL(dealExpr, asOf string) string {
+func OpenNextStepSQL(dealExpr, asOf, currentTask string) string {
 	return fmt.Sprintf(`(
 		EXISTS (
 			SELECT 1 FROM activity t
 			JOIN activity_link tl ON tl.activity_id = t.id AND tl.deal_id = %[1]s
-			WHERE t.kind = 'task' AND t.is_done = false AND t.archived_at IS NULL
+			WHERE t.kind = 'task' AND t.is_done = false AND t.archived_at IS NULL AND %[4]s
 		)
 		OR EXISTS (
 			SELECT 1 FROM activity m
@@ -52,7 +52,7 @@ func OpenNextStepSQL(dealExpr, asOf string) string {
 			  AND %[2]s < m.occurred_at
 			         + make_interval(secs => coalesce(m.duration_seconds, 0))
 		)
-	)`, dealExpr, asOf, meetingStillStandingSQL("m"))
+	)`, dealExpr, asOf, meetingStillStandingSQL("m"), currentTask)
 }
 
 // MeetingIsOverSQL renders "this meeting is finished", the reading the waiting

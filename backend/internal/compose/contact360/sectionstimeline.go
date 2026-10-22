@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -46,12 +47,13 @@ import (
 // The one %s expression is used by both arms: a bind ("$3") on the page's own
 // reads, a correlated column ("c.id") where a set of contacts is answered in one
 // statement. Every call site passes it exactly once.
-const contactReachesActivity = `(EXISTS (
-	SELECT 1 FROM activity_link l
-	WHERE l.activity_id = a.id AND l.contact_id = %[1]s)
- OR EXISTS (
-	SELECT 1 FROM activity_participant ap
-	WHERE ap.activity_id = a.id AND ap.contact_id = %[1]s))`
+//
+// One IN over both arms, not two ORed EXISTS. Postgres runs the IN as a join
+// from the contact's few rows; it tests ORed EXISTS on every activity.
+const contactReachesActivity = `(a.id IN (
+	SELECT l.activity_id FROM activity_link l WHERE l.contact_id = %[1]s
+	UNION ALL
+	SELECT ap.activity_id FROM activity_participant ap WHERE ap.contact_id = %[1]s))`
 
 // bind spells one placeholder for the predicates that take the contact as an
 // expression.
@@ -187,7 +189,8 @@ const (
 // second copy the helper exists to prevent.
 var byUrgencyHumanFirst = sectionOrder(
 	"(CASE WHEN " + activities.SystemMintedExpr("a") + " THEN 1 ELSE 0 END) ASC, " +
-		"a.due_at ASC NULLS LAST, a.occurred_at ASC, a.id ASC")
+		"a.due_at ASC NULLS LAST, a.occurred_at ASC, a.id ASC",
+)
 
 // sectionPage is the section's edge in the activities list's own cursor
 // vocabulary, so the record page continues from this page's last row rather
@@ -235,6 +238,13 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	contactPos := arg(contactID)
+	if order != byRecency {
+		identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
+		if err != nil {
+			return nil, false, err
+		}
+		extra += " AND " + activities.CurrentTaskClause("a", s.now(), identities, arg)
+	}
 	// DISCOVER-gated, like the activities list: a limited conversation on
 	// this contact is still a row on the timeline — date, direction, kind —
 	// with its content withheld (content_state), not a gap the reader
@@ -285,6 +295,9 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 	if err := activities.WithEmailRowFacts(ctx, tx, out); err != nil {
 		return nil, false, err
 	}
+	if err := activities.WithCommitmentAdmissions(ctx, tx, out); err != nil {
+		return nil, false, err
+	}
 	return out, hasMore, nil
 }
 
@@ -305,6 +318,7 @@ func (s *Service) lastTouchSection(ctx context.Context, tx pgx.Tx, contactID ids
 	touch := touched[contactID]
 	out.LastInboundAt = touch.InboundAt
 	out.LastOutboundAt = touch.OutboundAt
+	out.LastLiveInboundAt = touch.LiveInboundAt
 	return nil
 }
 
@@ -413,17 +427,32 @@ func actingUser(ctx context.Context) (ids.UserID, error) {
 	if !ok || p.UserID == (ids.UUID{}) {
 		return ids.UserID{}, fmt.Errorf(
 			"the visit baseline is per-user and this call carries no user: %w",
-			apperrors.ErrPermissionDenied)
+			apperrors.ErrPermissionDenied,
+		)
 	}
 	return ids.From[ids.UserKind](p.UserID), nil
 }
 
 // baselineFor reads the caller's own mark. The user_id predicate is the
 // whole scope and has to be written out: without it one rep would read
-// another rep's reading history. It is also sufficient — core 0225
+// another rep's reading history. It is also sufficient, because core 0225
 // collapsed user_record_view's unique key to (user_id, entity_type,
 // entity_id).
+//
+// An agent has no mark of its own and does not borrow its granting human's. A
+// passport carries that human's UserID, so the predicate alone answers with
+// their reading history.
+//
+// The response would then carry the instant that human last looked at this
+// contact. An agent reads the timeline whole instead, which is what a reader
+// who has never visited sees.
 func (s *Service) baselineFor(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) (at time.Time, visited bool, err error) {
+	if err := auth.RequireHuman(ctx); err != nil {
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			return time.Time{}, false, nil
+		}
+		return time.Time{}, false, err
+	}
 	userID, err := actingUser(ctx)
 	if err != nil {
 		return time.Time{}, false, err

@@ -14,6 +14,7 @@ package capture
 // of where the value lives, not of who may change it.
 
 import (
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
@@ -21,6 +22,9 @@ import (
 // surface: every role reads it (a rep needs to see whether auto-enrich is
 // live), only admin/ops writes.
 const captureSettingsObject = "capture_settings"
+
+// captureAuditVerb is the verb every capture setting's audit row carries.
+const captureAuditVerb = "update"
 
 // SettingsObject is the same object, for compose.
 //
@@ -41,13 +45,13 @@ const SettingsObject = captureSettingsObject
 // keyed `capture.auto_enrich` where the column form wrote `auto_enrich`. The
 // verb, object and actor are unchanged, but an operator reading the ledger
 // across the migration boundary sees both spellings.
-var AutoEnrich = settings.Define[bool](
-	"capture.auto_enrich",
-	captureSettingsObject,
-	"update",
-	true,
-	nil, // every bool is a valid posture; a validator here would be ceremony
-)
+var AutoEnrich = config.DefineStored(config.Spec[bool]{
+	Key:     "capture.auto_enrich",
+	Env:     "MARGINCE_CAPTURE_AUTO_ENRICH",
+	Type:    config.Bool,
+	Default: config.Some(true),
+	Doc:     "Read a new contact's company web page automatically.",
+}, config.Store{RBACObject: captureSettingsObject, AuditVerb: captureAuditVerb})
 
 // MailSharing is the workspace mail-sharing posture: ON, a captured email is
 // readable by every colleague who can see the contact; OFF, every email
@@ -59,13 +63,16 @@ var AutoEnrich = settings.Define[bool](
 // Default true: sharing is the point of a CRM, and the off position exists
 // for installations that accept how much harder it makes shared pipeline
 // work — the settings surface says so in as many words.
-var MailSharing = settings.Define[bool](
-	"capture.mail_sharing",
-	captureSettingsObject,
-	"update",
-	true,
-	nil, // every bool is a valid posture; a validator here would be ceremony
-).MachineryApplied() // the sink stamps each new email's audience from it
+var MailSharing = config.DefineStored(config.Spec[bool]{
+	Key:     "capture.mail_sharing",
+	Env:     "MARGINCE_CAPTURE_MAIL_SHARING",
+	Type:    config.Bool,
+	Default: config.Some(true),
+	Doc:     "Let every colleague who can see a contact read the email captured with them; off keeps new mail to those on it.",
+}, config.Store{
+	RBACObject: captureSettingsObject, AuditVerb: captureAuditVerb,
+	MachineryApplied: true, // the sink stamps each new email's audience from it
+})
 
 // SharedPostureAllowed is the workspace's answer to whether a seat may put
 // their mailbox in the `shared` posture at all — colleagues reading a captured
@@ -77,13 +84,16 @@ var MailSharing = settings.Define[bool](
 // by itself would be making a legal commitment on the customer's behalf. The
 // admin confirming it is the customer saying they hold that agreement; the
 // product does not verify one exists, and says so where it asks.
-var SharedPostureAllowed = settings.Define[bool](
-	"capture.shared_posture_allowed",
-	captureSettingsObject,
-	"update",
-	false,
-	nil, // every bool is a valid posture; a validator here would be ceremony
-).MachineryApplied() // SetMailPosture reads it inside the write it gates
+var SharedPostureAllowed = config.DefineStored(config.Spec[bool]{
+	Key:     "capture.shared_posture_allowed",
+	Env:     "MARGINCE_CAPTURE_SHARED_POSTURE_ALLOWED",
+	Type:    config.Bool,
+	Default: config.Some(false),
+	Doc:     "Allow a seat to share their mailbox with colleagues as mail lands; turn it on only where a works agreement allows it.",
+}, config.Store{
+	RBACObject: captureSettingsObject, AuditVerb: captureAuditVerb,
+	MachineryApplied: true, // SetMailPosture reads it inside the write it gates
+})
 
 // SignatureEnrich is the workspace DEFAULT for reading contact details out of
 // captured mail — a title, a phone number, an address, the company somebody
@@ -110,23 +120,31 @@ var SharedPostureAllowed = settings.Define[bool](
 //
 // Default true: the pass reads only what a contact put under their own name in
 // mail they sent us, which is the least-surprising enrichment in the product.
-var SignatureEnrich = settings.Define[bool](
-	"capture.signature_enrich",
-	captureSettingsObject,
-	"update",
-	true,
-	nil, // every bool is a valid posture, as for MailSharing above
-).MachineryApplied() // candidate selection reads it, per mailbox, in SQL
+var SignatureEnrich = config.DefineStored(config.Spec[bool]{
+	Key:     "capture.signature_enrich",
+	Env:     "MARGINCE_CAPTURE_SIGNATURE_ENRICH",
+	Type:    config.Bool,
+	Default: config.Some(true),
+	Doc:     "Read contact details from the signatures and attached cards of captured mail, for every mailbox that has made no choice of its own.",
+}, config.Store{
+	RBACObject: captureSettingsObject, AuditVerb: captureAuditVerb,
+	MachineryApplied: true, // candidate selection reads it, per mailbox, in SQL
+})
 
 // Definitions is capture's contribution to the settings registry. Compose
 // concatenates each module's list; a module that declares no settings has no
 // such function, so this is opt-in rather than an interface every module must
 // satisfy.
 func Definitions() []settings.Definition {
-	return []settings.Definition{
+	return []settings.Definition{GoogleAppSetting, MicrosoftAppSetting, UnitAppsSetting}
+}
+
+// ConfigSettings are capture's settings in the configuration registry. Named
+// apart from Settings, the posture this package answers with.
+func ConfigSettings() []config.Any {
+	return []config.Any{
 		AutoEnrich, MailSharing, SharedPostureAllowed, SignatureEnrich,
 		AutoEnrichDailyCap, SiteReadMaxPages, SiteReadMaxMiB, SiteReadWallSeconds,
 		MailSyncIntervalSeconds,
-		GoogleAppSetting, MicrosoftAppSetting,
 	}
 }

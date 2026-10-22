@@ -3,7 +3,12 @@
 
 package capture
 
-import "time"
+import (
+	"math"
+	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+)
 
 // The typed Fields payloads a NormalizedRecord carries (the port keeps
 // Fields as any so the seam stays leaf-pure; the sink switches on these
@@ -38,6 +43,39 @@ type ActivityFields struct {
 	// event without one. Deciding what a message asks of its reader is a
 	// judgement made later, from this fact among others.
 	HasCalendarPart bool
+	// CalendarMethod is that part's RFC 5546 METHOD, or "" when none is known.
+	// REPLY, COUNTER and DECLINECOUNTER answer an invitation rather than ask.
+	CalendarMethod string
+
+	// SentByColleague is the live seat who wrote a mail this mailbox holds a
+	// copy of (asSentByColleagueTx); zero for every other record.
+	SentByColleague ids.UUID
+
+	// Envelope is what the mail parser read about addressing and links; nil
+	// for anything not parsed from a mail, and for list mail.
+	Envelope *MailEnvelope
+
+	// judged is what the sink concluded from Envelope. Unexported so no
+	// connector can state the conclusion for it.
+	judged envelopeFacts
+}
+
+// MailEnvelope is what one mail's headers and body say, before any judgement.
+type MailEnvelope struct {
+	// DirectRecipients preserves To separately from copied readers.
+	DirectRecipients []string
+	// OpenRecipients holds the To and Cc addresses, the mailbox owner's included.
+	// Empty for a mail sent to undisclosed recipients.
+	OpenRecipients []string
+	// RecipientsUnreadable says a To or Cc header would not parse, so
+	// OpenRecipients may miss the reader's own address.
+	RecipientsUnreadable bool
+	// LinkHosts are the hosts the body's web links lead to, with a known
+	// redirect wrapper already unwrapped.
+	LinkHosts []string
+	// LinksTruncated says the parser stopped before it read every link, so
+	// LinkHosts may miss one.
+	LinksTruncated bool
 }
 
 // LeadFields is a captured prospect bound for the lead pool — never
@@ -62,4 +100,14 @@ type LeadFields struct {
 	// that contact's "owes a reply" lane and start their first-response clock,
 	// for somebody who has never written to anyone.
 	Unowned bool
+}
+
+// StorableDuration is seconds as activity.duration_seconds can hold it, or nil
+// when it is negative or past that int4 column. An event a sender wrote to run
+// for a century would otherwise fail the insert, and with it the whole sync.
+func StorableDuration(seconds *int) *int {
+	if seconds == nil || *seconds < 0 || *seconds > math.MaxInt32 {
+		return nil
+	}
+	return seconds
 }

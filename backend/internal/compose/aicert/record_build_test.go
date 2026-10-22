@@ -258,3 +258,24 @@ func ratedAccumulation() *taskAccumulation {
 		certifiedScope:        aitasks.ScopeFullInvocation,
 	}
 }
+
+func TestADecisionIsPricedAtTheModelThatServedItElseTheBoundOne(t *testing.T) {
+	day := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
+	served, _ := seedRateFor("gemini", "gemini-3.6-flash", day)
+	bound, _ := seedRateFor("gemini", "gemini-3.5-flash", day)
+	if served.InputPerMTokMicroUSD == bound.InputPerMTokMicroUSD {
+		t.Fatal("the seed sheet prices both models alike; the test means nothing")
+	}
+	for _, tc := range []struct {
+		name, servedModel string
+		want              ai.ModelRate
+	}{
+		{"a seeded served model", "gemini-3.6-flash", served},
+		{"an unseeded served model", "gemini-3.6-flash-001", bound},
+	} {
+		got, ok := servedRateFor("gemini", tc.servedModel, "gemini-3.5-flash", day)
+		if !ok || got.InputPerMTokMicroUSD != tc.want.InputPerMTokMicroUSD {
+			t.Errorf("%s: rate = %+v (%v), want %+v", tc.name, got, ok, tc.want)
+		}
+	}
+}

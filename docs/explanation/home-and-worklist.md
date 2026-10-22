@@ -1,8 +1,8 @@
 <!-- prose:plain -->
 # Home and the Worklist: how the day is ranked
 
-Home has one ranking engine behind three views: the Worklist, the Focus cards on Morning, and the weekly
-review. The server ranks every row once, by one fixed order of ranking steps. Focus is a
+Home has one ranking engine behind three views: the Worklist, the **First** section on Morning, and the
+weekly review. The server ranks every row once, by one fixed order of ranking steps. Focus is a
 cut of that same order, taken before the queue's filter and page limit, so no client can rank work on its
 own. Promises read from a conversation reach the queue through one dispatch rule.
 
@@ -18,7 +18,7 @@ The code:
 - `backend/internal/compose/weeklyjobs.go`, `weeklyteamjobs.go`, `weeklyenrichjobs.go` and `backend/internal/compose/weekly/`: the weekly review.
 - `backend/internal/modules/deals/closedate.go` and `closedatesweep.go`: the nightly close date repair; `changeacceptance.go`: **Accept**.
 - `backend/internal/modules/notices/store.go` and `backend/internal/modules/automation/handlers_event.go`: stage change notices.
-- `frontend/src/app/router.tsx` and `frontend/src/screens/brief.queue.tsx`: old addresses.
+- `frontend/src/lib/router.tsx` and `frontend/src/features/brief/brief.queue.tsx`: old addresses.
 
 ## How a row is ranked
 
@@ -30,10 +30,9 @@ outranks one customer who waits; with levels, sixty duplicate merges never reach
 `rankSteps` in `ranksteps.go` is the order of ranking steps, and `less` stops at the first step that decides
 a pair. `pin`, `band` and `crowded` come before `level`, so a crowded row can sort below a row of a lower level. The steps, in order,
 are `pin`, `band`, `crowded`, `level`, `deadline`, `expected_revenue`, `opportunity`,
-`waiting_days`, `relationship`, `occurrence`. Both the sort and the "why it ranks here" sentence walk them.
-One slice serves both, so a step that can decide a pair always
-explains it too. Deadline leads the steps after `level` because a date somebody agreed to is the one fact on the page
-that runs out.
+`waiting_days`, `relationship`, `occurrence`. The comparison data follows the same steps.
+The screen shows the facts that admit work, without a sentence for each comparison.
+Deadline leads the steps after `level` because an agreed date runs out.
 
 Bands are headings drawn from the level and the source, never stored (`bands.go`). `bandOrder` is `now`,
 `keep_momentum`, `build_pipeline`, `review`. Crowding moves a row down and never up. Past the first group of waiting customers, the rest leave the `now` band but stay ahead of upkeep work. Without that rule a hundred
@@ -48,6 +47,38 @@ That is imported history, not today's breach; a duty that fell due while on reco
 `recoveryHorizonDays` (14, `classifyrisk.go`) makes deal recovery urgent when the expected close is past or
 inside it.
 
+## Deal suggestions need current facts
+
+`admittedBriefItems` in `attention/briefadmission.go` checks each brief suggestion before counts, filters and pages.
+It uses current deal facts and the risk facts already read for this caller.
+A stored signal or finding cannot create current work alone. Suggestions without current facts stay in the stored brief.
+
+Home and Worklist use the same typed reasons. Deal values and dates keep their own fields.
+Cached deal facts add context after the page is cut; they do not admit work.
+Stored findings follow the current audience of their cited activities on both run reads and item read-backs.
+
+## Personal work needs its own owner
+
+The mail request writer and waiting read share the direct-recipient rule in
+`activities/mailresponsibility.go`. Owning a contact or being able to read shared mail does not assign its reply.
+A personal or chosen team member view applies that rule before the source limit, counts and Focus.
+A chosen member view uses that member’s choices, while access checks still use the viewer.
+Team keeps its shared view.
+
+The capture writer keeps the mailbox owner's parsed To and Cc roles without creating another contact.
+A delivery record alone is not a To role.
+
+Record task lists, project counts and deal next-step checks share
+`activities.CurrentTaskClause`. Old automatic work needs current source evidence or a real human change.
+Import audits and record filing do not count as human changes.
+Raw history keeps the original records and their status.
+
+An automatic mail task also needs a current request addressed to the user who holds it.
+Editing the displayed body cannot change that evidence.
+The request writer and current task readers share the recipient rule and mail horizon.
+Reads hide old automatic work even before a background job runs.
+A later email to a contact does not show that a task or promise was done.
+
 ## Focus is a cut of the same ranking
 
 `focusOf` in `focus.go` sorts the whole assembled day, keeps the rows `focusEligible` accepts, and cuts at
@@ -56,7 +87,7 @@ hide a card. It is a projection of the one ranking, not a second scoring system.
 
 `focusEligible` keeps rows under `levelRoutine`, with four rules by source. A notice must be urgent work. A
 task with a future deadline counts only when it is due today. A meeting counts only when it is unprepared
-and starts within 24 hours. A `brief_item` of kind `moved` never counts.
+and starts within 24 hours. An admitted deal suggestion counts when current facts call for action.
 
 The counts on `WorklistFocus` in `backend/api/crm.yaml`:
 
@@ -83,13 +114,15 @@ These rules hold the morning brief to what it read:
 
 ## Close dates and Accept
 
-The nightly sweep in `closedatesweep.go` replaces a missing or past expected close, and keeps any future
-date. `proposedCloseDate` in `closedate.go` takes today plus the median days per stage of won deals in the
+The nightly sweep in `closedatesweep.go` replaces a missing or past expected close only when
+observed history supports an estimate, and keeps any future date. `proposedCloseDate` in `closedate.go` takes today plus the median days per stage of won deals in the
 pipeline, times `StagesToGo`, rounded up to whole weeks. The floor is 7 days. Below `CloseDateMinHistory`
-(20 won deals) it uses `CloseDateStageDays` (14).
+(20 won deals) it keeps the date as it is. You still need to confirm estimates. They record the observed
+won-deal count, median days per stage and stages left.
 
-A stalled deal never has its date pushed forward. Its forecast category drops one step instead, since a fresh date is how a dead deal stays in the forecast. Only
-a replaced date is provisional; a date a human set stays theirs.
+A stalled deal keeps its future date while its forecast category drops one step. A missing or past
+date still needs enough observed history before it can be replaced. Only a replaced date is
+provisional; a future date a human set stays theirs.
 
 `setCloseDate` and `setForecastCategory` in `closedatecorrect.go` write only a real change. The sweep sees a quiet deal again every night. Without that guard, the audit log would show a forecast that moves each night while it stands
 still.
@@ -109,15 +142,66 @@ mail alike:
 - A promise nobody can be named for is proposed to the member the reading belongs to.
 - In private mail, `PrivateTo` keeps the promise with its owner, and the task is readable by its holder alone.
 
-The 0.85 sits in the gap the certification records show. A plain dated promise reads at 0.9 or more and a soft one at 0.3 or less, and the extractors drop anything under 0.7.
-`TestCommitmentTaskConfidenceSitsInTheCertifiedGap` holds it there.
+`commitmentmeaning.go` checks what the words ask someone to do before the dispatcher creates work.
+Completed work, an offer, a request without agreement and work that depends on something that has not happened yet create no task or proposal.
+The reading keeps that reason with the source. Missing or invalid meaning stops the reading so it can be retried.
+A deadline such as "next week" keeps its quoted range and sets no due day. A day needs its own source words.
+
+Before writing new work, `CommitmentAdmissionEvidenceTx` checks the source and any later mail. The dispatcher uses the source date saved by capture, or reads the original mail date for older rows.
+Its rule version is `CommitmentAdmissionVersion`, in `backend/internal/modules/activities/commitmentadmission.go`.
+The commitment window uses `automaticCommitmentHorizonDays` (30). A promise or agreed deadline within that window stays current, as does a deadline still ahead.
+
+Unknown times and unread later context stop new work. This does not mark the promise done.
+Human changes keep tasks current. A machine claim without a current admission stays with its source for review. It does not become personal work because the reader owns the contact. Assigned promises use the task lane; claims without tasks name no personal owner.
+
+Canceled meetings create no new work after their scheduled start. A future booked meeting waits until it has taken place.
+Promises that need review do not create fresh open account signals.
+
+A history read adds the newest bounded thread window, without moving the history cursor past unread older messages.
+`extractContextMessages` bounds both windows together. A gap or unread new text stops admission. A cut counts as read only when every line left out is quoted history; an inline answer below the cut stays unread.
+
+`activity_commitment_admission` keeps the reason, source quote, rule version and read time under the source's access rules.
+The activity audit stores decision metadata without copying source text. Later read times stop stale results from replacing newer ones.
+Contact and company timelines show commitment review counts on sources and their threads.
+
+Open **Commitment review** in the source drawer to see why no work was created. Readers can check later replies and add a follow-up from a linked record.
+This is the bounded review route for threads with more later context than the read window holds; the scan still moves forward.
+A transcript reading also reports why a commitment needs more evidence.
+
+Partial delivery leaves the original promise open. A repeated promise keeps the original source and quoted clause, so it cannot create a second task for the same work.
+A stated renewal records its message and source time. It can update the deadline on an open automatic task and its claim; human changes and completed or archived tasks keep their state.
+The dispatcher locks the original source before applying a renewal. An older renewing message cannot replace a newer one, even when a later pass reads it.
+
+Completion follows the stored source and the quoted clause's key. Pending task proposals end only after every recipient claim for that promise is done or dismissed.
+A completed commitment task can end its proposal when no contact claim exists. A blank key proves no link.
+
+One promise to several known recipients creates one task with a claim for each recipient. Home and Worklist show each visible recipient and their status. Different asks keep separate tasks.
+A later reading that leaves out a recipient does not remove an existing claim. A human can dismiss a claim that is no longer owed.
+
+A later recipient joins automatic work directly when no human has changed it. A task a human accepted or changed needs approval to attach that recipient.
+That approval names the existing task and changes no task fields.
+
+Automatic completion counts all claims for the promise, including recipients whose attachment needs approval. Completing one recipient's claim cannot complete work still owed to another recipient.
+
+Completion events use the original member's current access. A task completion read later checks the task again and leaves reopened work alone.
+The notice worker removes notices for proposals that ended; the source and audit stay available under their access rules.
+
+The day folds an approval's notice into its decision before counting or paging. The approval engine checks ownership and access by identifier, even beyond the loaded decision page.
+Titles and target records prove no link. A notice keeps its place when no pending decision is in scope.
+`notices_more_available` keeps the original scan bound after folding; Worklist derives its notice coverage from that same field.
+
+Signal and transcript readers use the `premium` tier by default. Their certification cases check meaning, ownership and recipient attribution.
+Each reading uses tokens at that tier. Work waits in the queue when the budget runs out.
+
+The task threshold applies only after the meaning of the promise admits work. A soft offer cannot become a task through confidence alone.
+`TestAutomaticTaskConfidenceFitsCertifiedCommitments` checks the threshold against current certification records. The corpus also checks that soft offers create no work.
 
 `commitmentLocator` keys a promise on its source, side, party and quoted words, built by the server and not
 from the model's text. A new reading that words the summary another way still finds the old promise. The key
 covers archived tasks, refused proposals and dismissed claims, so none of them comes back.
 
 `commitmentsettle.go` keeps a promise and its task in step, as consumer group `cg:commitment-settle`. A task
-marked done settles its open claims, and a claim settled as done completes its task. Each side does nothing
+marked done settles its readable open claims. A claim settled as done completes its task only when no recipient claim stays open. Each side does nothing
 when the other is already done, so the pair cannot loop. Opening the task again leaves the claim kept, and
 dismissing a claim leaves the task alone: a kept promise that was reopened was still kept. The write runs
 as the human behind the event, so it cannot settle a claim or a task that human may not change.
@@ -127,10 +211,10 @@ rules are on [customer-requests.md](customer-requests.md).
 
 ## The weekly job
 
-`weekly_review_generate` ticks every 6 hours (`backend/api/jobs.yaml`). The Monday it aims at is the installation's local Monday. A tick that crosses `reviewHour` (6) in every time zone is what makes one
-cadence correct everywhere. `reviewWindowOpen` in `weeklyenrichjobs.go` is closed only on Monday before that
-hour. A later tick in the same week, up to Sunday, catches up a member the last tick missed. Once the next
-Monday comes, the candidate query asks about the new week only.
+`weekly_review_generate` ticks hourly (`backend/api/jobs.yaml`) so it can reach personal delivery
+windows. Reviews keep the installation's last closed reporting week. Later working days allow
+catch-up within that week; once the next reporting week opens, the candidate query asks about the
+newly closed week. Existing review and mail claims keep repeated ticks from sending a second copy.
 
 `measureWorkspace` in `weeklyjobs.go` measures every due member first, each under their own authority.
 Model text and mail come after, because a stalled relay must not cost a member the review itself. One

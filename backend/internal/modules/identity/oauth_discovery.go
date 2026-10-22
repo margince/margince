@@ -7,6 +7,7 @@ package identity
 // reads to find the A2 handshake.
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -22,31 +23,40 @@ func (h Handlers) OAuthServerMetadata(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, map[string]any{
+	metadata := map[string]any{
 		"issuer":                 issuer,
 		"authorization_endpoint": issuer + authorizePath,
 		"token_endpoint":         issuer + "/oauth/token",
-		"registration_endpoint":  issuer + "/oauth/register",
-		// CIMD is the forward path and DCR is retained for the compatibility
-		// window (ADR-0092 §4), so BOTH are advertised. A client reading the
-		// profile's own priority order picks the metadata document on its own;
-		// one that predates the revision keeps registering, and is not stranded
-		// by a change it never asked for.
-		"client_id_metadata_document_supported": true,
 		// RFC 7009: a client that cannot see this here will never call it —
 		// it hands back a credential and ends the connection on its own
 		// initiative, not on a server-side hint.
-		"revocation_endpoint":                   issuer + "/oauth/revoke",
-		"response_types_supported":              []string{oauthResponseTypeCode},
-		"grant_types_supported":                 oauthGrantTypesSupported,
-		"code_challenge_methods_supported":      []string{pkceMethodS256},
-		"token_endpoint_auth_methods_supported": []string{oauthAuthMethodNone},
+		"revocation_endpoint":                            issuer + "/oauth/revoke",
+		"response_types_supported":                       []string{oauthResponseTypeCode},
+		"grant_types_supported":                          oauthGrantTypesSupported,
+		"code_challenge_methods_supported":               []string{pkceMethodS256},
+		"token_endpoint_auth_methods_supported":          oauthAuthMethodsSupported,
+		"revocation_endpoint_auth_methods_supported":     oauthAuthMethodsSupported,
+		"authorization_response_iss_parameter_supported": true,
 		// offline_access is listed so Claude appends it when it wants a
 		// refresh token (§5.2) — it is a session-lifetime marker, never a
 		// passport scope, so the exchange records it as the grant's
 		// refresh_allowed and strips it from the scopes (oauth_token.go).
 		"scopes_supported": oauthScopesSupported,
-	})
+	}
+	// CIMD is the forward path and DCR is kept for the compatibility window
+	// (ADR-0092), so both are advertised while their switches are on. A failed
+	// read advertises neither; every connection already made keeps renewing.
+	methods, err := h.registrationMethods(r.Context())
+	if err != nil {
+		slog.WarnContext(r.Context(), "oauth discovery: registration settings unreadable", "err", err)
+	}
+	if err == nil && methods.Dynamic {
+		metadata["registration_endpoint"] = issuer + "/oauth/register"
+	}
+	if err == nil && methods.MetadataDocument {
+		metadata["client_id_metadata_document_supported"] = true
+	}
+	httperr.WriteJSON(w, http.StatusOK, metadata)
 }
 
 // ProtectedResourceMetadata is the RFC 9728 document a generic MCP client
@@ -97,11 +107,17 @@ func (h Handlers) ProtectedResourceMetadata(w http.ResponseWriter, r *http.Reque
 // the mux's own 404: the same response a deployment with the connector off
 // gives, rather than a document whose endpoints are relative to nowhere.
 func (h Handlers) configuredIssuer(w http.ResponseWriter, r *http.Request) (string, bool) {
-	issuer := httpserver.ConfiguredOrigin(h.mcpResource)
+	issuer := h.issuer()
 	if issuer == "" {
 		http.NotFound(w, r)
 		return "", false
 	}
 	w.Header().Set("Cache-Control", "no-store")
 	return issuer, true
+}
+
+// issuer is the origin of the configured MCP resource, or "" when none is
+// configured. Discovery's issuer and every authorization response's iss name it.
+func (h Handlers) issuer() string {
+	return httpserver.ConfiguredOrigin(h.mcpResource)
 }

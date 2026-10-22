@@ -29,10 +29,10 @@ import (
 // the token lands in a third party's request line whichever form we choose. The
 // fragment is the right default; the containment is single use plus the TTL.
 //
-// The shape is the app's own hash route rather than a bare `#token=` because
-// `parseHash` (frontend app/router.tsx) reads the first hash segment as the screen
-// name and strips a hash-local query: `#/reset-password?token=…` parses, while
-// `#token=…` would make the token itself the screen name.
+// The shape is the app's own hash route, not a bare `#token=`.
+// `parseHash` (frontend lib/router.tsx) reads the first hash segment as the
+// screen name and strips a hash-local query. So `#/reset-password?token=…`
+// parses, while `#token=…` would make the token itself the screen name.
 //
 // `baseURL` arrives with any trailing slash already trimmed (see
 // `Handlers.WithPasswordLinkBase`), so this concatenation cannot produce `//#/`.
@@ -48,6 +48,31 @@ func passwordLink(baseURL, rawToken string) string {
 func (h Handlers) WithPasswordLinkBase(publicBaseURL string) Handlers {
 	h.passwordLinkBaseURL = strings.TrimRight(publicBaseURL, "/")
 	return h
+}
+
+// WithContactMailLane records that the installation can mail a contact a
+// one-time confirmation link.
+//
+// Named apart from the consent module's own WithConfirmationLane, because
+// compose promotes both onto one Server.
+func (h Handlers) WithContactMailLane(wired bool) Handlers {
+	h.confirmLaneWired = wired
+	return h
+}
+
+// canRequestConfirmation reports whether this caller may ask a contact to
+// confirm what is held about them.
+//
+// It folds the grant in for the reason admin_password_link states: a bare
+// posture boolean would tell every seat whether this installation has email.
+//
+// The lane is read as wired, never as healthy. Whether a wired relay delivers
+// is the delivery row's answer, and the sibling below says what came of asking
+// for more.
+func (h Handlers) canRequestConfirmation(ctx context.Context, id Identity) bool {
+	return h.confirmLaneWired &&
+		auth.Require(actorCtx(ctx, id), "contact", principal.ActionUpdate) == nil &&
+		principal.SeatType(id.SeatType).CanMutate()
 }
 
 // canSendPasswordLink reports whether this installation can MAIL a

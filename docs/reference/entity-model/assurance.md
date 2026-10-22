@@ -206,7 +206,7 @@ The 7 tables owned by `assurance`, as the migrations build them. [Back to the en
 
 ## assurance_task_item
 
-8 columns · primary key `(id)` · referenced by 0 foreign keys
+13 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -214,8 +214,13 @@ The 7 tables owned by `assurance`, as the migrations build them. [Back to the en
 | `cycle_id` | `uuid` | yes | Points at `assurance_cycle.id`. |
 | `exception_id` | `uuid` | yes | Points at `assurance_exception.id`. |
 | `state` | `text`, default `'open'::text` | yes | One of `open`, `resolved`, `dismissed`. |
+| `subject_contract_id` | `uuid` |  | Points at `contract.id`. |
+| `subject_deal_id` | `uuid` |  | Points at `deal.id`. |
 | `subject_id` | `uuid` | yes |  |
 | `subject_kind` | `text` | yes | One of `deal`, `signal`, `offer`, `contract`. |
+| `subject_offer_id` | `uuid` |  | Points at `offer.id`. |
+| `subject_signal_id` | `uuid` |  | Points at `signal.id`. |
+| `subject_unkeyed` | `boolean`, default `false` | yes |  |
 | `task_activity_id` | `uuid` | yes | Points at `activity.id`. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
@@ -225,6 +230,10 @@ The 7 tables owned by `assurance`, as the migrations build them. [Back to the en
 |---|---|---|
 | `cycle_id` | `assurance_cycle` | deleting the parent deletes this row |
 | `exception_id` | `assurance_exception` | deleting the parent deletes this row |
+| `subject_contract_id` | `contract` | deleting the parent deletes this row |
+| `subject_deal_id` | `deal` | deleting the parent deletes this row |
+| `subject_offer_id` | `offer` | deleting the parent deletes this row |
+| `subject_signal_id` | `signal` | deleting the parent deletes this row |
 | `task_activity_id` | `activity` | deleting the parent deletes this row |
 
 **Rules**
@@ -232,7 +241,12 @@ The 7 tables owned by `assurance`, as the migrations build them. [Back to the en
 - `assurance_task_item_once`: `UNIQUE (exception_id, cycle_id)`
 - `assurance_task_item_one_task_per_subject`: `EXCLUDE USING gist (cycle_id WITH =, subject_kind WITH =, subject_id WITH =, task_activity_id WITH <>)`
 - `assurance_task_item_state`: `CHECK ((state = ANY (ARRAY['open', 'resolved', 'dismissed'])))`
+- `assurance_task_item_subject_contract_id_bound`: `CHECK ((subject_unkeyed OR (NOT (subject_contract_id IS DISTINCT FROM CASE WHEN (subject_kind = 'contract') THEN subject_id ELSE NULL::uuid END))))`
+- `assurance_task_item_subject_deal_id_bound`: `CHECK ((subject_unkeyed OR (NOT (subject_deal_id IS DISTINCT FROM CASE WHEN (subject_kind = 'deal') THEN subject_id ELSE NULL::uuid END))))`
 - `assurance_task_item_subject_kind`: `CHECK ((subject_kind = ANY (ARRAY['deal', 'signal', 'offer', 'contract'])))`
+- `assurance_task_item_subject_offer_id_bound`: `CHECK ((subject_unkeyed OR (NOT (subject_offer_id IS DISTINCT FROM CASE WHEN (subject_kind = 'offer') THEN subject_id ELSE NULL::uuid END))))`
+- `assurance_task_item_subject_shape`: `CHECK ((subject_unkeyed OR (num_nonnulls(subject_deal_id, subject_signal_id, subject_offer_id, subject_contract_id) = 1)))`
+- `assurance_task_item_subject_signal_id_bound`: `CHECK ((subject_unkeyed OR (NOT (subject_signal_id IS DISTINCT FROM CASE WHEN (subject_kind = 'signal') THEN subject_id ELSE NULL::uuid END))))`
 
 **Indexes**
 
@@ -241,3 +255,11 @@ The 7 tables owned by `assurance`, as the migrations build them. [Back to the en
 - `assurance_task_item_one_task_per_subject`: `gist (cycle_id, subject_kind, subject_id, task_activity_id)`
 - `assurance_task_item_open_in_cycle`: `btree (cycle_id, subject_kind, subject_id) WHERE (state = 'open')`
 - `assurance_task_item_pkey`: `unique, btree (id)`
+- `idx_assurance_task_item_subject_contract`: `btree (subject_contract_id) WHERE (subject_contract_id IS NOT NULL)`
+- `idx_assurance_task_item_subject_deal`: `btree (subject_deal_id) WHERE (subject_deal_id IS NOT NULL)`
+- `idx_assurance_task_item_subject_offer`: `btree (subject_offer_id) WHERE (subject_offer_id IS NOT NULL)`
+- `idx_assurance_task_item_subject_signal`: `btree (subject_signal_id) WHERE (subject_signal_id IS NOT NULL)`
+
+**Triggers**
+
+- `trg_assurance_task_item_subject_keys`: `BEFORE INSERT OR UPDATE FOR EACH ROW EXECUTE FUNCTION trg_assurance_task_item_subject_keys()`

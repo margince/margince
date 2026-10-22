@@ -21,7 +21,7 @@ import (
 )
 
 func TestDealCreateInputRefusesTheImporterNamespace(t *testing.T) {
-	_, err := dealCreateInput(crmcontracts.CreateDealRequest{
+	_, err := DealCreationInput(crmcontracts.CreateDealRequest{
 		Name: "Planted", Source: "mirror:legacy_crm:deal:d-1",
 	})
 	var refused *provenance.ReservedError
@@ -36,7 +36,7 @@ func TestDealCreateInputRefusesTheImporterNamespace(t *testing.T) {
 // A deal gained a source_system wire of its own, guarded like `source`.
 func TestDealCreateInputRefusesTheImporterNamespaceOnSourceSystem(t *testing.T) {
 	reserved := "mirror:legacy_crm"
-	_, err := dealCreateInput(crmcontracts.CreateDealRequest{
+	_, err := DealCreationInput(crmcontracts.CreateDealRequest{
 		Name: "Planted", Source: "webform", SourceSystem: &reserved,
 		PipelineId: openapi_types.UUID(ids.NewV7()),
 		StageId:    openapi_types.UUID(ids.NewV7()),
@@ -52,7 +52,7 @@ func TestDealCreateInputRefusesTheImporterNamespaceOnSourceSystem(t *testing.T) 
 	// The positive control: an ordinary source system reaches the store, or
 	// the guard would refuse every real import rather than the forged one.
 	ordinary := "legacy_crm"
-	in, err := dealCreateInput(crmcontracts.CreateDealRequest{
+	in, err := DealCreationInput(crmcontracts.CreateDealRequest{
 		Name: "Real", Source: "webform", SourceSystem: &ordinary,
 		PipelineId: openapi_types.UUID(ids.NewV7()),
 		StageId:    openapi_types.UUID(ids.NewV7()),
@@ -71,7 +71,7 @@ func TestDealCreateInputAcceptsAnOrdinarySource(t *testing.T) {
 	// lookup as a zero UUID and come back as a bare not-found. They are noise to
 	// this test's subject, which is that `source` survives the mapping — but a
 	// request without them is no longer a request the mapper accepts.
-	in, err := dealCreateInput(crmcontracts.CreateDealRequest{
+	in, err := DealCreationInput(crmcontracts.CreateDealRequest{
 		Name: "Real", Source: "webform",
 		PipelineId: openapi_types.UUID(ids.NewV7()),
 		StageId:    openapi_types.UUID(ids.NewV7()),
@@ -102,7 +102,7 @@ func TestDealImporterDoorAdmitsItsNamespaceAndNothingElse(t *testing.T) {
 	if _, err := dealCreateInputFromImporter(body(provenance.CheckInCadenceSource)); err == nil {
 		t.Error("the importer door admitted an engine identity")
 	}
-	if _, err := dealCreateInput(body("mirror:hubspot")); err == nil {
+	if _, err := DealCreationInput(body("mirror:hubspot")); err == nil {
 		t.Error("the client door admitted the importer namespace")
 	}
 }

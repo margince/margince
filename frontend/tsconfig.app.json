@@ -3,7 +3,7 @@
     "composite": true,
     "tsBuildInfoFile": "node_modules/.tmp/tsconfig.app.tsbuildinfo",
     "target": "ES2022",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "lib": ["ES2022", "ES2023.Intl", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "moduleResolution": "bundler",
     "jsx": "react-jsx",
@@ -11,6 +11,7 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
     "noUncheckedSideEffectImports": true,
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
@@ -35,11 +36,10 @@
     // the vanilla installation does not serve that route. The composed lane
     // points it at the types generated from the MERGED contract, where it is
     // not. "screens" is the unit SCREENS an installation mounts: in this lane
-    // an empty registry, in the composed lane src/screens/ext/. Those screens
-    // call their unit's routes, which exist in `paths` only where the
-    // installation serves them — so they are compiled by the composed lane
-    // alone, and src/screens/ext/ is excluded below rather than failing every
-    // vanilla build on a call it correctly cannot express.
+    // an empty registry, in the composed lane each unit's frontend under
+    // extensions/. Those screens call their unit's routes, which exist in
+    // `paths` only where the installation serves them, so only the composed
+    // lane compiles them.
     "paths": {
       "@composition/extensions": ["./src/composition/extensions.gen"],
       "@composition/schema": ["./src/api/schema"],
@@ -48,11 +48,5 @@
     }
   },
   "include": ["src"],
-  // src/screens/ext/ is NOT dead code excluded for convenience: it is the
-  // composed lane's program, typechecked by tsconfig.composed.json against the
-  // merged contract, and reached at runtime only through the alias above. An
-  // `exclude` is enough precisely because nothing in this lane imports it —
-  // tsc follows imports past an exclusion, so a stray import here would put it
-  // straight back and fail, which is the outcome we want if one ever appears.
-  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/screens/ext/**"]
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
 }

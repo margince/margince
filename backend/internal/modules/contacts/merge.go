@@ -6,6 +6,8 @@ package contacts
 import (
 	"context"
 	"fmt"
+	"maps"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -16,7 +18,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -56,8 +57,31 @@ import (
 // Held by: TestAClaimedSpellingIsTheOnlySpellingWhereItIsUsed (backend/gates/claimedspelling_test.go)
 const (
 	auditKeyMergedInto = "merged_into_id"
+	auditKeyMergedFrom = "merged_from_id"
 	auditKeyFilled     = "filled"
+	// The tally a contact merge writes on both rows: how many references of
+	// each kind moved over. Counts only, never the values.
+	auditKeyRelinkedEmails        = "relinked_emails"
+	auditKeyRelinkedPhones        = "relinked_phones"
+	auditKeyRelinkedRelationships = "relinked_relationships"
+	auditKeyRelinkedActivityLinks = "relinked_activity_links"
 )
+
+// filledColumns names the columns a merge filled on the survivor, for the
+// archived record's row, which must not carry the values themselves.
+func filledColumns(filled map[string]any) []string {
+	return slices.Sorted(maps.Keys(filled))
+}
+
+// heldNothing is the before image of a fill-only write: every column it set
+// held nothing until now, which is the only case a fill covers.
+func heldNothing(filled map[string]any) map[string]any {
+	before := make(map[string]any, len(filled))
+	for column := range filled {
+		before[column] = nil
+	}
+	return before
+}
 
 // MergeSelfError maps to 422: a record cannot merge into itself.
 type MergeSelfError struct{}
@@ -116,14 +140,14 @@ func (s *Store) MergeContact(ctx context.Context, sourceID, targetID ids.Contact
 	}
 	// authz.go maps the merge verb to update: rewriting where records
 	// point is curation of both rows, not deletion of one.
-	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
+	if err := auth.Require(ctx, contactEntity, principal.ActionUpdate); err != nil {
 		return crmcontracts.Contact{}, err
 	}
 	if sourceID == targetID {
 		return crmcontracts.Contact{}, &MergeSelfError{}
 	}
 
-	active, err := s.activeColumns(ctx, "contact")
+	active, err := s.activeColumns(ctx, contactEntity)
 	if err != nil {
 		return crmcontracts.Contact{}, err
 	}
@@ -152,11 +176,11 @@ func (s *Store) mergeContactTx(ctx context.Context, tx pgx.Tx, sourceID, targetI
 		commsauthz.ContactStopSubject(targetID)); err != nil {
 		return crmcontracts.Contact{}, err
 	}
-	_, tgtLock, err := storekit.LockPair(ctx, tx, "contact", sourceID.UUID, targetID.UUID)
+	_, tgtLock, err := storekit.LockPair(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID)
 	if err != nil {
 		return crmcontracts.Contact{}, err
 	}
-	src, tgt, err := mergePair(ctx, tx, "contact", sourceID, targetID, ifVersion, readContactMergeState)
+	src, tgt, err := mergePair(ctx, tx, contactEntity, sourceID, targetID, ifVersion, readContactMergeState)
 	if err != nil {
 		return crmcontracts.Contact{}, err
 	}
@@ -164,33 +188,8 @@ func (s *Store) mergeContactTx(ctx context.Context, tx pgx.Tx, sourceID, targetI
 	if err != nil {
 		return crmcontracts.Contact{}, err
 	}
-	// The STOPS come across too, and they are not a relink — see stopcarry.go.
-	// relinkContactReferences moved the grants; without this the objections
-	// stayed on a record no send evaluates any more, and marketing resumed
-	// against somebody who had explicitly refused it.
-	if err := s.carryStopsTx(ctx, tx,
-		commsauthz.ContactStopSubject(sourceID),
-		commsauthz.ContactStopSubject(targetID)); err != nil {
-		return crmcontracts.Contact{}, fmt.Errorf("carry the merged-away contact's stops: %w", err)
-	}
-	// A rep's standing override travels the same way, and for the same
-	// reason: a merge that carried the stops but dropped a live vouch would
-	// leave the survivor refused again for a category a rep already cleared —
-	// see overridecarry.go.
-	if err := s.carryOverridesTx(ctx, tx,
-		commsauthz.ContactStopSubject(sourceID),
-		commsauthz.ContactStopSubject(targetID)); err != nil {
-		return crmcontracts.Contact{}, fmt.Errorf("carry the merged-away contact's overrides: %w", err)
-	}
-	// And the links, bases and asks other modules keep about them — see
-	// satellitecarry.go.
-	if err := s.carryConsentSatellitesTx(ctx, tx,
-		commsauthz.ContactStopSubject(sourceID),
-		commsauthz.ContactStopSubject(targetID)); err != nil {
-		return crmcontracts.Contact{}, fmt.Errorf("carry the merged-away contact's consent links: %w", err)
-	}
-	if err := s.carryIntrosTx(ctx, tx, sourceID, targetID); err != nil {
-		return crmcontracts.Contact{}, fmt.Errorf("carry the merged-away contact's introduction asks: %w", err)
+	if err := s.carryContactSatellitesTx(ctx, tx, sourceID, targetID); err != nil {
+		return crmcontracts.Contact{}, err
 	}
 	p := buildSurvivorshipPatch(tgt, src)
 	if !p.Empty() {
@@ -198,12 +197,16 @@ func (s *Store) mergeContactTx(ctx context.Context, tx pgx.Tx, sourceID, targetI
 			return crmcontracts.Contact{}, fmt.Errorf("apply survivorship fill: %w", err)
 		}
 	}
-	if err := archiveMergedAway(ctx, tx, "contact", sourceID.UUID, targetID.UUID); err != nil {
+	if err := archiveMergedAway(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID); err != nil {
 		return crmcontracts.Contact{}, fmt.Errorf("retire merged-away contact: %w", err)
 	}
-	auditID, err := storekit.Audit(ctx, tx, "merge", "contact", sourceID.UUID,
+	auditID, err := storekit.Audit(ctx, tx, "merge", contactEntity, sourceID.UUID,
 		map[string]any{auditKeyMergedInto: nil},
-		map[string]any{auditKeyMergedInto: targetID, "relinked": counts, auditKeyFilled: p.After()})
+		map[string]any{
+			auditKeyMergedInto: targetID, auditKeyFilled: filledColumns(p.After()),
+			auditKeyRelinkedEmails: counts.Emails, auditKeyRelinkedPhones: counts.Phones,
+			auditKeyRelinkedRelationships: counts.Relationships, auditKeyRelinkedActivityLinks: counts.ActivityLinks,
+		})
 	if err != nil {
 		return crmcontracts.Contact{}, fmt.Errorf("audit contact merge: %w", err)
 	}
@@ -212,11 +215,50 @@ func (s *Store) mergeContactTx(ctx context.Context, tx pgx.Tx, sourceID, targetI
 	if err := storekit.EmitEvent(ctx, tx, auditID, sourceID.UUID, contactMergedPayload(sourceID, targetID, counts)); err != nil {
 		return crmcontracts.Contact{}, fmt.Errorf("emit contact.merged: %w", err)
 	}
+	// Each filled column is its own top-level key, as in an update row. The
+	// history read masks by key, so a nested value would pass the mask.
+	before := map[string]any{auditKeyMergedFrom: nil}
+	after := map[string]any{
+		auditKeyMergedFrom: sourceID.UUID, auditKeyRelinkedEmails: counts.Emails, auditKeyRelinkedPhones: counts.Phones,
+		auditKeyRelinkedRelationships: counts.Relationships, auditKeyRelinkedActivityLinks: counts.ActivityLinks,
+	}
+	maps.Copy(before, p.Before())
+	maps.Copy(after, p.After())
+	if _, err := storekit.Audit(ctx, tx, "merge", contactEntity, targetID.UUID, before, after); err != nil {
+		return crmcontracts.Contact{}, fmt.Errorf("audit contact merge on the survivor: %w", err)
+	}
 	out, err := readContact(ctx, tx, targetID, storekit.LiveOnly, active)
 	if err != nil {
 		return crmcontracts.Contact{}, fmt.Errorf("read surviving contact: %w", err)
 	}
 	return out, nil
+}
+
+// carryContactSatellitesTx moves what other modules keep about the merged-away
+// contact onto the survivor. None of it is a relink of this module's own rows.
+func (s *Store) carryContactSatellitesTx(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID) error {
+	from, to := commsauthz.ContactStopSubject(sourceID), commsauthz.ContactStopSubject(targetID)
+	// In this order. The stops come across first and are not a relink (see
+	// stopcarry.go). Without them marketing resumed against somebody who had
+	// refused it. A rep's standing override follows for the same reason
+	// (overridecarry.go). Then come the links, bases and asks other modules
+	// keep about them (satellitecarry.go).
+	steps := []struct {
+		what string
+		run  func() error
+	}{
+		{"stops", func() error { return s.carryStopsTx(ctx, tx, from, to) }},
+		{"overrides", func() error { return s.carryOverridesTx(ctx, tx, from, to) }},
+		{"consent links", func() error { return s.carryConsentSatellitesTx(ctx, tx, from, to) }},
+		{"introduction asks", func() error { return s.carryIntrosTx(ctx, tx, sourceID, targetID) }},
+		{"grants", func() error { return s.carryGrantsTx(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID) }},
+	}
+	for _, step := range steps {
+		if err := step.run(); err != nil {
+			return fmt.Errorf("carry the merged-away contact's %s: %w", step.what, err)
+		}
+	}
+	return nil
 }
 
 // contactMergedPayload builds the contact.merged wire payload from
@@ -241,20 +283,13 @@ func contactMergedPayload(sourceID, targetID ids.ContactID, counts relinkCounts)
 // what it already holds; only its empty fields take A's non-empty values.
 func buildSurvivorshipPatch(target, source crmcontracts.Contact) *storekit.Patch {
 	p := storekit.NewPatch()
-	fillString(p, "first_name", target.FirstName, source.FirstName)
-	fillString(p, "last_name", target.LastName, source.LastName)
+	fillString(p, columnFirstName, target.FirstName, source.FirstName)
+	fillString(p, columnLastName, target.LastName, source.LastName)
 	fillString(p, "title", target.Title, source.Title)
 	if target.ConvertedFromLeadId == nil && source.ConvertedFromLeadId != nil {
 		p.Set("converted_from_lead_id", nil, ids.UUID(*source.ConvertedFromLeadId))
 	}
-	if target.Address == nil && source.Address != nil {
-		p.Set("address_line1", nil, source.Address.Line1)
-		p.Set("address_line2", nil, source.Address.Line2)
-		p.Set("address_city", nil, source.Address.City)
-		p.Set("address_region", nil, source.Address.Region)
-		p.Set("address_postal_code", nil, source.Address.PostalCode)
-		p.Set("address_country", nil, source.Address.Country)
-	}
+	fillMergeAddress(p, target.Address, source.Address)
 	return p
 }
 
@@ -270,23 +305,14 @@ func relinkContactEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.C
 	// duplicate, not a (kind, company, deal) one, and this predicate would archive
 	// a source edge because the target pairs with ANYBODY.
 	// The role counts for the kinds keyed on it — see roleKeyedDuplicateSQL.
-	if _, err := tx.Exec(ctx, `
-		UPDATE relationship a SET archived_at = $3
-		WHERE a.contact_id = $1 AND a.kind <> 'works_with' AND a.archived_at IS NULL AND EXISTS (
-		  SELECT 1 FROM relationship b
-		  WHERE b.contact_id = $2 AND b.kind = a.kind AND b.archived_at IS NULL
-		    AND b.company_id IS NOT DISTINCT FROM a.company_id
-		    AND b.deal_id IS NOT DISTINCT FROM a.deal_id
-		    AND `+roleKeyedDuplicateSQL+`)`,
-		sourceID, targetID, time.Now().UTC()); err != nil {
+	if err := foldFirstObservations(ctx, tx, contactFK, sourceID.UUID, targetID.UUID); err != nil {
 		return 0, err
 	}
-	tag, err := tx.Exec(ctx, `
-		UPDATE relationship a SET contact_id = $2,
-		  is_current_primary = a.is_current_primary AND NOT EXISTS (
-		    SELECT 1 FROM relationship b
-		    WHERE b.contact_id = $2 AND `+employment.CurrentPrimarySlotSQL("b")+`)
-		WHERE a.contact_id = $1 AND a.kind <> 'works_with' AND a.archived_at IS NULL`, sourceID, targetID)
+	args := pgx.NamedArgs{mergeSourceKey: sourceID, mergeTargetKey: targetID, archiveStateKey: time.Now().UTC()}
+	if _, err := tx.Exec(ctx, `UPDATE relationship a SET archived_at = @archived WHERE `+mergeContactEdgeSource+` AND `+mergeContactEdgeDuplicate, args); err != nil {
+		return 0, err
+	}
+	tag, err := tx.Exec(ctx, `UPDATE relationship a SET contact_id = @target, is_current_primary = `+mergeContactEdgePrimary+` WHERE `+mergeContactEdgeSource, args)
 	return moved + tag.RowsAffected(), err
 }
 
@@ -296,28 +322,14 @@ func relinkContactEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.C
 // orientation — would double it; both are archived instead, because the
 // surviving record already states the fact.
 func relinkWorksWithEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID) (int64, error) {
-	if _, err := tx.Exec(ctx, `
-		UPDATE relationship a SET archived_at = $3
-		WHERE a.kind = 'works_with' AND a.archived_at IS NULL
-		  AND (a.contact_id = $1 OR a.counterparty_contact_id = $1)
-		  AND (
-		    a.contact_id = $2 OR a.counterparty_contact_id = $2
-		    OR EXISTS (
-		      SELECT 1 FROM relationship b
-		      WHERE b.kind = 'works_with' AND b.archived_at IS NULL AND b.id <> a.id
-		        AND LEAST(b.contact_id, b.counterparty_contact_id) =
-		            LEAST($2::uuid, CASE WHEN a.contact_id = $1 THEN a.counterparty_contact_id ELSE a.contact_id END)
-		        AND GREATEST(b.contact_id, b.counterparty_contact_id) =
-		            GREATEST($2::uuid, CASE WHEN a.contact_id = $1 THEN a.counterparty_contact_id ELSE a.contact_id END)))`,
-		sourceID, targetID, time.Now().UTC()); err != nil {
+	args := pgx.NamedArgs{mergeSourceKey: sourceID, mergeTargetKey: targetID, archiveStateKey: time.Now().UTC()}
+	if _, err := tx.Exec(ctx, `UPDATE relationship a SET archived_at = @archived WHERE `+mergeWorksWithSource+` AND `+mergeWorksWithDuplicate, args); err != nil {
 		return 0, err
 	}
-	tag, err := tx.Exec(ctx, `
-		UPDATE relationship SET
-		  contact_id              = CASE WHEN contact_id = $1 THEN $2::uuid ELSE contact_id END,
-		  counterparty_contact_id = CASE WHEN counterparty_contact_id = $1 THEN $2::uuid ELSE counterparty_contact_id END
-		WHERE kind = 'works_with' AND archived_at IS NULL
-		  AND (contact_id = $1 OR counterparty_contact_id = $1)`, sourceID, targetID)
+	tag, err := tx.Exec(ctx, `UPDATE relationship a SET
+ contact_id = CASE WHEN a.contact_id = @source THEN @target::uuid ELSE a.contact_id END,
+ counterparty_contact_id = CASE WHEN a.counterparty_contact_id = @source THEN @target::uuid ELSE a.counterparty_contact_id END
+ WHERE `+mergeWorksWithSource, args)
 	if err != nil {
 		return 0, err
 	}
@@ -325,41 +337,38 @@ func relinkWorksWithEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids
 }
 
 // relinkLinkRows re-homes the pure link tables (activity_link,
-// list_member, taggable): a link the survivor already holds drops A's
-// copy — these rows carry no provenance of their own, so deletion loses
-// nothing — and the rest relink.
+// list_member, taggable): a link the survivor already holds stands, and the
+// retired copy is dropped. activity_link has no provenance; the list note is
+// kept, and the earlier adder or tagger of a duplicate is not.
 func relinkLinkRows(ctx context.Context, tx pgx.Tx, entityType string, sourceID, targetID ids.UUID) (int64, error) {
-	column := entityType + "_id" // contact_id | company_id
-	if _, err := tx.Exec(ctx, `
-		DELETE FROM activity_link a
-		WHERE a.`+column+` = $1 AND EXISTS (
-		  SELECT 1 FROM activity_link b
-		  WHERE b.activity_id = a.activity_id AND b.`+column+` = $2)`,
-		sourceID, targetID); err != nil {
+	column, source, duplicate, err := mergeActivityPredicates(entityType)
+	if err != nil {
 		return 0, err
 	}
-	tag, err := tx.Exec(ctx,
-		`UPDATE activity_link SET `+column+` = $2 WHERE `+column+` = $1`, sourceID, targetID)
+	args := pgx.NamedArgs{mergeSourceKey: sourceID, mergeTargetKey: targetID, recordKindParam: entityType}
+	if _, err := tx.Exec(ctx, `DELETE FROM activity_link a
+ WHERE `+source+` AND `+duplicate, args); err != nil {
+		return 0, err
+	}
+	tag, err := tx.Exec(ctx, `UPDATE activity_link a SET `+column+` = @target WHERE `+source, args)
 	if err != nil {
 		return 0, err
 	}
 	relinked := tag.RowsAffected()
 
-	for _, t := range []struct{ table, key string }{
-		{"list_member", "list_id"},
-		{"taggable", "tag_id"},
+	// Spelled out per table: the company-merge coverage census reads these
+	// statements, and a table name assembled at runtime is invisible to it.
+	for _, stmt := range []string{
+		`UPDATE list_member b SET note = a.note FROM list_member a
+ WHERE ` + mergeMembershipSource + ` AND ` + mergeMembershipTarget + ` AND b.list_id = a.list_id AND ` + mergeListNoteFill,
+		`DELETE FROM list_member a
+ WHERE ` + mergeMembershipSource + ` AND ` + mergeListDuplicate,
+		`UPDATE list_member a SET entity_id = @target WHERE ` + mergeMembershipSource,
+		`DELETE FROM taggable a
+ WHERE ` + mergeMembershipSource + ` AND ` + mergeTagDuplicate,
+		`UPDATE taggable a SET entity_id = @target WHERE ` + mergeMembershipSource,
 	} {
-		if _, err := tx.Exec(ctx, `
-			DELETE FROM `+t.table+` a
-			WHERE a.entity_type = $3 AND a.entity_id = $1 AND EXISTS (
-			  SELECT 1 FROM `+t.table+` b
-			  WHERE b.`+t.key+` = a.`+t.key+` AND b.entity_type = $3 AND b.entity_id = $2)`,
-			sourceID, targetID, entityType); err != nil {
-			return 0, err
-		}
-		if _, err := tx.Exec(ctx,
-			`UPDATE `+t.table+` SET entity_id = $2 WHERE entity_type = $3 AND entity_id = $1`,
-			sourceID, targetID, entityType); err != nil {
+		if _, err := tx.Exec(ctx, stmt, args); err != nil {
 			return 0, err
 		}
 	}

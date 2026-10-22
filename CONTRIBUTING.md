@@ -2,8 +2,9 @@
 # Contributing to Margince
 
 Margince is source-available under the Business Source License (BUSL-1.1). AI agents write most of
-its code, and a human is accountable for each change. Your changes are welcome, and they must meet the
-same rules as the code our own agents write.
+its code, and a human is accountable for each change. Your changes are welcome and must meet the
+same rules as the code our own agents write. You accept [CLA.md](CLA.md) before your first change
+merges; [LICENSING.md](LICENSING.md) says why.
 
 The [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) covers how we work together. It adds one rule:
 to send more code than you can explain wastes the time of the reviewers.
@@ -15,8 +16,7 @@ to use AI help. We refuse a change you cannot explain, and more code than the ta
 why a line is there, what it does and why it is right, it is not ready. "The model wrote it" does not
 answer a review question.
 
-This rule never changes. The AI note below keeps a human accountable, and it does not stop you from
-using AI.
+The AI note below keeps a human accountable; it does not stop you from using AI.
 
 ## Say how you used AI
 
@@ -61,8 +61,8 @@ Two things to know about `make dev`:
 
 ### Contributing from a fork
 
-A pull request from a fork runs the same `ci` checks as our own work, and `ci` is the one check a merge
-needs. A maintainer approves the run before it starts, so expect a short wait. A fork run gets no SonarCloud
+A pull request from a fork runs the same `ci` checks as our own work. A merge needs `ci`, and `cla` once
+you accept [CLA.md](CLA.md). A maintainer approves the run before it starts, so expect a short wait. A fork run gets no SonarCloud
 token, so SonarCloud does not report, and a merge does not need it.
 
 ## The checks
@@ -71,12 +71,14 @@ Code, docs and settings all go through the same checks.
 
 - `make check` is the merge check. It builds, lints and tests the code. It also checks the generated
   code, changes to the API contract, the image pins and file length, and the web app (`check-fe`).
+  It runs the craftsmanship gate (`craft static --strict`) too.
 - `make test-integration` is a separate run against a real Postgres, and needs `make db-up`. It tests
   that a workspace sees only its own data, GDPR erase requests, and an audit log no one can change. With
   no database it fails and does not skip, because a skipped security check looks the same as a passed one.
-- The craftsmanship gate (`craft static --strict`) runs on each push once you run `make hooks`. It blocks
-  each `BLOCKER` and `MAJOR` finding in the Go code you changed and in the comments you add to Go or
-  TypeScript. A `MINOR` finding does not block.
+  CI runs it on every PR that changes backend code, once the PR is ready for review. Locally,
+  `make test-it DIR=<pkg>` runs the packages your change touches.
+- The craftsmanship gate blocks each `BLOCKER` and `MAJOR` finding in the Go code and in the comments
+  you add to Go or TypeScript. A `MINOR` finding does not block.
 - Every check in CI must be green before a merge: the same checks, plus review bots and SonarCloud. Fix
   what they find, and do not dismiss it.
 

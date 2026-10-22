@@ -31,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // The default a contact who has chosen nothing is bookable in. Named, because it
@@ -281,7 +282,7 @@ func validWorkingHours(in WorkingHours) (WorkingHours, error) {
 		days = append(days, day)
 	}
 	sort.Ints(days)
-	if _, err := time.LoadLocation(in.Timezone); err != nil || in.Timezone == "" {
+	if err := values.ZoneName(in.Timezone); err != nil {
 		return WorkingHours{}, &WorkingHoursError{
 			Field:   fieldWorkTimezone,
 			Message: "a timezone is an IANA name, such as Europe/Berlin",

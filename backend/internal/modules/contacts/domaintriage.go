@@ -20,6 +20,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -80,9 +81,12 @@ const (
 
 // DomainDisposition is one domain's standing verdict.
 type DomainDisposition struct {
-	Domain string
-	Status string
-	Source string
+	PendingReason string
+	Evidence      string
+	SiteReadID    *ids.UUID
+	Domain        string
+	Status        string
+	Source        string
 	// OwnerID is the human whose connection surfaced the domain, and it is a
 	// POINTER because the row's own FK clears it when that human is deleted.
 	// Reading it as a zero uuid would forge an owner no app_user row matches,
@@ -135,11 +139,11 @@ func readDispositionTx(ctx context.Context, tx pgx.Tx, domain string) (DomainDis
 	var companyID *ids.UUID
 	err := tx.QueryRow(ctx, `
 		SELECT domain, status, source, owner_id, company_id, attempts,
-		       COALESCE(admission, ''), last_evidence_at
+		       COALESCE(admission, ''), last_evidence_at, COALESCE(pending_reason, ''), site_read_id, COALESCE(evidence, '')
 		FROM company_domain_disposition
 		WHERE domain = $1
 		FOR UPDATE`, domain).Scan(&d.Domain, &d.Status, &source, &d.OwnerID, &companyID,
-		&d.Attempts, &d.Admission, &d.LastEvidenceAt)
+		&d.Attempts, &d.Admission, &d.LastEvidenceAt, &d.PendingReason, &d.SiteReadID, &d.Evidence)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return DomainDisposition{}, false, nil
 	}
@@ -177,6 +181,9 @@ func recordPendingDispositionTx(
 		domain, ownerID, evidenceAt)
 	if err != nil {
 		return false, fmt.Errorf("contacts: opening the disposition question for %s: %w", domain, err)
+	}
+	if err := recordDomainQuestionReader(ctx, tx, domain, ownerID, evidenceAt); err != nil {
+		return false, err
 	}
 	return tag.RowsAffected() > 0, nil
 }
@@ -235,7 +242,7 @@ func newestEvidenceFor(ctx context.Context, tx pgx.Tx, domain string, activityID
 		 WHERE a.restricted_at IS NULL AND a.archived_at IS NULL
 		   AND a.occurred_at <= now() + $3::interval
 		   AND (lower(split_part(ap.address, '@', 2)) = $1
-		    OR lower(split_part(ap.address, '@', 2)) LIKE '%.' || $1
+		    OR lower(split_part(ap.address, '@', 2)) LIKE '%.' || `+storekit.EscapeLikeSQL("$1")+`
 		    OR a.id = $2)`, domain, activityID, mailClockSkewAllowance).Scan(&occurred)
 	if err != nil {
 		return nil

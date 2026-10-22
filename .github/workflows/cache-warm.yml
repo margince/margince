@@ -132,6 +132,17 @@ jobs:
         if: steps.gate-binaries.outputs.cache-hit != 'true'
         working-directory: .
         run: make tools
+      # The entry every PR's first push restores: a PR can read only its own
+      # entries and main's, and ci.yml runs on no push to main.
+      - name: Compute the golangci cache key
+        id: golangci-key
+        uses: ./.github/actions/golangci-cache-key
+      - name: Cache the golangci-lint analysis cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/golangci-lint
+          key: ${{ steps.golangci-key.outputs.key }}
+          restore-keys: ${{ steps.golangci-key.outputs.restore-keys }}
       - name: Gate binaries onto PATH
         run: echo "$HOME/go/bin" >> "$GITHUB_PATH"
       - name: Compile what the gate compiles (make check-backend)
@@ -144,22 +155,16 @@ jobs:
       # The entry about to be saved replays test results, and a replay is only
       # honest if the cache can see every input the test read. Go never rechecks
       # a file outside the test's module, so each such read must go through its
-      # tree digest (gatekit.DeclareInputs). This reruns the cached pass with
-      # Go's test log on and judges what every package really read. A failing
-      # test does not decide it; only an undeclared read withholds the entry,
-      # leaving readers on the last one that was honest.
-      - name: Census the test cache's inputs
+      # tree digest (gatekit.DeclareInputs). The census reruns the cached pass
+      # with Go's test log on and judges what every package really read. Only
+      # an undeclared read withholds the entry, leaving readers on the last one
+      # that was honest. A PR's backend-lint job runs the same census, so a read
+      # is caught before it merges rather than here.
+      - name: Census the test cache's inputs (make test-input-census)
         id: census
         if: ${{ !cancelled() }}
         working-directory: .
-        env:
-          TESTLOG_DIR: ${{ runner.temp }}/testlogs
-        run: |
-          make -C backend -k test-cached test-extensions TEST_EXEC="$GITHUB_WORKSPACE/scripts/testlog-exec.sh" ||
-            echo "::warning::a test failed under the census; its inputs are judged all the same"
-          scripts/ci-stable-mtimes.sh --names > "$RUNNER_TEMP/tree-digest-names.tsv"
-          (cd backend && GOWORK="$GITHUB_WORKSPACE/go.work" go run ./tools/check-test-inputs \
-            -logs "$TESTLOG_DIR" -names "$RUNNER_TEMP/tree-digest-names.tsv")
+        run: make test-input-census
       # !cancelled() rather than success(): a red gate still compiled the tree,
       # and those artifacts are exactly as reusable as a green run's. This
       # workflow is not a verdict, so a failure here must still leave the cache
@@ -217,9 +222,9 @@ jobs:
         env:
           INTEGRATION_SHARD: 1/12
           INTEGRATION_SHARD_OUT: ${{ runner.temp }}/shard-out
-          # The tests are DB-bound, not CPU-bound: on the 4-core runner the
-          # nproc-derived default leaves the slice mostly waiting on Postgres.
-          INTEGRATION_JOBS: 16
+          # The value of the shard it mirrors, in _lane-integration.yml, for its
+          # reason: sixteen ran the 16GB runner out of memory and got it signalled.
+          INTEGRATION_JOBS: 8
         run: make test-integration
       - name: Refresh the shared build cache
         if: ${{ !cancelled() }}

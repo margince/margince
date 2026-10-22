@@ -23,6 +23,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/freemail"
+	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -57,11 +58,8 @@ import (
 // shared domain the practical difference is exactly that one bit: T2 would let
 // the address through once the owner replied, and this does not.
 //
-// The two consult different domain lists on purpose. transactionalBaseline is
-// also read by IsMachineAddress, which the attention queue uses to drop rows, so
-// a product company with real salescontacts must not go in it — a hidden human
-// waiting on a reply is not recoverable by that queue's reader.
-// personalServiceDomains is the list only this gate and T2 see.
+// Infrastructure can suppress waiting rows; product companies can have real sales contacts.
+// Personal service domains therefore stay outside the shared infrastructure list.
 func (s *Sink) recordWorthy(cp connector.Counterparty) bool {
 	return AddressCouldNameAContact(cp.Email, cp.Domain, s.transactional)
 }
@@ -89,7 +87,7 @@ func AddressCouldNameAContact(email, domain string, list *TransactionalList) boo
 	// The local part is asked FIRST, and no allowlist overrules it. An operator
 	// vouches for a DOMAIN — that its contacts are real counterparties — and says
 	// nothing about `noreply@` on it, where still nobody answers.
-	if machineLocalpart(address) {
+	if mailidentity.HasMachineLocalpart(address) {
 		return false
 	}
 	if list != nil && list.Allowlisted(domain) {
@@ -103,7 +101,7 @@ func AddressCouldNameAContact(email, domain string, list *TransactionalList) boo
 		// a contact may still be reachable at it, so this is not a refusal.
 		return true
 	}
-	if _, infra := transactionalBaseline[base]; infra {
+	if mailidentity.Infrastructure(base) {
 		return false
 	}
 	// A personal-service product: the owner's own traffic with a tool they use.
@@ -111,17 +109,6 @@ func AddressCouldNameAContact(email, domain string, list *TransactionalList) boo
 	// reads that one and a named human here is a real customer.
 	_, service := personalServiceDomains[base]
 	return !service
-}
-
-// machineLocalpart reports whether the local part of an address names a sending
-// system rather than a contact, by both vocabularies the registry keeps.
-func machineLocalpart(address string) bool {
-	at := strings.LastIndex(address, "@")
-	if at <= 0 || at == len(address)-1 {
-		return false
-	}
-	local := address[:at]
-	return isMachineLocalpart(local) || hasMachineMarker(local)
 }
 
 // consumerMailSender answers T3: is this sender a personal mailbox rather than

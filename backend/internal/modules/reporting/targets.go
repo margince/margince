@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -137,20 +138,26 @@ func (s *Service) ListTargets(ctx context.Context, after *ids.UUID, limit int, f
 
 func (s *Service) validateTarget(ctx context.Context, tx pgx.Tx, in *crmcontracts.ReportingTargetInput) (crmcontracts.ReportingWindow, string, error) {
 	empty := crmcontracts.ReportingWindow{}
-	if in.Value < 0 || in.Value > 9007199254740991 || !values.HasVisibleText(in.Reason) || utf8.RuneCountInString(in.Reason) > 1000 {
-		return empty, "", invalid("enter a non-negative target and a revision reason")
+	if in.Value < 0 || in.Value > values.MaxExactInteger {
+		return empty, "", refuse("value", "out_of_range", "enter a non-negative target")
 	}
-	catalog, err := s.evaluator.Catalog(ctx)
+	if !values.HasVisibleText(in.Reason) {
+		return empty, "", refuse("reason", "required", "enter a revision reason")
+	}
+	if utf8.RuneCountInString(in.Reason) > 1000 {
+		return empty, "", refuse("reason", "too_long", "a revision reason holds at most 1000 characters")
+	}
+	catalog, err := s.evaluator.Catalog(ctx, textlang.English)
 	if err != nil {
 		return empty, "", err
 	}
 	index := slices.IndexFunc(catalog.Metrics, func(m crmcontracts.ReportingMetricDefinition) bool { return m.Id == in.Metric && m.SupportsTarget })
 	if index < 0 {
-		return empty, "", invalid("this metric does not support targets")
+		return empty, "", refuse("metric", "unsupported", "this metric does not support targets")
 	}
 	scope, err := s.authority.Scope(ctx, tx, in.Scope, true)
 	if err != nil {
-		return empty, "", err
+		return empty, "", refusedField("scope", err)
 	}
 	in.Scope = scope
 	if err := s.authority.Pipeline(ctx, tx, (*ids.UUID)(in.PipelineId)); err != nil {
@@ -168,10 +175,10 @@ func (s *Service) validateTarget(ctx context.Context, tx pgx.Tx, in *crmcontract
 	start := time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, zone)
 	interval, err := TargetWindow(crmcontracts.ReportingWindow{StartAt: start, EndAt: start.AddDate(0, 0, 1)}, string(in.PeriodKind), calendar)
 	if err != nil {
-		return empty, "", err
+		return empty, "", refusedField("period_kind", err)
 	}
 	if !interval.StartAt.Equal(start) {
-		return empty, "", invalid("the target must start on the first day of its month or fiscal quarter")
+		return empty, "", refuse("period_start", "not_period_start", "the target must start on the first day of its month or fiscal quarter")
 	}
 	unit := catalog.Metrics[index].Unit
 	if unit == "money" {
@@ -230,6 +237,26 @@ func sameID(left, right *openapi_types.UUID) bool {
 	return *left == *right
 }
 
+// refuseIdentityChange names the field that differs. A revision keeps its
+// target's metric, scope, pipeline and period, and a caller fixing one field
+// must not be pointed at another.
+func refuseIdentityChange(before crmcontracts.ReportingTarget, in crmcontracts.ReportingTargetInput, interval crmcontracts.ReportingWindow, unit string) error {
+	const message = "create a separate target for a different metric, scope, pipeline or period"
+	switch {
+	case before.Definition.Metric != in.Metric || before.Unit != unit:
+		return refuse("metric", "immutable", message)
+	case before.Definition.Scope.Kind != in.Scope.Kind || !sameID(before.Definition.Scope.Id, in.Scope.Id):
+		return refuse("scope", "immutable", message)
+	case !sameID(before.Definition.PipelineId, in.PipelineId):
+		return refuse("pipeline_id", "immutable", message)
+	case before.Definition.PeriodKind != in.PeriodKind:
+		return refuse("period_kind", "immutable", message)
+	case !interval.StartAt.Equal(before.Interval.StartAt) || !interval.EndAt.Equal(before.Interval.EndAt):
+		return refuse("period_start", "immutable", message)
+	}
+	return nil
+}
+
 // UpdateTarget appends a reasoned revision while preserving prior editions.
 func (s *Service) UpdateTarget(ctx context.Context, id ids.UUID, version int64, in crmcontracts.ReportingTargetInput) (crmcontracts.ReportingTarget, error) {
 	if err := requireReadWrite(ctx, "sales_target", principal.ActionUpdate); err != nil {
@@ -248,8 +275,8 @@ func (s *Service) UpdateTarget(ctx context.Context, id ids.UUID, version int64, 
 		if err != nil {
 			return err
 		}
-		if before.Definition.Metric != in.Metric || before.Definition.Scope.Kind != in.Scope.Kind || !sameID(before.Definition.Scope.Id, in.Scope.Id) || !sameID(before.Definition.PipelineId, in.PipelineId) || !interval.StartAt.Equal(before.Interval.StartAt) || !interval.EndAt.Equal(before.Interval.EndAt) || before.Unit != unit {
-			return invalid("create a separate target for a different metric, scope or period")
+		if err := refuseIdentityChange(before, in, interval, unit); err != nil {
+			return err
 		}
 		out = before
 		out.Definition = in

@@ -75,7 +75,7 @@ Two more rules keep the read correct by the way it is built:
 ## The work in flight, and the account brief behind it
 
 The lead card of the overview is **the account's work in flight**
-(`frontend/src/screens/companywork.tsx`): one line per open deal, and one per live project. Each line
+(`frontend/src/features/companies/companywork.tsx`): one line per open deal, and one per live project. Each line
 holds at most one reason it needs a look: an overdue task, or a promise they made to us that is still
 open.
 
@@ -483,7 +483,7 @@ the account, as a node and edge set the browser draws. It is separate from the 3
 profile does not always want the graph, and its unit of authorization is a **node group**, not a section.
 
 The posture is the same: one transaction, one point in time, grants per group, and a cap that reports what it
-left out. The groups are `contacts`, `deals`, `intro_path` and `our_side`, named in `groups_omitted` when
+left out. The groups are `contacts`, `deals`, `signal_route` and `our_side`, named in `groups_omitted` when
 refused.
 
 **One hop means one edge from the account.** A contact's other companies, a deal's other accounts and a
@@ -546,8 +546,8 @@ long run. See [composition-layer.md](composition-layer.md).
 | The account scan: row, rail carrier, the rule for `ensure`, merge | `backend/internal/compose/companyscan/{store,service}.go` |
 | The account scan's job, and its wiring into both roles | `backend/internal/compose/jobs_accountscan.go` |
 | The visit baseline (`user_record_view`) | `backend/internal/compose/company360/viewbaseline.go` |
-| The account card, the row every record page draws it as, and the moment vocabulary they read it with | `backend/internal/compose/company360/moment.go`, `frontend/src/screens/record360/today.tsx`, `frontend/src/screens/record360/moment.ts` |
-| The live record poll, and which reads it knows | `frontend/src/app/queryclient.ts`, `frontend/src/screens/activitykeys.ts` |
+| The account card, the row every record page draws it as, and the moment vocabulary they read it with | `backend/internal/compose/company360/moment.go`, `frontend/src/features/records/record360/today.tsx`, `frontend/src/features/records/record360/moment.ts` |
+| The live record poll, and which reads it knows | `frontend/src/app/queryclient.ts`, `frontend/src/lib/activitykeys.ts` |
 | The connections graph | `backend/internal/compose/company360/{graph,graphreads,graphplace,graphourside}.go` |
 | HTTP transport | `backend/internal/compose/company360/handlers.go` |
 | The brief: cache, input, fingerprint | `backend/internal/compose/companybrief/{service,input}.go` |
@@ -559,11 +559,11 @@ long run. See [composition-layer.md](composition-layer.md).
 | Logo streaming handler | `backend/internal/modules/contacts/handlers_company.go` |
 | Contract | `backend/api/crm.yaml`: `/companies/{id}/{360,graph,brief,ask,view-ack,suggestions/dismiss,scan,logo}` |
 | The ruling on who owns which table | `backend/gates/tableownership_test.go` |
-| The screen | `frontend/src/screens/companies.tsx` (`CompanyScreen`) |
-| The scan on the page: `ensure` on open, poll, the pending row | `frontend/src/screens/accountscan.tsx`, `companytoday.tsx` |
-| Data layer + cards in the right rail | `frontend/src/screens/company360.tsx`, `company360.css` |
-| The connections view to compare | `frontend/src/screens/coverageexplorer.tsx` on the Contacts tab, with `companygraph.ts` as its read |
-| Header actions (new deal, tag, list) | `frontend/src/screens/companyactions.tsx` |
+| The screen | `frontend/src/features/companies/companies.tsx` (`CompanyScreen`) |
+| The scan on the page: `ensure` on open, poll, the pending row | `frontend/src/features/companies/accountscan.tsx`, `companytoday.tsx` |
+| Data layer + cards in the right rail | `frontend/src/features/companies/company360.tsx`, `company360.css` |
+| The connections view to compare | `frontend/src/features/contacts/coverageexplorer.tsx` on the Contacts tab, with `companygraph.ts` as its read |
+| Header actions (new deal, tag, list) | `frontend/src/features/companies/companyactions.tsx` |
 
 ## Where to go next
 

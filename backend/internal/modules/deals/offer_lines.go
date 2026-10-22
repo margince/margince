@@ -63,8 +63,12 @@ type OfferLineInputRow struct {
 // insertOfferLines inserts each input line in order, numbering the 422
 // error by the caller's 1-based line position.
 func insertOfferLines(ctx context.Context, tx pgx.Tx, offerID ids.OfferID, currency string, lines []OfferLineInputRow) error {
-	for i, line := range lines {
-		if err := insertOfferLine(ctx, tx, offerID, currency, line); err != nil {
+	planned, _, err := planNewOfferLines(ctx, tx, currency, lines)
+	if err != nil {
+		return err
+	}
+	for i, line := range planned {
+		if err := insertOfferLineRow(ctx, tx, offerID, line.Input, line.resolved); err != nil {
 			return fmt.Errorf("line %d: %w", i+1, err)
 		}
 	}
@@ -107,40 +111,11 @@ type resolvedOfferLine struct {
 }
 
 func insertOfferLine(ctx context.Context, tx pgx.Tx, offerID ids.OfferID, offerCurrency string, in OfferLineInputRow) error {
-	defaults, err := resolveProductSnapshot(ctx, tx, in.ProductID, offerCurrency, lineSnapshotDefaults{
-		Description: in.Description, Unit: in.Unit, Price: in.UnitPriceMinor, TaxRate: in.TaxRate,
-		BillingModel: in.BillingModel, IntervalMonths: in.BillingIntervalMonths,
-	})
+	line, err := resolveOfferLine(ctx, tx, offerCurrency, in)
 	if err != nil {
 		return err
 	}
-	if defaults.Description == nil || *defaults.Description == "" {
-		return &RequiredFieldError{Field: "description"}
-	}
-	if defaults.Price == nil {
-		return &RequiredFieldError{Field: "unit_price_minor"}
-	}
-	unitVal, discount, tax := normalizeLineDefaults(defaults.Unit, in.DiscountPct, defaults.TaxRate)
-	// Validate the money math before the row lands: a malformed decimal
-	// or a nonsense quantity answers 422 here, not a CHECK 500 later.
-	if _, err := LineTotals(OfferLineInput{
-		Quantity: in.Quantity, UnitPriceMinor: *defaults.Price, DiscountPct: discount, TaxRate: tax,
-	}); err != nil {
-		return err
-	}
-	// The classification is settled here, before the row lands, so a
-	// half-stated one earns a field to fix rather than oli_billing_shape.
-	if err := validBillingShape(defaults.BillingModel, defaults.IntervalMonths); err != nil {
-		return err
-	}
-	if err := validIntervalCount(defaults.BillingModel, in.IntervalCount); err != nil {
-		return err
-	}
-	return insertOfferLineRow(ctx, tx, offerID, in, resolvedOfferLine{
-		Description: *defaults.Description, Unit: unitVal, Price: *defaults.Price, Discount: discount, Tax: tax,
-		BillingModel: defaults.BillingModel, IntervalMonths: defaults.IntervalMonths,
-		IntervalCount: in.IntervalCount,
-	})
+	return insertOfferLineRow(ctx, tx, offerID, in, line)
 }
 
 // insertOfferLineRow assigns the line's position (appending after the last
@@ -181,9 +156,12 @@ func insertOfferLineRow(ctx context.Context, tx pgx.Tx, offerID ids.OfferID, in 
 func nextOfferLinePosition(ctx context.Context, tx pgx.Tx, offerID ids.OfferID) (int, error) {
 	var next int
 	if err := tx.QueryRow(ctx,
-		`SELECT COALESCE(MAX(position), 0) + 1 FROM offer_line_item WHERE offer_id = $1`, offerID).
+		`SELECT COALESCE(MAX(position)::bigint, 0) + 1 FROM offer_line_item WHERE offer_id = $1`, offerID).
 		Scan(&next); err != nil {
 		return 0, fmt.Errorf("next line position: %w", err)
+	}
+	if err := checkLinePosition(&next); err != nil {
+		return 0, err
 	}
 	return next, nil
 }
@@ -253,8 +231,15 @@ func (s *Store) UpdateOfferLineItem(ctx context.Context, offerID ids.OfferID, li
 	if err := auth.Require(ctx, "offer", principal.ActionUpdate); err != nil {
 		return crmcontracts.Offer{}, err
 	}
+	in, err := requireLineWords(in)
+	if err != nil {
+		return crmcontracts.Offer{}, err
+	}
+	if err := checkLinePosition(in.Position); err != nil {
+		return crmcontracts.Offer{}, err
+	}
 	var out crmcontracts.Offer
-	err := s.Tx(ctx, func(tx pgx.Tx) error {
+	err = s.Tx(ctx, func(tx pgx.Tx) error {
 		current, _, err := visibleOfferLocked(ctx, tx, offerID, storekit.LiveOnly)
 		if err != nil {
 			return err
@@ -269,7 +254,10 @@ func (s *Store) UpdateOfferLineItem(ctx context.Context, offerID ids.OfferID, li
 		}
 
 		sets, args, lineBefore, lineAfter, line := buildOfferLinePatch(lineID, in, curPosition, curDescription, curUnit, line)
-		// Validate the resulting line's math up front (422, not a CHECK 500).
+		// Validate the resulting line's figures and math up front (422, not a CHECK 500).
+		if err := checkLineFigures(line); err != nil {
+			return err
+		}
 		if _, err := LineTotals(line); err != nil {
 			return err
 		}
@@ -371,7 +359,7 @@ func buildOfferLinePatch(lineID ids.UUID, in UpdateOfferLineInput, curPosition i
 		// named — including to null, which is how a line goes back to saying
 		// nothing about whether its price repeats.
 		set("billing_model", nil, in.BillingModel)
-		set("billing_interval_months", nil, in.BillingIntervalMonths)
+		set(billingIntervalColumn, nil, in.BillingIntervalMonths)
 	}
 	if in.IntervalCountSet {
 		set("interval_count", nil, in.IntervalCount)

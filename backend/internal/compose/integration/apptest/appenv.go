@@ -11,11 +11,13 @@ import (
 	"encoding/json"
 	"io"
 	"log/slog"
+	"maps"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -30,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // AppEnv is the heaviest of the three exported fixtures: a real compose handler
@@ -58,6 +61,8 @@ type AppEnv struct {
 	wiring func(origin string) []compose.Option
 	// ownPool is set on an env from Reboot, whose pool no other env shares.
 	ownPool bool
+	// importJobs are the import workers over this server's own object store.
+	importJobs compose.ImportJobWorkers
 }
 
 // SetupApp boots the default harness server — no schema pool, so the
@@ -206,8 +211,19 @@ func (e *AppEnv) serve(t *testing.T, jar http.CookieJar) *AppEnv {
 		// of these suites is asking.
 		compose.WithConfirmLinkVault(e.Vault),
 		compose.WithControllerMail(sendInserter),
+		// An approve or an undo queues its job, as the api role does; the
+		// suite works the job through importjobtest.
+		compose.WithImportJobs(sendInserter),
+		// No runner works a test run here, so preview_import answers at once and
+		// the suite drains; a suite about the wait composes its own clock.
+		compose.WithImportPreviewWaitForTest(nil, 0),
 	}, e.wiring(origin)...)
+	var importJobsErr error
+	allOpts = append(allOpts, compose.WithImportJobWorkersForTest(&e.importJobs, &importJobsErr))
 	ts.Config.Handler = compose.New(e.Pool, slog.New(slog.NewTextHandler(os.Stderr, nil)), allOpts...)
+	if importJobsErr != nil {
+		t.Fatalf("building the import workers: %v", importJobsErr)
+	}
 	ts.StartTLS()
 	t.Cleanup(ts.Close)
 
@@ -255,8 +271,44 @@ func (e *AppEnv) SetWorkspaceSeat(t *testing.T, seat string) {
 // Call issues one API request with the dev workspace header and decodes
 // the JSON response into out (when non-nil), returning the status code.
 //
+// A create body that lacks the `source` the contract requires gets one, as
+// every real client sends it. CallVerbatim sends the body untouched.
+//
 //craft:ignore naked-any the test transport seam: body/out are whichever request/response shapes the scenario exercises
 func (e *AppEnv) Call(t *testing.T, method, path string, body any, headers map[string]string, out any) int {
+	t.Helper()
+	return e.CallVerbatim(t, method, path, withRecordSource(method, path, body), headers, out)
+}
+
+// recordCreateRoutes matches the create routes whose contract body requires
+// `source` and whose scenarios mostly care about something other than it.
+var recordCreateRoutes = regexp.MustCompile(`^/v1/(` +
+	`leads|relationships|activities|tasks|custom-fields|products|signals|deal-rooms|` +
+	`deals/[^/]+/offers|deal-rooms/[^/]+/(participants|documents))$`)
+
+// withRecordSource returns body with a `source` added when it is a create map
+// for one of recordCreateRoutes without one. Any other body is returned as is.
+//
+//craft:ignore naked-any the test transport seam: body is whichever request shape the scenario exercises
+func withRecordSource(method, path string, body any) any {
+	fields, ok := body.(map[string]any)
+	if !ok || method != http.MethodPost || !recordCreateRoutes.MatchString(path) {
+		return body
+	}
+	if _, stated := fields["source"]; stated {
+		return body
+	}
+	withSource := make(map[string]any, len(fields)+1)
+	maps.Copy(withSource, fields)
+	withSource["source"] = provenance.RecordSourceManual
+	return withSource
+}
+
+// CallVerbatim is Call without the default source, for a scenario about what a
+// body leaves out.
+//
+//craft:ignore naked-any the test transport seam: body/out are whichever request/response shapes the scenario exercises
+func (e *AppEnv) CallVerbatim(t *testing.T, method, path string, body any, headers map[string]string, out any) int {
 	t.Helper()
 	var reqBody io.Reader
 	if body != nil {
@@ -312,7 +364,7 @@ func BootstrapWorkspaceSession(t *testing.T, e *AppEnv, workspaceName, adminEmai
 	if err := os.WriteFile(pwFile, []byte(operatorSupplied), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	cfg := deployconfig.Config{
+	cfg := deployconfig.Bootstrap{
 		Version:   1,
 		Workspace: deployconfig.Workspace{Name: workspaceName},
 		BootstrapAdmin: &deployconfig.BootstrapAdmin{
@@ -382,6 +434,12 @@ func applyRiverSchema(t *testing.T) {
 	if err := testdb.EnsureRiverSchema(ctx, ownerPool, jobs.Migrate); err != nil {
 		t.Fatal(err)
 	}
+}
+
+// ImportJobs answers the import workers over the object store this server
+// holds, as the worker role registers them.
+func (e *AppEnv) ImportJobs() compose.ImportJobWorkers {
+	return e.importJobs
 }
 
 // DB is the app harness's installation-bound pool.

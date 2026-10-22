@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // BookingPage is the slug's resolution: which workspace, whose calendar.
@@ -346,9 +347,8 @@ func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, host
 		return
 	}
 
-	contactID, err := h.publicContacts.EnsureContactByEmail(r.Context(), req.Booker.Name, string(req.Booker.Email), "public_booking")
-	if err != nil {
-		writeStoreErr(w, r, err)
+	contactID, ok := h.ensureBooker(w, r, req)
+	if !ok {
 		return
 	}
 	if err := h.store.calendar.CheckRecipient(r.Context(), page.HostUserID, contactID, string(req.Booker.Email)); err != nil {
@@ -369,6 +369,21 @@ func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, host
 	h.bookPublicInvitation(w, r, page, req, contactID, marketingOutcome, intent)
 }
 
+// ensureBooker is the contact the booking lands on, or the refusal written.
+func (h Handlers) ensureBooker(w http.ResponseWriter, r *http.Request, req crmcontracts.BookPublicMeetingJSONRequestBody) (ids.UUID, bool) {
+	contactID, err := h.publicContacts.EnsureContactByEmail(r.Context(), req.Booker.Name, string(req.Booker.Email), "public_booking")
+	if badValue, ok := errors.AsType[*values.ParseError](err); ok {
+		// The contacts store names its own field; this form's address is booker.email.
+		httperr.Write(w, r, httperr.Validation("booker.email", badValue.Code, badValue.Message))
+		return ids.Nil, false
+	}
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return ids.Nil, false
+	}
+	return contactID, true
+}
+
 // admitBookingMarketing settles the marketing tick BEFORE any write: it refuses
 // a malformed one and probes the purpose, so a form carrying a bad tick never
 // reaches the contact-ensure that would otherwise leave a row behind.
@@ -386,31 +401,12 @@ func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, host
 // way to name one: a parameter of that type would have to restate the whole
 // literal, field tags included.
 func (h Handlers) admitBookingMarketing(w http.ResponseWriter, r *http.Request, c crmcontracts.CaptureConsent, tickedFrom string) (*BookingMarketing, bool) {
-	m := c.Marketing
-	if m == nil {
-		return nil, true
-	}
-	if strings.TrimSpace(m.PolicyVersion) == "" {
-		httperr.Write(w, r, httperr.Validation("consent.marketing.policy_version", codeRequired,
-			"the marketing wording version shown to the subject is required"))
-		return nil, false
-	}
-	if strings.TrimSpace(m.Wording) == "" {
-		httperr.Write(w, r, httperr.Validation("consent.marketing.wording", codeRequired,
-			"the marketing wording shown to the subject is required"))
-		return nil, false
-	}
-	purposeID := ids.UUID(m.PurposeId)
-	if err := h.publicConsent.ValidateMarketingPurpose(r.Context(), purposeID); err != nil {
+	marketing, err := prepareBookingMarketing(r.Context(), c, tickedFrom, h.publicConsent)
+	if err != nil {
 		writeStoreErr(w, r, err)
 		return nil, false
 	}
-	return &BookingMarketing{
-		PurposeID:     purposeID,
-		PolicyVersion: m.PolicyVersion,
-		Wording:       m.Wording,
-		TickedFrom:    tickedFrom,
-	}, true
+	return marketing, true
 }
 
 // captureBookingConsent records the authenticated booking's optional
@@ -426,50 +422,12 @@ func (h Handlers) captureBookingConsent(w http.ResponseWriter, r *http.Request, 
 	if c == nil {
 		return true
 	}
-	if h.publicConsent == nil {
-		httperr.Write(w, r, apperrors.ErrPermissionDenied)
-		return false
-	}
-	if c.PolicyVersion == "" {
-		httperr.Write(w, r, httperr.Validation("consent.policy_version", codeRequired,
-			"the consent wording version shown to the subject is required"))
-		return false
-	}
-	// Both halves of the proof row are settled before anything is written: a
-	// grant that cannot say what the subject read is not demonstrable.
-	if c.Wording == nil || strings.TrimSpace(*c.Wording) == "" {
-		httperr.Write(w, r, httperr.Validation("consent.wording", codeRequired,
-			"the consent wording shown to the subject is required"))
-		return false
-	}
-	contactID, ok := consentSubjectLink(w, r, links)
-	if !ok {
-		return false
-	}
-	purposeID, err := h.publicConsent.ScopedPurpose(r.Context(), requestedPurpose(*c))
+	contact, consent, err := PrepareBookingConsent(r.Context(), *c, links, h.publicConsent)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return false
 	}
-	// No submitted address: this door names a linked contact instead of typing
-	// an email, so there is no second address the link could disagree with.
-	marketing, ok := h.admitBookingMarketing(w, r, *c, "")
-	if !ok {
-		return false
-	}
-	// The outcome is dropped on THIS door and not on the public one, because
-	// this response is the booked activity itself — a shape the contract
-	// declares and every authenticated client already parses. Reporting the
-	// marketing outcome here needs a field on that shape, which is a contract
-	// change of its own. What matters is the same on both doors and is settled
-	// in the adapter: a question that cannot be asked no longer costs the
-	// meeting.
-	if _, err := h.publicConsent.CaptureBookingConsent(r.Context(), contactID, BookingConsent{
-		PurposeID:     purposeID,
-		PolicyVersion: c.PolicyVersion,
-		Wording:       *c.Wording,
-		Marketing:     marketing,
-	}); err != nil {
+	if _, err := h.publicConsent.CaptureBookingConsent(r.Context(), contact, consent); err != nil {
 		writeStoreErr(w, r, err)
 		return false
 	}

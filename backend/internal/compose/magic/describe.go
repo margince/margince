@@ -13,11 +13,14 @@ package magic
 
 import (
 	"encoding/json"
+	"math"
 	"net/url"
 	"sort"
+	"strconv"
 	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/deals"
 )
 
 // The job names used more than once below.
@@ -51,7 +54,9 @@ var bookkeepingFields = map[string]bool{
 	// The mail reader's sorting of one message into "needs a reply or not". It
 	// feeds the reply lists; as a line it read "Changed owed verdict" once per
 	// email, which named an internal column and told the reader nothing.
-	"owed_verdict": true,
+	"owed_verdict": true, "reply_verdict": true,
+	// The task or proposal has its own audit; source linkage adds no second result.
+	"commitment_admission": true, "task_activity_id": true,
 	// Why a contact is visible to its owner alone. It follows the visibility
 	// field, which a line shows on its own; as a line by itself it read
 	// "Changed narrowing reason", an internal state the reader cannot act on.
@@ -90,6 +95,12 @@ func describe(e entry) (description, bool) {
 	if len(fields) == 0 {
 		return description{}, false
 	}
+	if reason := forecastCorrectionReason(evidence); reason != nil {
+		return description{
+			summary: crmcontracts.MagicSentence{Key: "magic.action.forecast_changed"},
+			reason:  reason,
+		}, true
+	}
 	values := map[string]string{"fields": strings.Join(fields, ", ")}
 	return description{
 		summary: crmcontracts.MagicSentence{Key: "magic.action.fields_changed", Values: &values},
@@ -112,6 +123,38 @@ func changedFields(before, after map[string]any) []string {
 	}
 	sort.Strings(out)
 	return out
+}
+
+func forecastCorrectionReason(evidence map[string]any) *crmcontracts.MagicSentence {
+	correction, ok := evidence[deals.CloseDateCorrectionKind].(string)
+	if !ok {
+		return nil
+	}
+	switch deals.CloseDateAction(correction) {
+	case deals.CloseDateActionDowngradeAndReview:
+		return &crmcontracts.MagicSentence{Key: "magic.why.forecast_review"}
+	case deals.CloseDateActionAutoApply, deals.CloseDateActionProvisionalConfirm:
+		return forecastDateReason(evidence)
+	default:
+		return nil
+	}
+}
+
+func forecastDateReason(evidence map[string]any) *crmcontracts.MagicSentence {
+	sample, sampleOK := evidence[deals.CloseDateSampleCountKey].(float64)
+	median, medianOK := evidence[deals.CloseDateMedianDaysKey].(float64)
+	stages, stagesOK := evidence[deals.CloseDateRemainingStagesKey].(float64)
+	if !sampleOK || !medianOK || !stagesOK || sample < deals.CloseDateMinHistory || median <= 0 || stages < 1 ||
+		math.Trunc(sample) != sample || math.Trunc(stages) != stages ||
+		math.IsNaN(median) || math.IsInf(median, 0) || math.IsInf(sample, 0) || math.IsInf(stages, 0) {
+		return &crmcontracts.MagicSentence{Key: "magic.why.forecast_date"}
+	}
+	values := map[string]string{
+		"sample_count":     strconv.FormatFloat(sample, 'f', -1, 64),
+		"median_days":      strconv.FormatFloat(median, 'f', -1, 64),
+		"remaining_stages": strconv.FormatFloat(stages, 'f', -1, 64),
+	}
+	return &crmcontracts.MagicSentence{Key: "magic.why.forecast_date_basis", Values: &values}
 }
 
 // reasonFromEvidence turns the source an enrichment recorded into a why.

@@ -111,6 +111,9 @@ type OnboardingCompanyDraft struct {
 	LegalName         *string `json:"legal_name,omitempty"`
 	RegisteredAddress *string `json:"registered_address,omitempty"`
 	RegisterVAT       *string `json:"register_vat,omitempty"`
+	LegalForm         *string `json:"legal_form,omitempty"`
+	RegisterCourt     *string `json:"register_court,omitempty"`
+	RegisterNumber    *string `json:"register_number,omitempty"`
 	Industry          *string `json:"industry,omitempty"`
 	History           *string `json:"history,omitempty"`
 }

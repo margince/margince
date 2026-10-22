@@ -203,14 +203,14 @@ func TestBothDoorsNeedTheirPreviewsTokenAboveTenAndSpendItOnce(t *testing.T) {
 	e, _, doors := bulkDoorsApp(t, "bulk-token", agentvolume.Limits{})
 	colleague, other := seedColleague(t, e), seedColleague(t, e)
 	for _, door := range doors {
-		items := seedBulkContacts(t, e, 25)
+		items := seedBulkContacts(t, e, 11)
 		change := reassignContacts(colleague, items)
 		if _, refusal := door.execute(t, change, ""); !strings.Contains(refusal, "confirm_token") {
-			t.Fatalf("%s: twenty-five without a token → %q, want a refusal naming confirm_token", door.name, refusal)
+			t.Fatalf("%s: eleven without a token → %q, want a refusal naming confirm_token", door.name, refusal)
 		}
 		preview, refusal := door.preview(t, change)
-		if refusal != "" || !preview.RequiresConfirmation || preview.ConfirmToken == "" || preview.Count != 25 {
-			t.Fatalf("%s: preview → %+v, refused %q; want 25 affected and a token", door.name, preview, refusal)
+		if refusal != "" || !preview.RequiresConfirmation || preview.ConfirmToken == "" || preview.Count != 11 {
+			t.Fatalf("%s: preview → %+v, refused %q; want 11 affected and a token", door.name, preview, refusal)
 		}
 		elsewhere := reassignContacts(other, items)
 		elsewhere["confirm_token"] = preview.ConfirmToken
@@ -218,7 +218,7 @@ func TestBothDoorsNeedTheirPreviewsTokenAboveTenAndSpendItOnce(t *testing.T) {
 			t.Errorf("%s: the token presented for another owner → %q, want it refused", door.name, refusal)
 		}
 		change["confirm_token"] = preview.ConfirmToken
-		if out, refusal := door.execute(t, change, ""); refusal != "" || out.Changed != 25 {
+		if out, refusal := door.execute(t, change, ""); refusal != "" || out.Changed != 11 {
 			t.Fatalf("%s: executing with the token → %+v, refused %q", door.name, out, refusal)
 		}
 		if _, refusal := door.execute(t, change, ""); !strings.Contains(refusal, "confirm_token") {

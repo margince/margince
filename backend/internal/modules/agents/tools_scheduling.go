@@ -150,6 +150,7 @@ func (t bookMeetingTool) Spec() mcp.ToolSpec {
 		Description:   bookMeetingCopy.render(),
 		Instead:       bookMeetingCopy.Instead,
 		RequiredScope: principal.ScopeSend, Tier: mcp.TierAutoExecute, Egress: true,
+		Unlisted:  true,
 		OpenAPIOp: "bookMeeting",
 		// `links` is REQUIRED by crm.yaml's bookMeeting body and was advertised
 		// as optional, so an agent that read the schema and omitted it was
@@ -215,7 +216,7 @@ func (t bookMeetingTool) Handle(ctx context.Context, in json.RawMessage) (json.R
 	if err := requireOwnCalendarOrAdmin(ctx, args.HostUserID); err != nil {
 		return nil, err
 	}
-	links, err := uniqueRecordLinks(args.Links)
+	links, err := UniqueRecordLinks(args.Links)
 	if err != nil {
 		return nil, err
 	}

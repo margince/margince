@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -30,6 +31,37 @@ import (
 // The section is a summary with a "there is more" flag, not a paging
 // surface: follow-up pages come from the endpoint that owns the collection.
 const sectionLimit = 25
+
+// SectionLimit is sectionLimit for a reader that composes this read, so the
+// page and the handoff cut every list at the same row.
+const SectionLimit = sectionLimit
+
+// sectionDocuments names the documents section, which the contract's
+// sections_omitted vocabulary does not carry because it has no omission case.
+const sectionDocuments crmcontracts.Project360Section = "documents"
+
+// Reading says which parts of the page one caller wants. The zero value is the
+// whole page.
+type Reading struct {
+	// Only limits the optional sections that are read. Empty reads them all.
+	Only []crmcontracts.Project360Section
+	// ExcludeSystemMinted leaves the clock's own reminders out of the open
+	// commitments. The page lists them, because they are on the project; a
+	// reader that lists promises somebody made sets this.
+	ExcludeSystemMinted bool
+}
+
+func (r Reading) wants(section crmcontracts.Project360Section) bool {
+	return len(r.Only) == 0 || slices.Contains(r.Only, section)
+}
+
+// Result is one read of the page. Page is the wire shape. Tasks are the open
+// tasks its commitments section was cut from, for a reader that carries more of
+// each task than the page does.
+type Result struct {
+	Page  crmcontracts.Project360
+	Tasks []activities.OpenTask
+}
 
 // Service assembles the project page from the module stores it composes.
 type Service struct {
@@ -79,6 +111,8 @@ type catalogs struct {
 	// already inside — a deadlock Postgres cannot break, because it sees two
 	// unrelated sessions rather than one goroutine waiting on itself.
 	company contacts.CustomColumns
+	// activity fills the timeline section's custom-field values.
+	activity activities.CustomColumns
 }
 
 func (s *Service) readCatalogs(ctx context.Context) (catalogs, error) {
@@ -88,6 +122,9 @@ func (s *Service) readCatalogs(ctx context.Context) (catalogs, error) {
 		return catalogs{}, err
 	}
 	if c.deal, err = s.deals.ActiveDealColumns(ctx); err != nil {
+		return catalogs{}, err
+	}
+	if c.activity, err = s.activities.ActiveActivityColumns(ctx); err != nil {
 		return catalogs{}, err
 	}
 	// The company catalog is read HERE like the two above, and a caller
@@ -115,31 +152,43 @@ func (s *Service) readCatalogs(ctx context.Context) (catalogs, error) {
 // refusal; every other section is attempted, and a section refused for
 // lack of a grant is omitted and named rather than returned empty.
 func (s *Service) Assemble(ctx context.Context, projectID ids.ProjectID) (crmcontracts.Project360, error) {
+	res, err := s.Read(ctx, projectID, Reading{})
+	return res.Page, err
+}
+
+// Read is Assemble for a reader that wants part of the page, or its tasks.
+func (s *Service) Read(ctx context.Context, projectID ids.ProjectID, reading Reading) (Result, error) {
 	// The object question at the entry point, not only inside GetProjectTx.
 	// This page is reached from an MCP tool as well as a browser, so the seam
 	// that admits the caller is worth being able to read here.
 	if err := auth.Require(ctx, "project", principal.ActionRead); err != nil {
-		return crmcontracts.Project360{}, err
+		return Result{}, err
 	}
 	now := s.now().UTC()
 	out := crmcontracts.Project360{AsOf: now, SectionsOmitted: []crmcontracts.Project360Section{}}
 	cats, err := s.readCatalogs(ctx)
 	if err != nil {
-		return crmcontracts.Project360{}, err
+		return Result{}, err
 	}
+	var tasks []activities.OpenTask
 	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
 		project, err := s.projects.GetProjectTx(ctx, tx, projectID, storekit.LiveOnly, cats.project)
 		if err != nil {
 			return err
 		}
 		out.Project = project
-		a := &assembly{svc: s, ctx: ctx, tx: tx, projectID: projectID, now: now, cats: cats, out: &out}
-		return a.sections()
+		a := &assembly{
+			svc: s, ctx: ctx, tx: tx, projectID: projectID, now: now, cats: cats, out: &out,
+			reading: reading,
+		}
+		err = a.sections()
+		tasks = a.tasks
+		return err
 	})
 	if err != nil {
-		return crmcontracts.Project360{}, err
+		return Result{}, err
 	}
-	return out, nil
+	return Result{Page: out, Tasks: tasks}, nil
 }
 
 // assembly is one 360's working state. The activity facts feed two sections
@@ -153,9 +202,12 @@ type assembly struct {
 	now       time.Time
 	cats      catalogs
 	out       *crmcontracts.Project360
+	reading   Reading
 
 	facts     activities.ProjectActivityFacts
 	factsRead bool
+	// tasks are the open tasks the commitments section was cut from.
+	tasks []activities.OpenTask
 }
 
 // sections runs each optional section behind its own grant, in a fixed
@@ -181,6 +233,9 @@ func (a *assembly) sections() error {
 		{crmcontracts.Project360SectionRollups, a.readRollups},
 	}
 	for _, section := range each {
+		if !a.reading.wants(section.name) {
+			continue
+		}
 		err := section.read()
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			a.out.SectionsOmitted = append(a.out.SectionsOmitted, section.name)
@@ -193,6 +248,9 @@ func (a *assembly) sections() error {
 	// Documents ride the project grant, which the anchor read already held,
 	// so the section is present whenever the page is — and it runs after
 	// the loop because it has no omission case to name.
+	if !a.reading.wants(sectionDocuments) {
+		return nil
+	}
 	return a.readDocuments()
 }
 
@@ -201,7 +259,7 @@ func (a *assembly) activityFacts() (activities.ProjectActivityFacts, error) {
 	if a.factsRead {
 		return a.facts, nil
 	}
-	facts, err := a.svc.activities.ProjectActivityFactsTx(a.ctx, a.tx, a.projectID)
+	facts, err := a.svc.activities.ProjectActivityFactsTx(a.ctx, a.tx, a.projectID, a.now)
 	if err != nil {
 		return activities.ProjectActivityFacts{}, err
 	}

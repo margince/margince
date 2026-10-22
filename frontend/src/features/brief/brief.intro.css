@@ -1,0 +1,172 @@
+/* The morning's greeting over the whole window. One press anywhere ends it, so
+ * the whole curtain is the button, and it carries no button chrome of its own.
+ * Above the shell's bar, because it stands in for the page under it. The page
+ * ground wears the shell's two lit corners, so the curtain and the page under
+ * it read as one room. */
+.brief-intro {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8);
+  overflow: hidden;
+  border: 0;
+  background:
+    radial-gradient(1100px 760px at 0 0, var(--glowA), transparent 70%),
+    radial-gradient(1100px 760px at 100% 0, var(--glowB), transparent 70%),
+    var(--bgPage);
+  color: var(--textPrimary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.brief-intro:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -4px;
+}
+.brief-intro-body {
+  display: flex;
+  flex-direction: column;
+  width: min(62.5rem, 100%);
+}
+.brief-intro-topline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.core.brief-intro-core {
+  --coreSize: 48px; /* ds:ignore the ball's diameter beside the date line */
+  --coreGlass: 40px; /* ds:ignore the glass inside that ball */
+  --coreCap: 100%;
+  /* Halo off: beside a line of text a bloom would wash the date out. */
+  --coreHalo: 0;
+  flex: none;
+}
+.brief-intro-date {
+  color: var(--accentText);
+}
+.brief-intro-greeting {
+  margin-block-start: var(--space-6);
+  font: var(--fontDisplayXLarge);
+  text-wrap: balance;
+}
+.brief-intro-word {
+  display: inline-block;
+}
+.brief-intro-read {
+  max-width: 46ch;
+  margin-block-start: var(--space-6);
+  font: var(--fontLead);
+  color: var(--textSecondary);
+}
+.brief-intro-rule {
+  display: block;
+  block-size: 1px;
+  margin-block-start: var(--space-10);
+  background: var(--borderStrong);
+  transform-origin: left;
+}
+/* The day's figures under the rule, three across, wrapping on a phone. */
+.brief-intro-figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--space-6) var(--space-8);
+  margin-block-start: var(--space-6);
+}
+.brief-intro-figure {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.brief-intro-value {
+  font: var(--fontDisplayMedium);
+}
+.brief-intro-value[data-tone="warning"] {
+  color: var(--warningText);
+}
+.brief-intro-label {
+  color: var(--textSecondary);
+}
+.brief-intro-skip {
+  position: absolute;
+  inset-block-end: var(--space-8);
+  color: var(--textSecondary);
+}
+
+/* THE CHOREOGRAPHY: the date, then the greeting word by word, the night's
+   line, the rule drawn left to right, the figures one after the next. Left
+   alone, it lifts and blurs away, then the curtain draws up off the page. It
+   never plays for a reader who asked for less motion (brief.intro.tsx). */
+@media (prefers-reduced-motion: no-preference) {
+  .brief-intro-topline {
+    animation: brief-intro-arrive 500ms var(--ease-out) 100ms both;
+  }
+  .brief-intro-word {
+    animation: brief-intro-word 900ms var(--ease-out) both;
+  }
+  .brief-intro-read {
+    animation: brief-intro-arrive 600ms var(--ease-out) 950ms both;
+  }
+  .brief-intro-rule {
+    animation: brief-intro-grow 900ms var(--ease-in-out) 1200ms both;
+  }
+  .brief-intro-figure {
+    animation: brief-intro-arrive 500ms var(--ease-out) both;
+  }
+  .brief-intro-figure:nth-child(1) {
+    animation-delay: 1400ms;
+  }
+  .brief-intro-figure:nth-child(2) {
+    animation-delay: 1550ms;
+  }
+  .brief-intro-figure:nth-child(3) {
+    animation-delay: 1700ms;
+  }
+  .brief-intro-skip {
+    animation: brief-intro-fade 1s ease 1200ms both;
+  }
+  .brief-intro[data-state="leaving"] {
+    animation: brief-intro-curtain 450ms var(--ease-in-out) 450ms forwards;
+  }
+  .brief-intro[data-state="leaving"] .brief-intro-body {
+    animation: brief-intro-lift 450ms var(--ease-in-out) forwards;
+  }
+}
+@keyframes brief-intro-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+@keyframes brief-intro-word {
+  from {
+    opacity: 0;
+    transform: translateY(0.35em);
+    filter: blur(12px);
+  }
+}
+@keyframes brief-intro-grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes brief-intro-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes brief-intro-lift {
+  to {
+    opacity: 0;
+    transform: translateY(-28px) scale(0.98);
+    filter: blur(8px);
+  }
+}
+@keyframes brief-intro-curtain {
+  to {
+    transform: translateY(-100%);
+  }
+}

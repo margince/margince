@@ -93,30 +93,16 @@ func wireReview(review Review) crmcontracts.CommunicationReview {
 	return out
 }
 
-// RequestCommunicationDecision hands a refused send to somebody who may direct
-// it.
-//
-// Thin transport. Who may ask, what state a review must be in and what the card
-// carries are all the store's, and the approvals engine decides who may answer.
+// RequestCommunicationDecision answers the retired ask with a refusal that
+// names the moves a rep has instead.
 func (h Handlers) RequestCommunicationDecision(
-	w http.ResponseWriter, r *http.Request, id crmcontracts.Id,
+	w http.ResponseWriter, r *http.Request, _ crmcontracts.Id,
 ) {
 	var body crmcontracts.RequestCommunicationDecisionRequest
 	if !httperr.Decode(w, r, &body) {
 		return
 	}
-	note := ""
-	if body.Note != nil {
-		note = *body.Note
-	}
-	approvalID, err := h.store.RequestDecision(r.Context(), ids.UUID(id), note)
-	if err != nil {
-		httperr.Write(w, r, err)
-		return
-	}
-	httperr.WriteJSON(w, http.StatusCreated, crmcontracts.CommunicationDecisionRequested{
-		ApprovalId: openapi_types.UUID(approvalID),
-	})
+	httperr.Write(w, r, h.store.RequestDecision(r.Context()))
 }
 
 // RecordCommunicationContext takes one rep's statement about one contact and
@@ -161,7 +147,11 @@ func (h Handlers) ListCommunicationReviews(
 	if params.Limit != nil {
 		limit = *params.Limit
 	}
-	reviews, total, err := h.store.AwaitingDecision(r.Context(), limit)
+	cursor := ""
+	if params.Cursor != nil {
+		cursor = *params.Cursor
+	}
+	reviews, total, next, err := h.store.AwaitingDecision(r.Context(), limit, cursor)
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return
@@ -170,7 +160,13 @@ func (h Handlers) ListCommunicationReviews(
 	for _, review := range reviews {
 		out = append(out, wireReview(review))
 	}
+	// total stays at the top level where it shipped, and page carries where
+	// this read was cut. A caller reading only total keeps working.
+	page := crmcontracts.PageInfo{HasMore: next != "", Total: &total}
+	if next != "" {
+		page.NextCursor = &next
+	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.CommunicationReviewList{
-		Data: out, Total: total,
+		Data: out, Page: page, Total: total,
 	})
 }

@@ -229,29 +229,44 @@ func TestGroundOfferLinesDropsZeroAndNegativeQuantity(t *testing.T) {
 	}
 }
 
+func TestGroundOfferLinesDropsFiguresTheStoreWouldRefuse(t *testing.T) {
+	d := offerDrafter{}
+	dealContext := []dealContextItem{{SourceID: "activity:1", Snippet: "Client wants a workshop."}}
+
+	overPrecise := candidate("Four places", "wants a workshop")
+	overPrecise.Quantity = "1.2345"
+	overTax := candidate("Tax past its column", "wants a workshop")
+	overTax.TaxRate = "1000"
+
+	lines, err := d.groundOfferLines(context.Background(), []offerLineCandidate{overPrecise, overTax}, dealContext, "EUR")
+	if err != nil {
+		t.Fatalf("groundOfferLines: %v", err)
+	}
+	if len(lines) != 0 {
+		t.Fatalf("staged lines = %d, want 0 (a figure the store refuses must be dropped, not staged)", len(lines))
+	}
+}
+
 func TestValidDecimalMirrorsTheStoresExactDecimalGrammar(t *testing.T) {
 	cases := []struct {
 		name string
 		in   string
-		lo   float64
-		hi   float64
 		want bool
 	}{
-		{"plain integer", "1", 0, 1e12, true},
-		{"plain decimal", "19.00", 0, 100, true},
-		{"negative sign accepted by the grammar", "-1", -1e12, 1e12, true},
-		{"scientific notation rejected", "1e3", 0, 1e12, false},
-		{"NaN rejected", "NaN", 0, 1e12, false},
-		{"hex float rejected", "0x1p10", 0, 1e12, false},
-		{"underscore digit separator rejected", "1_000", 0, 1e12, false},
-		{"out of bounds", "200", 0, 100, false},
-		{"empty string rejected", "", 0, 1e12, false},
+		{"plain integer", "1", true},
+		{"plain decimal", "19.00", true},
+		{"negative sign accepted by the grammar", "-1", true},
+		{"scientific notation rejected", "1e3", false},
+		{"NaN rejected", "NaN", false},
+		{"hex float rejected", "0x1p10", false},
+		{"underscore digit separator rejected", "1_000", false},
+		{"empty string rejected", "", false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, _, ok := validDecimal(tc.in, tc.lo, tc.hi)
+			_, ok := validDecimal(tc.in)
 			if ok != tc.want {
-				t.Fatalf("validDecimal(%q, %v, %v) ok = %v, want %v", tc.in, tc.lo, tc.hi, ok, tc.want)
+				t.Fatalf("validDecimal(%q) ok = %v, want %v", tc.in, ok, tc.want)
 			}
 		})
 	}

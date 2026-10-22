@@ -252,6 +252,9 @@ func TestBackfillLifecycle(t *testing.T) {
 		if views[0].Backfill.Status != "cancelled" {
 			t.Fatalf("list backfill status = %s, want the newest run (cancelled)", views[0].Backfill.Status)
 		}
+		if !views[0].CanBackfill {
+			t.Error("a connector that pages backward is listed as unable to import older mail")
+		}
 	})
 }
 

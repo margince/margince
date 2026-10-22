@@ -10,8 +10,10 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { formatDateTime } from "../format/format";
+import { viewerZone } from "../format/timezone";
 import { type Locale, LocaleProvider } from "../i18n";
-import { meFixture } from "./mefixture";
+import { meFixture } from "../testing/mefixture";
 import { NotificationBell } from "./notificationbell";
 
 // The chrome's notification centre: the count a reader sees without opening
@@ -125,7 +127,7 @@ function refusingBackend(which: "read-all" | "one") {
             type: "about:blank",
             title: "Internal Server Error",
             status: 500,
-            code: "internal_error",
+            code: "internal",
             detail: "the notice store is unavailable",
           },
           500,
@@ -215,6 +217,56 @@ describe("NotificationBell", () => {
     const items = await screen.findAllByRole("listitem");
     expect(items[0]?.textContent).toContain("A lead is past its deadline");
     expect(items[1]?.textContent).toContain("An automation could not run");
+  });
+
+  it("heads a notice that is only field pairs with its class, not the pairs", async () => {
+    const fields = "into_tag_id=01a11ecb-0000, to_stage_id=01a0ced5-0000";
+    vi.stubGlobal(
+      "fetch",
+      backendFor([
+        notice("n1", fields, { kind: "approval_pending" }),
+        notice("n2", "Update a deal, setting amount_minor: amount_minor=100", {
+          kind: "approval_pending",
+        }),
+      ]).fetchMock,
+    );
+    const user = userEvent.setup();
+    render(<NotificationBell />);
+
+    await user.click(await screen.findByRole("button", { name: /waiting/i }));
+
+    const [bare, sentence] = await screen.findAllByRole("listitem");
+    expect(within(bare).getByText("Approvals waiting on you")).toBeTruthy();
+    expect(within(bare).getByText(fields)).toBeTruthy();
+    // A subject that is a sentence is still the headline, untouched.
+    expect(
+      within(sentence).getByText(
+        "Update a deal, setting amount_minor: amount_minor=100",
+      ),
+    ).toBeTruthy();
+    expect(within(sentence).queryByText("Approvals waiting on you")).toBeNull();
+  });
+
+  it("says when each notice was raised", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor([
+        notice("n1", "A lead is past its deadline", {
+          created_at: "2026-09-15T09:00:00Z",
+        }),
+      ]).fetchMock,
+    );
+    const user = userEvent.setup();
+    render(<NotificationBell />);
+
+    await user.click(await screen.findByRole("button", { name: /waiting/i }));
+
+    const [row] = await screen.findAllByRole("listitem");
+    const when = row.querySelector("time");
+    expect(when?.getAttribute("datetime")).toBe("2026-09-15T09:00:00Z");
+    expect(when?.textContent).toBe(
+      formatDateTime("2026-09-15T09:00:00Z", "en", viewerZone()),
+    );
   });
 
   // The chrome's one dismissal, so the centre closes the way every other
@@ -603,7 +655,7 @@ describe("NotificationBell", () => {
     render(<NotificationBell />, "de");
 
     const bell = await screen.findByRole("button", {
-      name: "Meldungen, 2 offen",
+      name: "Benachrichtigungen, 2 offen",
     });
     await user.click(bell);
 

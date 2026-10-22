@@ -69,12 +69,16 @@ func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSou
 		}
 		bounded[source] = len(*lane) >= bound
 	}
+	atCap("domain_question", day.DomainQuestions, DomainQuestionLimit)
 	// The health and receipt lanes share one bound.
 	atCap("failed_approval", day.DidNotRun, doneCap)
 	atCap("dsr", day.Dsr, doneCap)
 	atCap(sourceNoticeCase, day.NoticeCases, doneCap)
 	atCap("ai_work_health", day.AiWorkHealth, doneCap)
 	atCap("notice", day.Notices, doneCap)
+	if day.Notices != nil && day.NoticesMoreAvailable != nil {
+		bounded["notice"] = bounded["notice"] || *day.NoticesMoreAvailable
+	}
 	atCap("automation_run", day.AutomationHealth, doneCap)
 	atCap("bounce", day.Bounces, doneCap)
 	atCap("introduction_request", day.Introductions, doneCap)
@@ -92,6 +96,9 @@ func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSou
 	// under-reading a truncation flag exists to prevent.
 	atCap(sourceMeetingOutcome, day.MeetingsUnreported, plannedCap)
 	atCap(sourceAtRisk, day.AtRisk, quietDealBound)
+	if day.AtRisk != nil && day.AtRiskMoreAvailable != nil {
+		bounded[sourceAtRisk] = bounded[sourceAtRisk] || *day.AtRiskMoreAvailable
+	}
 	atCap("relationship_decay", day.RelationshipDecay, decayBound)
 	atCap("conversation_claim", day.Commitments, doneCap)
 	// The decision lane is read deeper than the rest, because a batch row
@@ -116,6 +123,9 @@ func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSou
 	// when the reader may not read them.
 	if day.Counts.DealSuggestionsOpen != nil {
 		bounded[sourceDealSuggestion] = shownFrom(day.NeedsYou, sourceDealSuggestion) < *day.Counts.DealSuggestionsOpen
+	}
+	if day.Counts.TagSuggestionsOpen != nil {
+		bounded[sourceTagSuggestion] = shownFrom(day.NeedsYou, sourceTagSuggestion) < *day.Counts.TagSuggestionsOpen
 	}
 	return bounded
 }

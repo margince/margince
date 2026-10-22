@@ -1,0 +1,151 @@
+.scheduledsends-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.scheduledsends-next {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* One block per calendar day, with the day's moments on a rail down the left:
+   the page is read in time order, so time is the layout. */
+.scheduledsends-days {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.scheduledsends-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.scheduledsends-day .scheduledsends-list {
+  padding-left: var(--space-4);
+  border-left: 2px solid var(--borderSubtle);
+}
+
+/* The one message that goes next carries the accent on its own rail dot, which
+   is also said in words by the badge on the row. */
+.scheduledsends-send {
+  position: relative;
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr) auto;
+  gap: var(--space-2) var(--space-4);
+  align-items: start;
+}
+
+.scheduledsends-day .scheduledsends-send::before {
+  content: "";
+  position: absolute;
+  left: calc(var(--space-4) * -1 - 6px);
+  top: var(--space-4);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  corner-shape: round;
+  background: var(--bgElevated);
+  border: 2px solid var(--accent);
+}
+
+.scheduledsends-send-next::before {
+  background: var(--accent);
+}
+
+.card.scheduledsends-send-held {
+  border-color: var(--warning);
+}
+
+.scheduledsends-moment {
+  display: flex;
+  flex-direction: column;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--fontWeightMedium);
+}
+
+.scheduledsends-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.scheduledsends-summary strong {
+  overflow-wrap: anywhere;
+}
+
+/* One line of the body, so the row says what the message is without the page
+   becoming a list of letters. */
+.scheduledsends-preview {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scheduledsends-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.scheduledsends-verbs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--gapActions);
+}
+
+.scheduledsends-held {
+  margin: 0;
+}
+
+/* The reschedule panel: the three common moments as full-width rows, then the
+   picker. */
+.scheduledsends-menu {
+  width: min(20rem, calc(100vw - var(--space-8)));
+}
+
+.scheduledsends-presets {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.scheduledsends-presets .btn {
+  justify-content: space-between;
+}
+
+.scheduledsends-custom {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--borderSubtle);
+}
+
+@media (max-width: 40rem) {
+  .scheduledsends-send {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .scheduledsends-side {
+    align-items: flex-start;
+  }
+
+  .scheduledsends-verbs {
+    justify-content: flex-start;
+  }
+}

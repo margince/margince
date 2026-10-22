@@ -1,11 +1,11 @@
 import { useDeferredValue } from "react";
-import { SETTINGS_SCREEN } from "../screens/settingsnav";
+import { SETTINGS_SCREEN } from "../features/settings/settingsnav";
+import type { Route } from "../lib/router";
 import {
   GRIDDED_RECORD_SCREENS,
   GRIDDED_SCREENS,
   opensReservedPage,
 } from "./nav";
-import type { Route } from "./router";
 
 /**
  * Which pages keep the capped reading column, and which of those are records.

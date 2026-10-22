@@ -138,7 +138,7 @@ func pageFrozenWalk(
 	shown := make([]ranked, 0, limit)
 	drawn := make(map[worklistsnap.Row]bool, limit)
 	at := from
-	for ; at < len(walk.Rows) && len(shown) < limit; at++ {
+	for ; at < len(walk.Rows); at++ {
 		row, here := live[walk.Rows[at]]
 		if !here {
 			continue
@@ -148,6 +148,11 @@ func pageFrozenWalk(
 		// many times as it stands for.
 		if drawn[rowIdentity(row)] {
 			continue
+		}
+		// Stopped only at a row not yet drawn, so the cursor steps past the
+		// members of a group this page already served.
+		if len(shown) == limit {
+			break
 		}
 		drawn[rowIdentity(row)] = true
 		shown = append(shown, row)
@@ -174,52 +179,6 @@ func anyLive(tail []worklistsnap.Row, live map[worklistsnap.Row]ranked) bool {
 		}
 	}
 	return false
-}
-
-// countArrived is how much of this read the walk never carried.
-func countArrived(rows []ranked, carried map[worklistsnap.Row]bool) int {
-	arrived := 0
-	for _, row := range rows {
-		if !carried[rowIdentity(row)] {
-			arrived++
-		}
-	}
-	return arrived
-}
-
-// rowIdentity names a row the way the walk stores it.
-//
-// The SOURCE and the id together, because that pair is what identifies a row on
-// this queue: the lanes mint ids independently, so an id alone can match a row
-// in a lane the reader was not looking at. The same pair the pin store keys on,
-// and for the same reason.
-func rowIdentity(row ranked) worklistsnap.Row {
-	return worklistsnap.Row{Source: string(row.item.Source), RowID: row.item.Id}
-}
-
-// frozenRows is the identity list a first page hands the snapshot store.
-//
-// Order matters and content does not: this is what the walk will be replayed
-// in, and every row's text is re-read live on each page.
-func frozenRows(rows []ranked) []worklistsnap.Row {
-	out := make([]worklistsnap.Row, 0, len(rows))
-	for _, row := range rows {
-		// A FOLDED GROUP freezes its members, never itself. Its own id is minted
-		// from the key and cause, so it exists only while the fold produces it:
-		// deal with one member, drop the rest below the floor, and the group
-		// stops being minted. Frozen by its own id it would read as gone, and
-		// its still-unresolved members would read as newly arrived — real work
-		// falling out of a walk the reader was part-way through.
-		//
-		// Frozen by member, the group is simply whatever today's fold makes of
-		// the members that remain.
-		if len(row.members) > 0 {
-			out = append(out, row.members...)
-			continue
-		}
-		out = append(out, rowIdentity(row))
-	}
-	return out
 }
 
 // frozenBuckets is the partition a walk starts with, in the store's shape.
@@ -367,7 +326,13 @@ func (s *Service) pageOf(
 		}
 	}
 	shown, more, reached = pageFrom(rows, limit, cursor)
-	return shown, more, reached, s.freezeWalk(ctx, rows, asOf, scope, filter)
+	walk = s.freezeWalk(ctx, rows, asOf, scope, filter)
+	// The next page resumes into the frozen list, where a group is one entry
+	// per member, so the cut is restated in those entries.
+	if walk.carried {
+		reached = len(frozenRows(rows[:reached]))
+	}
+	return shown, more, reached, walk
 }
 
 // freezeWalk records what this first page assembled.

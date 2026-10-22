@@ -87,3 +87,28 @@ func (e *NegativeVersionError) Error() string {
 func (e *NegativeVersionError) MessageFault() (code, message string) {
 	return "invalid_version", "The version to match must be the one the last read returned. Re-read the connection and retry with its version."
 }
+
+// UnnamedPurchaseError maps to 422: a run started by hand names its provider
+// and, when it narrows, at least one category. Left empty they fall back to the
+// connection's own choice, so a request meaning "none" would buy the most.
+type UnnamedPurchaseError struct{ Field, Reason string }
+
+func (e *UnnamedPurchaseError) Error() string { return e.Reason }
+
+// FieldFault names the field the run left out.
+func (e *UnnamedPurchaseError) FieldFault() (field, code, message string) {
+	return e.Field, "required", e.Reason
+}
+
+// EmptyConfigurationError maps to 422: a configuration patch naming no setting
+// would only bump the version and write an audit row that changed nothing.
+type EmptyConfigurationError struct{}
+
+func (e *EmptyConfigurationError) Error() string {
+	return "name at least one setting to change in configuration"
+}
+
+// FieldFault names configuration as the part of the request to fill in.
+func (e *EmptyConfigurationError) FieldFault() (field, code, message string) {
+	return "configuration", "required", e.Error()
+}

@@ -82,6 +82,7 @@ func sweepInsertOpts() *river.InsertOpts {
 // Embedder registers nothing for the drift sweep and anyway for a reindex —
 // which is why the posture is stated per kind and never per field.
 type JobRunnerConfig struct {
+	DataTasksPace time.Duration
 	// Schedules is the interval every {setting: …} cadence runs at, read from
 	// the admin's settings at boot and moved by its Watch while the worker
 	// runs. Nil schedules from the registered defaults.
@@ -199,6 +200,10 @@ type JobRunnerConfig struct {
 	// owed until somebody ticks its reminder, because a reply alone has never
 	// settled one.
 	SettlementBrain completer
+	// TagSuggestBrain is the tag_suggest lane, which reads captured items
+	// against the suggestible tags' descriptions. Nil = the tag scout matches
+	// description phrases instead.
+	TagSuggestBrain completer
 	// EnrichBrain is the signature-enrich lane; nil = the pass is absent
 	// by omission and connector-created contacts keep their empty fields.
 	EnrichBrain completer
@@ -297,7 +302,13 @@ type JobRunnerConfig struct {
 	// crawls (A55). Nil is a worker role with no object store: reads still
 	// run and still land their facts, and every company keeps the monogram
 	// the render layer draws when no logo is on file.
+	//
+	// It also holds the uploads an import commits from. Nil registers the
+	// import jobs anyway, and a commit then fails with that cause.
 	Blobstore blobstore.Store
+	// ImportUploadCap is the deployment's ceiling for an import upload, so a
+	// commit reads a stored ZIP under the limits its upload was accepted with.
+	ImportUploadCap int64
 	// Embedder is the retrieval embed lane (ModelPath.Embedder) both embed
 	// passes re-embed under, and it is the one field whose two kinds take
 	// OPPOSITE postures — for a reason that is about who enqueues them.
@@ -385,13 +396,16 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 	addDatabaseOnlySweepJobs(reg, pool, log, cfg.BriefMail)
 	addCapturePipelineJobs(reg, pool, cfg, log)
 	addStoredObjectJobs(reg, pool, cfg, log)
+	addSuppressionJournalJobs(reg, pool, cfg, log)
 	addGmailCaptureJobs(reg, pool, cfg, log)
 	addGraphWatchJobs(reg, pool, cfg, log)
 	addAuthzDisagreementWorker(reg, pool, log)
 	addNotificationMailJobs(reg, pool, cfg, log)
 	addNotificationDigestJobs(reg, pool, cfg, log)
+	addImportJobs(reg, pool, cfg, log)
 
 	periodic := slices.Concat(
+		addDataTaskJobs(reg, pool, cfg),
 		addMeetingDeliveryJob(reg, pool, cfg),
 		// The passes that register themselves: each helper wires its own
 		// workers and hands back the schedules that go with them, so this
@@ -399,6 +413,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		addGraphJobs(reg, pool, cfg, log),
 		addEmbedDriftSweepJob(reg, pool, cfg, log),
 		addScheduledSendRecoveryJob(reg, pool, cfg, log),
+		addImportRunSweepJob(reg, pool, cfg, log),
 		addControllerPayloadSweepJob(reg, pool, cfg, log),
 		addPrivacyRetentionJobs(reg, pool, cfg, log),
 		addCapturePartSlimJobs(reg, pool, cfg, log),
@@ -410,6 +425,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		addAgentSchedulerJobs(reg, pool, cfg),
 		addSignalJobs(reg, pool, cfg, log),
 		addDealScoutJobs(reg, pool, cfg, log),
+		addTagScoutJobs(reg, pool, cfg, log),
 		addListEvaluateJobs(reg, pool, cfg, log),
 		addFinanceJobs(reg, pool, cfg, log),
 		addAIPriceSyncJobs(reg, pool, cfg, log),
@@ -433,11 +449,14 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		periodicFor(cfg, AIBudgetResumeArgs{}),
 		periodicFor(cfg, IdempotencyRetentionArgs{}),
 		periodicFor(cfg, StoredObjectReapArgs{}),
+		periodicFor(cfg, SuppressionJournalArgs{}),
 		periodicFor(cfg, AgentTaskRetentionArgs{}),
 		periodicFor(cfg, AIActivityReconcileArgs{}),
 		periodicFor(cfg, AIActivityRetentionArgs{}),
 		periodicFor(cfg, MailDraftRetentionArgs{}),
+		periodicFor(cfg, WaitingHorizonRefreshArgs{}),
 		periodicFor(cfg, ApprovalExpiryArgs{}),
+		periodicFor(cfg, ApprovalNoticeReconcileArgs{}),
 		periodicFor(cfg, IntroExpiryArgs{}),
 		periodicFor(cfg, ApprovalAutoApplyArgs{}),
 		periodicFor(cfg, CaptureAutoEnrichSweepArgs{}),

@@ -59,9 +59,9 @@ import (
 // sitting in captured_by counts as a reader here, exactly as it does in the read
 // clause, and that seat cannot sign in to use it. Filtering it only here would
 // make the refusal stricter than the gate it mirrors, with no fitness function
-// behind the difference — and `status = 'active' AND archived_at IS NULL` has an
-// owner already (identity.LiveMemberSQL, which this package may not import), so
-// a third spelling would be the duplication this file exists to argue against.
+// behind the difference. `status = 'active' AND archived_at IS NULL` has an
+// owner already (workforce.LiveMemberSQL), so a second spelling would be the
+// duplication this file exists to argue against.
 // Whether a departed seat's provenance should keep admitting a row at all is one
 // question about the READ clause, and it is not this one.
 //
@@ -74,22 +74,40 @@ import (
 // This checks whether membership is orphaned. Source revocation independently
 // withholds derived reminders; it does not erase their surviving membership.
 func ActivityHasAReaderTx(ctx context.Context, tx pgx.Tx, id ids.UUID) (bool, error) {
-	var reachable bool
-	if err := tx.QueryRow(ctx, `
+	return activityHasReaderExceptTx(ctx, tx, id, nil)
+}
+
+// ActivityAudienceLimitedToTx refuses audiences that can disclose content to another seat.
+func ActivityAudienceLimitedToTx(ctx context.Context, tx pgx.Tx, id, owner ids.UUID) (bool, error) {
+	others, err := activityHasReaderExceptTx(ctx, tx, id, &owner)
+	return !others, err
+}
+
+func activityHasReaderExceptTx(ctx context.Context, tx pgx.Tx, id ids.UUID, except *ids.UUID) (bool, error) {
+	var args []any
+	arg := func(value any) int { args = append(args, value); return len(args) }
+	row, excluded := arg(id), arg(except)
+	query := fmt.Sprintf(`
 		SELECT a.audience = 'workspace'
-		    OR EXISTS (SELECT 1 FROM app_user u WHERE a.captured_by LIKE '%:' || u.id)
-		    OR EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = a.id)
+		    OR EXISTS (SELECT 1 FROM app_user u WHERE a.captured_by LIKE '%%:' || u.id
+                    AND ($%[2]d::uuid IS NULL OR u.id <> $%[2]d))
+		    OR EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = a.id
+                    AND ($%[2]d::uuid IS NULL OR ci.user_id <> $%[2]d))
 		    OR EXISTS (SELECT 1 FROM activity_participant ap
-		                WHERE ap.activity_id = a.id AND ap.user_id IS NOT NULL)
+		                WHERE ap.activity_id = a.id AND ap.user_id IS NOT NULL
+                    AND ($%[2]d::uuid IS NULL OR ap.user_id <> $%[2]d))
 		    OR (a.audience = 'selected' AND EXISTS (
 		          SELECT 1 FROM activity_audience_member am
 		           WHERE am.activity_id = a.id
-		             AND (am.subject_type = 'user'
+		             AND ((am.subject_type = 'user' AND ($%[2]d::uuid IS NULL OR am.subject_id <> $%[2]d))
 		               OR (am.subject_type = 'team' AND EXISTS (
 		                     SELECT 1 FROM team_membership tm
 		                       JOIN team t ON t.id = tm.team_id AND t.archived_at IS NULL
-		                      WHERE tm.team_id = am.subject_id)))))
-		  FROM activity a WHERE a.id = $1`, id).Scan(&reachable); err != nil {
+		                      WHERE tm.team_id = am.subject_id
+                            AND ($%[2]d::uuid IS NULL OR tm.user_id <> $%[2]d))))))
+		  FROM activity a WHERE a.id = $%[1]d`, row, excluded)
+	var reachable bool
+	if err := tx.QueryRow(ctx, query, args...).Scan(&reachable); err != nil {
 		return false, fmt.Errorf("auth: reading whether an activity still has a reader: %w", err)
 	}
 	return reachable, nil

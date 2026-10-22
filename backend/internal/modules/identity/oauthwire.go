@@ -46,11 +46,19 @@ const (
 	// spec reuses across four positions: the advertised grant type, the
 	// grant_type of a renewal, the RFC 7009 token_type_hint, and the token
 	// response's own member. One spelling for all four.
-	oauthRefreshToken             = "refresh_token"
-	oauthGrantAuthorizationCode   = "authorization_code"
-	oauthAuthMethodNone           = "none"
-	oauthErrInvalidClientMetadata = "invalid_client_metadata"
-	oauthErrInvalidRedirectURI    = "invalid_redirect_uri"
+	oauthRefreshToken           = "refresh_token"
+	oauthGrantAuthorizationCode = "authorization_code"
+	oauthAuthMethodNone         = "none"
+	oauthAuthMethodSecretBasic  = "client_secret_basic"
+	oauthAuthMethodSecretPost   = "client_secret_post"
+	oauthErrInvalidClient       = "invalid_client"
+	oauthErrInvalidRequest      = "invalid_request"
+	oauthErrUnauthorizedClient  = "unauthorized_client"
+	// oauthErrTemporarilyUnavailable is RFC 6749 §4.1.2.1's answer for a
+	// server that cannot decide right now, here a settings read that failed.
+	oauthErrTemporarilyUnavailable = "temporarily_unavailable"
+	oauthErrInvalidClientMetadata  = "invalid_client_metadata"
+	oauthErrInvalidRedirectURI     = "invalid_redirect_uri"
 	// oauthParamError is RFC 6749's error member, which this server writes in
 	// two disjoint positions: the §5.2 JSON error body an endpoint answers, and
 	// the §4.1.2.1 error redirect a refused authorization sends to the client.
@@ -58,6 +66,9 @@ const (
 	// and something else on the other — and so responseParams (oauth_redirect.go)
 	// clears the same member an answer would set.
 	oauthParamError = "error"
+	// oauthParamIssuer is RFC 9207's response parameter, set on every
+	// authorization response and stripped from any redirect_uri that preset it.
+	oauthParamIssuer = "iss"
 )
 
 // resourceScopesSupported is the passport vocabulary the PROTECTED RESOURCE
@@ -86,3 +97,8 @@ var resourceScopesSupported = func() []string {
 // on the resource: it asks for the connection's lifetime, not authority over
 // any record, and its durable home is oauth_grant.refresh_allowed.
 var oauthScopesSupported = append(slices.Clone(resourceScopesSupported), scopeOfflineAccess)
+
+// oauthAuthMethodsSupported lists none first. Claude, Codex and ChatGPT pick a
+// metadata document only when none is offered, and every DCR and CIMD client
+// is public. The secret methods serve clients an admin registers with one.
+var oauthAuthMethodsSupported = []string{oauthAuthMethodNone, oauthAuthMethodSecretBasic, oauthAuthMethodSecretPost}

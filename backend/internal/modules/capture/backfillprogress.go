@@ -16,6 +16,8 @@ package capture
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log/slog"
 	"sync"
 	"time"
@@ -105,6 +107,15 @@ func withPageProgress(ctx context.Context, r *Registry, backfillID ids.UUID, gen
 func pageProgressFrom(ctx context.Context) *pageProgress {
 	c, _ := ctx.Value(pageProgressKey{}).(*pageProgress)
 	return c
+}
+
+// backfillRunOf names the run whose page this context carries, or nil on
+// live sync. A sender queued here is credited to it when its verdict lands.
+func backfillRunOf(ctx context.Context) *ids.UUID {
+	if page := pageProgressFrom(ctx); page != nil {
+		return &page.backfillID
+	}
+	return nil
 }
 
 // Observed takes the connector's running count for this page.
@@ -249,32 +260,58 @@ func createdSubjects(outcome EnsureOutcome) []createdSubject {
 // write is one queue rather than a race between the insert and the count.
 func (c *pageProgress) recordCreations(ctx context.Context, created []createdSubject) error {
 	return c.registry.db.Tx(ctx, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx,
-			`SELECT 1 FROM capture_backfill WHERE id = $1 FOR UPDATE`, c.backfillID); err != nil {
+		return recordCreationsTx(ctx, tx, c.backfillID, created)
+	})
+}
+
+// recordCreationsTx writes what a run made and refreshes the run's columns
+// from the ledger, on the caller's transaction. A page and a later verdict
+// both credit a run through it, so the two count alike.
+func recordCreationsTx(ctx context.Context, tx pgx.Tx, backfillID ids.UUID, created []createdSubject) error {
+	if _, err := tx.Exec(ctx,
+		`SELECT 1 FROM capture_backfill WHERE id = $1 FOR UPDATE`, backfillID); err != nil {
+		return err
+	}
+	for _, made := range created {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO capture_backfill_creation (backfill_id, kind, subject)
+			VALUES ($1, $2, $3)
+			ON CONFLICT (backfill_id, kind, subject) DO NOTHING`,
+			backfillID, made.kind, made.subject); err != nil {
 			return err
 		}
-		for _, made := range created {
-			if _, err := tx.Exec(ctx, `
-				INSERT INTO capture_backfill_creation (backfill_id, kind, subject)
-				VALUES ($1, $2, $3)
-				ON CONFLICT (backfill_id, kind, subject) DO NOTHING`,
-				c.backfillID, made.kind, made.subject); err != nil {
-				return err
-			}
-		}
-		_, err := tx.Exec(ctx, `
-			UPDATE capture_backfill b
-			SET contacts_created = greatest(counted.contacts, b.contacts_created),
-			    companies_created = greatest(counted.companies, b.companies_created)
-			FROM (
-				SELECT count(*) FILTER (WHERE kind = 'contact') AS contacts,
-				       count(*) FILTER (WHERE kind = 'company_queued') AS companies
-				  FROM capture_backfill_creation
-				 WHERE backfill_id = $1
-			) counted
-			WHERE b.id = $1`, c.backfillID)
-		return err
-	})
+	}
+	_, err := tx.Exec(ctx, `
+		UPDATE capture_backfill b
+		SET contacts_created = greatest(counted.contacts, b.contacts_created),
+		    companies_created = greatest(counted.companies, b.companies_created)
+		FROM (
+			SELECT count(*) FILTER (WHERE kind = 'contact') AS contacts,
+			       count(*) FILTER (WHERE kind = 'company_queued') AS companies
+			  FROM capture_backfill_creation
+			 WHERE backfill_id = $1
+		) counted
+		WHERE b.id = $1`, backfillID)
+	return err
+}
+
+// CreditBackfillRunTx credits the run that queued a sender with what the
+// verdict on that sender made. A sender live sync queued credits no run.
+func CreditBackfillRunTx(ctx context.Context, tx pgx.Tx, dispositionID ids.UUID, outcome EnsureOutcome) error {
+	created := createdSubjects(outcome)
+	if len(created) == 0 {
+		return nil
+	}
+	var run *ids.UUID
+	err := tx.QueryRow(ctx,
+		`SELECT backfill_id FROM capture_pending_counterparty WHERE id = $1`, dispositionID).Scan(&run)
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && run == nil) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("capture: reading the run that queued a sender: %w", err)
+	}
+	return recordCreationsTx(ctx, tx, *run, created)
 }
 
 // flushPacing says whether a write may be dropped for being too soon. Only the

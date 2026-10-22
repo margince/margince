@@ -15,6 +15,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/auditentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -351,7 +352,7 @@ func (s *RateStore) writeModelRate(ctx context.Context, tx pgx.Tx, p preparedMod
 	// fx_rate sibling). The verb is the SAME word the gate above demanded, so
 	// authorization_rule attributes the grant that actually admitted the write
 	// rather than a plausible-looking one.
-	if _, err := storekit.Audit(ctx, tx, string(action), "ai_model_rate", id, before,
+	if _, err := storekit.Audit(ctx, tx, string(action), auditentity.ModelRate, id, before,
 		modelRateImage(p, effDate)); err != nil {
 		return ModelRateRow{}, fmt.Errorf("audit ai_model_rate %s: %w", action, err)
 	}
@@ -362,6 +363,9 @@ func (s *RateStore) writeModelRate(ctx context.Context, tx pgx.Tx, p preparedMod
 // row per (provider, model_id), which MAY be a future-scheduled price. The
 // editor's "sheet head" view, distinct from RateFor's as-of-day effective
 // price (effective_date <= day). Admin/ops read gate.
+//
+// A row with no model id is left off. It prices a binding that names no model
+// (the offline fake's seed row), and modelRateIdentity refuses to edit it.
 func (s *RateStore) ListLatestModelRates(ctx context.Context) ([]ModelRateRow, error) {
 	if err := auth.Require(ctx, "ai_model_rate", principal.ActionRead); err != nil {
 		return nil, err
@@ -373,6 +377,7 @@ func (s *RateStore) ListLatestModelRates(ctx context.Context) ([]ModelRateRow, e
 			       provider, model_id, input_per_mtok_microusd, output_per_mtok_microusd,
 			       cache_read_per_mtok_microusd, cache_write_per_mtok_microusd, effective_date, lane, source
 			FROM ai_model_rate
+			WHERE model_id <> ''
 			ORDER BY provider, model_id, effective_date DESC`)
 		if err != nil {
 			return fmt.Errorf("list ai_model_rate: %w", err)

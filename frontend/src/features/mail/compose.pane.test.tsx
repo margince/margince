@@ -1,0 +1,395 @@
+/** @vitest-environment happy-dom */
+import { cleanup, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { useState } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { writeMessage } from "../../design-system/richtext-testing";
+import { ComposeModal } from "./compose";
+import {
+  type Activity,
+  activity202,
+  jsonResponse,
+  pickWhy,
+  render,
+  stubRoutes,
+  WHY_ASK,
+  WHY_LABEL,
+} from "./compose.testkit";
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
+
+// What the composer claims a message is, and when it claims nothing.
+//
+// The rule: a reply to the subject's own message derives reply_to_inbound from
+// the anchor, so the composer asks nothing and sends no claim. Everything else
+// has to be asked, because there is nothing to derive from.
+describe("what the composer says this message is", () => {
+  const inbound: Activity = {
+    ...activity202,
+    thread_key: "<t-why@mail>",
+    body: "Can you send the revised quote?",
+    direction: "inbound",
+  };
+
+  it("asks nothing on a reply, and says why not", async () => {
+    stubRoutes({ "GET /activities/act-1": () => jsonResponse(inbound) });
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="contact"
+        entityId="p-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    // The sentence that replaces the question. A reader who is shown a dropdown
+    // here is being asked to restate what the thread in front of them says.
+    expect(
+      await screen.findByText(
+        "This replies to the recipient’s own message, so no reason is needed.",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByLabelText("Reason for contact")).toBeNull();
+  });
+
+  it("sends a reply with no claim at all", async () => {
+    const sent = stubRoutes({
+      "GET /activities/act-1": () => jsonResponse(inbound),
+      "POST /activities/act-1/send-email": () => jsonResponse(activity202, 202),
+    });
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="contact"
+        entityId="p-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await screen.findByText(
+      "This replies to the recipient’s own message, so no reason is needed.",
+    );
+    await userEvent.type(screen.getByLabelText("To"), "a@x.com");
+    await userEvent.tab();
+    await userEvent.type(screen.getByLabelText("Subject"), "Re: quote");
+    writeMessage("Body", "Attached.");
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() =>
+      expect(
+        sent.find((r) => r.key === "POST /activities/act-1/send-email"),
+      ).toBeTruthy(),
+    );
+    const body = sent.find((r) => r.key === "POST /activities/act-1/send-email")
+      ?.body as Record<string, unknown>;
+    // Neither key. The engine resolves reply_to_inbound from the anchor, and a
+    // claim on top could only agree with it or contradict it. A contradiction
+    // is recorded as a claim the evidence does not carry.
+    expect(body).not.toHaveProperty("communication_context");
+    expect(body).not.toHaveProperty("consent_purpose");
+  });
+
+  it("drops a stale answer when the composer moves onto a reply", async () => {
+    // On a reply the question never renders. So a composer that passed its own
+    // state through would look correct, as the state is empty when nothing set
+    // it. It stops looking correct once a reader answers on an unanchored
+    // message and then opens a reply, one click in the same drawer.
+    //
+    // The thread is the stronger evidence either way, so the stale pick must
+    // not travel. The server would record it as a claim the evidence does not
+    // carry.
+    const sent = stubRoutes({
+      "GET /activities/act-1": () => jsonResponse(inbound),
+      "POST /activities/act-1/send-email": () => jsonResponse(activity202, 202),
+    });
+    // A parent that flips the anchor on demand, so the same mounted composer
+    // moves from unanchored to answering. A rep does that by clicking Reply
+    // beside a message. Remounting instead would reset the state and prove
+    // nothing about a stale answer surviving.
+    function Harness() {
+      const [anchored, setAnchored] = useState(false);
+      return (
+        <>
+          <button type="button" onClick={() => setAnchored(true)}>
+            anchor it
+          </button>
+          <ComposeModal
+            activityId={anchored ? "act-1" : undefined}
+            entityType="contact"
+            entityId="p-1"
+            open
+            onClose={vi.fn()}
+          />
+        </>
+      );
+    }
+    render(<Harness />);
+
+    await screen.findByRole("combobox", { name: WHY_ASK });
+    await pickWhy(WHY_LABEL.marketing);
+
+    await userEvent.click(screen.getByRole("button", { name: "anchor it" }));
+    await screen.findByText(
+      "This replies to the recipient’s own message, so no reason is needed.",
+    );
+
+    await userEvent.type(screen.getByLabelText("To"), "a@x.com");
+    await userEvent.tab();
+    await userEvent.type(screen.getByLabelText("Subject"), "Re: quote");
+    writeMessage("Body", "Attached.");
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() =>
+      expect(
+        sent.find((r) => r.key === "POST /activities/act-1/send-email"),
+      ).toBeTruthy(),
+    );
+    const body = sent.find((r) => r.key === "POST /activities/act-1/send-email")
+      ?.body as Record<string, unknown>;
+    expect(body).not.toHaveProperty("communication_context");
+  });
+
+  it("asks on a first message, and sends what the reader answered", async () => {
+    const sent = stubRoutes({
+      "POST /emails": () => jsonResponse(activity202, 202),
+    });
+    render(
+      <ComposeModal
+        entityType="contact"
+        entityId="p-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await screen.findByRole("combobox", { name: WHY_ASK });
+    await userEvent.type(screen.getByLabelText("To"), "a@x.com");
+    await userEvent.tab();
+    await userEvent.type(screen.getByLabelText("Subject"), "Hello");
+    writeMessage("Body", "First contact.");
+    await pickWhy(WHY_LABEL.requestedFollowup);
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() =>
+      expect(sent.find((r) => r.key === "POST /emails")).toBeTruthy(),
+    );
+    const body = sent.find((r) => r.key === "POST /emails")?.body as Record<
+      string,
+      unknown
+    >;
+    expect(body.communication_context).toBe("requested_followup");
+  });
+
+  it("refuses to send a first message until the reader says why", async () => {
+    let sent = false;
+    stubRoutes({
+      "POST /emails": () => {
+        sent = true;
+        return jsonResponse(activity202, 202);
+      },
+    });
+    render(
+      <ComposeModal
+        entityType="contact"
+        entityId="p-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await userEvent.type(await screen.findByLabelText("To"), "a@x.com");
+    await userEvent.tab();
+    await userEvent.type(screen.getByLabelText("Subject"), "Hello");
+    writeMessage("Body", "First contact.");
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    expect(
+      await screen.findByText("Select the reason for contact."),
+    ).toBeTruthy();
+    expect(sent).toBe(false);
+  });
+});
+
+// The conversation a reply is answering, in the drawer beside it.
+//
+// A reply does not use the centred box, because the box covers the message it
+// answers. These pin the shape it takes and what it draws in the second column.
+describe("the composer's conversation pane", () => {
+  const threaded: Activity = {
+    ...activity202,
+    thread_key: "<t-1@mail>",
+    body: "The signed order is attached.",
+    direction: "inbound",
+  };
+  const sibling: Activity = {
+    ...threaded,
+    id: "act-0",
+    subject: "Q3 order",
+    body: "Sending the order over today.",
+    direction: "outbound",
+    occurred_at: "2026-06-28T00:00:00Z",
+  };
+
+  it("takes the drawer on an account whose mail it is answering", async () => {
+    stubRoutes({
+      "GET /activities/act-1": () => jsonResponse(threaded),
+      "GET /activities": () =>
+        jsonResponse({ data: [threaded, sibling], page: { has_more: false } }),
+    });
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="company"
+        entityId="o-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    // The sibling message arrives in the pane, which widens the drawer. So
+    // wait for the conversation, then read the shape.
+    expect(
+      await screen.findByText("Sending the order over today."),
+    ).toBeTruthy();
+    // The reading drawer, whether the mail opens a conversation or answers one.
+    expect(
+      document.querySelector(".modal-drawer.modal-drawer-wide .compose-split"),
+    ).not.toBeNull();
+  });
+
+  it("draws a message it may not read as a held place, not a gap", async () => {
+    // A thread can run through an audience this reader is not in. Dropping the
+    // row would make the conversation look continuous when it is not. The
+    // reply would be written into a silence the writer cannot see.
+    const withheld: Activity = {
+      ...sibling,
+      id: "act-2",
+      subject: null,
+      body: null,
+      content_state: "withheld",
+    };
+    stubRoutes({
+      "GET /activities/act-1": () => jsonResponse(threaded),
+      "GET /activities": () =>
+        jsonResponse({ data: [threaded, withheld], page: { has_more: false } }),
+    });
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="company"
+        entityId="o-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    // Waited for by its rows. The pane holds its place with a pending body
+    // while the thread read is out. So the region existing does not yet mean
+    // the messages are drawn.
+    const pane = await screen.findByRole("region", {
+      name: /This thread/i,
+    });
+    await waitFor(() => expect(pane.querySelectorAll("li")).toHaveLength(2));
+  });
+
+  it("anchors nothing until the reader picks a conversation", async () => {
+    // The heading need not apologise for a thread chosen on the reader's
+    // behalf. Nothing is chosen, so there is nothing to explain: the
+    // conversations are offered and the reader takes one.
+    stubRoutes({
+      "GET /activities": () =>
+        jsonResponse({ data: [threaded, sibling], page: { has_more: false } }),
+      // Choosing a conversation reads its newest message, the way a Reply on
+      // the History tab does.
+      "GET /activities/act-1": () => jsonResponse(threaded),
+    });
+    render(
+      <ComposeModal
+        entityType="company"
+        entityId="o-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    // Waited for by its rows, not the region. The offer column holds its
+    // place with a pending body while the lookup is out. So the region
+    // existing does not yet mean there is anything to pick.
+    const choice = await screen.findByRole("button", { name: /Re: Q3/ });
+    expect(
+      screen.getByRole("region", { name: /Continue thread/i }),
+    ).toBeTruthy();
+    expect(screen.queryByRole("region", { name: /^this thread$/i })).toBeNull();
+
+    // Taking one turns the column into that conversation, with a way back.
+    await userEvent.click(choice);
+    expect(
+      await screen.findByRole("region", { name: /This thread/i }),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "New email" })).toBeTruthy();
+  });
+
+  it("draws no conversation beside a reply to a note", async () => {
+    // A timeline row offers Reply on a note as readily as on a mail. One filed
+    // note under the heading "This thread" claims to be an exchange.
+    const note: Activity = { ...threaded, kind: "note" };
+    const second: Activity = { ...sibling, kind: "note" };
+    const sent = stubRoutes({
+      "GET /activities/act-1": () => jsonResponse(note),
+      "GET /activities": () =>
+        jsonResponse({ data: [note, second], page: { has_more: false } }),
+    });
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="company"
+        entityId="o-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    // The composer has read the anchor and its siblings. So the pane's
+    // absence is a decision, not a list that had not arrived yet.
+    await waitFor(() =>
+      expect(
+        sent.filter((call) => call.key === "GET /activities"),
+      ).not.toHaveLength(0),
+    );
+    await screen.findByRole("combobox", { name: WHY_ASK });
+    expect(screen.queryByRole("region", { name: /This thread/i })).toBeNull();
+  });
+
+  it("shows a mail with no thread as the one message it is", async () => {
+    // Capture assigns a thread key only where a provider reported a
+    // conversation. A mail without one is a conversation of one message.
+    // Asking the server for every activity that has no thread is the wrong
+    // question.
+    const loose: Activity = { ...threaded, thread_key: null };
+    const sent = stubRoutes({
+      "GET /activities/act-1": () => jsonResponse(loose),
+    });
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="company"
+        entityId="o-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(
+      await screen.findByText("The signed order is attached."),
+    ).toBeTruthy();
+    expect(sent.filter((call) => call.key === "GET /activities")).toHaveLength(
+      0,
+    );
+  });
+});

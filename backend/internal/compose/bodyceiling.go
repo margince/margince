@@ -8,7 +8,6 @@ import (
 	"net/http"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
-	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/imagenorm"
@@ -32,7 +31,7 @@ import (
 // Paths are as the generated router mounts them, under the /v1 prefix the
 // chassis sees. TestEveryUploadRouteIsDeclared derives the expected set from
 // the contract, so a new upload route cannot be added without appearing here.
-func uploadCeilings(limits deployconfig.UploadLimits) map[string]int64 {
+func uploadCeilings(limits UploadLimits) map[string]int64 {
 	return map[string]int64{
 		"/v1/attachments":             limits.Attachment,     // uploadAttachment
 		"/v1/imports/sources":         limits.CSVImport,      // uploadImportSource
@@ -55,6 +54,8 @@ func uploadCeilings(limits deployconfig.UploadLimits) map[string]int64 {
 		// is the same kind of upload of the same company's face, so a second
 		// number here would be a difference with no reason behind it.
 		"/v1/company/logo/icon": companyLogoUploadBytes, // uploadCompanyLogoIcon
+		// A legal entity's mark, through the same decode as the company's.
+		"/v1/legal-entities/{id}/logo": companyLogoUploadBytes, // uploadLegalEntityLogo
 	}
 }
 

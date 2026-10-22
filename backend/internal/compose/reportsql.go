@@ -19,9 +19,11 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -136,7 +138,7 @@ func (e *reportEngine) fetchRows(ctx context.Context, report string, spec report
 		// below binds its own statement from. Binding appends a value per token
 		// the statement names, so a second bind over an already-bound slice
 		// numbers its placeholders past the values it just added.
-		sql, boundArgs, err := bindReportTokens(ctx, out.frame, reportSQL(spec, selects, where, groupBy), args)
+		sql, boundArgs, err := bindReportTokens(ctx, tx, out.frame, reportSQL(spec, selects, where, groupBy), args)
 		if err != nil {
 			return err
 		}
@@ -294,7 +296,7 @@ const (
 // a concurrent settings write land between them, and the answer then reports
 // a total cut in one zone under the name of another.
 func bindReportTokens(
-	ctx context.Context, frame reportFrame, sql string, args []any,
+	ctx context.Context, tx pgx.Tx, frame reportFrame, sql string, args []any,
 ) (string, []any, error) {
 	args = slices.Clone(args)
 	arg := func(v any) int { args = append(args, v); return len(args) }
@@ -336,7 +338,20 @@ func bindReportTokens(
 	}); err != nil {
 		return "", nil, err
 	}
-	if err := bindScope(reportActivityScopeToken, func() (string, error) { return auth.ActivityContentClause(ctx, "a", arg) }); err != nil {
+	if err := bindScope(reportActivityScopeToken, func() (string, error) {
+		scope, err := auth.ActivityContentClause(ctx, "a", arg)
+		if err != nil {
+			return "", err
+		}
+		if scope == "" {
+			scope = sqlUnnarrowed
+		}
+		identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
+		if err != nil {
+			return "", err
+		}
+		return "(" + scope + ") AND " + activities.CurrentTaskClause("a", frame.AsOf, identities, arg), nil
+	}); err != nil {
 		return "", nil, err
 	}
 	return sql, args, nil
@@ -380,7 +395,7 @@ func countReportGroups(
 		inner += " WHERE " + strings.Join(where, " AND ")
 	}
 	inner += " GROUP BY " + strings.Join(positions, ", ")
-	sql, bound, err := bindReportTokens(ctx, frame, "SELECT count(*) FROM ("+inner+") g", args)
+	sql, bound, err := bindReportTokens(ctx, tx, frame, "SELECT count(*) FROM ("+inner+") g", args)
 	if err != nil {
 		return 0, err
 	}

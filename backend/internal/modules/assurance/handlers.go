@@ -24,7 +24,14 @@ import (
 // Injected rather than imported: the scope clause is over `deal`, which this
 // module does not own and may not import. Applying it in the composition layer
 // is also where the caller's authority already sits.
-type ExceptionsFunc func(ctx context.Context, tx pgx.Tx) ([]Exception, error)
+type ExceptionsFunc func(ctx context.Context, tx pgx.Tx, population Population) ([]Exception, error)
+
+// Population narrows a list to the deals of one team, owner or the whole
+// workspace. The zero value narrows nothing beyond what the caller may see.
+type Population struct {
+	Kind string
+	ID   *ids.UUID
+}
 
 // Handlers is the assurance surface.
 type Handlers struct {
@@ -41,11 +48,15 @@ func NewHandlers(store *Store, exceptions ExceptionsFunc, now func() time.Time) 
 }
 
 // ListInputChecks answers the open findings this caller can see.
-func (h Handlers) ListInputChecks(w http.ResponseWriter, r *http.Request) {
+func (h Handlers) ListInputChecks(w http.ResponseWriter, r *http.Request, params crmcontracts.ListInputChecksParams) {
+	population := Population{ID: (*ids.UUID)(params.ScopeId)}
+	if params.ScopeKind != nil {
+		population.Kind = string(*params.ScopeKind)
+	}
 	var found []Exception
 	err := h.store.InTx(r.Context(), func(ctx context.Context, tx pgx.Tx) error {
 		var err error
-		found, err = h.exceptions(ctx, tx)
+		found, err = h.exceptions(ctx, tx, population)
 		return err
 	})
 	if err != nil {
@@ -54,20 +65,23 @@ func (h Handlers) ListInputChecks(w http.ResponseWriter, r *http.Request) {
 	}
 	httperr.WriteJSON(w, http.StatusOK, struct {
 		Data []crmcontracts.InputCheck `json:"data"`
-	}{Data: exceptionsToWire(found)})
+	}{Data: ExceptionsToWire(found)})
 }
 
-// subjectOf names the record a finding is about, so the row can open it.
-//
-// Only a NAMED subject becomes one: the label comes from the surface read's own
-// join, under the caller's own deal scope, so an empty one means the reader was
-// never shown the name and a row carrying the id alone is the honest answer.
-//
-// The kind is mapped rather than cast. `subject_kind` and AttentionSubject's
-// vocabulary overlap on `deal` and nowhere else — an offer, a contract and a
-// signal are not screens a subject routes to — so a kind this map does not know
-// yields no subject rather than a link that opens nothing.
+// Signal findings open their verified company; the signal remains the review subject.
 func subjectOf(e Exception) *crmcontracts.AttentionSubject {
+	if e.SubjectKind == subjectKindSignal {
+		slots := decodeSlots(e.Claim)
+		company, ok := (*slots)["company_id"].(string)
+		if !ok || e.SubjectLabel == "" {
+			return nil
+		}
+		id, err := ids.Parse(company)
+		if err != nil {
+			return nil
+		}
+		return &crmcontracts.AttentionSubject{Type: crmcontracts.AttentionSubjectTypeCompany, Id: openapi_types.UUID(id), Label: &e.SubjectLabel}
+	}
 	kind, ok := subjectKinds[e.SubjectKind]
 	if !ok || e.SubjectLabel == "" {
 		return nil
@@ -80,14 +94,13 @@ func subjectOf(e Exception) *crmcontracts.AttentionSubject {
 	}
 }
 
-// subjectKinds maps a finding's subject onto the contract's subject vocabulary.
-// Today the surface read returns deal findings only; the map is what makes a
-// second kind arriving later a deliberate act rather than a silent link.
 var subjectKinds = map[string]crmcontracts.AttentionSubjectType{
 	"deal": crmcontracts.AttentionSubjectTypeDeal,
 }
 
-func exceptionsToWire(in []Exception) []crmcontracts.InputCheck {
+// ExceptionsToWire renders findings on the listInputChecks item shape; the
+// team weekly carries the same items.
+func ExceptionsToWire(in []Exception) []crmcontracts.InputCheck {
 	// Empty, never nil. "Nothing to check" is a real answer and arrives shaped
 	// like the array it is; null reads as "unknown", which on this surface
 	// would be the difference between a clean pipeline and an unread one.
@@ -212,6 +225,7 @@ func (h Handlers) ResolveInputCheck(
 		return
 	}
 	in := Resolution{
+		DealID:      (*ids.UUID)(body.DealId),
 		Outcome:     string(body.Outcome),
 		Reason:      derefString(body.Reason),
 		EvidenceRef: derefString(body.EvidenceRef),

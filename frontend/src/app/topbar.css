@@ -12,16 +12,14 @@
  * page passes UNDER it all the same — the scroller reaches up behind the strip
  * and pads its content clear of it (app/shell.css) — so the strip is
  * translucent with a blur behind it and shows what is sliding past. */
-/* Three tracks, the outer two equal: the search sits at the centre of the
-   CONTENT column and stays there whatever the two sides carry. In flow rather
-   than absolutely positioned — a centred field taken out of the row leaves the
-   trail beside it bounded by nothing, and a long record name then runs UNDER the
-   field and out the other side, unclipped and with no tooltip, which is what the
-   first version of this bar did above 1100px. `minmax(0, 1fr)` is what lets the
-   trail shrink and ellipsis instead. */
+/* The search is centred on the content column while the trail fits its half;
+   a longer trail grows into the room the end controls leave, up to its cap. */
 .topbar {
+  --topbarSearchW: min(420px, 34vw);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-columns: minmax(min-content, 1fr) auto minmax(0, 1fr);
+  /* The query container `.topbar-lead` measures its cap against. */
+  container-type: inline-size;
   align-items: center;
   gap: var(--space-3);
   flex: none;
@@ -50,6 +48,15 @@
   align-items: center;
   gap: var(--space-2);
   min-width: 0;
+  /* The row less the search, its two gaps, and the bell and account control:
+     a trail longer than this ellipses rather than pushing them off the bar. */
+  max-width: calc(
+    100cqw -
+    var(--topbarSearchW) -
+    var(--space-2) -
+    2 *
+    (var(--space-3) + var(--controlHeight))
+  );
 }
 .topbar-trail {
   display: flex;
@@ -94,7 +101,7 @@
  * column when the sidebar collapses — `--railW` animates as a registered length
  * (shell.css), so the grid beside it moves rather than snapping. */
 .topbar-searchslot {
-  width: min(420px, 34vw);
+  width: var(--topbarSearchW);
 }
 /* This is a BUTTON that opens the palette, and it is drawn as the field the
    palette opens with — so it takes the field's box and the field's type, not a
@@ -195,6 +202,7 @@
   }
   .topbar-lead {
     flex: 1;
+    max-width: none;
   }
   .topbar-searchslot {
     width: auto;
@@ -231,6 +239,15 @@
   }
 }
 
+/* Below 1024px a long trail has no room beside the end controls, so the bar
+   draws the current page alone. */
+@media (width < 1024px) {
+  .topbar .crumbs > ol > li:not(:last-child),
+  .topbar .crumbs > ol > li:last-child > .crumbs-sep {
+    display: none;
+  }
+}
+
 /* At phone width the sidebar is the bottom bar, so there is no panel to collapse
    and no control for it. What stays is what a phone reader cannot get any other
    way: where they are, how to search, and who they are. */
@@ -250,13 +267,14 @@
    still a mouse — the floor is about what a thumb can hit, not about how much
    room there is. */
 @media (pointer: coarse) {
-  .topbar-search,
   /* The trail's triggers by STRUCTURE, not by name: they are icon-sized by
      default and one of them wears no class at all, so a list here would be a
      list somebody has to remember to extend. Grandchildren only — an open
-     menu's own rows are not the strip's targets. */
-  .topbar-trail > button,
-  .topbar-trail > * > button {
+     menu's own rows are not the strip's targets.
+     The `.topbar` prefix outranks the two-class bare button. */
+  .topbar-search,
+  .topbar .topbar-trail > button,
+  .topbar .topbar-trail > * > button {
     min-height: max(var(--controlHeight), 44px);
   }
 }

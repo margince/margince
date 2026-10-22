@@ -144,7 +144,7 @@ func TestInviteUserCreatesInvitedMemberWithRoleTokenAndEvent(t *testing.T) {
 		t.Fatalf("invite returned userID=%v token-empty=%v; want both set", userID, rawToken == "")
 	}
 
-	member, err := e.svc.GetUser(e.wsCtx(e.admin), userID)
+	member, err := e.svc.GetUser(e.wsCtx(e.admin), e.admin, userID)
 	if err != nil {
 		t.Fatalf("get invited member: %v", err)
 	}
@@ -259,7 +259,7 @@ func TestReactivateUserRestoresActiveAndEmits(t *testing.T) {
 		t.Fatalf("reactivate: %v", err)
 	}
 
-	member, err := e.svc.GetUser(e.wsCtx(e.admin), e.member.UserID)
+	member, err := e.svc.GetUser(e.wsCtx(e.admin), e.admin, e.member.UserID)
 	if err != nil {
 		t.Fatalf("get reactivated member: %v", err)
 	}
@@ -416,7 +416,7 @@ func TestRedeemingAnInvitationActivatesTheMemberAndEmitsIt(t *testing.T) {
 		t.Fatalf("redeem invitation: %v", err)
 	}
 
-	member, err := e.svc.GetUser(e.wsCtx(e.admin), userID)
+	member, err := e.svc.GetUser(e.wsCtx(e.admin), e.admin, userID)
 	if err != nil {
 		t.Fatalf("get member: %v", err)
 	}
@@ -471,7 +471,7 @@ func TestAnExpiredInvitationIsRecoveredByAnAdminIssuedLink(t *testing.T) {
 	if err := e.svc.RedeemPasswordReset(e.wsCtx(e.admin), token, "recovered-password-9"); err != nil {
 		t.Fatalf("redeem re-issued link: %v", err)
 	}
-	member, err := e.svc.GetUser(e.wsCtx(e.admin), userID)
+	member, err := e.svc.GetUser(e.wsCtx(e.admin), e.admin, userID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -518,7 +518,7 @@ func TestReactivatingAMemberWhoNeverSetAPasswordReturnsThemToInvited(t *testing.
 	if err := e.svc.ReactivateUser(e.wsCtx(e.admin), e.admin, userID); err != nil {
 		t.Fatalf("reactivate: %v", err)
 	}
-	member, err := e.svc.GetUser(e.wsCtx(e.admin), userID)
+	member, err := e.svc.GetUser(e.wsCtx(e.admin), e.admin, userID)
 	if err != nil {
 		t.Fatal(err)
 	}

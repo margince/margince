@@ -29,6 +29,7 @@ import (
 // what the review does with an outlook, not about how forecasting computes one.
 // The figures below are therefore fixtures, not a second implementation.
 type stubForecast struct {
+	coverage  []Coverage
 	outlooks  []Outlook
 	movements []Movement
 	drivers   []Driver
@@ -50,10 +51,10 @@ func (s *stubForecast) CloseWeek(
 
 func (s *stubForecast) CloseTeamWeek(
 	_ context.Context, _ pgx.Tx, teamID ids.UUID, _, _ time.Time,
-) ([]Outlook, []Movement, []Driver, error) {
+) (TeamClose, error) {
 	s.teamCalls++
 	s.teamID = teamID
-	return s.outlooks, s.movements, s.drivers, nil
+	return TeamClose{Outlooks: s.outlooks, Movements: s.movements, Drivers: s.drivers, Coverage: s.coverage}, nil
 }
 
 func oneHorizon(openingID, closingID ids.UUID) *stubForecast {

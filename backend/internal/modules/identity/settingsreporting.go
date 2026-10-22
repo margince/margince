@@ -18,7 +18,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -45,18 +45,19 @@ import (
 // What the label DOES fix is the reader's half: spelling both years means the
 // answer they get is unambiguous about which twelve months it covers, even when
 // the filter that produced it is stale.
-var FiscalYearStartMonth = settings.Define[int](
-	"installation.fiscal_year_start_month",
-	installationSettingsObject,
-	"update",
-	int(time.January),
-	func(month int) error {
+var FiscalYearStartMonth = config.DefineStored(config.Spec[int]{
+	Key:     "installation.fiscal_year_start_month",
+	Env:     "MARGINCE_INSTALLATION_FISCAL_YEAR_START_MONTH",
+	Type:    config.Int,
+	Default: config.Some(int(time.January)),
+	Validate: func(month int) error {
 		if month < int(time.January) || month > int(time.December) {
 			return fmt.Errorf("a fiscal year starts in month 1..12, not %d", month)
 		}
 		return nil
 	},
-).AsInstallationIdentity()
+	Doc: "The month the business year begins, 1 to 12.",
+}, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true})
 
 // ForecastForwardMeasure is which remaining-pipeline reading a projected
 // landing is built from.
@@ -74,18 +75,19 @@ var FiscalYearStartMonth = settings.Define[int](
 // anything outside it and this package may not import that module. Validating
 // against a copy here would let the two drift, and the drift only shows up as
 // a forecast read failing for an installation that saved cleanly.
-var ForecastForwardMeasure = settings.Define[string](
-	"installation.forecast_forward_measure",
-	installationSettingsObject,
-	"update",
-	string(values.MeasureCommitEvidence),
-	func(measure string) error {
+var ForecastForwardMeasure = config.DefineStored(config.Spec[string]{
+	Key:     "installation.forecast_forward_measure",
+	Env:     "MARGINCE_INSTALLATION_FORECAST_FORWARD_MEASURE",
+	Type:    config.String,
+	Default: config.Some(string(values.MeasureCommitEvidence)),
+	Validate: func(measure string) error {
 		if _, err := values.ParseForwardMeasure(&measure, "forecast_forward_measure"); err != nil {
 			return err
 		}
 		return nil
 	},
-).AsInstallationIdentity()
+	Doc: "Which remaining-pipeline reading a projected landing is built from.",
+}, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true})
 
 // ForecastForwardMeasureOf resolves the stored measure inside a transaction the
 // caller already holds.
@@ -94,7 +96,7 @@ var ForecastForwardMeasure = settings.Define[string](
 // how this setting is read belongs with the entry that declares it, so a
 // wiring site injecting it does not restate the default or the key.
 func ForecastForwardMeasureOf(ctx context.Context, tx pgx.Tx) (string, error) {
-	return settings.GetTx(ctx, tx, ForecastForwardMeasure)
+	return config.StoredValTx(ctx, tx, config.Bound(), ForecastForwardMeasure)
 }
 
 // FiscalYearStartMonthOf resolves the month the installation's business year
@@ -106,5 +108,5 @@ func ForecastForwardMeasureOf(ctx context.Context, tx pgx.Tx) (string, error) {
 // an absent row is not a broken installation, it is an older one that agrees
 // with the default.
 func FiscalYearStartMonthOf(ctx context.Context, tx pgx.Tx) (int, error) {
-	return settings.GetTx(ctx, tx, FiscalYearStartMonth)
+	return config.StoredValTx(ctx, tx, config.Bound(), FiscalYearStartMonth)
 }

@@ -7,7 +7,7 @@ import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
-} from "../screens/story-utils";
+} from "../testing/story-utils";
 import { SourceEvidence } from "./sourceevidence";
 
 const ACTIVITY = "22222222-2222-4222-8222-222222222222";
@@ -106,6 +106,23 @@ export const Failed: StoryObj = {
   render: () => {
     installFetchStub({
       [`GET /activities/${ACTIVITY}`]: () => new Response("", { status: 500 }),
+    });
+    return (
+      <StoryProviders>
+        <SourceEvidence activityId={ACTIVITY} onOpenTranscript={() => {}} />
+      </StoryProviders>
+    );
+  },
+};
+
+export const Withheld: StoryObj = {
+  render: () => {
+    installFetchStub({
+      [`GET /activities/${ACTIVITY}`]: () =>
+        jsonResponse({
+          ...activity("meeting"),
+          content_state: "withheld",
+        }),
     });
     return (
       <StoryProviders>

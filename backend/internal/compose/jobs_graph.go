@@ -31,7 +31,7 @@ import (
 func addGraphJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger) []*river.PeriodicJob {
 	// Each pass is a dispatcher plus a workspace worker; only the dispatcher
 	// gets a periodic entry, and the workspace worker reuses its wiring.
-	participants := newParticipantBackfillWorker(pool, log)
+	participants := newParticipantBackfillWorker(pool, cfg.Blobstore, log)
 	addDeclaredWorker[ParticipantBackfillArgs](reg, participants)
 	graphEdges := newGraphEdgeReconcileWorker(pool, log)
 	addDeclaredWorker[GraphEdgeReconcileArgs](reg, graphEdges)

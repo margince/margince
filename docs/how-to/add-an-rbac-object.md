@@ -137,7 +137,7 @@ the tree and fails a store method with no gate. Such a method is a way into tena
 to it can reach it, and a review cannot see it.
 
 **Client side.** Bind the control to the **grant**, never to a role name. The hooks are in
-`frontend/src/app/capability.ts`. They take the generated `RbacObject` union, so a wrong object name fails
+`frontend/src/lib/capability.ts`. They take the generated `RbacObject` union, so a wrong object name fails
 the compile:
 
 | Hook | Use it for |
@@ -152,6 +152,15 @@ comes from the contract. So the client stays correct on a workspace whose stored
 only shape the UI. The server's `auth.Require` decides every call. A client that gets it wrong shows the
 wrong button, and never the wrong data.
 
+**Name.** The grid of a role shows each object by a name, in a group. Give the new object its name. Add
+one entry to `CORE_OBJECTS` in `frontend/src/format/rbacobjects.ts`: its group, from `GRANT_AREAS`, and a
+`roles.object.<name>` key. Then add that key to `en.ts`, `de.ts` and `vi.ts` in `frontend/src/i18n/`. Use
+the name that the screen the grant opens uses: short, in sentence case.
+
+The table is keyed by the `RbacObject` union from step 2, so a missing entry fails the TypeScript build.
+An object with no entry in a client still shows in the grid, under "Other", by its key. That is the case
+of a client older than its server.
+
 ## 6. Check
 
 Run both lanes, and know which one proves what.
@@ -164,7 +173,8 @@ Run both lanes, and know which one proves what.
   It finds step 4 not run.
 - `TestEveryStoreEntryPointIsAuthGated`: every store entry point has a gate. It finds step 5 missing on the
   server.
-- `make check-fe`: the TypeScript build proves the capability hooks can name the new object.
+- `make check-fe`: the TypeScript build proves the capability hooks can name the new object, and that the
+  role screen has a name for it.
 
 **`make test-integration`**: the lane with a real Postgres, and **the only proof that the backfill reached
 an old install**. All three gates live in
@@ -197,5 +207,5 @@ prints when it fails; never by hand.
 It lives in the unit lane because reading history needs a full checkout, and the integration lane takes a
 short checkout.
 
-Commit the policy change, the contract, the migration pair, the new matrix and the UI link together. They
-are one change, and any one of them alone is a state that does not work.
+Commit the policy change, the contract, the migration pair, the new matrix, the UI link and the name
+together. They are one change, and any one of them alone is a state that does not work.

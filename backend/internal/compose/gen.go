@@ -5,3 +5,4 @@ package compose
 
 //go:generate go run github.com/margince/margince/backend/tools/gen-stubs -src ../contracts/api_gen.go -out stubs_gen.go
 //go:generate go run github.com/margince/margince/backend/tools/gen-agentpolicy -in ../../api/crm.yaml -out agentpolicy_gen.go
+//go:generate go run github.com/margince/margince/backend/tools/gen-queryenums -in ../../api/crm.yaml -out queryenums_gen.go

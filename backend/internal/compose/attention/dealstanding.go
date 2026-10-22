@@ -100,6 +100,10 @@ func (s *Service) nameTheStanding(
 				Line:   finding,
 				Source: crmcontracts.WorklistDealVerdictSourceWorklistInsightSourceBriefFinding,
 			}
+			if !s.briefCutoff.IsZero() {
+				asOf := s.briefCutoff
+				queue[i].Verdict.AsOf = &asOf
+			}
 		}
 	}
 	return nil

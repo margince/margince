@@ -50,6 +50,12 @@ func TestEveryControllerTemplateCarriesExactlyOnePlaceholder(t *testing.T) {
 					"refuses a body whose count disagrees with its material, so this template can "+
 					"never be sent", key, language, got, want)
 			}
+			if RenderControllerPresentation(rendered, "Example Company") == "" || !strings.Contains(RenderControllerPresentation(rendered, "Example Company"), `lang="`+string(language)+`"`) {
+				t.Errorf("template %s lacks localized markup", key)
+			}
+			if got := strings.Count(RenderControllerPresentation(rendered, "Example Company"), linkPlaceholder); got != want {
+				t.Errorf("template %s markup has %d personal actions, want %d", key, got, want)
+			}
 			if rendered.Subject == "" {
 				t.Errorf("template %q renders no subject line in %s", key, language)
 			}
@@ -178,19 +184,18 @@ func TestTheRenderedBodyNeverCarriesTheLink(t *testing.T) {
 //
 // gatekit:fixture the sha256 of each registered template's rendered wording
 var pinnedWording = map[string]string{
-	"privacy_notice@1@de": "f22fd4fc7fe4e266bd6f19566cf1c168d9981106ee8bfe64d7d43758b1bd8b3a",
-	"privacy_notice@1@en": "9bcfa68cac9cece7974e57c71472434f4baf865a4a0c8e12970fe0b3f1212dd4",
-	"privacy_notice@1@vi": "5fc479c528b31e79df080e9f07cbfedd15e6e67373ed73776b29b7513da9bef2",
-
-	"optout_acknowledgement@1@de": "64facabebf95a1aee0040714c4c9a931b747d49477ebc2c50e7c739c0d5c57c1",
-	"optout_acknowledgement@1@en": "b1e875b839add1d0adc02499a2569c4fa7a59ee9f185f44bbd9952482934b76a",
-	"optout_acknowledgement@1@vi": "cf3c6f5faab5c2ea7b736607f0486f121fbea2466280734fee4b017680fd0e49",
-	"record_confirmation@2@en":    "ae6261f551d0f39945b720db03b9ef2f51a36516b88eeff0b1afae80808e0c28",
-	"record_confirmation@2@de":    "3ba76e0c75f2dd619ad4666d3452607b87a638ea1183e3188ace7bd7d4ac6b06",
-	"record_confirmation@2@vi":    "28894b02130d640779a9fd4550a2f987a4925c04aaf2749679d44708eae9d2a7",
-	"consent_confirmation@3@en":   "05485c736c4971864938a0a4100a69b0533b7f9792e1d75820299461c043233e",
-	"consent_confirmation@3@de":   "bc4ce2c04ab10176e5bb49362554a42411b97ac1c9629f6c6eb921de527fa59a",
-	"consent_confirmation@3@vi":   "e224aa3f581bf8b2fccb3468364abe52f0f6467e3dd045c9e2b056a96fd4b7b3",
+	"record_confirmation@3@de":    "1b43a49c716496407f12328ebcc68f43ee586909b6b8edfcc92e45212f58fb9f",
+	"record_confirmation@3@en":    "5eea97facb021167689fd7d55a9f7eb111f6d5f3a97bce0d132c48a6146cffd7",
+	"record_confirmation@3@vi":    "c946125439097475f3fdf0f913ae1934e78a3930a5e8283bc34b254c2848becb",
+	"consent_confirmation@4@de":   "f657ea3ffc0bcced8aa96bf77061e1d69766d990b0817fd3a3ed18255c834f98",
+	"consent_confirmation@4@en":   "ea8668c4bd0f429db959554f4e5e539e756dec502d8fbe590557814648316c8a",
+	"consent_confirmation@4@vi":   "88f470b6631a98861701f6abde54f57e5a34e9ca4f51ad17fd25dfe1ebd0025b",
+	"privacy_notice@2@de":         "b1e55b3b20f3ad216eea6fa209fb17cdb3f5cedd64da5345f07e482557ab16cd",
+	"privacy_notice@2@en":         "a10a05e513c603e0a92e230fd47d284b345b49177a5b189f33172517230ebe31",
+	"privacy_notice@2@vi":         "eb0f41662c7333b3a718a9961f2f218467ebb2bbfdb2a2449e7bb554078a3565",
+	"optout_acknowledgement@2@de": "e7c1a1b705acc9fc43860cff63f4de049a694ca8d66734d9ecec54e489f54b8f",
+	"optout_acknowledgement@2@en": "1e536284d3200b99a38a349e55aa65cdc8b7e0482e1b2f4559c546830751500b",
+	"optout_acknowledgement@2@vi": "4ce293fb0948756cc75f2b27a1ba054e7364c347a6e6ab71f250de5a922c32b8",
 }
 
 // TestEveryControllerTemplateIsPinnedToItsWording fails when a registered
@@ -219,7 +224,7 @@ func TestEveryControllerTemplateIsPinnedToItsWording(t *testing.T) {
 	seen := map[string]bool{}
 	for _, key := range keys {
 		for _, language := range mailcopy.Languages() {
-			rendered, _, err := RenderControllerTemplate(key, expires, string(language))
+			rendered, _, err := renderTemplateContext(key, expires, string(language), "Example subscription")
 			if err != nil {
 				t.Errorf("rendering %s in %s: %v", key, language, err)
 				continue
@@ -274,14 +279,8 @@ func checkPin(t *testing.T, seen map[string]bool, key, locale string, rendered R
 	}
 }
 
-// TestTheExpiryDateReadsTheSameInEveryLanguage is the one part of a rendered
-// message that is not copy, and it was wrong first time round.
-//
-// Go's reference layouts name the month in English, so "2 January 2006" put
-// "9 March 2026" inside a German sentence — the single visible place where a
-// catalog of translations would still have shipped English. An ISO date carries
-// no month name to get wrong.
-func TestTheExpiryDateReadsTheSameInEveryLanguage(t *testing.T) {
+// TestTheExpiryRetainsItsTimeInEveryLanguage prevents a whole-day expiry promise.
+func TestTheExpiryRetainsItsTimeInEveryLanguage(t *testing.T) {
 	expires := time.Date(2026, time.March, 9, 12, 0, 0, 0, time.UTC)
 	for key := range controllerTemplates {
 		// A LINKLESS TEMPLATE HAS NO EXPIRY TO READ. The acknowledgement carries
@@ -295,8 +294,8 @@ func TestTheExpiryDateReadsTheSameInEveryLanguage(t *testing.T) {
 			if err != nil {
 				t.Fatalf("rendering %q in %s: %v", key, language, err)
 			}
-			if !strings.Contains(rendered.Body, "2026-03-09") {
-				t.Errorf("template %q in %s does not carry the ISO expiry date:\n%s",
+			if !strings.Contains(rendered.Body, mailcopy.For(string(language)).Instant(expires)) {
+				t.Errorf("template %q in %s does not carry the exact localized expiry:\n%s",
 					key, language, rendered.Body)
 			}
 			// The month name is what an English layout leaks. Asserting the ISO
@@ -351,4 +350,26 @@ func evidencedCategory(category commsauthz.Category) bool {
 		return true
 	}
 	return category == commsauthz.CategoryOptoutConfirmation
+}
+
+func TestQueuedControllerVersionsRemainRecognized(t *testing.T) {
+	registry := ControllerTemplateRegistry()
+	for key, old := range map[string]int{TemplateRecordConfirmation: 2, TemplateConsentConfirmation: 3, TemplatePrivacyNotice: 1, TemplateOptOutAcknowledgement: 1} {
+		current, ok := ControllerTemplateVersion(key)
+		if !ok || current <= old || !registry.Registered(key, old) || !registry.Registered(key, current) || registry.Registered(key, 0) || registry.Registered(key, current+1) {
+			t.Errorf("invalid current/queued version policy for %s", key)
+		}
+	}
+}
+
+func TestOnlyTheSubscriptionTemplateNamesASubscription(t *testing.T) {
+	for _, key := range []string{TemplateRecordConfirmation, TemplateConsentConfirmation, TemplatePrivacyNotice} {
+		rendered, _, err := renderTemplateContext(key, time.Date(2026, 11, 15, 12, 0, 0, 0, time.UTC), "de", "Produktneuigkeiten")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := strings.Contains(rendered.Body, "Thema: Produktneuigkeiten"); got != (key == TemplateConsentConfirmation) {
+			t.Fatalf("subscription and correction contexts crossed: %s", rendered.Body)
+		}
+	}
 }

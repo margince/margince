@@ -6,6 +6,7 @@ package contacts
 import (
 	"context"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -68,6 +69,9 @@ func (s *Store) mergeLeadTx(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 	if err != nil {
 		return crmcontracts.Lead{}, err
 	}
+	if err := refuseWebsiteLeadNotYetTold(ctx, tx, sourceID.UUID, targetID.UUID); err != nil {
+		return crmcontracts.Lead{}, err
+	}
 	src, tgt, err := mergePair(ctx, tx, entityLead, sourceID, targetID, nil, readLeadMergeState)
 	if err != nil {
 		return crmcontracts.Lead{}, err
@@ -95,7 +99,7 @@ func (s *Store) mergeLeadTx(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 	}
 	auditID, err := storekit.Audit(ctx, tx, "merge", entityLead, sourceID.UUID,
 		map[string]any{auditKeyMergedInto: nil},
-		map[string]any{auditKeyMergedInto: targetID, auditKeyFilled: p.After()})
+		map[string]any{auditKeyMergedInto: targetID, auditKeyFilled: filledColumns(p.After())})
 	if err != nil {
 		return crmcontracts.Lead{}, fmt.Errorf("audit lead merge: %w", err)
 	}
@@ -103,6 +107,13 @@ func (s *Store) mergeLeadTx(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 		MergedFromId: openapi_types.UUID(sourceID.UUID), MergedIntoId: openapi_types.UUID(targetID.UUID),
 	}); err != nil {
 		return crmcontracts.Lead{}, fmt.Errorf("emit lead.merged: %w", err)
+	}
+	before := map[string]any{auditKeyMergedFrom: nil}
+	after := map[string]any{auditKeyMergedFrom: sourceID.UUID}
+	maps.Copy(before, p.Before())
+	maps.Copy(after, p.After())
+	if _, err := storekit.Audit(ctx, tx, "merge", entityLead, targetID.UUID, before, after); err != nil {
+		return crmcontracts.Lead{}, fmt.Errorf("audit lead merge on the survivor: %w", err)
 	}
 	out, err := readLead(ctx, tx, targetID, storekit.LiveOnly, active)
 	if err != nil {
@@ -128,6 +139,9 @@ func (s *Store) carryLeadToLeadTx(ctx context.Context, tx pgx.Tx, sourceID, targ
 	}
 	if err := s.carryConsentSatellitesTx(ctx, tx, from, to); err != nil {
 		return fmt.Errorf("carry the merged-away lead's consent links: %w", err)
+	}
+	if err := s.carryGrantsTx(ctx, tx, entityLead, sourceID.UUID, targetID.UUID); err != nil {
+		return fmt.Errorf("carry the merged-away lead's grants: %w", err)
 	}
 	return carryLeadMembershipsToLead(ctx, tx, sourceID, targetID)
 }

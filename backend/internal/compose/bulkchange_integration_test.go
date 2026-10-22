@@ -193,7 +193,7 @@ func TestANamedOwnerWhoMayNotOwnRecordsRefusesTheWholeChange(t *testing.T) {
 
 func TestTheInstallationsOwnCompanyIsLeftOutOfABulkArchive(t *testing.T) {
 	e := integration.Setup(t)
-	store := contacts.NewStore(e.DB())
+	store := contacts.NewStore(e.DB()).WithInstallationRenamer(installationRenamer(e.Pool))
 	anchor, err := store.SaveCompany(e.Admin(), contacts.SaveCompanyInput{DisplayName: "Ourselves GmbH"})
 	if err != nil {
 		t.Fatalf("SaveCompany: %v", err)

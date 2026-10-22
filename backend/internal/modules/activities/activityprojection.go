@@ -264,6 +264,7 @@ func (s *activityScan) record() crmcontracts.Activity {
 	// held message's audience would learn who wrote it while being refused
 	// every word of it.
 	if s.contentAvailable {
+		a.ImportedFrom = provenance.ImportedFrom(s.a.SourceSystem)
 		a.Author = SourceAuthorOf(s.sourceAuthorID, s.sourceAuthorSeatName, s.sourceAuthorName, s.a.SourceSystem)
 	}
 	if s.language != nil && s.contentAvailable {

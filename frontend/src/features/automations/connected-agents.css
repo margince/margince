@@ -1,0 +1,6 @@
+/* The empty line keeps a focus target around it, so it reads as the bare
+   sentence `.panel-body > .empty` draws rather than as a plate. */
+.agents-empty > .empty {
+  padding: 0;
+  background: none;
+}

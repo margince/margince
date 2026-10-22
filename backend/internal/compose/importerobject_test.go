@@ -27,3 +27,11 @@ func TestTheImporterDoorNamesTheObjectTheImportSurfaceTakes(t *testing.T) {
 			auth.ImporterObject(), migration.ImportRunObject)
 	}
 }
+
+func TestTheComposeGrantSpellingIsTheMigrationObject(t *testing.T) {
+	if importRunGrant != migration.ImportRunObject {
+		t.Errorf("compose takes the import grant on %q but migration owns %q — "+
+			"the doors here would ask about an object nobody is granted",
+			importRunGrant, migration.ImportRunObject)
+	}
+}

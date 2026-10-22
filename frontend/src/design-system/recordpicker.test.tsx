@@ -10,16 +10,16 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
-import { ProblemError } from "../screens/common";
+import { ProblemError } from "../lib/problem";
 import { Field } from "./atoms";
 import { RecordPicker, type RecordPickerCandidate } from "./recordpicker";
 
-// RecordPicker is the extracted debounced search→candidate-list→pick pattern
-// that used to live duplicated inline in MergeAction (screens/merge.tsx) and
-// AddRelationshipAction (screens/relationships.tsx). These specs pin the
-// behaviour those two call sites already relied on: the 250ms debounce, an
-// empty term clearing the list instead of searching, an inline (not thrown)
-// search error, and a picked candidate reaching onPick.
+// RecordPicker is the debounced search→candidate-list→pick pattern that
+// MergeAction (components/merge.tsx) and AddRelationshipAction
+// (features/records/relationships.tsx) share. These specs pin what those two
+// call sites rely on. The search waits 250ms, and an empty term clears the list
+// instead of searching. A search error shows inline rather than being thrown,
+// and a picked candidate reaches onPick.
 
 afterEach(cleanup);
 
@@ -219,8 +219,9 @@ describe("RecordPicker", () => {
   it("keeps a detail the server wrote for a reader", async () => {
     const user = userEvent.setup();
     const refused = new ProblemError({
-      code: "search_unavailable",
-      detail: "Search is being rebuilt. Try again in a few minutes.",
+      code: "schema_changed",
+      detail:
+        "this installation's schema changed while the connection serving this request was holding a plan made against the old one. Nothing in the request is wrong and nothing was written; send it again — the plan is rebuilt on the next attempt.",
     });
     rtlRender(
       <LocaleProvider initial="en">
@@ -234,7 +235,9 @@ describe("RecordPicker", () => {
 
     await user.type(screen.getByRole("searchbox"), "anna");
 
-    await waitFor(() => expect(screen.getByText(/being rebuilt/)).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByText(/the plan is rebuilt/)).toBeTruthy(),
+    );
   });
 
   it("discards a stale search when the term changes before it resolves", async () => {

@@ -4,6 +4,7 @@
 package attention
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
@@ -99,10 +100,12 @@ func (h Handlers) GetHiddenBacklog(w http.ResponseWriter, r *http.Request) {
 
 // GetHiddenBacklogRows answers WHICH threads one hiding rule is holding back.
 //
-// The rule arrives typed: the generated router validates it against the
-// contract's enum before this runs, so an unknown word is a 400 from the
-// chassis rather than a question reaching the store. The store refuses one
-// anyway — it is reachable from a seam that has no router in front of it.
+// The rule arrives typed, and the generated router does not validate it
+// against the contract's enum, whatever the type suggests.
+//
+// So an unknown word reaches the store, which is the one place that decides
+// which rules exist. Its refusal names the `rule` parameter and answers 422;
+// before it carried a field, a mistyped rule read as a server fault.
 func (h Handlers) GetHiddenBacklogRows(
 	w http.ResponseWriter, r *http.Request, rule crmcontracts.GetHiddenBacklogRowsParamsRule,
 ) {
@@ -215,4 +218,32 @@ func (h Handlers) GetWorklist(w http.ResponseWriter, r *http.Request, params crm
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// MarkWorklistRowsDone takes rows off the calling reader's own Worklist.
+func (h Handlers) MarkWorklistRowsDone(w http.ResponseWriter, r *http.Request) {
+	h.worklistDone(w, r, h.svc.MarkRowsDone)
+}
+
+// ReopenWorklistRows puts rows back on the calling reader's own Worklist.
+func (h Handlers) ReopenWorklistRows(w http.ResponseWriter, r *http.Request) {
+	h.worklistDone(w, r, h.svc.ReopenRows)
+}
+
+func (h Handlers) worklistDone(
+	w http.ResponseWriter, r *http.Request, write func(context.Context, []RowRef) error,
+) {
+	var req crmcontracts.WorklistDoneRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	rows := make([]RowRef, 0, len(req.Rows))
+	for _, row := range req.Rows {
+		rows = append(rows, RowRef{Source: row.Source, RowID: row.RowId})
+	}
+	if err := write(r.Context(), rows); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

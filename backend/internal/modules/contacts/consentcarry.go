@@ -188,18 +188,18 @@ func flipCarriedWithdrawals(ctx context.Context, tx pgx.Tx, spec consentCarrySpe
 ) error {
 	_, err := tx.Exec(ctx, storekit.SQLf(`
 		WITH flipped AS (
-		  UPDATE contact_consent b SET state = 'withdrawn', captured_at = $3, source = $5
+		  UPDATE contact_consent b SET state = 'withdrawn', captured_at = @now, source = @origin
 		  FROM contact_consent a
-		  WHERE a.%[1]s = $1 AND b.%[2]s = $2
+		  WHERE a.%[1]s = @source AND b.%[2]s = @target
 		    AND a.purpose_id = b.purpose_id
-		    AND a.state = 'withdrawn' AND b.state <> 'withdrawn'
+		    AND `+carriedWithdrawal+`
 		  RETURNING b.purpose_id
 		)
 		INSERT INTO consent_event (%[2]s, purpose_id, new_state, source,
 		                           policy_text, policy_version, captured_at, captured_by)
-		SELECT $2, purpose_id, 'withdrawn', $5, $6, $7, $3, $4
+		SELECT @target, purpose_id, 'withdrawn', @origin, @wording, @version, @now, @actor
 		FROM flipped`, spec.from, spec.to),
-		fromID, toID, now, by, spec.source, spec.policyText, carriedWordingVersion)
+		pgx.NamedArgs{mergeSourceKey: fromID, mergeTargetKey: toID, "now": now, "actor": by, "origin": spec.source, "wording": spec.policyText, "version": carriedWordingVersion})
 	if err != nil {
 		return fmt.Errorf("carry withdrawals onto the surviving record: %w", err)
 	}

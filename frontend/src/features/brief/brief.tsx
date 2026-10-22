@@ -1,0 +1,281 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import { type ReactNode, useId, useState } from "react";
+import { PageAsideToggle } from "../../components/pageaside";
+import { Modal } from "../../design-system/atoms";
+import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
+import { Eyebrow } from "../../design-system/eyebrow";
+import { Heading } from "../../design-system/heading";
+import { PageZones } from "../../design-system/pagezones";
+import { greetingNameOf } from "../../format/greetingname";
+import { useNow } from "../../format/now";
+import { useT } from "../../i18n";
+import { isReviewableReceipt } from "../../lib/receiptreview";
+import { navigate } from "../../lib/router";
+import { useMe } from "../../lib/session";
+import { useUrlParams } from "../../lib/urlstate";
+import { pillCount } from "../../lib/worklistcounts";
+import { LinkedApprovalDrawer } from "../automations/approvaldrawer";
+import { MagicPanel } from "../sign-in/magic";
+import { useTaskUpdate } from "../worklist/taskactions";
+import { TaskDetailModal } from "../worklist/taskdetailmodal";
+import { drawerScope } from "../worklist/worklist.address";
+import { WorklistPane } from "../worklist/worklist.pane";
+import {
+  useHandledForYou,
+  useWorklist,
+  worklistKey,
+} from "../worklist/worklist.queries";
+import { readerTask } from "../worklist/worklist.reader";
+import { changedSinceBrief } from "./brief.changed";
+import { BriefChanges } from "./brief.changes";
+import { BriefDials } from "./brief.dials";
+import { briefDay } from "./brief.facts";
+import { BriefFeed } from "./brief.feed";
+import { BriefGlance } from "./brief.glance";
+import { BriefIntro } from "./brief.intro";
+import { PlanSection } from "./brief.plan";
+import { useMorningBrief, useWeeklyReview } from "./brief.queries";
+import { BriefQueue } from "./brief.queue";
+import { BriefReadingsStrip } from "./brief.readings";
+import { SchedulePanel } from "./brief.schedule";
+import { BriefSuggestions } from "./brief.suggestions";
+import { addressFrom, type BriefAddress, paramsFor } from "./brief.view";
+import { WeeklySection, WeekStepper } from "./brief.weekly";
+import { BriefCoverage } from "./briefcoverage";
+import "./brief.css";
+
+export function BriefScreen() {
+  const t = useT();
+  const nowMs = useNow(60_000);
+  const me = useMe();
+  const query = useWorklist("mine", "all");
+  const [params, setParams] = useUrlParams();
+  const address = addressFrom(params);
+  const day = briefDay(query.data?.pages);
+  // The queue the button opens, which keeps the drawer's scope and owner from
+  // the address. It shares the drawer's query key, so the two report one total.
+  const owner = params.get("owner") ?? "";
+  const queued = useWorklist(
+    drawerScope(params),
+    "all",
+    owner === "" ? undefined : owner,
+  );
+  const queuedDay = briefDay(queued.data?.pages);
+  const review = useWeeklyReview(address.week);
+  const firstName = greetingNameOf(me.data?.user);
+  const brief = useMorningBrief();
+  const morning = address.view === "morning";
+  const dials = (
+    <BriefDials
+      address={address}
+      onChange={(next) => setParams(paramsFor(next, params))}
+    />
+  );
+  // The way into the whole queue, with the day's count on it. The count is
+  // the drawer's own total, read off the drawer's own query. It is the figure
+  // the drawer's head sentence ends on, whichever queue it shows.
+  const queueToggle = (
+    <PageAsideToggle
+      controlled={{
+        open: params.get("queue") === "1",
+        count: queuedDay ? pillCount(queuedDay, "all") : undefined,
+        labels: {
+          show: t("brief.queue.show"),
+          hide: t("brief.queue.hide"),
+        },
+        onToggle: () => {
+          const next = new Map(params);
+          if (next.get("queue") === "1") next.delete("queue");
+          else next.set("queue", "1");
+          navigate({ screen: "home" }, next);
+        },
+      }}
+    />
+  );
+  const glance = (
+    <BriefGlance
+      view={address.view}
+      day={
+        day
+          ? {
+              ...day,
+              focus: day.focus
+                ? {
+                    ...day.focus,
+                    items: day.focus.items.map((item) =>
+                      readerTask(item, me.data?.user, t),
+                    ),
+                  }
+                : undefined,
+            }
+          : undefined
+      }
+      week={review.data}
+      firstName={firstName}
+      now={new Date(nowMs)}
+      briefedAt={morning ? brief.data?.generated_at : undefined}
+      controls={dials}
+      titleAside={morning ? undefined : <WeekStepper />}
+    />
+  );
+  // The dial stands on the date's line, and the week stepper on the title's.
+  const head = <div className="brief-head">{glance}</div>;
+  return (
+    <div className="wrap brief-wrap">
+      {/* A link to one decision, from a notice or a receipt, opens it here. */}
+      <LinkedApprovalDrawer />
+      {morning && (
+        <BriefIntro firstName={firstName} day={day} now={new Date(nowMs)} />
+      )}
+      <BriefBody
+        address={address}
+        query={query}
+        head={head}
+        queueToggle={queueToggle}
+      />
+      <BriefQueue />
+    </div>
+  );
+}
+
+export { deckItems } from "../../lib/brief.decisions.items";
+
+function BriefBody({
+  address,
+  query,
+  head,
+  queueToggle,
+}: Readonly<{
+  address: BriefAddress;
+  query: ReturnType<typeof useWorklist>;
+  head: ReactNode;
+  queueToggle: ReactNode;
+}>) {
+  if (address.view === "weekly")
+    return (
+      <div className="brief-weekly-page">
+        {head}
+        <WeeklySection plan={<PlanSection />} />
+      </div>
+    );
+  return (
+    <PersonalMorning query={query} head={head} queueToggle={queueToggle} />
+  );
+}
+
+function PersonalMorning({
+  query,
+  head,
+  queueToggle,
+}: Readonly<{
+  query: ReturnType<typeof useWorklist>;
+  head: ReactNode;
+  queueToggle: ReactNode;
+}>) {
+  const t = useT();
+  const brief = useMorningBrief();
+  const handled = useHandledForYou();
+  const [selected, setSelected] = useState("");
+  const titleId = useId();
+  const update = useTaskUpdate([worklistKey]);
+  const day = briefDay(query.data?.pages);
+  const context = day?.focus?.items.find(
+    (item) => `${item.source}-${item.id}` === selected,
+  );
+  const state = query.isPending
+    ? "loading"
+    : query.isError && !day
+      ? "failed"
+      : "ready";
+  // A task or a meeting opens the activity's own read. The pane beside the
+  // queue draws only a contact, so a meeting there would show nothing.
+  const opensActivity =
+    context?.source === "task" || context?.source === "meeting_outcome";
+  return (
+    <>
+      {/* The brief and the work it names in one column; beside it, the
+          figures and the meetings the work is read against. */}
+      <PageZones
+        shape="aside"
+        className="brief-morning"
+        mainClassName="brief-main"
+        asideClassName="brief-rail"
+        asideLabel={t("brief.rail")}
+        main={
+          <>
+            {head}
+            <BriefFeed
+              day={day}
+              onContext={(item) => setSelected(`${item.source}-${item.id}`)}
+              state={state}
+              changed={changedSinceBrief(day)}
+              refreshFailed={query.isRefetchError}
+              onRetry={() => void query.refetch()}
+              queueToggle={queueToggle}
+            />
+            <BriefSuggestions />
+            <MagicPanel
+              visibleApprovalIds={day?.focus?.items
+                .filter(
+                  (item) =>
+                    item.source === "approval" &&
+                    item.actions.includes("decide"),
+                )
+                .map((item) => item.id)}
+              visibleReceiptIds={
+                handled.isSuccess && !handled.isRefetchError
+                  ? handled.data.receipts
+                      ?.filter(isReviewableReceipt)
+                      .map((receipt) => receipt.id)
+                  : []
+              }
+            />
+          </>
+        }
+        aside={
+          <>
+            {day && (
+              <div className="brief-overview">
+                <Eyebrow as="h2" className="brief-section-label">
+                  {t("brief.rail.numbers")}
+                </Eyebrow>
+                <BriefReadingsStrip day={day} />
+                <BriefCoverage
+                  day={day}
+                  run={brief.data}
+                  onRetry={() => void query.refetch()}
+                />
+              </div>
+            )}
+            <SchedulePanel day={day} state={state} />
+            <BriefChanges />
+          </>
+        }
+      />
+      {context && opensActivity ? (
+        <TaskDetailModal
+          activityId={context.id}
+          readOnly={!context.actions.includes("complete")}
+          update={update}
+          onClose={() => setSelected("")}
+        />
+      ) : (
+        <Modal
+          open={Boolean(context)}
+          onClose={() => setSelected("")}
+          labelledBy={titleId}
+          intent="drawer"
+        >
+          <DrawerHead>
+            <Heading size="large" id={titleId} className="t-h2">
+              {t("brief.focus.context")}
+            </Heading>
+          </DrawerHead>
+          <DrawerBody>{context && <WorklistPane item={context} />}</DrawerBody>
+        </Modal>
+      )}
+    </>
+  );
+}

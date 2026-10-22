@@ -76,7 +76,7 @@ func (s *Store) DisposeDedupeCandidate(ctx context.Context, id ids.UUID, disposi
 		return DedupeCandidateRow{}, err
 	}
 	if row.Disposition != dispositionOpen {
-		return DedupeCandidateRow{}, fmt.Errorf("contacts: candidate already disposed (%s): %w", row.Disposition, apperrors.ErrConflict)
+		return DedupeCandidateRow{}, errAlreadyDisposed(row.Disposition)
 	}
 
 	switch disposition {
@@ -174,7 +174,7 @@ func (s *Store) executeDedupeMergeTx(
 		_, err := s.mergeContactTx(ctx, tx, ids.From[ids.ContactKind](loser), ids.From[ids.ContactKind](winner), nil, active)
 		return err
 	case entityCompany:
-		_, err := mergeCompanyTx(ctx, tx, ids.From[ids.CompanyKind](loser), ids.From[ids.CompanyKind](winner), nil, active)
+		_, err := s.mergeCompanyTx(ctx, tx, ids.From[ids.CompanyKind](loser), ids.From[ids.CompanyKind](winner), nil, active)
 		return err
 	case entityLead:
 		_, err := s.mergeLeadTx(ctx, tx, ids.From[ids.LeadKind](loser), ids.From[ids.LeadKind](winner), active, capturedBy)
@@ -213,7 +213,7 @@ func setDedupeDispositionTx(ctx context.Context, tx pgx.Tx, id ids.UUID, disposi
 		return fmt.Errorf("contacts: disposing dedupe candidate: %w", err)
 	}
 	if tag.RowsAffected() == 0 {
-		return fmt.Errorf("contacts: candidate already disposed: %w", apperrors.ErrConflict)
+		return errAlreadyDisposed("by a concurrent decision")
 	}
 	_, err = storekit.Audit(ctx, tx, "resolve", auditEntityDedupe, id,
 		map[string]any{auditKeyDisposition: dispositionOpen},
@@ -274,7 +274,7 @@ func (s *Store) UndoDedupeDisposition(ctx context.Context, id ids.UUID) (DedupeC
 	case dispositionOpen:
 		return DedupeCandidateRow{}, fmt.Errorf("contacts: candidate is already open: %w", apperrors.ErrConflict)
 	case dispositionMerged:
-		return DedupeCandidateRow{}, fmt.Errorf("%w: %w", ErrNotUndoable, apperrors.ErrConflict)
+		return DedupeCandidateRow{}, ErrNotUndoable
 	}
 	// Through writePairDecision, not reopenDedupeCandidate directly: that
 	// function has a second caller which is not a user act — disposeMerge

@@ -46,7 +46,7 @@ prompt: |
   Nordwind Armaturen — does anyone on the team know someone there?
 
 must_call:
-  - intro_path_to
+  - read_relationships
   - at_risk_relationships
   - read_reporting
 may_call:
@@ -55,13 +55,14 @@ may_call:
   - read_record
   - list_records
   - resolve_entities
-  - who_knows
   - run_analytics_query
-  - describe_analytics_vocabulary
-  - describe_report_vocabulary
-  - forecast_readings
+  - read_workspace
+  - read_forecast
   - query_workspace
   - search_context
+
+must_call_with:
+  - read_relationships.company_id=*
 
 must_mention:
   - "Heike"

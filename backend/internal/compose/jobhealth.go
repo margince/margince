@@ -22,9 +22,9 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/jobs"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -206,7 +206,7 @@ func deadWorkWindow(ctx context.Context, pool *pgxpool.Pool) (time.Duration, err
 		Type: principal.PrincipalSystem,
 		ID:   deadWorkBannerReadActor,
 	})
-	hours, err := settings.Get(readCtx, NewSettingsStore(pool), identity.DeadWorkBannerHours)
+	hours, err := config.StoredVal(readCtx, StoredConfig(pool), identity.DeadWorkBannerHours)
 	if err != nil {
 		return 0, fmt.Errorf("compose: reading the dead-work banner window: %w", err)
 	}

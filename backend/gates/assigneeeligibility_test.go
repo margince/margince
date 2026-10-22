@@ -61,7 +61,7 @@ var assigneeEligibilityWriters = map[string]string{
 func TestSeatEligibilityIsAskedTheSameWayEverywhereItIsAsked(t *testing.T) {
 	t.Parallel()
 	found := map[string][]string{}
-	root := filepath.Join(moduleRoot(t), "internal")
+	root := filepath.Join(gatekit.ModuleRoot(t), "internal")
 	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return err
@@ -77,9 +77,10 @@ func TestSeatEligibilityIsAskedTheSameWayEverywhereItIsAsked(t *testing.T) {
 			return nil
 		}
 		rel := "internal/" + strings.TrimPrefix(filepath.ToSlash(strings.TrimPrefix(path, root)), "/")
-		// All of them, in one file, plus the active-status clause: that
-		// conjunction is the question, and any subset is a different one.
-		if !strings.Contains(text, "status = 'active'") {
+		// All of them, in one file, plus the active-status clause, spelled out
+		// or called through the shared live-member helper. That conjunction is
+		// the question, and any subset is a different one.
+		if !strings.Contains(text, "status = 'active'") && !strings.Contains(text, "workforce.LiveMemberSQL(") {
 			return nil
 		}
 		hits := []string{}
@@ -133,7 +134,7 @@ func keysOf(m map[string]string) []string {
 // stranger and happily file work on a suspended colleague.
 func TestTheAssigneePredicateKeepsBothHalvesOfTheRule(t *testing.T) {
 	t.Parallel()
-	path := filepath.Join(moduleRoot(t), "internal", "platform", "auth", "assignscope.go")
+	path := filepath.Join(gatekit.ModuleRoot(t), "internal", "platform", "auth", "assignscope.go")
 	file, err := gatekit.ParseFile(path, parser.ParseComments)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", path, err)
@@ -156,7 +157,7 @@ func TestTheAssigneePredicateKeepsBothHalvesOfTheRule(t *testing.T) {
 		t.Fatal("AssigneeEligibleSQL is gone from assignscope.go: the rule it holds has moved and this gate has not")
 	}
 	for _, half := range []string{
-		"status = 'active'", "archived_at IS NULL", "NOT %[1]s.is_agent",
+		"workforce.LiveMemberSQL(alias)", "NOT %[2]s.is_agent",
 		"seat_type <> 'read'", "ownerPredicate",
 	} {
 		if !strings.Contains(body, half) {

@@ -17,7 +17,6 @@ package deals
 import (
 	"context"
 	"fmt"
-	"net/http"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -25,7 +24,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -95,18 +93,12 @@ func (s *Store) CreateOffer(ctx context.Context, dealID ids.DealID, in CreateOff
 // all inside the caller's transaction.
 func createOfferTx(ctx context.Context, tx pgx.Tx, dealID ids.DealID, in CreateOfferInput, by string) (crmcontracts.Offer, error) {
 	wsID := storekit.MustWorkspace(ctx)
-	// The deal anchors the offer's visibility: it must exist, be live
-	// and sit inside the caller's row scope (miss = 404).
-	if err := auth.EnsureLinkTarget(ctx, tx, dealTable, dealID.UUID); err != nil {
-		return crmcontracts.Offer{}, err
-	}
-	buyerCompany, err := resolveBuyerCompany(ctx, tx, dealID, in.BuyerCompanyID)
+	var err error
+	in, err = admitOfferCreation(ctx, tx, dealID, in)
 	if err != nil {
 		return crmcontracts.Offer{}, err
 	}
-	if err := resolveOfferTemplateRef(ctx, tx, in.TemplateID); err != nil {
-		return crmcontracts.Offer{}, err
-	}
+
 	number, err := nextOfferNumber(ctx, tx, wsID)
 	if err != nil {
 		return crmcontracts.Offer{}, err
@@ -117,7 +109,7 @@ func createOfferTx(ctx context.Context, tx pgx.Tx, dealID ids.DealID, in CreateO
 		`INSERT INTO offer (id, deal_id, offer_number, revision, status, currency,
 		                    buyer_company_id, valid_until, intro_text, terms_text, template_id, source, captured_by)
 		 VALUES ($1, $2, $3, 1, 'draft', $4, $5, $6, $7, $8, $9, $10, $11)`,
-		id, dealID, number, in.Currency, buyerCompany, in.ValidUntil, in.IntroText, in.TermsText,
+		id, dealID, number, in.Currency, in.BuyerCompanyID, in.ValidUntil, in.IntroText, in.TermsText,
 		in.TemplateID, in.Source, by); err != nil {
 		return crmcontracts.Offer{}, fmt.Errorf("insert offer: %w", err)
 	}
@@ -151,7 +143,7 @@ func createOfferTx(ctx context.Context, tx pgx.Tx, dealID ids.DealID, in CreateO
 // inherits the deal's company.
 func resolveBuyerCompany(ctx context.Context, tx pgx.Tx, dealID ids.DealID, buyerCompanyID *ids.CompanyID) (*ids.CompanyID, error) {
 	if buyerCompanyID != nil {
-		if err := auth.EnsureLinkTarget(ctx, tx, "company", buyerCompanyID.UUID); err != nil {
+		if err := auth.EnsureReferenceTarget(ctx, tx, "buyer_company_id", "company", buyerCompanyID.UUID); err != nil {
 			return nil, err
 		}
 		return buyerCompanyID, nil
@@ -185,7 +177,7 @@ func resolveOfferTemplateRef(ctx context.Context, tx pgx.Tx, templateID *ids.Off
 		return fmt.Errorf("check offer_template reference: %w", err)
 	}
 	if !exists {
-		return apperrors.ErrNotFound
+		return auth.NameMissingReference("template_id", apperrors.ErrNotFound)
 	}
 	return nil
 }
@@ -194,6 +186,9 @@ func resolveOfferTemplateRef(ctx context.Context, tx pgx.Tx, templateID *ids.Off
 // under a transaction-scoped advisory lock — two concurrent creates
 // serialize on the mint instead of racing into offer_number_rev_unique.
 func nextOfferNumber(ctx context.Context, tx pgx.Tx, wsID ids.UUID) (string, error) {
+	if err := requireReadCommitted(ctx, tx); err != nil {
+		return "", err
+	}
 	if _, err := tx.Exec(ctx,
 		`SELECT pg_advisory_xact_lock(hashtextextended('offer_number:' || $1::text, 0))`, wsID); err != nil {
 		return "", fmt.Errorf("acquire offer-number lock: %w", err)
@@ -205,6 +200,20 @@ func nextOfferNumber(ctx context.Context, tx pgx.Tx, wsID ids.UUID) (string, err
 		return "", fmt.Errorf("mint offer number: %w", err)
 	}
 	return fmt.Sprintf("A-%d", next), nil
+}
+
+// requireReadCommitted refuses a mint on a transaction that is not at
+// `read committed`. A mint reads MAX after taking its lock. Under a snapshot
+// taken before the lock, that read is stale and two mints share one number.
+func requireReadCommitted(ctx context.Context, tx pgx.Tx) error {
+	var isolation string
+	if err := tx.QueryRow(ctx, `SHOW transaction_isolation`).Scan(&isolation); err != nil {
+		return fmt.Errorf("read the mint's isolation level: %w", err)
+	}
+	if isolation != "read committed" {
+		return fmt.Errorf("deals: a number is minted only at read committed, not %s", isolation)
+	}
+	return nil
 }
 
 // offerTotalsChange is the transition recomputeOfferTotals wrote to the
@@ -334,16 +343,15 @@ func writableOffer(ctx context.Context, tx pgx.Tx, id ids.OfferID, archived stor
 	return offer, nil
 }
 
-// visibleOfferLocked is the MUTATION spelling of visibleOffer: it takes
-// the offer's row lock before the status/visibility reads, so two
-// concurrent editors — or an edit racing a send — linearize and the
-// stored totals can never miss a committed line. The returned witness
-// lets the caller patch under the held lock (storekit.ApplyLocked).
-//
-// It also asks the harder authority question, and that is what makes it the
-// mutation spelling rather than merely the locked one — writableOffer above
-// is where that question is spelled.
+// visibleOfferLocked is the MUTATION spelling of visibleOffer. It locks the
+// deal (lockOfferDeal), then the offer, before the status and visibility reads.
+// So concurrent editors linearize and the totals never miss a line. The
+// witness lets the caller patch under the held lock (storekit.ApplyLocked).
+// It also asks the harder authority question, spelled in writableOffer above.
 func visibleOfferLocked(ctx context.Context, tx pgx.Tx, id ids.OfferID, archived storekit.ArchivedFilter) (crmcontracts.Offer, storekit.RowLock, error) {
+	if err := lockOfferDeal(ctx, tx, id); err != nil {
+		return crmcontracts.Offer{}, storekit.RowLock{}, err
+	}
 	lock, err := storekit.LockRow(ctx, tx, "offer", id.UUID, storekit.LiveOnly)
 	if err != nil {
 		return crmcontracts.Offer{}, storekit.RowLock{}, err
@@ -370,7 +378,10 @@ type UpdateOfferInput struct {
 	IntroText      *string
 	TermsText      *string
 	TemplateID     *ids.OfferTemplateID
-	IfVersion      *int64
+	// Clear are the fields the caller sent as an explicit null, which is a
+	// request to empty them rather than to leave them alone.
+	Clear     []string
+	IfVersion *int64
 }
 
 // UpdateOffer also answers the rendering a buyer change retired, nil when none
@@ -402,6 +413,9 @@ func (s *Store) UpdateOffer(ctx context.Context, id ids.OfferID, in UpdateOfferI
 			return err
 		}
 		if p.Empty() {
+			if err := storekit.EnsureIfMatch(ctx, tx, "offer", id.UUID, in.IfVersion); err != nil {
+				return err
+			}
 			out, err = readOfferWithLines(ctx, tx, id, storekit.LiveOnly)
 			return err
 		}
@@ -427,12 +441,15 @@ func (s *Store) UpdateOffer(ctx context.Context, id ids.OfferID, in UpdateOfferI
 // the rendering a buyer change retired.
 func offerHeaderPatch(ctx context.Context, tx pgx.Tx, current crmcontracts.Offer, in UpdateOfferInput) (*storekit.Patch, *string, error) {
 	p := storekit.NewPatch()
+	if err := storekit.ApplyClears(p, in.Clear, clearableOfferColumns(current)); err != nil {
+		return nil, nil, err
+	}
 	var retired *string
 	if in.Currency != nil {
 		p.Set("currency", current.Currency, *in.Currency)
 	}
 	if in.BuyerCompanyID != nil {
-		if err := auth.EnsureLinkTarget(ctx, tx, "company", in.BuyerCompanyID.UUID); err != nil {
+		if err := auth.EnsureReferenceTarget(ctx, tx, "buyer_company_id", "company", in.BuyerCompanyID.UUID); err != nil {
 			return nil, nil, err
 		}
 		p.Set("buyer_company_id", current.BuyerCompanyId, *in.BuyerCompanyID)
@@ -454,37 +471,4 @@ func offerHeaderPatch(ctx context.Context, tx pgx.Tx, current crmcontracts.Offer
 		p.Set("template_id", current.TemplateId, *in.TemplateID)
 	}
 	return p, retired, nil
-}
-
-func (s *Store) ArchiveOffer(ctx context.Context, id ids.OfferID) (crmcontracts.Offer, error) {
-	if err := auth.Require(ctx, "offer", principal.ActionDelete); err != nil {
-		return crmcontracts.Offer{}, err
-	}
-	var out crmcontracts.Offer
-	err := s.Tx(ctx, func(tx pgx.Tx) error {
-		current, _, err := visibleOfferLocked(ctx, tx, id, storekit.LiveOnly)
-		if err != nil {
-			return err
-		}
-		// An accepted offer is the source of its deal's price, so retiring it
-		// would leave the deal priced from a document nobody can open.
-		if current.Status == crmcontracts.OfferStatusAccepted {
-			return &httperr.DetailedError{
-				Status: http.StatusConflict, Code: "offer_accepted",
-				Detail: "an accepted offer prices its deal and cannot be archived; the deal's price has to change first",
-			}
-		}
-		if _, err := tx.Exec(ctx,
-			`UPDATE offer SET archived_at = now() WHERE id = $1 AND archived_at IS NULL`, id); err != nil {
-			return fmt.Errorf("archive offer: %w", err)
-		}
-		if _, err := storekit.Audit(ctx, tx, "archive", "offer", id.UUID, nil, nil); err != nil {
-			return fmt.Errorf("audit offer archive: %w", err)
-		}
-		if out, err = readOfferWithLines(ctx, tx, id, storekit.IncludeArchived); err != nil {
-			return fmt.Errorf("read archived offer: %w", err)
-		}
-		return nil
-	})
-	return out, err
 }

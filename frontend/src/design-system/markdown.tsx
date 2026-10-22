@@ -218,7 +218,7 @@ function renderBlock(block: Block): ReactNode {
     return <blockquote {...marked}>{renderBlocks(block.blocks)}</blockquote>;
   }
   if (block.kind === "list") {
-    return renderList(block.ordered, block.items, marked);
+    return renderList(block.ordered, block.start, block.items, marked);
   }
   return renderTable(block.header, block.rows, marked);
 }
@@ -232,18 +232,21 @@ type MarkAttr = { "data-markdown-mark"?: string };
 const HEADINGS = ["h1", "h2", "h3", "h4", "h5", "h6"] as const;
 
 function renderHeading(level: number, run: Run): ReactNode {
-  const Tag = HEADINGS[Math.min(Math.max(level, 1), 6) - 1];
+  const Tag = HEADINGS[Math.min(Math.max(level, 1), 6) - 1] ?? "h6";
   return <Tag>{renderRun(run)}</Tag>;
 }
 
 function renderList(
   ordered: boolean,
+  start: number,
   items: readonly Run[],
   marked: MarkAttr,
 ): ReactNode {
   const rendered = sequence(items, (item) => <li>{renderRun(item)}</li>);
   return ordered ? (
-    <ol {...marked}>{rendered}</ol>
+    <ol start={start === 1 ? undefined : start} {...marked}>
+      {rendered}
+    </ol>
   ) : (
     <ul {...marked}>{rendered}</ul>
   );
@@ -294,22 +297,42 @@ function renderRun(run: Run): ReactNode[] {
 function renderInline(node: Inline): ReactNode {
   if (node.kind === "text") return node.text;
   if (node.kind === "code") return <code>{node.text}</code>;
-  if (node.kind === "strong") return <strong>{children(node.children)}</strong>;
+  if (node.kind === "strong")
+    return <strong className="md-strong">{children(node.children)}</strong>;
   if (node.kind === "em") return <em>{children(node.children)}</em>;
   if (node.kind === "mark") return <mark>{children(node.children)}</mark>;
   return (
     <a
       href={node.href}
-      // An outbound document link leaves this pane rather than replacing the
-      // answer the reader is holding it against. `noopener` is not optional on
-      // a target from a customer-uploaded file: without it the opened page can
-      // steer this one.
-      target={node.external ? "_blank" : undefined}
+      // An outbound link leaves this pane rather than replacing the answer
+      // the reader holds it against. `noopener` stops the opened page steering this one.
+      target={leavesTheApp(node.href) ? "_blank" : undefined}
       rel="noopener noreferrer"
     >
       {children(node.children)}
     </a>
   );
+}
+
+/**
+ * Whether a link leaves the app. Only a hash route on this page's own path is
+ * in-app; the same origin also serves the API and downloads, which would replace the app.
+ */
+function leavesTheApp(href: string): boolean {
+  if (!/^https?:/i.test(href)) return false;
+  if (typeof window === "undefined") return true;
+  try {
+    const target = new URL(href);
+    const here = window.location;
+    const inApp =
+      target.origin === here.origin &&
+      target.pathname === here.pathname &&
+      target.hash.startsWith("#/");
+    return !inApp;
+  } catch {
+    // An address the URL parser refuses has no origin to match, so it is not ours.
+    return true;
+  }
 }
 
 function children(nodes: readonly Inline[]): ReactNode[] {

@@ -1,0 +1,192 @@
+/* Settings surfaces. The section nav that used to float in this column is the
+   sidebar's second navigation level (app/shell.css), so what is left here is the
+   tabs' own content: this sheet owns the cards, never the navigation between
+   them. */
+
+/* EVERY settings page's vertical rhythm, owned in one place.
+   `.wrap > .card + .card` (app/shell.css) is the shell's default and it matches a
+   card FOLLOWING a card. Since the entries were merged, most settings pages are
+   no longer stacks of cards — General holds a `<form>`, a `<section>` and a Card;
+   Contacts holds two flex wrappers; Data model holds a block, a card and two
+   heading-plus-table pairs — so that rule silently missed and the gap between two
+   unrelated surfaces was ZERO. Two hairlines touching read as one card.
+
+   The gap is the same --space-4 the shell's rule gives, so a settings page and any
+   other page space alike.
+
+   ONE measure for every settings page, and it is --settingsColumn. A settings
+   page is a column of decisions read top to bottom, and the row language puts
+   the naming on the left and the answer on the right — at the page's own
+   --pageColumn that pair is separated by half a wide screen of nothing, which is
+   the width doing the opposite of what the layout is for.
+
+   It is the PAGE's width and not the entry's, which is the part that was wrong
+   before: this sheet once carried a measure with an exemption for the two
+   table-carrying pages, so a reader navigating between entries watched the page
+   change size. Every entry gets the same measure, tables included — a table
+   wider than that scrolls inside its own box (`.table-scroll`), which is a
+   property of the table rather than a knob the page has to answer for.
+
+   Centred in the wrap, and the page's NAME is centred on the same measure: the
+   shell reads this very token to cap the head above this stack (app/shell.css,
+   --pageMeasure), so the title starts where the first card starts. The token is
+   why they cannot drift — the number is not written down twice. */
+.settings-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: var(--settingsColumn);
+  margin-inline: auto;
+}
+
+/* A section heading inside the stack separates SUBJECTS, so it needs more air
+   above it than the gap between two cards of one subject — and none below, or the
+   heading floats midway between the block it leaves and the table it names.
+   Margins do not collapse in a flex container, so these add to the gap rather
+   than competing with it: --space-4 above the heading on top of the --space-4 gap
+   reads as a new subject, while the heading sits --space-4 from its own content.
+   Without the reset the default (24 above, 12 below) gave 40 and 28 — a heading
+   barely closer to what it names than to what it follows. */
+.settings-stack > .section-header {
+  /* ds:ignore a heading in this stack adds to the gap rather than competing with it */
+  margin: var(--space-4) 0 0;
+}
+
+/* A notice and the verb that commits an unsaved change, standing below the rows
+   they belong to. It is the card's own band rather than one more row: an unsaved
+   flip is a state of the whole card, and a callout in a row's control column
+   reads as that row's answer. The interval is here because `SettingList` owns
+   the gaps BETWEEN rows and nothing above or below itself. */
+.settings-panel-commit {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+/* Opening a body of its own under a list, the body's padding is the interval. */
+.panel-body > :is(.settings-panel-commit, .settings-danger-result):first-child {
+  margin-top: 0;
+}
+
+/* The one panel that announces its own danger: the red border is what separates
+   a destructive surface from the ordinary settings around it. */
+.settings-danger {
+  border-color: var(--danger);
+}
+.settings-danger-result {
+  margin-top: var(--space-3);
+}
+.settings-danger-warning {
+  margin-top: var(--space-1);
+  color: var(--warningText);
+}
+
+/* The profile block, borrowed from the record page's identity header
+   (composed.css `.record-head`): the mark, then the name with its standing
+   badges on the same line, then the two meta lines that qualify it. Three loose
+   items in a wide box said nothing about which of them was the subject. */
+.settings-identity {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.settings-identity-id {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  /* So a long address wraps inside the row rather than widening it. */
+  min-width: 0;
+}
+.settings-identity-name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* PassportCard. The design system draws the mint form; this sheet draws only
+   what the dialog hands back.
+
+   The region the minted passport lands in. It has no box of its own and no
+   focus ring, because focus arrives here programmatically, not by tabbing. */
+.passport-token {
+  display: grid;
+  gap: var(--space-3);
+}
+.passport-token:focus {
+  outline: none;
+}
+/* The minted token with its copy control, and the code example with its
+   language switch: each a column at one interval. */
+.passport-stack {
+  display: grid;
+  gap: var(--space-2);
+}
+.passport-snippet-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* The settings home's page rows, two columns where the panel has room. The
+   negative inset keeps each row's glyph on the panel title's edge while the
+   hover ground reaches past it. */
+.settings-home-links {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
+  gap: var(--space-1) var(--space-2);
+  margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-3));
+}
+.settings-home-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-content: start;
+  column-gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--r-sm);
+  color: var(--textPrimary);
+  text-decoration: none;
+}
+.settings-home-row:hover {
+  background: var(--bgHover);
+}
+.settings-home-glyph {
+  align-self: center;
+  color: var(--textSecondary);
+}
+.settings-home-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: var(--fontWeightMedium);
+}
+.settings-home-row > .t-caption {
+  grid-column: 2;
+}
+.settings-home-lock {
+  display: inline-flex;
+  color: var(--textSecondary);
+}
+/* A term and its answer, where the answer is a FACT rather than a setting: who
+   the reader is on the settings home, what the mail-sharing rule currently says
+   on their connections page. A definition list because none of it is operable —
+   the way to change any of it is to ask somebody, or to open the page that owns
+   it. */
+.settings-facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+}
+.settings-facts dd {
+  margin: 0;
+}
+.settings-home-roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}

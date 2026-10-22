@@ -190,7 +190,7 @@ func ActivityContentClause(ctx context.Context, alias string, arg func(any) int)
 	}
 	discover := activityDiscoverClause(p, alias, arg)
 	if p.Type == principal.PrincipalSystem {
-		return discover, nil
+		return discover + " AND " + CommitmentContentRetainedClause(alias), nil
 	}
 	return discover + " AND " + activityContentAudienceArm(p, alias, arg), nil
 }
@@ -205,10 +205,13 @@ func activityContentAudienceArm(p principal.Principal, alias string, arg func(an
 	// A captured request is a personal reminder of its source, not a new grant
 	// to that correspondence. Archiving or restricting the source withholds it.
 	source := activityDiscoverClause(p, "request_source", arg) + " AND " + activityAudienceArm(p, "request_source", arg)
-	return own + fmt.Sprintf(` AND (coalesce(%[1]s.source_system, '') <> '`+provenance.EmailRequestSource+`'
+	sourceBound := own + fmt.Sprintf(` AND ((coalesce(%[1]s.source_system, '') NOT IN ('`+provenance.EmailRequestSource+`', '`+provenance.CommitmentTaskSource+`') AND (%[1]s.kind <> 'task' OR %[1]s.source_activity_id IS NULL))
 	 OR EXISTS (SELECT 1 FROM activity request_source
-	   WHERE request_source.id = %[1]s.source_activity_id AND request_source.archived_at IS NULL
+	   WHERE request_source.id = %[1]s.source_activity_id
+     AND (coalesce(%[1]s.source_system, '') <> '`+provenance.EmailRequestSource+`' OR request_source.archived_at IS NULL)
 	     AND request_source.restricted_at IS NULL AND %[2]s))`, alias, source)
+	return sourceBound + fmt.Sprintf(" AND (coalesce(%s.source_system, '') <> '%s' OR %s)",
+		alias, provenance.CommitmentTaskSource, commitmentEvidenceArm(p, alias+".source_activity_id", alias+".source_id", arg))
 }
 
 // ActivityAudienceArm renders the audience membership test alone — the
@@ -222,7 +225,7 @@ func ActivityAudienceArm(ctx context.Context, alias string, arg func(any) int) (
 		return "", err
 	}
 	if p.Type == principal.PrincipalSystem {
-		return "TRUE", nil
+		return CommitmentContentRetainedClause(alias), nil
 	}
 	return activityContentAudienceArm(p, alias, arg), nil
 }

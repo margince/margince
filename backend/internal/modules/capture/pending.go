@@ -166,6 +166,10 @@ type PendingCounterparty struct {
 	// started. An address that never has is an intention rather than a
 	// relationship, whatever the outbound message says about it.
 	WroteBack bool
+	// SenderAuthenticated is the triggering message's
+	// inbound_sender_authenticated stamp, true only when Email is that
+	// message's From. IsGoogleMeetingMail needs it.
+	SenderAuthenticated bool
 
 	// Claim is this lease's token, minted by the ClaimDue that handed the row
 	// out. Every write back to the ledger presents it, so a worker holding an
@@ -262,13 +266,13 @@ func recordDisposition(ctx context.Context, tx pgx.Tx, in dispositionRow) (strin
 	_, err = tx.Exec(ctx, `
 		INSERT INTO capture_pending_counterparty
 		  (email, domain, display_name, activity_id, owner_id, status,
-		   disposition_reason, next_attempt_at)
+		   disposition_reason, next_attempt_at, backfill_id)
 		VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), $4, $5, $6, NULLIF($7, ''),
-		        CASE WHEN $8::boolean THEN now() END)
+		        CASE WHEN $8::boolean THEN now() END, $9)
 		ON CONFLICT `+conflict+`
 		DO NOTHING`,
 		email, strings.ToLower(strings.TrimSpace(in.Domain)), in.DisplayName,
-		in.ActivityID, in.OwnerID, in.Status, in.Reason, due)
+		in.ActivityID, in.OwnerID, in.Status, in.Reason, due, backfillRunOf(ctx))
 	if err != nil {
 		return "", fmt.Errorf("capture: recording the counterparty disposition: %w", err)
 	}
@@ -424,7 +428,7 @@ func (s *PendingStore) Retire(
 	ctx context.Context, p PendingCounterparty, reason string, measured VerdictMeasurement,
 ) error {
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, `
+		tag, err := tx.Exec(ctx, `
 			UPDATE capture_pending_counterparty
 			   SET status = 'unsure', disposition_reason = NULLIF($2, ''),
 			       attempts = $4, resolved_at = now(),
@@ -433,6 +437,9 @@ func (s *PendingStore) Retire(
 			       updated_at = now()
 			 WHERE id = $1 AND status = 'pending' AND claimed_by = $3`,
 			p.ID, reason, p.Claim, PendingMaxAttempts, measured.confidence(), measured.Model)
+		if err == nil && tag.RowsAffected() == 0 {
+			return declinedRetire(ctx, tx, p.ID, p.Claim)
+		}
 		return err
 	})
 	if err != nil {

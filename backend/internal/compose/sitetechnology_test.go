@@ -9,6 +9,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/webread"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 func pageWith(url string, fingerprint webread.Fingerprint) crawlPage {
@@ -29,7 +30,7 @@ func TestATechnologyIsFoundOnThePageThatRunsIt(t *testing.T) {
 			Headers:     http.Header{"Server": []string{"nginx"}},
 			CookieNames: []string{"sw-states"},
 		}),
-	})
+	}, textlang.German)
 	if err != nil {
 		t.Fatalf("matching the crawl: %v", err)
 	}
@@ -47,7 +48,7 @@ func TestTheEvidenceCitesTheProvingPage(t *testing.T) {
 		pageWith("https://example.de/karriere", webread.Fingerprint{
 			CookieNames: []string{"fe_typo_user"},
 		}),
-	})
+	}, textlang.German)
 	if err != nil {
 		t.Fatalf("matching the crawl: %v", err)
 	}
@@ -71,7 +72,7 @@ func TestATechnologyOnEveryPageIsOneObservation(t *testing.T) {
 		pageWith("https://example.de/", same),
 		pageWith("https://example.de/about", same),
 		pageWith("https://example.de/contact", same),
-	})
+	}, textlang.German)
 	if err != nil {
 		t.Fatalf("matching the crawl: %v", err)
 	}
@@ -91,7 +92,7 @@ func TestATechnologyOnEveryPageIsOneObservation(t *testing.T) {
 // is what the certification fixtures build.
 func TestAPageWithNoFetchedResponseIsSkipped(t *testing.T) {
 	t.Parallel()
-	got, err := technologiesAcross([]crawlPage{{URL: "https://example.de/", Text: "hello"}})
+	got, err := technologiesAcross([]crawlPage{{URL: "https://example.de/", Text: "hello"}}, textlang.German)
 	if err != nil {
 		t.Fatalf("matching the crawl: %v", err)
 	}

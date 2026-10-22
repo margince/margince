@@ -158,6 +158,9 @@ func zeroPayloadRefusalDrivers() map[string]func(context.Context) error {
 		AssuranceRunArgs{}.Kind(): func(ctx context.Context) error {
 			return (&assuranceRunWorker{}).Work(ctx, &river.Job[AssuranceRunArgs]{})
 		},
+		FinanceSyncArgs{}.Kind(): func(ctx context.Context) error {
+			return (&financeSyncWorker{}).Work(ctx, &river.Job[FinanceSyncArgs]{})
+		},
 		FxRateRefreshArgs{}.Kind(): func(ctx context.Context) error {
 			return (&fxRefreshWorker{}).Work(ctx, &river.Job[FxRateRefreshArgs]{})
 		},
@@ -203,6 +206,21 @@ func idBearingRefusalDrivers() map[string]func(context.Context) error {
 		VoiceBuildArgs{}.Kind(): func(ctx context.Context) error {
 			return (&voiceBuildWorker{}).Work(ctx, &river.Job[VoiceBuildArgs]{
 				Args: VoiceBuildArgs{RequestedBy: ids.NewV7().String()},
+			})
+		},
+		ImportCommitArgs{}.Kind(): func(ctx context.Context) error {
+			return (&importCommitWorker{}).Work(ctx, &river.Job[ImportCommitArgs]{
+				Args: ImportCommitArgs{RunID: ids.NewV7(), Attempt: 1},
+			})
+		},
+		ImportValidateArgs{}.Kind(): func(ctx context.Context) error {
+			return (&importValidateWorker{}).Work(ctx, &river.Job[ImportValidateArgs]{
+				Args: ImportValidateArgs{RunID: ids.NewV7(), Attempt: 1},
+			})
+		},
+		ImportUndoArgs{}.Kind(): func(ctx context.Context) error {
+			return (&importUndoWorker{}).Work(ctx, &river.Job[ImportUndoArgs]{
+				Args: ImportUndoArgs{RunID: ids.NewV7(), Attempt: 1},
 			})
 		},
 		SiteDeepReadArgs{}.Kind(): func(ctx context.Context) error {

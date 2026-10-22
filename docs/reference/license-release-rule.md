@@ -28,8 +28,8 @@ Date. This rule is how we use that part of the license.
 
 ## Why the date counts
 
-- The README makes a public promise: every release turns into Apache 2.0 two
-  years after it ships. An old date typed into the file breaks that promise in
+- The README makes a public promise: every release turns into Apache 2.0 no
+  later than two years after it ships. An old date typed into the file breaks that promise in
   two ways. Later releases turn into Apache 2.0 before two years have passed,
   which gives up the window the license keeps for business use. And a release
   that carries a past date is Apache 2.0 at once.
@@ -39,8 +39,14 @@ Date. This rule is how we use that part of the license.
 
 ## How it is checked
 
-Not checked yet: no workflow or gate checks the Change Date
-([#6840](https://github.com/margince/margince/issues/6840)). The check to add
-runs on a `v*` tag. It fails when the `Change Date` in LICENSE is not the tag
-date plus two years. It also fails when the release changes any line below
-the `Parameters` block.
+Two checks hold the rule:
+
+- `release-tag.yml` runs
+  [`scripts/release-license-stamped.sh`](../../scripts/release-license-stamped.sh) on every `v*`
+  tag, before any bundle builds. It refuses the release when the `Change Date` is not the tag
+  date plus two years, or the `Licensed Work` line does not name the tag. The tag date is the day
+  the tag was made, in the time zone of the one who made it. Only `git tag -a` records that day,
+  so a tag made without `-a` is refused. A tag made on `02-29` converts on `02-28`, which stays
+  inside the two years.
+- `backend/gates/licensebody_test.go` pins the text below the `Parameters` block. Any change to
+  it fails `make check` on every PR, not only on a release.

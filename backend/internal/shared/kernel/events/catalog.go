@@ -189,8 +189,14 @@ var catalog = map[string]struct {
 	"list.member_removed": {contactStreamEntity, 1},
 	"list.evaluated":      {contactStreamEntity, 1},
 
-	"reporting.changed":          {identityStreamEntity, 1},
-	"booking_page.updated":       {identityStreamEntity, 1},
+	"reporting.changed":    {identityStreamEntity, 1},
+	"booking_page.updated": {identityStreamEntity, 1},
+	// The legal entities the installation trades as, on the identity stream
+	// because an entity is installation configuration a user is assigned to.
+	"legal_entity.created":       {identityStreamEntity, 1},
+	"legal_entity.updated":       {identityStreamEntity, 1},
+	"legal_entity.archived":      {identityStreamEntity, 1},
+	"legal_entity.member_added":  {identityStreamEntity, 1},
 	"meeting_proposal.updated":   {activityStreamEntity, 1},
 	"meeting_invitation.updated": {activityStreamEntity, 1},
 	"activity.captured":          {activityStreamEntity, 1},
@@ -214,6 +220,10 @@ var catalog = map[string]struct {
 	// about it, and a consumer counting edits to correspondence must not read a
 	// rep clearing their queue as the customer's mail being rewritten.
 	"activity.disposition_recorded": {activityStreamEntity, 1},
+	// One reader marked a waiting message done. A type of its own because
+	// disposition_recorded's enum is closed at v1, and a new value would break
+	// subscribers that validate it.
+	"activity.marked_handled": {activityStreamEntity, 1},
 	// A rep set a lapsed CONTACT aside so their own decay lane stops raising
 	// them, or put them back. The entity is the contact, which is what the
 	// judgement is about, the relationship's silence is a fact about them
@@ -237,6 +247,7 @@ var catalog = map[string]struct {
 	// How a seat wants their notices to reach them is a fact about the seat, so
 	// it rides the stream those notices ride, and only they are its subject.
 	"notification.preference_changed": {identityStreamEntity, 1},
+	"approval.preference_changed":     {identityStreamEntity, 1},
 
 	// A weekly plan belongs to one rep, so its changes ride the same identity
 	// stream a notice does. help_requested is its own type rather than another
@@ -268,8 +279,9 @@ var catalog = map[string]struct {
 	"intro_request.replied":   {contactStreamEntity, 1},
 	"intro_request.closed":    {contactStreamEntity, 1},
 
-	"approval.requested": {approvalStreamEntity, 1},
-	"approval.decided":   {approvalStreamEntity, 1},
+	"approval.requested":            {approvalStreamEntity, 1},
+	"approval.decided":              {approvalStreamEntity, 1},
+	"approval.failure_acknowledged": {approvalStreamEntity, 1},
 
 	"capture.received":   {captureStreamEntity, 1},
 	"capture.normalized": {captureStreamEntity, 1},
@@ -295,6 +307,7 @@ var catalog = map[string]struct {
 	"user.invited":              {identityStreamEntity, 1},
 	"user.activated":            {identityStreamEntity, 1},
 	"user.password_link_issued": {identityStreamEntity, 1},
+	"user.mfa_removed":          {identityStreamEntity, 1},
 	"user.deactivated":          {identityStreamEntity, 1},
 	"user.reactivated":          {identityStreamEntity, 1},
 	"role.changed":              {identityStreamEntity, 1},
@@ -325,6 +338,25 @@ var catalog = map[string]struct {
 	"deal_suggestion.accepted":   {dealStreamEntity, 1},
 	"deal_suggestion.dismissed":  {dealStreamEntity, 1},
 	"deal_suggestion.superseded": {dealStreamEntity, 1},
+
+	// A deal's legal review: asked for, answered, taken back. Internal only,
+	// and entity-less for the reason api/internal-events.yaml gives.
+	"legal_review.requested": {dealStreamEntity, 1},
+	"legal_review.decided":   {dealStreamEntity, 1},
+	"legal_review.withdrawn": {dealStreamEntity, 1},
+
+	// The tag scout's suggestions and the decisions on them. Internal only, and
+	// entity-less for the reason api/internal-events.yaml gives. Tags ride the
+	// contact stream, as lists do.
+	"tag_suggestion.created":    {contactStreamEntity, 1},
+	"tag_suggestion.accepted":   {contactStreamEntity, 1},
+	"tag_suggestion.dismissed":  {contactStreamEntity, 1},
+	"tag_suggestion.superseded": {contactStreamEntity, 1},
+
+	// A website lead's Art. 14 notice: queued, not given, or bounced. Internal
+	// only, and entity-less for the reason api/internal-events.yaml gives.
+	"lead_privacy_notice.created": {leadStreamEntity, 1},
+	"lead_privacy_notice.failed":  {leadStreamEntity, 1},
 }
 
 // IsPipelineEvent reports whether an event type is an entity-less

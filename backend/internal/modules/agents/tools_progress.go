@@ -43,11 +43,12 @@ func (t progressDeal) Spec() mcp.ToolSpec {
 		Description:   progressDealCopy.render(),
 		Instead:       progressDealCopy.Instead,
 		RequiredScope: principal.ScopeWrite,
+		Unlisted:      true,
 		Tier:          mcp.TierDynamic,
 		// The SAME resolver as advance_deal: the intent composition never
 		// widens authority, so the won/lost 🟡 floor holds identically.
 		TierResolver: advanceDealTier,
-		OpenAPIOp:    "advanceDeal + logActivity",
+		OpenAPIOp:    "progressDeal",
 		InputSchema: schema(`{"type":"object","required":["deal_id","to_stage_id"],"properties":{
 			"deal_id":{"type":"string","format":"uuid"},
 			"to_stage_id":{"type":"string","format":"uuid"` + stageIDNote + `},

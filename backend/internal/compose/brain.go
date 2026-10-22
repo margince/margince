@@ -103,6 +103,10 @@ type ModelPath struct {
 	// OwedVerdict because it reads a CONVERSATION rather than a message, and
 	// only ever runs on threads the workspace has already answered.
 	RequestSettlement completer
+	// TagSuggest reads captured items against the workspace's suggestible tags
+	// and names the ones each item shows interest in. Without it the tag scout
+	// matches description phrases.
+	TagSuggest completer
 	// CaptureCounterpartyVerdict is the ADR-0072/A118 creation gate for the
 	// ambiguous first-time sender: real | noise, floor 0.7, below-floor
 	// abstains to unsure. A separate task from CaptureClassify on purpose —
@@ -331,6 +335,7 @@ func modelPathForRouter(router *ai.Router, companyContext *companyContextProvide
 		CaptureClassify:               brain(ai.TaskCaptureClassify),
 		OwedVerdict:                   brain(ai.TaskOwedVerdict),
 		RequestSettlement:             brain(ai.TaskRequestSettlement),
+		TagSuggest:                    brain(ai.TaskTagSuggest),
 		CaptureCounterpartyVerdict:    brain(ai.TaskCaptureCounterpartyVerdict),
 		CaptureConfidentialityVerdict: brain(ai.TaskCaptureConfidentialityVerdict),
 		SignalExtract:                 brain(ai.TaskSignalExtract),

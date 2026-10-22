@@ -42,6 +42,14 @@ const (
 // what production would.
 func autopilotOn(t *testing.T, e *configEnv, on bool) {
 	t.Helper()
+	// The row is installation-wide and this package never resets, so deleting
+	// it hands the next test the registered default rather than this value.
+	t.Cleanup(func() {
+		if _, err := e.owner.Exec(context.Background(),
+			`DELETE FROM setting WHERE key = $1`, StageAutopilotEnabled.Key()); err != nil {
+			t.Errorf("restoring the default kill switch: %v", err)
+		}
+	})
 	value := "false"
 	if on {
 		value = "true"
@@ -513,5 +521,21 @@ func TestTheKillSwitchReadIsGatedLikeTheRulesItAccompanies(t *testing.T) {
 
 	if _, err := e.store.StageAutomationEnabled(context.Background()); err == nil {
 		t.Error("a caller with no grant was told whether automation is on")
+	}
+}
+
+// An installation nobody has configured permits no automation.
+//
+// It runs after every test above that switches automation on. A full run so
+// proves none of them left the switch on.
+func TestAnUnconfiguredInstallationPermitsNoAutomation(t *testing.T) {
+	e := setupConfigEnv(t)
+
+	told, err := e.store.StageAutomationEnabled(e.as())
+	if err != nil {
+		t.Fatalf("reading the kill switch: %v", err)
+	}
+	if told {
+		t.Error("automation reads as permitted on an installation that never switched it on")
 	}
 }

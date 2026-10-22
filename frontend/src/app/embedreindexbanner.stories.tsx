@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { meFixture } from "../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
-} from "../screens/story-utils";
+} from "../testing/story-utils";
 import { EmbedReindexBanner } from "./embedreindexbanner";
-import { meFixture } from "./mefixture";
 
 function admin(overrides: Record<string, unknown> = {}) {
   return () =>

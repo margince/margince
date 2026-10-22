@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -102,6 +103,11 @@ type DealBlock struct {
 	// its counts are the current-state figures they always were — and folding
 	// that to 0 would claim those old weeks were fully reconstructed.
 	Unreconstructible *int
+
+	// Open deals whose close date was still provisional when the week ended.
+	// Nil on a scorecard frozen before it was counted: zero would claim a
+	// measurement that was never taken.
+	CloseDateProvisional *int
 }
 
 // multiThreadWindow is how far back a deal's second contact may be and still
@@ -389,6 +395,11 @@ func scoreDeals(
 	if err != nil {
 		return nil, err
 	}
+	identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
+	if err != nil {
+		return nil, err
+	}
+	currentTask := storekit.CurrentTaskClause("task", end, identities, arg)
 	block := &DealBlock{}
 	var present bool
 	// Nullable on its own: a present block whose deals all stayed put has no
@@ -398,12 +409,12 @@ func scoreDeals(
 		startPos, endPos, userPos, sincePos, stakeholdersPos,
 		forecastRank("last_cat"), forecastRank("first_cat"), scope, zonePos,
 		weekEndDealsSQL(fmt.Sprintf("$%d", endPos), fmt.Sprintf("$%d", verbsPos)), taskScope, activityScope,
-		taskCompletionAtSQL("task", fmt.Sprintf("$%d", endPos), fmt.Sprintf("$%d", verbsPos))),
+		taskCompletionAtSQL("task", fmt.Sprintf("$%d", endPos), fmt.Sprintf("$%d", verbsPos)), currentTask),
 		args...).
 		Scan(&present, &block.Advances, &block.Regressions, &median,
 			&block.WithNextStep, &block.Open, &block.MultiThreaded,
 			&block.CloseDateSound, &block.ForecastUp, &block.ForecastDown,
-			&block.Unreconstructible)
+			&block.Unreconstructible, &block.CloseDateProvisional)
 	if err != nil {
 		return nil, fmt.Errorf("weekly: scoring the week's deals: %w", err)
 	}

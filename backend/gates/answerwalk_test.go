@@ -14,6 +14,7 @@ package gates
 import (
 	"go/ast"
 	"go/parser"
+	"go/token"
 	"io/fs"
 	"path/filepath"
 	"regexp"
@@ -31,6 +32,7 @@ const answerWalkOwner = "internal/modules/activities/answered.go:threadAnswerArm
 // answerWalksAdmitted are the thread walks that ask something other than
 // "was this inbound answered", keyed by file and declaration.
 var answerWalksAdmitted = gatekit.Waive(map[string]string{
+	"internal/modules/activities/answered.go:owedSQL":                 "The owed predicate checks whether a newer inbound exists and delegates all reply evidence to answeredSQL in the same owner. Expanding shared fragments exposes that delegated read; no second answer predicate is defined here.",
 	"internal/modules/activities/awaitingreply.go:awaitingRepliesSQL": "the mirror question: whether a message the READER sent is still the last word on its thread, so the reader is reminded to follow up. It asks about our outbound, never whether an inbound was answered, and decides no needs-reply badge",
 	answerWalkOwner: "the thread arm of the one answer: every surface that shows needs-reply, a waiting row, request review or the response time reads it through answeredSQL or firstAnswerAtSQL",
 	"internal/modules/activities/waitingsql.go:waitingRepliesSQL":           "the Engaged column asks whether we wrote on the thread BEFORE the message arrived, to rank the row; it is reported, never used to hide one",
@@ -74,11 +76,56 @@ func answerWalkSites(path string, file *ast.File) []string {
 	var sites []string
 	for _, decl := range file.Decls {
 		name := declarationName(decl)
-		if slices.ContainsFunc(gatekit.SQLStatementsOf(decl), walksForOutbound) {
+		if slices.ContainsFunc(answerWalkStatements(file, decl), walksForOutbound) {
 			sites = append(sites, path+":"+name)
 		}
 	}
 	return sites
+}
+
+// A shared fragment can hold the thread match while its caller adds direction.
+func answerWalkStatements(file *ast.File, decl ast.Decl) []string {
+	statements := gatekit.SQLStatementsOf(decl)
+	fragments := map[string]ast.Node{}
+	for _, candidate := range file.Decls {
+		if fn, ok := candidate.(*ast.FuncDecl); ok && fn.Recv == nil {
+			fragments[fn.Name.Name] = fn.Body
+		}
+	}
+	ast.Inspect(decl, func(node ast.Node) bool {
+		joined, ok := node.(*ast.BinaryExpr)
+		if !ok || joined.Op != token.ADD {
+			return true
+		}
+		parts := gatekit.SQLStatementsOf(joined)
+		seen := map[string]bool{}
+		var include func(ast.Node)
+		include = func(root ast.Node) {
+			ast.Inspect(root, func(n ast.Node) bool {
+				call, ok := n.(*ast.CallExpr)
+				if !ok {
+					return true
+				}
+				name, ok := call.Fun.(*ast.Ident)
+				if !ok || seen[name.Name] || fragments[name.Name] == nil {
+					return true
+				}
+				seen[name.Name] = true
+				body := fragments[name.Name]
+				bodySQL := gatekit.SQLStatementsOf(body)
+				if slices.ContainsFunc(bodySQL, walksForOutbound) {
+					return true
+				}
+				parts = append(parts, bodySQL...)
+				include(body)
+				return true
+			})
+		}
+		include(joined)
+		statements = append(statements, strings.Join(parts, " "))
+		return true
+	})
+	return statements
 }
 
 // walksForOutbound reports a statement that pins rows to a thread and asks
@@ -138,6 +185,7 @@ func TestOnlyTheAnswerPredicateWalksAThreadForOurReply(t *testing.T) {
 func TestTheAnswerWalkCensusFindsAPlantedBypass(t *testing.T) {
 	t.Parallel()
 	planted := map[string]string{
+		"shared fragment": "package p\nfunc thread() string { return `r.thread_key = a.thread_key` }; func f() string { return thread() + ` AND r.direction = 'outbound'` }\n",
 		"literal": "package p\nconst q = `SELECT 1 FROM activity a WHERE NOT EXISTS (SELECT 1 FROM activity r " +
 			"WHERE r.thread_key = a.thread_key AND r.direction = 'outbound')`\n",
 		"concatenated": "package p\nvar q = `SELECT 1 FROM activity r WHERE r.thread_key = a.thread_key` + x + " +

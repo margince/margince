@@ -84,6 +84,21 @@ describe("the door always says Open", () => {
     expect(door.getAttribute("aria-label")).toBeNull();
   });
 
+  it("draws a door given an href as a link with the same word and description", () => {
+    render(
+      <LocaleProvider initial="en">
+        <StatCard label="Best route" value="Ada" href="#/contacts/c-1" />
+      </LocaleProvider>,
+    );
+
+    const door = screen.getByRole("link", {
+      name: en["stat.open"],
+      description: "Best route",
+    });
+    expect(door.getAttribute("href")).toBe("#/contacts/c-1");
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
   it("pins the English word, which is what every door in the product reads", () => {
     expect(en["stat.open"]).toBe("Open");
   });
@@ -222,6 +237,92 @@ describe("a toned figure is read, so it takes the ink that clears contrast", () 
         ),
       ]),
     ).toEqual([]);
+  });
+});
+
+// A long correct reading is fixed in the layout, never shortened. The name and
+// the figure wrap inside the tile in every sheet the app ships.
+const WRAP_CUT = /(?:-webkit-)?line-clamp\s*:|white-space\s*:\s*nowrap/;
+const END_CUT =
+  /text-overflow\s*:\s*ellipsis|overflow(?:-x|-y)?\s*:\s*(?:hidden|clip)/;
+const WHOLE = [
+  "stat-card",
+  "stat-card-label",
+  "stat-card-label-text",
+  "stat-card-value",
+];
+// A figure breaks only at its spaces: a split number reads as two figures.
+const NUMBER_SPLIT =
+  /overflow-wrap\s*:\s*(?:anywhere|break-word)|word-break\s*:\s*break-all/;
+// A number cannot break, so this one rule may end an over-wide one in "…".
+const FIGURE_LAST_RESORT = "design-system/atoms.css .stat-card-value";
+
+function cutsOfWholeText(all: readonly Rule[]) {
+  return all.flatMap((rule) =>
+    alternativesOf(rule.selector).flatMap((selector) => {
+      const where = `${relative(sourceRoot, rule.file)} ${selector}`;
+      const subject = classesOf(subjectOf(selector));
+      if (!WHOLE.some((one) => subject.has(one))) return [];
+      const cut =
+        WRAP_CUT.test(rule.body) ||
+        (subject.has("stat-card-value") && NUMBER_SPLIT.test(rule.body)) ||
+        (END_CUT.test(rule.body) && where !== FIGURE_LAST_RESORT);
+      return cut ? [where] : [];
+    }),
+  );
+}
+
+describe("a reading's name and figure are never cut", () => {
+  const all = rulesOf(appStylesheets(join(here, "..", "..")));
+  const at = (file: string, selector: string, body: string): Rule[] => [
+    { file: join(here, file), selector, body },
+  ];
+
+  it("finds no clamp, nowrap, ellipsis or hidden overflow on them anywhere", () => {
+    expect(all.length).toBeGreaterThan(0);
+    expect(cutsOfWholeText(all)).toEqual([]);
+  });
+
+  it.each([
+    ["atoms.css", ".stat-card-value", "white-space: nowrap;"],
+    ["atoms.css", ".stat-card-label-text", "-webkit-line-clamp: 1;"],
+    ["atoms.css", ".stat-card-label-text", "text-overflow: ellipsis;"],
+    ["atoms.css", ".stat-card-value", "overflow-wrap: anywhere;"],
+    [
+      "../../../extensions/demo/frontend/atoms.css",
+      ".stat-card-value",
+      "text-overflow: ellipsis;",
+    ],
+    [
+      "atoms.css",
+      '[data-density="compact"] .stat-card-value',
+      "overflow: hidden;",
+    ],
+    ["brief.css", ".brief .stat-card-value", "text-overflow: ellipsis;"],
+    ["statstrip.css", ".stat-strip > * > .stat-card", "overflow: clip;"],
+  ])("refuses %s %s { %s }", (file, selector, body) => {
+    expect(cutsOfWholeText(at(file, selector, body))).toHaveLength(1);
+  });
+
+  it("keeps the whole figure on the card's tooltip", () => {
+    render(
+      <LocaleProvider initial="en">
+        <StatCard label="Reading" value={"1.234.567,89\u00a0€"} />
+      </LocaleProvider>,
+    );
+    expect(document.querySelector(".stat-card")?.getAttribute("title")).toBe(
+      "1.234.567,89\u00a0€",
+    );
+  });
+
+  it("breaks a long compound at a syllable before anywhere", () => {
+    const rule = all.find(
+      (one) =>
+        basename(one.file) === "atoms.css" &&
+        one.selector === ".stat-card-label-text" &&
+        /hyphens/.test(one.body),
+    );
+    expect(rule?.body).toMatch(/hyphens:\s*auto;/);
   });
 });
 

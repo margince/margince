@@ -61,46 +61,58 @@ type Imports interface {
 	StageRun(ctx context.Context, req crmcontracts.CreateImportRunRequest) (crmcontracts.ImportRun, error)
 	// ReadRun answers one run's lifecycle state.
 	ReadRun(ctx context.Context, id ids.UUID) (crmcontracts.ImportRun, error)
-	// ReadReport answers what the run will do, or did.
-	ReadReport(ctx context.Context, id ids.UUID) (crmcontracts.ImportRunReport, error)
+	// ReadReport answers the run and what it will do, or did. The report is
+	// nil until validation has produced one.
+	ReadReport(ctx context.Context, id ids.UUID) (crmcontracts.ImportRun, *crmcontracts.ImportRunReport, error)
 	// Commit approves a validated run and starts the write.
 	Commit(ctx context.Context, id ids.UUID) (crmcontracts.ImportRun, error)
+	// DescribeFormat answers the import format in the installation's language.
+	DescribeFormat(ctx context.Context, lang string) (crmcontracts.ImportFormat, error)
+	// ProfileFiles stores several CSV files as one bundle and profiles each,
+	// as an uploaded ZIP is.
+	ProfileFiles(ctx context.Context, files []ImportFile) (crmcontracts.ImportSourceProfile, error)
+}
+
+// ImportFile is one CSV of a several-file import and the type its rows are.
+type ImportFile struct {
+	Object string
+	CSV    string
 }
 
 // RegisterImportTools joins the import verbs to the surface.
 //
-// Unconditionally, unlike the tag and whoami registrars: the contract DECLARES
-// these four verbs, so a registry that skipped them would advertise something
-// tools/list cannot offer — the mismatch TestEveryDeclaredToolVerbIsRegistered
-// exists to catch. A deployment with no object store still serves them and
-// refuses the three that need the source file, naming what is missing.
+// Unconditionally, unlike the tag and whoami registrars. The contract declares
+// these verbs, and TestEveryDeclaredToolVerbIsRegistered fails a registry that
+// skips one. A deployment with no object store still serves them, and refuses
+// the ones that need the source file, naming what is missing.
 func RegisterImportTools(r *Registry, imports Imports) {
-	r.Register(previewImport{imports: imports})
-	r.Register(readImportRun{imports: imports})
+	r.Register(previewImport{imports: imports, wait: r.importWait})
 	r.Register(readImportReport{imports: imports})
+	r.Register(describeImportFormat{imports: imports})
 	r.Register(commitImport{imports: imports, language: r.language})
+	r.Register(readImport{})
 }
 
-// importObjectEnum is what a file's rows may be.
-//
-// `deal` and `activity` are not here: no import writer exists for either, so
-// offering them would advertise a door the REST contract does not have. The
-// first cut of this tool listed all four and
-// TestEveryToolEnumMatchesTheContractItMirrors caught it, which is what that
-// gate is for.
+// importObjectEnum is what a file's rows may be, held to the contract by
+// TestEveryToolEnumMatchesTheContractItMirrors.
 //
 // `lead` and `contact` are BOTH here and the caller picks per run: a
 // machine-sourced list lands as leads for a human to promote, a file the
 // business already knows lands as contacts. Neither skips the identity ladder.
-var importObjectEnum = []string{importObjectCompany, importObjectLead, importObjectContact}
+var importObjectEnum = []string{importObjectCompany, importObjectLead, importObjectContact, importObjectDeal, importObjectActivity}
 
-// The three things a file's rows may be, spelled once. They mirror the
-// contract's ImportObject enum, and the tool's schema is built from them so
-// the two cannot drift.
+// importObjectEnumJSON is importObjectEnum as the JSON array a tool schema's enum takes.
+func importObjectEnumJSON() string { return `["` + strings.Join(importObjectEnum, `","`) + `"]` }
+
+// The things a file's rows may be, spelled once. They mirror the contract's
+// ImportObject enum, and the tool's schema is built from them so the two
+// cannot drift.
 const (
-	importObjectCompany = "company"
-	importObjectLead    = "lead"
-	importObjectContact = "contact"
+	importObjectCompany  = "company"
+	importObjectLead     = "lead"
+	importObjectContact  = "contact"
+	importObjectDeal     = "deal"
+	importObjectActivity = "activity"
 )
 
 // maxImportCSVBytes caps the pasted file.
@@ -129,6 +141,12 @@ const (
 	importOnDuplicateSkip   = string(crmcontracts.ImportOnDuplicateSkip)
 )
 
+// The two broken-link policies, spelled here for the same reason.
+const (
+	importOnBrokenLinkSkipRow  = string(crmcontracts.ImportOnBrokenLinkSkipRow)
+	importOnBrokenLinkDropLink = string(crmcontracts.ImportOnBrokenLinkDropLink)
+)
+
 // refuseUnimportableObject holds `object` to the vocabulary, naming the whole
 // of it rather than saying the value is invalid.
 func refuseUnimportableObject(object string) error {
@@ -146,40 +164,14 @@ func refuseUnimportableObject(object string) error {
 	}
 }
 
-type readImportRun struct{ imports Imports }
-
-func (t readImportRun) Spec() mcp.ToolSpec {
-	return mcp.ToolSpec{
-		Name: "read_import_run", Title: "Read an import run", Version: toolVersionV1,
-		Description:   readImportRunCopy.render(),
-		Instead:       readImportRunCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
-		OpenAPIOp:    "getImportRun",
-		InputSchema:  schema(`{"type":"object","required":["run_id"],"properties":{"run_id":{"type":"string","format":"uuid"}},"additionalProperties":false}`),
-		OutputSchema: schemaFor[ImportRunResult](),
-	}
-}
-
-func (t readImportRun) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
-	id, err := importRunArg(in)
-	if err != nil {
-		return nil, err
-	}
-	run, err := t.imports.ReadRun(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(importRunResult(run))
-}
-
 type readImportReport struct{ imports Imports }
 
 func (t readImportReport) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
-		Name: "read_import_report", Title: "Read an import report", Version: toolVersionV1,
+		Name: "read_import_report", Title: "Read an import run and its report", Version: toolVersionV1,
 		Description:   readImportReportCopy.render(),
 		Instead:       readImportReportCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp:    "getImportRunReport",
 		InputSchema:  schema(`{"type":"object","required":["run_id"],"properties":{"run_id":{"type":"string","format":"uuid"}},"additionalProperties":false}`),
 		OutputSchema: schemaFor[ImportReportResult](),
@@ -191,11 +183,20 @@ func (t readImportReport) Handle(ctx context.Context, in json.RawMessage) (json.
 	if err != nil {
 		return nil, err
 	}
-	report, err := t.imports.ReadReport(ctx, id)
+	run, report, err := t.imports.ReadReport(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	return json.Marshal(ImportReportResult{Report: report})
+	out := ImportReportResult{
+		RunID: run.Id.String(), State: string(run.Status), Checkpoint: run.Checkpoint, Report: report,
+	}
+	if run.Error != nil {
+		out.Error = *run.Error
+	}
+	if run.Parts != nil {
+		out.Parts = *run.Parts
+	}
+	return json.Marshal(out)
 }
 
 type commitImport struct {
@@ -269,23 +270,24 @@ const importRunRecordType = "import_run"
 // awaitingApproval is the one state a commit may start from.
 const awaitingApproval = "awaiting_approval"
 
-// refuseUncommittableRun holds a commit to a run that has actually been
-// dry-run.
-//
-// This is G — the dry run stays mandatory — expressed where it cannot be
-// skipped: a run only reaches awaiting_approval by producing a report, so
-// requiring that state IS requiring the report. The refusal says which state
-// the run is in, because "already running" and "already finished" are the two
-// a caller most needs told apart.
+// refuseUncommittableRun holds a commit to a run that has been dry-run, or to a
+// failed commit, which resumes at its checkpoint. A run reaches
+// awaiting_approval only by producing a report, and only an approved run was
+// ever committed, so the dry run stays mandatory. The refusal names the state:
+// "already running" and "already finished" are what a caller must tell apart.
 func refuseUncommittableRun(run crmcontracts.ImportRun) error {
-	if string(run.Status) == awaitingApproval {
+	status := string(run.Status)
+	if status == awaitingApproval || (status == failedCommit && run.ApprovedAt != nil) {
 		return nil
 	}
 	return &BadArgsError{Cause: fmt.Errorf(
-		"import run %s is %s, and a commit starts only from %s — "+
+		"import run %s is %s, and a commit starts only from %s or resumes a failed commit — "+
 			"an import commits what a dry run reported, so there is always a report first",
-		run.Id, string(run.Status), awaitingApproval)}
+		run.Id, status, awaitingApproval)}
 }
+
+// failedCommit is the state of a commit that stopped part-way.
+const failedCommit = "failed"
 
 // importRunArg reads the one argument every id-bearing import verb takes.
 func importRunArg(in json.RawMessage) (ids.UUID, error) {
@@ -303,11 +305,20 @@ func importRunArg(in json.RawMessage) (ids.UUID, error) {
 	return id, nil
 }
 
+// importObjectName is the object a single-CSV run or profile names, and empty
+// for a ZIP, which names one per part.
+func importObjectName(object *crmcontracts.ImportObject) string {
+	if object == nil {
+		return ""
+	}
+	return string(*object)
+}
+
 // importRunResult reshapes one run for the wire.
 func importRunResult(run crmcontracts.ImportRun) ImportRunResult {
 	out := ImportRunResult{
 		RunID:      run.Id.String(),
-		Object:     string(run.Object),
+		Object:     importObjectName(run.Object),
 		State:      string(run.Status),
 		Checkpoint: run.Checkpoint,
 	}

@@ -29,11 +29,11 @@ import (
 // refuse. No version probe: a version that is right at staging can be wrong by
 // the time the human answers, so the pin is the write's business.
 func (s *Store) RefuseArchiveContact(ctx context.Context, id ids.ContactID) error {
-	if err := auth.Require(ctx, "contact", principal.ActionDelete); err != nil {
+	if err := auth.Require(ctx, contactEntity, principal.ActionDelete); err != nil {
 		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
-		return auth.EnsureWritable(ctx, tx, "contact", id.UUID)
+		return auth.EnsureWritable(ctx, tx, contactEntity, id.UUID)
 	})
 }
 
@@ -46,10 +46,10 @@ func (s *Store) ArchiveContact(
 	ctx context.Context, id ids.ContactID, ifVersion *int64, opts ...WriteOption,
 ) (crmcontracts.Contact, error) {
 	options := collectWriteOptions(opts)
-	if err := auth.Require(ctx, "contact", principal.ActionDelete); err != nil {
+	if err := auth.Require(ctx, contactEntity, principal.ActionDelete); err != nil {
 		return crmcontracts.Contact{}, err
 	}
-	active, err := s.activeColumns(ctx, "contact")
+	active, err := s.activeColumns(ctx, contactEntity)
 	if err != nil {
 		return crmcontracts.Contact{}, err
 	}
@@ -69,7 +69,7 @@ func (s *Store) ArchiveContact(
 // ArchiveContact asks and answers nothing: the caller already knows which row
 // it archived.
 func (s *Store) ArchiveContactTx(ctx context.Context, tx pgx.Tx, id ids.ContactID, ifVersion *int64) error {
-	if err := auth.Require(ctx, "contact", principal.ActionDelete); err != nil {
+	if err := auth.Require(ctx, contactEntity, principal.ActionDelete); err != nil {
 		return err
 	}
 	return archiveContactInTx(ctx, tx, id, ifVersion, writeOptions{})
@@ -78,13 +78,13 @@ func (s *Store) ArchiveContactTx(ctx context.Context, tx pgx.Tx, id ids.ContactI
 // archiveContactInTx is the archive itself, behind the object gate its callers
 // ask: the row's write check, the caller's precondition, and the cascade.
 func archiveContactInTx(ctx context.Context, tx pgx.Tx, id ids.ContactID, ifVersion *int64, options writeOptions) error {
-	if err := auth.EnsureWritable(ctx, tx, "contact", id.UUID); err != nil {
+	if err := auth.EnsureWritable(ctx, tx, contactEntity, id.UUID); err != nil {
 		return err
 	}
 	// The precondition, under the row lock the write takes: a caller that
 	// asked for this write only while nobody had touched the record gets
 	// that answered HERE rather than in a read that already committed.
-	if err := refuseIfHumanTouched(ctx, tx, "contact", id.UUID, options); err != nil {
+	if err := refuseIfHumanTouched(ctx, tx, contactEntity, id.UUID, options); err != nil {
 		return err
 	}
 	// A liveness probe, not a wire read — no custom columns needed.
@@ -111,7 +111,7 @@ func archiveContactInTx(ctx context.Context, tx pgx.Tx, id ids.ContactID, ifVers
 func archiveContactRows(ctx context.Context, tx pgx.Tx, id ids.ContactID, now time.Time, ifVersion *int64) error {
 	p := storekit.NewPatch()
 	p.Set("archived_at", nil, now)
-	if err := p.ApplyGuarded(ctx, tx, "contact", id.UUID, ifVersion); err != nil {
+	if err := p.ApplyGuarded(ctx, tx, contactEntity, id.UUID, ifVersion); err != nil {
 		return err
 	}
 	// Every row the cascade retires or deletes is recorded on the archive's
@@ -124,17 +124,19 @@ func archiveContactRows(ctx context.Context, tx pgx.Tx, id ids.ContactID, now ti
 		// resolving inbound messages onto a record that has been
 		// soft-deleted; archived, the next message starts a fresh one.
 		{"contact_channel_identity", `UPDATE contact_channel_identity SET archived_at = $2 WHERE contact_id = $1 AND archived_at IS NULL RETURNING id`},
-		{tableRelationship, `UPDATE relationship SET archived_at = $2 WHERE (contact_id = $1 OR counterparty_contact_id = $1) AND archived_at IS NULL RETURNING id`},
 	} {
 		if err := cascade.Retire(ctx, tx, retire.table, retire.statement, id, now); err != nil {
 			return err
 		}
 	}
+	if err := cascade.Retire(ctx, tx, tableRelationship, `UPDATE relationship SET archived_at = @archived WHERE `+contactArchiveRelationships+` RETURNING id`, pgx.StrictNamedArgs{archiveRecordKey: id, archiveStateKey: now}); err != nil {
+		return err
+	}
 	// Polymorphic membership/tag rows have no archived_at; the §1.10
 	// cleanup rule removes them with the entity.
 	if err := cascade.DropMemberships(ctx, tx,
 		`WITH gone AS (
-			DELETE FROM list_member WHERE entity_type = 'contact' AND entity_id = @record
+			DELETE FROM list_member WHERE `+contactArchiveMemberships+`
 			RETURNING list_id, entity_type, entity_id, added_by, created_at, note),
 		logged AS (
 			INSERT INTO list_member_event (list_id, entity_type, entity_id, action, reason, actor)
@@ -143,11 +145,11 @@ func archiveContactRows(ctx context.Context, tx pgx.Tx, id ids.ContactID, now ti
 		return err
 	}
 	if err := cascade.DropTags(ctx, tx,
-		`DELETE FROM taggable WHERE entity_type = 'contact' AND entity_id = $1 RETURNING tag_id, assigned_by, assigned_by_kind, assigned_at`, id.UUID); err != nil {
+		`DELETE FROM taggable WHERE `+contactArchiveMemberships+` RETURNING tag_id, assigned_by, assigned_by_kind, assigned_at`, pgx.StrictNamedArgs{archiveRecordKey: id.UUID}); err != nil {
 		return err
 	}
 
-	auditID, err := storekit.AuditWithEvidence(ctx, tx, "archive", "contact", id.UUID, nil, nil, cascade.Evidence())
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, "archive", contactEntity, id.UUID, nil, nil, cascade.Evidence())
 	if err != nil {
 		return err
 	}

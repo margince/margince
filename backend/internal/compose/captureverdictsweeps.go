@@ -21,8 +21,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -85,7 +87,14 @@ func (e *CounterpartyVerdictEngine) StageReviewsWorkspace(ctx context.Context, m
 			if proposalID.IsZero() {
 				continue
 			}
-			if err := e.pending.LinkProposal(wsCtx, row.ID, proposalID); err != nil {
+			// A row a human decided while this sweep staged its offer is
+			// nothing to link, not a reason to abandon the other rows.
+			//
+			// The offer describes a question that is already answered.
+			switch err := e.pending.LinkProposal(wsCtx, row.ID, proposalID); {
+			case errors.Is(err, apperrors.ErrConflict), errors.Is(err, apperrors.ErrNotFound):
+				continue
+			case err != nil:
 				return err
 			}
 		}
@@ -231,43 +240,87 @@ func (e *CounterpartyVerdictEngine) RedactNoiseWorkspace(ctx context.Context, wi
 		maxRows = noiseSweepBatch
 	}
 	return e.inWorkspace(ctx, func(wsCtx context.Context, ws ids.UUID) error {
-		due, err := e.pending.NoiseMailToRedact(wsCtx, window, maxRows)
+		floor, err := purgeFloor(wsCtx, e.pool)
 		if err != nil {
 			return err
 		}
-		// ONE transaction for the whole destruction: the activity's text, the
-		// vectors derived from it, and the provider original behind it commit
-		// together or not at all.
-		//
-		// Splitting them was not survivable. Once the activity's content is
-		// nulled it no longer looks like outstanding work, so a failure between
-		// two transactions would strand the original in raw_capture with nothing
-		// left that would ever collect it — a silent, permanent retention of the
-		// exact message the workspace decided to destroy.
-		redacted := 0
-		err = database.WithWorkspaceTx(wsCtx, e.pool, func(tx pgx.Tx) error {
-			done, err := e.activities.RedactCapturedNoiseTx(wsCtx, tx, due)
+		// Read once per pass and above every message's transaction: the catalog
+		// opens a connection of its own.
+		erasable, err := e.activities.ErasableActivityColumns(wsCtx)
+		if err != nil {
+			return err
+		}
+		redacted, failed := 0, 0
+		var after *capture.NoiseMessage
+		// Pages walk past a message that keeps failing. A pass that only ever
+		// read the oldest page would retry the same failures forever and
+		// destroy nothing behind them. maxRows bounds the messages destroyed,
+		// not the messages tried.
+		for redacted < maxRows {
+			page, err := e.pending.NoiseMailToRedact(wsCtx, window, floor, after, maxRows)
 			if err != nil {
 				return err
 			}
-			// Keyed on what was actually redacted, never on what was proposed: a
-			// message a human un-archived since the backlog was read keeps its
-			// content, and must keep its original with it.
-			if err := e.pending.PurgeRawCaptureTx(wsCtx, tx, done); err != nil {
-				return err
+			for _, message := range page {
+				done, err := e.redactOneNoiseMessage(wsCtx, message.ID, window, erasable)
+				switch {
+				case err != nil:
+					failed++
+					e.log.ErrorContext(wsCtx, "counterparty verdict: redacting one hidden message failed; the next pass retries it",
+						"workspace", ws.String(), "activity", message.ID.String(), "err", err)
+				case done:
+					redacted++
+				}
 			}
-			redacted = len(done)
-			return nil
-		})
-		if err != nil {
-			return fmt.Errorf("verdict: redacting noise mail: %w", err)
+			if len(page) < maxRows {
+				break
+			}
+			after = &page[len(page)-1]
 		}
-		if redacted > 0 {
+		if redacted > 0 || failed > 0 {
 			e.log.InfoContext(ctx, "counterparty verdict: redacted hidden mail past its undo window",
-				"workspace", ws.String(), "messages", redacted)
+				"workspace", ws.String(), "messages", redacted, "failed", failed)
 		}
 		return nil
 	})
+}
+
+// redactOneNoiseMessage destroys one message and every copy derived from it in
+// one transaction, so a failure leaves all of it for the next pass. Each message
+// gets its own transaction, so one that fails rolls back alone.
+//
+// It reports false when the message no longer qualifies once locked. A human
+// may have un-archived it. A hold, a request or a colleague's import may have
+// arrived after the backlog was read.
+func (e *CounterpartyVerdictEngine) redactOneNoiseMessage(
+	ctx context.Context, id ids.UUID, window time.Duration, erasable activities.ErasableColumns,
+) (bool, error) {
+	destroyed := false
+	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		// The floor in force now, not the one the page was selected under: a
+		// jurisdiction change between the two must not destroy what it shields.
+		floor, _, err := purgeFloorTx(ctx, tx)
+		if err != nil {
+			return err
+		}
+		claimed, err := e.pending.ClaimNoiseMailForRedactionTx(ctx, tx, id, window, floor)
+		if err != nil || !claimed {
+			return err
+		}
+		done, err := e.activities.RedactCapturedNoiseTx(ctx, tx, erasable, []ids.UUID{id})
+		if err != nil {
+			return err
+		}
+		if err := e.eraser.PurgeContentDerivedFromNoiseTx(ctx, tx, done); err != nil {
+			return err
+		}
+		destroyed = len(done) > 0
+		return nil
+	})
+	if err != nil {
+		return false, fmt.Errorf("verdict: redacting noise mail: %w", err)
+	}
+	return destroyed, nil
 }
 
 // noiseSweepBatch bounds one sweep pass. The backlog is a query, so what a pass

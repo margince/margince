@@ -59,6 +59,19 @@ func decodeRequest(w http.ResponseWriter, r *http.Request) (Request, bool) {
 	if body.RewriteOf != nil {
 		req.RewriteOf = *body.RewriteOf
 	}
+	if body.AboutActivityId != nil {
+		about := ids.From[ids.ActivityKind](ids.UUID(*body.AboutActivityId))
+		req.AboutActivityID = &about
+	}
+	if body.AlsoTo != nil {
+		if len(*body.AlsoTo) > MaxAlsoTo {
+			httperr.Write(w, r, httperr.Validation("also_to", "too_many", "a draft may name at most 24 further recipients"))
+			return Request{}, false
+		}
+		for _, id := range *body.AlsoTo {
+			req.AlsoTo = append(req.AlsoTo, ids.From[ids.ContactKind](ids.UUID(id)))
+		}
+	}
 	if body.ProjectId != nil {
 		// A null project_id is "the contact in general", which is ordinary. A
 		// present-but-zero one is a client bug, and answering "not part of

@@ -53,7 +53,7 @@ when it runs. So a stale or foreign domain cannot ride in the args.
 ### `MARGINCE_CERTLOG_BASE_URL`: required, or the whole lane is off
 
 The **worker** reads it when it starts; the API does not, because `cmd/worker/jobrunner.go` builds the
-enricher. In development, put it in `.env.local`, which `scripts/dev.sh` reads and exports.
+enricher. In development, put it in `.env.local`, which `scripts/dev.sh` passes to the worker as `--env-file`.
 
 ```sh
 MARGINCE_CERTLOG_BASE_URL=public
@@ -77,8 +77,8 @@ Run `make dev` again after you change it. Vite reloads the app as you type, but 
 
 ### Set the time between refreshes
 
-The admin setting **Technical lookup sweep (seconds)**, in **Settings → System health**, is 21600 (6 hours)
-by default. `0` turns the sweep off and leaves the lookup to the site read. A running worker checks for
+The admin setting **Technical lookup sweep**, under **All schedules** in **Settings → System health**, is
+21600 seconds (6 hours) by default. `0` turns the sweep off and leaves the lookup to the site read. A running worker checks for
 changes every minute.
 
 ## How a refresh changes the facts

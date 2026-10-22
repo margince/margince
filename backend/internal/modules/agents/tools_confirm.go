@@ -56,6 +56,7 @@ var archivableRecordTypes = []string{
 	string(datasource.EntityContact), string(datasource.EntityCompany),
 	string(datasource.EntityDeal), string(datasource.EntityProject),
 	string(datasource.EntityRelationship), string(datasource.EntityActivity),
+	string(datasource.EntityProduct), string(datasource.EntityOfferTemplate), string(datasource.EntityOffer),
 }
 
 // archivableHere answers what the ROUTED executor archives, falling back to the
@@ -110,9 +111,9 @@ func (t archiveRecord) Spec() mcp.ToolSpec {
 		Description:   archiveRecordCopy.render(),
 		Instead:       archiveRecordCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "archiveContact/archiveCompany/archiveDeal/archiveProject/archiveRelationship/archiveActivity",
+		OpenAPIOp: "archiveContact/archiveCompany/archiveDeal/archiveProject/archiveRelationship/archiveActivity/archiveProduct/archiveOfferTemplate/archiveOffer",
 		InputSchema: schema(`{"type":"object","required":["record_type","id"],"properties":{
-			"record_type":{"type":"string","enum":["contact","company","deal","project","relationship","activity"]},
+			"record_type":{"type":"string","enum":["contact","company","deal","project","relationship","activity","product","offer_template","offer"]},
 			"id":{"type":"string","format":"uuid"},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
 			"additionalProperties":false}`),
@@ -228,7 +229,7 @@ func (t promoteLead) Spec() mcp.ToolSpec {
 		Name: "promote_lead", Title: "Promote a lead to a contact", Version: toolVersionV1,
 		Description:   promoteLeadCopy.render(),
 		Instead:       promoteLeadCopy.Instead,
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "promoteLead",
 		InputSchema: schema(`{"type":"object","required":["lead_id","trigger"],"properties":{
 			"lead_id":{"type":"string","format":"uuid"},
@@ -322,7 +323,7 @@ func (t mergeRecords) Spec() mcp.ToolSpec {
 		Name: "merge_records", Title: "Merge two records", Version: toolVersionV1,
 		Description:   mergeRecordsCopy.render(),
 		Instead:       mergeRecordsCopy.Instead,
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "mergeContact/mergeCompany",
 		InputSchema: schema(`{"type":"object","required":["record_type","source_id","target_id"],"properties":{
 			"record_type":{"type":"string","enum":["contact","company"]},

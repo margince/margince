@@ -157,7 +157,7 @@ func TestRuntimeIsScopedToTheInvokingUnit(t *testing.T) {
 // every entry is narrow for the same reason: what it names is something OTHER
 // than a unit, and naming it buys the caller nothing it could not already do.
 //
-// Two classes so far, and they are different questions:
+// Three classes so far, and they are different questions:
 //
 //   - a MEMBER of this installation. Ingest takes one because a connector poll
 //     acts for the member whose credential produced the record, and that member
@@ -165,10 +165,15 @@ func TestRuntimeIsScopedToTheInvokingUnit(t *testing.T) {
 //     currently holds one of this unit's user-scoped secrets — depositing a
 //     credential is the consent act — and then resolves what they may do right
 //     now, so naming a colleague buys a unit nothing.
+//
 //   - a JOB the calling unit declares. SyncNow takes one because a unit with
 //     two jobs has two answers to "run it now". It is resolved against the
 //     declarations of the unit the Runtime was minted for, so a name belonging
 //     to another unit reads as a name belonging to nobody.
+//
+//   - an OAUTH APP the calling unit declares. Resolved against the unit's own
+//     declarations exactly as a job name is, so another unit's app reads as
+//     no app at all.
 //
 // A bare string stays refused. The exceptions are by TYPE, so a future
 // parameter that means something else cannot arrive under one of them.
@@ -179,6 +184,9 @@ var nameableOnThisSurface = gatekit.Waive(map[string]string{
 		"Runtime was minted for. It cannot re-scope anything: a name belonging to another unit reads as a " +
 		"name belonging to nobody, and the workspace the run lands in is the invocation's rather than this " +
 		"parameter's",
+	"extension.OAuthProvider": "the OAuth app whose grant a unit reads, resolved against the declarations of " +
+		"the unit the Runtime was minted for; another unit's app reads as none, and the grant is the " +
+		"invocation's workspace's",
 })
 
 // stringParams reports EVERY string-kinded parameter of fn, by type name,

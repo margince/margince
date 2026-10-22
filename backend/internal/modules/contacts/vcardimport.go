@@ -29,6 +29,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/captureorigin"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -36,7 +37,7 @@ import (
 )
 
 // vcardSource is the provenance every row this import writes carries.
-const vcardSource = "vcard_import"
+const vcardSource = captureorigin.VCardSource
 
 // vcardFieldStated marks a field this import answered. The image says WHICH
 // field moved and never what it moved to: audit_log is append-only, and this
@@ -58,8 +59,8 @@ const (
 	// close enough to be sure. The card is not written; the candidate is
 	// named so a human can open it.
 	VCardNeedsReview VCardOutcome = "needs_review"
-	// VCardSkipped means the card could not be written: it states no name, or
-	// it matches a contact this caller may not write.
+	// VCardSkipped means the card could not be written: no name, a sending
+	// system's address, or a match this caller may not write.
 	VCardSkipped VCardOutcome = "skipped"
 )
 
@@ -141,6 +142,10 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry,
 	if result.FullName == "" {
 		result.Outcome = VCardSkipped
 		result.Reason = "the card states no name"
+		return result, nil
+	}
+	if cardNamesASendingSystem(entry) {
+		result.Outcome, result.Reason = VCardSkipped, vcardMachineAddress
 		return result, nil
 	}
 
@@ -284,9 +289,8 @@ func contactFromVCard(entry VCardEntry) CreateContactInput {
 	// compared verbatim — the exact-match dedupe key, the provider resolver's
 	// lookup — so a card that spelt the profile with http, a trailing slash or
 	// a tracking query would file the same contact under a second identity.
-	// isLinkedinURL has already refused anything the normalizer would.
-	if u := strings.TrimSpace(entry.URL); u != "" && isLinkedinURL(u) {
-		if normalized, err := NormalizeLinkedInURL(u); err == nil {
+	if u := strings.TrimSpace(entry.URL); u != "" {
+		if normalized, err := NormalizeContactLinkedInURL(u); err == nil {
 			contact.Social = map[string]any{profileURLField: normalized}
 		}
 	}
@@ -364,7 +368,7 @@ func (s *Store) employerByName(ctx context.Context, tx pgx.Tx, name string) (*id
 		company, createErr := s.CreateCompanyTx(ctx, tx, CreateCompanyInput{
 			DisplayName: name,
 			Source:      vcardSource,
-		})
+		}, CustomColumns{})
 		if createErr != nil {
 			return nil, createErr
 		}
@@ -483,7 +487,7 @@ func vcardEvidence(entry VCardEntry) string {
 // stage a second review of a review. The creating authority is the caller's —
 // the deciding human — so the store's own create gate answers for them.
 func (s *Store) CreateFromVCardReviewTx(ctx context.Context, tx pgx.Tx, entry VCardEntry) (ids.ContactID, error) {
-	contact, err := s.CreateContactTx(ctx, tx, contactFromVCard(entry))
+	contact, err := s.CreateContactTx(ctx, tx, contactFromVCard(entry), CustomColumns{})
 	if err != nil {
 		return ids.ContactID{}, fmt.Errorf("contacts: creating the reviewed card's contact: %w", err)
 	}

@@ -32,7 +32,7 @@ import (
 
 const (
 	inviteMailSource = "internal/modules/dealrooms/invitemail.go"
-	routerSource     = "../frontend/src/app/router.tsx"
+	routerSource     = "../frontend/src/lib/router.tsx"
 	navSource        = "../frontend/src/app/nav.ts"
 	// PUBLIC_SCREENS lives with the shell that enforces it rather than with the
 	// route table, because it is a question about the SESSION and not about the

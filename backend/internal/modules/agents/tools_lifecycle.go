@@ -123,7 +123,7 @@ type relinkActivity struct {
 
 func (t relinkActivity) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
-		Name: "relink_activity", Title: "Re-associate an activity to a record", Version: toolVersionV1,
+		Name: relinkActivityTool, Title: "Re-associate an activity to a record", Version: toolVersionV1,
 		Description: relinkActivityCopy.render(),
 		Instead:     relinkActivityCopy.Instead,
 		// Dynamic because filing under a PROJECT classifies the activity as
@@ -131,6 +131,7 @@ func (t relinkActivity) Spec() mcp.ToolSpec {
 		// other destination is an association that runs at once. See
 		// relinkActivityTier.
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierDynamic,
+		Unlisted:     true,
 		TierResolver: relinkActivityTier,
 		OpenAPIOp:    "relinkActivity",
 		InputSchema: schema(`{"type":"object","required":["activity_id","entity_type","entity_id"],"properties":{
@@ -248,7 +249,7 @@ func (t disqualifyLead) Spec() mcp.ToolSpec {
 		Name: "disqualify_lead", Title: "Disqualify a lead", Version: toolVersionV1,
 		Description:   disqualifyLeadCopy.render(),
 		Instead:       disqualifyLeadCopy.Instead,
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "disqualifyLead",
 		InputSchema: schema(`{"type":"object","required":["lead_id"],"properties":{
 			"lead_id":{"type":"string","format":"uuid","description":"The lead to disqualify"},
@@ -304,7 +305,7 @@ func (t demoteLead) Spec() mcp.ToolSpec {
 		Name: "demote_lead", Title: "Reverse a lead promotion", Version: toolVersionV1,
 		Description:   demoteLeadCopy.render(),
 		Instead:       demoteLeadCopy.Instead,
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "demoteLead",
 		InputSchema: schema(`{"type":"object","required":["lead_id","reason"],"properties":{
 			"lead_id":{"type":"string","format":"uuid","description":"The lead whose promotion is being reversed"},
@@ -336,7 +337,7 @@ func (t demoteLead) Handle(ctx context.Context, in json.RawMessage) (json.RawMes
 	// Re-asked HERE as well as in Guards, because an approved retry re-enters
 	// through this door without passing staging: a reason the staging refused
 	// must not become one the execution accepts.
-	if err := requireDemotionReason(args.Reason); err != nil {
+	if err := RequireDemotionReason(args.Reason); err != nil {
 		return nil, err
 	}
 	// nil, because this tool takes no if_version of its own: the pin it applies
@@ -381,11 +382,12 @@ func (t advanceProjectPhase) Spec() mcp.ToolSpec {
 		Description:   advanceProjectPhaseCopy.render(),
 		Instead:       advanceProjectPhaseCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
+		Unlisted:  true,
 		OpenAPIOp: "advanceProjectPhase",
 		InputSchema: schema(`{"type":"object","required":["project_id","to_phase"],"properties":{
 			"project_id":{"type":"string","format":"uuid"},
 			"to_phase":{"type":"string","enum":["initiative","pursuing","delivering","closed"]},
-			"reason":{"type":"string","description":"Required when to_phase is closed; recorded on the phase-history row either way"},
+			"reason":{"type":"string","minLength":1,"description":"Required when to_phase is closed; recorded on the phase-history row either way"},
 			"if_version":{"type":"integer","description":"The version the caller read; the write is refused as skew if the project moved since"},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
 			"additionalProperties":false}`),

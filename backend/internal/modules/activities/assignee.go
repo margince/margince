@@ -16,8 +16,11 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // ensureAssigneeCanHoldWork checks a client-supplied user reference before it
@@ -36,7 +39,7 @@ import (
 // afterwards.
 func ensureAssigneeCanHoldWork(ctx context.Context, tx pgx.Tx, assigneeID *ids.UserID) error {
 	return ensureSeatHoldsWork(ctx, tx, assigneeID,
-		`SELECT is_agent FROM app_user WHERE id = $1 AND status = 'active' AND archived_at IS NULL`)
+		`SELECT is_agent FROM app_user WHERE id = $1 AND `+workforce.LiveMemberSQL(""))
 }
 
 // ensureNewTaskAssignee is ensureAssigneeCanHoldWork for a task being CREATED,
@@ -47,11 +50,10 @@ func ensureAssigneeCanHoldWork(ctx context.Context, tx pgx.Tx, assigneeID *ids.U
 // ensureAssigneeCanHoldWork, so nothing is re-routed to a seat nobody answers.
 func ensureNewTaskAssignee(ctx context.Context, tx pgx.Tx, assigneeID *ids.UserID) error {
 	return ensureSeatHoldsWork(ctx, tx, assigneeID,
-		`SELECT is_agent FROM app_user WHERE id = $1 AND status IN ('active', 'invited') AND archived_at IS NULL`)
+		`SELECT is_agent FROM app_user WHERE id = $1 AND `+workforce.ActivatableMemberSQL(""))
 }
 
-// ensureSeatHoldsWork runs one of the two seat questions above. Each is spelled
-// out whole, so the liveness gate reads both halves of every statement.
+// ensureSeatHoldsWork runs one of the two seat questions above.
 func ensureSeatHoldsWork(ctx context.Context, tx pgx.Tx, assigneeID *ids.UserID, seatSQL string) error {
 	if assigneeID == nil {
 		return nil
@@ -117,3 +119,41 @@ func (e *AgentAssigneeError) FieldFault() (field, code, message string) {
 
 // fieldAssignee is the wire name of the column this module points a caller at.
 const fieldAssignee = "assignee_id"
+
+// A task with no assignee named belongs to the human behind the call: the
+// writer, or the one an agent or connector acts for. Automatic work stays unassigned.
+func taskAssignee(ctx context.Context, in LogActivityInput) *ids.UserID {
+	if in.AssigneeID != nil || in.Kind != string(crmcontracts.ActivityKindTask) {
+		return in.AssigneeID
+	}
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		return nil
+	}
+	var human ids.UUID
+	switch actor.Type {
+	case principal.PrincipalHuman:
+		human = actor.UserID
+	case principal.PrincipalAgent, principal.PrincipalConnector:
+		human = actor.OnBehalfOf
+	default:
+		return nil
+	}
+	if human.IsZero() {
+		return nil
+	}
+	owner := ids.From[ids.UserKind](human)
+	return &owner
+}
+
+func checkedTaskAssignee(ctx context.Context, tx pgx.Tx, in LogActivityInput) (*ids.UserID, error) {
+	assignee := taskAssignee(ctx, in)
+	check := ensureAssigneeCanHoldWork
+	if in.invitedAssignee {
+		check = ensureNewTaskAssignee
+	}
+	if err := check(ctx, tx, assignee); err != nil {
+		return nil, err
+	}
+	return assignee, nil
+}

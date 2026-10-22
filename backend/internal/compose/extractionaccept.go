@@ -35,6 +35,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/extraction"
 )
 
@@ -385,7 +386,7 @@ func setAcceptedDealField(patch *deals.UpdateDealInput, position int, field acce
 		patch.Currency = &currency
 	case acceptFieldExpectedClose:
 		day, err := time.Parse("2006-01-02", field.Value)
-		if err != nil {
+		if err != nil || !datasource.InstantInRange(day) {
 			return &ExtractionAcceptError{
 				Field: fmt.Sprintf("field_keys[%d]", position), Code: "invalid_date",
 				Message: "expected_close_date must be a YYYY-MM-DD calendar date",

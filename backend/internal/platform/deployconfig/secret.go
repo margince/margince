@@ -43,10 +43,10 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config"
 )
 
-// secretFileLimit bounds what a reference may pull in. A secret is a password,
-// a key or a token; anything larger is a path typed wrong, and reading it into
-// memory to find that out is the wrong order.
-const secretFileLimit = 64 << 10
+// SecretRemoved is the reference spelling that declares a credential absent.
+// Only email.smtp.password takes it, and that key is a setting config.Load
+// reads; every secret here refuses it.
+const SecretRemoved = "${none}"
 
 // The two reference kinds, named because they are matched, compared and
 // rendered in errors — three places that must agree on the spelling.
@@ -118,6 +118,10 @@ func (s *Secret) UnmarshalYAML(node *yaml.Node) error {
 		*s = Secret{}
 		return nil
 	}
+	if raw == SecretRemoved {
+		return fmt.Errorf("deployconfig: line %d declares %s, which only email.smtp.password accepts — "+
+			"to leave this credential unset, delete the key", node.Line, SecretRemoved)
+	}
 	m := secretRef.FindStringSubmatch(raw)
 	if m == nil {
 		// The value is NOT echoed back. Reporting what was written would put
@@ -148,7 +152,19 @@ func (s Secret) withField(path string) Secret { s.field = path; return s }
 // rule), and the caller decides required-ness — this reports the empty string
 // and no error for a reference that is simply unset, because "the operator has
 // not configured optional thing X" is not a failure at this layer.
+//
+// A source holding the removal sentinel is refused. It could read as a
+// password of that spelling or as a removal, and a removal belongs in the file.
 func (s Secret) Resolve(lookup config.Lookup) (string, error) {
+	value, err := s.fetch(lookup)
+	if err == nil && value == SecretRemoved {
+		return "", fmt.Errorf("deployconfig: %s resolves to %s, which declares a credential absent rather than being one — "+
+			"only email.smtp.password takes it, written in margince.yaml itself", s.name(), SecretRemoved)
+	}
+	return value, err
+}
+
+func (s Secret) fetch(lookup config.Lookup) (string, error) {
 	switch s.kind {
 	case "":
 		return "", nil
@@ -168,9 +184,9 @@ func (s Secret) readFile() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("deployconfig: %s points at %s, which cannot be read: %w", s.name(), s.arg, err)
 	}
-	if info.Size() > secretFileLimit {
+	if info.Size() > config.SecretFileLimit {
 		return "", fmt.Errorf("deployconfig: %s points at %s, which is %d bytes — a secret is not (limit %d). "+
-			"Check the path names the secret and not something else", s.name(), s.arg, info.Size(), secretFileLimit)
+			"Check the path names the secret and not something else", s.name(), s.arg, info.Size(), config.SecretFileLimit)
 	}
 	raw, err := os.ReadFile(s.arg) // #nosec G304 -- the operator's own secret path; reading it is this function's purpose
 	if err != nil {

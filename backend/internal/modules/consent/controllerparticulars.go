@@ -3,26 +3,11 @@
 
 package consent
 
-// Who this installation is, in the words a message has to carry.
-//
-// Every jurisdiction pack declares disclosures — Art. 13 GDPR wants the
-// controller named and a privacy contact reachable at first contact; German
-// §7(3) UWG wants an objection route on every advertising message; Vietnamese
-// Decree 91/2020 wants the advertiser identified. The packs have declared them
-// since they shipped and nothing rendered one, because nothing knew who the
-// controller WAS: there is no name, no address and no privacy contact recorded
-// anywhere in this product.
-//
-// gates/messagingruleapplied_test.go's register says so in its own words —
-// "nothing renders a disclosure into a message body" — and that line cannot be
-// removed until an installation can state its own particulars. This is where it
-// states them.
-
 import (
 	"fmt"
 	"strings"
 
-	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/platform/config"
 )
 
 // controllerParticularsObject gates who may read and write the installation's
@@ -31,45 +16,31 @@ import (
 // trusted with one is trusted with the other.
 const controllerParticularsObject = "installation_settings"
 
-// ControllerParticulars is what the installation must be able to say about
-// itself when it writes to somebody.
-//
-// FREE TEXT, not a structured address. The particulars a jurisdiction demands
-// differ in shape — a German business letter wants a register court and number,
-// a Vietnamese advertising mail wants a phone and a website — and a struct with
-// a field per jurisdiction would be a form nobody outside that jurisdiction can
-// fill in. What every pack actually needs is a block of words to put at the
-// bottom of a message, written by somebody who knows what their own law
-// requires.
-//
-// Each field is bounded because it is destined for every message this
-// installation sends: an unbounded one is a way to make every mail arbitrarily
-// large, and a footer nobody reads is not a disclosure. Nothing renders them
-// into a body yet — gates/messagingruleapplied_test.go carries that gap — so
-// the bound is set before the consumer rather than after it.
+// ControllerParticulars holds bounded disclosure text for the applicable jurisdiction.
+// DisclosuresFor selects the fields required by each send category.
 type ControllerParticulars struct {
 	// LegalName is who is writing, as the law would name them. Art. 13(1)(a)
 	// GDPR's "identity of the controller" and Decree 91/2020's advertiser.
-	LegalName string
+	LegalName string `yaml:"LegalName"` //nolint:tagliatelle // the saved row spells each field by its Go name
 	// PostalAddress is where they are, as a block of lines. Art. 13(1)(a)
 	// again, and the German business-letter particulars.
-	PostalAddress string
+	PostalAddress string `yaml:"PostalAddress"` //nolint:tagliatelle // the saved row spells each field by its Go name
 	// PrivacyContact is how to reach whoever answers about the data —
 	// Art. 13(1)(b), which asks for the data protection officer where one
 	// exists and the controller's own contact where one does not.
-	PrivacyContact string
+	PrivacyContact string `yaml:"PrivacyContact"` //nolint:tagliatelle // the saved row spells each field by its Go name
 	// ObjectionRoute is how to say stop, free and without a barrier. §7(3) UWG
 	// requires it on every advertising message rather than only the first, and
 	// the one-click unsubscribe this product already mints is usually the
 	// honest answer — but an installation whose recipients answer by phone
 	// says so here.
-	ObjectionRoute string
+	ObjectionRoute string `yaml:"ObjectionRoute"` //nolint:tagliatelle // the saved row spells each field by its Go name
 	// AdvertiserContact is how to reach the advertiser directly — a phone
 	// number, a website, whatever the jurisdiction asks for. Vietnamese Decree
 	// 91/2020 requires it on advertising beyond naming who is advertising, and
 	// it is a SEPARATE field from the postal address because that requirement
 	// is about reachability rather than about where somebody is registered.
-	AdvertiserContact string
+	AdvertiserContact string `yaml:"AdvertiserContact"` //nolint:tagliatelle // the saved row spells each field by its Go name
 }
 
 // particularsFieldCap bounds one field. Long enough for a postal address with a
@@ -89,30 +60,19 @@ func (p ControllerParticulars) IsZero() bool {
 		p.AdvertiserContact == ""
 }
 
-// ControllerIdentity is the installation's own particulars.
-//
-// MachineryApplied, for the same reason the authorization posture beside it is:
-// the disclosures a message carries must apply whoever composes it. A rep
-// writing a reply is the case that decides it — a system worker would pass the
-// gate anyway, since auth.Require admits PrincipalSystem, but a rep holds
-// contact grants and no settings grant at all. Gating the read would mean a
-// message went out WITHOUT its legally required disclosure because the sender
-// lacked an operator permission, which is the failure this whole slice exists
-// to end.
-//
-// The disclosure through behaviour is the feature, which is the bar
-// MachineryApplied sets. These particulars are the installation's own public
-// identity — the name, address and contact it prints at the bottom of its mail
-// — so there is nothing here a reader could learn that any recipient of that
-// mail does not already have in their inbox. WRITING them stays gated on
-// installation_settings at update, which is where the trust actually sits.
-var ControllerIdentity = settings.Define[ControllerParticulars](
-	"consent.controller_particulars",
-	controllerParticularsObject,
-	"update",
-	ControllerParticulars{},
-	validateControllerParticulars,
-).MachineryApplied()
+// ControllerIdentity is the installation's own particulars. MachineryApplied: a
+// rep writing a reply holds no settings grant, and a gated read would send the
+// message without its legally required disclosure. The particulars are public,
+// printed on every mail; writing them stays gated on installation_settings.
+// The saved row spells each field by its Go name, and so do a boot value and
+// the yaml tags.
+var ControllerIdentity = config.DefineStored(config.Spec[ControllerParticulars]{
+	Key:      "consent.controller_particulars",
+	Env:      "MARGINCE_CONSENT_CONTROLLER_PARTICULARS",
+	Type:     config.Struct[ControllerParticulars](),
+	Validate: validateControllerParticulars,
+	Doc:      "Who this installation is, as every message it sends must say: legal name, address, privacy contact, how to object, and advertiser contact.",
+}, config.Store{RBACObject: controllerParticularsObject, AuditVerb: settingsAuditVerb, MachineryApplied: true})
 
 // validateControllerParticulars refuses what a message could not carry.
 //

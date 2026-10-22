@@ -1,0 +1,494 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import { type ReactNode, useRef } from "react";
+import type { components } from "../../api/schema";
+import { ProjectContractRow } from "../../components/contractterms";
+import { EntityRef } from "../../components/entityref";
+import { Badge } from "../../design-system/atoms";
+import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
+import {
+  type SectionState,
+  SurfaceState,
+  sectionState,
+} from "../../design-system/surfacestate";
+import {
+  formatBytes,
+  formatDateAbbrev,
+  formatDateTime,
+  formatDuration,
+  formatMoneyOrAbsent,
+} from "../../format/format";
+import { useLocale, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
+import { useRecordZone } from "../../lib/recordzone";
+import { navigate } from "../../lib/router";
+import { projectRoleLabel } from "../records/record360";
+import { isProjectPhase, PHASE_LABEL } from "./projects.form";
+import {
+  AddProjectStakeholder,
+  RemoveProjectStakeholder,
+} from "./projectstakeholders";
+
+// The project page's sections, each drawn from ONE composite read
+// (GET /projects/{id}/360). Every card below answers the same three questions
+// in the same order — withheld, unavailable, empty — through `sectionState`,
+// so a section a grant refused says so rather than drawing an empty list that
+// reads as "there is none".
+
+export type Project360 = components["schemas"]["Project360"];
+type Project360Section = components["schemas"]["Project360Section"];
+type Deal = components["schemas"]["Deal"];
+type Attachment = components["schemas"]["Attachment"];
+type Stakeholder = components["schemas"]["Project360Stakeholder"];
+type Commitment = components["schemas"]["Project360Commitment"];
+type PhaseTransition = components["schemas"]["Project360PhaseTransition"];
+
+// Every section of the page the reader may lack a grant for. `documents`
+// rides the project grant itself and is never in `sections_omitted`, so it is
+// not in this union either.
+type SectionKey = Project360Section | "documents";
+
+/**
+ * SectionPanel is the shape every card on this page takes: a titled Panel
+ * whose rows run edge to edge when the section is `ready`, and whose
+ * message states — withheld, unavailable, empty, loading — are SurfaceState's
+ * own sentences in a padded body. The empty sentence is the caller's, because
+ * what belongs in a section is the one thing only the section knows.
+ */
+function SectionPanel({
+  title,
+  state,
+  emptyLabel,
+  titleAction,
+  children,
+}: Readonly<{
+  title: string;
+  state: SectionState;
+  emptyLabel: string;
+  titleAction?: ReactNode;
+  children: ReactNode;
+}>) {
+  return (
+    <Panel title={title} titleAction={titleAction}>
+      {state === "ready" ? (
+        children
+      ) : (
+        <PanelBody>
+          <SurfaceState
+            state={state}
+            emptyLabel={emptyLabel}
+            loadingLabel={title}
+          >
+            {null}
+          </SurfaceState>
+        </PanelBody>
+      )}
+    </Panel>
+  );
+}
+
+export function stateOf(
+  view: Project360 | undefined,
+  section: SectionKey,
+  present: boolean,
+  count: number,
+): SectionState {
+  if (section === "documents") {
+    // Documents ride the project grant: the page carries them whenever it
+    // carries the project, so absent means the read failed, never withheld.
+    if (!view) {
+      return "unavailable";
+    }
+    return present ? (count === 0 ? "empty" : "ready") : "unavailable";
+  }
+  return sectionState(view, section, present, count);
+}
+
+function phaseWord(phase: string, t: (key: MessageKey) => string): string {
+  return isProjectPhase(phase) ? t(PHASE_LABEL[phase]) : phase;
+}
+
+/**
+ * Every phase transition, oldest first, with how long the project has spent
+ * in each phase so far. A reopened project visits a phase twice and the
+ * duration sums the visits, which is what the server's fold already says.
+ */
+export function PhaseHistoryCard({
+  view,
+}: Readonly<{ view: Project360 | undefined }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const history = view?.phase_history;
+  const rows = history?.data ?? [];
+  const state = stateOf(view, "phase_history", Boolean(history), rows.length);
+  return (
+    <SectionPanel
+      title={t("project.history.title")}
+      state={state}
+      emptyLabel={t("project.history.empty")}
+    >
+      {history && history.phase_durations.length > 0 && (
+        <PanelBody>
+          <ul className="project-durations">
+            {history.phase_durations.map((duration) => (
+              <li key={duration.phase}>
+                <span>{phaseWord(duration.phase, t)}</span>
+                <span className="t-num">
+                  {formatDuration(duration.seconds * 1000, locale)}
+                  {duration.current && ` · ${t("project.history.current")}`}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </PanelBody>
+      )}
+      {rows.map((transition) => (
+        <TransitionRow key={transition.id} transition={transition} />
+      ))}
+    </SectionPanel>
+  );
+}
+
+function TransitionRow({
+  transition,
+}: Readonly<{ transition: PhaseTransition }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const recordZone = useRecordZone();
+  return (
+    <PanelRow className="project-row">
+      <span>
+        {transition.from_phase
+          ? t("project.history.moved", {
+              from: phaseWord(transition.from_phase, t),
+              to: phaseWord(transition.to_phase, t),
+            })
+          : t("project.history.born", {
+              phase: phaseWord(transition.to_phase, t),
+            })}
+      </span>
+      <span className="project-row-meta t-caption">
+        <span>{formatDateTime(transition.changed_at, locale, recordZone)}</span>
+        <span>
+          {transition.changed_by.display_name ?? t("project.history.bySystem")}
+        </span>
+        {transition.reason && <span>“{transition.reason}”</span>}
+      </span>
+    </PanelRow>
+  );
+}
+
+/** The deals rolled up to the project, newest first, every status. */
+export function ProjectDealsCard({
+  view,
+  actions,
+}: Readonly<{ view: Project360 | undefined; actions?: ReactNode }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const deals = view?.deals?.data ?? [];
+  const state = stateOf(view, "deals", Boolean(view?.deals), deals.length);
+  return (
+    <SectionPanel
+      title={t("project.deals.title")}
+      state={state}
+      emptyLabel={t("project.deals.empty")}
+      titleAction={state === "ready" || state === "empty" ? actions : undefined}
+    >
+      {deals.map((deal) => (
+        <ProjectDealRow key={deal.id} deal={deal} locale={locale} />
+      ))}
+      {view?.deals?.page.has_more && (
+        <PanelBody>
+          <p className="t-caption">{t("project.deals.more")}</p>
+        </PanelBody>
+      )}
+    </SectionPanel>
+  );
+}
+
+function ProjectDealRow({
+  deal,
+  locale,
+}: Readonly<{ deal: Deal; locale: ReturnType<typeof useLocale>["locale"] }>) {
+  return (
+    <PanelRow className="project-row">
+      <button
+        type="button"
+        className="project-rowlink"
+        onClick={() => navigate({ screen: "deals", id: deal.id })}
+      >
+        {deal.name}
+      </button>
+      <span className="project-row-meta t-caption">
+        <Badge tone={deal.status === "won" ? "success" : undefined}>
+          {deal.status}
+        </Badge>
+        <span className="t-num">
+          {formatMoneyOrAbsent(deal.amount_minor, deal.currency, locale)}
+        </span>
+      </span>
+    </PanelRow>
+  );
+}
+
+/**
+ * The contacts seated on the project, each with the seat they hold — and the
+ * verbs that put them there.
+ *
+ * The verbs ride `titleAction`, which `SectionPanel` draws only on a section
+ * that is ready or empty. That is deliberate rather than incidental: a reader
+ * whose grant withheld the seats is told so, and offering them an Add button
+ * over a list they were not allowed to read would invite a write against
+ * records they cannot see.
+ */
+export function StakeholdersCard({
+  view,
+  projectId,
+  readOnly,
+}: Readonly<{
+  view: Project360 | undefined;
+  projectId: string;
+  // An archived project is read-only: the endpoints refuse a write against a
+  // non-live row, so a verb here could only ever fail.
+  readOnly?: boolean;
+}>) {
+  const t = useT();
+  const seats = view?.stakeholders?.data ?? [];
+  const state = stateOf(
+    view,
+    "stakeholders",
+    Boolean(view?.stakeholders),
+    seats.length,
+  );
+  const writable = !readOnly && (state === "ready" || state === "empty");
+  // Where focus goes after a removal. The row holding the Remove button is gone
+  // by then, and focus restored to a node that has unmounted leaves a keyboard
+  // reader on document.body — so it lands on the panel's own Add control, which
+  // survives every removal and is rendered exactly when a Remove button is.
+  const addVerb = useRef<HTMLDivElement>(null);
+  return (
+    <SectionPanel
+      title={t("project.stakeholders.title")}
+      state={state}
+      emptyLabel={t("project.stakeholders.empty")}
+      titleAction={
+        writable ? (
+          <div ref={addVerb}>
+            <AddProjectStakeholder projectId={projectId} />
+          </div>
+        ) : undefined
+      }
+    >
+      {seats.map((seat) => (
+        <StakeholderRow
+          key={seat.relationship_id}
+          seat={seat}
+          projectId={projectId}
+          writable={writable}
+          returnFocusTo={() =>
+            addVerb.current?.querySelector<HTMLElement>("button") ?? null
+          }
+        />
+      ))}
+    </SectionPanel>
+  );
+}
+
+function StakeholderRow({
+  seat,
+  projectId,
+  writable,
+  returnFocusTo,
+}: Readonly<{
+  seat: Stakeholder;
+  projectId: string;
+  writable: boolean;
+  returnFocusTo: () => HTMLElement | null;
+}>) {
+  const t = useT();
+  return (
+    <PanelRow className="project-row">
+      <EntityRef kind="contact" id={seat.contact_id} name={seat.contact_name} />
+      <span className="project-row-meta t-caption">
+        {seat.role && <Badge>{projectRoleLabel(seat.role, t)}</Badge>}
+        {writable && (
+          <RemoveProjectStakeholder
+            projectId={projectId}
+            contactId={seat.contact_id}
+            contactName={seat.contact_name}
+            returnFocusTo={returnFocusTo}
+          />
+        )}
+      </span>
+    </PanelRow>
+  );
+}
+
+/** The agreements filed under the project. */
+export function ProjectContractsCard({
+  view,
+}: Readonly<{ view: Project360 | undefined }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const contracts = view?.contracts?.data ?? [];
+  const state = stateOf(
+    view,
+    "contracts",
+    Boolean(view?.contracts),
+    contracts.length,
+  );
+  return (
+    <SectionPanel
+      title={t("project.contracts.title")}
+      state={state}
+      emptyLabel={t("project.contracts.empty")}
+    >
+      {contracts.map((contract) => (
+        <ProjectContractRow
+          key={contract.id}
+          contract={contract}
+          locale={locale}
+        />
+      ))}
+    </SectionPanel>
+  );
+}
+
+/** The files attached to the project itself, newest first. */
+export function ProjectDocumentsCard({
+  view,
+}: Readonly<{ view: Project360 | undefined }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const documents = view?.documents?.data ?? [];
+  const state = stateOf(
+    view,
+    "documents",
+    Boolean(view?.documents),
+    documents.length,
+  );
+  return (
+    <SectionPanel
+      title={t("project.documents.title")}
+      state={state}
+      emptyLabel={t("project.documents.empty")}
+    >
+      {documents.map((doc) => (
+        <DocumentRow key={doc.id} doc={doc} locale={locale} />
+      ))}
+    </SectionPanel>
+  );
+}
+
+function DocumentRow({
+  doc,
+  locale,
+}: Readonly<{
+  doc: Attachment;
+  locale: ReturnType<typeof useLocale>["locale"];
+}>) {
+  const recordZone = useRecordZone();
+  return (
+    <PanelRow className="project-row">
+      {/* The name is the download, as on the company page: one thing to find
+          for the one thing the row does. */}
+      <a
+        className="project-rowlink"
+        href={`/v1/attachments/${doc.id}`}
+        download={doc.filename}
+      >
+        {doc.title || doc.filename}
+      </a>
+      <span className="project-row-meta t-caption">
+        {doc.byte_size != null && (
+          <span className="t-num">{formatBytes(doc.byte_size, locale)}</span>
+        )}
+        <span>{formatDateAbbrev(doc.created_at, locale, recordZone)}</span>
+      </span>
+    </PanelRow>
+  );
+}
+
+/** The open tasks filed under the project, soonest due first. */
+export function CommitmentsCard({
+  view,
+  onOpenTask,
+}: Readonly<{
+  view: Project360 | undefined;
+  // Opens one commitment's task detail. Owned by the screen rather than by
+  // this card, because the modal is one per page: a card that mounted its own
+  // would put a second dialog on a screen that already has one whenever both
+  // are open.
+  onOpenTask?: (activityId: string) => void;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const commitments = view?.commitments?.data ?? [];
+  const state = stateOf(
+    view,
+    "commitments",
+    Boolean(view?.commitments),
+    commitments.length,
+  );
+  return (
+    <SectionPanel
+      title={t("project.commitments.title")}
+      state={state}
+      emptyLabel={t("project.commitments.empty")}
+    >
+      {commitments.map((commitment) => (
+        <CommitmentRow
+          key={commitment.activity_id}
+          commitment={commitment}
+          locale={locale}
+          onOpenTask={onOpenTask}
+        />
+      ))}
+    </SectionPanel>
+  );
+}
+
+function CommitmentRow({
+  commitment,
+  locale,
+  onOpenTask,
+}: Readonly<{
+  commitment: Commitment;
+  locale: ReturnType<typeof useLocale>["locale"];
+  onOpenTask?: (activityId: string) => void;
+}>) {
+  const t = useT();
+  // The record's clock, exactly as the tasks screen reads it. A commitment is a
+  // deadline the team agreed, so the day it names cannot depend on where the
+  // reader is sitting.
+  const recordZone = useRecordZone();
+  return (
+    <PanelRow className="project-row">
+      {/* The subject opens the task, the way this file's other two rows open
+          theirs. It was flat text here, so a reader who wanted the description,
+          the assignee or the verbs behind a commitment had nowhere to press —
+          on the one card that names what the project owes. */}
+      {onOpenTask ? (
+        <button
+          type="button"
+          className="project-rowlink"
+          onClick={() => onOpenTask(commitment.activity_id)}
+        >
+          {commitment.subject}
+        </button>
+      ) : (
+        <span>{commitment.subject}</span>
+      )}
+      <span className="project-row-meta t-caption">
+        {commitment.due_at && (
+          <span>{formatDateAbbrev(commitment.due_at, locale, recordZone)}</span>
+        )}
+        {commitment.overdue && (
+          <Badge tone="danger">{t("project.commitments.overdue")}</Badge>
+        )}
+        {commitment.assignee_name && <span>{commitment.assignee_name}</span>}
+      </span>
+    </PanelRow>
+  );
+}

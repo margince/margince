@@ -27,9 +27,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
 
 // publishedRetentionAction is the check the one emit site whose action comes off
@@ -123,12 +121,12 @@ const maxRecordDuration = 10 * time.Second
 // precisely what would make this bound a fiction, which is why both facts are
 // enforced rather than assumed.
 //
-// The §3.4 ladder is unaffected: its rungs are different scopes (`activity` at
-// 1095, `activity/transcript` at 365), never repeated ones.
+// A ladder is unaffected: its rungs are different scopes (`activity` and
+// `activity/transcript`), never repeated ones.
 //
 // aiRetentionStages adds the engine-owned AI stores, which batch the same way,
 // and restrictionExpiryStages the erasure of held records whose window closed.
-var MaxPassDuration = time.Duration(len(retentionSelectors)+aiRetentionStages+restrictionExpiryStages) *
+var MaxPassDuration = time.Duration(len(retentionSelectors)+aiRetentionStages+restrictionExpiryStages+heldCommitmentStages) *
 	(retentionBatch * maxRecordDuration)
 
 // embedCallRetention bounds how long an embedding-kind ai_call trace row
@@ -316,6 +314,9 @@ func (s *RetentionService) EvaluateInstallation(ctx context.Context) error {
 	if err := s.evaluateRestrictionExpiry(ctx); err != nil {
 		return err
 	}
+	if err := s.evaluateHeldCommitments(ctx); err != nil {
+		return err
+	}
 	retainOnly, err := s.retainOnly(ctx)
 	if err != nil {
 		return err
@@ -420,17 +421,21 @@ func (s *RetentionService) dueRecords(ctx context.Context, pol retentionPolicy, 
 	if strings.Contains(selector, "$3") && !strings.Contains(selector, "$4") {
 		args = append(args, pol.Action)
 	}
-	if strings.Contains(selector, "$4") {
-		floor := jurisdiction.RetentionClass{}
-		if pol.Action != actionArchive {
-			floor = statutoryCorrespondenceFloor(ref)
-		}
-		args = append(args, floor.Keep.String(), floor.Anchor == jurisdiction.AnchorCalendarYearEnd)
-	}
 	// The ids stay untyped: the selector's entity varies by policy scope (lead,
 	// activity, contact, deal), so the kind is only known one dispatch deeper.
 	var due []ids.UUID
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if strings.Contains(selector, "$4") {
+			floor := archiveFloor
+			if pol.Action != actionArchive {
+				var err error
+				if floor, err = resolveFloorPolicyAt(ctx, tx, s.eraser.country, ref); err != nil {
+					return err
+				}
+			}
+			floorCurrent, floorCarried := floor.sqlArgs()
+			args = append(args, floorCurrent, floorCarried)
+		}
 		rows, err := tx.Query(ctx, selector, args...)
 		if err != nil {
 			return err
@@ -451,7 +456,7 @@ func (s *RetentionService) retainOnly(ctx context.Context) (bool, error) {
 	var held bool
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		held, err = settings.GetTx(ctx, tx, RetainOnly)
+		held, err = retainOnlyTx(ctx, tx)
 		return err
 	})
 	if err != nil {

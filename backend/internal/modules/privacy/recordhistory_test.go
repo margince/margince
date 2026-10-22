@@ -326,6 +326,15 @@ func TestRecordHistoryEntryActorDisplayFallsBackToRawActorID(t *testing.T) {
 	}
 }
 
+// An invitation lets a participant in, so the sentence never reads as though
+// the record itself had been invited.
+func TestADealRoomInvitationReadsAsASentence(t *testing.T) {
+	want := "Rosa invited a participant to the record"
+	if got := composeRecordSummary("human", "Rosa", nil, "invite", false, nil); got != want {
+		t.Errorf("invite reads %q, want %q", got, want)
+	}
+}
+
 func TestRecordHistoryVerbsCoverTheAuditCheckVocabulary(t *testing.T) {
 	verbs := verbsFromCheckConstraint(t)
 	if len(verbs) < 25 {

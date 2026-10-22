@@ -52,20 +52,12 @@ func EncodeCursor(createdAt time.Time, id ids.UUID) (string, error) {
 	return EncodeOpaque(Cursor{CreatedAt: createdAt, ID: id})
 }
 
-// SweepCursor is a position in a walk across SEVERAL streams: which stream the
-// page stopped in, and where inside that stream it stopped.
+// SweepCursor is a position in one of several streams: which stream the page
+// stopped in, and where inside that stream it stopped.
 //
-// A walk with no ordering to interleave its streams by — a search across
-// record types, whose rows carry no common rank — can still be resumed if the
-// token says both. The stream alone would restart it; the inner position alone
-// would not say what it indexes into.
-//
-// Both providers that sweep mint this ONE token, rather than a shape each:
-// what a caller pages with must not depend on which system of record answered
-// them, and two codecs for one wire value drift the first time either changes.
-// The inner half stays opaque here — a keyset token on one side, an incumbent
-// mirror's own cursor on the other — because this type carries a position, not
-// a meaning.
+// The stream half lets a reader refuse a token minted for another stream
+// rather than resume a keyset in the wrong table. The inner half stays opaque
+// here, because this type carries a position, not a meaning.
 type SweepCursor struct {
 	Stream string `json:"s"`
 	Inner  string `json:"c"`
@@ -167,8 +159,8 @@ func ClampLimit(limit *int) int {
 // ("oreilly" finds "Tim O'Reilly"; f_unaccent maps the typographic ’
 // to ' first, so every spelling collapses the same way). nameExpr must
 // mirror the expression of the entity's *_name_trgm index so the LIKE
-// stays indexed; the query text is a bind parameter (LIKE
-// metacharacters at worst widen the caller's own match).
+// stays indexed. The query is a bind parameter with its LIKE
+// metacharacters escaped: `%` and `_` search for themselves.
 func QuickFindClause(pos int, nameExpr string) string {
 	return QuickFindClauseWith(pos, nameExpr, Identifier{})
 }
@@ -197,20 +189,28 @@ type Identifier struct {
 // ever read the name index. The address lives one table away and is the thing
 // most often copied out of a mail client, so it is the identifier a search has
 // to answer for.
-//
-// The arm is `id = ANY (ARRAY(SELECT fk FROM t WHERE col = ...))`. The array
-// is built once, ahead of the scan, so the primary key can join the bitmap union
-// over the name indexes. `id IN (SELECT ...)` and a correlated EXISTS both
-// become a subplan evaluated per row, which no index can serve, and turn the
-// whole search into a scan of the record table.
 func QuickFindClauseWith(pos int, nameExpr string, id Identifier) string {
 	clause := fmt.Sprintf(`search_tsv @@ websearch_to_tsquery('simple', f_unaccent($%[1]d))
-	   OR f_fold_apostrophes(lower(%[2]s)) LIKE '%%' || f_fold_apostrophes(lower($%[1]d)) || '%%'`, pos, nameExpr)
+	   OR f_fold_apostrophes(lower(%[2]s)) LIKE '%%' || %[3]s || '%%'`,
+		pos, nameExpr, EscapeLikeSQL(fmt.Sprintf("f_fold_apostrophes(lower($%d))", pos)))
 	if id.Table != "" {
-		clause += fmt.Sprintf(`
-	   OR id = ANY (ARRAY(SELECT %[2]s FROM %[3]s
-	              WHERE archived_at IS NULL AND %[4]s = lower(btrim($%[1]d))))`,
-			pos, id.FK, id.Table, id.Column)
+		clause += "\n\t   OR " + id.MatchSQL(pos, "id")
 	}
 	return "(" + clause + ")"
+}
+
+// The identifier tables of the two record types a pasted handle names. The
+// contact and company lists and the cross-object search all read them here.
+var (
+	ContactEmails  = Identifier{Table: "contact_email", FK: "contact_id", Column: "email"}
+	CompanyDomains = Identifier{Table: "company_domain", FK: "company_id", Column: "domain"}
+)
+
+// MatchSQL is true when a live identifier row of the record equals the query at
+// pos. The ARRAY is built once, so the primary key joins the bitmap union over
+// the name indexes. `IN (SELECT ...)` or EXISTS runs per row and scans the table.
+func (id Identifier) MatchSQL(pos int, idColumn string) string {
+	return fmt.Sprintf(`%[1]s = ANY (ARRAY(SELECT %[3]s FROM %[4]s
+	              WHERE archived_at IS NULL AND %[5]s = lower(btrim($%[2]d))))`,
+		idColumn, pos, id.FK, id.Table, id.Column)
 }

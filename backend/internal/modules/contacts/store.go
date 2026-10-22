@@ -11,10 +11,10 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/freemail"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
@@ -27,7 +27,15 @@ const ownerIDColumn = "owner_id"
 // Store owns this module's tables (data-seam ownership, ADR-0014 Am.1);
 // every write rides the storekit audit+outbox shape in one transaction.
 type Store struct {
-	clock func() time.Time
+	mergeSignalReader       MergeSignalReader
+	mergeCommitmentReader   MergeCommitmentReader
+	mergeNoticeReader       MergeNoticeReader
+	mergeContentReader      MergeContentReader
+	providerRunReader       ProviderRunReader
+	feedbackCarryReader     FeedbackCarryReader
+	profileVerdictReader    ProfileVerdictReader
+	participantRosterReader ParticipantRosterReader
+	clock                   func() time.Time
 	// db binds the workspace this store runs for (ADR-0091 §9 step 3).
 	db *database.DB
 	// catalog is the fieldcatalog seam (custom-field columns); nil means
@@ -60,9 +68,9 @@ type Store struct {
 	// config that must not be cached into staleness. Nil falls back to the
 	// shipped baseline with no workspace overlay.
 	consumerMail ConsumerMailReader
-	// settings is the installation settings store the lead-settings endpoints
-	// write through; nil means the settings are read-only on this store.
-	settings *settings.Store
+	// settings is the configuration the lead and signature-template settings
+	// are read and saved through; nil means they are read-only on this store.
+	settings *config.Config
 	// dealOpener opens the deal a qualify call asks for, inside the promote
 	// transaction; compose binds the deals store. Nil refuses such calls.
 	dealOpener LeadDealOpener
@@ -76,6 +84,12 @@ type Store struct {
 	// strand one — see satellitecarry.go.
 	consentCarrier ConsentSatelliteCarrier
 	introCarrier   IntroCarrier
+	// grantCarrier moves the shares on a retiring record; nil refuses a merge
+	// that would strand one (grantcarry.go).
+	grantCarrier GrantCarrier
+	// renameInstallation keeps the installation's name on the anchor's display
+	// name (anchorname.go); nil refuses an anchor rename.
+	renameInstallation InstallationRenamer
 }
 
 // ConsumerMailReader builds the workspace's consumer-mail matcher on a

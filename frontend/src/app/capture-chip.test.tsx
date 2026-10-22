@@ -8,8 +8,8 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
+import { useDrawsImportRun } from "../lib/import-onscreen";
 import { CaptureChip } from "./capture-chip";
-import { useDrawsImportRun } from "./import-onscreen";
 
 // The chip is the import's gauge, bottom-centre of the content: present for
 // exactly as long as mail is arriving, carrying the server's own counts, and
@@ -23,6 +23,7 @@ function mailbox(backfill?: BackfillStatus): Connector {
   return {
     id: "018f3a1b-0000-7000-8000-0000000000c1",
     provider: "gmail",
+    can_backfill: true,
     status: "connected",
     scopes: [],
     account_label: "ada@acme.test",

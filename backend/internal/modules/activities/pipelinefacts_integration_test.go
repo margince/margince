@@ -189,14 +189,22 @@ func TestTheBacklogAndTheExplanationAgreeOnEveryExclusion(t *testing.T) {
 		t.Error("a limited message reports eligible — the reader and the backlog disagree, so the shared predicate is no longer shared")
 	}
 
-	// Half one: the classifier's own backlog selects EXACTLY the eligible row.
-	backlog, err := e.store.UnlabeledCaptureEmails(ctx, rulesetNew, 50, 200)
+	// Half one: of the rows seeded here, the classifier's own backlog selects
+	// the eligible one and no other. The package shares one database, so a sibling
+	// test's rows are in the backlog too and are not this test's to count.
+	backlog, err := e.store.UnlabeledCaptureEmails(ctx, rulesetNew, 200, 200)
 	if err != nil {
 		t.Fatalf("reading the backlog: %v", err)
 	}
-	if len(backlog) != 1 || backlog[0].ID != eligible {
-		t.Fatalf("the backlog selected %d row(s), want exactly the eligible one (%s)",
-			len(backlog), eligible)
+	var selected []ids.UUID
+	for _, row := range backlog {
+		if _, seeded := want[row.ID]; seeded || row.ID == limited {
+			selected = append(selected, row.ID)
+		}
+	}
+	if len(selected) != 1 || selected[0] != eligible {
+		t.Fatalf("the backlog selected %v of the seeded rows, want exactly the eligible one (%s)",
+			selected, eligible)
 	}
 
 	// Half two: the reader names the exclusion that applied to each of the rest,

@@ -14,6 +14,9 @@ package textlang
 import (
 	"strings"
 	"unicode"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/mailquote"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // quoteMarkers are the ways a mail client announces that what follows is the
@@ -21,8 +24,6 @@ import (
 // not produce these lines by accident.
 var quoteMarkers = []string{
 	">",
-	"-----Original Message",
-	"-----Ursprüngliche Nachricht",
 	"________________________________",
 	"Von: ",
 	"From: ",
@@ -190,12 +191,14 @@ const minReplyWords = 12
 // leading whitespace is skipped: "  > quoted" is a quote however the client
 // indented it.
 func quoteStart(runes []rune) int {
+	ownHeaders := true
 	for offset, atLineStart := 0, true; offset < len(runes); offset++ {
 		if atLineStart && !unicode.IsSpace(runes[offset]) {
 			line := lineAt(runes, offset)
-			if startsQuote(line) && !isOwnHeader(line, offset) {
+			if startsQuote(line) && (!ownHeaders || !isOwnHeader(line, offset)) {
 				return offset
 			}
+			ownHeaders = ownHeaders && IsMailHeader(string(line))
 			atLineStart = false
 			continue
 		}
@@ -231,12 +234,16 @@ func lineAt(runes []rune, offset int) []rune {
 // startsQuote reports whether this line announces quoted text.
 func startsQuote(line []rune) bool {
 	text := string(line)
+	// A visual divider alone does not attribute the following prose to somebody else.
+	if strings.Trim(strings.TrimSpace(text), "_") == "" {
+		return false
+	}
 	for _, marker := range quoteMarkers {
 		if strings.HasPrefix(text, marker) {
 			return true
 		}
 	}
-	return isAttributionLine(text)
+	return mailquote.IsAttribution(text) || isAttributionLine(text)
 }
 
 // authoredText is the text above the first quoted or forwarded line — what the
@@ -257,7 +264,7 @@ func authoredText(text string) string {
 	if offset < 0 {
 		return text
 	}
-	return string(runes[:offset])
+	return textcut.Runes(text, offset)
 }
 
 // isAttributionLine reports whether the line is a client's "On <date>, <name>
@@ -274,10 +281,7 @@ func isAttributionLine(line string) bool {
 		return false
 	}
 
-	head := line
-	if runes := []rune(line); len(runes) > attributionMaxRunes {
-		head = string(runes[:attributionMaxRunes])
-	}
+	head := textcut.Runes(line, attributionMaxRunes)
 	for _, verb := range attributionVerbs {
 		if strings.Contains(head, verb) {
 			return true

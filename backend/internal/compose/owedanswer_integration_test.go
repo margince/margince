@@ -5,13 +5,9 @@
 
 package compose
 
-// Whether a mail is still owed a reply, asked of mail that came in through the
-// production capture sink and the real mail parser.
-//
-// The answer check reads thread keys, recipient rows and counterparty columns
-// exactly as capture writes them, so hand-inserted rows would test a shape
-// capture might never produce. Each case reads both surfaces: the needs-reply
-// badge (EmailSummariesByID) and the waiting lane (WaitingReplies).
+// Mail comes through the native parser and capture sink so answer evidence
+// uses real thread, recipient and counterparty fields. Answering a message and
+// settling a confirmed request are checked separately.
 
 import (
 	"context"
@@ -36,14 +32,29 @@ import (
 // headers does.
 type owedMail struct {
 	from, to, cc, bcc, subject, messageID, inReplyTo string
+	body                                             string
 	at                                               time.Time
 	// spoofed leaves out the provider's word that the seat sent it: a message
 	// whose From merely names the seat's own address.
-	spoofed bool
+	spoofed       bool
+	authenticated bool
+	// html is an HTML body sent instead of the plain one.
+	html string
+	// deliveredTo is the receiving server's Delivered-To, which proves a Bcc
+	// copy reached the seat.
+	deliveredTo string
 }
 
 func (m owedMail) raw() []byte {
-	lines := []string{"From: " + m.from, "To: " + m.to}
+	var lines []string
+	if m.deliveredTo != "" {
+		lines = append(lines, "Delivered-To: "+m.deliveredTo, "Received: by mx.ws.example")
+	}
+	lines = append(lines, "From: "+m.from, "To: "+m.to)
+	if m.authenticated {
+		_, domain, _ := strings.Cut(m.from, "@")
+		lines = append([]string{"Authentication-Results: mx.google.com; dmarc=pass header.from=" + domain}, lines...)
+	}
 	if m.cc != "" {
 		lines = append(lines, "Cc: "+m.cc)
 	}
@@ -55,7 +66,15 @@ func (m owedMail) raw() []byte {
 	if m.inReplyTo != "" {
 		lines = append(lines, "In-Reply-To: <"+m.inReplyTo+">", "References: <"+m.inReplyTo+">")
 	}
-	lines = append(lines, "Content-Type: text/plain; charset=utf-8", "", "Text.", "")
+	if m.html != "" {
+		lines = append(lines, "Content-Type: text/html; charset=utf-8", "", m.html, "")
+		return []byte(strings.Join(lines, "\r\n"))
+	}
+	body := m.body
+	if body == "" {
+		body = "Text."
+	}
+	lines = append(lines, "Content-Type: text/plain; charset=utf-8", "", body, "")
 	return []byte(strings.Join(lines, "\r\n"))
 }
 
@@ -242,8 +261,8 @@ func TestAReplyThatLostItsThreadAnswersTheMail(t *testing.T) {
 	o := setupOwed(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
 	asked := o.customerWrites(t, "pat@customer.example", "Invoice March", o.now.Add(-3*time.Hour))
-	if !o.owed(t, asked) {
-		t.Fatal("an unanswered, unjudged mail is not owed; the cases below would pass for the wrong reason")
+	if !o.unanswered(t, asked) {
+		t.Fatal("the fresh captured message already has an answer")
 	}
 
 	reply := o.weWrite(t, owedMail{
@@ -253,7 +272,7 @@ func TestAReplyThatLostItsThreadAnswersTheMail(t *testing.T) {
 	if o.threadKey(t, reply) == o.threadKey(t, asked) {
 		t.Fatal("capture joined the reply to the thread on its subject; the fixture no longer loses its thread")
 	}
-	if o.owed(t, asked) {
+	if o.unanswered(t, asked) {
 		t.Fatal("a reply to the sender with the same subject did not answer the mail")
 	}
 }
@@ -285,7 +304,7 @@ func TestOnlyASameSubjectReplyToTheSenderAnswers(t *testing.T) {
 			subject := "Quote " + ids.NewV7().String()[:8]
 			asked := o.customerWrites(t, "pat@customer.example", subject, o.now.Add(-3*time.Hour))
 			answerAttempt(o, subject)
-			if !o.owed(t, asked) {
+			if !o.unanswered(t, asked) {
 				t.Fatalf("%s answered the mail", name)
 			}
 		})
@@ -301,7 +320,7 @@ func TestAReplyCopyingTheSenderAnswers(t *testing.T) {
 		to: "legal@customer.example", cc: "pat@customer.example",
 		subject: "Re: Contract draft", at: o.now.Add(-time.Hour),
 	})
-	if o.owed(t, asked) {
+	if o.unanswered(t, asked) {
 		t.Fatal("a reply copying the sender did not answer the mail")
 	}
 }
@@ -320,10 +339,10 @@ func TestTwoSameSubjectMailsFromTwoSendersNeverClearEachOther(t *testing.T) {
 
 	o.weWrite(t, owedMail{to: "pat@customer.example", subject: "Re: Invoice", at: o.now.Add(-2 * time.Hour)})
 
-	if o.owed(t, pat) {
+	if o.unanswered(t, pat) {
 		t.Error("the reply to Pat did not answer Pat")
 	}
-	if !o.owed(t, robin) {
+	if !o.unanswered(t, robin) {
 		t.Error("the reply to Pat answered Robin, who wrote the same subject")
 	}
 }
@@ -339,11 +358,11 @@ func TestACallOrHeldMeetingWithTheSenderAnswers(t *testing.T) {
 			asked := o.customerWrites(t, "pat@customer.example", "Can we talk", o.now.Add(-3*time.Hour))
 
 			o.weLog(t, kind, sam, o.now.Add(-2*time.Hour))
-			if !o.owed(t, asked) {
+			if !o.unanswered(t, asked) {
 				t.Fatalf("a %s with the sender's colleague answered the sender", kind)
 			}
 			o.weLog(t, kind, pat, o.now.Add(-time.Hour))
-			if o.owed(t, asked) {
+			if o.unanswered(t, asked) {
 				t.Fatalf("a %s with the sender did not answer them", kind)
 			}
 		})
@@ -422,6 +441,8 @@ func TestTheBadgeAndTheLaneAgreeOnEveryOwedMail(t *testing.T) {
 
 	unanswered := o.customerWrites(t, "robin@other.example", "Pricing question", at(9))
 	forwarded := o.customerWrites(t, "robin@other.example", "Delivery date", at(9))
+	o.judgeAsRequest(t, unanswered)
+	o.judgeAsRequest(t, forwarded)
 	o.weWrite(t, owedMail{to: "robin@other.example", subject: "Fwd: Delivery date", at: at(8)})
 
 	onThread := o.capture(t, owedMail{
@@ -456,6 +477,7 @@ func TestTheBadgeAndTheLaneAgreeOnEveryOwedMail(t *testing.T) {
 		t.Fatalf("reading the hidden backlog: %v", err)
 	}
 	old := o.customerWrites(t, "robin@other.example", "Spring order", o.now.AddDate(0, 0, -150))
+	o.judgeAsRequest(t, old)
 
 	for name, want := range map[string]struct {
 		message ids.UUID
@@ -508,7 +530,7 @@ func TestAReplySentFromMarginceAnswersThroughItsCounterparty(t *testing.T) {
 	if n := o.count(t, `SELECT count(*) FROM activity_participant WHERE activity_id = $1 AND address IS NOT NULL`, sent.Id); n != 0 {
 		t.Fatalf("the sent reply carries %d recipient row(s); the case needs the counterparty alone", n)
 	}
-	if o.owed(t, asked) {
+	if o.unanswered(t, asked) {
 		t.Fatal("a reply sent from Margince to the sender did not answer them")
 	}
 }
@@ -552,7 +574,7 @@ func TestPrivateEvidenceDoesNotAnswerAnotherSeatsMail(t *testing.T) {
 	if n := o.count(t, `SELECT count(*) FROM activity WHERE id = $1 AND audience = 'workspace'`, private); n != 0 {
 		t.Fatal("the colleague's mailbox shares its mail; the case needs a private reply")
 	}
-	if !o.owed(t, asked) {
+	if !o.unanswered(t, asked) {
 		t.Fatal("a colleague's private reply answered another seat's mail")
 	}
 
@@ -569,12 +591,12 @@ func TestPrivateEvidenceDoesNotAnswerAnotherSeatsMail(t *testing.T) {
 		activities.SetAudienceInput{Audience: "participants"}); err != nil {
 		t.Fatalf("making the meeting private: %v", err)
 	}
-	if !o.owed(t, asked) {
+	if !o.unanswered(t, asked) {
 		t.Fatal("a colleague's private meeting answered another seat's mail")
 	}
 
 	o.weLog(t, string(crmcontracts.ActivityKindCall), pat, o.now.Add(-time.Hour))
-	if o.owed(t, asked) {
+	if o.unanswered(t, asked) {
 		t.Fatal("a call the whole workspace can read did not answer the mail")
 	}
 }
@@ -587,11 +609,11 @@ func TestASpoofedReplyAnswersNothing(t *testing.T) {
 	asked := o.customerWrites(t, "pat@customer.example", "Bank details", o.now.Add(-3*time.Hour))
 
 	o.weWrite(t, owedMail{to: "pat@customer.example", subject: "Re: Bank details", at: o.now.Add(-2 * time.Hour), spoofed: true})
-	if !o.owed(t, asked) {
+	if !o.unanswered(t, asked) {
 		t.Fatal("a spoofed reply answered the mail")
 	}
 	o.weWrite(t, owedMail{to: "pat@customer.example", subject: "Re: Bank details", at: o.now.Add(-time.Hour)})
-	if o.owed(t, asked) {
+	if o.unanswered(t, asked) {
 		t.Fatal("the attested reply did not answer the mail")
 	}
 }
@@ -606,7 +628,7 @@ func TestAReplyToAnotherAddressOfTheSenderAnswers(t *testing.T) {
 	if o.threadKey(t, reply) == o.threadKey(t, asked) {
 		t.Fatal("capture joined the two on their subject; the fixture no longer loses its thread")
 	}
-	if o.owed(t, asked) {
+	if o.unanswered(t, asked) {
 		t.Fatal("a reply to another address of the same contact did not answer them")
 	}
 }
@@ -631,7 +653,7 @@ func TestASameSecondReplyIsNotAnAnswer(t *testing.T) {
 			if !replyFirst {
 				reply()
 			}
-			if !o.owed(t, asked) {
+			if !o.unanswered(t, asked) {
 				t.Fatal("a reply in the same second counted as an answer")
 			}
 		})

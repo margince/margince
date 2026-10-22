@@ -26,9 +26,13 @@ import (
 )
 
 type AdvanceDealInput struct {
-	ToStageID  ids.StageID
-	LostReason *string
-	IfVersion  *int64
+	ToStageID ids.StageID
+	// ReferencesFromRequest says the caller typed ToStageID, so a stage that
+	// is gone is refused naming `to_stage_id`. A move that came from a decided
+	// card leaves it false.
+	ReferencesFromRequest bool
+	LostReason            *string
+	IfVersion             *int64
 	// WonWithoutContractReason says why this win has no agreement behind it
 	// (ADR-0109 §6). Absent means the deal claims one, and the store looks for
 	// it — a win that claims nothing and offers no reason is what gets refused.
@@ -56,6 +60,9 @@ type AdvanceDealInput struct {
 	// and the product must not propose it again. Without it a reversed move is
 	// re-proposable the moment the fortnight's human-move protection lapses.
 	ReversalOf *ids.UUID
+	// closedAt is the instant a closing move records as the close, set only
+	// by ImportDealTx: an imported win keeps the day its source closed it.
+	closedAt *time.Time
 }
 
 // StagePipelineMismatchError maps to 422: the target stage exists but
@@ -172,16 +179,22 @@ func (s *Store) advanceOnTx(
 		// with the deal as it stands makes a retried call safe, where running the
 		// move again would close a closed deal a second time and move its day.
 		if ids.UUID(*current.StageId) == in.ToStageID.UUID {
+			if err := storekit.EnsureIfMatch(ctx, tx, dealTable, id.UUID, in.IfVersion); err != nil {
+				return err
+			}
 			out, err = readDealForCaller(ctx, tx, id, storekit.LiveOnly, active)
 			return err
 		}
 		semantic, winProbability, err := resolveAdvanceTarget(ctx, tx, in.ToStageID, current)
 		if err != nil {
+			if in.ReferencesFromRequest {
+				err = auth.NameMissingReference("to_stage_id", err)
+			}
 			return err
 		}
 		// Under the lock resolveAdvanceTarget just took on the target row, and
 		// before anything is written.
-		if err := refuseAMoveTheGateDidNotAdmit(ctx, tx, current, in.ToStageID); err != nil {
+		if err := refuseAMoveTheGatesDoNotAdmit(ctx, tx, id, current, in.ToStageID); err != nil {
 			return err
 		}
 		// Checked inside the transaction that writes the transition, and
@@ -257,6 +270,7 @@ func (s *Store) advanceOnTx(
 // two independently-drifting map literals.
 func dealStageChangedPayload(current crmcontracts.Deal, toStageID ids.StageID, toStatus string, winProbability int, frozenFx *string) crmcontracts.PublicEventDealStageChanged {
 	payload := crmcontracts.PublicEventDealStageChanged{
+		DealName:            &current.Name,
 		FromStageId:         current.StageId,
 		ToStageId:           openapi_types.UUID(toStageID.UUID),
 		FromStatus:          string(current.Status),
@@ -284,11 +298,16 @@ func announceStageAdvance(
 	ctx context.Context, tx pgx.Tx, id ids.DealID, in AdvanceDealInput,
 	current crmcontracts.Deal, p *storekit.Patch, status string, winProbability int,
 ) error {
-	auditID, err := storekit.Audit(ctx, tx, "advance_stage", "deal", id.UUID, p.Before(), p.After())
+	var evidence map[string]any
+	if in.ApprovalID != nil {
+		evidence = map[string]any{StageApprovalEvidenceKey: in.ApprovalID.String()}
+	}
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, "advance_stage", "deal", id.UUID, p.Before(), p.After(), evidence)
 	if err != nil {
 		return fmt.Errorf("audit stage advance: %w", err)
 	}
 	payload := dealStageChangedPayload(current, in.ToStageID, status, winProbability, frozenFxFromPatch(p, current))
+	payload.Imported, payload.ImportRunId = storekit.ImportMark(ctx)
 	args := []any{current.StageId, in.ToStageID}
 	if err := tx.QueryRow(ctx, storekit.SQLf(`SELECT (SELECT name FROM stage WHERE id = $%d), (SELECT name FROM stage WHERE id = $%d)`, len(args)-1, len(args)), args...).Scan(&payload.FromStageName, &payload.ToStageName); err != nil {
 		return fmt.Errorf("read the stage names for the change: %w", err)
@@ -327,18 +346,19 @@ func announceStageAdvance(
 func (s *Store) onDealWon(
 	ctx context.Context, tx pgx.Tx, id ids.DealID, status, by string, p *storekit.Patch,
 ) error {
-	if DealStatus(status) != DealWon {
-		return nil
+	for _, effect := range wonEffects(status, p) {
+		switch effect {
+		case effectClassifyCorrespondence:
+			if err := s.stampCorrespondence(ctx, tx, id, BasisDealWon); err != nil {
+				return fmt.Errorf("stamp won deal's correspondence: %w", err)
+			}
+		case effectStartDelivery:
+			if err := s.startDeliveryForWonDeal(ctx, tx, id, by); err != nil {
+				return fmt.Errorf("start delivery on the won deal's project: %w", err)
+			}
+		}
 	}
-	if err := s.stampCorrespondence(ctx, tx, id, BasisDealWon); err != nil {
-		return fmt.Errorf("stamp won deal's correspondence: %w", err)
-	}
-	if _, becameWon := p.After()["status"]; !becameWon {
-		return nil
-	}
-	if err := s.startDeliveryForWonDeal(ctx, tx, id, by); err != nil {
-		return fmt.Errorf("start delivery on the won deal's project: %w", err)
-	}
+
 	return nil
 }
 
@@ -367,13 +387,15 @@ func frozenFxFromPatch(p *storekit.Patch, current crmcontracts.Deal) *string {
 func (s *Store) stageTransitionPatch(ctx context.Context, tx pgx.Tx,
 	current crmcontracts.Deal, in AdvanceDealInput, semantic string,
 ) (*storekit.Patch, string, error) {
-	status := string(DealOpen)
+	status := string(StageSemantic(semantic).Status())
 	var closedAt *time.Time
 	var lostReason string
 	switch semantic {
 	case "won", "lost":
-		status = semantic
 		now := s.clock().UTC()
+		if in.closedAt != nil {
+			now = in.closedAt.UTC()
+		}
 		closedAt = &now
 		if in.LostReason != nil {
 			lostReason = strings.TrimSpace(*in.LostReason)
@@ -420,9 +442,8 @@ func (s *Store) stageTransitionPatch(ctx context.Context, tx pgx.Tx,
 	// close it is supposed to price, and the roll-up would then reconcile
 	// against a rate the deal never closed at.
 	if DealStatus(status) != DealOpen && current.AmountMinor != nil && current.Currency != nil {
-		rateBefore, rateDateBefore := frozenBefore(current)
 		if err := s.freezeBaseRate(ctx, tx, p, current.Id, string(*current.Currency),
-			*current.AmountMinor, *closedAt, rateBefore, rateDateBefore); err != nil {
+			*current.AmountMinor, *closedAt); err != nil {
 			return nil, "", fmt.Errorf("freeze fx at close: %w", err)
 		}
 	}
@@ -433,17 +454,7 @@ func (s *Store) stageTransitionPatch(ctx context.Context, tx pgx.Tx,
 	// which covers the reopen too.
 	if DealStatus(status) == DealOpen && DealStatus(current.Status) != DealOpen {
 		p.Set("closed_at", current.ClosedAt, nil)
-		// The pre-images are what the row HELD, not nil. A closed deal carrying an
-		// amount carries a rate — deal_closed_fx requires it — and the reopen's
-		// audit row is precisely what a reversal reads to put the old rate back.
-		rateBefore, rateDateBefore := frozenBefore(current)
-		p.Set(fxRateColumn, rateBefore, nil)
-		p.SetDate(fxRateDateColumn, rateDateBefore, nil)
-		// The converted amount goes with the rate it was converted at, so the
-		// reopen clears both. clearFrozenConversion owns that, beside the writer
-		// that sets it: two places deciding what a frozen conversion consists of
-		// is how one of them comes to leave half of it behind.
-		if err := clearFrozenConversion(ctx, tx, p, current); err != nil {
+		if err := clearFrozenConversion(ctx, tx, p, current.Id); err != nil {
 			return nil, "", err
 		}
 	}

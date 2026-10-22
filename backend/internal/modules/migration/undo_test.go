@@ -6,6 +6,8 @@ package migration
 import (
 	"context"
 	"errors"
+	"fmt"
+	"slices"
 	"testing"
 	"time"
 
@@ -42,16 +44,18 @@ func TestReversalRefusalReasonNamesEachSentinelAndFallsBackHonestly(t *testing.T
 	for _, tc := range []struct {
 		name string
 		err  error
+		code ReasonCode
 		want string
 	}{
-		{"permission denied", apperrors.ErrPermissionDenied, "the caller's grant no longer covers this record"},
-		{"not found", apperrors.ErrNotFound, "the record is no longer visible to this caller"},
-		{"conflict", apperrors.ErrConflict, "the record refused the reversal (a business rule protects it)"},
-		{"unclassified", errors.New("boom"), "the record could not be reversed"},
+		{"permission denied", apperrors.ErrPermissionDenied, ReasonUndoGrantLost, "Your permissions no longer cover this record."},
+		{"not found", apperrors.ErrNotFound, ReasonUndoNotVisible, "This record is no longer visible to you."},
+		{"conflict", apperrors.ErrConflict, ReasonUndoRuleProtects, "The record refused the undo because a business rule protects it."},
+		{"unclassified", errors.New("boom"), ReasonUndoFailed, "The record could not be undone."},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := reversalRefusalReason(tc.err); got != tc.want {
-				t.Errorf("reversalRefusalReason(%v) = %q, want %q", tc.err, got, tc.want)
+			got := reversalRefusalReason(tc.err)
+			if got.Code != tc.code || got.English() != tc.want {
+				t.Errorf("reversalRefusalReason(%v) = %s %q, want %s %q", tc.err, got.Code, got.English(), tc.code, tc.want)
 			}
 		})
 	}
@@ -79,6 +83,24 @@ func TestReverseOneRowSplitsKeptReversedAndUnreachable(t *testing.T) {
 		}
 		if len(rep.Kept) != 1 || rep.ReversedCount != 0 {
 			t.Fatalf("rep = %+v, want the row kept and Reverse never invoked", rep)
+		}
+		if rep.Kept[0].Code != ReasonUndoEdited || rep.Kept[0].Reason == "" {
+			t.Fatalf("kept = %+v, want the edited reason beside it", rep.Kept[0])
+		}
+	})
+
+	t.Run("a refusal that keeps the row is kept with its own reason, not errored", func(t *testing.T) {
+		var rep UndoReport
+		why := Why(ReasonUndoStillReferenced, "deals", "2", "contacts", "0")
+		w := stubUndoWriters{err: fmt.Errorf("reversing: %w", &KeptError{Why: why})}
+		if err := reverseOneRow(context.Background(), w, row, false, &rep); err != nil {
+			t.Fatalf("reverseOneRow: %v", err)
+		}
+		if len(rep.Errored) != 0 || len(rep.Kept) != 1 {
+			t.Fatalf("rep = %+v, want one kept row and no errored one", rep)
+		}
+		if got := rep.Kept[0]; got.Code != ReasonUndoStillReferenced || got.Params["deals"] != "2" {
+			t.Fatalf("kept = %+v, want the code and its counts", got)
 		}
 	})
 
@@ -115,4 +137,14 @@ func TestReverseOneRowSplitsKeptReversedAndUnreachable(t *testing.T) {
 			t.Fatalf("rep = %+v, want nothing recorded for an unreachable estate", rep)
 		}
 	})
+}
+
+func TestAnUndoReversesTheTypesALaterImportLandedFirst(t *testing.T) {
+	want := []string{ObjectActivity, ObjectDeal, ObjectLead, ObjectContact, ObjectCompany}
+	if got := reverseImportOrder(); !slices.Equal(got, want) {
+		t.Fatalf("undo order = %v, want %v: a contact archived first leaves its deals and activities naming an archived record", got, want)
+	}
+	if ImportOrder[0] != ObjectCompany {
+		t.Fatalf("reversing changed ImportOrder itself: %v", ImportOrder)
+	}
 }

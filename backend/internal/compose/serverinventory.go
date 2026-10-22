@@ -5,12 +5,6 @@ package compose
 
 // The inventory: which transport handler sets the contract surface is made of.
 //
-// Split from server.go, which the file itself already distinguished — that one
-// is how the surface is ASSEMBLED (New, the routes, the middleware); this is
-// what it is assembled FROM. The list grows with every module that gains a
-// transport, so keeping it beside the assembly meant a new handler set nudged
-// an unrelated file toward its ceiling.
-
 import (
 	"context"
 	"io"
@@ -37,7 +31,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
@@ -54,6 +47,7 @@ import (
 type Server struct {
 	reportingHandlers
 	reportingExportHandlers
+	reportingReaderPreviewHandlers
 
 	authHandlers
 	contactsHandlers
@@ -134,6 +128,7 @@ type Server struct {
 	filterPreviewHandlers
 	filterProposalHandlers
 	exportBundleHandlers
+	agentBundleHandlers
 	companyRollupHandlers
 	strengthHandlers
 	recordAccessHandlers
@@ -145,11 +140,12 @@ type Server struct {
 	webhooksHandlers
 	dataResetHandlers
 	jobHealthHandlers
+	dataTaskHandlers
 	captureHealthHandlers
 	extensionIngestHealthHandlers
-	// The composed-extension inventory (handlers_extensions.go). Stateless — it
-	// reads the package's own boot-written accessors — so it is embedded as the
-	// zero value rather than assembled in serverassembly.go.
+	recoveryHealthHandlers
+	// The composed-extension inventory (handlers_extensions.go): stateless, it reads
+	// boot-written accessors, so it is embedded as the zero value.
 	extensionsHandlers
 	// The transport directory (handlers_channelproviders.go): stateless, embedded the same way.
 	channelProvidersHandlers
@@ -221,20 +217,20 @@ type Server struct {
 	// configured — the route is absent otherwise, never open.
 	graphPush http.Handler
 
-	// mcpConnectorEnabled is the remote-connector deployment gate, set by
-	// WithMCPConnector from the deployment file. It governs the connector as
-	// ONE group — transport, authorization server, both discovery documents —
-	// and routes.go, where the group is mounted, carries why.
-	mcpConnectorEnabled bool
+	// mcpConnectorEnabled is the connector's deployment gate (WithMCPConnector): transport, authorization
+	// server and both discovery documents as one group, for the reason routes.go gives.
+	// clientRegistrationLimit is the same file's limit on automatic client registration; nil allows both.
+	mcpConnectorEnabled     bool
+	clientRegistrationLimit *identity.RegistrationMethods
 	// appViews holds the MCP App documents this api is serving. Nil for the
 	// worker and for an api that composed no views — see mcpappviews.go.
 	appViews *apps.Provider
 
-	// mcpAllowedOrigin is the scheme+host the connector's Origin guard
-	// admits and its 401 challenge points at — derived by WithMCPResource
-	// from the configured --public-base-url, never from a request header a
-	// caller controls.
-	mcpAllowedOrigin string
+	// mcpResource is the connector URL the discovery document names, and
+	// mcpAllowedOrigin its scheme+host, which the Origin guard admits and the 401
+	// challenge points at. WithMCPResource sets both from --public-base-url,
+	// never from a request header a caller controls.
+	mcpResource, mcpAllowedOrigin string
 
 	// metricsToken gates /metrics, injected by WithMetricsToken from the
 	// deployment's --metrics-token. Empty — the default — configures no
@@ -247,10 +243,10 @@ type Server struct {
 	// credential to carry over an untrusted network. See gateMetrics in
 	// routes.go.
 	metricsToken string
-	// trustedProxies are the direct peers whose X-Forwarded-For names the
-	// client every per-IP limiter keys on, injected by WithTrustedProxies from
-	// --trusted-proxies. The zero value trusts nobody and keys on the TCP peer.
+	// trustedProxies are the direct peers whose X-Forwarded-* headers this process
+	// believes, from WithTrustedProxies. The zero value trusts nobody.
 	trustedProxies httpserver.TrustedProxies
+	apiBaseURL     string // --api-base-url, from WithAPIBaseURL; empty where the public origin serves the API
 
 	// metricsOpen serves /metrics to any caller, set by WithOpenMetrics from an
 	// explicit --metrics-access=open for a deployment whose network boundary
@@ -283,7 +279,7 @@ type Server struct {
 	// publishes to a client. Defaulted in New, so a composition never told
 	// about a deployment file still gets the compiled-in ceilings rather than
 	// zero — which would refuse every upload.
-	uploadLimits deployconfig.UploadLimits
+	uploadLimits UploadLimits
 
 	// blob is the object store, injected by WithBlobstore. When configured
 	// it feeds a /readyz probe and backs the attachment handlers; nil means
@@ -316,14 +312,14 @@ type Server struct {
 	mfaSigner         identity.MFAChallengeSigner
 	mfaSignerUnusable bool
 
-	// The three parts of the lane the installation's own mail rides, each
-	// supplied by a different option (WithOperatorMail, WithPublicBaseURL,
-	// WithControllerMail) and joined by rewireConfirmationLane. Held rather
-	// than assembled on arrival because options compose in any order, so no one
-	// of them can assume the others have run.
+	// The three parts of the lane the installation's own mail rides. Each comes
+	// from its own option (WithOperatorMail, WithPublicBaseURL, WithControllerMail),
+	// and rewireConfirmationLane joins them in any order. siteLeadNotices is that
+	// lane, as the site-lead accept sees it.
 	controllerRelay comms.ControllerRelay
 	confirmLinkBase string
 	confirmRunner   *jobs.Runner
+	siteLeadNotices *siteLeadNoticeLane
 
 	// captureConfig is the deployment's capture suppression-list config
 	// (CAP-PARAM-5/6, ADR-0072), injected by WithCaptureConfig. The options
@@ -418,16 +414,14 @@ type Server struct {
 	// reports no license section at all.
 	licensePosture func() licensecheck.Posture
 
-	// volumeMeter is the MCP-SESS-READS bound this role enforces on agent
-	// the five MCP-SESS-* counters, shared by everything that must agree about
-	// them: the admission gate that REFUSES on them, both doors' registries that
-	// CHARGE them, the approvals service that WIDENS one when a lender says
-	// continue, and the model path that charges the soft cost share.
+	// volumeMeter holds the MCP-SESS-* counters. The admission gate refuses on them
+	// and both registries charge them. The approvals service widens one when a lender
+	// says continue, and the model path charges the soft cost share.
 	//
-	// Always non-nil (newServer constructs it unconditionally, fail-closed
-	// with no Redis), and WithAgentVolume Rebinds this ONE pointer to the live
-	// Redis-backed meter at boot — so no option order can leave the gate
-	// enforcing a different counter from the one the registry pays into.
+	// It is always non-nil. newServer builds it fail-closed with no Redis, and
+	// WithAgentVolume rebinds this one pointer to the live meter at boot. No option
+	// order can then leave the gate enforcing a different counter from the one the
+	// registry pays into.
 	volumeMeter *agentvolume.Meter
 	// retrievalEmbedder is this role's embed lane for REQUEST-TIME ranking —
 	// the same ModelPath.Embedder the background reindex and drift sweep use,
@@ -486,6 +480,8 @@ type Server struct {
 	// failing to say so.
 	resetRuntime ResetRuntime
 
+	// views is the router read_view runs through, shared by every Server copy.
+	views *viewDoor
 	// listsEnabled is the deployment's lists.enabled (WithListsEnabled).
 	listsEnabled bool
 
@@ -495,5 +491,3 @@ type Server struct {
 }
 
 var _ crmcontracts.ServerInterface = Server{}
-
-type reportingHandlers = reporting.Handlers

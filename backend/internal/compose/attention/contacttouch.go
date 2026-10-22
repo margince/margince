@@ -115,21 +115,23 @@ func (s *Service) nameTheContacts(ctx context.Context, rows []crmcontracts.Workl
 	return nil
 }
 
-// labelContacts names the contacts the projection carried as an id alone —
-// the sender of a thread filed under a deal, the attendee of a meeting — in
-// one read, under the same resolver that named every subject.
+// labelContacts names, in one read, the contacts the projection carried as an
+// id alone. Those are a thread's sender or a meeting's attendees. It asks the
+// same resolver that named every subject.
 func (s *Service) labelContacts(ctx context.Context, rows []crmcontracts.WorklistItem, named []ids.UUID) error {
 	if s.names == nil {
 		return nil
 	}
 	unnamed := make([]ids.UUID, 0, len(named))
 	seen := make(map[ids.UUID]bool, len(named))
-	for _, row := range rows {
-		if row.Contact == nil || row.Contact.Label != nil || seen[ids.UUID(row.Contact.Id)] {
-			continue
+	for i := range rows {
+		for _, contact := range namedContactFacts(&rows[i]) {
+			if contact.Label != nil || seen[ids.UUID(contact.Id)] {
+				continue
+			}
+			seen[ids.UUID(contact.Id)] = true
+			unnamed = append(unnamed, ids.UUID(contact.Id))
 		}
-		seen[ids.UUID(row.Contact.Id)] = true
-		unnamed = append(unnamed, ids.UUID(row.Contact.Id))
 	}
 	if len(unnamed) == 0 {
 		return nil
@@ -139,15 +141,28 @@ func (s *Service) labelContacts(ctx context.Context, rows []crmcontracts.Worklis
 		return fmt.Errorf("attention: naming the contacts on the queue: %w", err)
 	}
 	for i := range rows {
-		contact := rows[i].Contact
-		if contact == nil || contact.Label != nil {
-			continue
-		}
-		if label, known := labels[ids.UUID(contact.Id)]; known {
-			contact.Label = &label
+		for _, contact := range namedContactFacts(&rows[i]) {
+			if label, known := labels[ids.UUID(contact.Id)]; known && contact.Label == nil {
+				contact.Label = &label
+			}
 		}
 	}
 	return nil
+}
+
+// namedContactFacts lists the contacts a row names: its contact, and each
+// recipient of a meeting follow-up.
+func namedContactFacts(row *crmcontracts.WorklistItem) []*crmcontracts.WorklistContactFacts {
+	var out []*crmcontracts.WorklistContactFacts
+	if row.Contact != nil {
+		out = append(out, row.Contact)
+	}
+	if row.Recipients != nil {
+		for i := range *row.Recipients {
+			out = append(out, &(*row.Recipients)[i])
+		}
+	}
+	return out
 }
 
 // contactsOn gathers the contacts a page names, once each, in the order they

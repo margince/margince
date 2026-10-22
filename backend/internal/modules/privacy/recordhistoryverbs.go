@@ -38,9 +38,9 @@ var recordHistoryVerbs = map[string]string{ // #nosec G101 -- audit verbs and th
 	"assign":        "assigned",
 	"advance_stage": "advanced the stage of",
 	"advance_phase": "advanced the phase of",
-	// Deal Room access. "invited" and "revoked access for" rather than
-	// "created"/"archived": the row is incidental, the access is the fact.
-	"invite": "invited",
+	// Deal Room access, not "created"/"archived": the access is the fact, and
+	// an invitation goes to a buyer rather than to the record.
+	"invite": "invited a participant to",
 	"revoke": "revoked access for",
 	// The Deal Room lifecycle. "closed" rather than "ended", because closing a
 	// room keeps the buyer reading it — the phrase should not suggest access
@@ -70,6 +70,7 @@ var recordHistoryVerbs = map[string]string{ // #nosec G101 -- audit verbs and th
 	// names what was issued, because on a member's history "issued" alone
 	// would not distinguish a credential from anything else granted to them.
 	"password_link_issued": "issued a set-password link for",
+	"mfa_removed":          "removed the second factor of",
 	// The subject is the provider connection, so the phrases name what the act
 	// did to the installation's relationship with that provider rather than to
 	// a record: connecting binds a paid credential, disconnecting destroys it
@@ -121,4 +122,8 @@ var recordHistoryVerbs = map[string]string{ // #nosec G101 -- audit verbs and th
 	"place_legal_hold": "put under legal hold",
 	"lift_legal_hold":  "released from legal hold",
 	"pin":              "pinned for statutory retention",
+	// A deal's side asking legal to review the deal, and taking it back. Each
+	// reads "<who> <phrase> the record".
+	"request_legal_review":  "asked legal to review",
+	"withdraw_legal_review": "withdrew the legal review request for",
 }

@@ -33,17 +33,19 @@ return {1, total, limit}`)
 // control is admitted and charged nothing; an agent whose counter cannot be
 // reached is refused, for the reason Read fails closed.
 func (m *Meter) Reserve(ctx context.Context, c Counter, n int) (Reading, bool, error) {
-	bucket := m.Bucket()
+	w := m.window(ctx)
 	if n <= 0 || m.unbounded || !governed(ctx) {
-		return Reading{Counter: c, Limit: m.limits.of(c), Allowance: m.limits.of(c), Bucket: bucket}, true, nil
+		return w.reading(c), true, nil
 	}
 	ws, agent, named := callerKey(ctx)
 	if !named || m.rdb == nil {
-		return Reading{Counter: c, Limit: m.limits.of(c), Allowance: m.limits.of(c), Exceeded: true, Bucket: bucket}, false, nil
+		refused := w.reading(c)
+		refused.Exceeded = true
+		return refused, false, nil
 	}
 	answer, err := reserveScript.Run(ctx, m.rdb,
-		[]string{m.countKey(ws, agent, c, bucket), m.releaseKey(ws, agent, c, bucket)},
-		n, m.limits.of(c), m.ttlSeconds()).Int64Slice()
+		[]string{m.countKey(ws, agent, c, w.bucket), m.releaseKey(ws, agent, c, w.bucket)},
+		n, w.limits.of(c), w.ttlSeconds()).Int64Slice()
 	m.noteReach(err)
 	if err != nil {
 		return Reading{}, false, fmt.Errorf("agentvolume: reserving %d on %s: %w", n, c, err)
@@ -52,10 +54,8 @@ func (m *Meter) Reserve(ctx context.Context, c Counter, n int) (Reading, bool, e
 		return Reading{}, false, fmt.Errorf("agentvolume: reserving on %s answered %d values, want 3", c, len(answer))
 	}
 	admitted := answer[0] == 1
-	reading := Reading{
-		Counter: c, Observed: int(answer[1]), Limit: int(answer[2]), Allowance: m.limits.of(c),
-		Exceeded: !admitted, Bucket: bucket,
-	}
+	reading := w.reading(c)
+	reading.Observed, reading.Limit, reading.Exceeded = int(answer[1]), int(answer[2]), !admitted
 	return reading, admitted, nil
 }
 

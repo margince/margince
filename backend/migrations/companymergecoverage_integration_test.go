@@ -22,6 +22,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -44,20 +45,19 @@ var mergePathFiles = []string{
 	"internal/modules/contacts/merge_company.go",
 	"internal/modules/contacts/merge.go",
 	"internal/modules/contacts/mergecompanyedges.go",
+	"internal/modules/contacts/mergekindid.go",
 	"internal/modules/contacts/company_relationship_types.go",
+	"internal/modules/identity/grantmerge.go",
 }
 
 // companyFKsTheMergeLeaves are the company-pointing columns the merge
 // deliberately does not move, each with the reason moving it would be wrong.
 //
-// EMPTY, and that is the finding rather than an omission: every foreign key
-// pointing at company today is one the merge actually writes. The map stays
-// because the next column to arrive may genuinely belong here — a ledger row
-// that must not move, say — and an entry with a stated cost is how that gets
-// declared. gatekit reports an entry that stops matching, so a waiver added
-// here cannot quietly outlive the column it was written for.
+// gatekit reports an entry that stops matching, so a waiver cannot outlive the
+// column it was written for.
 var companyFKsTheMergeLeaves = gatekit.Waive(map[string]string{
 	"deal_suggestion.company_id":      "a suggestion is Deal Scout's reading of ONE company's evidence, fingerprinted over that company's id and held to one open suggestion per company, so a moved row could collide with the survivor's own and would hash differently from anything the survivor is offered. The merge archives the retired company instead, which the next scout pass reads as a suggestion that no longer stands (superseded); the evidence the merge relinks raises the survivor's own suggestion",
+	"tag_suggestion.company_id":       "a tag suggestion is the tag scout's reading of ONE record's evidence, held to one open suggestion per tag and record, so a moved row could collide with the survivor's own. The merge archives the retired company, which the next scout pass reads as a suggestion that no longer stands (superseded); the activities the merge relinks raise the survivor's own suggestion",
 	"suggestion_dismissal.company_id": "a dismissal is keyed by a fingerprint computed over the company's OWN id, so a row moved onto the survivor would hash differently from anything the survivor is ever offered and could never match again. The merge retires them with the company instead of moving rows that cannot work; a reader may be offered the equivalent suggestion about the survivor once, and dismissing it again sticks. Re-deriving the fingerprints belongs to the suggestion engine that defines them",
 })
 
@@ -75,13 +75,30 @@ var sqlWriteTarget = regexp.MustCompile(`(?i)\b(?:UPDATE|INSERT\s+INTO|DELETE\s+
 // its `DELETE FROM x WHERE company_id = $1` behind, and a census reading table
 // names alone reports that table covered while the merge destroys every row the
 // retired company held.
-var assignsToSurvivor = regexp.MustCompile(`(?i)([a-z_][a-z0-9_]*)\s*=\s*\$(?:2|%d)`)
+//
+// The survivor arrives as `$2` in a positional statement and as `@target` in
+// one bound through pgx.NamedArgs (the merge's mergeTargetKey).
+var assignsToSurvivor = regexp.MustCompile(`(?i)([a-z_][a-z0-9_]*)\s*=\s*[^=]*?(?:\$(?:2|%d)|@target\b)`)
 
-// carriesSurvivorIntoInsert matches the INSERT … SELECT $2 form, where the
+// updateSetClause is the assignment list of an UPDATE: what follows `SET`, up
+// to its `WHERE`.
+var updateSetClause = regexp.MustCompile(`(?is)\bUPDATE\b.*?\bSET\b(.*?)(?:\bWHERE\b|$)`)
+
+// setClauseOf returns the text a statement assigns in, and nothing for a
+// DELETE. A DELETE compares columns to the survivor in its subquery, which is
+// a read. Counting it would certify a merge whose UPDATE had been removed.
+func setClauseOf(stmt string) string {
+	if m := updateSetClause.FindStringSubmatch(stmt); m != nil {
+		return m[1]
+	}
+	return ""
+}
+
+// carriesSurvivorIntoInsert matches the INSERT … SELECT $2 (or @target) form, where the
 // survivor's id arrives positionally as the first selected value rather than as
 // an assignment. The column it lands in is the first name in the INSERT's
 // column list.
-var carriesSurvivorIntoInsert = regexp.MustCompile(`(?is)INSERT\s+INTO\s+[a-z_][a-z0-9_]*\s*\(\s*([a-z_][a-z0-9_]*).*?SELECT\s+\$2`)
+var carriesSurvivorIntoInsert = regexp.MustCompile(`(?is)INSERT\s+INTO\s+[a-z_][a-z0-9_]*\s*\(\s*([a-z_][a-z0-9_]*).*?SELECT\s+(?:\$2|@target\b)`)
 
 // concatenatedColumn matches a Go string concatenation standing where a column
 // name belongs, so a statement that assembles its column still counts as
@@ -112,7 +129,14 @@ func TestEveryCompanyForeignKeyJoinsTheMerge(t *testing.T) {
 	ctx := context.Background()
 
 	rows, err := owner.Query(ctx, `
-		SELECT c.conrelid::regclass::text AS src_table, a.attname AS src_col
+		SELECT c.conrelid::regclass::text AS src_table, a.attname AS src_col,
+		       ARRAY(SELECT ref.attname::text
+		               FROM pg_attrdef ad
+		               JOIN pg_depend d ON d.classid = 'pg_attrdef'::regclass AND d.objid = ad.oid
+		                               AND d.refclassid = 'pg_class'::regclass AND d.refobjid = ad.adrelid
+		               JOIN pg_attribute ref ON ref.attrelid = ad.adrelid AND ref.attnum = d.refobjsubid
+		              WHERE a.attgenerated = 's' AND ad.adrelid = c.conrelid AND ad.adnum = a.attnum
+		              ORDER BY 1) AS generated_from
 		FROM pg_constraint c
 		JOIN unnest(c.conkey) WITH ORDINALITY AS k(attnum, ord) ON true
 		JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = k.attnum
@@ -128,11 +152,12 @@ func TestEveryCompanyForeignKeyJoinsTheMerge(t *testing.T) {
 	seen := 0
 	for rows.Next() {
 		var table, column string
-		if err := rows.Scan(&table, &column); err != nil {
+		var generatedFrom []string
+		if err := rows.Scan(&table, &column, &generatedFrom); err != nil {
 			t.Fatal(err)
 		}
 		seen++
-		if written[table+"."+column] {
+		if written[table+"."+column] || movesAGenerator(written, table, generatedFrom) {
 			continue
 		}
 		// Asked only once the column is already an offender: a waiver checked
@@ -157,6 +182,13 @@ func TestEveryCompanyForeignKeyJoinsTheMerge(t *testing.T) {
 			"a smaller schema than it thinks, and an under-counting census reports PASS over the "+
 			"very columns it failed to look at", seen, theCompanyFKFloor)
 	}
+}
+
+// movesAGenerator reports whether the merge moves a column a generated key is
+// computed from. No statement can assign the generated column itself, so the
+// write that moves it is the one to the column it derives from.
+func movesAGenerator(written map[string]bool, table string, generatedFrom []string) bool {
+	return slices.ContainsFunc(generatedFrom, func(column string) bool { return written[table+"."+column] })
 }
 
 // tablesTheMergeWrites reads the merge path's own source and returns the
@@ -186,7 +218,7 @@ func tablesTheMergeWrites(t *testing.T) map[string]bool {
 				continue
 			}
 			table := strings.ToLower(target[1])
-			for _, moved := range assignsToSurvivor.FindAllStringSubmatch(stmt, -1) {
+			for _, moved := range assignsToSurvivor.FindAllStringSubmatch(setClauseOf(stmt), -1) {
 				written[table+"."+strings.ToLower(moved[1])] = true
 			}
 			if insert := carriesSurvivorIntoInsert.FindStringSubmatch(stmt); insert != nil {

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useId, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { Button, Field, Modal, TextInput } from "./atoms";
 import { ChoiceList } from "./choicelist";
 import { DateInput, type ISODate, isISODate } from "./dateinput";
@@ -23,14 +23,22 @@ import { Heading } from "./heading";
 // its own labels would give the same answer three names.
 export function ResolveSheet({
   open,
+  context,
   labels,
   onSubmit,
   onClose,
   pending,
   error,
   returnFocusTo,
+  outcomeFields,
+  canSubmit,
 }: Readonly<{
   open: boolean;
+  // What is being answered, shown above the choices. The sheet covers the list
+  // that opened it, so without this the reader answers blind.
+  context?: ReactNode;
+  outcomeFields?: (outcome: ResolveOutcome | "") => ReactNode;
+  canSubmit?: (outcome: ResolveOutcome) => boolean;
   labels: ResolveSheetLabels;
   onSubmit: (answer: ResolveAnswer) => void;
   onClose: () => void;
@@ -56,7 +64,8 @@ export function ResolveSheet({
   const complete =
     outcome !== "" &&
     (!needsReason || reason.trim() !== "") &&
-    (!needsRemind || remindAt !== "");
+    (!needsRemind || remindAt !== "") &&
+    (canSubmit?.(outcome) ?? true);
 
   return (
     <Modal
@@ -73,12 +82,15 @@ export function ResolveSheet({
       </DrawerHead>
       <DrawerBody>
         <div className="form-stack">
+          {context}
           <ChoiceList
             legend={labels.outcomeLegend}
             value={outcome}
             choices={labels.outcomes}
             onChange={setOutcome}
           />
+
+          {outcomeFields?.(outcome)}
 
           {/* A hidden finding owes the next reader the reason it is not flagged. */}
           {needsReason && (

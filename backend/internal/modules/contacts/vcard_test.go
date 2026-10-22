@@ -145,6 +145,37 @@ func TestParseVCardsRefusesAFileTooLargeRatherThanReadingItsPrefix(t *testing.T)
 	}
 }
 
+func TestParseVCardsReadsOneUnfoldedLineOverAMebibyte(t *testing.T) {
+	photo := strings.Repeat("A", 1100<<10)
+	got, err := ParseVCards(strings.NewReader("BEGIN:VCARD\nFN:Photo Card\nPHOTO;ENCODING=b:" + photo + "\nEND:VCARD\n"))
+	if err != nil || len(got) != 1 || got[0].FullName != "Photo Card" {
+		t.Fatalf("a card with a 1.1 MiB photo line: %v / %v, want it read", got, err)
+	}
+}
+
+func TestParseVCardsRefusesAnOversizedLineInTheProductsWords(t *testing.T) {
+	_, err := ParseVCards(strings.NewReader("BEGIN:VCARD\nFN:Big\nNOTE:" + strings.Repeat("x", vcardMaxBytes) + "\nEND:VCARD\n"))
+	if err == nil || strings.Contains(err.Error(), "token too long") || !strings.Contains(err.Error(), "exceeds") {
+		t.Fatalf("err = %v, want the file-size refusal and not the scanner's token message", err)
+	}
+}
+
+func TestParseVCardsRefusesACrlfFileCutAtTheBoundRatherThanReadingItsPrefix(t *testing.T) {
+	// The first card is complete inside the prefix and fills it. The scanner
+	// drops each carriage return, so its own count stays under the bound. The
+	// cards after the cut would be dropped without a word.
+	const head, tail = "BEGIN:VCARD\r\nFN:First\r\nNOTE:", "\r\nEND:VCARD\r\n"
+	var b strings.Builder
+	b.WriteString(head)
+	b.WriteString(strings.Repeat("x", vcardMaxBytes+1-len(head)-len(tail)))
+	b.WriteString(tail)
+	b.WriteString("BEGIN:VCARD\r\nFN:Later\r\nEND:VCARD\r\n")
+	got, err := ParseVCards(strings.NewReader(b.String()))
+	if err == nil {
+		t.Fatalf("a CRLF file past the bound parsed %d cards, want a refusal", len(got))
+	}
+}
+
 func TestParseVCardsReadsEveryCardInAMultiCardFile(t *testing.T) {
 	file := "BEGIN:VCARD\nFN:First Contact\nEND:VCARD\n" +
 		"BEGIN:VCARD\nFN:Second Contact\nEND:VCARD\n" +
@@ -255,5 +286,17 @@ func assertChannels(t *testing.T, what string, got, want []VCardChannel) {
 		if got[i] != want[i] {
 			t.Errorf("%s[%d] = %+v, want %+v", what, i, got[i], want[i])
 		}
+	}
+}
+
+// A REV outside the storable range reads as no REV. The card then falls back
+// to the import's clock, and no statement time is stored that no zone can render.
+func TestParseVCardsDropsARevisionNoZoneCanRender(t *testing.T) {
+	got, err := ParseVCards(strings.NewReader("BEGIN:VCARD\nFN:Old Card\nREV:00000101T000000Z\nEND:VCARD\n"))
+	if err != nil || len(got) != 1 {
+		t.Fatalf("ParseVCards = %+v, %v; want one card", got, err)
+	}
+	if got[0].Revised != nil {
+		t.Errorf("Revised = %v, want none for a REV in the year 0", got[0].Revised)
 	}
 }

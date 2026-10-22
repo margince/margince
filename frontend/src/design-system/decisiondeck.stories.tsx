@@ -78,6 +78,8 @@ const LABELS: DecisionDeckLabels = {
   skipped: (count) => (count === 1 ? "1 skipped" : `${count} skipped`),
   commit: "Commit",
   commitNothingToSend: "Clear skipped",
+  acceptanceChanged:
+    "Some approvals changed and need another look. Their acceptances were not sent.",
   unstage: "Undo the last",
   clearedTitle: "The queue is clear.",
   cleared: (count) =>
@@ -277,9 +279,14 @@ export const StagedTray: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const user = userEvent.setup();
-    await user.click(canvas.getAllByRole("button", { name: "Accept" })[0]);
-    await user.click(canvas.getAllByRole("button", { name: "Accept" })[0]);
-    await user.click(canvas.getAllByRole("button", { name: "Reject" })[0]);
+    const clickFirst = async (name: string) => {
+      const [button] = canvas.getAllByRole("button", { name });
+      if (button === undefined) throw new Error(`the deck drew no ${name}`);
+      await user.click(button);
+    };
+    await clickFirst("Accept");
+    await clickFirst("Accept");
+    await clickFirst("Reject");
   },
 };
 

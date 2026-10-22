@@ -156,21 +156,27 @@ func TestEveryAuditVerbTheCodeWritesIsLegal(t *testing.T) {
 	}
 }
 
-// auditLogContractEnums returns the sorted action and actor_type enum sets
-// declared on components.schemas.AuditLogEntry in api/crm.yaml.
+// auditLogContractEnums returns the audit log's sorted action and actor_type
+// enums. AuditLogEntry and AuditHistoryEntry must both $ref AuditAction.
 func auditLogContractEnums(t *testing.T) (action, actorType []string) {
 	t.Helper()
 	raw, err := os.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatalf("read contract: %v", err)
 	}
-	block := schemaBlock(t, string(raw), "AuditLogEntry")
+	doc := string(raw)
+	block := schemaBlock(t, doc, "AuditLogEntry")
+	actionRef := regexp.MustCompile(`(?m)^        action:\s*\n\s+\$ref: '#/components/schemas/AuditAction'`)
+	for _, reader := range []string{"AuditLogEntry", "AuditHistoryEntry"} {
+		if !actionRef.MatchString(schemaBlock(t, doc, reader)) {
+			t.Errorf("contract: %s.action does not $ref AuditAction; a second list of audit verbs "+
+				"drifts from the one the CHECK is held to", reader)
+		}
+	}
 
-	// action: a standalone `enum: [ ... ]` line — AuditLogEntry's only
-	// multi-line enum property, so the sole match anchored to line start.
-	am := regexp.MustCompile(`(?m)^\s+enum:\s*\[([^\]]*)\]`).FindStringSubmatch(block)
+	am := regexp.MustCompile(`(?m)^\s+enum:\s*\[([^\]]*)\]`).FindStringSubmatch(schemaBlock(t, doc, "AuditAction"))
 	if am == nil {
-		t.Fatal("contract: AuditLogEntry.action enum not found")
+		t.Fatal("contract: AuditAction enum not found")
 	}
 	// actor_type: an inline flow-mapping enum on the actor_type line.
 	tm := regexp.MustCompile(`actor_type:[^\n]*enum:\s*\[([^\]]*)\]`).FindStringSubmatch(block)

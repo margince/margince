@@ -88,19 +88,20 @@ func pageInfo(p storekit.Page) crmcontracts.PageInfo {
 // every record of that type, an id alone every type carrying that id.
 func listInput(params crmcontracts.ListApprovalsParams) (ListInput, *httperr.DetailedError) {
 	in := ListInput{Kind: params.Kind}
+	if params.IncludeMuted != nil {
+		in.IncludeMuted = *params.IncludeMuted
+	}
 	if params.Status != nil {
 		status := string(*params.Status)
 		in.Status = &status
 	}
-	if params.Limit != nil {
-		in.Limit = *params.Limit
-	}
+	in.Limit = storekit.ClampLimit(params.Limit)
 	if params.Cursor != nil {
 		in.Cursor = *params.Cursor
 	}
-	if (params.TargetEntityType == nil) != (params.TargetEntityId == nil) {
-		return ListInput{}, httperr.Validation("target_entity_type", "requires_pair",
-			"filtering by target needs both target_entity_type and target_entity_id; supply both or neither")
+	if err := httperr.RequirePair("target_entity_type", params.TargetEntityType,
+		"target_entity_id", params.TargetEntityId); err != nil {
+		return ListInput{}, err
 	}
 	if params.TargetEntityId != nil {
 		targetID := ids.UUID(*params.TargetEntityId)
@@ -130,7 +131,7 @@ func (h Handlers) ApproveApproval(w http.ResponseWriter, r *http.Request, id crm
 		}
 	}
 	approvalID := pathID[ids.ApprovalKind](id)
-	var a row
+	var a crmcontracts.Approval
 	var err error
 	if req.EditedPayload != nil {
 		edited, marshalErr := json.Marshal(*req.EditedPayload)
@@ -138,25 +139,15 @@ func (h Handlers) ApproveApproval(w http.ResponseWriter, r *http.Request, id crm
 			httperr.Write(w, r, httperr.Validation("edited_payload", "malformed_json", marshalErr.Error()))
 			return
 		}
-		a, err = h.svc.DecideEdited(r.Context(), approvalID, edited)
+		a, err = h.svc.DecideEditedWire(r.Context(), approvalID, edited, req.Reason)
 	} else {
-		a, err = h.svc.Decide(r.Context(), approvalID, true, nil)
+		a, err = h.svc.DecideWire(r.Context(), approvalID, true, req.Reason)
 	}
 	if err != nil {
 		writeErr(w, r, err)
 		return
 	}
-	out := h.wire(a)
-	// The approve response carries the ADR-0036 compact JWS so a remote
-	// redeemer can present a signed, effect-bound proof; the row remains
-	// the single-use authority either way.
-	token, err := h.svc.MintApprovalToken(r.Context(), approvalID)
-	if err != nil {
-		writeErr(w, r, err)
-		return
-	}
-	out.ApprovalToken = &token
-	httperr.WriteJSON(w, http.StatusOK, out)
+	httperr.WriteJSON(w, http.StatusOK, a)
 }
 
 func (h Handlers) RejectApproval(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
@@ -168,16 +159,35 @@ func (h Handlers) RejectApproval(w http.ResponseWriter, r *http.Request, id crmc
 			return
 		}
 	}
-	a, err := h.svc.Decide(r.Context(), pathID[ids.ApprovalKind](id), false, req.Reason)
+	a, err := h.svc.DecideWire(r.Context(), pathID[ids.ApprovalKind](id), false, req.Reason)
 	if err != nil {
 		writeErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, h.wire(a))
+	httperr.WriteJSON(w, http.StatusOK, a)
 }
 
 // ApproveApprovalBundle decides every still-pending member of one bundle at
 // once. Each member is decided on its own terms, so the response is per member.
+// AcknowledgeApprovalFailure takes the caller's failed decision off their Worklist.
+func (h Handlers) AcknowledgeApprovalFailure(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	var req crmcontracts.AcknowledgeApprovalFailureJSONRequestBody
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	// The contract requires failed_at; a body without it decodes to the zero
+	// time, which the service would read as an older failure.
+	if req.FailedAt.IsZero() {
+		writeErr(w, r, httperr.Validation("failed_at", "required", "failed_at is required: send the time the Worklist row shows for the failure"))
+		return
+	}
+	if err := h.svc.AcknowledgeEffectFailure(r.Context(), pathID[ids.ApprovalKind](id), req.FailedAt); err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (h Handlers) ApproveApprovalBundle(w http.ResponseWriter, r *http.Request, bundleID crmcontracts.BundleId) {
 	h.decideBundle(w, r, bundleID, true)
 }
@@ -222,8 +232,6 @@ func writeErr(w http.ResponseWriter, r *http.Request, err error) {
 	httperr.Write(w, r, err)
 }
 
-func (h Handlers) wire(a row) crmcontracts.Approval { return wire(a, h.svc.now()) }
-
 // wire maps the store row onto the contract shape; effectiveStatus folds
 // lazy expiry in so a stale pending row never reads as approvable.
 func wire(a row, now time.Time) crmcontracts.Approval {
@@ -237,6 +245,9 @@ func wire(a row, now time.Time) crmcontracts.Approval {
 		Summary:    a.Summary,
 		ExpiresAt:  &a.ExpiresAt,
 		DecidedAt:  a.DecidedAt,
+	}
+	if recipient := requestedDecider(a); !recipient.IsZero() {
+		out.RequestedDeciderId = new(openapi_types.UUID(recipient))
 	}
 	if a.OnBehalfOf != nil {
 		v := openapi_types.UUID(a.OnBehalfOf.UUID)
@@ -254,6 +265,9 @@ func wire(a row, now time.Time) crmcontracts.Approval {
 		out.TargetEntityType = a.TargetType
 	}
 	out.TargetLabel = a.TargetLabel
+	if a.TargetVersion != nil {
+		out.TargetVersion = new(int(*a.TargetVersion))
+	}
 	if a.TargetID != nil {
 		v := openapi_types.UUID(*a.TargetID)
 		out.TargetEntityId = &v

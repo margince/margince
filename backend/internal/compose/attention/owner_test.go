@@ -37,10 +37,13 @@ func TestEveryProducerStatesAnOwner(t *testing.T) {
 	}
 	rows = append(rows, planRows.planRows...)
 	// Waiting messages are read beside the assembled day.
+	met, actionable := classifyMeetingFollowUp(AwaitedReply{SentAt: rankInstant, DealID: ids.NewV7()}, rankInstant)
+	if !actionable {
+		t.Fatal("a meeting filed on a deal produced no follow-up row, so this census misses its lane")
+	}
 	rows = append(rows,
 		classifyWaiting(WaitingCustomer{Since: rankInstant}, rankInstant),
-		classifyAwaiting(AwaitedReply{SentAt: rankInstant}, rankInstant),
-		classifyMeetingFollowUp(AwaitedReply{SentAt: rankInstant}, rankInstant))
+		classifyAwaiting(AwaitedReply{SentAt: rankInstant}, rankInstant), met)
 	// And the FOLD, which mints rows of its own after everything above has run.
 	// A census that stopped at the classifiers never met the one producer that
 	// synthesises a row rather than classifying one, so a batch reached readers
@@ -203,7 +206,7 @@ func dayOfEveryLane() crmcontracts.Attention {
 		AsOf:               rankInstant,
 		Meetings:           lane(item("meeting", "meeting")),
 		MeetingsUnreported: lane(item("meeting-over", "meeting_outcome")),
-		ThisMorning:        []crmcontracts.AttentionItem{item("brief", "brief_item")},
+		ThisMorning:        []crmcontracts.AttentionItem{item("brief", "brief_item", withCurrentIntervention())},
 		Commitments:        lane(item("promise", "conversation_claim")),
 		DidNotRun:          lane(item("failed", "failed_approval")),
 		Dsr:                lane(item("dsr", "dsr")),
@@ -214,6 +217,7 @@ func dayOfEveryLane() crmcontracts.Attention {
 		Undelivered:        lane(item("undelivered", "undelivered")),
 		NeedsYou: []crmcontracts.AttentionItem{
 			item("approval", "approval"), item("pair", "dedupe_candidate"), item("suggestion", "deal_suggestion"),
+			item("tag-suggestion", "tag_suggestion"),
 		},
 		RelationshipDecay: lane(item("decay", "relationship_decay")),
 		CaptureHealth:     lane(item("capture", "capture_health")),
@@ -240,7 +244,6 @@ func dayOfEveryLane() crmcontracts.Attention {
 func TestOnlyAReaderBoundLaneNamesTheReader(t *testing.T) {
 	t.Parallel()
 	readerBound := map[crmcontracts.WorklistItemSource]string{
-		"conversation_claim":   "OpenCommitmentsDue takes the actor's id",
 		"failed_approval":      "ListWire with FailedForDecider carries the decider",
 		"introduction_request": "AwaitingMyAnswer is the reader's own asks",
 		"relationship_decay":   "QuietEdgesForUser binds the edges to the actor",
@@ -297,18 +300,6 @@ func holdsABatch(rows []ranked) bool {
 	return false
 }
 
-// TestATeamPageDropsAnOutsideTeamTask closes the hole publishing the owner
-// opened.
-//
-// keepTeams judges a row through answersTo, which reads `ranked.owner`. The
-// task lane never set it, so a task answered nobody and the filter kept it as
-// unowned work — the gap its own comment describes for link-less tasks, which
-// auth.ActivityDiscoverClause makes discoverable installation-wide. Putting the
-// assignee on the wire made that worse: the colleague's user id travelled with
-// the row.
-//
-// The two readings come off one field now, so a task cannot be unowned to the
-// filter and owned to the client.
 func TestATeamPageDropsAnOutsideTeamTask(t *testing.T) {
 	t.Parallel()
 	outsider := ids.MustParse("01a05500-0000-7000-8000-00000000d15e")

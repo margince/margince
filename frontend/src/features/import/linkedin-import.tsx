@@ -1,0 +1,402 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useId, useState } from "react";
+import { api } from "../../api/client";
+import type { components } from "../../api/schema";
+import { Button, Field, Modal, TextInput } from "../../design-system/atoms";
+import { Callout } from "../../design-system/callout";
+import { Heading } from "../../design-system/heading";
+import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
+import { SettingList, SettingRow } from "../../design-system/settingrow";
+import { Switch } from "../../design-system/switch";
+import { formatNumber } from "../../format/format";
+import { useLocale, useT } from "../../i18n";
+import { postMultipart } from "../../lib/multipart";
+import { problemMessageOf, unwrap } from "../../lib/problem";
+import {
+  LINKEDIN_ACCOUNT_KEY,
+  useSaveLinkedInAccount,
+} from "../../lib/use-linkedin-account";
+import "./linkedin-import.css";
+
+// The LinkedIn connections import (ADR-0078 §2.1b).
+//
+// Your own export, not an integration: LinkedIn hands every member a
+// Connections.csv under Settings → Data privacy, and this reads it. No app
+// approval, no OAuth, nothing to configure.
+//
+// The copy says what happens to the file, because a user uploading their
+// personal address book into a company system deserves to know before they
+// click rather than after. The imported rows never become contacts.
+//
+// Two decisions, so two rows: which profile the imported network is attributed
+// to, and which file to read. The URL is an ANSWER — a value with a verb that
+// changes it — so the field that edits it lives in a modal and the row prints
+// what is set now. What the import PRODUCED is not an answer to anything and
+// gets no row: it is a report, and it renders under the list.
+
+type ImportSummary = {
+  rows: number;
+  imported: number;
+  skipped: number;
+  confirmed: number;
+  suggested: number;
+};
+
+function useImportConnections() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async (file: File): Promise<ImportSummary> => {
+      const payload = await postMultipart("/v1/me/linkedin-connections", {
+        file,
+      });
+      return payload as ImportSummary;
+    },
+    // An import changes what all three cards on this tab read, and they hold
+    // separate cache keys. Without this the summary reports new matches while
+    // the queue beside it still shows the pre-import "nothing waiting" it
+    // cached on load — the page contradicts itself and only a reload fixes it.
+    onSuccess: async () => {
+      await client.invalidateQueries({ queryKey: LINKEDIN_ACCOUNT_KEY });
+      await client.invalidateQueries({ queryKey: ["linkedin-connections"] });
+      await client.invalidateQueries({ queryKey: ["linkedin-reach"] });
+    },
+  });
+}
+
+type LinkedInAccount = components["schemas"]["LinkedInAccount"];
+
+function useLinkedInAccount() {
+  return useQuery({
+    queryKey: LINKEDIN_ACCOUNT_KEY,
+    queryFn: async (): Promise<LinkedInAccount> => {
+      return unwrap(await api.GET("/me/linkedin-account", {}));
+    },
+  });
+}
+
+// Your own LinkedIn account: the profile the onboarding act recorded, shown
+// back so it can be corrected. A member is the only authority on their own
+// profile URL, so this is the caller's row and nobody else's — the API has no
+// path to another member's.
+//
+// The row is the brief's value-and-verb shape: the URL that is stored reads on
+// the left, the verb that changes it sits at the same x as every other answer on
+// the page, and the field itself is in a modal. One input is not what put it
+// there — a URL with an Edit beside it is a row that says what it is set to,
+// while a text box in the card says only that something is editable.
+function LinkedInProfileRow() {
+  const t = useT();
+  const account = useLinkedInAccount();
+  const save = useSaveLinkedInAccount();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<string | null>(null);
+  const headingId = useId();
+  const formId = useId();
+
+  const stored = account.data?.profile_url ?? "";
+  // Adopt the server value until the member starts typing, so a save or a
+  // refetch is reflected without discarding an edit in progress. Adjusted
+  // during render rather than in an effect: an effect would paint the stale
+  // value first and then correct it.
+  const [seen, setSeen] = useState(stored);
+  if (seen !== stored) {
+    setSeen(stored);
+    setDraft(null);
+  }
+  const value = draft ?? stored;
+  const dirty = value.trim() !== stored;
+
+  // Closing is abandoning: the draft goes and so does the previous attempt's
+  // refusal, which would otherwise be on screen the next time the dialog opens
+  // and read as a fresh failure of an edit nobody has made yet.
+  const close = () => {
+    setEditing(false);
+    setDraft(null);
+    save.reset();
+  };
+
+  if (account.isError) {
+    // The row keeps its place and says the read failed. `SettingList` rules
+    // between whatever it holds, so a surface standing in for a row lines up
+    // with the rows around it.
+    return (
+      <Callout
+        kind="outcome"
+        tone="danger"
+        title={t("linkedinImport.profileReadFailed")}
+      >
+        {problemMessageOf(account.error, t)}
+      </Callout>
+    );
+  }
+
+  return (
+    <>
+      <SettingRow
+        label={t("linkedinImport.profileLabel")}
+        // The answer the row holds. An empty URL is not a blank cell — it is
+        // "we have not recorded one", which is a different claim from "the
+        // member has no profile".
+        value={stored === "" ? t("linkedinImport.profileNotSet") : stored}
+        // What the setting DOES, which is what a description is for. The
+        // not-connected arm used to open "Not connected yet." — the same fact
+        // the `value` beside it already states as "Not recorded yet", said
+        // twice on one row in two different words.
+        description={
+          account.data?.connected
+            ? t("linkedinImport.connectedNote")
+            : t("linkedinImport.notConnectedNote")
+        }
+        control={
+          <Button variant="ghost" onClick={() => setEditing(true)}>
+            {t("linkedinImport.editProfile")}
+          </Button>
+        }
+      />
+      <Modal
+        open={editing}
+        onClose={close}
+        labelledBy={headingId}
+        intent="form"
+      >
+        <Heading size="large" id={headingId} className="t-h2 modal-title">
+          {t("linkedinImport.editProfileTitle")}
+        </Heading>
+        <form
+          id={formId}
+          className="form-stack"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (dirty) {
+              // Correcting the URL is not disconnecting: the save carries
+              // `connected: false` and the store keeps whatever authorization
+              // the member has already given.
+              save.mutate(
+                { profileUrl: value.trim(), connected: false },
+                { onSuccess: () => setEditing(false) },
+              );
+            }
+          }}
+        >
+          <Field label={t("linkedinImport.profileLabel")}>
+            {(control) => (
+              <TextInput
+                {...control}
+                type="url"
+                inputMode="url"
+                data-testid="linkedin-profile-url"
+                placeholder={t("linkedinImport.profilePlaceholder")}
+                value={value}
+                onChange={(e) => setDraft(e.target.value)}
+              />
+            )}
+          </Field>
+          {save.isError && (
+            <Callout
+              kind="outcome"
+              tone="danger"
+              title={t("linkedinImport.saveFailed")}
+            >
+              {problemMessageOf(save.error, t)}
+            </Callout>
+          )}
+        </form>
+        <div className="actions">
+          <Button type="button" onClick={close} disabled={save.isPending}>
+            {t("create.cancel")}
+          </Button>
+          {/* `disabled` for an unchanged URL the reader fixes by typing;
+              `pending` keeps a started save focusable so its wait is announced. */}
+          <Button
+            variant="primary"
+            type="submit"
+            form={formId}
+            disabled={!dirty}
+            pending={save.isPending}
+          >
+            {t("linkedinImport.saveProfile")}
+          </Button>
+        </div>
+      </Modal>
+    </>
+  );
+}
+
+// Whether colleagues who may read a company see how many of this member's
+// connections work there.
+//
+// On by default, and the description says so, because a member who never opens
+// this is listed. The count is a derived fact and names no connection, which is
+// what makes a default-on setting defensible. It is still a fact about them, so
+// they may withhold it.
+//
+// Their own reach page is unaffected either way: that one answers about
+// themselves, and this governs what colleagues are shown.
+function ReachVisibilityRow() {
+  const t = useT();
+  const account = useLinkedInAccount();
+  const client = useQueryClient();
+  const save = useMutation({
+    mutationFn: async (visible: boolean): Promise<void> => {
+      unwrap(
+        await api.PUT("/me/linkedin-account", {
+          body: { reach_visible_to_team: visible },
+        }),
+      );
+    },
+    onSuccess: async () => {
+      await client.invalidateQueries({ queryKey: LINKEDIN_ACCOUNT_KEY });
+      // The colleague lists every company page draws from this answer.
+      await client.invalidateQueries({ queryKey: ["company-linkedin-reach"] });
+    },
+  });
+  // Only a successful read answers this. Until then the control is unavailable
+  // rather than showing the default. A member who withheld their reach would
+  // see it on, and a click would write a state nobody read back.
+  const answered = account.isSuccess;
+  const visible = account.data?.reach_visible_to_team ?? true;
+  return (
+    <SettingRow
+      label={t("linkedinImport.reachVisibleLabel")}
+      description={t("linkedinImport.reachVisibleHelp")}
+      control={(props) => (
+        <div className="li-reach-visibility">
+          <Switch
+            label={t("linkedinImport.reachVisibleLabel")}
+            labelHidden
+            checked={answered && visible}
+            reason={
+              answered ? undefined : t("linkedinImport.reachVisibleUnread")
+            }
+            pending={save.isPending}
+            describedBy={props["aria-describedby"]}
+            onChange={(next) => save.mutate(next)}
+          />
+          {save.isError && (
+            <Callout
+              kind="outcome"
+              tone="danger"
+              title={t("linkedinImport.reachVisibleSaveFailed")}
+            >
+              {problemMessageOf(save.error, t)}
+            </Callout>
+          )}
+        </div>
+      )}
+    />
+  );
+}
+
+export function LinkedInImportCard() {
+  const t = useT();
+  const [fileName, setFileName] = useState<string | null>(null);
+  const importer = useImportConnections();
+
+  return (
+    // No per-card bottom margin: the tab owns the rhythm between its cards.
+    <Panel title={t("linkedinImport.title")}>
+      <PanelBody>
+        {/* ONE description, in the spacing contract's spelling. A second
+            full-width paragraph under it — where to get the file, and what
+            happens to it — was a wall of prose before the card's first row, and
+            both halves of it belong to the import row rather than to the card:
+            they say what that one setting does. */}
+        <PanelIntro>{t("linkedinImport.sub")}</PanelIntro>
+      </PanelBody>
+      <SettingList bleed="settings">
+        <LinkedInProfileRow />
+        <ReachVisibilityRow />
+        {/* LinkedIn's export holds many CSVs and the wrong one fails with an
+            unhelpful parse error, so the description names the file to pick. */}
+        <SettingRow
+          label={t("linkedinImport.importLabel")}
+          description={t("linkedinImport.whichFile")}
+          control={
+            <div className="li-import-picker">
+              <label
+                className="li-import-button"
+                htmlFor="linkedin-import-file"
+              >
+                {t("linkedinImport.choose")}
+              </label>
+              <input
+                id="linkedin-import-file"
+                type="file"
+                accept=".csv,text/csv"
+                data-testid="linkedin-import-file"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  setFileName(file?.name ?? null);
+                  if (file) {
+                    importer.mutate(file);
+                  }
+                }}
+              />
+              {fileName && <span className="t-sub">{fileName}</span>}
+            </div>
+          }
+        />
+      </SettingList>
+      {/* Outside the list: the import's progress and outcome answer no
+          setting. */}
+      {!importer.isIdle && (
+        <PanelBody>
+          {importer.isPending && (
+            <p className="t-sub">{t("linkedinImport.working")}</p>
+          )}
+          {importer.isError && (
+            <Callout
+              kind="outcome"
+              tone="danger"
+              title={t("linkedinImport.importFailed")}
+            >
+              {problemMessageOf(importer.error, t)}
+            </Callout>
+          )}
+          {importer.isSuccess && <ImportResult summary={importer.data} />}
+        </PanelBody>
+      )}
+    </Panel>
+  );
+}
+
+// ImportResult states what happened in the terms someone checking the import
+// would ask. Skipped rows are shown rather than hidden: a file half-ignored
+// under a success message is worse than a refusal.
+function ImportResult({ summary }: Readonly<{ summary: ImportSummary }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  return (
+    <>
+      <dl data-testid="linkedin-import-result" className="li-import-result">
+        <div>
+          <dt>{t("linkedinImport.imported")}</dt>
+          <dd>{formatNumber(summary.imported, locale)}</dd>
+        </div>
+        <div>
+          <dt>{t("linkedinImport.confirmed")}</dt>
+          <dd>{formatNumber(summary.confirmed, locale)}</dd>
+        </div>
+        <div>
+          <dt>{t("linkedinImport.suggested")}</dt>
+          <dd>{formatNumber(summary.suggested, locale)}</dd>
+        </div>
+        {summary.skipped > 0 && (
+          <div>
+            <dt>{t("linkedinImport.skipped")}</dt>
+            <dd>{formatNumber(summary.skipped, locale)}</dd>
+          </div>
+        )}
+      </dl>
+      {/* Zero matches on a new workspace is expected rather than wrong: the
+          contacts an export matches arrive with mail capture over the hours
+          after it. Saying so stops it reading as a broken import. */}
+      {summary.confirmed + summary.suggested === 0 && summary.imported > 0 && (
+        <p className="t-sub">{t("linkedinImport.noMatchesYet")}</p>
+      )}
+    </>
+  );
+}

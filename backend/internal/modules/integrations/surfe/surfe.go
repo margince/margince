@@ -279,6 +279,14 @@ func (a *Adapter) call(ctx context.Context, cred provider.Credential, method, pa
 	if readErr != nil {
 		return resp.StatusCode, fmt.Errorf("surfe: reading the response: %w", readErr)
 	}
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		// A refusal carries the vendor's own prose, which may be HTML from a
+		// gateway rather than their documented JSON. Decoding it would report
+		// a shape fault where the status is the answer, and the status is what
+		// every caller here branches on. So a wrong key reads as refused
+		// rather than as a vendor whose API changed.
+		return resp.StatusCode, nil
+	}
 	if len(raw) == 0 {
 		return resp.StatusCode, nil
 	}

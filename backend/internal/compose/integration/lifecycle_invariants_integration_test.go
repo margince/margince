@@ -534,19 +534,19 @@ func TestActivityLinkTargetsMustBeVisible(t *testing.T) {
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, repPermsWithCapture())
 
 	if _, _, err := e.Activities.LogActivity(rep, activities.LogActivityInput{
-		Kind: "note", Source: "manual",
+		Kind: "note", Subject: new("Linked note"), Source: "manual",
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: theirContact}},
 	}); err != nil {
 		t.Errorf("link to another team's readable contact → %v, want success", err)
 	}
 	if _, _, err := e.Activities.LogActivity(rep, activities.LogActivityInput{
-		Kind: "note", Source: "manual",
+		Kind: "note", Subject: new("Linked note"), Source: "manual",
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: foreignContact}},
 	}); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("link to a capture-private contact → %v, want ErrNotFound", err)
 	}
 	if _, _, err := e.Activities.LogActivity(rep, activities.LogActivityInput{
-		Kind: "note", Source: "manual",
+		Kind: "note", Subject: new("Linked note"), Source: "manual",
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: ids.NewV7()}},
 	}); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("link to a nonexistent contact → %v, want ErrNotFound", err)

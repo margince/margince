@@ -60,6 +60,7 @@ changes none.
 | Object | `admin` | `management` | `manager` | `rep` | `read_only` | `ops` |
 |---|---|---|---|---|---|---|
 | `activity` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
+| `agent_client` | CRUD | -R-- | ---- | ---- | ---- | -R-- |
 | `ai_budget` | -RU- | -R-- | ---- | ---- | ---- | -RU- |
 | `ai_diagnostics` | -R-- | -R-- | ---- | ---- | ---- | -R-- |
 | `ai_model_rate` | CRU- | ---- | ---- | ---- | ---- | CRU- |
@@ -79,6 +80,7 @@ changes none.
 | `contract` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `custom_field` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
 | `data_coverage` | -R-- | ---- | ---- | ---- | ---- | -R-- |
+| `data_task` | -RU- | ---- | ---- | ---- | ---- | -RU- |
 | `deal` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `deal_room` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `embedding_reindex` | -RU- | ---- | ---- | ---- | ---- | -RU- |
@@ -94,6 +96,8 @@ changes none.
 | `knowledge_corpus` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
 | `knowledge_document` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
 | `lead` | CRUD | CRUD | CRUD | CRUD | -R-- | CRUD |
+| `legal_entity` | CRUD | -R-- | -R-- | -R-- | -R-- | -R-- |
+| `legal_review` | -RU- | ---- | ---- | ---- | ---- | ---- |
 | `license` | -R-- | ---- | ---- | ---- | ---- | -R-- |
 | `list` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `oauth_application` | CRUD | -R-- | ---- | ---- | ---- | CRUD |

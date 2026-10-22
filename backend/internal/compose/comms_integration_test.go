@@ -194,7 +194,7 @@ func TestCommsAdapterSharesTheGovernedPaths(t *testing.T) {
 func assertModelAndFallbackDrafts(ctx context.Context, t *testing.T, adapter commsAdapter, anchorID ids.UUID) {
 	t.Helper()
 	adapter.draft = replyDrafter{
-		brain: integrationReplyBrain{response: `{"subject":"Re: Your pricing question","body":"Hi Anna,\n\nThe discount is confirmed for review."}`},
+		brain: integrationReplyBrain{response: `{"subject":"Re: Your pricing question","body":"Hello,\n\nThe discount is confirmed for review."}`},
 		store: adapter.store,
 		log:   slog.New(slog.NewTextHandler(io.Discard, nil)),
 	}
@@ -202,7 +202,7 @@ func assertModelAndFallbackDrafts(ctx context.Context, t *testing.T, adapter com
 	if err != nil {
 		t.Fatal(err)
 	}
-	if subject != pricingReplySubject || body != "Hi Anna,\n\nThe discount is confirmed for review." {
+	if subject != pricingReplySubject || body != "Hello,\n\nThe discount is confirmed for review." {
 		t.Fatalf("model draft = %q / %q", subject, body)
 	}
 
@@ -215,8 +215,9 @@ func assertModelAndFallbackDrafts(ctx context.Context, t *testing.T, adapter com
 	if err != nil {
 		t.Fatalf("fallback draft: %v", err)
 	}
-	if subject != pricingReplySubject || !strings.Contains(body, "confirm the discount") {
-		t.Fatalf("fallback draft = %q / %q", subject, body)
+	// The intent steers a model; with none answering, it is not message text.
+	if subject != pricingReplySubject || !strings.Contains(body, "Pricing question") || strings.Contains(body, "confirm the discount") {
+		t.Fatalf("fallback draft = %q / %q, want a reply about the thread without the steering text", subject, body)
 	}
 }
 

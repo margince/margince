@@ -39,6 +39,15 @@ type Tag struct {
 	// name whose only holder is archived is a conflict, not a match — so a
 	// caller that cannot see this would read a refusal as a bug.
 	Archived bool `json:"archived,omitempty"`
+	// CarriedBy counts the records the caller can see carrying the word, when
+	// with_carried_by asked for it.
+	CarriedBy *int `json:"carried_by,omitempty"`
+}
+
+// TagQuery is list_tags' arguments: retired words, and per-word record counts.
+type TagQuery struct {
+	IncludeArchived bool `json:"include_archived"`
+	WithCarriedBy   bool `json:"with_carried_by"`
 }
 
 // TagDetail is one word with its weight: how many records of each advertised
@@ -82,7 +91,7 @@ type Tags interface {
 	// ListTags answers the workspace's vocabulary. Read before applying:
 	// apply_tag REFUSES a word the workspace does not hold, so a caller who
 	// cannot see the existing ones asks for a near-duplicate.
-	ListTags(ctx context.Context, includeArchived bool) (tags []Tag, truncated bool, err error)
+	ListTags(ctx context.Context, q TagQuery) (tags []Tag, truncated bool, err error)
 	// GetTag answers one word with how much of the workspace carries it.
 	GetTag(ctx context.Context, tagID ids.UUID) (TagDetail, error)
 	// RecordTags answers the tags on one record, with who applied each.
@@ -128,11 +137,14 @@ type Tags interface {
 	// It answers the WORD, not TagDetail: usage counts are a second read, and a
 	// write that reported them would either pay for a count nobody asked for or
 	// — as this first shipped — report zero for a word on fifty records.
-	CreateTag(ctx context.Context, name string, color *string) (Tag, error)
+	CreateTag(ctx context.Context, name string, color, description *string) (Tag, error)
 	// UpdateTag renames, recolours or describes an existing word. A nil field
 	// is left alone, which is what lets a caller recolour without restating a
 	// name it never read.
 	UpdateTag(ctx context.Context, tagID ids.UUID, in TagEdit) (Tag, error)
+	// ArchiveTag retires a word: it stays on the records carrying it and can
+	// no longer be applied. The store takes `tag.delete`.
+	ArchiveTag(ctx context.Context, tagID ids.UUID) (Tag, error)
 	// MergeTags folds the source word into the target: every record carrying
 	// the source ends up carrying the target, the source is archived, and its
 	// NAME IS RELEASED. The store takes `tag.update`, the same grant an update
@@ -173,7 +185,10 @@ func RegisterTagTools(r *Registry, tags Tags) {
 	r.Register(removeTag{tags: tags})
 	r.Register(createTag{tags: tags})
 	r.Register(updateTag{tags: tags})
+	r.Register(archiveTag{tags: tags})
 	r.Register(mergeTags{tags: tags, language: r.language})
+	r.Register(readTags{})
+	r.Register(changeTags{})
 }
 
 // taggingSchema is apply's and remove's argument shape, spelled once: they name
@@ -204,23 +219,22 @@ func (t listTags) Spec() mcp.ToolSpec {
 		Name: "list_tags", Title: "List tags", Version: toolVersionV1,
 		Description:   listTagsCopy.render(),
 		Instead:       listTagsCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "listTags",
 		InputSchema: schema(`{"type":"object","properties":{
-			"include_archived":{"type":"boolean","description":"Also list retired words; they cannot be applied"}},
+			"include_archived":{"type":"boolean","description":"Also list retired words; they cannot be applied"},
+			"with_carried_by":{"type":"boolean","description":"Also count the records you can see carrying each word"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[ListTagsResult](),
 	}
 }
 
 func (t listTags) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
-	var args struct {
-		IncludeArchived bool `json:"include_archived"`
-	}
+	var args TagQuery
 	if err := decodeArgs(in, &args); err != nil {
 		return nil, err
 	}
-	tags, truncated, err := t.tags.ListTags(ctx, args.IncludeArchived)
+	tags, truncated, err := t.tags.ListTags(ctx, args)
 	if err != nil {
 		return nil, err
 	}
@@ -243,7 +257,7 @@ func (t getTag) Spec() mcp.ToolSpec {
 		Name: "get_tag", Title: "Get a tag", Version: toolVersionV1,
 		Description:   getTagCopy.render(),
 		Instead:       getTagCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "getTag",
 		InputSchema: schema(`{"type":"object","required":["tag_id"],"properties":{
 			"tag_id":{"type":"string","format":"uuid"}},"additionalProperties":false}`),
@@ -281,7 +295,7 @@ func (t getRecordTags) Spec() mcp.ToolSpec {
 		Name: "get_record_tags", Title: "Get a record's tags", Version: toolVersionV1,
 		Description:   getRecordTagsCopy.render(),
 		Instead:       getRecordTagsCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "getRecordTags",
 		InputSchema: schema(`{"type":"object","required":["record_type","record_id"],"properties":{
 			"record_type":{"type":"string","enum":[` + strings.Join(quoted, ",") + `]},
@@ -317,7 +331,7 @@ func (t applyTag) Spec() mcp.ToolSpec {
 		Name: "apply_tag", Title: "Apply a tag to a record", Version: toolVersionV1,
 		Description:   applyTagCopy.render(),
 		Instead:       applyTagCopy.Instead,
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp:    "applyTag",
 		InputSchema:  schema(taggingSchema(t.tags.TaggableTypes())),
 		OutputSchema: schemaFor[TagAppliedResult](),
@@ -366,7 +380,7 @@ func (t removeTag) Spec() mcp.ToolSpec {
 		Name: "remove_tag", Title: "Take a tag off a record", Version: toolVersionV1,
 		Description:   removeTagCopy.render(),
 		Instead:       removeTagCopy.Instead,
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp:    "removeTag",
 		InputSchema:  schema(taggingSchema(t.tags.TaggableTypes())),
 		OutputSchema: schemaFor[TagAppliedResult](),

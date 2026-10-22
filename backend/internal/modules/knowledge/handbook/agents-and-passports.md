@@ -15,31 +15,63 @@ There is one rule under everything here:
 
 ## Connecting and controlling agents
 
+### How do I connect my AI tool to Margince?
+To connect your AI tool to Margince, open **Settings → AI access** and answer the two questions on the **Connect your AI tool** card. Copilot on a personal account cannot connect; the card says so. Gemini through work or school needs [an admin to register it first](settings.md#how-do-i-let-gemini-through-work-or-school-connect). If the card says AI tools "cannot connect to Margince yet", an administrator or operations user must turn it on first.
+1. Open the account menu, choose **Settings**, then **AI access**.
+2. Under **Which AI do you use?**, choose **Claude**, **ChatGPT**, **Microsoft Copilot** or **Gemini**.
+3. Under **Whose plan is it?**, choose **My company’s** or **My own**.
+4. If the card says "First, your admin.", choose **Download guide for your admin** and send them the file. It holds their steps and your Margince address.
+5. If the card shows your Margince address, choose **Copy address** and paste it where the steps say.
+6. Follow the numbered steps the card shows for that one case.
+7. When Margince opens, sign in. **Authorize access** ticks all five permissions; beside **Send messages** it says "sends messages as you, without asking first". Clear any permissions the tool should not get, then choose **Authorize**.
+To refuse, choose **Deny access**.
+Authorizing creates the connection, listed under **Your connections**, so you need no passport.
+Also called: connect Claude, connect ChatGPT, Copilot, Gemini, AI assistant, connector, MCP.
+
 ### What is an agent passport?
-An agent passport in Margince is the credential that lets one AI agent or script act as you. It carries your own seat, permissions and record visibility, cut down to the **Agent permissions** you tick.
-Those are **Read records**, **Draft messages**, **Change records**, **Send messages** and **Buy contact data**. An agent can never do more than you can. You create and revoke passports yourself in **Settings → Agents**.
+An agent passport in Margince is your personal access token: whatever uses it, an AI tool or your own code, acts as you. It carries your own seat, permissions and record visibility, cut down to the **Agent permissions** you tick.
+Those are **Read records**, **Draft messages**, **Change records**, **Send messages** and **Buy contact data**. An agent can never do more than you can. You create and revoke passports yourself in **Settings → AI access**, under **For developers**.
 Also called: API key, token, agent credential, access token.
 
 ### How do I give an agent access to Margince?
-To give a script or AI agent access to Margince, open **Settings → Agents** and choose **New passport** on the **Agent passports** card.
-1. Open the account menu, choose **Settings**, then **Agents**.
-2. Choose **New passport**.
-3. Fill **Agent name**.
-4. Under **Agent permissions**, tick at least one permission.
-5. Choose **Mint passport**.
-6. Copy the **Credential** now: "Copy it now. This credential is shown only once."
-A passport lasts 30 days. For an MCP client, use **Connect an agent** on the **Connected agents** card instead.
-Also called: create an API key, connect ChatGPT or Claude, integrate an agent.
+To give a script or your own code access to Margince, open **Settings → AI access**, then **For developers**. Choose **New passport** on the **API keys** tab.
+1. Open the account menu, choose **Settings**, then **AI access**.
+2. Open **For developers**.
+3. Choose **New passport**.
+4. Fill **Agent name**.
+5. Under **Agent permissions**, tick at least one permission.
+6. Choose **Mint passport**.
+7. Choose **Copy passport** now: "Passport created. It is shown only once, so copy it now."
+8. Under **Next, use it**, choose **Download skill** for an AI tool, or **Copy example** for your own code.
+A passport lasts 30 days. To use Margince in Claude, ChatGPT, Copilot or Gemini, [connect the tool](#how-do-i-connect-my-ai-tool-to-margince) instead.
+Also called: create an API key, script access, integrate an agent.
 
-### How do I connect an MCP client such as Claude to Margince?
-To connect an agent that uses MCP, open **Settings → Agents**, go to **Connected agents** and follow **Connect an agent**. Run one of the commands shown, and the client signs itself up.
-Margince then shows **Authorize access**: "{client} will be able to act in Margince as you, with the access checked below." Clear the boxes for what it should not get, then choose **Authorize**, or **Deny access**.
-If the page says "The MCP connector is off for this installation.", an administrator or operations user must turn it on first.
-Also called: MCP server, Claude Desktop, AI assistant integration.
+### How do I use a passport in my AI tool?
+To use a passport in an AI tool such as Claude Code, Codex or Antigravity, download the Margince skill. Then save your passport where the tool can find it.
+1. Open **Settings → AI access**, then **For developers**.
+2. On the **API keys** tab, under **In a script or another AI tool**, choose **Download skill**.
+3. Open `margince-skill.zip`. It holds one folder, `margince`.
+4. For Claude Code, move the folder to `~/.claude/skills/margince`. For Claude Desktop, add the zip file as a skill in the app's settings.
+5. For Codex or Antigravity, follow the `README.md` in the folder. You move the folder, then add one line to your `AGENTS.md` or `GEMINI.md`.
+6. Before you start the AI tool, set `MARGINCE_PASSPORT` to your passport, the only place the tool reads it from. The `README.md` shows how, also from your Keychain or 1Password.
+Never paste your passport into a chat with the AI tool. The skill tells the tool where to find it. No passport is in the download, so one download works for all your passports.
+Also called: Claude skill, add Margince to Claude Code, Codex, Antigravity, AI tool setup.
+
+### How do I call Margince from my own code?
+To call Margince from your own code, send your passport with each call.
+On the **API keys** tab in **For developers**, under **In your own code**, choose **curl**, **Python** or **JavaScript**, then **Copy example**. It reads the passport from `MARGINCE_PASSPORT`, so set that first.
+The `openapi.yaml` file in the skill lists every call a passport can make.
+Also called: REST API, API key, script, access token, integration.
+
+### How do I connect a coding agent to Margince?
+For Claude Code, Codex or Antigravity, open **Settings → AI access**, then **For developers**, the **Coding agents** tab and your tool.
+Do what the tab shows for your tool: run the command, or for Antigravity add the block to the file it names. Then sign in in the browser and choose **Authorize** on **Authorize access**. You need no passport for this.
+If the page says AI tools "cannot connect to Margince yet", an administrator or operations user must turn it on first.
+Also called: MCP client, MCP server, command line, AI assistant integration.
 
 ### How do I revoke an agent's access?
-To stop an agent, open **Settings → Agents**. For a passport, choose **Revoke** on it: "The passport’s credential is invalidated immediately. The agent loses access on its next call."
-For an MCP client, choose **Disconnect** under **Connected agents**, which ends the whole connection. Turning off a user revokes all their passports at once.
+To stop an agent, open **Settings → AI access**. For a passport, open **For developers**, then the **…** menu on its row, and choose **Revoke**: "The passport’s credential is invalidated immediately. The agent loses access on its next call."
+For a connected AI tool, open the **…** menu on its row under **Your connections** and choose **Disconnect**, which ends the whole connection. Turning off a user revokes all their passports at once.
 Also called: kill switch, remove an agent, disconnect, delete an API key.
 
 ### How do I let Margince work overnight for me?
@@ -76,11 +108,6 @@ AI names the address Margince reads. Someone who talks the AI round could make
 it reach an address nobody holding the passport ever picked. That is a question
 about where your data goes, so it waits.
 
-**Creating or changing a custom field.** This changes the fields everyone can use.
-
-**Creating or changing a webhook subscription.** This decides where your events
-are sent.
-
 **Folding one tag into another.** A merge renames a word on every record
 carrying it, and renaming it back does not undo it.
 
@@ -103,15 +130,13 @@ than all the others together.
 
 An installation that needs every agent send confirmed can set a floor on
 sending. A send then waits in Approvals like anything else. Whoever runs your
-installation sets this; there is no switch for it in Settings.
+installation sets this; there is no switch for it in Settings. If you need sends
+confirmed, ask them whether that floor is set. Ask; do not guess.
 
-If you need sends confirmed in your company, ask whoever runs your
-installation whether that floor is set. Ask; do not guess.
-
-The **Autonomy tiers** card in **Settings → Agents** states the same rule.
+The **Autonomy tiers** card in **Settings → AI access**, on the **Agent rules** tab under **For developers**, states the same rule.
 It reads "Send email, book meetings, update a contact or deal: runs immediately if the
 agent has that permission. Granting the permission is the approval." and
-"Enrichment, custom fields, webhooks, tag merges: wait in Approvals."
+"Enrichment and tag merges: wait in Approvals."
 
 See [Approvals](approvals.md) for what happens to a card once it is staged.
 
@@ -144,8 +169,9 @@ in these cases:
   action and the other approve it, and nobody would have looked.
 - An agent may approve its own proposal only in a narrow case. The change must
   be one that would have applied by itself if a human had not edited the record
-  first, and could be put back. That leaves out closing a deal, relinking, merging tags, changing a custom
-  field, sending, and anything your installation always holds for a human.
+  first, and could be put back. That leaves out closing a deal, relinking,
+  merging tags, sending, and anything your installation always holds for a
+  human.
   Any of the colleague's passports may approve such a proposal. That includes
   the one that proposed it, and a connected agent.
 - Anything else an agent proposed is approved by the colleague in the app, or
@@ -178,9 +204,13 @@ question box works over a named set of documents rather than over everything.
 a deal" approval is judged against. An agent that could edit the ladder could
 change the meaning of the approval it was asking for.
 
-For consent, document sets and pipeline settings, Margince does not let an
-agent's passport sign in at all. Approvals work in another way: the passport is
-let in, and the check happens on the card itself.
+**Custom fields, webhooks, saved views and sharing.** These are settings for
+members, and an agent can neither read nor change them. It can still read which
+custom fields exist, so it can search on them.
+
+For these and for consent, document sets and pipeline settings, a passport
+cannot sign in at all. Approvals work in another way: the passport is let in,
+and the check happens on the card itself.
 
 **New actions that change data.** Agents cannot use a new action that changes
 data until it is given a label. A missing label means the agent cannot do it,
@@ -214,9 +244,10 @@ and booking a meeting. A passport without it cannot do any of them, no matter
 the tier. **Change records** does not include **Send messages**. Each
 permission must be ticked on its own.
 
-**A fixed limit on calls that go out.** Each passport gets a fixed allowance of
-calls that leave Margince per 24 hours. The read and write allowances can be
-widened by approving a card; this one cannot. It ends when the window ends.
+**A fixed limit on calls that go out.** Each passport gets an allowance of
+calls that leave Margince in each window, 20 by default. The allowance for
+changes can be widened by approving a card; this one cannot. It ends when
+the window ends.
 
 ## Human edits win, field by field
 
@@ -245,10 +276,10 @@ original, wider request is not sent again.
 ## Passports: how an agent is connected
 
 A **passport** is the credential that ties one agent to one colleague. You
-create it yourself in **Settings → Agents**, and you can revoke it yourself.
-Revoking cuts off that one agent. The **Agent passports** card says: "An agent
-acts with your permissions and never more: every request rechecks your
-permissions."
+create it yourself in **Settings → AI access**, under **For developers**, and you
+can revoke it yourself. Revoking cuts off that one agent. The **Passports** card
+says: "A passport is your personal credential for scripts and your own code.
+Whatever uses it acts as you, with the permissions you tick, and never more."
 
 A passport carries narrower permissions than the colleague has. Each one stands
 alone: ticking one never includes another. The app names them **Agent
@@ -269,14 +300,14 @@ messages** too where approving sends a message.
 
 A passport lasts 30 days by default, at least an hour and at most 90 days. A
 passport created in Settings always gets the 30-day default. The credential is
-shown once and never again: "Copy it now. This credential is shown only once."
+shown once and never again: "Passport created. It is shown only once, so copy it now."
 Margince keeps no copy it can read, so nobody, including an administrator, can
 get it back for you.
 
-Passports are for scripts and other apps. The page says: "An MCP client
-connection does not use these; it is listed below." An MCP client gets its own
-credential under **Connected agents**, which renews itself until you choose
-**Disconnect**.
+A passport does the same through the REST API as through MCP. It sees the same
+records, filters, permissions and approvals; an MCP page holds 50 rows. Some
+reads are for humans only either way: installation, capture and integration
+settings, the digest, backfill progress, rates, AI prices, access and consent.
 
 Revoking takes effect at the agent's next call. So does moving the colleague
 behind it to a lower role. Margince checks the colleague's rights on every call,
@@ -306,41 +337,47 @@ the work**, and you do the same thing.
 Nobody can do this for you, and no agent can do it for itself. An agent
 that could grant itself lasting authority would be deciding its own rights.
 
-### Daily allowances
+### Allowances per window
 
-Each passport gets a fixed allowance per 24-hour window: records read, changes
-made, calls that go out, and total calls. One more count shows how many AI
-tokens the agent used; it is only for you to see, and limits nothing.
+Each passport gets an allowance per window: changes made, calls that go out,
+and total calls. Every call counts once, a read too. A long list is still one
+call. By default the window is 24 hours, and the allowances are 200
+changes, 20 calls that go out and 1,000 calls in total. An administrator
+changes them under **Settings › AI usage › Agent passport allowances**: press
+**Edit allowances**, change the values, and press **Save**. One more count shows
+how many AI tokens the agent used; it is only for you to see, and limits
+nothing.
 
-The allowances work differently when they run out. For reading and writing,
-the agent is refused, and a card goes to whoever approved the connection.
-Their approval widens the window by one more allowance. Calls that go out and
-total calls are fixed stops. No approval raises them, and only the end of the
-window clears them.
+A connected app's passports share one allowance: a renewed passport goes on
+counting where the last one stopped.
 
-The window is fixed, not rolling, so every allowance in an installation starts
-over at the same moment. That is why a refusal says "when the window rolls"
-rather than naming a number of hours.
+The allowances work differently when they run out. For changes, the agent is
+refused, and a card goes to whoever approved the connection. Their approval
+widens the window by one more allowance. Calls that go out and total calls are
+fixed stops. No approval raises them, and only the end of the window clears
+them. An agent that only reads can still reach the total and stop.
+
+The window is fixed, not rolling, so every allowance starts over at the same
+moment. A changed allowance applies within a minute, in the window that is
+running. Raise one, and a stopped agent can go on. Lower one, and an agent
+already past it is refused on its next call. A new window size waits for the
+next reset, so no agent starts over early; the card says when it starts.
+
+In **Settings → AI access**, each row under **Your connections** and **Passports**
+shows the allowance closest to running out. Open a row to see all three. Revoked passports are hidden; the button under the list shows them.
+**AI usage › Agent usage by user** shows how much each user's agents used, never
+which passport or what it read. Administrators, Management and operations users see it.
 
 Only whoever approved the connection can answer a request to widen it. An
 administrator cannot, and neither can the owner of the company. An agent's
 limit is that colleague's own authority.
 
-When an outside app asks to connect, you get an **Authorize access** screen. It
-says "{client} will be able to act in Margince as you, with the access checked
-below." It names the address the answer is sent back to, and lists the five
-permissions as boxes to tick. Beside **Send messages** it says "sends messages
-as you, without asking first".
-
-All boxes are ticked by default. You clear what it should not get before
-choosing **Authorize**, or you choose **Deny access**. There is nothing to set
-up first: authorizing creates the connection.
-
 ## Files and agents
 
 ### Can an agent put a file on a record?
-Yes. A connected agent whose connection has **Change records** ticked can put a file on a company, contact, deal, lead or project. The file shows on the record's **Documents** tab, as if you had uploaded it.
+Yes. A connected agent whose connection has **Change records** ticked can put a file on a company, contact, deal, lead, project or activity. The file shows with the record's files, as if you had uploaded it. This works the same whether the agent connects through Claude or uses its passport with the Margince API.
 - It is done at once, and never waits for an approval.
+- The agent can also file it against one of the account's contracts, as you can when you upload.
 - A file can be up to about 6.2 MB, or your installation's upload limit if that is smaller.
 - The same kinds of file are taken as in the app; see [Which kinds of file can I upload?](documents-and-files.md#which-kinds-of-file-can-i-upload).
 An agent can also list the files on a record, but it cannot download a file or read what is in it. A scheduled agent never puts a file on a record.

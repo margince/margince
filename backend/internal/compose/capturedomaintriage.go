@@ -31,18 +31,20 @@ import (
 // domainTriageTrigger queues the read that decides whether a domain capture
 // just met deserves a company.
 type domainTriageTrigger struct {
-	contacts   *contacts.Store
-	settings   *capture.SettingsStore
-	autoEnrich *capture.AutoEnrichStore
-	log        *slog.Logger
+	contacts            *contacts.Store
+	settings            *capture.SettingsStore
+	autoEnrich          *capture.AutoEnrichStore
+	log                 *slog.Logger
+	skipReservedDomains bool
 }
 
-func newDomainTriageTrigger(pool *pgxpool.Pool, log *slog.Logger) *domainTriageTrigger {
+func newDomainTriageTrigger(pool *pgxpool.Pool, log *slog.Logger, skipReservedDomains bool) *domainTriageTrigger {
 	return &domainTriageTrigger{
-		contacts:   contacts.NewStore(InstallationDB(pool)),
-		settings:   capture.NewSettings(NewSettingsStore(pool)),
-		autoEnrich: capture.NewAutoEnrichStore(InstallationDB(pool)),
-		log:        log,
+		contacts:            contacts.NewStore(InstallationDB(pool)),
+		settings:            capture.NewSettings(NewSettingsStore(pool), StoredConfig(pool)),
+		autoEnrich:          capture.NewAutoEnrichStore(InstallationDB(pool)),
+		log:                 log,
+		skipReservedDomains: skipReservedDomains,
 	}
 }
 
@@ -76,6 +78,9 @@ func (t *domainTriageTrigger) queueTriage(ctx context.Context, domain string) er
 	triageCtx := principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: systemDomainTriageActor,
 	})
+	if skipped, err := skipReservedDomainTriage(triageCtx, t.contacts, domain, t.skipReservedDomains); skipped || err != nil {
+		return err
+	}
 	settings, err := t.settings.Get(triageCtx)
 	if err != nil {
 		return err
@@ -185,12 +190,17 @@ func (w *captureAutoEnrichSweepWorker) sweepDomainTriage(ctx context.Context, da
 	if err != nil {
 		return err
 	}
+	said := domainEvidenceCopyFor(installationLanguage(w.pool).Resolve(ctx))
 	for _, domain := range exhausted {
+		if skipped, err := skipReservedDomainTriage(ctx, w.contacts, domain.Domain, w.skipReservedDomains); err != nil {
+			return err
+		} else if skipped {
+			continue
+		}
 		if _, err := w.contacts.ResolveUnreadableDomainTriage(ctx, contacts.ResolveDomainTriageInput{
-			Domain:  domain.Domain,
-			SeedURL: contacts.TriageSeedURL(domain.Domain),
-			Evidence: "every attempt to read this site failed, so the question was answered " +
-				"from what the workspace already knew",
+			Domain:   domain.Domain,
+			SeedURL:  contacts.TriageSeedURL(domain.Domain),
+			Evidence: said.Say(domainEvidence.Exhausted),
 		}); err != nil {
 			w.log.WarnContext(ctx, "domain triage: could not settle an exhausted domain",
 				"domain", domain.Domain, "err", err)
@@ -202,6 +212,11 @@ func (w *captureAutoEnrichSweepWorker) sweepDomainTriage(ctx context.Context, da
 		return err
 	}
 	for _, domain := range due {
+		if skipped, err := skipReservedDomainTriage(ctx, w.contacts, domain.Domain, w.skipReservedDomains); err != nil {
+			return err
+		} else if skipped {
+			continue
+		}
 		slot, err := w.autoEnrich.ReserveBudget(ctx, dailyCap)
 		if err != nil {
 			return err

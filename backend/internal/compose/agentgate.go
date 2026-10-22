@@ -46,6 +46,12 @@ const approvalTokenHeader = "X-Approval-Token"
 // mutation; anything larger is not a plausible contract payload.
 const maxGatedBody = 1 << 20
 
+// gatedBodyLimit widens that bound to what the operation's tool takes in one
+// call, which is wider only for a tool that carries a file.
+func gatedBodyLimit(spec mcp.ToolSpec) int64 {
+	return max(maxGatedBody, spec.MaxArgsBytes)
+}
+
 func agentGate(reg *agents.Registry, staging agents.Approvals, stages agents.StageResolver, records datasource.SystemOfRecordProvider, ownership agents.FieldOwnership, imports agents.Imports, tags agents.Tags, gate *auth.Gate) func(http.Handler) http.Handler {
 	// ONE set of read-side dependencies for both questions this door asks of a
 	// command: what tier it runs at, and what an approval of it would bind to.
@@ -55,7 +61,7 @@ func agentGate(reg *agents.Registry, staging agents.Approvals, stages agents.Sta
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
 			p, ok := principal.Actor(ctx)
-			if !ok || p.Type != principal.PrincipalAgent {
+			if !ok || p.Type != principal.PrincipalAgent || servedByTheRegistry(r) || admittedByTheTool(r) {
 				next.ServeHTTP(w, r)
 				return
 			}
@@ -104,24 +110,28 @@ func agentGate(reg *agents.Registry, staging agents.Approvals, stages agents.Sta
 	}
 }
 
-// refuseAgentRead answers a NON-mutating agent call: its governance class
+// servedByTheRegistry reports a route whose handler runs its tool through
+// Registry.Invoke, which admits the call itself. Admitting it here too would
+// charge the agent twice and stage a confirm-first call twice.
+func servedByTheRegistry(r *http.Request) bool {
+	pattern := chi.RouteContext(r.Context()).RoutePattern()
+	return agentPolicies[r.Method+" "+pattern].ServedBy == servedByRegistry
+}
+
+// refuseAgentRead answers a non-mutating agent call: its governance class
 // first, then its volume.
 //
-// The order is deliberate. `x-agent-access: human-only` says this route is not
-// an agent's to read AT ALL, and that answer must not depend on how much the
-// agent happens to have read today — a caller told "you are over your read
-// budget" would reasonably retry tomorrow against a route that will never be
-// theirs.
+// The order matters. `x-agent-access: human-only` says this route is never an
+// agent's to read, and that answer must not depend on how much the agent has
+// called today. A caller told it is over its ceiling would retry tomorrow
+// against a route that will never be theirs.
 //
-// The bound itself binds BOTH doors: a Passport that spent its window through
-// the MCP surface must not keep reading the same records over /v1. One
-// credential governed two ways is the hole ADR-0055 exists to close.
+// The ceiling binds both doors. A Passport that spent its window through the MCP
+// surface must not keep reading the same records over /v1.
 //
-// And the door that refuses on the bound PAYS INTO it: the handler answers
-// through a servedMeter, so the records this read hands over are charged where
-// they leave. Consulting a counter nothing increments bounds nobody — a
-// credential reading only over /v1 would sit at zero forever, however much it
-// read.
+// The door that refuses on the ceiling also pays into it: an admitted read spends
+// one call before the handler runs. A counter nothing increments bounds nobody,
+// and a credential that only reads over /v1 would sit at zero.
 func refuseAgentRead(w http.ResponseWriter, r *http.Request, next http.Handler, gate *auth.Gate, reg *agents.Registry) {
 	if refusedAsHumanOnly(w, r) {
 		return
@@ -130,35 +140,38 @@ func refuseAgentRead(w http.ResponseWriter, r *http.Request, next http.Handler, 
 		httperr.Write(w, r, err)
 		return
 	}
-	next.ServeHTTP(&servedMeter{ResponseWriter: w, r: r, reg: reg, mayRefuse: nothingHasHappenedYet}, r)
+	if err := reg.ChargeAdmittedRead(r.Context()); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	next.ServeHTTP(w, r)
 }
 
 // refusedAsHumanOnly applies x-agent-access to a NON-mutating agent call, and
-// reports whether it answered the request itself.
-//
-// A read has no tier to admit and no change to stage, but it does have a
-// governance class, and `x-agent-access: human-only` binds a `get:` exactly
-// as it binds a `post:`. auth.RequireHuman is the in-handler twin of this
-// check and about a dozen human-only reads call it; the rest — attachment
-// bytes and their extractions, AI call logs, voice profiles, automation run
-// history, webhook subscriptions — did not, and the gate could not cover
-// them because it returned early on every non-mutating method. It no longer
-// does.
-//
-// The default is the OPPOSITE of the mutating side's, deliberately: a
-// mutating route absent from the table is refused, a read absent from it is
-// admitted. The table now carries every ANNOTATED read, and an unannotated
-// read is ordinary agent-readable data whose authority is the granting
-// human's RBAC and row scope at the store, unchanged.
+// reports whether it answered the request itself. A read binds a passport as a
+// mutation does. One marked human-only is refused, and so is one the table does
+// not carry: every read a passport makes names its MCP verb.
 func refusedAsHumanOnly(w http.ResponseWriter, r *http.Request) bool {
 	pattern := chi.RouteContext(r.Context()).RoutePattern()
-	pol, known := agentPolicies[r.Method+" "+pattern]
-	if !known || pol.Access == accessTool {
+	pol, admitted := routeAdmitsAgents(r.Method, pattern)
+	if admitted {
 		return false
+	}
+	if pol.Op == "" {
+		httperr.Write(w, r, fmt.Errorf(
+			"agent gate: %s %s has no agent policy: %w", r.Method, pattern, apperrors.ErrPermissionDenied))
+		return true
 	}
 	httperr.Write(w, r, fmt.Errorf(
 		"agent gate: %s is %s: %w", pol.Op, pol.Access, apperrors.ErrPermissionDenied))
 	return true
+}
+
+// routeAdmitsAgents asks whether an agent may call the route at all, and returns its policy, zero if none.
+// Only a route under a tool policy admits one.
+func routeAdmitsAgents(method, pattern string) (agentPolicy, bool) {
+	pol, known := agentPolicies[method+" "+pattern]
+	return pol, known && pol.Access == accessTool
 }
 
 // prepareAgentGate resolves the admission inputs for a mutating agent call:
@@ -172,13 +185,13 @@ func prepareAgentGate(w http.ResponseWriter, r *http.Request, reg *agents.Regist
 	// router registered; a mutating route it doesn't know is refused, never
 	// admitted ungated (ADR-0055 §2).
 	pattern := chi.RouteContext(ctx).RoutePattern()
-	pol, known := agentPolicies[r.Method+" "+pattern]
-	if !known {
+	pol, admitted := routeAdmitsAgents(r.Method, pattern)
+	if pol.Op == "" {
 		httperr.Write(w, r, fmt.Errorf(
 			"agent gate: %s %s carries no autonomy tier: %w", r.Method, pattern, apperrors.ErrPermissionDenied))
 		return mcp.ToolSpec{}, nil, agentPolicy{}, nil, false
 	}
-	if pol.Access != accessTool {
+	if !admitted {
 		// human-only governance (the credential class: lending authority,
 		// recording consent, moving what the tiers read) and the
 		// session/bootstrap machinery: an agent principal is rejected
@@ -200,8 +213,9 @@ func prepareAgentGate(w http.ResponseWriter, r *http.Request, reg *agents.Regist
 			"agent gate: %s %s: %w", pol.Op, reason, apperrors.ErrPermissionDenied))
 		return mcp.ToolSpec{}, nil, agentPolicy{}, nil, false
 	}
-	body, err := io.ReadAll(io.LimitReader(r.Body, maxGatedBody+1))
-	if err != nil || len(body) > maxGatedBody {
+	limit := gatedBodyLimit(spec)
+	body, err := io.ReadAll(io.LimitReader(r.Body, limit+1))
+	if err != nil || int64(len(body)) > limit {
 		httperr.Write(w, r, httperr.Validation("body", "too_large", "request body unreadable or exceeds the gated limit"))
 		return mcp.ToolSpec{}, nil, agentPolicy{}, nil, false
 	}
@@ -246,8 +260,7 @@ func admitAgentCall(w http.ResponseWriter, r *http.Request, next http.Handler, o
 		// the effect for both would bill a refusal, so this arm charges only
 		// where redeemIfPresented actually forwarded.
 		performed := &effectRecorder{ResponseWriter: w}
-		metered := &servedMeter{ResponseWriter: performed, r: r, reg: outcome.registry, mayRefuse: theEffectAlreadyLanded}
-		ran := stageOrRedeem(metered, r, next, outcome.staging, outcome.commands, outcome.pol, outcome.body)
+		ran := stageOrRedeem(performed, r, next, outcome.staging, outcome.commands, outcome.pol, outcome.body)
 		if !ran {
 			return
 		}

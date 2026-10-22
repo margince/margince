@@ -3,7 +3,7 @@
 
 import type { MarginceCoreState } from "../design-system/margince-core";
 import type { MessageKey } from "../i18n/en";
-import type { Screen } from "./router";
+import type { Screen } from "../lib/router";
 
 /**
  * The agent section's own tables.

@@ -1,0 +1,94 @@
+# Beschäftigteninformation zur Erfassung von E-Mail-Korrespondenz
+
+> Vorlage. Platzhalter in `[eckigen Klammern]` ausfüllen. Diese Information ist
+> **vor** der ersten Verbindung eines Postfachs auszuhändigen.
+
+**Verantwortliche Stelle (Art. 4 Nr. 7 DSGVO):** [Unternehmen, Anschrift]
+**Datenschutzbeauftragte Person:** [Name, Kontakt]
+**Stand:** [Datum] · **Version:** [z. B. 1.0]
+
+## Worum es geht
+
+[Unternehmen] setzt das CRM-System Margince ein. Wenn Sie Ihr dienstliches Postfach
+mit Margince verbinden, liest das System Ihre geschäftliche E-Mail-Korrespondenz
+und legt sie im CRM ab, damit Vorgänge nachvollziehbar bleiben, wenn Sie im
+Urlaub sind oder das Unternehmen verlassen.
+
+**Die Verbindung erfolgt durch Sie selbst.** Ohne Ihre Anmeldung beim
+E-Mail-Anbieter greift das System auf nichts zu.
+
+## Welche Daten verarbeitet werden
+
+- Absende- und Empfangsadressen (auch in Kopie), Betreff, Datum und Text Ihrer
+  geschäftlichen E-Mails sowie deren Anhänge
+- daraus abgeleitete Kontakt- und Unternehmensdatensätze
+- technische Protokolle über den Abruf
+
+Spam, Papierkorb und Entwürfe werden nicht erfasst. Erfasst werden der Posteingang
+und der Ordner „Gesendet“; bei Microsoft 365 ausschließlich diese beiden Ordner,
+bei IMAP das eingerichtete Postfach und der Sendeordner.
+
+## Zwecke und Rechtsgrundlagen
+
+| Zweck | Rechtsgrundlage |
+| --- | --- |
+| Dokumentation der Geschäftskorrespondenz im CRM | Art. 6 Abs. 1 lit. b und f DSGVO, § 26 Abs. 1 BDSG |
+| Aufbewahrung von Handelsbriefen | Art. 6 Abs. 1 lit. c DSGVO i. V. m. § 257 HGB, § 147 AO |
+| [bei erlaubter Privatnutzung:] Verarbeitung privater Korrespondenz | Art. 6 Abs. 1 lit. a DSGVO, § 26 Abs. 2 BDSG; gesonderte Einwilligung |
+
+## Wer die Inhalte lesen kann
+
+Wer die Inhalte lesen kann, hängt an einer Einstellung Ihres Postfachs:
+
+- **`classified` (Voreinstellung):** Jede erfasste Nachricht ist zunächst **nur
+  für Sie und die auf der Mail genannten Personen** sichtbar. Ein Klassifikator
+  prüft anschließend jeden Thread und gibt nur die gewöhnlichen geschäftlichen
+  Konversationen für das Team frei. Alles andere bleibt privat.
+- **`held`:** Nichts wird jemals freigegeben.
+- **`shared`:** Nachrichten sind ab Eingang für das Team lesbar.
+  Diese Einstellung ist nur verfügbar, wenn die Geschäftsführung sie ausdrücklich
+  freischaltet.
+
+Auch mit Adminrechten lässt sich eine zurückgehaltene Nachricht nicht lesen.
+Die Zugriffsprüfung kennt keine Ausnahme für Adminrechte.
+
+Fällt der Klassifikator aus, bleibt alles zurückgehalten. Das System entscheidet
+im Zweifel gegen die Sichtbarkeit.
+
+## Was Sie selbst steuern
+
+- **Absendeadressen ausschließen:** Post von einer Adresse oder Domain gar nicht erst
+  erfassen: Einstellungen → Capture-Aktivität, Karte „Capture-Ausschlüsse“.
+- **Bereits erfasste Post löschen:** unwiderruflich, einschließlich Anhängen und
+  abgeleiteter Daten. Löschen Sie eine erfasste Nachricht in Ihrem Postfach,
+  wird die Kopie hier mitgelöscht. Ausgenommen ist eine Nachricht, die ein anderes
+  Teammitglied ebenfalls erfasst hat, und ein Handelsbrief innerhalb seiner
+  Aufbewahrungsfrist. Post, die auch ein anderes Teammitglied empfangen hat,
+  bleibt diesem erhalten; Ihr Zugriff darauf endet.
+- **Entscheidungen über Absendeadressen einsehen und korrigieren:** Die Seite
+  „Absendeadressen“ zeigt jede automatische Entscheidung über die Adressen, mit
+  denen Sie korrespondieren. Ihre Korrektur ist endgültig; die Maschine überschreibt sie nicht.
+- **Einzelne Threads freigeben oder privat halten:** unabhängig davon, was der
+  Klassifikator entschieden hat.
+- **Postfach trennen:** jederzeit. Bereits Erfasstes bleibt, bis Sie es löschen.
+
+## Aufbewahrung
+
+Handelsbriefe: [z. B. sechs Jahre] nach § 257 HGB, § 147 AO. Übrige
+Korrespondenz: [Frist].
+
+Als privat eingestufte Post wird vernichtet. Wie lange das dauert, hängt
+davon ab, wer die Einstufung vorgenommen hat: sieben Tage, wenn Sie die Absendeadresse
+selbst als privat gekennzeichnet haben, und dreißig Tage, wenn der Klassifikator
+es war. Die längere Frist gilt der unbestätigten Entscheidung; bis dahin können
+Sie sie auf der Seite „Absendeadressen“ korrigieren.
+
+## Ihre Rechte
+
+Auskunft (Art. 15), Berichtigung (Art. 16), Löschung (Art. 17), Einschränkung
+(Art. 18), Datenübertragbarkeit (Art. 20) und Widerspruch (Art. 21) gegenüber
+[Kontakt]. Beschwerderecht bei der zuständigen Aufsichtsbehörde
+[Behörde, Anschrift].
+
+Eine erteilte Einwilligung können Sie jederzeit mit Wirkung für die Zukunft
+widerrufen. **Ein Widerruf bringt Ihnen keine Nachteile.**

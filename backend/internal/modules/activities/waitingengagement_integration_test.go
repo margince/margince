@@ -334,7 +334,7 @@ func TestAMessageWrittenOnlyToAColleagueIsAddressedElsewhere(t *testing.T) {
 	activity := e.waitingFrom(t, "Connect me with your team", "buyer@customer.test", contact)
 	e.addressedTo(t, activity, e.rep, "colleague@ours.test")
 
-	row, found := present(t, storeAddressing(e, "reader@ours.test"), e, activity)
+	row, found := present(t, storeKnowing(e), e, activity)
 	if !found {
 		t.Fatal("the message left the queue entirely — it is real mail and must " +
 			"stay on the page, demoted rather than dropped")
@@ -355,9 +355,10 @@ func TestAMessageNamingTheReaderIsNotAddressedElsewhere(t *testing.T) {
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	activity := e.waitingFrom(t, "About the retrofit", "buyer@customer.test", contact)
-	e.addressedTo(t, activity, e.rep, "colleague@ours.test", "reader@ours.test")
+	e.addressedTo(t, activity, e.rep, "colleague@ours.test")
+	e.directlyTo(t, activity, e.rep)
 
-	row, found := present(t, storeAddressing(e, "reader@ours.test"), e, activity)
+	row, found := present(t, storeKnowing(e), e, activity)
 	if !found {
 		t.Fatal("the message is not in the queue at all")
 	}
@@ -379,7 +380,7 @@ func TestAMessageNamingNoRecipientIsNotAddressedElsewhere(t *testing.T) {
 	// leaves behind.
 	e.addressedTo(t, activity, e.rep)
 
-	row, found := present(t, storeAddressing(e, "reader@ours.test"), e, activity)
+	row, found := present(t, storeKnowing(e), e, activity)
 	if !found {
 		t.Fatal("the message is not in the queue at all")
 	}
@@ -389,19 +390,22 @@ func TestAMessageNamingNoRecipientIsNotAddressedElsewhere(t *testing.T) {
 	}
 }
 
-// A reader whose addresses cannot be resolved sees everything, unchanged.
-func TestAnUnknownReaderAddressDemotesNothing(t *testing.T) {
+// Unknown recipient addresses retain team visibility without assigning a seat.
+func TestAnUnresolvedRecipientStaysUnassignedOnTheTeamQueue(t *testing.T) {
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	activity := e.waitingFrom(t, "About the retrofit", "buyer@customer.test", contact)
 	e.addressedTo(t, activity, e.rep, "colleague@ours.test")
 
-	row, found := present(t, storeAddressing(e), e, activity)
+	row, found := present(t, storeKnowing(e), e, activity)
 	if !found {
 		t.Fatal("the message is not in the queue at all")
 	}
-	if row.AddressedElsewhere {
-		t.Error("an empty address list demoted a message; a reader whose own " +
-			"addresses are unknown must not have their waiting mail quietly sink")
+	if !row.AddressedElsewhere || !row.OwnerID.IsZero() {
+		t.Errorf("an unresolved recipient became personal work: %+v", row)
 	}
+}
+
+func (f fixedDomains) MailSeatIdentitiesSQL(ctx context.Context, tx pgx.Tx, bind func(any) int) (string, error) {
+	return (&Store{}).mailSeatIdentitiesSQL(ctx, tx, bind)
 }

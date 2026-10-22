@@ -33,11 +33,17 @@ var pipelineEventTypes = map[string]struct{}{
 	"booking_page.updated":       {},
 	"meeting_invitation.updated": {},
 	"meeting_proposal.updated":   {},
-	"capture.received":           {},
-	"capture.normalized":         {},
-	"capture.failed":             {},
-	"capture.skipped":            {},
-	"ai_task.state_changed":      {},
+	// A legal entity's bank details and imprint are installation configuration
+	// read through the legal_entity grant; the internal consumers re-read it.
+	"legal_entity.created":      {},
+	"legal_entity.updated":      {},
+	"legal_entity.archived":     {},
+	"legal_entity.member_added": {},
+	"capture.received":          {},
+	"capture.normalized":        {},
+	"capture.failed":            {},
+	"capture.skipped":           {},
+	"ai_task.state_changed":     {},
 	// A Brief open names no record it could hand a consumer: the subject is the
 	// READING, not the run, and the run is the reader's own queue. Entity-less
 	// is also what keeps it off the subscribable set — see its schema in
@@ -52,4 +58,17 @@ var pipelineEventTypes = map[string]struct{}{
 	"deal_suggestion.accepted":   {},
 	"deal_suggestion.dismissed":  {},
 	"deal_suggestion.superseded": {},
+	// A legal review's note and pack are for holders of the legal_review
+	// grant, and no subscriber can be held to that. The audit row names the deal.
+	"legal_review.requested": {},
+	"legal_review.decided":   {},
+	"legal_review.withdrawn": {},
+	// The same holds for a tag suggestion, whose evidence may be one owner's mail.
+	"tag_suggestion.created":    {},
+	"tag_suggestion.accepted":   {},
+	"tag_suggestion.dismissed":  {},
+	"tag_suggestion.superseded": {},
+	// A website lead's notice names a lead who may be deleted for want of it.
+	"lead_privacy_notice.created": {},
+	"lead_privacy_notice.failed":  {},
 }

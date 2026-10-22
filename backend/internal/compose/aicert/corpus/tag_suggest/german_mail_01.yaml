@@ -1,0 +1,32 @@
+name: a_german_mail_shows_interest_against_an_english_description
+task: tag_suggest
+site: interest
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# The description is English and the buyer writes German. The interest is the
+# same, and the tag has to follow it across the language.
+fixture:
+  tags:
+    - key: ledger_migration
+      name: 'Ledger migration'
+      description: 'wants to move their bookkeeping off spreadsheets'
+  items:
+    - kind: email
+      subject: 'Monatsabschluss'
+      body: |
+        Hallo Herr Weber,
+
+        wir machen unseren Monatsabschluss immer noch komplett in Excel, und
+        das kostet uns jeden Monat zwei Tage. Könnten Sie uns ein Angebot
+        machen, wie wir das in ein richtiges System überführen?
+
+        Viele Grüße
+        Petra Lindner
+expect:
+  outcome: accepted
+  answer: [[ledger_migration]]
+  judge: none
+  judge_none_reason: >
+    The answer is a closed set of tag keys per item, and the check requires
+    each item's set exactly. A rubric could only rank wrong sets, which the
+    check fails outright.

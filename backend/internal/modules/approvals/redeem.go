@@ -93,42 +93,64 @@ func (s *Service) RedeemAndApplyPinned(
 // for an approval that carried none — a create, or a target type with no
 // version column.
 func (s *Service) RedeemInTx(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, tool, diffHash string) (version int64, pinned bool, err error) {
-	p, ok := principal.Actor(ctx)
-	if !ok {
-		return 0, false, errors.New("crmapprovals: no actor bound to context")
-	}
-	a, err := get(ctx, tx, id)
+	a, err := s.redeemRow(ctx, tx, id, tool, diffHash)
 	if err != nil {
-		// An unknown approval id reads as an invalid token, not a 404:
-		// the caller is asserting authority, not browsing.
-		return 0, false, fmt.Errorf("no such approval: %w", apperrors.ErrApprovalTokenInvalid)
-	}
-	if err := validateRedemption(a, p, tool, diffHash, s.now()); err != nil {
-		return 0, false, err
-	}
-
-	if err := validateRedemptionTarget(ctx, tx, a); err != nil {
-		return 0, false, err
-	}
-
-	tag, err := tx.Exec(ctx,
-		`UPDATE approval SET consumed_at = now() WHERE id = $1 AND consumed_at IS NULL`, id)
-	if err != nil {
-		return 0, false, err
-	}
-	if tag.RowsAffected() != 1 {
-		return 0, false, fmt.Errorf("approval already redeemed: %w", apperrors.ErrApprovalTokenInvalid)
-	}
-	if _, err := storekit.AuditWithEvidence(ctx, tx, "update", entityApproval, id.UUID,
-		map[string]any{approvalKeyRedeemed: false},
-		map[string]any{approvalKeyRedeemed: true},
-		map[string]any{approvalKeyKind: a.Kind}); err != nil {
 		return 0, false, err
 	}
 	if a.TargetVersion == nil {
 		return 0, false, nil
 	}
 	return *a.TargetVersion, true, nil
+}
+
+func (s *Service) redeemRow(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, tool, diffHash string) (row, error) {
+	p, ok := principal.Actor(ctx)
+	if !ok {
+		return row{}, errors.New("crmapprovals: no actor bound to context")
+	}
+	a, err := get(ctx, tx, id)
+	if err != nil {
+		// An unknown approval id reads as an invalid token, not a 404:
+		// the caller is asserting authority, not browsing.
+		return row{}, fmt.Errorf("no such approval: %w", apperrors.ErrApprovalTokenInvalid)
+	}
+	if err := validateRedemption(a, redeemerFor(ctx, a, p), tool, diffHash, s.now()); err != nil {
+		return row{}, err
+	}
+
+	if err := validateRedemptionTarget(ctx, tx, a); err != nil {
+		return row{}, err
+	}
+
+	tag, err := tx.Exec(ctx,
+		`UPDATE approval SET consumed_at = now() WHERE id = $1 AND consumed_at IS NULL`, id)
+	if err != nil {
+		return row{}, err
+	}
+	if tag.RowsAffected() != 1 {
+		return row{}, &alreadyRedeemedError{}
+	}
+	if _, err := storekit.AuditWithEvidence(ctx, tx, "update", entityApproval, id.UUID,
+		map[string]any{approvalKeyRedeemed: false},
+		map[string]any{approvalKeyRedeemed: true},
+		map[string]any{approvalKeyKind: a.Kind}); err != nil {
+		return row{}, err
+	}
+	return a, nil
+}
+
+// alreadyRedeemedError is a redemption refused because another call spent the
+// approval first. It answers as an invalid token, and recordEffectFailure tells
+// it apart: the work belongs to the call that redeemed.
+type alreadyRedeemedError struct{}
+
+func (*alreadyRedeemedError) Error() string { return "approval already redeemed" }
+func (*alreadyRedeemedError) Unwrap() error { return apperrors.ErrApprovalTokenInvalid }
+
+// redemptionLapsed reports whether the window to redeem a decided approval has
+// closed. Both a redemption and the offer to re-run an effect ask it.
+func redemptionLapsed(a row, now time.Time) bool {
+	return a.DecidedAt != nil && now.Sub(*a.DecidedAt) > redemptionTTL
 }
 
 func validateRedemption(a row, p principal.Principal, tool, diffHash string, now time.Time) error {
@@ -162,8 +184,8 @@ func validateRedemption(a row, p principal.Principal, tool, diffHash string, now
 	case a.Status != approvalStatusApproved:
 		return fmt.Errorf("approval is %s: %w", a.effectiveStatus(now), apperrors.ErrApprovalTokenInvalid)
 	case a.ConsumedAt != nil:
-		return fmt.Errorf("approval already redeemed: %w", apperrors.ErrApprovalTokenInvalid)
-	case a.DecidedAt != nil && now.Sub(*a.DecidedAt) > redemptionTTL:
+		return &alreadyRedeemedError{}
+	case redemptionLapsed(a, now):
 		return fmt.Errorf("approval expired %s after decision: %w", redemptionTTL, apperrors.ErrApprovalTokenInvalid)
 	default:
 		return nil
@@ -171,14 +193,14 @@ func validateRedemption(a row, p principal.Principal, tool, diffHash string, now
 }
 
 func validateRedemptionTarget(ctx context.Context, tx pgx.Tx, a row) error {
-	if err := checkPin(ctx, tx, a.TargetType, a.TargetID, a.TargetVersion, "target"); err != nil {
+	if err := checkPin(ctx, tx, a.TargetType, a.TargetID, a.TargetVersion, "record"); err != nil {
 		return err
 	}
 	// The SECOND row, where the proposal declared one. A tag merge names two
 	// words and the human judged both, so both have to still be what they were
 	// — the retired side has always been checked here, and the survivor being
 	// exempt is what let a rename slip between the card and the merge.
-	return checkPin(ctx, tx, a.CoTargetType, a.CoTargetID, a.CoTargetVersion, "co-target")
+	return checkPin(ctx, tx, a.CoTargetType, a.CoTargetID, a.CoTargetVersion, "second record")
 }
 
 // checkPin re-reads one pinned row and refuses if it has moved since the
@@ -186,7 +208,7 @@ func validateRedemptionTarget(ctx context.Context, tx pgx.Tx, a row) error {
 // approval that rests on a single row.
 func checkPin(
 	ctx context.Context, tx pgx.Tx,
-	entityType *string, id *ids.UUID, pinned *int64, which string,
+	entityType *string, id *ids.UUID, pinned *int64, record string,
 ) error {
 	if pinned == nil || id == nil || entityType == nil {
 		return nil
@@ -196,8 +218,9 @@ func checkPin(
 		return err
 	}
 	if current != *pinned {
-		return fmt.Errorf("%s changed since approval (v%d → v%d): %w",
-			which, *pinned, current, apperrors.ErrVersionSkew)
+		return &apperrors.VersionSkewError{Message: fmt.Sprintf(
+			"The %s this approval names changed after it was approved (version %d, now %d), so nothing was changed. "+
+				"Stage the change again for a fresh approval.", record, *pinned, current)}
 	}
 	return nil
 }
@@ -218,9 +241,11 @@ func checkPin(
 // short-circuits silently — the human approves a row that anyone may then
 // change before the authorized call lands.
 var versionTables = map[string]bool{
+	"stage":      true,
 	tableContact: true, tableCompany: true, tableDeal: true, tableLead: true, objectActivity: true,
 	targetOffer: true, targetProduct: true, tableList: true, targetTag: true, targetRelationship: true,
 	tableProject: true, targetSavedView: true, targetOfferTemplate: true, targetWebhookSubscription: true,
+	targetImportRun: true,
 }
 
 // contextTargetKinds are the staging kinds whose target_entity names what the

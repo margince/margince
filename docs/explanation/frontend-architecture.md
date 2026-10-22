@@ -37,8 +37,8 @@ for the frontend; the agent surface follows the same rule. Three things follow:
 
 The first raw call is the LinkedIn `Connections.csv` file send. It is a
 **`/v1` call the typed client cannot make**: the client cannot build a
-`multipart` body. Its file (`screens/linkedin-import.tsx`) says so in place, and a new exception of that kind
-needs the same note. The other raw call is `screens/connected-agents.tsx`
+`multipart` body. Its file (`features/import/linkedin-import.tsx`) says so in place, and a new exception of that kind
+needs the same note. The other raw call is `features/automations/connected-agents.tsx`
 reading `/.well-known/oauth-protected-resource`. That is **not a `/v1` route**,
 so the typed client does not carry it.
 
@@ -52,10 +52,14 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
 ```text
  src/design-system/     tokens.css → brand.css → base.css
                         → atoms → trust → the Core primitive → composed
- src/app/               shell = sidebar + top bar + page title, hash router,
-                        ⌘K palette, agent dock, theme, capability, banners
- src/screens/           one file per surface (a directory when the surface
-                        is a state machine)
+ src/app/               shell = sidebar + top bar + page title,
+                        ⌘K palette, agent dock, banners
+ src/lib/               shared code that draws nothing: hash router, URL
+                        state, theme, capability, problem decoding, session
+ src/components/        screen parts many features share: create, edit,
+                        list query, record fields
+ src/features/<name>/   one folder per feature: its screens, tests, stories
+ src/testing/           test harnesses, fixtures and tree-wide guards
  src/i18n/  src/format/ the presentation edge: copy, money, dates, zones
  src/api/               the one seam + the generated contract types
 ```
@@ -69,11 +73,14 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   Then come `atoms.tsx` (`Button`, `Badge`, `Avatar`, `Card`, `Modal`, …) and
   `trust.tsx`. The trust parts are `AutonomyDot`, `EvidenceChip`,
   `ConfidenceMeter`, `ProvenanceTag`, `StagingCard` and `FieldDiff`. Next come
-  the Margince Core (`margince-core*`) and `composed.tsx`, which builds on both
-  (`RecordView`, `PipelineBoard`, `GroupedTimelineList`, …). `motion.ts` holds
+  the Margince Core (`margince-core*`) and the composed parts that build on
+  both, such as `recordview.tsx`, `pipelineboard.tsx` and `timeline.tsx`. `motion.ts` holds
   the `prefers-reduced-motion` rule: with it on, a change shows its end state at
-  once, never nothing. `conformance.test.ts` is the drift gate over the whole
-  tree.
+  once, never nothing.
+
+  `conformance.test.ts` is the drift gate over the whole
+  tree. No file in `design-system/` imports `app/`, `components/` or `features/`. A part
+  that needs a feature, such as the record page's mail drawer, lives in that feature.
 - **`src/app/`**: the shell of the app and what holds on every screen.
   `shell.tsx` is the shell, the sidebar and the title of each page.
   `topbar.tsx` is the top bar of the session: the control that makes the
@@ -81,18 +88,22 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   what both of them know about a page before it renders.
 
   Then come `nav.ts`
-  (the list of places that decides), `router.tsx` (hash routing) and
-  `palette.tsx` (`⌘K`). After them are `agentrail.tsx` (the agent, at the end
-  of the rail), `theme.ts` and `capability.ts`. Last are the advisories the
-  shell itself shows (`economybanner.tsx`, `embedreindexbanner.tsx`).
-- **`src/screens/`**: one file per surface. A surface gets a *folder* only
-  when it is a state machine and not a page. One has one:
-  `screens/onboarding-conversation/`. There the conversation machine, each
-  `*-act.tsx` and `*-scene.tsx` file, and the code that loads the conversation
-  again each need their own file. Everything else, even surfaces as
-  large as `companies.tsx` and `deals.tsx`, stays one file, with its
-  `*.test.tsx` and `*.stories.tsx` beside it. An address that no screen answers
-  shows a note that says so (`shell.unknownPage`), never an empty page.
+  (the list of places that decides) and `palette.tsx` (`⌘K`). After them is
+  `agentrail.tsx` (the agent, at the end of the rail). Last are the advisories
+  the shell itself shows (`economybanner.tsx`, `embedreindexbanner.tsx`).
+- **`src/lib/`**: shared code that draws nothing. `router.tsx` (hash routing),
+  `urlstate.ts`, `theme.ts` and `capability.ts` live here, with problem
+  decoding and the session. `lib/` never imports `app/`, `components/` or `features/`.
+- **`src/components/`**: the screen parts that many features share. Examples are
+  the create and edit dialogs, the list query and the record fields.
+  A component never imports `app/` or `features/`.
+- **`src/features/<name>/`**: one folder per feature, with each screen's
+  `*.test.tsx` and `*.stories.tsx` beside it. A screen gets a folder of its own
+  only when it is a state machine and not a page, as
+  `features/onboarding/onboarding-conversation/` is. An address that no screen
+  answers shows a note that says so (`shell.unknownPage`), never an empty page.
+- **`src/custom/`**: the screens a fork adds. Margince ships it with only its
+  README, so a fork's screens never conflict with a new release.
 - **`src/i18n/`**: three catalogs (`en`, `de`, `vi`), with `en` the default.
   Two checks make every catalog hold the same keys. `MessageKey` is
   `keyof typeof en`, and the other catalogs are checked against it with
@@ -117,6 +128,25 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   one kind of money into another, no counting on calendar dates, and no locale
   going back into what is stored.
 
+### Each feature stands alone
+
+Only the shell (`app/` and `App`) imports a feature. A feature imports no
+other feature and not the shell. When two features need the same code, it moves
+down: to `components/` if it draws, to `lib/` if it does not. Code that only one
+other feature uses moves into that feature, and a test helper that features
+share moves to `testing/`. A feature that shows another feature's whole screen
+gets it from `app/`, which passes it in.
+
+The other side holds too: a file in `components/`, `lib/` or `format/` that
+only one feature uses belongs in that feature. Without this rule, a move of one
+feature's code into a shared folder would get past the first.
+
+`frontend/scripts/feature-boundaries.test.ts` fails both. The imports that
+crossed a feature line when it landed are frozen in
+`frontend/scripts/feature-boundaries-waivers.txt`. That list only gets shorter,
+and a new line is never added. The steps for a move are in
+[move-frontend-code.md](../how-to/move-frontend-code.md).
+
 ## The shell
 
 `src/app/nav.ts` holds the list of places that decides, and `rail.test.tsx`
@@ -128,7 +158,7 @@ labels.
 | *(no group)* | `home` |
 | Records | `contacts`, `companies`, `leads`, `deals` |
 | Work | `projects`, `filters` |
-| Intelligence | `analytics` |
+| Insights | `analytics` |
 
 The groups belong to the **open sidebar** alone. When the sidebar is small,
 each group title keeps its place and shows a line there. So the
@@ -224,7 +254,7 @@ app panel styled from those tokens is styled, in error, as the public web site.
 
 Both themes ship, and **the theme resolves before React starts**.
 `main.tsx` calls `startTheme()` above `createRoot(...).render(...)`. That choice
-lives in `src/app/theme.ts` and in no other file. A stated choice
+lives in `src/lib/theme.ts` and in no other file. A stated choice
 (`margince.theme` in `localStorage`, `light` or `dark`) wins; otherwise the OS
 `prefers-color-scheme` decides.
 
@@ -276,10 +306,10 @@ The old parts stay in two places, both by design:
 - **Inside the mark.** The `EvidenceMark` panel renders `ProvenanceTag` itself,
   and states its trust as text, not as a bar.
 - **On the staging surfaces**, whose job is to set a proposal beside what is
-  stored. The first is the approvals lane of the Worklist (`screens/worklist.tsx`,
-  `screens/approvalrow.tsx`). Then the confirm step of onboarding
-  (`screens/onboarding-conversation/confirm-card.tsx`,
-  `screens/onboarding-company-form.tsx`) and the Company-context settings
+  stored. The first is the approvals lane of the Worklist (`features/worklist/worklist.tsx`,
+  `features/automations/approvalrow.tsx`). Then the confirm step of onboarding
+  (`features/onboarding/onboarding-conversation/confirm-card.row.tsx`,
+  `features/onboarding/onboarding-company-form.tsx`) and the Company-context settings
   screen. Last are the record surfaces that show a single line about where a
   value comes from (`contacts.tsx`, `leads.tsx`, `consent.tsx`, `history.tsx`).
   `StagingCard` and `FieldDiff` are the composed forms of the same parts.
@@ -343,7 +373,7 @@ even if the test tree breaks.
 | Contract type drift | `make frontend-check` | `pnpm gen:api` changes `src/api/schema.d.ts` or `public-events.ts` |
 | Lint | `pnpm lint` (Biome) | style and lint findings over `src` and `index.html` |
 | Design test | `design-system/conformance.test.ts` | the same rules read from the AST, not from text, plus copy users see that is written in the code outside the `i18n` catalogs, and a wrong web app manifest |
-| Service worker | `frontend/scripts/vite-pwa.test.ts`, `frontend/src/app/serviceworker-registrar.test.ts` | the web app build not writing `/sw.js`. The worker answering from `Cache Storage` anything but a failed page load and the offline page with its script. The worker catching a path the API owns, keeping a cache that is not its own, or keeping its cache name when what it holds changed. Any shipped module but `src/app/pwa.ts`, in any kind of script, reaching for `navigator.serviceWorker` ([pwa.md](pwa.md)) |
+| Service worker | `frontend/scripts/vite-pwa.test.ts`, `frontend/src/app/serviceworker-registrar.test.ts` | the web app build not writing `/sw.js`. The worker answering from `Cache Storage` anything but a failed page load and the offline page with its script. The worker catching a path the API owns, keeping a cache that is not its own, or keeping its cache name when what it holds changed. Any shipped module but `src/lib/pwa.ts`, in any kind of script, reaching for `navigator.serviceWorker` ([pwa.md](pwa.md)) |
 | CSS file owners | `design-system/stylesheetnamespace.test.ts` | the class names of a screen declared in a CSS file other than the screen's own, in every `.css` under `frontend/src` and in the frontend layer of each extension |
 | Timeline rows | `design-system/timelinerows.test.ts` | a rule that reaches the `li` of a `.timeline` list by anything but `>` from the `.timeline` part, which also reaches `li` items inside a row; a sibling (`+`, `~`) of such a row passes. It reads every `.css` under `frontend/src` and the frontend of each extension. It fails closed when the selectors it parses and a plain count of the text disagree |
 | Token values | `design-system/tokens.test.ts` | a Ledger-Green value that drifts from the design source |
@@ -352,7 +382,7 @@ even if the test tree breaks.
 | Render UAT | `make fe-uat` → `frontend/scripts/fe-uat.mjs` | a changed component with no story beside it, a changed story the build does not register, or a render that fails when run with no screen. It is **outside** `make check`: it is the UAT lane for the frontend alone, and it writes its result to `.tmp/fe-uat/manifest.json` |
 | Screen checks | `make frontend-e2e` → `frontend/e2e/` | Playwright cases named for their AC, axe at WCAG 2.2 AA, and the `390px` `no-horizontal-scroll` sweep. The speed budget is the one in `make bench-mobile`: a `p95` over many runs, because one clock reading in a shared lane measures the machine it runs on |
 
-`craft static`, in the push hook and in CI, reads only the comment lines a
+`craft static`, in `make check` and in CI, reads only the comment lines a
 change adds to a `frontend/` file. The frontend lane is separate from the Go
 merge gate and needs Node and pnpm. Run `make check-fe` (or
 `make frontend-check`) before pushing a frontend change.
@@ -365,9 +395,9 @@ merge gate and needs Node and pnpm. Run `make check-fe` (or
 | what a route renders | `src/App.tsx` (`ScreenView`), then the screen file |
 | a colour, a `border-radius`, a spacing step | `src/design-system/tokens.css` (and `tokens.test.ts`), never a call site |
 | a derived colour role | `src/design-system/brand.css`: a `color-mix()`, never a new hex value |
-| light and dark themes | `src/app/theme.ts` and `tokens.css`, which carries all three states: the light colour set on `:root` alone, the `prefers-color-scheme` block for a surface whose host states nothing, and the `[data-theme]` blocks a stated choice sets |
+| light and dark themes | `src/lib/theme.ts` and `tokens.css`, which carries all three states: the light colour set on `:root` alone, the `prefers-color-scheme` block for a surface whose host states nothing, and the `[data-theme]` blocks a stated choice sets |
 | how a derived value shows its evidence | `src/design-system/evidencemark.tsx` |
-| a staging or approval surface | `src/design-system/trust.tsx` and `src/screens/worklist.tsx` |
+| a staging or approval surface | `src/design-system/trust.tsx` and `src/features/worklist/worklist.tsx` |
 | copy | `src/i18n/en.ts`, `de.ts` **and** `vi.ts`; the type check holds their keys the same |
 | money, dates and time | `src/format/format.ts`, apart from which calendar day a point in time falls on, and the point in time where the day the user set ends: those are in `src/format/calendarday.ts` |
 | an API call | `src/api/client.ts` is the seam; generate the types again with `pnpm gen:api` |
@@ -379,14 +409,14 @@ merge gate and needs Node and pnpm. Run `make check-fe` (or
 |---|---|
 | The API seam and the generated contract types | `frontend/src/api/{client.ts,schema.d.ts,public-events.ts}` |
 | Boot: theme, install offer, service worker, query client, 403 handling | `frontend/src/main.tsx` |
-| Registering the service worker, install state / the worker and its offline page | `frontend/src/app/pwa.ts` / `frontend/src/offline/`, built by `frontend/scripts/vite-pwa.ts` |
+| Registering the service worker, install state / the worker and its offline page | `frontend/src/lib/pwa.ts` / `frontend/src/offline/`, built by `frontend/scripts/vite-pwa.ts` |
 | Route → screen, the sign-in gate, the onboarding gate | `frontend/src/App.tsx` |
 | The shell, sidebar, page title | `frontend/src/app/{shell.tsx,shell.css}` |
 | Top bar: breadcrumb, search, account | `frontend/src/app/{topbar.tsx,topbar.css,account.tsx}` |
 | The rail list, the badge set, the phone set, the set with no rail | `frontend/src/app/nav.ts` |
-| The hash router | `frontend/src/app/router.tsx` |
+| The hash router | `frontend/src/lib/router.tsx` |
 | The `⌘K` palette, the agent in the rail | `frontend/src/app/{palette.tsx,agentrail.tsx}` |
-| How the theme resolves and is stored | `frontend/src/app/theme.ts` |
+| How the theme resolves and is stored | `frontend/src/lib/theme.ts` |
 | Tokens (the source) / derived roles / plain controls | `frontend/src/design-system/{tokens.css,brand.css,base.css}` |
 | Small parts, trust parts, composed surfaces | `frontend/src/design-system/{atoms,trust,composed}.tsx` |
 | The evidence mark | `frontend/src/design-system/evidencemark.tsx` |
@@ -395,7 +425,9 @@ merge gate and needs Node and pnpm. Run `make check-fe` (or
 | Design gates (tests) | `frontend/src/design-system/{conformance,tokens}.test.ts` |
 | Design gates (shell script checks that fail closed) | `frontend/scripts/check-*.sh` |
 | Render UAT scoped to the change | `frontend/scripts/fe-uat.mjs` |
-| Screens | `frontend/src/screens/` (one file per surface; `onboarding-conversation/` is the one state-machine folder) |
+| Screen parts many features share | `frontend/src/components/` |
+| Features | `frontend/src/features/<name>/` (one folder per feature; `onboarding-conversation/` is the one state-machine folder) |
+| The feature boundary gate | `frontend/scripts/feature-boundaries.ts` |
 | Catalogs / the edge where values turn into text | `frontend/src/i18n/`, `frontend/src/format/` |
 
 ## Where to go next

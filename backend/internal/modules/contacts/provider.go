@@ -26,7 +26,15 @@ import (
 // Provider answers the datasource verbs for contact|company|lead|
 // relationship|partner.
 type Provider struct {
-	store *Store
+	store       *Store
+	listMembers storekit.ListMemberFilterResolver
+}
+
+// WithListMembers lets a list narrow to one list's members, through the
+// resolver the HTTP door uses. Compose injects it while lists are on.
+func (p *Provider) WithListMembers(resolve storekit.ListMemberFilterResolver) *Provider {
+	p.listMembers = resolve
+	return p
 }
 
 // NewProvider builds this module's system-of-record provider over a
@@ -57,6 +65,12 @@ func (p *Provider) WithStopCarrier(carrier StopCarrier) *Provider {
 // WithStopCarrier does.
 func (p *Provider) WithSatelliteCarriers(consent ConsentSatelliteCarrier, intros IntroCarrier) *Provider {
 	p.store = p.store.WithSatelliteCarriers(consent, intros)
+	return p
+}
+
+// WithGrantCarrier mirrors the HTTP wiring for the same reason.
+func (p *Provider) WithGrantCarrier(carrier GrantCarrier) *Provider {
+	p.store = p.store.WithGrantCarrier(carrier)
 	return p
 }
 
@@ -130,6 +144,11 @@ func (p *Provider) SearchEntity(ctx context.Context, t datasource.EntityType, te
 		if err := contactListFilters.Apply(&in, filters); err != nil {
 			return nil, "", false, err
 		}
+		membership, err := storekit.ResolveListMembership(ctx, in.MemberOf, p.listMembers, contactEntity)
+		if err != nil {
+			return nil, "", false, err
+		}
+		in.Membership = membership
 		rows, page, err := p.store.ListContacts(ctx, in)
 		return pageOf(datasource.EntityContact, rows, page, err, func(v crmcontracts.Contact) (openapi_types.UUID, *int64) {
 			return v.Id, v.Version
@@ -139,6 +158,11 @@ func (p *Provider) SearchEntity(ctx context.Context, t datasource.EntityType, te
 		if err := companyListFilters.Apply(&in, filters); err != nil {
 			return nil, "", false, err
 		}
+		membership, err := storekit.ResolveListMembership(ctx, in.MemberOf, p.listMembers, companyEntity)
+		if err != nil {
+			return nil, "", false, err
+		}
+		in.Membership = membership
 		rows, page, err := p.store.ListCompanies(ctx, in)
 		return pageOf(datasource.EntityCompany, rows, page, err,
 			func(v crmcontracts.Company) (openapi_types.UUID, *int64) { return v.Id, v.Version })
@@ -147,6 +171,11 @@ func (p *Provider) SearchEntity(ctx context.Context, t datasource.EntityType, te
 		if err := leadListFilters.Apply(&in, filters); err != nil {
 			return nil, "", false, err
 		}
+		membership, err := storekit.ResolveListMembership(ctx, in.MemberOf, p.listMembers, leadEntity)
+		if err != nil {
+			return nil, "", false, err
+		}
+		in.Membership = membership
 		rows, page, err := p.store.ListLeads(ctx, in)
 		return pageOf(datasource.EntityLead, rows, page, err, func(v crmcontracts.Lead) (openapi_types.UUID, *int64) {
 			return v.Id, v.Version
@@ -212,7 +241,7 @@ func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datas
 			return datasource.EntityRef{}, err
 		}
 		req.Source = in.Source
-		mapped, err := contactCreateInput(req)
+		mapped, err := ContactCreationInput(req)
 		if err != nil {
 			return datasource.EntityRef{}, err
 		}
@@ -224,7 +253,7 @@ func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datas
 			return datasource.EntityRef{}, err
 		}
 		req.Source = in.Source
-		mapped, err := companyCreateInput(req)
+		mapped, err := CompanyCreationInput(req)
 		if err != nil {
 			return datasource.EntityRef{}, err
 		}
@@ -236,7 +265,7 @@ func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datas
 			return datasource.EntityRef{}, err
 		}
 		req.Source = in.Source
-		mapped, err := leadCreateInput(req)
+		mapped, err := LeadCreationInput(req)
 		if err != nil {
 			return datasource.EntityRef{}, err
 		}
@@ -248,7 +277,11 @@ func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datas
 			return datasource.EntityRef{}, err
 		}
 		req.Source = in.Source
-		row, err := p.store.CreateRelationship(ctx, relationshipCreateInput(req))
+		mapped, err := relationshipCreateInput(req)
+		if err != nil {
+			return datasource.EntityRef{}, err
+		}
+		row, err := p.store.CreateRelationship(ctx, mapped)
 		// The edge's own id, not an endpoint's: the caller asked for a
 		// relationship and the read-back has to reach the row it created.
 		return edgeRef(row.ID), err
@@ -298,7 +331,11 @@ func (p *Provider) Update(ctx context.Context, in datasource.UpdateInput) (datas
 		if err := datasource.StrictDecode(raw, &req); err != nil {
 			return datasource.EntityRef{}, err
 		}
-		row, err := p.store.UpdateRelationship(ctx, in.Ref.ID, relationshipUpdateInput(req, in.IfVersion))
+		update, err := relationshipUpdateInput(req, in.IfVersion, in.Clear)
+		if err != nil {
+			return datasource.EntityRef{}, err
+		}
+		row, err := p.store.UpdateRelationship(ctx, in.Ref.ID, update)
 		return edgeRef(row.ID), err
 	default:
 		return datasource.EntityRef{}, &datasource.UnsupportedEntityError{Type: string(in.Ref.Type)}
@@ -374,4 +411,10 @@ func (p *Provider) PromoteLead(
 		Trigger: trigger, EvidenceNote: evidenceNote, IfVersion: ifVersion,
 	})
 	return ref(datasource.EntityContact, contact.Id), merged, err
+}
+
+// WithParticipantRosterReader uses the owning module’s authorized reader so preview and execution share its policy.
+func (p *Provider) WithParticipantRosterReader(read ParticipantRosterReader) *Provider {
+	p.store = p.store.WithParticipantRosterReader(read)
+	return p
 }

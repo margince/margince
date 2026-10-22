@@ -35,36 +35,11 @@ func classifyRisk(item crmcontracts.AttentionItem, asOf time.Time, bar materialB
 	} else if known {
 		row.Because = append(row.Because, reason("below_material", money.value(expected, item.Deal)))
 	}
-	// Nobody inside the account is carrying it, which is a different problem
-	// from silence and needs a different move: a quiet deal wants a touch, an
-	// unchampioned one wants somebody found. Stated whenever the lane knew the
-	// answer, at any level — a small deal nobody is arguing for is still a deal
-	// nobody is arguing for, and the reason is what the rep acts on.
-	if item.Deal != nil && item.Deal.NoChampion != nil && *item.Deal.NoChampion {
-		row.Because = append(row.Because, reason("no_champion", nil))
-	} else if item.Deal != nil && item.Deal.ChampionUnknown != nil && *item.Deal.ChampionUnknown {
-		// Nobody has said who argues for it. The rep's move is to find out,
-		// which is not the same as being told nobody does.
-		row.Because = append(row.Because, reason("champion_unknown", nil))
-	}
-	// Nothing planned to move it: the intervention is to agree the next step.
-	if item.Deal != nil && item.Deal.NoNextStep != nil && *item.Deal.NoNextStep {
-		row.Because = append(row.Because, reason("no_next_step", nil))
-	}
+	row.Because = append(row.Because, dealInterventionReasons(item, asOf)...)
 	quiet := quietDaysOf(item)
-	if quiet > 0 {
-		row.Because = append(row.Because, reason("quiet_days", daysValue(quiet)))
-	}
-	// A close date calls for recovery or requalification, including when provisional.
-	if closingSoon(item, asOf) {
-		row.Because = append(row.Because, reason("closing_soon", nil))
-	}
 	return ranked{
 		item: row,
-		// The deal's own owner, and it is not known yet: dealfacts fills OwnerId
-		// onto the wire AFTER this classification runs. So this lane defers, and
-		// the wire step reads the deal the facts pass attached — the same second
-		// carrier answersTo has always consulted for these rows.
+		// Ownership arrives with the shared deal-facts pass after classification.
 		ownerRef:         deferredToTheDeal(),
 		deadlineAt:       deadlineOf(item.DueAt),
 		overdue:          item.Overdue != nil && *item.Overdue,
@@ -75,6 +50,35 @@ func classifyRisk(item crmcontracts.AttentionItem, asOf time.Time, bar materialB
 		waitingRank:      orderingAge(quiet),
 		occurredAt:       occurredOf(item, asOf),
 	}
+}
+
+func dealInterventionReasons(item crmcontracts.AttentionItem, asOf time.Time) []crmcontracts.WorklistReason {
+	var reasons []crmcontracts.WorklistReason
+	// Nobody inside the account is carrying it, which is a different problem
+	// from silence and needs a different move: a quiet deal wants a touch, an
+	// unchampioned one wants somebody found. Stated whenever the lane knew the
+	// answer, at any level — a small deal nobody is arguing for is still a deal
+	// nobody is arguing for, and the reason is what the rep acts on.
+	if item.Deal != nil && item.Deal.NoChampion != nil && *item.Deal.NoChampion {
+		reasons = append(reasons, reason("no_champion", nil))
+	} else if item.Deal != nil && item.Deal.ChampionUnknown != nil && *item.Deal.ChampionUnknown {
+		// Nobody has said who argues for it. The rep's move is to find out,
+		// which is not the same as being told nobody does.
+		reasons = append(reasons, reason("champion_unknown", nil))
+	}
+	// Nothing planned to move it: the intervention is to agree the next step.
+	if item.Deal != nil && item.Deal.NoNextStep != nil && *item.Deal.NoNextStep {
+		reasons = append(reasons, reason("no_next_step", nil))
+	}
+	quiet := quietDaysOf(item)
+	if quiet > 0 {
+		reasons = append(reasons, reason("quiet_days", daysValue(quiet)))
+	}
+	// A close date calls for recovery or requalification, including when provisional.
+	if closingSoon(item, asOf) {
+		reasons = append(reasons, reason("closing_soon", nil))
+	}
+	return reasons
 }
 
 // materialOf is the material verdict on one at-risk row: the figure it was

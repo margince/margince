@@ -90,6 +90,9 @@
 # but never built is one a fan-out child is inserted onto (workspaceSweepOpts
 # reads the DECLARED queue) with no client to work it.
 queues:
+  data_task:
+    max_workers: 1
+    reason: Bounded database corrections run apart from interactive jobs and serialize across processes with a database lock.
   default: {max_workers: 5}
   comms_send:
     max_workers: 3
@@ -108,6 +111,14 @@ queues:
       message a contact pressed a button for and is waiting on, so the pool is
       wide enough that an ordinary text send is not queued behind two album
       uploads.
+  accounting_read:
+    max_workers: 2
+    reason: >-
+      A finance sync reads every linked customer's ledger from an accounting
+      system this deployment does not control, for up to five minutes a pass.
+      On the default queue a burst of admins pressing Sync would hold every
+      worker that capture syncs and close-date jobs need. Two, because the
+      sync is a six-hourly mirror nobody waits on beyond the card's spinner.
   deep_read:
     max_workers: 6
     reason: >-
@@ -186,6 +197,20 @@ queues:
     reason: >-
       A full batch per policy, each record its own multi-statement audited
       transaction — minutes of database-bound work per tenant.
+  import_check:
+    max_workers: 2
+    reason: >-
+      A test run of an import that a user is watching. Its own pool, so a
+      long commit can never queue ahead of it. Two, one per open wizard tab.
+      Each holds its snapshot connection plus up to two short ones, for its
+      progress and its heartbeat.
+  import_write:
+    max_workers: 1
+    reason: >-
+      Commit and undo slices of an import. One per process: slices of two runs
+      interleave through the snooze, so one worker is fair to both, and the
+      run's advisory lock keeps two processes off one run. Each slice holds the
+      lock's connection plus one row transaction at a time.
 
 # Every DISPATCHER below takes timeout: 2m, and the reason is one reason rather
 # than twenty-three: a dispatcher runs one indexed scan and one insert-many (or
@@ -272,7 +297,7 @@ kinds:
     role: worker
     fleet: true
     go_type: FinanceSyncSweepArgs
-    queue: default
+    queue: accounting_read
     timeout: 5m
     opts_owner: caller
     cadence: 6h
@@ -293,6 +318,39 @@ kinds:
       Each workspace's pass reads the source's customers and the ledger of each
       linked one, and writes only what changed. The hash covers the source's own
       values, so a pass over an unchanged ledger writes nothing.
+
+  finance_sync:
+    role: worker
+    go_type: FinanceSyncArgs
+    queue: accounting_read
+    timeout: 5m
+    opts_owner: caller
+    args:
+      Workspace: id
+    reason: >-
+      One workspace's pass, queued when an administrator connects a source or
+      presses Sync now, so the customer directory arrives without waiting for
+      the six-hourly sweep. It is the pass the sweep runs per workspace, under
+      the same five minutes.
+
+  data_task_run:
+    role: worker
+    fleet: true
+    go_type: DataTaskRunArgs
+    queue: data_task
+    timeout: 2m
+    opts_owner: caller
+    reason: A globally serialized bounded correction batch, paced between transactions.
+
+  data_task_reconcile:
+    role: worker
+    fleet: true
+    go_type: DataTaskReconcileArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    cadence: 10m
+    reason: Seed missing correction progress and restore an interrupted executor job.
 
   capture_backfill_reconcile:
     role: worker
@@ -469,14 +527,11 @@ kinds:
     queue: default
     timeout: 10m
     opts_owner: caller
-    cadence: 6h
+    cadence: 1h
     reason: >-
-      Every six hours rather than weekly, for the same reason the brief ticks
-      hourly: the Monday it aims at is the installation's local one, and a tick
-      that crosses the review hour in every zone the setting can name is what
-      makes the schedule correct without a per-zone cron. The per-rep week
-      uniqueness collapses the extra ticks into one review, and the same
-      property backfills a Monday the worker was down for.
+      Hourly ticks reach each recipient's bounded personal delivery window.
+      The reporting week remains the installation's last closed week;
+      existing review and delivery claims prevent repeated generation or sending.
 
 
 
@@ -966,6 +1021,21 @@ kinds:
       loosening the cadence without amending the migration makes it a lie.
 
 
+  approval_notice_reconcile:
+    role: worker
+    go_type: ApprovalNoticeReconcileArgs
+    queue: default
+    timeout: 2m
+    max_attempts: 3
+    opts_owner: args
+    cadence: 5m
+    reason: >-
+      Clear pending-decision notices whose approval was withdrawn, replaced or
+      erased without a decision event. Each attempt reads at most 200 notices
+      and keeps its cursor in the job metadata before yielding. Pending rows
+      do not hide later notices. At the end of the scan the job completes, so
+      the next periodic pass starts from the beginning.
+
   # One job, not a dispatcher and a child (ADR-0103 §1): one indexed scan over
   # an installation-wide table, so there is nothing to fan out over.
   approval_expiry:
@@ -991,8 +1061,6 @@ kinds:
       every row this pass did not reach is still due then. A backing-off row
       would only suppress that tick.
 
-  # One job, not a dispatcher and a child (ADR-0103 §1): one indexed scan over
-  # an installation-wide table, so there is nothing to fan out over.
   intro_expiry:
     role: worker
     go_type: IntroExpiryArgs
@@ -1199,6 +1267,20 @@ kinds:
       answers not found, so nobody can find it to discard it — and a draft
       holds a subject's address and the words written to them.
 
+  waiting_horizon_refresh:
+    role: worker
+    go_type: WaitingHorizonRefreshArgs
+    queue: default
+    timeout: 5m
+    max_attempts: 3
+    opts_owner: args
+    cadence: 1h
+    reason: >-
+      Hourly, because readers treat a stored horizon older than a day as
+      missing (waitingHorizonStaleAfter): a few missed passes still leave a
+      fresh value, and a measurement that fails keeps the previous one. The
+      measurement is a year of inbound mail, which is why no read does it.
+
   idempotency_retention:
     role: worker
     fleet: true
@@ -1214,6 +1296,22 @@ kinds:
       lapsed bulk-change confirmations, which name who previewed and live 15
       minutes.
 
+
+  suppression_journal_export:
+    role: worker
+    fleet: true
+    go_type: SuppressionJournalArgs
+    queue: default
+    timeout: 5m
+    opts_owner: caller
+    cadence: 1h
+    registration: {when: [Blobstore], absent: registers_nothing}
+    reason: >-
+      Hourly, and the cadence answers how much of the journal a restore may
+      lose rather than how long the export takes: an erasure recorded after the
+      last export is one a restored database has no entry to refuse. The pass
+      itself is one indexed read of the suppression list and one Put per entry,
+      all of it idempotent, so a re-run costs writes and changes nothing.
 
   stored_object_reap:
     role: worker
@@ -1313,7 +1411,7 @@ kinds:
     queue: privacy_retention
     timeout:
       derived: privacyRetentionPassTimeout
-      value: 7h18m20s
+      value: 7h51m40s
       reason: >-
         privacy.MaxPassDuration is the pass's own ceiling — its stage count
         times its batch bound times its per-record allowance — and the margin
@@ -1345,6 +1443,98 @@ kinds:
       the real retry — and the uniqueness above dedupes over retryable, so a
       long ladder would suppress the very recovery it is waiting for while
       each rung risks buying the same answer again.
+
+  import_validate:
+    role: worker
+    go_type: ImportValidateArgs
+    queue: import_check
+    timeout: 10m
+    opts_owner: caller
+    fault:
+      nil_after_logging: >-
+        the import_run row owns the outcome: a refusal, an over-budget stop and
+        a lost fence are written to the run, or are a superseded attempt's
+        quiet exit; a River retry would test again a run whose state already
+        says what happened.
+    args:
+      Workspace: id
+      RunID: id
+      Attempt:
+        scalar: true
+        reason: the fence the run row holds; a new attempt is a new job
+    reason: >-
+      One test run of an import, read in one snapshot, so it is not sliced.
+      Ten minutes is far past what the row cap takes to test; past it the run
+      returns to its draft with an over-budget reason.
+
+  import_commit:
+    role: worker
+    go_type: ImportCommitArgs
+    queue: import_write
+    timeout:
+      derived: importSliceTimeout
+      value: 1m
+      reason: a slice is at most importSliceBudget of rows, plus its setup and its last flush
+    opts_owner: caller
+    fault:
+      nil_after_logging: >-
+        the import_run row owns the outcome: a failed row, an over-budget slice
+        and a lost fence are written to the run, or are a superseded attempt's
+        quiet exit; a River retry would rerun a slice whose run already says
+        what happened.
+    args:
+      Workspace: id
+      RunID: id
+      Attempt:
+        scalar: true
+        reason: the fence the run row holds; a new attempt is a new job
+    reason: >-
+      One slice of an approved import's commit. The run row is the checkpoint,
+      so a slice ends by rows or time, snoozes, and the next one resumes at the
+      cursor.
+
+  import_undo:
+    role: worker
+    go_type: ImportUndoArgs
+    queue: import_write
+    timeout:
+      derived: importSliceTimeout
+      value: 1m
+      reason: a slice is at most importSliceBudget of rows, plus its setup and its last page
+    opts_owner: caller
+    fault:
+      nil_after_logging: >-
+        the import_run row owns the outcome: an undo that stops stays undoing
+        with its cause and its cursor, and a lost fence is a superseded
+        attempt's quiet exit; a River retry would rerun a slice whose run
+        already says what happened.
+    args:
+      Workspace: id
+      RunID: id
+      Attempt:
+        scalar: true
+        reason: the fence the run row holds; a new attempt is a new job
+    reason: >-
+      One slice of an import's undo, the commit's shape: it pages over the
+      rows the run created from its cursor, then snoozes for the next slice.
+
+  import_run_sweep:
+    role: worker
+    go_type: ImportRunSweepArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    cadence: 1m
+    reason: >-
+      Settles every import run nothing else will move. A commit or undo slice
+      or test run whose process died stops heartbeating, and the sweep queues a
+      new attempt within a couple of minutes, so the cadence is one minute. A
+      run whose job was lost, such as a test run an old API pod started, has
+      its job queued again after two minutes; a draft or report
+      untouched for 7 days is cancelled; and every run that will not read its
+      uploaded file again releases it, so the stored-object reaper deletes the
+      bytes. Each rule selects its runs by status over an index, so on an idle
+      installation a pass finds nothing.
 
   employment_import_sweep:
     role: worker
@@ -1439,6 +1629,23 @@ kinds:
       tomorrow. The pass is a few indexed reads and at most two hundred
       writes per workspace and calls no model, so five minutes is a ceiling
       it does not approach.
+
+
+  tag_scout:
+    role: worker
+    fleet: true
+    go_type: TagScoutArgs
+    queue: default
+    timeout: 15m
+    opts_owner: caller
+    cadence: 1h
+    registration: {when: [TagSuggestBrain], absent: registers_anyway}
+    reason: >-
+      Hourly, like deal_scout: a mail asking about a product this morning
+      should be a suggestion by lunch. With a tag_suggest lane bound the pass
+      asks the model about at most two hundred unread items per workspace,
+      ten to a call, so it takes owed_verdict's fifteen minutes. Without one
+      it matches description phrases and calls no model.
 
 
   site_deep_read:

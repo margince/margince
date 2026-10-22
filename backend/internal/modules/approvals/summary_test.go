@@ -37,8 +37,8 @@ func TestSanitizeSummaryStripsWhatCanMisleadAReader(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			if got := sanitizeSummary(tc.in); got != tc.want {
-				t.Errorf("sanitizeSummary(%q) = %q, want %q", tc.in, got, tc.want)
+			if got := SanitizeSummary(tc.in); got != tc.want {
+				t.Errorf("SanitizeSummary(%q) = %q, want %q", tc.in, got, tc.want)
 			}
 		})
 	}
@@ -47,7 +47,7 @@ func TestSanitizeSummaryStripsWhatCanMisleadAReader(t *testing.T) {
 // A benign prefix long enough to push the real content out of view is the
 // cheapest of these attacks and needs no special characters at all.
 func TestSanitizeSummaryBoundsALongPrefix(t *testing.T) {
-	got := sanitizeSummary(strings.Repeat("routine cleanup ", 200) + "and delete everything")
+	got := SanitizeSummary(strings.Repeat("routine cleanup ", 200) + "and delete everything")
 	if len(got) > maxSummaryLen {
 		t.Errorf("summary is %d bytes, want at most %d — the ellipsis is inside the budget", len(got), maxSummaryLen)
 	}
@@ -64,7 +64,7 @@ func TestSanitizeSummaryBoundsALongPrefix(t *testing.T) {
 func TestSanitizeSummaryCutsOnARuneBoundary(t *testing.T) {
 	for offset := 1; offset <= 4; offset++ {
 		prefix := strings.Repeat("x", maxSummaryLen-offset)
-		got := sanitizeSummary(prefix + strings.Repeat("日", 8))
+		got := SanitizeSummary(prefix + strings.Repeat("日", 8))
 		if strings.ContainsRune(got, '�') {
 			t.Errorf("bounding split a rune at offset=%d: %q", offset, got)
 		}

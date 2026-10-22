@@ -3,23 +3,12 @@
 
 package compose
 
-// Handing a refused send to somebody who may decide it.
+// Closing the cards an earlier version raised for refused sends.
 //
-// consent owns the review and what routing means for it. approvals owns the
-// card and who may answer one. Neither may import the other, so the seam is
-// declared by consent (ReviewRouter) and bound here.
-//
-// WHAT THE CARD CARRIES is deliberately thin: the review's id, the held
-// message's id, the reason and how many contacts it names. Not the addresses —
-// an approvals queue is read by whoever holds the grant, and a card is a worse
-// place for somebody's contact details than the review it points at, which is
-// scoped to the colleagues who may see it.
-//
-// WHO ANSWERS IT is the approvals engine's question, and the grant it checks is
-// communication_exception:create — the same one the direct-send door takes. A
-// card that could be approved by somebody who may not direct a send would be a
-// way around that door, and the effect would refuse after the decision had
-// already committed.
+// A rep could once hand a refusal to whoever may direct a send, as an approval
+// card. That ask is gone (consent/reviewroute.go). Cards raised before it went
+// still need an ending. Approving one directs the send. Declining or expiring
+// one hands the review back to the rep.
 
 import (
 	"bytes"
@@ -37,7 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// reviewRouter stages a refused send as a decision somebody else can take.
+// reviewRouter closes cards raised for refused sends.
 type reviewRouter struct {
 	approvals *approvals.Service
 }
@@ -56,63 +45,6 @@ type reviewDecision struct {
 	Note       string `json:"note,omitempty"`
 }
 
-// RouteForDecisionTx implements consent.ReviewRouter.
-func (r reviewRouter) RouteForDecisionTx(
-	ctx context.Context, tx pgx.Tx, in consent.ReviewRouteRequest,
-) (ids.UUID, error) {
-	payload, err := json.Marshal(reviewDecision{
-		ReviewID:   in.ReviewID.String(),
-		IntentID:   in.IntentID.String(),
-		ReasonCode: in.ReasonCode,
-		Recipients: in.Recipients,
-		Note:       in.Note,
-	})
-	if err != nil {
-		return ids.UUID{}, fmt.Errorf("compose: describing the decision being asked for: %w", err)
-	}
-	// IDENTITY IS THE REVIEW ALONE, and it is a SUBSET of the payload rather
-	// than the payload itself.
-	//
-	// A rep who presses the button twice is asking one question about one
-	// refused message, so the second press must find the first card. Identity
-	// is what decides that — and if it carried the whole payload, two presses
-	// with different notes would be two identities and the decider would be
-	// shown the same refusal twice.
-	identity, err := json.Marshal(map[string]string{consent.FieldReviewID: in.ReviewID.String()})
-	if err != nil {
-		return ids.UUID{}, fmt.Errorf("compose: naming the question being asked: %w", err)
-	}
-	staged, _, err := r.approvals.StageUnlessDeclinedTx(ctx, tx, approvals.StageInput{
-		Kind:           approvals.KindCommunicationReview,
-		ProposedChange: payload,
-		Identity:       identity,
-		// The DIFF HASH is the review too, not the message. A card is
-		// superseded when the question changes, and the question here is "may
-		// this refused send go" — which is the same question however many
-		// times it is asked about one review.
-		DiffHash:    in.ReviewID.String(),
-		JoinPending: true,
-		Summary:     reviewSummary(approvalSummaryCopyIn(ctx, tx), in),
-	})
-	if err != nil {
-		return ids.UUID{}, err
-	}
-	return staged.UUID, nil
-}
-
-// reviewSummary is the line a decider reads in the queue before opening
-// anything. It says what was refused and how widely, and names no recipient.
-func reviewSummary(said approvalSummaryCopy, in consent.ReviewRouteRequest) string {
-	recipients := said.reviewOneRecipient
-	if in.Recipients != 1 {
-		recipients = fmt.Sprintf(said.reviewRecipients, in.Recipients)
-	}
-	return fmt.Sprintf(said.reviewSendRefused, recipients, in.ReasonCode)
-}
-
-// reviewDecisionEffect is what approving the card does: the directed send
-// itself, under the APPROVER's principal.
-//
 // THE APPROVER IS THE DIRECTOR. That is the whole design — the instruction
 // records who decided, and the human who decided is the one who pressed
 // approve, not the rep who asked. An effect that ran under the initiator's
@@ -283,7 +215,7 @@ func returnRoutedReview(ctx context.Context, tx pgx.Tx, proposedChange json.RawM
 // wiring sites below, so widening it is a deliberate edit rather than an
 // accident.
 func retractionRouter(pool *pgxpool.Pool) reviewRouter {
-	return reviewRouter{approvals: approvals.NewService(InstallationDB(pool))}
+	return reviewRouter{approvals: NewApprovalsService(InstallationDB(pool))}
 }
 
 // reviewCloser closes the review a settled message leaves behind.

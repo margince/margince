@@ -115,6 +115,17 @@ func carriesWarning(sealed sealedResult, code string) bool {
 	return false
 }
 
+// warningText answers the words beside a code, so a test can read what a model
+// would read rather than only that something was raised.
+func warningText(sealed sealedResult, code string) string {
+	for _, warning := range sealed.Warnings {
+		if warning.Code == code {
+			return warning.Message
+		}
+	}
+	return ""
+}
+
 func recordCount(t *testing.T, payload json.RawMessage) int {
 	t.Helper()
 	var answer struct {
@@ -124,4 +135,58 @@ func recordCount(t *testing.T, payload json.RawMessage) int {
 		t.Fatalf("unreadable search payload %s: %v", payload, err)
 	}
 	return len(answer.Records)
+}
+
+// The second boundary, which row scope does not describe.
+//
+// Capture privacy withholds an owner-private row from everyone but its owner,
+// and reading every row does not lift it. So an administrator searching for a
+// colleague's unpromoted capture is told nothing matched. The surface exists so
+// that "nothing I can see" and "nothing exists" read differently. They get the
+// bounded rep's answer, and before this it carried no warning.
+func TestAnAdministratorIsToldWhenCapturePrivacyWithheldARow(t *testing.T) {
+	e := Setup(t)
+	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
+	for _, name := range []string{"Withheld Alpha", "Withheld Beta"} {
+		e.MakeCapturePrivate(t, "contact", e.SeedContact(t, name, &e.Rep1), e.Rep1)
+	}
+	const query = `{"q":"Withheld","record_type":"contact"}`
+
+	// An administrator who owns none of them. Row scope admits every row and
+	// capture privacy still refuses these, which is the gap.
+	admin := invokeForEnvelope(e.As(e.AdminUser, []ids.UUID{e.Team1}, AdminPerms), t, registry, query)
+
+	if got := recordCount(t, admin.Data); got != 0 {
+		t.Fatalf("the administrator read %d of the private captures, so this suite is not testing the boundary it names", got)
+	}
+	if !carriesWarning(admin, "row_scope_filtered") {
+		t.Errorf("an administrator's empty answer carries no warning: %v — "+
+			"an agent reading it will report that no such contact exists", admin.Warnings)
+	}
+	// The same rule as the row-scope arm: the fact rides the envelope, never
+	// the size. Two rows were withheld and the answer must not say so.
+	if strings.Contains(warningText(admin, "row_scope_filtered"), "2") {
+		t.Error("the warning counts what was withheld, which is the disclosure the boundary exists to close")
+	}
+}
+
+// The warning has to keep telling two answers apart, and capture privacy is
+// the arm that could end that. It binds every human on contact and company.
+// A warning raised because the arm applied would ride nearly every answer, and
+// say as little as one riding none.
+func TestAnAnswerNothingWithheldCarriesNoWarning(t *testing.T) {
+	e := Setup(t)
+	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
+	// Readable by the workspace, so capture privacy has nothing to take.
+	e.SeedContact(t, "Shared Alpha", &e.Rep1)
+	const query = `{"q":"Shared","record_type":"contact"}`
+
+	admin := invokeForEnvelope(e.As(e.AdminUser, []ids.UUID{e.Team1}, AdminPerms), t, registry, query)
+
+	if got := recordCount(t, admin.Data); got != 1 {
+		t.Fatalf("the administrator read %d contacts, want the 1 seeded", got)
+	}
+	if carriesWarning(admin, "row_scope_filtered") {
+		t.Error("an answer nothing withheld claims filtering, so the warning no longer tells two answers apart")
+	}
 }

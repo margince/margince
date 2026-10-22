@@ -20,33 +20,17 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-// addListMember, applyTag and the three offer-line-item commands all stage
-// OUTSIDE the record seam (list, tag and offer are none of them served) —
-// the id alone names the target, the same shape
-// TestCustomFieldCommandsStageAndAdmitOutsideTheRecordSeam proves for
-// retire/update-options. Guards is asked — StageSubject (command.go) runs it
-// before Subject, which is what makes this an ADMIT assertion and not only a
-// staging one — against a provider that fails EVERY read, so a resolver that
-// consulted the seam anyway fails here rather than passing on a lenient stub.
-func TestListTagAndLineItemCommandsStageAndAdmitOutsideTheRecordSeam(t *testing.T) {
-	id, lineItemID := ids.NewV7(), ids.NewV7()
+// applyTag stages outside the record seam, which serves no tag: the id alone
+// names the target. StageSubject runs Guards first, against a provider that fails every
+// read, so a resolver that consulted the seam fails here.
+func TestApplyTagStagesOutsideTheRecordSeam(t *testing.T) {
+	id := ids.NewV7()
 	cases := []struct {
 		name           string
 		call           GovernedCall
 		wantTargetType string
 	}{
 		{"apply_tag", NewApplyTagCall(unreadableProvider{}, nil, ApplyTagCommand{ID: id}), "tag"},
-		{"add_offer_line_item", NewAddOfferLineItemCall(unreadableProvider{}, nil, AddOfferLineItemCommand{ID: id}), "offer"},
-		{
-			"update_offer_line_item",
-			NewUpdateOfferLineItemCall(unreadableProvider{}, nil, UpdateOfferLineItemCommand{ID: id, LineItemID: lineItemID}),
-			"offer",
-		},
-		{
-			"remove_offer_line_item",
-			NewRemoveOfferLineItemCall(unreadableProvider{}, nil, RemoveOfferLineItemCommand{ID: id, LineItemID: lineItemID}),
-			"offer",
-		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

@@ -157,10 +157,14 @@ type Input struct {
 	// each type — instead of one ranked list. Nil is the ranked list.
 	PerType *int
 	// WithEmployees adds the employer arm (employerArmSQL): contacts found
-	// through a company the query matches. Only the HTTP surface asks for it, so
-	// the agent and plan lanes that reuse Search keep matching by own text alone.
+	// through a company the query matches. GET /v1/search and search_records ask
+	// for it; the retrieval and plan lanes keep matching by own text alone.
 	WithEmployees bool
 }
+
+// maxQueryWords bounds the words one query may hold. The employer arm binds a
+// parameter and a clause per word, so this caps the statement a request builds.
+const maxQueryWords = 32
 
 // Search runs the cross-object query (contract /search): one ranked list, or
 // with PerType one page grouped by type. Every branch carries archived_at IS
@@ -173,6 +177,11 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 	query := normalizeQuery(in.Query)
 	if strings.TrimSpace(query) == "" {
 		return Page{}, &BadQueryError{Field: "q", Reason: "q is required"}
+	}
+	if words := len(strings.Fields(query)); words > maxQueryWords {
+		return Page{}, &BadQueryError{Field: "q", Reason: fmt.Sprintf(
+			"q holds %d words and a search takes at most %d; keep the words that name what you are looking for",
+			words, maxQueryWords)}
 	}
 	types := in.Types
 	if len(types) == 0 {
@@ -206,12 +215,13 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 		arg := func(v any) int { args = append(args, v); return len(args) }
 
 		headPos, tailPos, hasFragment := bindTypedQuery(query, arg)
-		branches, err := admittedBranchSQL(ctx, types, headPos, tailPos, hasFragment, arg)
+		identifierPos := bindIdentifier(query, arg)
+		branches, err := admittedBranchSQL(ctx, types, headPos, tailPos, hasFragment, identifierPos, arg)
 		if err != nil {
 			return err
 		}
 		if in.WithEmployees && slices.Contains(types, entityContact) && !carriesOperators(query) {
-			arm, armErr := employerArmSQL(ctx, headPos, tailPos, hasFragment, arg)
+			arm, armErr := employerArmSQL(ctx, query, headPos, tailPos, hasFragment, identifierPos, arg)
 			if armErr != nil {
 				return armErr
 			}
@@ -232,16 +242,10 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 			return err
 		}
 		page = shape.page(hits)
-		if err := s.countTagReach(ctx, tx, page.Hits); err != nil {
+		if err := noteCaptureWithheld(ctx, tx, types); err != nil {
 			return err
 		}
-		if err := s.attachEmailSummaries(ctx, tx, page.Hits); err != nil {
-			return err
-		}
-		if err := s.markPartners(ctx, tx, page.Hits); err != nil {
-			return err
-		}
-		return s.attachCompanyLogos(ctx, tx, page.Hits)
+		return s.decorate(ctx, tx, page.Hits)
 	})
 	if err != nil {
 		return Page{}, err
@@ -298,7 +302,9 @@ func withinClause(within []ids.UUID, arg func(any) int) string {
 // entity type. A hit is a read twice over: object RBAC first (a role
 // without contact.read gets no contact hits — search must not out-see the
 // entity lists), then the row scope.
-func admittedBranchSQL(ctx context.Context, types []string, headPos, tailPos int, hasFragment bool, arg func(any) int) ([]string, error) {
+func admittedBranchSQL(ctx context.Context, types []string, headPos, tailPos int, hasFragment bool,
+	identifierPos func() int, arg func(any) int,
+) ([]string, error) {
 	var branches []string
 	for _, branch := range searchBranches {
 		if !slices.Contains(types, branch.entity) {
@@ -320,22 +326,24 @@ func admittedBranchSQL(ctx context.Context, types []string, headPos, tailPos int
 		if err != nil {
 			return nil, err
 		}
-		sql := fmt.Sprintf(
-			`SELECT '%s'::text AS rtype, t.id, %s AS title, %s AS snippet,
-			        %s::float8 AS score, %s
-			 FROM %s t
-			 WHERE t.search_tsv @@ %s
-			   AND t.archived_at IS NULL`,
-			branch.entity, branch.title, snippet,
-			scoreExpression(branch.entity, "t", headPos, tailPos, hasFragment),
-			noEmployer, branch.table, tsquery)
+		where := branch.ownMatch("t", tsquery, identifierPos) + " AND t.archived_at IS NULL"
 		if narrowing := branch.narrowing("t"); narrowing != "" {
-			sql += " AND " + narrowing
+			where += " AND " + narrowing
 		}
 		if scope != "" {
-			sql += " AND " + scope
+			where += " AND " + scope
 		}
-		branches = append(branches, sql)
+		source := fmt.Sprintf("%s t WHERE %s", branch.table, where)
+		if branch.rankSample > 0 {
+			source = fmt.Sprintf("(SELECT t.* FROM %s LIMIT $%d) t", source, arg(branch.rankSample))
+		}
+		branches = append(branches, fmt.Sprintf(
+			`SELECT '%s'::text AS rtype, t.id, %s AS title, %s AS snippet,
+			        %s::float8 AS score, %s
+			 FROM %s`,
+			branch.entity, branch.title, snippet,
+			branch.ownScore("t", scoreExpression(branch.entity, "t", headPos, tailPos, hasFragment), identifierPos),
+			noEmployer, source))
 	}
 	return branches, nil
 }
@@ -446,7 +454,7 @@ func (e *QueryTooBroadError) Unwrap() error { return e.Err }
 // FieldFault names `q`, because `q` is what the reader can change.
 func (e *QueryTooBroadError) FieldFault() (field, code, message string) {
 	return "q", "query_too_broad", "this search matched too much of the workspace to rank in time — " +
-		"add another word, or narrow it with types"
+		"add another word, or narrow it by record type"
 }
 
 func knownEntity(t string) bool {

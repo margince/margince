@@ -104,8 +104,7 @@ SELECT t.status, t.handler, a.id, a.params, a.owner_id, o.envelope,
            AND regexp_replace(prior.idempotency_key, '^retry[0-9]+:', '') = t.base_key)
   FROM target t
   JOIN automation a ON a.archived_at IS NULL AND a.enabled
-   AND t.handler = a.key
-   AND t.idempotency_key LIKE '%@' || a.id
+   AND ` + runOfAutomationSQL + `
   LEFT JOIN event_outbox o ON o.id = t.trigger_event`
 
 // retryCandidate is one recovered firing, ready to re-dispatch.

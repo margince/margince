@@ -31,6 +31,19 @@ type ConfigPatch struct {
 	Budgets          *[]PoolBudget
 }
 
+// refuseUnusablePatch refuses what no row can answer: a version below zero and
+// a patch that names no setting.
+func refuseUnusablePatch(p ConfigPatch, ifMatch int64) error {
+	if ifMatch < 0 {
+		return &NegativeVersionError{Version: ifMatch}
+	}
+	if p.Mode == nil && p.Preset == nil && p.Categories == nil && p.AutomaticCreate == nil &&
+		p.AutomaticImport == nil && p.RefreshAfterDays == nil && p.DailyRunLimit == nil && p.Budgets == nil {
+		return &EmptyConfigurationError{}
+	}
+	return nil
+}
+
 // UpdateConfig patches the saved policy. The new version affects FUTURE runs
 // only: a run already queued carries its own frozen snapshot, so widening the
 // categories here cannot retroactively authorize a purchase (PI-AC-2).
@@ -52,8 +65,8 @@ func (s *Store) UpdateConfig(ctx context.Context, name string, patch ConfigPatch
 	if err := auth.Require(ctx, objectIntegrations, principal.ActionUpdate); err != nil {
 		return Connection{}, err
 	}
-	if ifMatch < 0 {
-		return Connection{}, &NegativeVersionError{Version: ifMatch}
+	if err := refuseUnusablePatch(patch, ifMatch); err != nil {
+		return Connection{}, err
 	}
 	desc, err := s.registry.Descriptor(name)
 	if err != nil {
@@ -72,6 +85,13 @@ func (s *Store) UpdateConfig(ctx context.Context, name string, patch ConfigPatch
 		if ifMatch != 0 && current.Version != ifMatch {
 			return apperrors.ErrVersionSkew
 		}
+		// readOne leaves the pool budgets out, and a save that resends them has
+		// to be compared with what is stored.
+		shown, err := s.loadConnections(ctx, tx)
+		if err != nil {
+			return err
+		}
+		current.Budgets = shown[name].Budgets
 
 		merged := applyPatch(current, patch)
 		if err := desc.ValidateSelection(merged.Preset, categoriesFrom(merged.Categories)); err != nil {
@@ -86,44 +106,54 @@ func (s *Store) UpdateConfig(ctx context.Context, name string, patch ConfigPatch
 			}
 		}
 
-		if _, err := tx.Exec(ctx, `
-			UPDATE provider_connection
-			   SET mode = $2, preset = $3, automatic_individual_create = $4,
-			       automatic_import = $5, categories = $6,
-			       refresh_after_days = $7, daily_run_limit = $8
-			 WHERE provider = $1`,
-			name, merged.Mode, merged.Preset, merged.AutomaticCreate,
-			merged.AutomaticImport, merged.Categories,
-			merged.RefreshAfterDays, merged.DailyRunLimit); err != nil {
-			return fmt.Errorf("integrations: updating the connection: %w", err)
-		}
-		if patch.Budgets != nil {
-			if err := s.writeBudgets(ctx, tx, name, merged.Budgets, emptyCredits()); err != nil {
+		if !configurationUnchanged(current, merged) {
+			if err := s.writeConfig(ctx, tx, name, current, merged, patch.Budgets != nil); err != nil {
+				return err
+			}
+			if shown, err = s.loadConnections(ctx, tx); err != nil {
 				return err
 			}
 		}
-		if _, err := storekit.Audit(ctx, tx, "update", "provider_connection", uuidOf(current.id),
-			map[string]any{
-				auditKeyMode: current.Mode, auditKeyPreset: current.Preset,
-				auditKeyAutoCreate: current.AutomaticCreate, auditKeyAutoImport: current.AutomaticImport,
-			},
-			map[string]any{
-				auditKeyMode: merged.Mode, auditKeyPreset: merged.Preset,
-				auditKeyAutoCreate: merged.AutomaticCreate, auditKeyAutoImport: merged.AutomaticImport,
-			}); err != nil {
-			return err
-		}
-		conns, err := s.loadConnections(ctx, tx)
-		if err != nil {
-			return err
-		}
-		out = conns[name]
-		return nil
+		out, err = s.presentAfterWrite(ctx, tx, shown[name], desc)
+		return err
 	})
 	if err != nil {
 		return Connection{}, err
 	}
 	return out, nil
+}
+
+// writeConfig lands a policy that differs from the stored one, with the audit
+// row that says what it was and what it became.
+func (s *Store) writeConfig(
+	ctx context.Context, tx pgx.Tx, name string, current, merged currentConfig, budgetsSent bool,
+) error {
+	if _, err := tx.Exec(ctx, `
+		UPDATE provider_connection
+		   SET mode = $2, preset = $3, automatic_individual_create = $4,
+		       automatic_import = $5, categories = $6,
+		       refresh_after_days = $7, daily_run_limit = $8
+		 WHERE provider = $1`,
+		name, merged.Mode, merged.Preset, merged.AutomaticCreate,
+		merged.AutomaticImport, merged.Categories,
+		merged.RefreshAfterDays, merged.DailyRunLimit); err != nil {
+		return fmt.Errorf("integrations: updating the connection: %w", err)
+	}
+	if budgetsSent {
+		if err := s.writeBudgets(ctx, tx, name, merged.Budgets, emptyCredits()); err != nil {
+			return err
+		}
+	}
+	_, err := storekit.Audit(ctx, tx, "update", "provider_connection", uuidOf(current.id),
+		map[string]any{
+			auditKeyMode: current.Mode, auditKeyPreset: current.Preset,
+			auditKeyAutoCreate: current.AutomaticCreate, auditKeyAutoImport: current.AutomaticImport,
+		},
+		map[string]any{
+			auditKeyMode: merged.Mode, auditKeyPreset: merged.Preset,
+			auditKeyAutoCreate: merged.AutomaticCreate, auditKeyAutoImport: merged.AutomaticImport,
+		})
+	return err
 }
 
 // DeleteProviderData removes retained provider claims and the identifying

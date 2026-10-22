@@ -317,7 +317,7 @@ type agentLoopToolSurface struct{}
 
 func (agentLoopToolSurface) Specs() []mcp.ToolSpec { return agentLoopRegistry() }
 
-func (agentLoopToolSurface) Offered(context.Context) []mcp.ToolSpec { return agentLoopRegistry() }
+func (agentLoopToolSurface) Runnable(context.Context) []mcp.ToolSpec { return agentLoopRegistry() }
 
 func (agentLoopToolSurface) Invoke(context.Context, string, json.RawMessage) (json.RawMessage, error) {
 	return nil, &workflow.StagedApprovalError{ApprovalID: ids.New[ids.ApprovalKind]()}

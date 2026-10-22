@@ -50,7 +50,7 @@ type ListCompaniesInput struct {
 	OwnerID       *ids.UserID
 	// OwnerTeamID narrows to a team's rows; Unassigned to the unowned queue.
 	// Both narrow the caller's row scope and never widen it — see
-	// listFilters.ownershipClause, which also refuses two of them at once.
+	// storekit.OwnershipClause, which also refuses two of them at once.
 	OwnerTeamID *ids.TeamID
 	Unassigned  *bool
 	// Two questions, asked separately because one value could not answer both:
@@ -80,6 +80,9 @@ type ListCompaniesInput struct {
 	CustomFilters map[string]string
 	// Membership narrows to one list's members (list_id).
 	Membership storekit.ListMemberFilter
+	// MemberOf is the list a seam caller narrowed to; the provider resolves it
+	// into Membership before the read.
+	MemberOf *ids.UUID
 }
 
 // companyListFields is the company list's core sortable
@@ -89,7 +92,7 @@ var companyListFields = map[string]storekit.SortField{
 	createdAtColumn:    storekit.Column(storekit.KindTimestamp),
 	updatedAtColumn:    storekit.Column(storekit.KindTimestamp),
 	companyNameColumn:  storekit.Column(fieldcatalog.TypeText),
-	ownerIDColumn:      storekit.Column(storekit.KindUUID),
+	ownerIDColumn:      storekit.OwnerNameSort(companyEntity),
 	lastActivityColumn: storekit.Column(storekit.KindTimestamp),
 	columnDescription:  storekit.Column(fieldcatalog.TypeText),
 	// classification is retired and the column the list draws is lifecycle, so
@@ -176,10 +179,8 @@ func companyCommonFilters(in ListCompaniesInput) listFilters {
 		Cursor:          in.Cursor,
 		CustomFilters:   in.CustomFilters,
 		nameColumn:      companyNameColumn,
-		identifier: storekit.Identifier{
-			Table: "company_domain", FK: companyFK, Column: domainColumn,
-		},
-		Membership: in.Membership,
+		identifier:      storekit.CompanyDomains,
+		Membership:      in.Membership,
 	}
 }
 
@@ -189,7 +190,7 @@ func (s *Store) ListCompanies(ctx context.Context, in ListCompaniesInput) ([]crm
 	shared := companyCommonFilters(in)
 	return listPage(ctx, s, in.Sort, in.Limit, listPageSpec[crmcontracts.Company]{
 		entity:  companyEntity,
-		columns: companyColumns,
+		columns: func(context.Context, func(any) int) (string, error) { return companyColumns, nil },
 		fields:  companyListFields,
 		filters: func(ctx context.Context, active []fieldcatalog.Column, sorted *storekit.ListSort, arg func(any) int) ([]string, error) {
 			where, err := shared.clauses(ctx, active, sorted, arg)

@@ -1,0 +1,9 @@
+# A filled-in web.security_txt block, every optional field included.
+web:
+  security_txt:
+    contact:
+      - mailto:security@example.org
+      - https://example.org/report-a-vulnerability
+    expires: "2030-01-01T00:00:00Z"
+    policy: https://example.org/disclosure-policy
+    preferred_languages: [en, de]

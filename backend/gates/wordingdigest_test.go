@@ -21,12 +21,14 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 func TestOneWordingDigest(t *testing.T) {
 	t.Parallel()
 
-	dir := filepath.Join(moduleRoot(t), "internal", "modules", "consent")
+	dir := filepath.Join(gatekit.ModuleRoot(t), "internal", "modules", "consent")
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("reading the consent module: %v", err)

@@ -271,13 +271,16 @@ var maskGate = objectGate{
 
 // predicateMaskedAmountReads: the statement names an amount column but no
 // figure reaches a reader who could be masked.
-var predicateMaskedAmountReads = gatekit.Waive(map[string]string{})
+var predicateMaskedAmountReads = gatekit.Waive(map[string]string{
+	"internal/modules/deals/legalreviewterms.go:readReviewTerms": "the deal's amount and currency, hashed with the current offer into the fingerprint a legal approval is bound to. Only the SHA-256 leaves the function; the stage gate compares two of them and neither reaches a reader",
+})
 
 // lifecycleMaskedAmountReads: the read runs as PrincipalSystem, which
 // auth.Unbounded answers for outright — a mask asked there would be inert, and
 // the entry records why asking was never the point.
 var lifecycleMaskedAmountReads = gatekit.Waive(map[string]string{
-	"internal/compose/assuranceseam.go":                         "the assurance scan's subject statement, selecting each deal's owner, amount and currency so a finding can be raised against it. The pass runs as PrincipalSystem over the whole installation (assurancebundle.go records it), and what a HUMAN later reads is AssuranceExceptions, which is a report surface and carries the engine's own mask pass. A mask applied to the scan would hide a finding from everybody rather than a figure from one reader",
+	"internal/compose/extsystemread.go:readDealSummary":         "an extension unit's system read of one deal (Runtime.Deals().Get), as the delivery's or tick's PrincipalSystem, and refused by systemRead on any invocation a caller could receive it on. Whom the unit then shows the figure is the unit's to ask through Authority().CanRead, which answers false while auth.MaskedFields withholds a named field from that colleague, a conditional mask included",
+	"internal/compose/assuranceseam.go":                         "the assurance scan's subject statement, selecting each deal's owner, amount and currency so a finding can be raised against it. The pass runs as PrincipalSystem over the whole installation (assurancebundle.go records it), and what a HUMAN later reads is AssuranceExceptions, which renders the finding's money through auth.MaskedExpressionSQL over the joined deal (assurancelist.go maskedFindingMoney). A mask applied to the scan would hide a finding from everybody rather than a figure from one reader",
 	"internal/modules/privacy/sarsections.go:sarRecordSections": "the deal rows AS the Art. 15 export: what the installation holds about the data subject, assembled under the system principal on a request a human already authorised. A field mask narrows what a COLLEAGUE may read about a record; applying one here would make the subject's own answer incomplete, which is the defect the export exists to prevent",
 })
 
@@ -299,9 +302,9 @@ var calleeGatedMaskedAmountReads = gatekit.Waive(map[string]string{
 // does not vouch for it, and a reason here that claimed to would be a mitigation
 // nobody can check from the statement it is written beside.
 var writePreimageMaskedAmountReads = gatekit.Waive(map[string]string{
-	"internal/modules/deals/basecurrencyfreezewrite.go:frozenBaseBefore": "the frozen base amount a re-price or a reopen is about to overwrite. amount_minor_base is an internal column on no contract, so the writer has no pre-image to hand over and reads the row for one; recording nil instead would write \"there was no converted amount\" into the audit diff of every reopen, which is the row a reversal reads to put the old figure back",
-	"internal/modules/deals/forecasthistory.go:recordForecastMovement":   "INSERT INTO deal_forecast_history … SELECT FROM deal: the deal's state copied into its forecast trail, in the write's own transaction and after the patch landed. The statement answers a row count and no figure. Nothing in this tree READS that table yet, so the obligation belongs to whoever writes the first such read rather than to somebody who has already met it",
-	"internal/modules/deals/offer_dealsync.go:syncDealAmountFromOffer":   "the deal's current price under a row lock, so an accepted offer's gross can be compared against it and the audit diff can name what it replaced. The comparison is what keeps an accept re-pricing at the figure already held out of the forecast trail. The pre-image it reads reaches only that diff: the money the function returns in p.After() is the offer's own gross, which its caller supplied",
+	"internal/modules/deals/basecurrencyfreezewrite.go:frozenBefore":   "the frozen base amount a re-price or a reopen is about to overwrite. amount_minor_base is an internal column on no contract, so the writer has no pre-image to hand over and reads the row for one; recording nil instead would write \"there was no converted amount\" into the audit diff of every reopen, which is the row a reversal reads to put the old figure back",
+	"internal/modules/deals/forecasthistory.go:recordForecastMovement": "INSERT INTO deal_forecast_history … SELECT FROM deal: the deal's state copied into its forecast trail, in the write's own transaction and after the patch landed. The statement answers a row count and no figure. Nothing in this tree READS that table yet, so the obligation belongs to whoever writes the first such read rather than to somebody who has already met it",
+	"internal/modules/deals/offer_dealsync.go:syncDealAmountFromOffer": "the deal's current price under a row lock, so an accepted offer's gross can be compared against it and the audit diff can name what it replaced. The comparison is what keeps an accept re-pricing at the figure already held out of the forecast trail. The pre-image it reads reaches only that diff: the money the function returns in p.After() is the offer's own gross, which its caller supplied",
 })
 
 // ruledMaskedAmountReads: a read the product has ruled may print the figure
@@ -390,14 +393,9 @@ func readsADealAmount(filePath string, file *ast.File, columns *regexp.Regexp, b
 // `sum(deals.OpenDealBaseValueSQL(...))` over every open deal, with no mask and
 // nothing here to say so.
 //
-// DERIVED from the tree rather than listed, and the list is why. It was two
-// names, written down when a reviewer found the first gap; it was already
-// missing a third. `briefs.briefBaseValueSQL` is a CHARACTER-IDENTICAL second
-// spelling of compose.BaseValueSQL, held so by TestOneSpellingOfADealsBaseValue
-// because the import direction forbids the call — so this tree states that the
-// two are one expression, and a hand-kept list saw one of them. Two statements
-// selecting a deal's money sat outside the census for as long as that list was
-// the answer.
+// DERIVED from the tree rather than listed, and the list is why. A hand-kept
+// list of builder names misses the next builder somebody writes, and every
+// statement composing it then sits outside the census.
 //
 // A builder is a function whose one result is a string and whose body names an
 // amount column INSIDE A STATEMENT FRAGMENT. Both halves are load-bearing:

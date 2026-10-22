@@ -124,14 +124,14 @@ func (a tagAdapter) RecordTagTypes() []string { return collections.RecordTagType
 // through: TagVocabulary was written for a caller outside that module and
 // this is the first one, so there is nothing here to translate beyond the
 // field names the wire uses.
-func (a tagAdapter) ListTags(ctx context.Context, includeArchived bool) ([]agents.Tag, bool, error) {
-	rows, truncated, err := a.store.TagVocabulary(ctx, includeArchived)
+func (a tagAdapter) ListTags(ctx context.Context, q agents.TagQuery) ([]agents.Tag, bool, error) {
+	rows, truncated, err := a.store.TagVocabulary(ctx, collections.VocabularyQuery(q))
 	if err != nil {
 		return nil, false, err
 	}
 	out := make([]agents.Tag, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, agents.Tag{TagID: r.TagID, Name: r.Name, Color: r.Color, Archived: r.Archived})
+		out = append(out, agents.Tag{TagID: r.TagID, Name: r.Name, Color: r.Color, Archived: r.Archived, CarriedBy: r.CarriedBy})
 	}
 	return out, truncated, nil
 }
@@ -195,11 +195,10 @@ func tagOf(id ids.TagID, name string, color *string, archived bool) agents.Tag {
 	return out
 }
 
-// The description is nil because `create_tag`'s schema does not offer one: a
-// tool that advertised the field would have to explain a word in a sentence
-// the model invented, and the HTTP door is where a curator writes that.
-func (a tagAdapter) CreateTag(ctx context.Context, name string, color *string) (agents.Tag, error) {
-	row, err := a.store.CreateTag(ctx, name, color, nil)
+// The description is read as the HTTP door reads it, so a tag's description
+// cannot depend on which door wrote it.
+func (a tagAdapter) CreateTag(ctx context.Context, name string, color, description *string) (agents.Tag, error) {
+	row, err := a.store.CreateTag(ctx, name, color, collections.TagDescriptionOrNone(description))
 	if err != nil {
 		return agents.Tag{}, err
 	}
@@ -211,14 +210,19 @@ func (a tagAdapter) CreateTag(ctx context.Context, name string, color *string) (
 // store owns every refusal that remains (a self-merge, an archived target, a
 // word the caller may not read).
 func (a tagAdapter) MergeTags(ctx context.Context, source, target ids.UUID) (agents.TagMergeResult, error) {
-	// Unpinned on the agent path. The staged row carries ONE pinned version and
-	// it is the source's, so there is nothing here to check the survivor
-	// against yet — closing that needs approvals to carry a second pin.
 	out, err := a.store.MergeTags(ctx, ids.From[ids.TagKind](source), ids.From[ids.TagKind](target), 0)
 	if err != nil {
 		return agents.TagMergeResult{}, err
 	}
 	return agents.TagMergeResult{Moved: out.Moved, Collapsed: out.Collapsed}, nil
+}
+
+func (a tagAdapter) ArchiveTag(ctx context.Context, tagID ids.UUID) (agents.Tag, error) {
+	row, err := a.store.ArchiveTag(ctx, ids.From[ids.TagKind](tagID))
+	if err != nil {
+		return agents.Tag{}, err
+	}
+	return tagOf(row.ID, row.Name, row.Color, true), nil
 }
 
 func (a tagAdapter) UpdateTag(ctx context.Context, tagID ids.UUID, in agents.TagEdit) (agents.Tag, error) {

@@ -3,7 +3,7 @@
 
 package activities
 
-import "github.com/margince/margince/backend/internal/shared/kernel/principal"
+import "github.com/margince/margince/backend/internal/platform/database/storekit"
 
 // requestUnsettledSQL uses the activity alias a. Classification records intent;
 // a topic label, a deal outcome and elapsed time do not prove fulfillment.
@@ -46,26 +46,21 @@ const notDismissedSQL = `NOT EXISTS (SELECT 1 FROM activity_sales_state dismisse
 
 // Taking a request records intent in the audited source-linked task. It does
 // not overwrite the classifier's verdict on somebody else's correspondence.
-const acceptedRequestSQL = `EXISTS (SELECT 1 FROM activity accepted
+var acceptedRequestSQL = `EXISTS (SELECT 1 FROM activity accepted
  WHERE accepted.source_system = '` + EmailRequestTaskSource + `'
- AND accepted.source_activity_id = a.id)`
+ AND accepted.source_activity_id = a.id AND ` + storekit.HumanWroteActivityClause("accepted") + `)`
 
 // heldRequestSQL is a request a human kept: an open reminder a human wrote,
 // whether they took the request or edited the reminder the system filed. Only
 // this outlives the waiting horizon; a classifier verdict does not.
+// An id list, not an EXISTS, so the scan reads it from an index. An EXISTS is
+// tested on every inbound message ever captured. The list holds 16 bytes per
+// open reminder a human wrote, far under any value size limit.
 func heldRequestSQL() string {
-	return `EXISTS (SELECT 1 FROM activity held
- WHERE held.archived_at IS NULL AND NOT held.is_done AND held.source_activity_id = a.id
+	return `a.id = ANY (ARRAY(SELECT held.source_activity_id FROM activity held
+ WHERE held.source_activity_id IS NOT NULL AND held.restricted_at IS NULL
  AND held.source_system = '` + EmailRequestTaskSource + `'
- AND ` + humanWroteReminderSQL("held") + `)`
-}
-
-// humanWroteReminderSQL is whether a human ever wrote the reminder under alias,
-// read off the audit trail because an edit leaves captured_by as it was.
-func humanWroteReminderSQL(alias string) string {
-	return `EXISTS (SELECT 1 FROM audit_log worked
- WHERE worked.entity_type = 'activity' AND worked.entity_id = ` + alias + `.id
-   AND worked.actor_type = '` + string(principal.PrincipalHuman) + `')`
+ AND ` + storekit.HeldTaskClause("held") + `))`
 }
 
 const openRequestReminderSQL = `EXISTS (SELECT 1 FROM activity reminder
@@ -74,16 +69,23 @@ const openRequestReminderSQL = `EXISTS (SELECT 1 FROM activity reminder
  AND reminder.archived_at IS NULL)`
 
 // confirmedRequestSQL is a request the classifier or a human confirmed.
-const confirmedRequestSQL = `a.owed_verdict = 'asks_us' OR ` + acceptedRequestSQL
+var confirmedRequestSQL = `a.owed_verdict = 'asks_us' OR ` + acceptedRequestSQL
 
-const outstandingRequestSQL = requestUnsettledSQL + ` AND (` + confirmedRequestSQL + `)`
+var outstandingRequestSQL = requestUnsettledSQL + ` AND (` + confirmedRequestSQL + `)`
+
+// calendarResponseSQL is an attendee answering an invitation (RFC 5546 REPLY,
+// COUNTER, DECLINECOUNTER). Such a message is owed an answer only when
+// confirmed: "Declined" waits on nobody, and its meeting label must not say so.
+// TestTheCalendarResponseReadersAgree holds it to calendarmethod.IsResponse.
+const calendarResponseSQL = `coalesce(a.calendar_method, '') IN ('REPLY', 'COUNTER', 'DECLINECOUNTER')`
 
 // A scheduling/commitment label is enough to keep an unjudged candidate for
 // review, never enough to assign it.
-const requestIntentSQL = confirmedRequestSQL + `
- OR (a.owed_verdict IS NULL AND a.capture_label IN ('commitment', 'meeting'))`
+var requestIntentSQL = confirmedRequestSQL + `
+ OR (a.owed_verdict IS NULL AND a.capture_label IN ('commitment', 'meeting')
+     AND NOT ` + calendarResponseSQL + `)`
 
-const requestCandidateSQL = requestUnsettledSQL + ` AND (` + requestIntentSQL + `)`
+var requestCandidateSQL = requestUnsettledSQL + ` AND (` + requestIntentSQL + `)`
 
 // reviewableRequestSQL asks a threadless unjudged message for request
 // evidence first. The deal card offers these as work, and it applies no
@@ -92,5 +94,6 @@ const requestCandidateSQL = requestUnsettledSQL + ` AND (` + requestIntentSQL + 
 func reviewableRequestSQL(asOf string) string {
 	return requestUnsettledSQL + ` AND (a.owed_verdict = 'asks_us' OR ` + acceptedRequestSQL + `
  OR (a.owed_verdict IS NULL AND (` + requestCandidateSQL + `
-   OR (a.thread_key IS NOT NULL AND NOT ` + answeredSQL("a", asOf) + `))))`
+   OR (a.thread_key IS NOT NULL AND NOT ` + calendarResponseSQL + `
+       AND NOT ` + answeredSQL("a", asOf) + `))))`
 }

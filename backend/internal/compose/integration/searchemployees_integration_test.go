@@ -47,7 +47,7 @@ func TestAContactIsFoundThroughTheCompanyTheyWorkAt(t *testing.T) {
 
 	page = searchWith(e.Admin(), t, e, search.Input{Query: "quedlinburg"})
 	if hitFor(page, anna) != nil {
-		t.Error("the employee was found without WithEmployees — the agent and plan lanes must keep matching by own text alone")
+		t.Error("the employee was found without WithEmployees — a search that does not ask must match by own text alone")
 	}
 }
 
@@ -305,8 +305,8 @@ func TestARankedWalkWithEmployeesReturnsEachContactOnce(t *testing.T) {
 func TestACompanyHitCarriesItsLogo(t *testing.T) {
 	e := SetupSearch(t)
 	key := "logos/quedlinburg-werke.png"
-	branded := e.SeedID(t, `INSERT INTO company (id, display_name, logo_object_key, source, captured_by)
-		VALUES ($1, 'Quedlinburg Werke', $2, 'manual', 'human:x')`, key)
+	branded := e.SeedID(t, `INSERT INTO company (id, display_name, logo_object_key, logo_origin, source, captured_by)
+		VALUES ($1, 'Quedlinburg Werke', $2, 'upload', 'manual', 'human:x')`, key)
 	plain := seedSearchCompany(t, e, "Quedlinburg Logistik")
 
 	store := search.NewStore(e.DB()).WithCompanyLogos(contacts.CompanyLogoURLsBatch)

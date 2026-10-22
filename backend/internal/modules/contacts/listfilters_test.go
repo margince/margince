@@ -23,17 +23,19 @@ import (
 // remembering to cover it.
 func TestEveryDeclaredContactsFilterNarrowsSomething(t *testing.T) {
 	owner := ids.NewV7().String()
-	assertEveryFilterNarrows(t, "contact", contactListFilters, map[string]string{
-		"owner_id": owner, "tag_id": ids.NewV7().String(), "tag_mode": "all",
-	})
-	assertEveryFilterNarrows(t, "company", companyListFilters, map[string]string{
+	assertEveryFilterNarrows(t, "contact", contactListFilters, withListControls(map[string]string{
+		"owner_id": owner, "tag_id": ids.NewV7().String(), "tag_mode": "all", "company_id": ids.NewV7().String(),
+	}))
+	assertEveryFilterNarrows(t, "company", companyListFilters, withListControls(map[string]string{
 		"domain": "kaercher-technik.example", "lifecycle": "customer", "owner_id": owner,
 		"relationship_type": "partner", "tag_id": ids.NewV7().String(), "tag_mode": "none",
-	})
-	assertEveryFilterNarrows(t, "lead", leadListFilters, map[string]string{
+		"industry": "payments", "size_band": "51-200", "include_anchor": "true",
+	}))
+	assertEveryFilterNarrows(t, "lead", leadListFilters, withListControls(map[string]string{
 		"min_score": "70", "owner_id": owner, "status": "working",
 		"tag_id": ids.NewV7().String(), "tag_mode": "all", "from_contact_id": ids.NewV7().String(),
-	})
+		"source": "webinar", "sla_state": "breached",
+	}))
 }
 
 // Each entity type is offered ITS OWN vocabulary.
@@ -50,9 +52,19 @@ func TestEachEntityIsOfferedItsOwnVocabulary(t *testing.T) {
 		entity datasource.EntityType
 		want   []string
 	}{
-		{datasource.EntityContact, []string{"owner_id", "tag_id", "tag_mode"}},
-		{datasource.EntityCompany, []string{"domain", "lifecycle", "owner_id", "relationship_type", "tag_id", "tag_mode"}},
-		{datasource.EntityLead, []string{"from_contact_id", "min_score", "owner_id", "status", "tag_id", "tag_mode"}},
+		{datasource.EntityContact, []string{
+			"ai_written", "captured_by_kind", "company_id", "include_archived", "list_id", "owner_id",
+			"owner_team_id", "sort", "tag_id", "tag_mode", "unassigned",
+		}},
+		{datasource.EntityCompany, []string{
+			"ai_written", "captured_by_kind", "domain", "include_anchor", "include_archived", "industry", "lifecycle", "list_id",
+			"owner_id", "owner_team_id", "relationship_type", "size_band", "sort", "tag_id", "tag_mode",
+			"unassigned",
+		}},
+		{datasource.EntityLead, []string{
+			"ai_written", "captured_by_kind", "from_contact_id", "include_archived", "list_id", "min_score",
+			"owner_id", "owner_team_id", "sla_state", "sort", "source", "status", "tag_id", "tag_mode", "unassigned",
+		}},
 	} {
 		if got := p.ListFilters(tc.entity); !slices.Equal(got, tc.want) {
 			t.Errorf("%s is offered %v, want %v", tc.entity, got, tc.want)
@@ -66,6 +78,19 @@ func TestAnEntityThisModuleDoesNotListOffersNoFilters(t *testing.T) {
 	if got := (&Provider{}).ListFilters(datasource.EntityDeal); len(got) != 0 {
 		t.Errorf("deal is not this module's to list, yet it offers %v", got)
 	}
+}
+
+// withListControls adds an operand for each list control every record list
+// shares, so a case names only its own type's filters.
+func withListControls(operands map[string]string) map[string]string {
+	operands["owner_team_id"] = ids.NewV7().String()
+	operands["unassigned"] = "true"
+	operands["include_archived"] = "true"
+	operands["sort"] = "-created_at"
+	operands["captured_by_kind"] = "agent"
+	operands["ai_written"] = "true"
+	operands["list_id"] = ids.NewV7().String()
+	return operands
 }
 
 // assertEveryFilterNarrows applies each of a set's filters on its own and

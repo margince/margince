@@ -39,6 +39,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -74,6 +75,8 @@ type OpenTask struct {
 // bound: an empty input is the whole workspace's open promises, which is
 // what "who owes what" asks for.
 type ListOpenTasksInput struct {
+	// AsOf pins automatic admission to the composite read; zero uses the store clock.
+	AsOf       time.Time
 	AssigneeID *ids.UUID
 	// EntityType and EntityID narrow to the promises made about ONE record,
 	// spelled with the same vocabulary the timeline filter uses. Both or
@@ -147,6 +150,9 @@ func (s *Store) ListOpenTasks(ctx context.Context, in ListOpenTasksInput) ([]Ope
 	var tasks []OpenTask
 	var truncated bool
 	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
+		if in.AsOf.IsZero() {
+			in.AsOf = s.now()
+		}
 		tasks, truncated, err = listOpenTasks(ctx, tx, in)
 		return err
 	})
@@ -160,6 +166,9 @@ func (s *Store) ListOpenTasksTx(ctx context.Context, tx pgx.Tx, in ListOpenTasks
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, false, err
 	}
+	if in.AsOf.IsZero() {
+		in.AsOf = s.now()
+	}
 	return listOpenTasks(ctx, tx, in)
 }
 
@@ -170,7 +179,11 @@ func listOpenTasks(ctx context.Context, tx pgx.Tx, in ListOpenTasksInput) ([]Ope
 	limit := openTasksLimit(in.Limit)
 	args := []any{}
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	where, err := openTasksFilter(ctx, in, arg)
+	identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
+	if err != nil {
+		return nil, false, err
+	}
+	where, err := openTasksFilter(ctx, in, identities, arg)
 	if err != nil {
 		return nil, false, err
 	}
@@ -242,7 +255,7 @@ func ensureNarrowingTargetVisible(ctx context.Context, tx pgx.Tx, entityType *st
 
 // openTasksFilter builds the predicate: the two columns that define an open
 // promise, the caller's row scope, and whatever the input narrowed to.
-func openTasksFilter(ctx context.Context, in ListOpenTasksInput, arg func(any) int) (where []string, err error) {
+func openTasksFilter(ctx context.Context, in ListOpenTasksInput, identities string, arg func(any) int) (where []string, err error) {
 	where = []string{
 		// The definition of the set, and the partial index's own predicate.
 		sprintf("a.kind = $%d", arg(string(crmcontracts.ActivityKindTask))),
@@ -259,6 +272,9 @@ func openTasksFilter(ctx context.Context, in ListOpenTasksInput, arg func(any) i
 	}
 	if scope != "" {
 		where = append(where, scope)
+	}
+	if !in.AsOf.IsZero() {
+		where = append(where, CurrentTaskClause("a", in.AsOf, identities, arg))
 	}
 	if in.AssigneeID != nil {
 		where = append(where, sprintf("a.assignee_id = $%d", arg(*in.AssigneeID)))

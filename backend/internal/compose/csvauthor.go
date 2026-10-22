@@ -13,14 +13,15 @@ package compose
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
@@ -30,21 +31,40 @@ const csvTargetAuthor = "author"
 
 // isCreateOnlyTarget reports a target the import writes when it CREATES a
 // record and never on a re-import's update. The author is who wrote the record
-// where it came from, fixed when it landed; a later file does not rewrite that.
+// where it came from. A lost reason is why the deal closed. An activity's type,
+// direction and links are what it was and about whom. A later file rewrites
+// none of them.
 func isCreateOnlyTarget(field string) bool {
-	return field == csvTargetAuthor
+	switch field {
+	case csvTargetAuthor, dealTargetLostReason, activityTargetType, activityTargetDirection, activityTargetLinks:
+		return true
+	}
+	return false
+}
+
+// isCreateOnly is isCreateOnlyTarget for one object. An activity's owner_email
+// names its author, which the activities store cannot rewrite.
+func isCreateOnly(object, field string) bool {
+	return isCreateOnlyTarget(field) || (object == migration.ObjectActivity && field == csvTargetOwner)
 }
 
 // refuseAuthorFromNonImporter keeps the author column behind the same door as
 // the create wires: only a declared importer states who wrote a record. The
-// import writes through the stores, not the wire mappers, so it asks here — at
-// staging and again at commit, which an agent's tools reach too.
-func refuseAuthorFromNonImporter(ctx context.Context, fields map[string]string) error {
-	for _, target := range fields {
-		if target == csvTargetAuthor && !auth.DeclaredImporter(ctx) {
-			return &provenance.AuthorError{
-				Field: "mapping", Code: "reserved_source_author",
-				Message: "the author column is imported only by a signed-in person holding import_run:create; unmap it",
+// import writes through the stores, not the wire mappers, so it asks itself.
+// It asks at staging and again at commit, and an agent's tools reach both.
+// Every part of a ZIP is asked, since each file carries its own mapping. An
+// activity's owner column is its author, so it is behind the same door.
+func refuseAuthorFromNonImporter(ctx context.Context, mapping migration.RunMapping) error {
+	if auth.DeclaredImporter(ctx) {
+		return nil
+	}
+	for _, part := range mapping.PartList() {
+		for _, target := range part.Fields {
+			if target == csvTargetAuthor || (part.Object == migration.ObjectActivity && target == csvTargetOwner) {
+				return &provenance.AuthorError{
+					Field: "mapping", Code: "reserved_source_author",
+					Message: "the author column, and an activity's owner column, are imported only by a signed-in person holding import_run:create; unmap it",
+				}
 			}
 		}
 	}
@@ -59,12 +79,12 @@ func authorFrom(fields map[string]string) storekit.SourceAuthorInput {
 
 // authorUnwritableReason refuses an author cell the create would refuse, so the
 // dry run promises what the commit does.
-func authorUnwritableReason(fields map[string]string) string {
+func authorUnwritableReason(fields map[string]string) migration.Reason {
 	name := importString(fields, csvTargetAuthor)
 	if name == nil || utf8.RuneCountInString(*name) <= provenance.SourceAuthorNameMax {
-		return ""
+		return migration.Reason{}
 	}
-	return fmt.Sprintf("author is longer than %d characters", provenance.SourceAuthorNameMax)
+	return migration.WhyCount(migration.ReasonAuthorTooLong, "max", provenance.SourceAuthorNameMax)
 }
 
 // authorSeats caches one answer per author cell for the run, so a file naming
@@ -80,18 +100,22 @@ func (s authorSeats) resolve(ctx context.Context, tx pgx.Tx, author *storekit.So
 	key := strings.ToLower(*author.AuthorName)
 	seat, known := s[key]
 	if !known {
-		var id ids.UUID
-		err := tx.QueryRow(ctx, `SELECT id FROM app_user WHERE lower(email) = $1`, key).Scan(&id)
-		switch {
-		case errors.Is(err, pgx.ErrNoRows):
-			// No seat holds that address: the spelling stands alone.
-		case err != nil:
+		seats, err := seatsByEmail(ctx, tx, []string{key})
+		if err != nil {
 			return fmt.Errorf("import: resolving the author %q to a seat: %w", key, err)
-		default:
+		}
+		// No seat holds that address: the spelling stands alone.
+		if id, found := seats[key]; found {
 			seat = &id
 		}
 		s[key] = seat
 	}
 	author.AuthorID = seat
 	return nil
+}
+
+func (w *csvWriters) resolveSourceAuthor(ctx context.Context, author *storekit.SourceAuthorInput) error {
+	return database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+		return w.authors.resolve(ctx, tx, author)
+	})
 }

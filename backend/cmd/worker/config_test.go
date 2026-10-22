@@ -4,9 +4,14 @@
 package main
 
 import (
+	"slices"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/programsettings"
+	"github.com/margince/margince/backend/internal/platform/config"
 )
 
 // TestFxBootstrapCurrenciesFallsBackToTheDefault pins the fresh-install
@@ -25,21 +30,24 @@ func TestFxBootstrapCurrenciesFallsBackToTheDefault(t *testing.T) {
 	}
 }
 
+const workerTestDSN = "MARGINCE_DSN=postgres://localhost/x"
+
 // TestObservePprofIsParsedStrictlyAndNeedsAListener pins --observe-pprof's
 // three boot outcomes: off by default, on only alongside a listener to mount
 // on, and a value that is not a boolean refused rather than read as off.
 func TestObservePprofIsParsedStrictlyAndNeedsAListener(t *testing.T) {
-	base := []string{"--dsn", "postgres://localhost/x"}
+	t.Parallel()
+	base := []string{workerTestDSN}
 
-	cfg, err := parseWorkerFlags(base)
+	cfg, _, err := loadWorkerConfig(nil, base)
 	if err != nil {
-		t.Fatalf("parseWorkerFlags with no pprof setting: %v", err)
+		t.Fatalf("loadWorkerConfig with no pprof setting: %v", err)
 	}
 	if cfg.observePprof {
 		t.Error("--observe-pprof is on with nothing set; off must be the default")
 	}
 
-	cfg, err = parseWorkerFlags(append(append([]string{}, base...), "--observe-addr=127.0.0.1:9101", "--observe-pprof=true"))
+	cfg, _, err = loadWorkerConfig([]string{"--observe-addr=127.0.0.1:9101", "--observe-pprof=true"}, base)
 	if err != nil {
 		t.Fatalf("--observe-pprof=true alongside --observe-addr: %v", err)
 	}
@@ -48,9 +56,7 @@ func TestObservePprofIsParsedStrictlyAndNeedsAListener(t *testing.T) {
 	}
 
 	// From the environment too, which is how a deployment sets it.
-	t.Setenv("MARGINCE_OBSERVE_ADDR", "127.0.0.1:9101")
-	t.Setenv("MARGINCE_OBSERVE_PPROF", "true")
-	cfg, err = parseWorkerFlags(base)
+	cfg, _, err = loadWorkerConfig(nil, append([]string{"MARGINCE_OBSERVE_ADDR=127.0.0.1:9101", "MARGINCE_OBSERVE_PPROF=true"}, base...))
 	if err != nil {
 		t.Fatalf("MARGINCE_OBSERVE_PPROF=true alongside MARGINCE_OBSERVE_ADDR: %v", err)
 	}
@@ -59,8 +65,7 @@ func TestObservePprofIsParsedStrictlyAndNeedsAListener(t *testing.T) {
 	}
 
 	// A typo is a boot error naming the variable, not a silent off.
-	t.Setenv("MARGINCE_OBSERVE_PPROF", "ture")
-	if _, err := parseWorkerFlags(base); err == nil {
+	if _, _, err := loadWorkerConfig(nil, append([]string{"MARGINCE_OBSERVE_ADDR=127.0.0.1:9101", "MARGINCE_OBSERVE_PPROF=ture"}, base...)); err == nil {
 		t.Error("MARGINCE_OBSERVE_PPROF=ture was accepted; a value that is not a boolean must fail the boot")
 	} else if !strings.Contains(err.Error(), "MARGINCE_OBSERVE_PPROF") {
 		t.Errorf("the error does not name the variable that failed: %v", err)
@@ -68,9 +73,7 @@ func TestObservePprofIsParsedStrictlyAndNeedsAListener(t *testing.T) {
 
 	// On with no listener would do nothing while the operator believes it
 	// did something, so it is refused.
-	t.Setenv("MARGINCE_OBSERVE_ADDR", "")
-	t.Setenv("MARGINCE_OBSERVE_PPROF", "true")
-	if _, err := parseWorkerFlags(base); err == nil {
+	if _, _, err := loadWorkerConfig(nil, append([]string{"MARGINCE_OBSERVE_PPROF=true"}, base...)); err == nil {
 		t.Error("MARGINCE_OBSERVE_PPROF=true with no MARGINCE_OBSERVE_ADDR was accepted; there is no listener to serve it on")
 	} else if !strings.Contains(err.Error(), "MARGINCE_OBSERVE_ADDR") {
 		t.Errorf("the error does not name the missing listener: %v", err)
@@ -82,43 +85,97 @@ func TestObservePprofIsParsedStrictlyAndNeedsAListener(t *testing.T) {
 // value that does not parse fails the boot, and zero — River's hard stop — is
 // refused rather than taken.
 func TestTheJobDrainWindowIsBoundedAndConfigurable(t *testing.T) {
-	base := []string{"--dsn", "postgres://localhost/x"}
-	cfg, err := parseWorkerFlags(base)
+	t.Parallel()
+	const drainEnv = "MARGINCE_JOB_DRAIN_WINDOW"
+	base := []string{workerTestDSN}
+	cfg, _, err := loadWorkerConfig(nil, base)
 	if err != nil {
-		t.Fatalf("parseWorkerFlags: %v", err)
+		t.Fatalf("loadWorkerConfig: %v", err)
 	}
-	if cfg.jobDrainWindow != defaultJobDrainWindow {
-		t.Errorf("default drain window = %s, want %s", cfg.jobDrainWindow, defaultJobDrainWindow)
+	if cfg.jobDrainWindow != programsettings.DefaultJobDrainWindow {
+		t.Errorf("default drain window = %s, want %s", cfg.jobDrainWindow, programsettings.DefaultJobDrainWindow)
 	}
-	// The declared item spells the default as a literal, because the docs gate
-	// reads it from source; it has to be the constant the flag uses.
-	for _, item := range workerUnflaggedItems() {
-		if item.Name == jobDrainWindowEnv && item.Default != defaultJobDrainWindow.String() {
-			t.Errorf("%s declares default %q, the flag defaults to %s", jobDrainWindowEnv, item.Default, defaultJobDrainWindow)
-		}
-	}
-	if budget := defaultJobDrainWindow + jobCancelWindow; budget > 25*time.Second {
+	if budget := programsettings.DefaultJobDrainWindow + jobCancelWindow; budget > 25*time.Second {
 		t.Errorf("the default drain plus cancel windows come to %s, which leaves no teardown room inside a 30s termination grace period", budget)
 	}
 
-	t.Setenv(jobDrainWindowEnv, "45s")
-	cfg, err = parseWorkerFlags(base)
+	cfg, _, err = loadWorkerConfig(nil, append([]string{drainEnv + "=45s"}, base...))
 	if err != nil {
-		t.Fatalf("%s=45s: %v", jobDrainWindowEnv, err)
+		t.Fatalf("%s=45s: %v", drainEnv, err)
 	}
 	if cfg.jobDrainWindow != 45*time.Second {
-		t.Errorf("%s=45s produced %s", jobDrainWindowEnv, cfg.jobDrainWindow)
+		t.Errorf("%s=45s produced %s", drainEnv, cfg.jobDrainWindow)
 	}
 
-	t.Setenv(jobDrainWindowEnv, "a while")
-	if _, err := parseWorkerFlags(base); err == nil || !strings.Contains(err.Error(), jobDrainWindowEnv) {
-		t.Errorf("an unparseable %s must fail the boot naming the variable, got %v", jobDrainWindowEnv, err)
+	if _, _, err := loadWorkerConfig(nil, append([]string{drainEnv + "=a while"}, base...)); err == nil || !strings.Contains(err.Error(), drainEnv) {
+		t.Errorf("an unparseable %s must fail the boot naming the variable, got %v", drainEnv, err)
 	}
 
-	t.Setenv(jobDrainWindowEnv, "")
 	for _, v := range []string{"0s", "-1s"} {
-		if _, err := parseWorkerFlags(append(append([]string{}, base...), "--job-drain-window="+v)); err == nil {
+		if _, _, err := loadWorkerConfig([]string{"--job-drain-window=" + v}, base); err == nil {
 			t.Errorf("--job-drain-window=%s was accepted; it would make every shutdown cancel running jobs at once", v)
+		}
+	}
+}
+
+// The worker joins every fault of one boot into one error, as the api does.
+func TestTheWorkerReportsEveryConfigurationFaultTogether(t *testing.T) {
+	t.Parallel()
+	_, _, err := loadWorkerConfig([]string{"--observe-pprof", "--job-drain-window=0s"}, []string{"MARGINCE_AI_FAKE=true", "MARGINCE_ENV=production"})
+	for _, want := range []string{"MARGINCE_DSN: required", "MARGINCE_OBSERVE_ADDR is unset", "--job-drain-window", "MARGINCE_AI_FAKE"} {
+		if err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("missing %q in %v", want, err)
+		}
+	}
+}
+
+// A misspelled variable reaches the boot report, and one a sibling program
+// reads does not.
+func TestAMisspelledVariableReachesTheBootReport(t *testing.T) {
+	t.Parallel()
+	// Assembled rather than written whole: the documentation gate reads a
+	// quoted MARGINCE_* literal as a variable somebody must document.
+	const misspelled = "MARGINCE_" + "REDDIS"
+	_, loaded, err := loadWorkerConfig(nil, []string{workerTestDSN, misspelled + "=localhost:6379", "MARGINCE_METRICS_TOKEN=the-apis"})
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	if !slices.Contains(loaded.Warnings(), misspelled+" (did you mean "+programsettings.Redis.Env()+"?)") {
+		t.Errorf("warnings = %v; the misspelling never reached the boot report with the name it meant", loaded.Warnings())
+	}
+	for _, read := range []string{"MARGINCE_DSN", "MARGINCE_METRICS_TOKEN"} {
+		if slices.ContainsFunc(loaded.Warnings(), func(w string) bool { return strings.HasPrefix(w, read+" ") || w == read }) {
+			t.Errorf("%s is read by a program and was reported as unread", read)
+		}
+	}
+}
+
+func TestTheWorkerMarksItsCredentials(t *testing.T) {
+	t.Parallel()
+	reg, err := compose.ProgramRegistry(config.RoleWorker)
+	if err != nil {
+		t.Fatal(err)
+	}
+	secret := map[string]bool{}
+	for _, s := range reg.All() {
+		secret[s.Env()] = s.Secret()
+	}
+	for _, name := range []string{
+		"MARGINCE_DSN", "MARGINCE_GMAIL_CLIENT_SECRET", "MARGINCE_GRAPH_CLIENT_SECRET",
+		"MARGINCE_WEBHOOK_KEY", "MARGINCE_KEYVAULT_ROOT_KEY", "MARGINCE_LICENSE",
+		"ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY",
+		// The Graph notification URL carries the push token in its query.
+		"MARGINCE_GRAPH_NOTIFICATION_URL",
+	} {
+		if !secret[name] {
+			t.Errorf("%s authenticates something and is not marked Secret", name)
+		}
+	}
+	// A value that authenticates nobody stays visible, because an operator
+	// debugging a boot wants to read it.
+	for _, name := range []string{"MARGINCE_LOG_LEVEL", "MARGINCE_PUBLIC_BASE_URL", "MARGINCE_OBSERVE_ADDR"} {
+		if secret[name] {
+			t.Errorf("%s is marked Secret but authenticates nothing; hiding it only makes a boot harder to debug", name)
 		}
 	}
 }

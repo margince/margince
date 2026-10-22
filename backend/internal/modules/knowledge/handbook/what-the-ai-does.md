@@ -10,7 +10,7 @@ two tiers, what waits for a human, passports and allowances) are on
 ### What does the AI do in Margince?
 The AI in Margince drafts emails, reads deal documents for deal fields, and fills in company records from the web. It answers questions from a document set you filed, and ranks your Morning brief during the night.
 
-Everything it suggests carries its evidence. Changes to your records either wait as an approval, or appear as an automatic change you can switch off in **Settings → Agents**.
+Everything it suggests carries its evidence. Changes to your records either wait as an approval, or appear as an automatic change. You can turn off each kind of automatic change in **Settings → AI access**, on the **Agent rules** tab under **For developers**.
 Also called: AI features, assistant, copilot, what can Margince AI do.
 
 ### Can the AI send email on my behalf?
@@ -106,11 +106,17 @@ Where Margince can say who put a value there, it does. The trust marks are:
   name
 - "Automated by {agent}", or "Automated by an agent" when the passport has no
   name to show
-- "System task {job}", or plain "System task" when the job has no name to show.
+- "System task: {job}", naming the job in words such as "Mail participant
+  fill-in", or plain "System task" when the job has no name to show.
   This is the installation's own work, such as a planned sweep or a run that
   makes up for lost time. It has a different name from an agent, so you know whether a model
   decided something or Margince did routine work.
 - "Via {connector}": it came from a connected mailbox
+- "Imported from {upload}": a CSV import created the company, contact or lead,
+  and {upload} is the name you set for the upload. It reads plain "Imported"
+  when the upload has no name.
+- On a field change an agent made, the name of your own agent passport. A
+  colleague's passport reads "An agent".
 - "Source not recorded": when nobody knows where it came from
 
 ## Seeing work in progress
@@ -165,8 +171,8 @@ timing, how quickly things move, and how warm the contact is.
 The **AI** group in Settings holds four pages: **AI usage**, **AI models**,
 **AI call log** and **Automations**.
 
-In **Settings → Agents** you create your own passports, connect MCP clients, and
-switch **Automatic changes** on or off.
+In **Settings → AI access** you connect your AI tool. Under **For developers**
+there, you create your own passports on **API keys** and switch **Automatic changes** on or off on **Agent rules**.
 
 The full record of actions is in **Settings → Audit log**: every action, with the
 human, agent or connected system that did it.

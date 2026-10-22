@@ -8,6 +8,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
@@ -53,7 +54,9 @@ func (h Handlers) GetAiPriceSync(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, toContractPriceSync(state))
+	out := toContractPriceSync(state)
+	out.Locks = h.settingLocks(PriceSyncSettings)
+	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
 // ReplaceAiPriceSync implements (PUT /ai/price-sync).
@@ -77,7 +80,9 @@ func (h Handlers) ReplaceAiPriceSync(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, toContractPriceSync(state))
+	out := toContractPriceSync(state)
+	out.Locks = h.settingLocks(PriceSyncSettings)
+	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
 func toContractPriceSync(s PriceSyncState) crmcontracts.AiPriceSync {
@@ -101,4 +106,18 @@ func toContractRefreshReport(report RateRefreshReport) crmcontracts.AiModelRateR
 		})
 	}
 	return out
+}
+
+// WithLocks binds what reports the settings a boot source sets.
+func (h Handlers) WithLocks(locks func(surface []config.Any) *[]crmcontracts.SettingLock) Handlers {
+	h.locks = locks
+	return h
+}
+
+// settingLocks are the locks among surface, the settings one response carries.
+func (h Handlers) settingLocks(surface ...config.Any) *[]crmcontracts.SettingLock {
+	if h.locks == nil {
+		return nil
+	}
+	return h.locks(surface)
 }

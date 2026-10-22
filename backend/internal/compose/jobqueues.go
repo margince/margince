@@ -12,6 +12,7 @@ import "github.com/riverqueue/river"
 func jobQueues() map[string]river.QueueConfig {
 	return map[string]river.QueueConfig{
 		river.QueueDefault: {MaxWorkers: 5},
+		"data_task":        {MaxWorkers: 1},
 		// A send carrying files is long and outbound-bound — a three-minute
 		// upload budget, because a 20 MiB album cannot cross the wire in
 		// thirty seconds. It is the category this file's posture was written
@@ -72,5 +73,13 @@ func jobQueues() map[string]river.QueueConfig {
 		// audited transaction — minutes of database-bound work per tenant
 		// (privacyRetentionQueue).
 		privacyRetentionQueue: {MaxWorkers: privacyRetentionMaxWorkers},
+		// Commit and undo slices of an import: one per process, because slices
+		// of two runs interleave through the snooze (importWriteQueue).
+		importWriteQueue: {MaxWorkers: importWriteMaxWorkers},
+		// A test run a user watches never queues behind a commit (importCheckQueue).
+		importCheckQueue: {MaxWorkers: importCheckMaxWorkers},
+		// A finance pass reads an accounting system this deployment does not
+		// control: outbound-bound, so the deep-read posture (accountingReadQueue).
+		accountingReadQueue: {MaxWorkers: accountingReadMaxWorkers},
 	}
 }

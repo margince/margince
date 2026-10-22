@@ -14,7 +14,6 @@ package compose
 import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 )
 
@@ -25,7 +24,7 @@ func WithColdStart(fetch PageFetcher, brain completer) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		s.coldstartHandlers = coldstartHandlers{engine: &coldStartEngine{
 			extract:   evidenceExtractor{fetch: fetch, brain: brain},
-			approvals: approvals.NewService(InstallationDB(pool)),
+			approvals: NewApprovalsService(InstallationDB(pool)),
 			pool:      pool,
 		}}
 	}
@@ -40,7 +39,7 @@ func WithScrape(fetch PageFetcher, brain completer) Option {
 		s.scrapeHandlers = scrapeHandlers{engine: &scrapeEngine{
 			extract:   evidenceExtractor{fetch: fetch, brain: brain},
 			contacts:  contacts.NewStore(InstallationDB(pool)),
-			approvals: approvals.NewService(InstallationDB(pool)),
+			approvals: NewApprovalsService(InstallationDB(pool)),
 			pool:      pool,
 		}}
 	}
@@ -53,5 +52,12 @@ func WithScrape(fetch PageFetcher, brain completer) Option {
 func WithBrief(brain completer) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
 		s.WithL2Ranker(brain, s.log)
+	}
+}
+
+// WithHomeRepairClassifier uses the ordinary verdict lane for reviewed corrections.
+func WithHomeRepairClassifier(brain completer) Option {
+	return func(s *Server, pool *pgxpool.Pool) {
+		s.classifier = NewOwedClassifier(pool, brain, s.dataTaskHandlers.now, s.log)
 	}
 }

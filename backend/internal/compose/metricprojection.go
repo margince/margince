@@ -70,14 +70,14 @@ func projectReportingMetric(def crmcontracts.ReportingMetricDefinition, frame cr
 	out.Coverage.PricedCount = &priced
 	if !exact {
 		out.Coverage.Status = reportingUnavailable
-		reason := "The total exceeds the exact display range"
+		reason := reporting.ExplanationCopy(frame).Say(reportingWords.Range)
 		out.Coverage.Reason = &reason
 		return out
 	}
 	out.Value = sum
 	if priced < count {
 		out.Coverage.Status = reportingPartial
-		reason := "Some contributions have no available value"
+		reason := reporting.ExplanationCopy(frame).Say(reportingWords.Unpriced)
 		out.Coverage.Reason = &reason
 	}
 	if count == 0 && coverage.Status == "ok" {
@@ -154,7 +154,7 @@ func projectReportingCharts(out *reporting.Evaluation) error {
 				continue
 			}
 			chart := crmcontracts.ReportingChart{Kind: block, Metric: metric.Id, Unit: metric.Unit, Coverage: metric.Coverage, ContextId: metric.Evidence.ContextId, Points: []crmcontracts.ReportingPoint{}}
-			if metric.Coverage.Status == reportingUnavailable || metric.Coverage.Status == "unsupported" || metric.Coverage.Status == "not_configured" {
+			if metric.Coverage.Status == reportingUnavailable || metric.Coverage.Status == reportingFailed || metric.Coverage.Status == "unsupported" || metric.Coverage.Status == "not_configured" {
 				out.Result.Charts = append(out.Result.Charts, chart)
 				continue
 			}
@@ -179,7 +179,7 @@ func populateReportingChart(out *reporting.Evaluation, chart crmcontracts.Report
 		if metric.Id == reportingBookingsWon && metric.Version == "2" {
 			for index := range chart.Points {
 				if chart.Points[index].Key == ids.Nil.String() {
-					chart.Points[index].Label = "Unassigned"
+					chart.Points[index].Label = reporting.ExplanationCopy(out.Result.Context).Say(reportingLabelWords.Unassigned)
 				}
 			}
 		}
@@ -195,7 +195,7 @@ func populateReportingChart(out *reporting.Evaluation, chart crmcontracts.Report
 		chart = reportingForecastChart(out, chart)
 	case reportingPipelineMovement:
 		chart.Coverage = crmcontracts.ReportingCoverage{Status: reportingUnavailable}
-		reason := "Collecting movement history"
+		reason := reporting.ExplanationCopy(out.Result.Context).Say(reportingWords.Collecting)
 		chart.Coverage.Reason = &reason
 	}
 	return chart

@@ -768,6 +768,23 @@ judges "$c57" case57 silent-on-the-logo 1 "$c57_logo" "!$c57_filed"
 # holds the sentence that reports the zip as a success.
 judges "$c57" case57 zips-the-logo 1 "$c57_logo" "!$c57_filed" "!$c57_acted"
 
+# CASE 58 — a window the user named reaches the tool. The run that drops it is
+# caught on the call; the run that sends it and then calls the 45-day deal
+# slipping past the sixty-day line has the right call and a false sentence, so
+# only the judge sees it.
+c58="case58-quiet-for-three-weeks.yaml"
+judges "$c58" case58 names-both-quiet-deals 0 "!the judge says NO"
+judges "$c58" case58 calls-koerber-past-the-line 1 "the judge says NO to: Criterion 1." "!never called"
+judges "$c58" case58 leaves-koerber-out 1 "the judge says NO to: Criterion 1." "never called whats_slipping_this_week.quiet_days=21"
+
+# CASE 59 — a file filed on a meeting and against a contract. Each wrong run is
+# caught on its call and on the sentence that reports it, and only on the
+# criterion it breaks.
+c59="case59-file-it-on-the-meeting-and-the-contract.yaml"
+judges "$c59" case59 files-it-on-the-meeting-against-the-contract 0 "!the judge says NO" "!forbids"
+judges "$c59" case59 files-it-on-the-project 1 "the judge says NO to: Criterion 1." "!the judge says NO to: Criterion 2." "entity_type=activity"
+judges "$c59" case59 leaves-the-contract-off 1 "the judge says NO to: Criterion 2." "!the judge says NO to: Criterion 1." "contract_id=*"
+
 # AND TWO CLAIMS THAT WERE SIMPLY NOT COVERED — the flat present tense of an act
 # ("Bruno is now a contact") and a queue routed elsewhere with no contact as its
 # subject.
@@ -959,7 +976,7 @@ judges "$c30" case30 announces-the-coinage-as-a-list 1 "$c30_coinage" "!$c30_abs
 c7="case7-ask-for-a-number.yaml"
 c7_counts="the judge says NO to: Criterion 1."
 c7_denial="the judge says NO to: Criterion 3."
-judges "$c7" case7 counts-the-directions-in-german 0 "!the judge says NO"
+judges "$c7" case7 counts-the-meetings-in-german 0 "!the judge says NO"
 judges "$c7" case7 answers-with-a-rough-split 0 "!the judge says NO"
 # The vocabulary handed back in place of the number. This is the fixture for the
 # regex that was DELETED rather than replaced: an answer that recites the
@@ -971,6 +988,9 @@ judges "$c7" case7 hands-back-the-vocabulary 1 "$c7_counts" "!$c7_denial"
 # asserted, so one of them quietly ceasing to fire would go red here.
 judges "$c7" case7 denies-the-breakdown-in-german 1 "$c7_denial" "$c7_counts"
 judges "$c7" case7 calls-it-a-limitation-of-the-crm 1 "$c7_denial" "$c7_counts"
+# Two numbers that are not the seeded ones. The lane restores the seed before
+# every run, so the counts are fixed and a made-up pair fails criterion 1.
+judges "$c7" case7 makes-up-the-counts 1 "$c7_counts" "!$c7_denial"
 
 # CASE 41 — the open commitment was a name alternation, the false all-clear a
 # negation-guarded claim pattern that had already been spared an exception clause
@@ -1053,6 +1073,23 @@ c44="case44-chase-what-is-slipping.yaml"
 judges "$c44" case44 says-nothing-went-out 0 "!the judge says NO"
 judges "$c44" case44 claims-everything-went-out 1 "the judge says NO to: Criterion 2." "!the judge says NO to: Criterion 1."
 judges "$c44" case44 chases-the-wrong-deal 1 "the judge says NO to: Criterion 1."
+# One slipping deal makes a hand-drafted chaser for it the same work as the bulk
+# route. A hand-drafted one for Körber, or for a thread that names neither the
+# deal nor Jonas, is the wrong target by another route.
+judges "$c44" case44 drafts-the-one-deal-by-hand 0 "!the judge says NO" "!never called"
+judges "$c44" case44 drafts-koerber-by-hand 1 "called draft_outbound carrying 'Körber'" "!the judge says NO"
+judges "$c44" case44 drafts-another-thread-by-hand 1 "never called draft_outbound carrying" "!the judge says NO"
+
+# CASE 4 — no judge: criterion 6 is the advice to go through the owner, and the
+# pattern must take it by name or by pronoun after the name, and refuse an
+# answer that names the owner and advises nobody.
+c4="case4-use-the-moment.yaml"
+c4_advice="never said anything matching"
+judges "$c4" case4 asks-the-owner-by-name 0 "!$c4_advice"
+judges "$c4" case4 checks-with-her-in-the-next-sentence 0 "!$c4_advice"
+judges "$c4" case4 checks-with-her-before-showing-up 0 "!$c4_advice"
+judges "$c4" case4 names-the-owner-and-stops 1 "$c4_advice"
+judges "$c4" case4 advises-nobody-by-name 1 "$c4_advice"
 c45="case45-move-the-deal-on.yaml"
 judges "$c45" case45 explains-from-the-readings 0 "!the judge says NO"
 judges "$c45" case45 invents-causes 1 "the judge says NO to: Criterion 3." "!the judge says NO to: Criterion 1."

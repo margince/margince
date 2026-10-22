@@ -17,6 +17,7 @@ import (
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -64,6 +65,66 @@ type searchBranch struct {
 	// `snippet` — for an excerpt that reads a SECOND record and so owes that
 	// record's own gate. `snippet` stays the ungated floor it falls back to.
 	snippetFor func(ctx context.Context, fallback string, arg func(any) int) (string, error)
+	// identifier is the table of handles a reader pastes instead of a name: a
+	// contact's address, a company's domain. The name index holds neither.
+	identifier storekit.Identifier
+	// rankSample, when set, is how many visible matches the branch scores at
+	// most; the scan stops there, and the best hits come from that sample.
+	rankSample int
+	// snippetIsContext marks an excerpt shown beside the record whatever text
+	// matched. Retrieval cites the title instead, because evidence must be text
+	// that could have ranked the hit.
+	snippetIsContext bool
+}
+
+// snippetIsEvidence reports whether a hit's excerpt may be cited as the text
+// that ranked it.
+func snippetIsEvidence(entity string) bool {
+	for _, branch := range searchBranches {
+		if branch.entity == entity {
+			return !branch.snippetIsContext
+		}
+	}
+	return true
+}
+
+// activityRankSample bounds the mail the activity branch ranks. A common word
+// matches a tenth of all mail, and every match was read, permission-checked
+// and scored before the per-type limit. Sampling is acceptable because, on the
+// corpus this was measured on, the top mail hit was kept for every prefix.
+const activityRankSample = 2000
+
+// ownMatch is the predicate that finds a record by its own text: the name index,
+// or an exact identifier the record carries. identifierPos binds the query the
+// first time an identifier arm asks for it.
+func (b searchBranch) ownMatch(alias, tsquery string, identifierPos func() int) string {
+	if b.identifier.Table == "" {
+		return fmt.Sprintf("%s.search_tsv @@ %s", alias, tsquery)
+	}
+	return fmt.Sprintf("(%s.search_tsv @@ %s OR %s)",
+		alias, tsquery, b.identifier.MatchSQL(identifierPos(), alias+".id"))
+}
+
+// ownScore lifts an identifier hit into the whole-word tier, so a pasted address
+// ranks its contact above every name that merely starts like it.
+func (b searchBranch) ownScore(alias, score string, identifierPos func() int) string {
+	if b.identifier.Table == "" {
+		return score
+	}
+	return fmt.Sprintf("(%s + (%s)::int)", score, b.identifier.MatchSQL(identifierPos(), alias+".id"))
+}
+
+// bindIdentifier binds the whole query for the identifier arms on first use. A
+// bound parameter no statement references fails the whole search, and every
+// identifier branch may be denied.
+func bindIdentifier(query string, arg func(any) int) func() int {
+	pos := 0
+	return func() int {
+		if pos == 0 {
+			pos = arg(query)
+		}
+		return pos
+	}
 }
 
 // mayRead answers the object gate as a yes or a no, because that is what this
@@ -158,10 +219,19 @@ const noSnippet = "NULL"
 const columnName = "name"
 
 var searchBranches = []searchBranch{
-	{entity: "contact", table: entityContact, title: "full_name", snippet: noSnippet},
-	{entity: "company", table: entityCompany, title: "display_name", snippet: noSnippet, extraWhere: "NOT %s.is_anchor"},
+	{entity: "contact", table: entityContact, title: "full_name", snippet: noSnippet, identifier: storekit.ContactEmails},
+	{
+		entity: "company", table: entityCompany, title: "display_name", snippet: noSnippet,
+		extraWhere: "NOT %s.is_anchor", identifier: storekit.CompanyDomains,
+	},
 	{entity: "deal", table: entityDeal, title: columnName, snippet: noSnippet},
-	{entity: "lead", table: entityLead, title: "coalesce(full_name, company_name, email)", snippet: noSnippet},
+	// A name alone does not say why searching an account found the lead.
+	// So a lead's excerpt is its company, as a contact hit carries its employer.
+	// A lead with no full name is already titled by that company.
+	{
+		entity: "lead", table: entityLead, title: "coalesce(full_name, company_name, email)",
+		snippet: "CASE WHEN t.full_name IS NOT NULL THEN t.company_name END", snippetIsContext: true,
+	},
 	// A project's name alone does not say which account's work it is, and two
 	// accounts can run a "Phase 2". The excerpt is the key and the company,
 	// which is how a contact tells the hits apart; see projectSnippet for the
@@ -203,7 +273,7 @@ var searchBranches = []searchBranch{
 	// Archived words are excluded: a retired tag is not in the picker, so a hit
 	// on one leads to a page that cannot be acted on.
 	{entity: "tag", table: entityTag, title: columnName, snippet: noSnippet, workspaceWide: true, textOnly: true, extraWhere: "%s.archived_at IS NULL"},
-	{entity: "activity", table: entityActivity, title: "coalesce(subject, channel_provider, kind)", snippet: "left(coalesce(body, ''), 200)", activityWalk: true},
+	{entity: "activity", table: entityActivity, title: "coalesce(subject, channel_provider, kind)", snippet: "left(coalesce(body, ''), 200)", activityWalk: true, rankSample: activityRankSample},
 }
 
 // SearchedTables names every physical table the search union full-text matches,

@@ -27,16 +27,14 @@ prompt: |
 
 must_call:
   - create_record
-  - decide_duplicate
+  - resolve_duplicates
 
 must_call_with:
-  - decide_duplicate.decision=not_the_same
+  - resolve_duplicates.decision=not_the_same
 
 may_call:
-  - list_tags
-  - get_tag
-  - get_record_tags
-  - apply_tag
+  - read_tags
+  - change_tags
   - resolve_entities
   - search_records
   - read_record

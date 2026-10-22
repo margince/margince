@@ -250,6 +250,7 @@ func scanRelationshipWithPrior(r pgx.Row, prior **string, inserted *bool) (relat
 }
 
 type UpdateRelationshipInput struct {
+	ClearRole        bool
 	ClearStartedAt   bool
 	ClearEndedAt     bool
 	EmploymentStatus *string
@@ -304,16 +305,12 @@ func (s *Store) UpdateRelationship(ctx context.Context, id ids.UUID, in UpdateRe
 		if err := refusePatch(ctx, tx, current, in); err != nil {
 			return err
 		}
-		if err := demoteForRelationshipPatch(ctx, tx, current, id, in); err != nil {
+		var changed bool
+		if out, changed, err = patchRelationshipUnlessUnchanged(ctx, tx, current, id, in, capturedBy); err != nil {
 			return err
 		}
-		if out, err = patchRelationshipRow(ctx, tx, id, in, capturedBy); err != nil {
-			// Through the SAME constraint mapping the insert uses. A patch can
-			// violate rel_dates exactly as a create can — moving ended_at behind
-			// started_at — and without this the two verbs answered one rule two
-			// ways: a named refusal on create, the generic constraint net on
-			// update. current.Kind, because a patch cannot change the kind.
-			return mapRelationshipConstraint(err, current.Kind)
+		if !changed {
+			return nil
 		}
 		// Only when the patch ENDED the employment. A caller sending
 		// is_current_primary = false is STATING that this is not the contact's
@@ -347,6 +344,9 @@ func (s *Store) RefuseArchiveRelationship(ctx context.Context, id ids.UUID) erro
 	return s.tx(ctx, func(tx pgx.Tx) error {
 		current, err := s.visibleRelationship(ctx, tx, id)
 		if err != nil {
+			return err
+		}
+		if err := refuseGenericProjectCompany(current.Kind); err != nil {
 			return err
 		}
 		anchorObject, _ := relationshipAnchor(current.Kind)

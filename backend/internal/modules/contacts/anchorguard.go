@@ -21,9 +21,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// AnchorProtectedError refuses an operation that would retire the workspace's
-// own company. Losing it is not a lost record: the company read resolves only a
-// live anchor, so the whole workspace reads as one that was never configured.
+// AnchorProtectedError refuses retiring the workspace's own company, or a rename
+// of it that no human made. Retiring it loses more than a record: the company
+// read resolves only a live anchor, so the workspace reads as never configured.
 type AnchorProtectedError struct {
 	// Field names the request value that carried the anchor, so a caller sent
 	// two ids knows which one is refused: a merge names its source in the path

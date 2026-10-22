@@ -12,6 +12,7 @@ package agents
 // never the SQL.
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 
@@ -53,7 +54,7 @@ func (t forecastReadings) Spec() mcp.ToolSpec {
 		Name: "forecast_readings", Title: "Read the forecast", Version: toolVersionV1,
 		Description:   forecastReadingsCopy.render(),
 		Instead:       forecastReadingsCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "getForecast",
 		InputSchema: schema(`{"type":"object","properties":{
 			"period":{"type":"string","enum":["quarter","month","week"],"description":"The window length. Quarters and months follow the installation's own financial year, which may not start in January; a week runs Monday to Sunday."},
@@ -156,7 +157,7 @@ func (t forecastMovement) Spec() mcp.ToolSpec {
 		Name: "forecast_movement", Title: "What moved the forecast", Version: toolVersionV1,
 		Description:   forecastMovementCopy.render(),
 		Instead:       forecastMovementCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "getForecastMovement",
 		InputSchema: schema(`{"type":"object","required":["from","to"],"properties":{
 			"from":{"type":"string","format":"uuid","description":"The opening snapshot."},
@@ -223,14 +224,17 @@ func (t forecastInputChecks) Spec() mcp.ToolSpec {
 		Version:       toolVersionV1,
 		Description:   forecastInputChecksCopy.render(),
 		Instead:       forecastInputChecksCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp:    "getForecastAssurance",
 		InputSchema:  schema(`{"type":"object","properties":{},"additionalProperties":false}`),
 		OutputSchema: schemaFor[ForecastAssuranceResult](),
 	}
 }
 
-func (t forecastInputChecks) Handle(ctx context.Context, _ json.RawMessage) (json.RawMessage, error) {
+func (t forecastInputChecks) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
+	if err := decodeNoArguments(in); err != nil {
+		return nil, err
+	}
 	noteDerivedContent(ctx)
 	return t.read(ctx)
 }
@@ -264,8 +268,15 @@ type ForecastAssuranceSourceResult struct {
 	CheckedThrough string `json:"checked_through,omitempty"`
 }
 
-// InputChecksReader answers the open findings this caller may see.
-type InputChecksReader func(ctx context.Context) (json.RawMessage, error)
+// InputChecksReader answers the open findings this caller may see, for one
+// population when the arguments name one.
+type InputChecksReader func(ctx context.Context, args InputChecksArgs) (json.RawMessage, error)
+
+// InputChecksArgs narrows list_input_checks the way its route's query does.
+type InputChecksArgs struct {
+	ScopeKind string `json:"scope_kind,omitempty"`
+	ScopeID   string `json:"scope_id,omitempty"`
+}
 
 // RegisterInputChecksTool joins list_input_checks to the surface.
 func RegisterInputChecksTool(r *Registry, read InputChecksReader) {
@@ -282,16 +293,25 @@ func (t listInputChecks) Spec() mcp.ToolSpec {
 		Version:       toolVersionV1,
 		Description:   listInputChecksCopy.render(),
 		Instead:       listInputChecksCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
-		OpenAPIOp:    "listInputChecks",
-		InputSchema:  schema(`{"type":"object","properties":{},"additionalProperties":false}`),
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
+		OpenAPIOp: "listInputChecks",
+		InputSchema: schema(`{"type":"object","properties":{
+			"scope_kind":{"type":"string","enum":["workspace","team","owner"],"description":"Only the findings on the deals of this population. Omit for every finding you can see."},
+			"scope_id":{"type":"string","format":"uuid","description":"The team or owner, for a team or owner scope_kind"}},
+			"additionalProperties":false}`),
 		OutputSchema: schemaFor[InputChecksResult](),
 	}
 }
 
-func (t listInputChecks) Handle(ctx context.Context, _ json.RawMessage) (json.RawMessage, error) {
+func (t listInputChecks) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
+	var args InputChecksArgs
+	if len(bytes.TrimSpace(in)) > 0 {
+		if err := decodeArgs(in, &args); err != nil {
+			return nil, err
+		}
+	}
 	noteDerivedContent(ctx)
-	return t.read(ctx)
+	return t.read(ctx, args)
 }
 
 // InputChecksResult is what list_input_checks answers with.
@@ -342,14 +362,17 @@ func (t dataCoverage) Spec() mcp.ToolSpec {
 		Name: "data_coverage", Title: "How current the sources are", Version: toolVersionV1,
 		Description:   dataCoverageCopy.render(),
 		Instead:       dataCoverageCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp:    "getDataCoverage",
 		InputSchema:  schema(`{"type":"object","properties":{},"additionalProperties":false}`),
 		OutputSchema: schemaFor[DataCoverageResult](),
 	}
 }
 
-func (t dataCoverage) Handle(ctx context.Context, _ json.RawMessage) (json.RawMessage, error) {
+func (t dataCoverage) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
+	if err := decodeNoArguments(in); err != nil {
+		return nil, err
+	}
 	noteDerivedContent(ctx)
 	return t.read(ctx)
 }

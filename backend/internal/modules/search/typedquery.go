@@ -89,13 +89,13 @@ func carriesOperators(query string) bool {
 // exactly right — those are words the reader finished typing and the last is
 // the one still under the cursor.
 //
-// An EMPTY fragment renders an empty tsquery, and `”:*` would be a syntax
-// error, so the caller omits the arm entirely rather than building one. That is
-// also what makes a finished query match exactly what it matched before.
+// `:*` alone is a syntax error, and "%" or "(" parse to nothing; `&&` drops
+// the empty tsquery the arm falls back to.
 func prefixArmSQL(tailPos int) string {
+	parsed := fmt.Sprintf(`plainto_tsquery('simple', f_unaccent($%d))`, tailPos)
 	return fmt.Sprintf(
-		`(plainto_tsquery('simple', f_unaccent($%d))::text || ':*')::tsquery`,
-		tailPos)
+		`(CASE WHEN numnode(%[1]s) = 0 THEN ''::tsquery ELSE (%[1]s::text || ':*')::tsquery END)`,
+		parsed)
 }
 
 // matchExpression is the tsquery one branch matches against: the words the
@@ -112,10 +112,13 @@ func prefixArmSQL(tailPos int) string {
 // query parsed either way meets an index that speaks it.
 //
 // The activity branch parses German and English as well as `simple`, so rows
-// whose tsvector stemmed "Verträge" answer a search for "Vertrag". Both halves
-// carry those parses: a prefix compares `simple` lexemes while the index stores
-// stems, so a fragment offered as `study:*` reaches neither the stored `studi`
-// nor the simple `studies` — and every search is a fragment as it is typed.
+// whose tsvector stemmed "Verträge" answer a search for "Vertrag".
+//
+// Mail matches the fragment as a whole word too: "contr" finds no mail until
+// "contract" is typed. A two- to four-letter prefix matches most mail, and
+// reading and permission-checking every match spent the whole query budget
+// before one hit was ranked. Records keep the prefix, because a name is what a
+// reader types part of.
 func matchExpression(entity string, headPos, tailPos int, hasFragment bool) string {
 	finished := wholeWordsExpression(entity, headPos)
 	if !hasFragment {
@@ -123,7 +126,7 @@ func matchExpression(entity string, headPos, tailPos int, hasFragment bool) stri
 	}
 	fragment := prefixArmSQL(tailPos)
 	if entity == entityActivity {
-		fragment = fmt.Sprintf(`(%s%s)`, fragment, stemmedParses(tailPos))
+		fragment = fmt.Sprintf(`(%s)`, wholeWordsExpression(entity, tailPos))
 	}
 	return fmt.Sprintf(`((%s) && %s)`, finished, fragment)
 }

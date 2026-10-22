@@ -16,9 +16,11 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -57,7 +59,7 @@ var leadListFields = map[string]storekit.SortField{
 	leadCompanyColumn: storekit.Column(fieldcatalog.TypeText),
 	leadStatusColumn:  storekit.Column(fieldcatalog.TypeText),
 	leadScoreColumn:   storekit.Column(fieldcatalog.TypeNumber),
-	ownerIDColumn:     storekit.Column(storekit.KindUUID),
+	ownerIDColumn:     storekit.OwnerNameSort(leadEntity),
 	// The three the list draws and does not store. Each reads the same
 	// expression the row is PRINTED from (lead_read.go), so a reader sees the
 	// value the page was arranged by.
@@ -80,8 +82,12 @@ func orderByLeadLastActivity(context.Context, func(any) int) (string, error) {
 // orderByLeadNextTaskDue orders by the deadline the Next task column prints.
 // A lead with no open task shows none and orders by none, which the list's
 // ORDER BY already puts last.
-func orderByLeadNextTaskDue(context.Context, func(any) int) (string, error) {
-	return leadNextTaskDueSQL, nil
+func orderByLeadNextTaskDue(ctx context.Context, arg func(any) int) (string, error) {
+	work, err := leadTaskWorkSQL(ctx, arg)
+	if err != nil {
+		return "", err
+	}
+	return leadNextTaskDueSQL(work), nil
 }
 
 // orderByLeadSourceLabel orders by the words the Source column prints rather
@@ -104,6 +110,9 @@ func (s *Store) ListLeads(ctx context.Context, in ListLeadsInput) ([]crmcontract
 			return nil, storekit.Page{}, err
 		}
 	}
+	if err := auth.Require(ctx, leadEntity, principal.ActionRead); err != nil {
+		return nil, storekit.Page{}, err
+	}
 	if in.Sort == nil || *in.Sort == "" {
 		return s.listLeadWorkQueue(ctx, in)
 	}
@@ -116,6 +125,7 @@ func (s *Store) ListLeads(ctx context.Context, in ListLeadsInput) ([]crmcontract
 	ctx = withPinnedSLANow(ctx, leadSLAClock().UTC())
 	return listPage(ctx, s, in.Sort, in.Limit, listPageSpec[crmcontracts.Lead]{
 		entity:  leadEntity,
+		prepare: withLeadTaskIdentities,
 		columns: leadColumns,
 		fields:  leadListFields,
 		filters: func(ctx context.Context, active []fieldcatalog.Column, sorted *storekit.ListSort, arg func(any) int) ([]string, error) {

@@ -26,16 +26,30 @@ func resolveAdvanceTarget(ctx context.Context, tx pgx.Tx, toStage ids.StageID, c
 	return stage.semantic, stage.winProbability, nil
 }
 
+// StageGoneError is a stage nobody has or that is archived. It unwraps to
+// apperrors.ErrNotFound, and names the cause for a caller holding a stage it
+// read earlier, such as an import run. A request that typed the stage answers
+// 422 naming the field instead (auth.NameMissingReference).
+type StageGoneError struct{ StageID ids.StageID }
+
+func (e *StageGoneError) Error() string {
+	return "stage " + e.StageID.String() + " is not a live stage"
+}
+
+// Unwrap lets errors.Is match apperrors.ErrNotFound.
+func (e *StageGoneError) Unwrap() error { return apperrors.ErrNotFound }
+
 // liveStage is the part of a stage row a move or a birth decides on.
 type liveStage struct {
 	semantic       string
 	winProbability int
 }
 
-// resolveLiveStage is the one answer to "may a deal in this pipeline stand in
-// this stage": 404 for a stage nobody has or that is archived, 422 naming
-// field for a live stage of another pipeline. Both the advance and the create
-// door ask it, so one mistake earns one refusal.
+// resolveLiveStage answers whether a deal in this pipeline may stand in this
+// stage. A stage nobody has, or that is archived, is a StageGoneError. A live
+// stage of another pipeline is a 422 naming field. Both the advance and the
+// create door ask it, and a door whose caller typed the stage wraps the first
+// in auth.ReferenceNotFoundError.
 func resolveLiveStage(ctx context.Context, tx pgx.Tx, stageID ids.StageID, pipelineID ids.PipelineID, field string) (liveStage, error) {
 	var stage liveStage
 	var stagePipeline ids.PipelineID
@@ -44,7 +58,7 @@ func resolveLiveStage(ctx context.Context, tx pgx.Tx, stageID ids.StageID, pipel
 			lockLiveStageTarget,
 		stageID).Scan(&stage.semantic, &stagePipeline, &stage.winProbability)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return liveStage{}, apperrors.ErrNotFound
+		return liveStage{}, &StageGoneError{StageID: stageID}
 	}
 	if err != nil {
 		return liveStage{}, fmt.Errorf("resolve target stage: %w", err)

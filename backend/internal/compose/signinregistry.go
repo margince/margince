@@ -14,14 +14,14 @@ package compose
 // neither provider's option has to know the other exists, and their order in
 // cmd/api cannot change what gets mounted.
 //
-// WHERE THE CLIENT COMES FROM. The deployment decides whether a provider is
-// mounted at all — the state-signing key and the three URLs are properties of
-// this server, with no Settings equivalent — and the OAuth client is resolved
-// when a flow runs, exactly as the capture connectors resolve theirs
-// (connectorappauthorizer.go): the app the installation stored under Settings
-// wins, and the pair the deployment composed from its environment is the
-// fallback. That is what lets the app an admin saves during the first run reach
-// the login screen without a restart, and it is one rule for both vendors.
+// Where the client comes from. The deployment decides whether a provider is
+// mounted at all: the state-signing key and the three URLs belong to this
+// server, with no Settings equivalent. The OAuth client is resolved when a flow
+// runs, as the capture connectors resolve theirs (connectorappauthorizer.go).
+// The pair the deployment composed wins and locks the stored one, and the app
+// stored under Settings answers otherwise. So an app an admin saves during the
+// first run reaches the login screen with no restart, by one rule for both
+// vendors.
 
 import (
 	"context"
@@ -95,10 +95,9 @@ func signInClientOf(app capture.ConnectorApp) signInClient {
 // is a screen without that button, not a failure.
 var errNoSignInClient = errors.New("compose: no sign-in client from any source")
 
-// resolveSignInClient picks the client ONE flow will use: the stored app where
-// the installation has one, the deployment's otherwise, and neither is
-// ok=false. The rule is resolveApp's, so a sign-in and a mailbox connect cannot
-// come to disagree about which app this installation is using.
+// resolveSignInClient picks the client one flow will use: the deployment's app
+// where it composed one, the stored app otherwise, and neither is ok=false. The
+// rule is resolveApp's, so a sign-in and a mailbox connect use one app.
 func resolveSignInClient(ctx context.Context, stored appResolver, env signInClient) (signInClient, bool, error) {
 	client, err := resolveApp(ctx, stored, env, signInClientOf, errNoSignInClient)
 	if errors.Is(err, errNoSignInClient) {
@@ -130,14 +129,14 @@ func installationSignInApp(pool *pgxpool.Pool, stored appResolver) appResolver {
 	}
 }
 
-// signInRedirectBase is the origin a sign-in callback is served on: the
-// deployment's own, plus the `/v1` the API mounts its contract under.
+// apiV1Base is an origin plus the `/v1` the API mounts its contract under: where
+// a sign-in callback is served, and where a passport calls the API.
 //
 // One spelling for every provider, because it is used twice for each — once to
 // WIRE the routes and once to tell an operator what to register — and the two
 // must be the same bytes, or the value pasted into the vendor's console fails
 // the very flow it was meant to enable.
-func signInRedirectBase(base string) string {
+func apiV1Base(base string) string {
 	if base == "" {
 		return ""
 	}

@@ -57,6 +57,7 @@ var scopeSpellingTable = map[string]scopeSpelling{
 
 	"EnsureVisible":                 {argument: 2},
 	"EnsureVisibleLive":             {argument: 2},
+	"EnsureVisibleExisting":         {argument: 2},
 	"EnsureVisibleForSubjectRights": {argument: 2},
 	// The write-authority family takes the same (ctx, tx, table, id) shape as
 	// the visible family it opens with, so the table is in the same position.
@@ -70,6 +71,7 @@ var scopeSpellingTable = map[string]scopeSpelling{
 	// share arm, so it bounds a reference at least as tightly.
 	"EnsureAttachTarget": {argument: 2},
 	"VisibleTo":          {argument: 2},
+	"VisibleSubset":      {argument: 2},
 	// The link target's table is the caller's to name in its own allowlist;
 	// this clause renders over the alias it is given.
 	"LinkTargetVisibleClause": {table: anyTable},
@@ -518,5 +520,26 @@ const (
 	// lead merge). They must see the link whether or not the caller may open
 	// the contact, so it is read off the row; it reaches no caller, and every
 	// read of a lead withholds it through withholdUnreadableSourceContacts.
-	modulesTierUnscopedCeiling = 117
+	//
+	// 118: privacy.contactsMatchingSuppression's second walk, over every live
+	// contact_channel_identity. It is unscoped for the reason given at 106: a
+	// chat-only subject has no address, and the list names their account.
+	//
+	// 119: activities.CompanyReachedActivities is a SQL fragment, not a read:
+	// the timeline predicate's arms as a set that starts from the accounts. Its
+	// one caller, company360.LastTouchFor, bounds the company with ScopeClauseFor
+	// and the activity with ActivityDiscoverClause around it.
+	//
+	// 121: deals.readReviewTerms and deals.readOfferTerms read the deal's
+	// company and each offer's buyer company into the legal review terms. The
+	// ids feed a SHA-256 the stage gate compares and never leave the server.
+	//
+	// 123: privacy.subjectQuestionSources follows a rights-case subject to the
+	// deals and projects they are a stakeholder of. Subject access and erasure
+	// then reach every kept question answer those records were counted in.
+	// The operator's own seat must not narrow a subject's rights case.
+	//
+	// 124: privacy.leadTwinOf follows the same subject through merged contacts
+	// to the leads they were, for the same rights case.
+	modulesTierUnscopedCeiling = 124
 )

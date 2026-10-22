@@ -8,6 +8,7 @@ package activities
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -47,40 +48,49 @@ func CompanyLinkedActivityExists(companyPos int) string {
 // CompanyLinkedActivityExistsAny is the same walk over a SET of companies, for
 // a caller that binds an id array rather than one id.
 //
-// The hierarchy roll-up needs it. Its 30-day count used to match
-// activity_link.company_id alone, which asked a narrower question than the
-// timeline the number is displayed above: capture files mail against the CONTACT
-// it was with, so an account's busiest correspondence carries no company
-// link at all and went uncounted. One walk, three operand shapes — a fourth
-// link added to the model still reaches every one.
+// The hierarchy roll-up needs it, for a 30-day count that must answer the same
+// question as the timeline it is displayed above. Capture files mail against
+// the CONTACT it was with, so a flat company_id match misses an account's
+// busiest correspondence. One walk, two operand shapes, so a fourth link added
+// to the model still reaches both.
 //
 // companiesPos is the bind position carrying the company id array.
 func CompanyLinkedActivityExistsAny(companiesPos int) string {
 	return activityReachesCompany(sprintf("ANY($%d)", companiesPos))
 }
 
-// OuterCompanyAlias is the alias CompanyLinkedActivityExistsPerCompany compares
-// against: the company table of the enclosing query.
-const OuterCompanyAlias = "co"
+// CompanyReachedActivities is the timeline's four-arm reach for the bound
+// accounts: (activity_id, company_id) for each account an activity reaches.
+// CompanyReachSet is the three-arm set signals are filed through instead.
+func CompanyReachedActivities(companiesPos int) string {
+	return companyReach(sprintf("ANY($%d)", companiesPos))
+}
 
-// CompanyLinkedActivityExistsPerCompany is the same walk correlated with an
-// enclosing query over company aliased OuterCompanyAlias, for a set reader
-// that answers each company separately rather than the set as a whole.
+// companyReach is the walk as a set with one branch per arm. Each branch filters
+// on its arm's indexed company column, so a plan starts from the account. An
+// `OR` across the arms would leave Postgres no index to start from.
 //
-// The operand is a fixed column, not a parameter, so no caller text ever
-// reaches the SQL.
-func CompanyLinkedActivityExistsPerCompany() string {
-	return activityReachesCompany(OuterCompanyAlias + ".id")
+// participantEmployerArm correlates on a.occurred_at inside its join condition,
+// so Postgres keeps it a per-activity probe that cannot start from the account.
+// Its branch reaches the employees' activities through participantEntry first,
+// and that same `EXISTS` decides which of them count.
+func companyReach(operand string) string {
+	linkBranch := func(column string) string {
+		return sprintf("SELECT l.activity_id, %[1]s AS company_id %[2]s\n\t\t    WHERE %[1]s = %[3]s",
+			column, companyArms, operand)
+	}
+	participantBranch := sprintf(participantEntry+participantEmployerArm, operand, "e0.company_id")
+	return linkBranch("l.company_id") + "\n\t\t    UNION " + linkBranch("d.company_id") +
+		"\n\t\t    UNION " + linkBranch("r.company_id") + "\n\t\t    UNION " + participantBranch
 }
 
 // companyArms is the three links themselves — the account an activity is filed
 // against, the account its deal belongs to, and the employer of the contact it
 // is about.
 //
-// The arms live apart from the two shapes built on them because that is where
-// drift would happen — an arm gaining a condition in one spelling and not the
-// other — while the shapes differ for a reason that will not go away
-// (CompanyReachSet says what it is).
+// The arms live apart from the shapes built on them, because drift happens in
+// the arms: one spelling gains a condition and another does not. The
+// shapes differ for a reason that will not go away (CompanyReachSet says it).
 //
 // search/graphcompanyreach.go spells the SAME arms for the context walk, because a
 // module never imports a sibling (ADR-0054). The two texts are held equal by
@@ -90,10 +100,15 @@ func CompanyLinkedActivityExistsPerCompany() string {
 // The deal arm deliberately does not exclude archived or lost deals: a set
 // stricter than the predicate would show a message on the timeline whose
 // account never gets a signal about it.
+//
+// The employment arm is bounded by when the message was sent. The set form has
+// no outer activity to read that from, so the arms join the activity.
 var companyArms = `FROM activity_link l
+		    JOIN activity la ON la.id = l.activity_id
 		    LEFT JOIN deal d ON d.id = l.deal_id
 		    LEFT JOIN relationship r ON r.contact_id = l.contact_id AND r.kind = 'employment'
-		      AND ` + employment.IsCurrentSQL("r.ended_at") + ` AND r.archived_at IS NULL`
+		      AND ` + employment.IsCurrentSQL("r.ended_at") + ` AND r.archived_at IS NULL
+		      AND ` + employment.InPlaceAtSQL("r", "la.occurred_at")
 
 // participantEmployerArm is the READER's fourth arm: the employer of somebody
 // who is on the event as a participant rather than as a link.
@@ -120,23 +135,27 @@ var participantEmployerArm = `EXISTS (
 		    SELECT 1 FROM activity_participant ap
 		      JOIN relationship emp ON emp.contact_id = ap.contact_id AND emp.kind = 'employment'
 		        AND ` + employment.IsCurrentSQL("emp.ended_at") + ` AND emp.archived_at IS NULL
+		        AND ` + employment.InPlaceAtSQL("emp", "a.occurred_at") + `
 		    WHERE ap.activity_id = a.id AND emp.company_id = %s)`
 
+// participantEntry is where companyReach's participant branch starts: every
+// activity an employee of the account is on, for participantEmployerArm to
+// decide.
+var participantEntry = `SELECT a.id, e0.company_id FROM relationship e0
+		    JOIN activity_participant p0 ON p0.contact_id = e0.contact_id
+		    JOIN activity a ON a.id = p0.activity_id
+		    WHERE e0.company_id = %s AND e0.kind = 'employment' AND `
+
 // activityReachesCompany is the walk as a PREDICATE, for a query that aliases
-// activity as a. operand is what each arm compares its company id against
-// — a single bind, ANY(array), or the enclosing query's company column.
+// activity as a. operand is what each arm compares its company id against: a
+// single bind or ANY(array).
 //
-// It stays an EXISTS rather than a join against CompanyReachSet: EXISTS stops at
-// the first arm that matches, and every one of this function's callers is a
-// hot read. The participant arm is a second EXISTS beside the first for the
-// same reason — it is probed only when the three links found nothing.
+// It is a membership test against companyReach rather than an `EXISTS` per arm.
+// Correlated `EXISTS` joined by `OR` leave Postgres walking activity
+// newest-first, so a quiet account costs the whole table. The set starts from
+// the account, at the price of building a busy account's whole set first.
 func activityReachesCompany(operand string) string {
-	linked := sprintf(`EXISTS (
-		    SELECT 1 %s
-		    WHERE l.activity_id = a.id
-		      AND (l.company_id = %[2]s OR d.company_id = %[2]s OR r.company_id = %[2]s))`,
-		companyArms, operand)
-	return "(" + linked + "\n\t\t    OR " + sprintf(participantEmployerArm, operand) + ")"
+	return "a.id IN (SELECT reach.activity_id FROM (" + companyReach(operand) + ") reach)"
 }
 
 // CompanyReachSet is the same walk as a SET: the body of a derived table producing
@@ -172,15 +191,10 @@ func activityReachesCompany(operand string) string {
 // No workspace filter: activity_link, deal and relationship all carry FORCE
 // row-level security, and every caller runs inside WithWorkspaceTx.
 //
-// Known limit, and it matters more to a producer than to a reader: the
-// employment arm asks who a contact works for NOW, not who they worked for
-// when the message was sent. Mail exchanged with someone at a previous job
-// therefore reaches whoever employs them today. A timeline showing it is
-// arguably being helpful; a signal FILED against that account is a claim
-// nobody made. Bounding the arm by relationship.started_at is the fix, and it
-// is not available yet — contacts.plantEmploymentEdge writes no start date, so
-// the bound would resolve nothing (see the follow-up issue). Until then the
-// extractor's one-account rule carries most of the weight, since a contact
+// The employment arm reaches only mail sent while the edge was in place
+// (employment.InPlaceAtSQL). Mail from someone's previous job is therefore not
+// filed against their employer today. An edge with no date stays unbounded.
+// For those, the extractor's one-account rule carries the weight: a contact
 // with two live employers makes their conversations ambiguous and skipped.
 func CompanyReachSet() string {
 	return sprintf(`SELECT DISTINCT l.activity_id, o.company_id AS company_id
@@ -265,28 +279,18 @@ func RequireProjectScope(ctx context.Context, tx pgx.Tx, projectID ids.ProjectID
 // `kind` is stated rather than implied. The `activity_task_fields` CHECK
 // already keeps assignee_id NULL on every other kind, so it narrows nothing —
 // it is what lets the planner match the partial index.
-func openTaskAssigneeClause(assignee *ids.UserID, arg func(any) int) string {
+func openTaskAssigneeClause(assignee *ids.UserID, asOf *time.Time, identities map[string][]string, arg func(any) int) string {
 	if assignee == nil {
 		return ""
 	}
-	return sprintf("a.assignee_id = $%d AND a.kind = 'task' AND NOT a.is_done", arg(*assignee))
+	if asOf == nil || asOf.IsZero() {
+		return "FALSE"
+	}
+	return sprintf("a.assignee_id = $%d AND a.kind = 'task' AND NOT a.is_done", arg(*assignee)) + " AND " + CurrentTaskClause("a", *asOf, sprintf("$%d::jsonb", arg(identities)), arg)
 }
 
-// ownQueueClause narrows to the open tasks one contact is answerable for:
-// assigned to them, and to nobody else.
-//
-// It used to admit unassigned tasks too, on the ground that a rep who writes
-// themselves a task without filling in an assignee still owns it. That reading
-// was true of the case it named and wrong about every other: an automation
-// mints a follow-up with no assignee, and "or nobody" put that one task on
-// every colleague's queue at once — a manager opening "mine" found a rep's
-// lead work waiting for them, which is the report this rule comes from.
-//
-// The self-written task is kept where it belongs by owning it at the point of
-// writing instead (taskAssignee, activity.go), so this clause can mean exactly
-// what it says. Work that genuinely belongs to nobody is answered by
-// unassignedQueueClause, which is a queue somebody chooses to open rather than
-// one that arrives in everybody's.
+// Personal queues contain assigned work; taskAssignee owns a human's new task.
+// Automatic unassigned work belongs to unassignedQueueClause.
 func ownQueueClause(reader *ids.UserID, arg func(any) int) string {
 	if reader == nil {
 		return ""

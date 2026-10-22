@@ -2,13 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { useActivity } from "../screens/activityread";
+import { useActivity } from "../lib/activityread";
+import { ProblemError, problemCode } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
 import { Button } from "./atoms";
 import { SourceEmailPanel } from "./sourceemailpanel";
-import { SurfaceState } from "./surfacestate";
+import { type SectionState, SurfaceState } from "./surfacestate";
 
 type Activity = components["schemas"]["Activity"];
 
@@ -39,29 +40,33 @@ export function SourceEvidence({
   // PLAIN activity read, not the email presentation: that endpoint refuses any
   // kind but `email`, so asking it first would 404 on every transcript.
   const query = useActivity(activityId);
-  // A failed lookup is SAID, not swallowed. Returning nothing here removed the
-  // evidence altogether — no panel, no button, no reason — and the email
-  // panel's own failure arm cannot help, because a kind nobody resolved never
-  // mounts it.
-  if (query.isError) {
+  const source: Activity | undefined = query.data;
+  const code =
+    query.error instanceof ProblemError
+      ? problemCode(query.error.problem)
+      : null;
+  const unavailable = code === "permission_denied" || code === "not_found";
+  let state: SectionState = "ready";
+  if (unavailable || source?.content_state === "withheld") state = "withheld";
+  else if (query.isError) state = "failed";
+  else if (!source) state = "loading";
+  if (state !== "ready" || !source) {
     return (
       <SurfaceState
-        label={t("tasks.sourceEmail")}
+        label={t("stat.evidence")}
         labelLevel="h4"
-        state="failed"
+        state={state}
         emptyLabel={t("email.detail.none")}
         loadingLabel={t("email.detail.loading")}
-        detail={{ onRetry: () => void query.refetch() }}
+        detail={
+          state === "failed"
+            ? { onRetry: () => void query.refetch() }
+            : { withheldReason: t("email.detail.withheldReason") }
+        }
       >
         {null}
       </SurfaceState>
     );
-  }
-  const source: Activity | undefined = query.data;
-  // Nothing is drawn until the kind is known. A button that appeared and then
-  // vanished as the read landed would offer a verb this task does not have.
-  if (!source) {
-    return null;
   }
   if (source.kind === "email") {
     return (
@@ -73,6 +78,14 @@ export function SourceEvidence({
   }
   return (
     <div>
+      <p className="t-caption">
+        {[
+          formatDateTime(source.occurred_at, locale, recordZone),
+          source.subject,
+        ]
+          .filter(Boolean)
+          .join(" · ")}
+      </p>
       <Button variant="ghost" onClick={() => onOpenTranscript(activityId)}>
         {t("tasks.openSource")}
       </Button>

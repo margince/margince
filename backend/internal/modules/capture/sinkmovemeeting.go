@@ -91,7 +91,7 @@ func (s *Sink) MoveMeeting(ctx context.Context, key connector.NaturalKey, start 
 		if err != nil {
 			return fmt.Errorf("capture: finding the meeting to move: %w", err)
 		}
-		_, err = s.moveMeeting(ctx, tx, id, start, duration)
+		_, err = s.moveMeeting(ctx, tx, id, start, StorableDuration(duration))
 		return err
 	})
 }
@@ -112,7 +112,7 @@ func (s *Sink) moveOnReplay(
 	if s.moveMeeting == nil || viaIdentity || !ok || fields.Kind != meetingKind || fields.OccurredAt.IsZero() {
 		return nil
 	}
-	_, err := s.moveMeeting(ctx, tx, id, fields.OccurredAt, fields.DurationSeconds)
+	_, err := s.moveMeeting(ctx, tx, id, fields.OccurredAt, StorableDuration(fields.DurationSeconds))
 	return err
 }
 

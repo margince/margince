@@ -26,6 +26,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -139,6 +140,14 @@ func TestAThreadThatEndsAContractRaisesASignalCitingIt(t *testing.T) {
 	notice := seedThread(t, e, company, "thread-renewal", "Renewal for 2027",
 		"We have decided not to renew; the contract ends on 31 July.",
 		"inbound", extractClock.Add(-48*time.Hour))
+
+	judge := principal.WithActor(e.Admin(), principal.Principal{Type: principal.PrincipalSystem, ID: "system:owed_verdict", Permissions: principal.Permissions{RowScope: principal.RowScopeAll}})
+	if applied, err := e.Activities.SetCaptureLabel(judge, notice, "noise"); err != nil || !applied {
+		t.Fatalf("capture label: %t %v", applied, err)
+	}
+	if applied, err := e.Activities.SetOwedVerdict(judge, notice, activities.OwedVerdictInformsUs, "test-rules", extractClock); err != nil || !applied {
+		t.Fatalf("request verdict: %t %v", applied, err)
+	}
 
 	brain := &scriptedBrain{reply: reply(t, "contract_ended", notice,
 		"They wrote that the contract ends on 31 July.", 0.95)}

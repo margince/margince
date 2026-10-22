@@ -47,6 +47,10 @@ type Request struct {
 	// draft is grounded in the 360 scoped to that project and the project's
 	// own facts are folded in; nil is the contact in general.
 	ProjectID *ids.ProjectID
+	// AlsoTo are further contacts the same message goes to, after this one.
+	AlsoTo []ids.ContactID
+	// AboutActivityID names the activity the message follows up.
+	AboutActivityID *ids.ActivityID
 	// Envelope is the correspondence this draft is written into: the language
 	// it must be in, where the conversation stands, the current time, and who
 	// is writing it. Resolved by the caller, never by the model.
@@ -75,6 +79,10 @@ type Service struct {
 	// no pool and no transaction of its own, so the reader is injected rather
 	// than built here.
 	emailRows briefevidence.Reader
+	// others resolves AlsoTo under the caller's row scope.
+	others CoRecipients
+	// aboutReader resolves AboutActivityID under the caller's content gate.
+	aboutReader AboutActivities
 }
 
 // WithEmailSummaries binds the reader that opens a cited message, so a reason
@@ -134,13 +142,22 @@ func (s *Service) Draft(
 		draftfloor.Written{Body: CorrespondenceText(view), Rewrite: req.RewriteOf, Purpose: req.Intent},
 		ConversationState(view, s.envelope.Now()))
 	in := FromView(view, req)
+	if in.AlsoTo, err = s.coRecipients(ctx, contactID, req.AlsoTo); err != nil {
+		return crmcontracts.CompanyEmailDraft{}, nil, err
+	}
+	if req.AboutActivityID != nil {
+		if in.About, err = s.aboutActivity(ctx, *req.AboutActivityID, req.Envelope.At()); err != nil {
+			return crmcontracts.CompanyEmailDraft{}, nil, err
+		}
+		in.Recent = withoutActivity(in.Recent, in.About.ID)
+	}
 	// A project the caller can see but this contact is not part of is not a
 	// body of work a message to them can be about.
 	if req.ProjectID != nil && in.Project == nil {
 		return crmcontracts.CompanyEmailDraft{}, nil, httperr.Validation("project_id", "not_found",
 			"that project is not one this contact is part of, or you cannot see it")
 	}
-	grounding, err := in.Grounding(datasource.EntityContact)
+	grounding, err := in.Grounding()
 	if err != nil {
 		return crmcontracts.CompanyEmailDraft{}, nil, err
 	}

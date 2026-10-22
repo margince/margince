@@ -58,5 +58,8 @@ func (h integrationsSettingsHandlers) UpdateIntegrationsSettings(w http.Response
 
 // toContractIntegrationsSettings maps the stored posture onto the wire shape.
 func toContractIntegrationsSettings(s integrations.Settings) crmcontracts.IntegrationsSettings {
-	return crmcontracts.IntegrationsSettings{AutomaticLookup: s.AutomaticLookup}
+	return crmcontracts.IntegrationsSettings{
+		AutomaticLookup: s.AutomaticLookup,
+		Locks:           loadedLocks(integrations.ConfigSettings()),
+	}
 }

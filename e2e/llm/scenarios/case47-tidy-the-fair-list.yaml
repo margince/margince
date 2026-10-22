@@ -48,7 +48,7 @@ may_call:
   - read_record
   - list_records
   - resolve_entities
-  - list_colleagues
+  - read_workspace
   - query_workspace
   - whoami
 

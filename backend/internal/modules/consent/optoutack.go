@@ -3,46 +3,18 @@
 
 package consent
 
-// Acknowledging a refusal of advertising, where the applicable rules owe one.
-//
-// Decree 91/2020/ND-CP Art. 16 gives a Vietnamese recipient who refuses further
-// advertising a confirmation that their refusal was received, within
-// twenty-four hours and carrying no advertising of its own.
-// gates/messagingruleapplied_test.go carried the gap in its register:
-// OptOutAcknowledgement was declared by the pack and nothing sent one.
-//
-// THE CONTROLLER LANE IS THE ONLY ONE THAT MAY, which is the reason this exists
-// here rather than as an ordinary send. Every other path is refused writing to
-// somebody who has just suppressed themselves, and correctly: the
-// acknowledgement is the single exception the category vocabulary already
-// carries, and optout_confirmation survives a broad stop for exactly this.
-//
-// THE TWENTY-FOUR HOURS ARE NOT ENFORCED, and that is worth saying plainly
-// rather than leaving a reader to assume the decree's deadline is handled. The
-// acknowledgement is queued the moment the refusal commits, which is as prompt
-// as this product sends anything — but nothing measures the gap, nothing alerts
-// on it, and a worker outage lasting longer than a day sends it late with no
-// error raised. Controller mail is not paced, so the age ceiling that bounds an
-// ordinary send does not reach here either.
-//
-// Closing it means a deadline on the delivery and something that reads it,
-// which is its own change.
-//
-// SAME TRANSACTION as the suppression it acknowledges. A separate consumer
-// would have to answer what happens when the stop commits and the queue write
-// fails — either a subject who is owed an acknowledgement and does not get one,
-// or a job that has to re-derive whether it is still owed. Staging it here
-// means the two are one fact.
+// Optional receipts share the refusal transaction through a savepoint.
+// A receipt failure must not undo the subject's refusal.
 
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"slices"
 	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
-
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
@@ -102,12 +74,28 @@ func (s *Store) acknowledgeOptOutTx(
 // ONE PLACE, because the two refusals owe the same message and a second copy of
 // this would be a second answer to what the decree requires. What differs is
 // the message id, which each caller derives from the act it is acknowledging.
-func (s *Store) stageAcknowledgementTx(
-	ctx context.Context, tx pgx.Tx, sub subject, messageID string,
-) error {
+func (s *Store) stageAcknowledgementTx(ctx context.Context, tx pgx.Tx, sub subject, messageID string) error {
 	if s.confirmSender == nil {
 		return nil
 	}
+	nested, err := tx.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("consent: opening receipt preparation: %w", err)
+	}
+	if err := s.prepareAcknowledgementTx(ctx, nested, sub, messageID); err != nil {
+		if rollbackErr := nested.Rollback(ctx); rollbackErr != nil {
+			return fmt.Errorf("consent: rolling back receipt preparation: %w", rollbackErr)
+		}
+		slog.ErrorContext(ctx, "opt-out receipt could not be staged; the refusal remains recorded", "subject_type", sub.entityType, "subject_id", sub.id, "cause", err)
+		return nil
+	}
+	if err := nested.Commit(ctx); err != nil {
+		return fmt.Errorf("consent: committing receipt preparation: %w", err)
+	}
+	return nil
+}
+
+func (s *Store) prepareAcknowledgementTx(ctx context.Context, tx pgx.Tx, sub subject, messageID string) error {
 	rules, _, applicable, err := s.applicableRules(ctx, tx)
 	if err != nil || !applicable {
 		return err
@@ -117,59 +105,23 @@ func (s *Store) stageAcknowledgementTx(
 	}
 	address, err := acknowledgementAddressTx(ctx, tx, sub)
 	if err != nil || address == "" {
-		// NO ADDRESS, NO ACKNOWLEDGEMENT, and no error either. A stop can be
-		// recorded against a contact whose address the product does not hold,
-		// or has since erased — and refusing the STOP because the
-		// acknowledgement cannot be addressed would cost the subject the thing
-		// they actually asked for to satisfy the thing they did not.
 		return err
 	}
-	// NO EXPIRY, because there is no link to expire. The renderer skips the
-	// expiry line for a linkless template, so the zero time never reaches the
-	// words.
-	rendered, category, err := RenderControllerTemplate(
-		TemplateOptOutAcknowledgement, time.Time{}, s.mailLanguage(ctx, tx))
+	rendered, category, err := RenderControllerTemplate(TemplateOptOutAcknowledgement, time.Time{}, s.mailLanguage(ctx, tx))
 	if err != nil {
 		return err
 	}
-	// A SAVEPOINT, so a staging refusal cannot take the stop with it.
-	//
-	// THE STOP IS WHAT THE SUBJECT ASKED FOR. The acknowledgement is what the
-	// decree adds, and letting the second roll back the first inverts their
-	// importance: a contact whose address has hard-bounced cannot be
-	// acknowledged, and without this that refusal would fail their objection
-	// and leave advertising permitted — the exact opposite of what they said.
-	//
-	// A REPLAY lands here too. The message id is derived from the act, so a
-	// second acknowledgement of one refusal collides on the ledger's own
-	// uniqueness index and is contained here rather than sending twice.
-	nested, err := tx.Begin(ctx)
+	rendered, err = s.controllerView(ctx, tx, rendered, category)
 	if err != nil {
-		return fmt.Errorf("consent: opening the acknowledgement: %w", err)
+		return err
 	}
-	_, err = s.confirmSender.QueueConfirmationTx(ctx, nested, ConfirmationSend{
-		ContactID: ids.From[ids.ContactKind](sub.id),
-		Recipient: address,
-		Category:  category,
-		MessageID: messageID,
-		// NO LINK, NO EXPIRY, NO MATERIAL. The template is linkless, and comms
-		// refuses a body whose placeholder count disagrees with what it was
-		// staged with — so these staying empty is what the shape check reads.
-		Rendered: rendered,
-	})
-	if err != nil {
-		// A rollback that does not take leaves the outer transaction aborted,
-		// which would fail the stop anyway — so that one is reported rather
-		// than hidden behind the staging error it was trying to contain.
-		if rbErr := nested.Rollback(ctx); rbErr != nil {
-			return fmt.Errorf("consent: the opt-out acknowledgement could not be rolled back: %w", rbErr)
-		}
-		return nil
+	var dueAt *time.Time
+	if rules.OptOutAcknowledgementWithin > 0 {
+		due := s.now().Add(rules.OptOutAcknowledgementWithin)
+		dueAt = &due
 	}
-	if err := nested.Commit(ctx); err != nil {
-		return fmt.Errorf("consent: committing the opt-out acknowledgement: %w", err)
-	}
-	return nil
+	_, err = s.confirmSender.QueueConfirmationTx(ctx, tx, ConfirmationSend{ContactID: ids.From[ids.ContactKind](sub.id), Recipient: address, Category: category, MessageID: messageID, DueAt: dueAt, Rendered: rendered})
+	return err
 }
 
 // acknowledgeableStop reports whether this kind of stop is a refusal of

@@ -99,7 +99,7 @@ func PersonalPurgeScope(seatCol string) string {
 		   AND NOT EXISTS (
 		     SELECT 1 FROM capture_sender_override o
 		      WHERE o.user_id = ` + seatCol + ` AND o.address = a.counterparty_email
-		        AND o.decision = 'business')`
+		        AND o.decision = 'business')` + googleMeetingMailSpared("NOT p.resolved_by_owner")
 }
 
 // personalPurgeDue is which personal mail has run out its window, written ONCE
@@ -177,7 +177,7 @@ func SelectPersonalPurgeTx(
 	rows, err := tx.Query(ctx, `
 		SELECT a.id,
 		       `+withheldReason(shielded, floor.shieldedAs())+` AS withheld,
-		       (SELECT count(*) FROM capture_import o WHERE o.activity_id = a.id) AS importers
+		       `+importersOfActivity+` AS importers
 		  FROM activity a
 		  JOIN capture_import i ON i.activity_id = a.id AND i.user_id = $3
 		  JOIN capture_pending_counterparty p

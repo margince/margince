@@ -5,10 +5,12 @@ package values
 
 import "regexp"
 
-// iso4217 mirrors the schema's currency CHECKs (deal/product/offer/
-// workspace all validate ^[A-Z]{3}$) — one Go spelling for the four
-// SQL copies.
-var iso4217 = regexp.MustCompile(`^[A-Z]{3}$`)
+// CurrencyPattern mirrors the schema's currency CHECKs (deal/product/offer/
+// workspace all validate ^[A-Z]{3}$): one Go spelling for the four SQL
+// copies, which the config schema also states.
+const CurrencyPattern = `^[A-Z]{3}$`
+
+var iso4217 = regexp.MustCompile(CurrencyPattern)
 
 // ValidCurrency answers whether s has the shape of an ISO-4217 code, for the
 // callers that hold a currency string without minting a Money out of it — the

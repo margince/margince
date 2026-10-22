@@ -118,10 +118,10 @@ func NextDue(rule crmcontracts.ReportingScheduleInput, timezone string, after ti
 
 func scheduleMinutes(rule crmcontracts.ReportingScheduleInput) (int, error) {
 	if rule.Day < 1 || (rule.Frequency == reportingWeekly && rule.Day > 7) || rule.Day > 31 {
-		return 0, invalid("choose a valid run day")
+		return 0, refuse("day", "out_of_range", "choose a valid run day")
 	}
 	if rule.Frequency != reportingWeekly && rule.Frequency != "monthly" {
-		return 0, invalid("choose weekly or monthly")
+		return 0, refuse("frequency", "invalid", "choose weekly or monthly")
 	}
 	return reportingClockMinutes(rule.LocalTime)
 }
@@ -153,15 +153,15 @@ func invalid(message string) error {
 func reportingClockMinutes(localTime string) (int, error) {
 	clock := strings.Split(localTime, ":")
 	if len(clock) != 2 || len(clock[0]) != 2 || len(clock[1]) != 2 {
-		return 0, invalid("enter a time as HH:MM")
+		return 0, refuse("local_time", "invalid", "enter a time as HH:MM")
 	}
 	hour, err := strconv.Atoi(clock[0])
 	if err != nil || hour < 0 || hour > 23 {
-		return 0, invalid("enter a valid hour")
+		return 0, refuse("local_time", "invalid", "enter a valid hour")
 	}
 	minute, err := strconv.Atoi(clock[1])
 	if err != nil || minute < 0 || minute > 59 {
-		return 0, invalid("enter a valid minute")
+		return 0, refuse("local_time", "invalid", "enter a valid minute")
 	}
 	return hour*60 + minute, nil
 }

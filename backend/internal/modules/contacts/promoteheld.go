@@ -44,29 +44,13 @@ import (
 // already promoted, nameless — is left as it is rather than failing the write
 // that created the contact.
 func (s *Store) promoteHeldLeadsTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, trigger PromoteTrigger, evidence *ids.ActivityID, by string) error {
-	if err := auth.Require(ctx, "lead", principal.ActionUpdate); err != nil {
-		return unlessDenied(err)
+	allowed, err := mayPromoteHeldLeads(ctx)
+	if err != nil || !allowed {
+		return err
 	}
-	if err := auth.Require(ctx, "contact", principal.ActionCreate); err != nil {
-		return unlessDenied(err)
-	}
-	rows, err := tx.Query(ctx, `
-		SELECT l.id
-		  FROM contact c
-		  JOIN contact_email ce ON ce.contact_id = c.id AND ce.archived_at IS NULL
-		  JOIN lead l ON l.email = ce.email
-		 WHERE c.id = $1
-		   AND c.archived_at IS NULL AND c.merged_into_id IS NULL
-		   AND c.visibility = 'workspace' AND c.quarantined_at IS NULL
-		   AND l.archived_at IS NULL AND l.merged_into_id IS NULL
-		   AND l.status <> 'promoted'
-		 ORDER BY l.created_at, l.id`, contactID)
+	leadIDs, err := heldLeadIDs(ctx, tx, contactID, nil)
 	if err != nil {
-		return fmt.Errorf("contacts: leads holding the contact's address: %w", err)
-	}
-	leadIDs, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
-	if err != nil {
-		return fmt.Errorf("contacts: leads holding the contact's address: %w", err)
+		return err
 	}
 	for _, leadID := range leadIDs {
 		if err := s.promoteHeldLeadTx(ctx, tx, ids.From[ids.LeadKind](leadID), contactID, PromoteLeadInput{
@@ -106,7 +90,7 @@ func (s *Store) promoteHeldLeadTx(ctx context.Context, tx pgx.Tx, leadID ids.Lea
 	if _, err := tx.Exec(ctx, "SAVEPOINT promote_held_lead"); err != nil {
 		return fmt.Errorf("contacts: savepoint before promoting a held lead: %w", err)
 	}
-	out, err := s.promoteLeadTx(ctx, tx, leadID, in, by, nil)
+	out, err := s.promoteLeadTx(ctx, tx, leadID, in, by, nil, contactID)
 	if err == nil && (!out.Merged || ids.UUID(out.Contact.Id) != contactID.UUID) {
 		err = apperrors.ErrConflict
 	}
@@ -142,4 +126,20 @@ func promotionRefused(err error) bool {
 	return errors.As(err, &promoted) || errors.As(err, &nameless) ||
 		errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrConflict) ||
 		errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrVersionSkew)
+}
+
+// MayPromoteHeldLeads answers whether the caller holds both grants a lead
+// promotion needs, for a write that runs as the system on a human's behalf.
+func MayPromoteHeldLeads(ctx context.Context) (bool, error) {
+	return mayPromoteHeldLeads(ctx)
+}
+
+func mayPromoteHeldLeads(ctx context.Context) (bool, error) {
+	if err := auth.Require(ctx, "lead", principal.ActionUpdate); err != nil {
+		return false, unlessDenied(err)
+	}
+	if err := auth.Require(ctx, "contact", principal.ActionCreate); err != nil {
+		return false, unlessDenied(err)
+	}
+	return true, nil
 }

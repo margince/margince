@@ -1,0 +1,26 @@
+/* "For developers" stands in the page column, so its cards keep their own
+   panes and only the summary reads as a heading. */
+.aiaccess-dev-title {
+  font: var(--fontHeadingSmall);
+}
+
+.aiaccess-dev {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding-top: var(--space-4);
+}
+
+.aiaccess-dev-sub {
+  margin: 0;
+}
+
+.aiaccess-dev-rules {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.aiaccess-dev-rules[hidden] {
+  display: none;
+}

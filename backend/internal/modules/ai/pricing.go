@@ -176,13 +176,16 @@ func vendorSheetRates(day time.Time) []ModelRate {
 		// Gemini: cache read = 0.1x input; Gemini's implicit context caching
 		// carries no separate write charge. Prices are
 		// config/ai-routing.example.yaml's default bindings — premium
-		// (gemini-3.5-flash), cheap_cloud (gemini-3.1-flash-lite) and frontier
+		// (gemini-3.6-flash), cheap_cloud (gemini-3.1-flash-lite) and frontier
 		// (gemini-3.1-pro-preview). Both Flash rows are flat: their rate does
 		// not vary with prompt size, so what is seeded is what a call of any
 		// length pays. This CORRECTS the 2026-07-20 note that had them carrying
 		// a >200k tier — that is Pro's pricing shape, ascribed to the Flash rows
 		// in error; reconfirmed against the live sheet 2026-08-12.
 		rateOn(day, providerGemini, "gemini-3.5-flash", 1_500_000, 9_000_000, 150_000, 0),
+		// 3.6-flash is priced at half the 3.5 rate through 2026-12-31 and at the 3.5
+		// rate from 2027-01-01; the step is an effective-dated row an operator adds.
+		rateOn(day, providerGemini, "gemini-3.6-flash", 750_000, 3_750_000, 75_000, 0),
 		rateOn(day, providerGemini, "gemini-3.1-flash-lite", 250_000, 1_500_000, 25_000, 0),
 		// gemini-3.1-pro-preview — the example file's frontier binding — is
 		// DELIBERATELY NOT SEEDED, and that is the point rather than an
@@ -203,10 +206,7 @@ func vendorSheetRates(day time.Time) []ModelRate {
 		// visible unknown. Seeding the >200k price instead is the same error
 		// pointed the other way, over-reporting the common case.
 		//
-		// Nothing is billed on it today — no task ladder selects the frontier
-		// tier — so an operator loses nothing now and gains the unknown being
-		// visible the moment one does. Restoring a row wants the context band
-		// the rate model does not have: #1045.
+		// Restoring a row needs the context band the rate model does not have: #1045.
 		//
 		// Explicit caching is the second charge it cannot express: $4.50/MTok
 		// per HOUR HELD, billed for storage rather than per token processed, so
@@ -238,6 +238,7 @@ func vendorSheetRates(day time.Time) []ModelRate {
 		// Gemini on Vertex AI: the same models at the gemini rows' rates. NEEDS
 		// OPERATOR CONFIRMATION against the Vertex sheet for the bound location.
 		rateOn(day, providerGeminiVertex, "gemini-3.5-flash", 1_500_000, 9_000_000, 150_000, 0),
+		rateOn(day, providerGeminiVertex, "gemini-3.6-flash", 750_000, 3_750_000, 75_000, 0),
 		rateOn(day, providerGeminiVertex, "gemini-3.1-flash-lite", 250_000, 1_500_000, 25_000, 0),
 		embedOn(day, providerGeminiVertex, "gemini-embedding-001", 150_000),
 		// TypeSafe's own API serves the model the broker resells as
@@ -298,12 +299,19 @@ func brokerSheetRates(day time.Time) []ModelRate {
 		// catalog prices 4.5 at double above 200k prompt tokens, where 4.6 is
 		// flat across its window — the same reason gemini-3.1-pro-preview is
 		// left unseeded above.
+		// Read 2026-10-12 from the broker's catalog, for the GPT-6 family that
+		// config/presets/openrouter_openai.yaml binds. Unlike the Mistral rows,
+		// OpenAI publishes a cache-write price, so that column is nonzero.
+		rateOn(day, providerOpenAICompatible, "openai/gpt-6-luna", 100_000, 500_000, 10_000, 125_000),
+		rateOn(day, providerOpenAICompatible, "openai/gpt-6-sol", 2_000_000, 10_000_000, 200_000, 2_500_000),
+		rateOn(day, providerOpenAICompatible, "openai/gpt-6.1-sol", 2_000_000, 10_000_000, 100_000, 2_500_000),
 		rateOn(day, providerOpenAICompatible, "anthropic/claude-haiku-4.5", 1_000_000, 5_000_000, 100_000, 1_250_000),
 		rateOn(day, providerOpenAICompatible, "anthropic/claude-sonnet-4.6", 3_000_000, 15_000_000, 300_000, 3_750_000),
 		// Embedding lanes have no output and no cache — only input is nonzero.
 		embedOn(day, providerOpenAICompatible, "mistralai/mistral-embed-2312", 100_000),
 		embedOn(day, providerOpenAICompatible, "baai/bge-m3", 10_000),
 		embedOn(day, providerOpenAICompatible, "openai/text-embedding-3-small", 20_000),
+		embedOn(day, providerOpenAICompatible, "openai/text-embedding-3-large", 130_000),
 		// Read 2026-09-25 from the decisions endpoint's own usage.cost: one call
 		// of 425 input tokens cost $0.00001785, which is $0.042 per million
 		// input tokens exactly. Keyed on the configured id, which is what a

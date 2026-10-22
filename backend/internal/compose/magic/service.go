@@ -118,7 +118,7 @@ func (s *Service) Read(
 		if err != nil {
 			return err
 		}
-		notShown, err := notShownSince(ctx, tx, from)
+		notShown, countWithheld, err := notShownSince(ctx, tx, from)
 		if err != nil {
 			return err
 		}
@@ -159,6 +159,7 @@ func (s *Service) Read(
 			notShown[string(crmcontracts.MagicNotShownReasonMagicNotShownUnadmittedAction)] += housekeeping
 		}
 		receipt.NotShown = notShownOf(notShown)
+		receipt.NotShownCountWithheld = &countWithheld
 		return nil
 	})
 	if err != nil {

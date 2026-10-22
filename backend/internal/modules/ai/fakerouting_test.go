@@ -24,8 +24,8 @@ func TestFakeRoutingConfigBindsEveryLadder(t *testing.T) {
 	if cfg.Profile != ProfileEUHosted {
 		t.Fatalf("Profile = %q, want %q", cfg.Profile, ProfileEUHosted)
 	}
-	for _, tier := range []Tier{TierLocalSmall, TierCheapCloud, TierPremium} {
-		if got := cfg.Tiers[tier].Provider; got != ProviderFake {
+	for tier, binding := range cfg.Tiers {
+		if got := binding.Provider; got != ProviderFake {
 			t.Fatalf("tier %s provider = %q, want %q", tier, got, ProviderFake)
 		}
 	}

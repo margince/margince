@@ -20,14 +20,13 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// colleagueCap bounds one answer. A roster is tens of contacts, not thousands,
-// and a caller wanting a particular one narrows with q rather than paging —
-// so this is a ceiling that says "narrow it", never a page boundary a reader
-// has to walk.
-const colleagueCap = 200
+// ColleagueCap bounds one answer. A roster is tens of seats, not thousands. A
+// caller wanting one narrows with q, so the cap says "narrow it", not "page".
+const ColleagueCap = 200
 
 // Colleague is one seat: who they are, and whether they can still be given
 // work. Nothing about permissions — what a colleague may do is a question for
@@ -67,8 +66,7 @@ func (s *Service) Colleagues(ctx context.Context, q string) ([]Colleague, bool, 
 	// `%` and `_` are LIKE metacharacters, and the tool advertises this as a
 	// plain narrowing filter — a caller typing an underscore in a name means
 	// that character, not "any character".
-	escaped := strings.NewReplacer(`\`, `\\`, "%", `\%`, "_", `\_`).Replace(trimmed)
-	pattern := "%" + escaped + "%"
+	pattern := "%" + storekit.EscapeLike(trimmed) + "%"
 	var out []Colleague
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
@@ -78,7 +76,7 @@ func (s *Service) Colleagues(ctx context.Context, q string) ([]Colleague, bool, 
 			   AND locked_until IS NULL
 			   AND ($1 = '' OR display_name ILIKE $2 OR email ILIKE $2)
 			 ORDER BY display_name, id
-			 LIMIT $3`, trimmed, pattern, colleagueCap+1)
+			 LIMIT $3`, trimmed, pattern, ColleagueCap+1)
 		if err != nil {
 			return err
 		}
@@ -99,8 +97,8 @@ func (s *Service) Colleagues(ctx context.Context, q string) ([]Colleague, bool, 
 	// truncated one. A roster that silently stopped at 200 would read as the
 	// whole roster, and an assistant would report that a colleague does not
 	// work here.
-	if len(out) > colleagueCap {
-		return out[:colleagueCap], true, nil
+	if len(out) > ColleagueCap {
+		return out[:ColleagueCap], true, nil
 	}
 	return out, false, nil
 }

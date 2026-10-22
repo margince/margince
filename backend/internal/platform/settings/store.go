@@ -65,12 +65,20 @@ func New(pool *pgxpool.Pool, reg *Registry) *Store { return &Store{pool: pool, r
 // row exists. An unregistered key is an error — a typo must not read as
 // "unset and therefore default".
 func (s *Store) Raw(ctx context.Context, key string) (json.RawMessage, error) {
+	raw, _, err := s.RawStored(ctx, key)
+	return raw, err
+}
+
+// RawStored is Raw that also reports whether a row stands behind the value.
+// Both come from one statement, so a concurrent write cannot pair one
+// transaction's value with another's answer to "was it saved".
+func (s *Store) RawStored(ctx context.Context, key string) (json.RawMessage, bool, error) {
 	def, err := s.lookup(key)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	if err := auth.Require(ctx, def.Object(), principal.ActionRead); err != nil {
-		return nil, err
+	if err := RequireRead(ctx, def); err != nil {
+		return nil, false, err
 	}
 	// `setting` is non-tenant and carries no RLS, so the workspace GUC buys
 	// this read nothing directly. It still rides WithWorkspaceTx because the
@@ -87,11 +95,12 @@ func (s *Store) Raw(ctx context.Context, key string) (json.RawMessage, error) {
 		// Unset is not missing: the registered default IS the value until a
 		// human changes it, which is what lets a new setting ship without a
 		// backfill of every installation.
-		return def.DefaultJSON()
+		fallback, err := def.DefaultJSON()
+		return fallback, false, err
 	case err != nil:
-		return nil, fmt.Errorf("settings: reading %s: %w", key, err)
+		return nil, false, fmt.Errorf("settings: reading %s: %w", key, err)
 	}
-	return raw, nil
+	return raw, true, nil
 }
 
 // SetRaw writes a setting, committing the row + audit in ONE transaction like
@@ -132,7 +141,7 @@ func (s *Store) SetRawTxReceipt(ctx context.Context, tx pgx.Tx, key string, next
 	if err != nil {
 		return WriteReceipt{}, err
 	}
-	if err := auth.Require(ctx, def.Object(), principal.ActionUpdate); err != nil {
+	if err := RequireWrite(ctx, def); err != nil {
 		return WriteReceipt{}, err
 	}
 	if err := def.ValidateJSON(next); err != nil {
@@ -246,6 +255,18 @@ func LockForWrite(ctx context.Context, tx pgx.Tx, key string) error {
 	return nil
 }
 
+// ShareLockForDecision holds one key stable for the rest of the transaction
+// without reading it through a gate. It takes the shared form of the advisory
+// lock LockForWrite takes exclusively. So a writer of the key waits for this
+// transaction to end, and this waits for a writer already in flight. It holds
+// whether or not the row exists yet.
+func ShareLockForDecision(ctx context.Context, tx pgx.Tx, key string) error {
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock_shared(hashtext($1))`, key); err != nil {
+		return fmt.Errorf("settings: holding %s stable for a decision: %w", key, err)
+	}
+	return nil
+}
+
 // ReadForDecision resolves a setting a caller is about to DECIDE something
 // against, holding the row until that decision commits.
 //
@@ -270,7 +291,7 @@ func ReadForDecision[T any](ctx context.Context, tx pgx.Tx, e *Entry[T]) (T, err
 // lock is a constant at both call sites and never a caller's string.
 func readTx[T any](ctx context.Context, tx pgx.Tx, e *Entry[T], lock string) (T, error) {
 	var zero T
-	if err := auth.Require(ctx, e.Object(), principal.ActionRead); err != nil {
+	if err := RequireRead(ctx, e); err != nil {
 		return zero, err
 	}
 	var raw json.RawMessage
@@ -288,6 +309,17 @@ func readTx[T any](ctx context.Context, tx pgx.Tx, e *Entry[T], lock string) (T,
 	return out, nil
 }
 
+// RequireRead is the gate on reading a setting's value: read on the object the
+// entry declares. `setting` carries no RLS, so this gate is its only control.
+func RequireRead(ctx context.Context, def Definition) error {
+	return auth.Require(ctx, def.Object(), principal.ActionRead)
+}
+
+// RequireWrite is the gate on changing a setting: update on its object.
+func RequireWrite(ctx context.Context, def Definition) error {
+	return auth.Require(ctx, def.Object(), principal.ActionUpdate)
+}
+
 // lookup resolves a key to its declaration, refusing an unregistered one.
 func (s *Store) lookup(key string) (Definition, error) { //nolint:ireturn // returns the type-erased Definition by design — the registry holds entries of many value types, and the concrete Entry[T] cannot be named without the type parameter the caller is looking up
 	def, ok := s.reg.byKey[key]
@@ -300,16 +332,23 @@ func (s *Store) lookup(key string) (Definition, error) { //nolint:ireturn // ret
 // Get resolves a typed setting. A thin wrapper over Raw: the gate, the
 // registry lookup and the default all live there.
 func Get[T any](ctx context.Context, s *Store, e *Entry[T]) (T, error) {
+	v, _, err := GetStored(ctx, s, e)
+	return v, err
+}
+
+// GetStored is Get that also reports whether a row stands behind the value,
+// from the same read.
+func GetStored[T any](ctx context.Context, s *Store, e *Entry[T]) (T, bool, error) {
 	var zero T
-	raw, err := s.Raw(ctx, e.Key())
+	raw, stored, err := s.RawStored(ctx, e.Key())
 	if err != nil {
-		return zero, err
+		return zero, false, err
 	}
 	var out T
 	if err := json.Unmarshal(raw, &out); err != nil {
-		return zero, fmt.Errorf("settings: decoding %s: %w", e.Key(), err)
+		return zero, false, fmt.Errorf("settings: decoding %s: %w", e.Key(), err)
 	}
-	return out, nil
+	return out, stored, nil
 }
 
 // Set writes a typed setting. A thin wrapper over SetRaw, which owns the
@@ -320,36 +359,6 @@ func Set[T any](ctx context.Context, s *Store, e *Entry[T], v T) error {
 		return fmt.Errorf("settings: encoding %s: %w", e.Key(), err)
 	}
 	return s.SetRaw(ctx, e.Key(), raw)
-}
-
-// Seed writes a bootstrap value, consumed exactly once (ADR-0061 §2): it
-// inserts only when no row exists, so a restart never overwrites a setting a
-// human has since changed. Runs inside the caller's bootstrap transaction and
-// takes no RBAC gate — bootstrap runs before any human exists, and the caller
-// IS the boot path.
-//
-// It reports whether the row was STORED, and that is not a courtesy. DO NOTHING
-// is deliberate and stays, but "no row existed" is not the only way to reach it:
-// `setting` is not tenant-scoped, so a re-bootstrap creates a new workspace while
-// the previous installation's rows survive, and every value the operator just put
-// in margince.yaml is discarded. The columns that once carried a second copy of
-// these values are gone, so nothing downstream can notice the divergence.
-//
-// What Seed does NOT do is decide what should happen then — that is a product
-// question, open on #863. It refuses only to be silent about it, which is why
-// the boolean is returned rather than logged: platform plumbing owns no domain
-// and holds no logger.
-func Seed(ctx context.Context, tx pgx.Tx, def Definition, raw json.RawMessage) (stored bool, err error) {
-	if err := def.ValidateJSON(raw); err != nil {
-		return false, err
-	}
-	tag, err := tx.Exec(ctx,
-		`INSERT INTO setting (key, value) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING`,
-		def.Key(), raw)
-	if err != nil {
-		return false, fmt.Errorf("settings: seeding %s: %w", def.Key(), err)
-	}
-	return tag.RowsAffected() == 1, nil
 }
 
 // hasRow reports whether the setting has a stored row at all, which is a
@@ -393,7 +402,7 @@ func currentJSON(ctx context.Context, tx pgx.Tx, def Definition) (json.RawMessag
 // `setting` table carries no RLS, so this gate is the only control on it.
 func GetTx[T any](ctx context.Context, tx pgx.Tx, e *Entry[T]) (T, error) {
 	var zero T
-	if err := auth.Require(ctx, e.Object(), principal.ActionRead); err != nil {
+	if err := RequireRead(ctx, e); err != nil {
 		return zero, err
 	}
 	raw, err := currentJSON(ctx, tx, e)
@@ -405,45 +414,6 @@ func GetTx[T any](ctx context.Context, tx pgx.Tx, e *Entry[T]) (T, error) {
 		return zero, fmt.Errorf("settings: decoding %s: %w", e.Key(), err)
 	}
 	return out, nil
-}
-
-// ResetConfig restores the CONFIGURATION settings to first-boot state by
-// deleting their rows: an absent row reads as the registered default, which is
-// exactly what a fresh installation sees. Identity settings are spared.
-//
-// Deleting rather than writing defaults is what keeps this honest — a row
-// holding the default value and no row at all are the same to every reader,
-// and "has anyone ever changed this?" stays answerable afterwards.
-//
-// Runs inside the caller's reset transaction. The key list comes from the
-// registry, so a setting added later is reset with nothing here to keep in
-// step.
-func ResetConfig(ctx context.Context, tx pgx.Tx, reg *Registry) error {
-	keys := make([]string, 0, len(reg.byKey))
-	for key, def := range reg.byKey {
-		if def.SurvivesDataReset() {
-			continue
-		}
-		keys = append(keys, key)
-	}
-	if len(keys) == 0 {
-		return nil
-	}
-	if _, err := tx.Exec(ctx, `DELETE FROM setting WHERE key = ANY($1)`, keys); err != nil {
-		return fmt.Errorf("settings: restoring configuration to first-boot state: %w", err)
-	}
-	return nil
-}
-
-// SeedValue is the typed form of Seed, for a caller holding the entry. It
-// reports what Seed reports: whether the value was stored, or discarded because
-// a row was already there.
-func SeedValue[T any](ctx context.Context, tx pgx.Tx, e *Entry[T], v T) (stored bool, err error) {
-	raw, err := json.Marshal(v)
-	if err != nil {
-		return false, fmt.Errorf("settings: encoding seed for %s: %w", e.Key(), err)
-	}
-	return Seed(ctx, tx, e, raw)
 }
 
 // RequireTx reads a setting inside a transaction the caller already holds, for

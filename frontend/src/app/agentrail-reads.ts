@@ -4,14 +4,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useConnectors } from "../features/capture/connectors";
+import { providerName } from "../format/connectorprovider";
 import { formatPercent } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { usePendingApprovals } from "../screens/approvals.queries";
-import { useConnectors } from "../screens/connectors";
-import { useCan, useHoldsAdminRole } from "./capability";
-import { type CaptureProgress, liveCapture } from "./capture-progress";
-import { type LicensePosture, useLicensePosture } from "./license-posture";
+import { usePendingApprovals } from "../lib/approvals.queries";
+import { useCan, useHoldsAdminRole } from "../lib/capability";
+import { type CaptureProgress, liveCapture } from "../lib/capture-progress";
+import { type LicensePosture, useLicensePosture } from "../lib/license-posture";
 
 // WHAT THE AGENT SECTION READS. The rail's row, the state it derives and the
 // panel beside it all stand on these answers and on nothing else: approvals
@@ -120,7 +121,10 @@ export function useSignals(): Signals {
   const connections = connectors.data?.data ?? [];
   const offline = connections
     .filter((connection) => connection.status !== "connected")
-    .map((connection) => connection.account_label ?? connection.provider);
+    .map(
+      (connection) =>
+        connection.account_label ?? providerName(connection.provider, t),
+    );
   const capture = liveCapture(connections);
 
   return {

@@ -34,20 +34,11 @@ func (h Handlers) CreateProduct(w http.ResponseWriter, r *http.Request, _ crmcon
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	billingModel, billingMonths := billingClassificationOf(req.BillingModel, req.BillingIntervalMonths)
-	in := CreateProductInput{
-		Name:           req.Name,
-		SKU:            req.Sku,
-		Description:    req.Description,
-		Unit:           req.Unit,
-		UnitPriceMinor: req.UnitPriceMinor,
-		Currency:       req.Currency,
-		DefaultTaxRate: req.DefaultTaxRate,
-		Active:         req.Active,
-		Source:         req.Source,
-
-		BillingModel:          billingModel,
-		BillingIntervalMonths: billingMonths,
+	price, _ := httperr.PresentField(r, "unit_price_minor")
+	in, err := productCreateInput(req, price != nil)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
 	}
 	product, err := h.store.CreateProduct(r.Context(), in)
 	if err != nil {
@@ -76,34 +67,10 @@ func (h Handlers) UpdateProduct(w http.ResponseWriter, r *http.Request, id crmco
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	if err := httperr.RefuseNull(r, "name"); err != nil {
+	in, err := productUpdateInput(req, httperr.ClearedFields(r), ifVersion)
+	if err != nil {
 		writeStoreErr(w, r, err)
 		return
-	}
-	billingModel, billingMonths := billingClassificationOf(req.BillingModel, req.BillingIntervalMonths)
-	// `not_specified` is how a caller says "nobody has classified this",
-	// because a JSON null cannot: the generated field is a pointer, so a null
-	// and an omitted field both arrive as nil and an omitted field has to keep
-	// meaning "leave it alone". Translated to the pair of nulls the column
-	// holds, here at the edge, so the store speaks in stored values only.
-	if billingModel != nil && *billingModel == string(crmcontracts.UpdateProductRequestBillingModelNotSpecified) {
-		billingModel, billingMonths = nil, nil
-	}
-	in := UpdateProductInput{
-		Name:           req.Name,
-		SKU:            req.Sku,
-		Description:    req.Description,
-		Unit:           req.Unit,
-		UnitPriceMinor: req.UnitPriceMinor,
-		Currency:       req.Currency,
-		DefaultTaxRate: req.DefaultTaxRate,
-		Active:         req.Active,
-		IfVersion:      ifVersion,
-
-		// A PATCH addresses the classification when it names either half.
-		Classified:            req.BillingModel != nil || req.BillingIntervalMonths != nil,
-		BillingModel:          billingModel,
-		BillingIntervalMonths: billingMonths,
 	}
 	product, err := h.store.UpdateProduct(r.Context(), pathID[ids.ProductKind](id), in)
 	if err != nil {
@@ -113,8 +80,13 @@ func (h Handlers) UpdateProduct(w http.ResponseWriter, r *http.Request, id crmco
 	httperr.WriteJSON(w, http.StatusOK, product)
 }
 
-func (h Handlers) ArchiveProduct(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	product, err := h.store.ArchiveProduct(r.Context(), pathID[ids.ProductKind](id))
+// ArchiveProduct preserves the request version through the native archive writer.
+func (h Handlers) ArchiveProduct(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.ArchiveProductParams) {
+	ifVersion, ok := httperr.IfMatchVersion(w, r)
+	if !ok {
+		return
+	}
+	product, err := h.store.ArchiveProductAt(r.Context(), pathID[ids.ProductKind](id), ifVersion)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return

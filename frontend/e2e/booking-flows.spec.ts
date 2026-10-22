@@ -6,9 +6,10 @@ import {
   bookingInvitation,
   bookingProfile,
   bookingSlots,
-} from "../src/screens/book.testkit";
+} from "../src/testing/book.testkit";
 import { copy } from "./copy";
 import { mockApi } from "./seed";
+import { openedAt } from "./waits";
 
 test.beforeEach(async ({ page, context }) => {
   await mockApi(context);
@@ -69,8 +70,7 @@ test("reconnecting in another tab refreshes permissions without losing the draft
   await page.getByLabel(de["scheduling.agenda"]).fill("Keep this draft");
   const popupPromise = page.waitForEvent("popup");
   await page.getByRole("link", { name: de["scheduling.openSettings"] }).click();
-  const popup = await popupPromise;
-  await expect(popup).toHaveURL(/settings\/meetings/);
+  const popup = await openedAt(popupPromise, /settings\/meetings/);
   await expect(
     popup.getByText(de["scheduling.readOnlyCalendar"]),
   ).toBeVisible();
@@ -364,7 +364,7 @@ test("meeting settings shows the reusable link, saves hours, and previews a paus
   await expect(
     page.getByRole("button", { name: de["scheduling.copyLink"], exact: true }),
   ).toBeVisible();
-  await expect(page.getByLabel("Firmenname")).toHaveCount(0);
+  await expect(page.getByLabel("Unternehmensname")).toHaveCount(0);
   await expect(
     page.getByPlaceholder("https://meet.google.com/abc-defg-hij"),
   ).toBeVisible();
@@ -437,21 +437,20 @@ test("calendar setup enables booking with the existing Account name", async ({
       .getByRole("main")
       .getByRole("link", { name: de["settings.tab.account"], exact: true }),
   ).toHaveAttribute("href", "#/settings/account");
-  await expect(
-    page.getByRole("button", { name: de["scheduling.resume"], exact: true }),
-  ).toBeDisabled();
+  const accept = page.getByRole("switch", {
+    name: de["scheduling.acceptBookings"],
+    exact: true,
+  });
+  await expect(accept).toBeDisabled();
   await page
     .getByRole("button", { name: de["scheduling.save"], exact: true })
     .click();
   await expect(
     page.getByText(de["settings.saved"], { exact: true }),
   ).toBeVisible();
-  await page
-    .getByRole("button", { name: de["scheduling.resume"], exact: true })
-    .click();
-  await expect(
-    page.getByText(de["scheduling.active"], { exact: true }),
-  ).toHaveCount(2);
+  await accept.click();
+  // The booking link panel is the one surface that states it.
+  await expect(accept).toHaveAttribute("aria-checked", "true");
   expect(writes).toHaveLength(2);
   expect(writes[1]).toMatchObject({
     provider: "gcal",

@@ -127,6 +127,6 @@
 }
 
 .emailentry[aria-pressed="true"] {
-  background: var(--accentLight);
-  box-shadow: inset 3px 0 var(--accentText);
+  background: var(--bgInset);
+  box-shadow: inset 3px 0 var(--textPrimary);
 }

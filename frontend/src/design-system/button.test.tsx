@@ -7,6 +7,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ts from "typescript";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { appStylesheets, rulesOf } from "../../scripts/lib/css-rules";
 import {
   extensionFrontendFiles,
   filesMatching,
@@ -539,6 +540,86 @@ describe("the link variant is the .link-button affordance, not a copy of it", ()
     expect(rule?.[1]).toMatch(/min-block-size:\s*0/);
   });
 });
+
+describe("the bare variant is the .iconbtn control, not a copy of it", () => {
+  it("emits the class the stylesheet keys on", () => {
+    render(
+      <Button variant="bare" iconOnly aria-label="Notifications">
+        <svg aria-hidden />
+      </Button>,
+    );
+    expect(classesOf("Notifications")).toContain("btn-bare");
+  });
+
+  it("compiles only as a glyph button", () => {
+    render(
+      // @ts-expect-error bare is a glyph button only
+      <Button variant="bare">Bell</Button>,
+    );
+    expect(classesOf("Bell")).toContain("btn-bare");
+  });
+
+  // A rule for one of the two and not the other is where their looks part.
+  // Each selector alternative, in every app sheet and inside every @media,
+  // needs its partner with the same declarations in the same sheet.
+  it("shares every rule with .iconbtn, and outranks the button box", () => {
+    const all = rulesOf(appStylesheets(join(here, "..", "..")));
+    const key = (file: string, selector: string, body: string) =>
+      `${file}|${selector}|${body.trim()}`;
+    const written = new Set(
+      all.map((rule) => key(rule.file, rule.selector, rule.body)),
+    );
+    const paired = all.flatMap((rule) => {
+      const partner = bareTwinOf(rule.selector);
+      return partner === undefined
+        ? []
+        : [{ rule, partner: key(rule.file, partner, rule.body) }];
+    });
+    const where = (rule: { file: string; selector: string }) =>
+      `${relative(here, rule.file)}: ${rule.selector}`;
+    const misspelled = all.filter((rule) => namesLoneBare(rule.selector));
+    expect([
+      ...paired
+        .filter(({ partner }) => !written.has(partner))
+        .map(({ rule }) => where(rule)),
+      ...misspelled.map(where),
+    ]).toEqual([]);
+    // Pinned, so a pair deleted on both sides fails rather than shrinking.
+    expect(paired).toHaveLength(16);
+  });
+
+  it.each([
+    [".btn.btn-bare", false],
+    [".btn.btn-bare:hover svg", false],
+    [".btn.btn-barely", false],
+    [".btn-bare svg", true],
+    [".notifbell .btn-bare", true],
+    [".btn-bare.btn:hover", true],
+    [".xbtn.btn-bare", true],
+    [".btn.btn-bare + .btn-bare", true],
+  ])("reads %j as naming a lone .btn-bare: %s", (selector, lone) => {
+    expect(namesLoneBare(selector)).toBe(lone);
+  });
+});
+
+// `.btn-bare` alone ties with `.btn`, so every mention must be `.btn.btn-bare`.
+function namesLoneBare(selector: string): boolean {
+  return /(?<!(?:^|[^\w-])\.btn)\.btn-bare(?![\w-])/.test(selector);
+}
+
+// The same selector spelled for the other of the pair, or undefined for one
+// that names neither.
+function bareTwinOf(selector: string): string | undefined {
+  const iconbtn = /\.iconbtn(?![\w-])/g;
+  const bare = /\.btn\.btn-bare(?![\w-])/g;
+  if (selector.match(iconbtn)) {
+    return selector.replace(iconbtn, ".btn.btn-bare");
+  }
+  if (selector.match(bare)) {
+    return selector.replace(bare, ".iconbtn");
+  }
+  return undefined;
+}
 
 // The control owns its icon's size, and this is the fitness function for it.
 //

@@ -30,8 +30,9 @@ func (s *Service) PauseAll(ctx context.Context) (int64, error) {
 		if err != nil {
 			return err
 		}
+		reason := s.statusCopy(ctx, tx).Say(statusWords.Paused)
 		for _, schedule := range schedules {
-			if err := s.suspendSchedule(ctx, tx, schedule, "Paused by the reporting administrator; explicit resume required"); err != nil {
+			if err := s.suspendSchedule(ctx, tx, schedule, reason); err != nil {
 				return err
 			}
 			count++

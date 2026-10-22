@@ -19,8 +19,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
-	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -51,7 +49,11 @@ type AnalyticsExplanation struct {
 func ExplainAnalyticsCell(
 	ctx context.Context, tx pgx.Tx, in analyticsquery.Explain, floor analyticsquery.Floor,
 ) (AnalyticsExplanation, error) {
-	spec, ok := prebuiltReports[in.Query.Entity]
+	schema, specs, err := AnalyticsSchemaIn(ctx, tx)
+	if err != nil {
+		return AnalyticsExplanation{}, err
+	}
+	spec, ok := specs[in.Query.Entity]
 	if !ok {
 		return AnalyticsExplanation{}, &analyticsquery.RefusalError{
 			Kind:    analyticsquery.RefusalUnsupported,
@@ -59,7 +61,7 @@ func ExplainAnalyticsCell(
 			Suggest: "explain a cell of an answer this seat can ask for",
 		}
 	}
-	if err := auth.Require(ctx, string(spec.entity), principal.ActionRead); err != nil {
+	if err := requireAnalyticsRead(ctx, spec.entity); err != nil {
 		return AnalyticsExplanation{}, err
 	}
 
@@ -74,7 +76,6 @@ func ExplainAnalyticsCell(
 		return AnalyticsExplanation{Withheld: true}, nil
 	}
 
-	schema := AnalyticsSchemaFor(ctx)
 	// The SAME population the count was taken over — the Explain carries the
 	// whole query, scope included. A drill-through narrowed differently from
 	// its own headline opens records the number never counted.
@@ -88,7 +89,7 @@ func ExplainAnalyticsCell(
 	if err != nil {
 		return AnalyticsExplanation{}, err
 	}
-	sql, args, err := bindReportTokens(ctx, frame, plan.SQL, plan.Args)
+	sql, args, err := bindReportTokens(ctx, tx, frame, plan.SQL, plan.Args)
 	if err != nil {
 		return AnalyticsExplanation{}, err
 	}

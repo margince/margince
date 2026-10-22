@@ -56,7 +56,7 @@ func workflowEngineWithDrafter(db *database.DB, drafter activities.EmailDrafter)
 	// consumer.
 	ex := automation.Executors{
 		Provider:  NewProvider(db.Pool()),
-		Approvals: automationApprovalsAdapter{svc: approvals.NewService(db)},
+		Approvals: automationApprovalsAdapter{svc: NewApprovalsService(db)},
 		// The zero SendPath is the honest one here: automation.Comms declares
 		// DraftEmail alone, so no send is reachable from this surface to
 		// configure. What an automation composes waits as a held draft, and
@@ -86,6 +86,9 @@ func workflowEngineWithDrafter(db *database.DB, drafter activities.EmailDrafter)
 	activityStore := activities.NewStore(db)
 	engine.RegisterSystemWorkflow(newLeadSLAEscalation(db, time.Now))
 	for _, handler := range activities.FollowUpWorkflows(activityStore) {
+		engine.RegisterSystemWorkflow(handler)
+	}
+	for _, handler := range activities.QuietReminderReopenWorkflows(activityStore) {
 		engine.RegisterSystemWorkflow(handler)
 	}
 	for _, handler := range activities.OwnershipWorkflows(activityStore) {

@@ -13,11 +13,11 @@ was decided, and the audit log says who read what.
 
 ### How do I make Margince GDPR compliant before connecting mailboxes?
 To get Margince ready for mail capture within the law, do four things before anyone connects a work mailbox; Margince itself checks none of them.
-1. Tell the colleagues whose mail will be read (Mitarbeiterinformation, Art. 13 GDPR).
+1. Tell the colleagues whose mail will be read (Beschäftigteninformation, Art. 13 GDPR).
 2. Settle private use of work mail: consent per colleague, or a written ban (Einwilligung, §26(2) BDSG).
 3. Agree it with the works council (Betriebsvereinbarung, §87(1) Nr. 6 BetrVG).
 4. Record it for the regulator (Verarbeitungsverzeichnis und DSFA, Art. 30 and Art. 35).
-Templates ship with the Margince documentation.
+With Germany chosen as the law, **Settings → Governance → Jurisdiction** lists the templates.
 Also called: DSGVO, data protection, works council, Betriebsrat, DPIA.
 
 ### Does Margince check that we signed a works agreement?
@@ -27,7 +27,7 @@ Also called: compliance check, legal sign-off, is Margince compliant.
 ## The four compliance documents, in order
 
 1. **Tell the colleagues whose mail will be read**: the
-   *Mitarbeiterinformation* (Art. 13 GDPR). Do it before a mailbox is
+   *Beschäftigteninformation* (Art. 13 GDPR). Do it before a mailbox is
    connected, not after. Keep the receipt: the *Empfangsbestätigung* shows you
    did it, which Art. 5(2) asks of you on its own. Where there is no works
    council (most often in Austria), add each colleague's written agreement to
@@ -52,9 +52,9 @@ Also called: compliance check, legal sign-off, is Margince compliant.
 4. **Write it down for the regulator**: the *Verarbeitungsverzeichnis und DSFA*
    (Art. 30, Art. 35). One entry per processing operation.
 
-The templates live in the compliance section of the Margince documentation. The
-English set is for reading and for passing around inside the company; the German
-versions are the ones to sign.
+With Germany chosen as the law, the templates are on **Settings → Governance →
+Jurisdiction**, to read and download. The English set is for reading and for
+passing around inside the company; the German versions are the ones to sign.
 
 ## What Margince gives you to point at
 
@@ -69,3 +69,15 @@ versions are the ones to sign.
 Margince cannot tell you whether your own way of working is within the law: the
 templates have blanks to fill in. For erasure, access requests, retention and consent inside Margince, see
 [What is kept, what is destroyed](retention-exports-and-deletion.md).
+
+## Which law applies
+
+Margince follows one law for the whole installation. An admin chooses it at first setup, or later on **Settings → Governance → Jurisdiction**. The page shows what the choice changes:
+
+- how long business mail is kept before anyone may delete it;
+- the due date of a privacy request;
+- the rules for sales mail.
+
+With no law chosen, a privacy request is due in one calendar month. Mail is then kept for the longest time any built-in law asks for.
+
+A change to a law that keeps mail for a shorter time does not cut that time for mail you already hold. That mail keeps the old time, and the page says until when.

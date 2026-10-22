@@ -452,11 +452,15 @@ func exportCSV(t *testing.T, e *apptest.AppEnv, body AnyMap) [][]string {
 // deal carries an EMPTY amount for a rep whose role masks it, while their own
 // row keeps the figure — the same per-row decision the deal list makes,
 // proven here against the statement the export actually runs.
+// The base amount and rate go with it: either one prints the masked money
+// back out.
 func TestFilteredExportWithholdsAMaskedAmount(t *testing.T) {
 	e := SetupSearch(t)
 	f := e.seedFilteredDeals(t)
 	for id, amount := range map[ids.UUID]int64{f.matchOwn: 100000, f.matchOther: 250000} {
-		if _, err := e.Owner.Exec(context.Background(), `UPDATE deal SET amount_minor = $2, currency = 'EUR' WHERE id = $1`, id, amount); err != nil {
+		if _, err := e.Owner.Exec(context.Background(),
+			`UPDATE deal SET amount_minor = $2, currency = 'USD', amount_minor_base = $3,
+			        fx_rate_to_base = 0.5, fx_rate_date = CURRENT_DATE WHERE id = $1`, id, amount, amount/2); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -477,18 +481,22 @@ func TestFilteredExportWithholdsAMaskedAmount(t *testing.T) {
 	}
 	rowIDs := CSVColumn(t, result.Body, "id")
 	amounts := CSVColumn(t, result.Body, "amount_minor")
+	baseAmounts := CSVColumn(t, result.Body, "amount_minor_base")
+	rates := CSVColumn(t, result.Body, "fx_rate_to_base")
 	if len(rowIDs) != 2 {
 		t.Fatalf("exported rows = %v, want both matching deals (a deal is readable by every seat)", rowIDs)
 	}
 	for i, id := range rowIDs {
 		switch id {
 		case f.matchOwn.String():
-			if amounts[i] != "100000" {
-				t.Errorf("the rep's own amount = %q, want 100000", amounts[i])
+			if amounts[i] != "100000" || baseAmounts[i] != "50000" || rates[i] == "" {
+				t.Errorf("the rep's own amount, base amount, rate = %q, %q, %q, want 100000, 50000 and the rate",
+					amounts[i], baseAmounts[i], rates[i])
 			}
 		case f.matchOther.String():
-			if amounts[i] != "" {
-				t.Errorf("the other team's amount = %q, want empty — the export printed a masked value", amounts[i])
+			if amounts[i] != "" || baseAmounts[i] != "" || rates[i] != "" {
+				t.Errorf("the other team's amount, base amount, rate = %q, %q, %q, want all empty — "+
+					"the export printed a masked value", amounts[i], baseAmounts[i], rates[i])
 			}
 		default:
 			t.Errorf("unexpected row %s", id)

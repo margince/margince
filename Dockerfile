@@ -47,7 +47,7 @@
 # The base always runs on the build platform and cross-compiles to the target:
 # in a multi-platform bake only the thin runtime stages run emulated, never
 # the toolchains.
-FROM --platform=$BUILDPLATFORM golang:1.27.2-alpine@sha256:85dc1069ac644ea3c527b177303a406eb3358192816cd7f9e5848eb658851673 AS gobase
+FROM --platform=$BUILDPLATFORM golang:1.27.3-alpine@sha256:f2c872bcee949b7be9c490efd02b48a8a2fbf947cdf533f1c58525ec9d8170fd AS gobase
 
 RUN apk add --no-cache git ca-certificates
 
@@ -296,6 +296,10 @@ ENV MARGINCE_BUILD_REVISION=$MARGINCE_BUILD_REVISION
 # environment is the build's and the browser only ever sees the bundle.
 ARG MARGINCE_RELEASE_VERSION=dev
 ENV MARGINCE_RELEASE_VERSION=$MARGINCE_RELEASE_VERSION
+# The core release an instance pins, compiled into the bundle for the account
+# menu. Empty on a core-only build.
+ARG MARGINCE_CORE_VERSION=""
+ENV MARGINCE_CORE_VERSION=$MARGINCE_CORE_VERSION
 RUN --mount=type=cache,id=margince-tsbuildinfo,target=/app/frontend/node_modules/.tmp \
     pnpm gen:composed-types && pnpm gen:events:composed && pnpm build:composed
 
@@ -366,7 +370,7 @@ ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 # ── web: runtime ──────────────────────────────────────────────────────────────
 # nginx-unprivileged runs as a non-root user (uid 101) and listens on 8080.
-FROM nginxinc/nginx-unprivileged:alpine@sha256:b54ac358b83fc6c965793fd271839b4ea4cdb6e99895bb19618cbc2ca152d972 AS web
+FROM nginxinc/nginx-unprivileged:alpine@sha256:378d0c32f6562f7fd9629170797f57d2b953aa09be983b3daaf4809bb039ca00 AS web
 
 COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=web-build /app/frontend/dist /usr/share/nginx/html

@@ -49,6 +49,11 @@ const (
 // written anew.
 const CommitmentTaskSource = "commitment"
 
+// WebsiteLeadSource names a lead read off a company's website and accepted by
+// a human. Only that accept writes it. A lead under it is sent an Art. 14
+// notice, held until the notice is through, and deleted when it fails.
+const WebsiteLeadSource = "siteread"
+
 // internalSourceSystems are the exact identities only an internal writer may
 // spell. Exact names rather than a second prefix: these are already written
 // into rows, and renaming them to fit a namespace would strand every row that
@@ -58,6 +63,7 @@ var internalSourceSystems = map[string]bool{
 	NoActivityReminderSource: true,
 	CheckInCadenceSource:     true,
 	CommitmentTaskSource:     true,
+	WebsiteLeadSource:        true,
 }
 
 // ReservedSourceSystem reports whether a client-supplied source system
@@ -163,6 +169,30 @@ func DisplayVia(sourceSystem *string) *string {
 	}
 	shown := DisplaySourceSystem(*sourceSystem)
 	return &shown
+}
+
+// csvImportConnector is the connector segment the CSV importer writes after the
+// reserved prefix. The importer's own name for it is migration.ConnectorCSV; a
+// test in compose holds the two together.
+const csvImportConnector = "csv"
+
+// ImportedFrom answers where an imported row came from: nil when no import
+// wrote it, else the name of the source the import was run for. An empty name is
+// an import that was given none. A CSV run is named by its source name, so
+// `mirror:csv:bundle` reads `bundle`; another connector reads as itself.
+//
+// One derivation for every record kind an import writes, so the screens agree on
+// which rows are imported without each spelling the namespace.
+func ImportedFrom(sourceSystem *string) *string {
+	if sourceSystem == nil || !ImporterNamespace(*sourceSystem) {
+		return nil
+	}
+	name := DisplaySourceSystem(*sourceSystem)
+	if name == csvImportConnector {
+		name = ""
+	}
+	name = strings.TrimPrefix(name, csvImportConnector+":")
+	return &name
 }
 
 // RefuseWire guards BOTH provenance fields a create wire can carry, in one

@@ -108,6 +108,9 @@ func (s *Store) SetCompanyLogo(ctx context.Context, id ids.CompanyID, objectKey,
 		}
 		written = true
 		supersededKey = supersededObject(previous, objectKey)
+		if err := handOverLogoKeys(ctx, tx, supersededKey, &objectKey); err != nil {
+			return err
+		}
 		return recordLogoWrite(ctx, tx, id, LogoWide, resolvedLogoWrite(previousOrigin, originURL, by))
 	})
 	if err != nil {
@@ -209,7 +212,11 @@ func bindSiteReadLogo(ctx context.Context, tx pgx.Tx, readID ids.UUID, companyID
 	// What this confirmation left unreferenced: the mark the record wore before
 	// it, if it wore one. On the confirmation that CREATES the company there is
 	// none, which is why this stays nil for every onboarding read.
-	return supersededObject(previousKey, *objectKey), nil
+	superseded := supersededObject(previousKey, *objectKey)
+	if err := handOverLogoKeys(ctx, tx, superseded, objectKey); err != nil {
+		return nil, err
+	}
+	return superseded, nil
 }
 
 // supersededObject names the object this write orphaned, or nil when it

@@ -3,14 +3,14 @@
 
 package storekit
 
-// The customcolumns helper matrix: every one of the six closed field
-// types, both directions (SQLValue on write, ExtractValues on read), the
-// drop-on-mismatch rule, and the empty/missing-key edge cases — the
-// unit-test half of the fieldcatalog cross-module seam (the catalog-read
-// half is modules/customfields' integration suite).
+// The customcolumns helper matrix. It covers the six closed field types in both
+// directions, SQLValue on write and ExtractValues on read. It also covers the
+// refusal of a key or shape no column holds, and the empty and missing key cases.
+// The catalog read itself is tested elsewhere.
 
 import (
 	"encoding/json"
+	"errors"
 	"reflect"
 	"testing"
 	"time"
@@ -62,14 +62,12 @@ func TestInsertFragments(t *testing.T) {
 		col("cf_notes", fieldcatalog.TypeText),
 		col("cf_score", fieldcatalog.TypeNumber),
 	}
-	rawExtra := map[string]any{
-		"cf_amount":  float64(1250),
-		"cf_notes":   "hello",
-		"cf_unknown": "dropped: no matching active column",
-		"cf_score":   "not-a-number", // present but wrong shape: dropped
-	}
+	rawExtra := map[string]any{"cf_amount": float64(1250), "cf_notes": "hello"}
 	base := []any{"ws", "id"}
-	cols, placeholders, args := InsertFragments(active, rawExtra, base)
+	cols, placeholders, args, err := InsertFragments(active, rawExtra, base)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if want := `, "cf_amount", "cf_notes"`; cols != want {
 		t.Fatalf("cols = %q, want %q", cols, want)
 	}
@@ -94,7 +92,10 @@ func TestInsertFragmentsLeavesTheCallersBaseArgsAlone(t *testing.T) {
 	base := make([]any, 2, 8)
 	base[0], base[1] = "ws", "id"
 
-	_, _, args := InsertFragments(active, map[string]any{"cf_notes": "hello"}, base)
+	_, _, args, err := InsertFragments(active, map[string]any{"cf_notes": "hello"}, base)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if len(base) != 2 || base[0] != "ws" || base[1] != "id" {
 		t.Fatalf("base was mutated: %v", base)
@@ -104,19 +105,55 @@ func TestInsertFragmentsLeavesTheCallersBaseArgsAlone(t *testing.T) {
 	}
 }
 
-func TestInsertFragments_EmptyWhenNoActiveColumnsOrNoMatches(t *testing.T) {
+func TestInsertFragments_EmptyWhenNothingIsSet(t *testing.T) {
 	// Nothing to splice still answers the caller's own args, so the Exec that
 	// follows is written one way whether or not the workspace has custom
 	// fields — a nil here would drop every fixed bind on an install with none.
 	base := []any{"ws"}
-	cols, placeholders, args := InsertFragments(nil, map[string]any{"cf_x": "y"}, base)
-	if cols != "" || placeholders != "" || !reflect.DeepEqual(args, base) {
-		t.Fatalf("no active columns must yield empty fragments and the base args, got %q %q %v", cols, placeholders, args)
+	cols, placeholders, args, err := InsertFragments(nil, nil, base)
+	if err != nil || cols != "" || placeholders != "" || !reflect.DeepEqual(args, base) {
+		t.Fatalf("no active columns must yield empty fragments and the base args, got %q %q %v (%v)", cols, placeholders, args, err)
 	}
 	active := []fieldcatalog.Column{col("cf_missing", fieldcatalog.TypeText)}
-	cols, placeholders, args = InsertFragments(active, map[string]any{}, base)
-	if cols != "" || placeholders != "" || !reflect.DeepEqual(args, base) {
-		t.Fatalf("a rawExtra with no matching key must yield empty fragments and the base args, got %q %q %v", cols, placeholders, args)
+	cols, placeholders, args, err = InsertFragments(active, map[string]any{}, base)
+	if err != nil || cols != "" || placeholders != "" || !reflect.DeepEqual(args, base) {
+		t.Fatalf("a rawExtra with no key must yield empty fragments and the base args, got %q %q %v (%v)", cols, placeholders, args, err)
+	}
+}
+
+// A custom-field value no column can take is refused by name, on a create and
+// on an update.
+func TestACustomValueNoColumnTakesIsRefusedByName(t *testing.T) {
+	active := []fieldcatalog.Column{
+		col("cf_active", fieldcatalog.TypeBoolean),
+		col("cf_score", fieldcatalog.TypeNumber),
+	}
+	cases := []struct {
+		name, key, code string
+		values          map[string]any
+	}{
+		{"a key no column names", "cf_nme", CustomFieldUnknown, map[string]any{"cf_nme": "x"}},
+		{"a retired column", "cf_old", CustomFieldUnknown, map[string]any{"cf_old": true}},
+		{"a wrong shape", "cf_score", CustomFieldInvalid, map[string]any{"cf_score": "not-a-number"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, _, _, createErr := InsertFragments(active, tc.values, []any{"id"})
+			updateErr := SetCustomFieldPatch(NewPatch(), active, tc.values, nil)
+			for _, err := range []error{createErr, updateErr} {
+				refused, ok := errors.AsType[CustomFieldErrors](err)
+				if !ok || len(refused) != 1 || refused[0].Field != tc.key || refused[0].Code != tc.code {
+					t.Fatalf("got %v, want a refusal %s on %s", err, tc.code, tc.key)
+				}
+			}
+		})
+	}
+}
+
+func TestANullCustomValueIsNotRefused(t *testing.T) {
+	active := []fieldcatalog.Column{col("cf_score", fieldcatalog.TypeNumber)}
+	if err := CheckCustomValues(active, map[string]any{"cf_score": nil}); err != nil {
+		t.Fatalf("a null sets nothing on a create and clears on an update: %v", err)
 	}
 }
 
@@ -130,7 +167,9 @@ func TestSetCustomFieldPatch(t *testing.T) {
 	current := map[string]any{"cf_active": false}
 
 	p := NewPatch()
-	SetCustomFieldPatch(p, active, updates, current)
+	if err := SetCustomFieldPatch(p, active, updates, current); err != nil {
+		t.Fatal(err)
+	}
 
 	// The SQL SET fragments carry the QUOTED identifier — a cf_ column
 	// name is catalog-derived, and it must never reach the UPDATE text
@@ -156,15 +195,6 @@ func TestSetCustomFieldPatch(t *testing.T) {
 	}
 	if _, untouched := p.After()["cf_untouched"]; untouched {
 		t.Fatal("a column absent from updates must not enter the patch")
-	}
-}
-
-func TestSetCustomFieldPatch_MismatchedShapeDropped(t *testing.T) {
-	active := []fieldcatalog.Column{col("cf_active", fieldcatalog.TypeBoolean)}
-	p := NewPatch()
-	SetCustomFieldPatch(p, active, map[string]any{"cf_active": "not-a-bool"}, nil)
-	if !p.Empty() {
-		t.Fatalf("a wrong-shaped value must be dropped, got sets=%v", p.sets)
 	}
 }
 
@@ -285,6 +315,14 @@ func TestSQLValue_DropOnMismatch(t *testing.T) {
 		{"number given a bool", fieldcatalog.TypeNumber, true},
 		{"number given an unparseable string", fieldcatalog.TypeNumber, "not-a-number"},
 		{"date given a number", fieldcatalog.TypeDate, float64(20260711)},
+		{"date given a relative word", fieldcatalog.TypeDate, "tomorrow"},
+		{"date given infinity", fieldcatalog.TypeDate, "infinity"},
+		{"date given a slashed day-first date", fieldcatalog.TypeDate, "08/10/2026"},
+		{"date given a day past the month's end", fieldcatalog.TypeDate, "2026-02-30"},
+		{"date given a timestamp", fieldcatalog.TypeDate, "2026-07-11T10:00:00Z"},
+		{"date given year zero", fieldcatalog.TypeDate, "0000-01-01"},
+		{"date given a BC year", fieldcatalog.TypeDate, "4713-01-01 BC"},
+		{"date given a five-digit year", fieldcatalog.TypeDate, "12345-01-01"},
 		{"boolean given a string", fieldcatalog.TypeBoolean, "true"},
 		{"text given a number", fieldcatalog.TypeText, float64(1)},
 		{"picklist given a number", fieldcatalog.TypePicklist, float64(1)},

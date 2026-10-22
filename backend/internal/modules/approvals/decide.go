@@ -71,10 +71,16 @@ func (s *Service) Decide(ctx context.Context, id ids.ApprovalID, approve bool, r
 // principal, so the stores' own RBAC and row-scope gates cannot be relied on
 // to re-check what the human wrote.
 func (s *Service) DecideEdited(ctx context.Context, id ids.ApprovalID, edited json.RawMessage) (row, error) {
+	return s.DecideEditedFor(ctx, id, edited, nil)
+}
+
+// DecideEditedFor is DecideEdited with the approver's reason, which is recorded
+// with the decision as a rejection's is.
+func (s *Service) DecideEditedFor(ctx context.Context, id ids.ApprovalID, edited json.RawMessage, reason *string) (row, error) {
 	if len(edited) == 0 {
 		return row{}, &InvalidEditError{Cause: errors.New("empty payload")}
 	}
-	return s.recordDecision(ctx, id, true, nil, edited, decidedByContact)
+	return s.recordDecision(ctx, id, true, reason, edited, decidedByContact)
 }
 
 // decider says whether a contact answered this or the product applied it under
@@ -133,41 +139,23 @@ func (s *Service) recordDecision(ctx context.Context, id ids.ApprovalID, approve
 	return a, s.runDecisionEffect(ctx, id, a, approve)
 }
 
-// runPrecheck asks a kind that registered one whether its effect could run,
-// BEFORE anything is decided.
-//
-// The whole value is in the ordering. A refusal here leaves the approval
-// pending: the human is told what is wrong, fixes it, and approves the same row
-// again. The identical refusal one step later — after the decision transaction
-// commits — leaves an approved row nothing can decide again and no surface can
-// re-drive, which for a send means the message is simply lost.
-//
-// Only on approve, and only for a server-proposed staging, matching the effect
-// it preflights exactly: an agent-minted row reaches no executor, so
-// preflighting one would refuse a decision over an effect never going to run.
-//
-// A kind with no precheck registered is unchanged in every respect.
+// Preflight refuses unsafe context before a verdict can strand an unapplied effect.
 func (s *Service) runPrecheck(ctx context.Context, id ids.ApprovalID, approve bool, edited json.RawMessage) error {
-	if !approve || len(s.prechecks) == 0 {
+	if !approve || (len(s.prechecks) == 0 && s.preview == nil) {
 		return nil
 	}
 	a, err := s.Get(ctx, id)
 	if err != nil {
-		// Refused here too, with Get's own gated answer. Passing on would let a
-		// card that becomes decidable between this read and the decision be
-		// approved with its precheck never run, and an edit the precheck would
-		// refuse would land.
 		return err
 	}
-	check, ok := s.prechecks[a.Kind]
-	if !ok || !serverProposed(a) {
-		return nil
+	// An approved but unapplied effect retries through its execution guards.
+	if st := a.effectiveStatus(s.now()); st != "pending" {
+		if st == approvalStatusApproved && s.owesItsEffect(a) {
+			return nil
+		}
+		return &AlreadyDecidedError{Status: st}
 	}
-	// Both, because the kind may need to compare them. What is preflighted is
-	// the payload about to be approved — on a modify-then-approve the human's
-	// edit, since clearing the staged original would clear a message nobody is
-	// going to send — and what is compared against is what was staged.
-	return check(ctx, a.ProposedChange, edited)
+	return s.precheckMember(ctx, a, edited)
 }
 
 // countIfAContactDecided records the track record, and records nothing for an

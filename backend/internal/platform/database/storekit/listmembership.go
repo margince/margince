@@ -6,6 +6,7 @@ package storekit
 import (
 	"context"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -20,3 +21,19 @@ type ListMemberFilter func(idColumn string, arg func(any) int) (string, error)
 // connection of its own, and a read already holding one must not wait on a
 // second from the same pool.
 type ListMemberFilterResolver func(ctx context.Context, listID ids.UUID, entityType string) (ListMemberFilter, error)
+
+// ResolveListMembership turns the list a filter named into a member narrowing,
+// before the read, as the HTTP door does. Both doors narrow through one
+// resolver. With no resolver, lists are off and a list id names nothing: not
+// found, as REST answers it. No list named narrows nothing.
+func ResolveListMembership(ctx context.Context, listID *ids.UUID, resolve ListMemberFilterResolver,
+	entityType string,
+) (ListMemberFilter, error) {
+	if listID == nil {
+		return nil, nil //nolint:nilnil // a nil filter is the absence of a narrowing, which no list named means
+	}
+	if resolve == nil {
+		return nil, apperrors.ErrNotFound
+	}
+	return resolve(ctx, *listID, entityType)
+}

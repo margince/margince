@@ -60,7 +60,7 @@ func TestCSVImportOfKnownContactsCreatesContacts(t *testing.T) {
 	}
 
 	var approved importRunDTO
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, &approved); status != http.StatusAccepted {
+	if status := importCall(t, e, run.ID, "approve", nil, &approved); status != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", status)
 	}
 	if got := importedContactCount(t, e); got != contactsBefore+3 {
@@ -111,7 +111,7 @@ func TestCSVImportOfAClaimedEmailPreviewsWhatTheCommitDoes(t *testing.T) {
 		t.Fatalf("create run → %d, want 202", runStatus)
 	}
 	var approved importRunDTO
-	if s := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, &approved); s != http.StatusAccepted {
+	if s := importCall(t, e, run.ID, "approve", nil, &approved); s != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", s)
 	}
 
@@ -139,7 +139,7 @@ func TestCSVImportOfAClaimedEmailPreviewsWhatTheCommitDoes(t *testing.T) {
 	}
 
 	var reapproved importRunDTO
-	if s := e.Call(t, http.MethodPost, "/v1/imports/"+rerun.ID+"/approve", nil, nil, &reapproved); s != http.StatusAccepted {
+	if s := importCall(t, e, rerun.ID, "approve", nil, &reapproved); s != http.StatusAccepted {
 		t.Fatalf("approve re-run → %d, want 202", s)
 	}
 	var after importReportDTO
@@ -215,7 +215,7 @@ func TestCSVImportLinksContactsToTheirEmployers(t *testing.T) {
 	}
 
 	var approved importRunDTO
-	if s := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, &approved); s != http.StatusAccepted {
+	if s := importCall(t, e, run.ID, "approve", nil, &approved); s != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", s)
 	}
 
@@ -313,7 +313,7 @@ func TestCSVImportDoesNotPromiseLinksForRowsThatWillNotLand(t *testing.T) {
 	}
 
 	var approved importRunDTO
-	if s := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, &approved); s != http.StatusAccepted {
+	if s := importCall(t, e, run.ID, "approve", nil, &approved); s != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", s)
 	}
 	var after importReportDTO
@@ -388,7 +388,7 @@ func TestCSVImportResolvesALegalNameAndRefusesASharedOne(t *testing.T) {
 		t.Fatalf("links = %+v, want the shared name reported unresolved rather than linked to "+
 			"whichever company the read happened to see first", report.Links)
 	}
-	if !strings.Contains(report.Links.Unresolved[0].Reason, "more than one") {
+	if !strings.Contains(strings.ToLower(report.Links.Unresolved[0].Reason), "more than one") {
 		t.Errorf("reason = %q, want it to say the name is shared — a contact told 'not found' "+
 			"would go and create a third Faraday", report.Links.Unresolved[0].Reason)
 	}
@@ -415,4 +415,224 @@ func importOneEmployer(t *testing.T, e *apptest.AppEnv, company string) importRe
 		t.Fatalf("report → %d, want 200", s)
 	}
 	return report
+}
+
+// Undoing a run that UPDATED a contact tells the caller what it did not
+// reverse.
+//
+// Undo archives the rows a run created, which is what its own contract says.
+// A second run correcting an address the first one landed creates nothing, so
+// undo has nothing to archive and the corrected value stays.
+//
+// The run was still reported as undone. Somebody undoing a wrong correction was
+// told it had been taken back while it stood.
+func TestUndoingAnUpdateOnlyRunSaysWhatItDidNotReverse(t *testing.T) {
+	e := setupImportApp(t)
+	mapping := map[string]string{"Email": "email", "Full Name": "full_name", "Title": "title"}
+
+	const firstFile = "Email,Full Name,Title\nada@lovelace.example,Ada Lovelace,Old title\n"
+	first, status := uploadCSV(t, e, "contact", firstFile)
+	if status != http.StatusOK {
+		t.Fatalf("upload → %d, want 200", status)
+	}
+	run, runStatus := createRunWithMapping(t, e, "contact", first.SourceRef, mapping)
+	if runStatus != http.StatusAccepted {
+		t.Fatalf("create run → %d, want 202", runStatus)
+	}
+	if s := importCall(t, e, run.ID, "approve", nil, nil); s != http.StatusAccepted {
+		t.Fatalf("approve → %d, want 202", s)
+	}
+
+	// The same address, a new title: an update, and the run creates nothing.
+	const correction = "Email,Full Name,Title\nada@lovelace.example,Ada Lovelace,New title\n"
+	second, secondStatus := uploadCSV(t, e, "contact", correction)
+	if secondStatus != http.StatusOK {
+		t.Fatalf("second upload → %d, want 200", secondStatus)
+	}
+	rerun, rerunStatus := createRunWithMapping(t, e, "contact", second.SourceRef, mapping)
+	if rerunStatus != http.StatusAccepted {
+		t.Fatalf("create re-run → %d, want 202", rerunStatus)
+	}
+	if s := importCall(t, e, rerun.ID, "approve", nil, nil); s != http.StatusAccepted {
+		t.Fatalf("approve the correction → %d, want 202", s)
+	}
+	if got := contactTitle(t, e, "ada@lovelace.example"); got != "New title" {
+		t.Fatalf("title after the correction = %q, want New title", got)
+	}
+	// The premise this rests on: the run itself says it corrected one record.
+	var ran importReportDTO
+	if s := e.Call(t, http.MethodGet, "/v1/imports/"+rerun.ID+"/report", nil, nil, &ran); s != http.StatusOK {
+		t.Fatalf("report → %d, want 200", s)
+	}
+	if ran.Disposition.Updated != 1 || ran.Disposition.Created != 0 {
+		t.Fatalf("the correcting run reports %+v, want 1 update and no creation", ran.Disposition)
+	}
+
+	if s := importCall(t, e, rerun.ID, "undo", nil, nil); s != http.StatusAccepted {
+		t.Fatalf("undo → %d, want 202", s)
+	}
+	// The undo endpoint answers with the run; the reversal's own report is
+	// served beside the import report, which is where a reader finds it.
+	var after importReportWithUndoDTO
+	if s := e.Call(t, http.MethodGet, "/v1/imports/"+rerun.ID+"/report", nil, nil, &after); s != http.StatusOK {
+		t.Fatalf("report after undo → %d, want 200", s)
+	}
+	if after.Undo == nil {
+		t.Fatalf("the run reports no reversal after being undone: %+v", after)
+	}
+	// The run reversed nothing, because it created nothing. The report has to
+	// carry that, so a reader is not told the correction was taken back.
+	if after.Undo.ReversedCount != 0 {
+		t.Errorf("reversed_count = %d, want 0: the run created nothing to archive", after.Undo.ReversedCount)
+	}
+	if after.Undo.UpdatesNotReversed != 1 {
+		t.Errorf("updates_not_reversed = %d, want 1: the run corrected one contact and undo left it corrected",
+			after.Undo.UpdatesNotReversed)
+	}
+	if got := contactTitle(t, e, "ada@lovelace.example"); got != "New title" {
+		t.Errorf("title after undo = %q: undo archives what a run created and restores no value, "+
+			"so this is what the report must admit to", got)
+	}
+}
+
+// contactTitle reads one imported contact's title through the API.
+func contactTitle(t *testing.T, e *apptest.AppEnv, email string) string {
+	t.Helper()
+	var contacts struct {
+		Data []AnyMap `json:"data"`
+	}
+	if status := e.Call(t, http.MethodGet, "/v1/contacts?limit=100", nil, nil, &contacts); status != http.StatusOK {
+		t.Fatalf("GET /v1/contacts → %d, want 200", status)
+	}
+	for _, c := range contacts.Data {
+		if c["primary_email"] == email || c["email"] == email {
+			if title, ok := c["title"].(string); ok {
+				return title
+			}
+			return ""
+		}
+	}
+	t.Fatalf("no imported contact carries the address %s", email)
+	return ""
+}
+
+// A file whose contacts an undone import made can be staged and run again. The
+// undo archived them, so their addresses are free to be created once more.
+func TestAnUndoneImportCanBeStagedAndRunAgain(t *testing.T) {
+	e := setupImportApp(t)
+	mapping := map[string]string{"Email": "email", "Full Name": "full_name", "Title": "title"}
+	const file = "Email,Full Name,Title\nada@lovelace.example,Ada Lovelace,Analyst\n"
+
+	first, status := uploadCSV(t, e, "contact", file)
+	if status != http.StatusOK {
+		t.Fatalf("upload → %d, want 200", status)
+	}
+	run, runStatus := createRunWithMapping(t, e, "contact", first.SourceRef, mapping)
+	if runStatus != http.StatusAccepted {
+		t.Fatalf("create run → %d, want 202", runStatus)
+	}
+	if s := importCall(t, e, run.ID, "approve", nil, nil); s != http.StatusAccepted {
+		t.Fatalf("approve → %d, want 202", s)
+	}
+	if s := importCall(t, e, run.ID, "undo", nil, nil); s != http.StatusAccepted {
+		t.Fatalf("undo → %d, want 202", s)
+	}
+
+	again, status := uploadCSV(t, e, "contact", file)
+	if status != http.StatusOK {
+		t.Fatalf("second upload → %d, want 200", status)
+	}
+	rerun, rerunStatus := createRunWithMapping(t, e, "contact", again.SourceRef, mapping)
+	if rerunStatus != http.StatusAccepted {
+		t.Fatalf("staging the file again → %d, want 202", rerunStatus)
+	}
+	if s := importCall(t, e, rerun.ID, "approve", nil, nil); s != http.StatusAccepted {
+		t.Fatalf("approve the second run → %d, want 202", s)
+	}
+	if got := importedContactCount(t, e); got != 1 {
+		t.Fatalf("contacts after the second run = %d, want 1", got)
+	}
+}
+
+// A Latin-1 file is refused at the upload with a 422 that names the file.
+func TestUploadRefusesAFileThatIsNotUTF8(t *testing.T) {
+	e := setupImportApp(t)
+	latin1 := "Email,Full Name\nrene@example.test,Ren\xe9 Dupont\n"
+
+	status, refusals := uploadRefusal(t, e, "contact", latin1)
+	if status != http.StatusUnprocessableEntity {
+		t.Fatalf("upload of a Latin-1 file → %d, want 422", status)
+	}
+	if len(refusals) != 1 || refusals[0].Code != "not_utf8" || refusals[0].Field != "file" {
+		t.Fatalf("refusals = %+v, want one not_utf8 on file", refusals)
+	}
+}
+
+// A row whose address belongs to a sending system names no contact. The dry run
+// skips it with its reason, and the commit skips the same row. The report a
+// reader approves is the one the import carries out.
+func TestCSVImportSkipsARowWithASendingSystemsAddressInPreviewAndCommit(t *testing.T) {
+	e := setupImportApp(t)
+	contactsBefore := importedContactCount(t, e)
+	const file = "Email,Full Name,First Name,Last Name\n" +
+		"signing-noreply@machine-import.example,Signing-Noreply,Contact,A\n" +
+		"ada@machine-import.example,Signing-Noreply,Ada,Lovelace\n"
+
+	profile, status := uploadCSV(t, e, "contact", file)
+	if status != http.StatusOK {
+		t.Fatalf("upload → %d, want 200", status)
+	}
+	run, runStatus := createRunWithMapping(t, e, "contact", profile.SourceRef,
+		map[string]string{"Email": "email", "Full Name": "full_name", "First Name": "first_name", "Last Name": "last_name"})
+	if runStatus != http.StatusAccepted {
+		t.Fatalf("create run → %d, want 202", runStatus)
+	}
+	var report struct {
+		Disposition importDispositionDTO `json:"disposition"`
+		Issues      []struct {
+			Line       int    `json:"line"`
+			ReasonCode string `json:"reason_code"`
+		} `json:"issues"`
+	}
+	if status := e.Call(t, http.MethodGet, "/v1/imports/"+run.ID+"/report", nil, nil, &report); status != http.StatusOK {
+		t.Fatalf("report → %d, want 200", status)
+	}
+	if report.Disposition.Created != 1 || report.Disposition.Skipped != 1 {
+		t.Fatalf("preview = %+v, want 1 created and 1 skipped", report.Disposition)
+	}
+	if len(report.Issues) != 1 || report.Issues[0].ReasonCode != "email_names_no_contact" {
+		t.Fatalf("issues = %+v, want the one row skipped as email_names_no_contact", report.Issues)
+	}
+
+	var approved importRunDTO
+	if status := importCall(t, e, run.ID, "approve", nil, &approved); status != http.StatusAccepted {
+		t.Fatalf("approve → %d, want 202", status)
+	}
+	if got := importedContactCount(t, e); got != contactsBefore+1 {
+		t.Fatalf("contacts = %d, was %d; want the one human row created", got, contactsBefore)
+	}
+	var committed struct {
+		Disposition importDispositionDTO `json:"disposition"`
+	}
+	if status := e.Call(t, http.MethodGet, "/v1/imports/"+run.ID+"/report", nil, nil, &committed); status != http.StatusOK {
+		t.Fatalf("committed report → %d, want 200", status)
+	}
+	if committed.Disposition.Created != 1 || committed.Disposition.Skipped != 1 {
+		t.Fatalf("commit = %+v, want what the preview promised", committed.Disposition)
+	}
+	var listed struct {
+		Data []struct {
+			FullName string `json:"full_name"`
+		} `json:"data"`
+	}
+	if status := e.Call(t, http.MethodGet, "/v1/contacts?limit=100", nil, nil, &listed); status != http.StatusOK {
+		t.Fatalf("list → %d", status)
+	}
+	names := map[string]bool{}
+	for _, c := range listed.Data {
+		names[c.FullName] = true
+	}
+	if !names["Ada Lovelace"] || names["Signing-Noreply"] {
+		t.Errorf("imported names = %v, want Ada Lovelace named from her name parts and no Signing-Noreply", names)
+	}
 }

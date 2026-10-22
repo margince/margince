@@ -33,6 +33,8 @@ func toContractConnection(v capture.ConnectionView) crmcontracts.CaptureConnecti
 		SignatureEnrichEnabled: v.SignatureEnrichEnabled,
 		MailPosture:            postureOnWire(v.MailPosture),
 		ContextTag:             contextTagOnWire(v.ContextTag),
+		HistoryBaseline:        historyBaselineOnWire(v.HistoryBaseline),
+		CanBackfill:            v.CanBackfill,
 	}
 	if c.Scopes == nil {
 		c.Scopes = []string{}

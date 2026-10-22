@@ -24,19 +24,25 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// project360Reader binds the tool to the page's own service, built over the
-// same field-catalog-bearing stores the handler set uses.
-func project360Reader(pool *pgxpool.Pool) agents.Project360Reader {
+// newProject360Service is the page's own service, built over the same
+// field-catalog-bearing stores the handler set uses. The tool, the handoff and
+// the page all read through it.
+func newProject360Service(pool *pgxpool.Pool) *project360.Service {
 	catalog := customfields.NewService(pool, nil)
-	svc := project360.NewService(
+	return project360.NewService(
 		pool,
 		deals.NewStore(InstallationDB(pool), DealsInstallation()).WithFieldCatalog(catalog),
 		ProjectsStore(pool),
 		contacts.NewStore(InstallationDB(pool)).WithFieldCatalog(catalog),
 		contracts.NewStore(InstallationDB(pool), ContractFreezeRate(pool), ContractTimezone()).WithFieldCatalog(catalog),
-		activities.NewStore(InstallationDB(pool)),
+		activities.NewStore(InstallationDB(pool)).WithFieldCatalog(catalog),
 		clockNow,
 	)
+}
+
+// project360Reader binds the tool to the page's own service.
+func project360Reader(pool *pgxpool.Pool) agents.Project360Reader {
+	svc := newProject360Service(pool)
 	return func(ctx context.Context, projectID ids.UUID) (crmcontracts.Project360, error) {
 		return svc.Assemble(ctx, ids.From[ids.ProjectKind](projectID))
 	}

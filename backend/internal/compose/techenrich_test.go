@@ -14,7 +14,9 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/dnsread"
+	"github.com/margince/margince/backend/internal/platform/techprofile"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // observedAt is a fixed instant: the engine stamps what it read, and a test
@@ -114,7 +116,7 @@ func TestReadGathersEveryLane(t *testing.T) {
 		newRecordingCache(), fixedClock(),
 	)
 
-	got, outcomes := enricher.Read(context.Background(), ids.CompanyID{}, "example.de")
+	got, outcomes := enricher.Read(context.Background(), ids.CompanyID{}, "example.de", textlang.German)
 
 	// TWO, not three: the homepage lane belongs to the site read now, which
 	// matches every page it crawled rather than fetching one here.
@@ -153,7 +155,7 @@ func TestACertificateLogOutageCompletesNoLane(t *testing.T) {
 		newRecordingCache(), fixedClock(),
 	)
 
-	got, _ := enricher.Read(context.Background(), ids.CompanyID{}, "example.de")
+	got, _ := enricher.Read(context.Background(), ids.CompanyID{}, "example.de", textlang.German)
 
 	for _, lane := range got.Completed {
 		if lane == contacts.LaneCertLog {
@@ -173,7 +175,7 @@ func TestAnAbsentReaderCompletesNoLane(t *testing.T) {
 	t.Parallel()
 	enricher := NewTechnicalEnricher(nil, nil, newRecordingCache(), fixedClock())
 
-	got, _ := enricher.Read(context.Background(), ids.CompanyID{}, "example.de")
+	got, _ := enricher.Read(context.Background(), ids.CompanyID{}, "example.de", textlang.German)
 
 	if len(got.Completed) != 0 {
 		t.Errorf("completed %v with nothing wired", got.Completed)
@@ -192,7 +194,7 @@ func TestReadAnswersForExactlyTheDeclaredLanes(t *testing.T) {
 		newRecordingCache(), fixedClock(),
 	)
 
-	_, outcomes := enricher.Read(context.Background(), ids.CompanyID{}, "example.de")
+	_, outcomes := enricher.Read(context.Background(), ids.CompanyID{}, "example.de", textlang.German)
 
 	asked := make([]contacts.TechnicalLane, 0, len(outcomes))
 	for _, outcome := range outcomes {
@@ -211,7 +213,7 @@ func TestAnEmptyDomainAsksNobody(t *testing.T) {
 		newRecordingCache(), fixedClock(),
 	)
 
-	got, outcomes := enricher.Read(context.Background(), ids.CompanyID{}, "   ")
+	got, outcomes := enricher.Read(context.Background(), ids.CompanyID{}, "   ", textlang.German)
 
 	if len(got.Completed) != 0 || len(outcomes) != 0 {
 		t.Errorf("looked something up for a record carrying no domain: %v", got)
@@ -233,7 +235,7 @@ func TestTheCacheNeverHoldsARawCertificateHostname(t *testing.T) {
 		cache, fixedClock(),
 	)
 
-	enricher.Read(context.Background(), ids.CompanyID{}, "example.de")
+	enricher.Read(context.Background(), ids.CompanyID{}, "example.de", textlang.German)
 
 	stored := cache.everythingStored()
 	for _, personal := range []string{"jan", "mueller", "anna", "schmidt"} {
@@ -252,8 +254,8 @@ func TestASecondReadIsAnsweredFromTheCache(t *testing.T) {
 	counting := &countingCertLog{inner: stubCertLog{hostnames: []string{"shop.example.de"}}}
 	enricher := NewTechnicalEnricher(stubResolver{}, counting, cache, fixedClock())
 
-	enricher.Read(context.Background(), ids.CompanyID{}, "example.de")
-	second, _ := enricher.Read(context.Background(), ids.CompanyID{}, "example.de")
+	enricher.Read(context.Background(), ids.CompanyID{}, "example.de", textlang.German)
+	second, _ := enricher.Read(context.Background(), ids.CompanyID{}, "example.de", textlang.German)
 
 	if counting.calls != 1 {
 		t.Errorf("asked the certificate log %d times for one domain, want 1", counting.calls)
@@ -280,4 +282,75 @@ func observed(in contacts.TechnicalEnrichment, field, key string) bool {
 		}
 	}
 	return false
+}
+
+// The record names a service in the language the record is kept in.
+//
+// The classifier reads a key off a hostname and the key is the same in every
+// language. What a reader sees is stored, so it answers to the installation.
+func TestATechnicalFactIsNamedInTheRecordsLanguage(t *testing.T) {
+	t.Parallel()
+	service := techprofile.Signal{
+		Field: techprofile.FieldOperatedService,
+		Key:   techprofile.ServiceCustomerPortal, Evidence: "portal.example.de",
+	}
+	for lang, want := range map[textlang.Lang]string{
+		textlang.English:    "Customer portal",
+		textlang.German:     "Kundenportal",
+		textlang.Vietnamese: "Cổng khách hàng",
+	} {
+		got := observationOf(service, "https://example.de", lang)
+		if got.Value != want {
+			t.Errorf("%s names the customer portal %q, want %q", lang, got.Value, want)
+		}
+		if got.ValueKey != techprofile.ServiceCustomerPortal {
+			t.Errorf("%s changed the key to %q; a filter matches on the key", lang, got.ValueKey)
+		}
+	}
+}
+
+// A vendor keeps its own name, because no language renames Shopify.
+func TestAVendorNameIsNotTranslated(t *testing.T) {
+	t.Parallel()
+	vendor := techprofile.Signal{
+		Field: techprofile.FieldTechnology, Key: "shopify",
+		Label: "Shopify", Evidence: "x-shopify-stage",
+	}
+	for _, lang := range []textlang.Lang{textlang.English, textlang.German, textlang.Vietnamese} {
+		if got := observationOf(vendor, "https://example.de", lang); got.Value != "Shopify" {
+			t.Errorf("%s renamed the vendor to %q", lang, got.Value)
+		}
+	}
+}
+
+// An email-security posture carries its evidence in the record's language too,
+// with the protocol name left alone.
+func TestAPostureCitesItsEvidenceInTheRecordsLanguage(t *testing.T) {
+	t.Parallel()
+	posture := techprofile.Signal{
+		Field: techprofile.FieldEmailSecurity, Key: techprofile.SecurityDMARCReject,
+	}
+	english := observationOf(posture, "https://example.de", textlang.English)
+	if english.Value != "DMARC enforced" || english.Evidence != "DMARC record: p=reject" {
+		t.Errorf("English posture reads %q / %q", english.Value, english.Evidence)
+	}
+	german := observationOf(posture, "https://example.de", textlang.German)
+	if german.Value != "DMARC durchgesetzt" || german.Evidence != "DMARC-Eintrag: p=reject" {
+		t.Errorf("German posture reads %q / %q", german.Value, german.Evidence)
+	}
+}
+
+// A key no copy names falls back to the key, never to an empty value.
+//
+// The census holds the maps complete, so this is unreachable. The column
+// accepts an empty string, and a fact row reading as nothing is worse than one
+// reading as its own key.
+func TestAnUnnamedKeyStoresItsKeyRatherThanNothing(t *testing.T) {
+	t.Parallel()
+	unknown := techprofile.Signal{
+		Field: techprofile.FieldOperatedService, Key: "a_service_no_copy_names",
+	}
+	if got := observationOf(unknown, "https://example.de", textlang.English); got.Value != "a_service_no_copy_names" {
+		t.Errorf("an unnamed key stored %q, want the key", got.Value)
+	}
 }

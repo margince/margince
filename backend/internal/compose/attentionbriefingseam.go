@@ -3,8 +3,7 @@
 
 package compose
 
-// The overnight brief's lane, and the one rule it applies that the engine does
-// not: an entry is served only while the reader can still resolve its deal.
+// The actionable brief lane requires an open deal the reader can still resolve.
 
 import (
 	"context"
@@ -32,30 +31,8 @@ type attentionBriefing struct {
 	now     attention.Clock
 }
 
-// Queue serves the acting rep's unanswered briefing entries for today, and
-// whether a run exists at all.
-//
-// No run for today reads as an EMPTY lane with ran=false, not a refusal.
-// LatestRun answers ErrNotFound both when the night has not produced one and
-// when a rep is new, and neither is a permission problem — reporting them as
-// a withheld lane would tell the rep something was hidden from her when
-// nothing was. ran is what lets the feed tell that emptiness from a morning
-// the rep finished: a found run counts as ran even with zero unanswered
-// entries.
-//
-// Answered entries are dropped here rather than in the feed, because what the
-// states mean belongs to the brief. The engine already resolves an expired
-// snooze on this read, so an item whose set-aside has run out comes back
-// actionable without anything here knowing that rule either.
-//
-// So are entries whose deal this reader cannot resolve. A run is the night's
-// record and keeps every deal it ranked, but the deal can be archived or leave
-// the reader's scope between the night and the morning — and the reads that
-// would furnish the row (the figures pass and the label resolver) both exclude
-// an archived deal, correctly. Left in, the entry reaches the rep as a row with
-// no amount, no close date, no reason and no name, still offering act, set
-// aside and dismiss over a deal that has been deleted, and counting toward the
-// day's total. A row that can name nothing is not a suggestion.
+// Queue returns the reader's unanswered entries and the stored run's cutoff.
+// Closed, archived and unreadable deals leave this lane; the run remains reviewable.
 func (a attentionBriefing) Queue(ctx context.Context) ([]attention.BriefEntry, bool, time.Time, error) {
 	// This read WRITES — it resurfaces expired snoozes and records the open —
 	// and under a composed read those now ride the page's own transaction. That
@@ -99,7 +76,7 @@ func (a attentionBriefing) Queue(ctx context.Context) ([]attention.BriefEntry, b
 	}
 	entries := make([]attention.BriefEntry, 0, len(unanswered))
 	for _, entry := range unanswered {
-		if _, ok := resolvable[entry.DealID]; ok {
+		if figures, ok := resolvable[entry.DealID]; ok && !figures.Closed {
 			entries = append(entries, entry)
 		}
 	}

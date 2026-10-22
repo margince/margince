@@ -81,7 +81,7 @@ func listContractsTx(ctx context.Context, tx pgx.Tx, in ListContractsInput, asOf
 		where = append(where, storekit.SQLf("status = $%d", arg(*in.Status)))
 	}
 	if in.UnderContractOnly {
-		where = append(where, underContractSQL(asOfPos))
+		where = append(where, UnderContractSQL(asOfPos))
 	}
 	if in.Cursor != nil && *in.Cursor != "" {
 		cursor, err := storekit.DecodeCursor(*in.Cursor)
@@ -94,8 +94,9 @@ func listContractsTx(ctx context.Context, tx pgx.Tx, in ListContractsInput, asOf
 	limit := storekit.ClampLimit(in.Limit)
 	rows, err := tx.Query(ctx, storekit.SQLf(
 		`SELECT %s%s, %s FROM contract WHERE %s ORDER BY `+termOrder+` LIMIT $%d`,
-		contractColumns, storekit.SelectSuffix(active), underContractSQL(asOfPos),
-		strings.Join(where, " AND "), arg(limit+1)), args...)
+		contractColumns, storekit.SelectSuffix(active), UnderContractSQL(asOfPos),
+		strings.Join(where, " AND "), arg(limit+1),
+	), args...)
 	if err != nil {
 		return crmcontracts.ContractListResponse{}, fmt.Errorf("list contracts: %w", err)
 	}
@@ -182,8 +183,9 @@ func (s *Store) ListProjectContractsTx(ctx context.Context, tx pgx.Tx, projectID
 	lim := storekit.ClampLimit(limit)
 	rows, err := tx.Query(ctx, storekit.SQLf(
 		`SELECT %s%s, %s FROM contract WHERE %s ORDER BY `+termOrder+` LIMIT $%d`,
-		contractColumns, storekit.SelectSuffix(active), underContractSQL(asOfPos),
-		strings.Join(where, " AND "), arg(lim+1)), args...)
+		contractColumns, storekit.SelectSuffix(active), UnderContractSQL(asOfPos),
+		strings.Join(where, " AND "), arg(lim+1),
+	), args...)
 	if err != nil {
 		return crmcontracts.ContractListResponse{}, fmt.Errorf("list project contracts: %w", err)
 	}
@@ -267,7 +269,8 @@ func continueAfterTerm(cursor storekit.Cursor, arg func(any) int) string {
 	// comparison gives Postgres nothing to infer it from.
 	return storekit.SQLf(
 		"((starts_on IS NOT NULL AND (starts_on, created_at, id) < ($%d::date, $%d, $%d)) OR starts_on IS NULL)",
-		arg(*cursor.SortKey), arg(cursor.CreatedAt), arg(cursor.ID))
+		arg(*cursor.SortKey), arg(cursor.CreatedAt), arg(cursor.ID),
+	)
 }
 
 // termCursor mints the token that continues a page after one contract,
@@ -282,7 +285,7 @@ func termCursor(c crmcontracts.Contract) (string, error) {
 	cur := storekit.Cursor{
 		CreatedAt: cursorTime(c.CreatedAt),
 		ID:        ids.UUID(c.Id),
-		SortField: "starts_on",
+		SortField: startsOnColumn,
 		SortDesc:  true,
 	}
 	if c.StartsOn != nil {

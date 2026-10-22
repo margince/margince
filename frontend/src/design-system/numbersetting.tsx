@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useId, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
+import { isImeCommit } from "../lib/imecommit";
 import { TextInput } from "./atoms";
+import { describedByIds } from "./describedby";
 import { ErrorLine } from "./errorline";
 import { type SettingControlProps, SettingRow } from "./settingrow";
 import "./numbersetting.css";
@@ -33,8 +35,11 @@ export function NumberSetting({
   max,
   lowestOn,
   refusal,
+  reading,
   onCommit,
   disabled,
+  reason,
+  describedBy,
   testId,
 }: Readonly<{
   control: SettingControlProps;
@@ -43,8 +48,17 @@ export function NumberSetting({
   max: number;
   lowestOn?: number;
   refusal: string;
+  /** The typed number in words under the box, for a unit a bare figure hides. */
+  reading?: (value: number) => string;
   onCommit: (next: number) => void;
   disabled?: boolean;
+  /** Why this reader may not change it, under the box; refuses the edit alone. */
+  reason?: ReactNode;
+  /**
+   * An element elsewhere that describes this number, named after the row's
+   * own description.
+   */
+  describedBy?: string;
   testId?: string;
 }>) {
   // `sent` is the number this draft already committed: the blur that follows
@@ -57,26 +71,25 @@ export function NumberSetting({
   } | null>(null);
   const [refused, setRefused] = useState(false);
   const refusalId = useId();
+  const readingId = useId();
+  const reasonId = useId();
   const live = draft !== null && draft.over === value ? draft : null;
   const shown = live?.text ?? String(value);
+  const bounds = { min, max, lowestOn };
+  const typed = acceptedNumber(shown, bounds);
+  const words = reading && typed !== null ? reading(typed) : null;
   const commit = (by: "enter" | "blur") => {
     if (live === null) {
       setRefused(false);
       return;
     }
-    const next = Number(live.text.trim());
-    if (next === value) {
+    if (Number(live.text.trim()) === value) {
       setDraft(null);
       setRefused(false);
       return;
     }
-    if (
-      live.text.trim() === "" ||
-      !Number.isInteger(next) ||
-      next < min ||
-      next > max ||
-      (lowestOn !== undefined && next !== 0 && next < lowestOn)
-    ) {
+    const next = acceptedNumber(live.text, bounds);
+    if (next === null) {
       setRefused(true);
       return;
     }
@@ -91,28 +104,61 @@ export function NumberSetting({
     <div className="settingrow-measure numbersetting">
       <TextInput
         {...control}
-        aria-describedby={
-          [control["aria-describedby"], refused ? refusalId : null]
-            .filter(Boolean)
-            .join(" ") || undefined
-        }
+        aria-describedby={describedByIds(
+          control["aria-describedby"],
+          describedBy,
+          words && readingId,
+          reason !== undefined && reasonId,
+          refused && refusalId,
+        )}
         aria-invalid={refused ? true : undefined}
+        className="t-num"
         data-testid={testId}
         inputMode="numeric"
         value={shown}
-        disabled={disabled}
+        disabled={disabled || reason !== undefined}
         onChange={(e) => setDraft({ text: e.target.value, over: value })}
         onBlur={() => commit("blur")}
         onKeyDown={(e) => {
-          if (e.key === "Enter") {
+          if (e.key === "Enter" && !isImeCommit(e)) {
             e.preventDefault();
             commit("enter");
           }
         }}
       />
+      {words && (
+        <span id={readingId} className="t-caption numbersetting-reading">
+          {words}
+        </span>
+      )}
+      {reason !== undefined && (
+        <p id={reasonId} className="t-caption numbersetting-reason">
+          {reason}
+        </p>
+      )}
       <ErrorLine id={refusalId}>{refused ? refusal : null}</ErrorLine>
     </div>
   );
+}
+
+// Digits only: `Number` would also read "1e3", "0x10" and " -5 " as numbers.
+function acceptedNumber(
+  text: string,
+  {
+    min,
+    max,
+    lowestOn,
+  }: Readonly<{ min: number; max: number; lowestOn?: number }>,
+): number | null {
+  const trimmed = text.trim();
+  if (!/^\d+$/.test(trimmed)) {
+    return null;
+  }
+  const next = Number(trimmed);
+  if (next < min || next > max) {
+    return null;
+  }
+  return lowestOn !== undefined && next !== 0 && next < lowestOn ? null : next;
 }
 
 /**

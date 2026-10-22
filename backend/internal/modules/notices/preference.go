@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -28,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/noticekeys"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -78,6 +78,7 @@ var noticeClasses = []string{
 // where the two meet. A kind missing from it is refused by ClassFor rather than
 // delivered under whatever the fallback happened to be.
 var classByKind = map[string]string{
+	"data_task_failed":        classSystem,
 	"automation":              classAutomation,
 	"lead_sla":                classLeadSLA,
 	"capture_backlog_stalled": classCapture,
@@ -437,19 +438,11 @@ const TargetApproval = "approval"
 // ApprovalNoticeKey names one announcement of a pending decision across every
 // seat told about it. The writer, the retraction and the centre's routing all
 // read this one spelling.
-func ApprovalNoticeKey(approvalID ids.UUID) string {
-	return approvalNoticePrefix + approvalID.String()
-}
+func ApprovalNoticeKey(approvalID ids.UUID) string { return noticekeys.Approval(approvalID) }
 
-// approvalNoticePrefix opens every approval notice's dedupe key.
-const approvalNoticePrefix = KindApprovalPending + ":"
-
-// approvalOfNoticeKey is the decision an approval notice announces.
 func approvalOfNoticeKey(kind, noticeKey string) (ids.UUID, bool) {
-	rest, ok := strings.CutPrefix(noticeKey, approvalNoticePrefix)
-	if kind != KindApprovalPending || !ok {
-		return ids.UUID{}, false
+	if kind != KindApprovalPending {
+		return ids.Nil, false
 	}
-	id, err := ids.Parse(rest)
-	return id, err == nil
+	return noticekeys.ParseApproval(noticeKey)
 }

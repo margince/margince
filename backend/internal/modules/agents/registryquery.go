@@ -152,8 +152,23 @@ func outsideToolName(c rune) bool {
 //
 // It answers the SCOPE axis only. Invoke remains the authority on the seat
 // ceiling and object RBAC, which are re-derived per call — this narrows what is
-// advertised and enforces nothing.
+// advertised and enforces nothing. An Unlisted tool is never offered.
 func (r *Registry) Offered(ctx context.Context) []mcp.ToolSpec {
+	all := r.Specs()
+	out := make([]mcp.ToolSpec, 0, len(all))
+	words := r.lister()
+	for _, spec := range all {
+		if !spec.Unlisted && invocableByCaller(ctx, spec) {
+			out = append(out, words.listed(spec))
+		}
+	}
+	return out
+}
+
+// Runnable is what a Surface-B run may choose among: every tool this caller may
+// invoke, offered on the external listing or not. A scheduled agent's allowlist
+// narrows it to the verbs that agent names, each with its own full copy.
+func (r *Registry) Runnable(ctx context.Context) []mcp.ToolSpec {
 	all := r.Specs()
 	out := make([]mcp.ToolSpec, 0, len(all))
 	for _, spec := range all {
@@ -189,4 +204,17 @@ const maxToolNameEcho = 64
 // the transcript that the same run's later prompts go on to read.
 func (e *UnknownToolError) Error() string {
 	return "unknown tool " + echoSafe(e.Name, maxToolNameEcho)
+}
+
+// RouteTargets names the tools a router runs as, and reports false for a tool
+// that is not a router. A gate holding routers to the contract reads it: a
+// router declares nothing of its own, so its targets' declarations are its own.
+func (r *Registry) RouteTargets(name string) ([]string, bool) {
+	r.mu.RLock()
+	rt, isRouter := r.tools[name].(router)
+	r.mu.RUnlock()
+	if !isRouter {
+		return nil, false
+	}
+	return slices.Sorted(maps.Values(rt.routeTargets())), true
 }

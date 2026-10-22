@@ -17,7 +17,7 @@ import (
 
 func rules(body string) []string {
 	out := []string{}
-	for _, finding := range draftcheck.Formatting(body, draftcheck.Grounds{}) {
+	for _, finding := range draftcheck.Formatting(body, textlang.Unknown, draftcheck.Grounds{}) {
 		out = append(out, finding.Rule.Name())
 	}
 	return out

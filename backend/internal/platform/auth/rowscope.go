@@ -105,6 +105,20 @@ var shareableTables = map[string]bool{
 	tableContact: true, tableCompany: true, tableDeal: true, tableLead: true, tableProject: true,
 }
 
+// actsForTheInstallation reports whether an actor reads an owner-private row.
+// It is the one widening capture privacy admits.
+//
+// A system job qualifies by construction, and so does a connector with no
+// human behind it. Such a run buys for the installation, not for a colleague.
+// Withholding the row protects nobody and loses the write. Object RBAC and
+// grants are untouched.
+func actsForTheInstallation(p principal.Principal) bool {
+	if p.Type == principal.PrincipalSystem {
+		return true
+	}
+	return p.Type == principal.PrincipalConnector && p.OnBehalfOf.IsZero()
+}
+
 // ownerPrivateTables carry capture privacy (migration 0095): a row is either
 // 'workspace' — everyone in the workspace, the default — or 'owner', the
 // capturing user's alone until a human edit or approval promotes it. Connector
@@ -223,9 +237,9 @@ func predicateFor(p principal.Principal, table string, arg func(any) int,
 	case ownerScoped:
 		scope = OwnerPredicate(p, arg)
 	}
-	// The system principal is trusted by construction and reads both
-	// arms away; an unbounded human still faces capture privacy.
-	private := bool(capture) && ownerPrivateTables[table] && p.Type != principal.PrincipalSystem
+	// An actor with no human behind it reads both arms away; an unbounded
+	// human still faces capture privacy.
+	private := bool(capture) && ownerPrivateTables[table] && !actsForTheInstallation(p)
 	// An actor who reads every row needs no grant arm to see a shareable
 	// row — unless capture privacy just took it away from them again.
 	shareable := shareableTables[table] && (!everyRow || private)
@@ -269,43 +283,6 @@ func predicateFor(p principal.Principal, table string, arg func(any) int,
 		       OR (rg.subject_type = 'team' AND rg.subject_id = ANY($%d)))))`,
 			inner(alias), table, col(alias, "id"), access, me, teams)
 	}
-}
-
-// EnsureVisibleLive is the strict row probe: the row must EXIST, be LIVE
-// (archived_at IS NULL) and pass the caller's row scope. It differs from
-// EnsureVisible in both halves that matter to a caller handing data back —
-// an unbounded actor does not skip the existence check, and a soft-deleted
-// row never passes.
-//
-// Both differences are load-bearing where a record is served or referenced
-// outside the store that owns it. Art. 17 erasure anonymizes a contact in
-// place and stamps archived_at while LEAVING owner_id alone, so the
-// tombstone still satisfies the original owner's predicate: a probe without
-// the live filter answers "yes, still yours" for a record every live read
-// path now refuses.
-func EnsureVisibleLive(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) error {
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	idPos := arg(id)
-
-	clause, err := ScopeClauseFor(ctx, table, "", arg)
-	if err != nil {
-		return err
-	}
-	q := fmt.Sprintf(`SELECT EXISTS (SELECT 1 FROM %s WHERE id = $%d AND archived_at IS NULL`, table, idPos)
-	if clause != "" {
-		q += " AND " + clause
-	}
-	q += ")"
-
-	var visible bool
-	if err := tx.QueryRow(ctx, q, args...).Scan(&visible); err != nil {
-		return err
-	}
-	if !visible {
-		return apperrors.ErrNotFound
-	}
-	return nil
 }
 
 // EnsureVisibleForSubjectRights is EnsureVisible for the GDPR engines:
@@ -357,13 +334,25 @@ func EnsureVisibleForSubjectRights(ctx context.Context, tx pgx.Tx, table string,
 // object grant as well as the row scope: a seat that may create a type and
 // not read it is told a duplicate exists, never which one.
 func VisibleTo(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) (bool, error) {
+	return visibleThrough(ctx, tx, table, id, EnsureVisible)
+}
+
+// VisibleToExisting is VisibleTo that also answers false for an id no row
+// holds, even to a caller whose row scope is every row.
+func VisibleToExisting(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) (bool, error) {
+	return visibleThrough(ctx, tx, table, id, EnsureVisibleExisting)
+}
+
+func visibleThrough(ctx context.Context, tx pgx.Tx, table string, id ids.UUID,
+	probe func(context.Context, pgx.Tx, string, ids.UUID) error,
+) (bool, error) {
 	if err := Require(ctx, table, principal.ActionRead); err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			return false, nil
 		}
 		return false, err
 	}
-	err := EnsureVisible(ctx, tx, table, id)
+	err := probe(ctx, tx, table, id)
 	switch {
 	case err == nil:
 		return true, nil
@@ -372,38 +361,6 @@ func VisibleTo(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) (bool,
 	default:
 		return false, err
 	}
-}
-
-// EnsureVisible applies the row scope to a single-row operation: get,
-// update, archive, advance. Out of scope reads as ErrNotFound — the
-// caller cannot distinguish "not yours" from "not there", by design.
-// Activities scope through their links (the activities module's
-// link-walk clause); pipelines have no owner and are governed by object
-// grants only.
-func EnsureVisible(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) error {
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	idPos := arg(id)
-
-	clause, err := ScopeClauseFor(ctx, table, "", arg)
-	if err != nil {
-		return err
-	}
-	if clause == "" {
-		return nil
-	}
-
-	var visible bool
-	err = tx.QueryRow(ctx,
-		fmt.Sprintf(`SELECT EXISTS (SELECT 1 FROM %s WHERE id = $%d AND %s)`, table, idPos, clause),
-		args...).Scan(&visible)
-	if err != nil {
-		return err
-	}
-	if !visible {
-		return apperrors.ErrNotFound
-	}
-	return nil
 }
 
 // VisibleSubset answers, in ONE statement, which of the given rows of a

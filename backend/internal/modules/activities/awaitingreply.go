@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
@@ -28,6 +29,12 @@ import (
 // message is still followed up on. Past it the conversation belongs to the
 // record's timeline, the same fortnight the worklist's other reminders keep.
 const AwaitingReplyLookbackDays = 14
+
+// ImportedHistorySQL is the test that an activity on alias a came from an
+// import. A reminder to follow up is about what happened lately. An import
+// brings history that may fall inside the lookback though nobody acted on it
+// in this CRM. The importer's namespace is reserved, so no live write carries it.
+const ImportedHistorySQL = "starts_with(COALESCE(a.source_system, ''), '" + provenance.ReservedSourceSystemPrefix + "')"
 
 // AwaitingReplyScanCap bounds one read. Newest first, so the cap drops the
 // oldest reminders, which are the closest to aging out anyway.
@@ -42,6 +49,9 @@ type AwaitingReply struct {
 	ContactID  ids.UUID
 	CompanyID  ids.UUID
 	DealID     ids.UUID
+	// Recipients is who a meeting follow-up goes to, best first; ContactID is
+	// the first of them. Empty on a sent message.
+	Recipients []ids.UUID
 }
 
 // AwaitingReplies answers which messages the reader sent that are still the
@@ -214,6 +224,7 @@ var awaitingRepliesSQL = `
 	 WHERE a.kind = 'email'
 	   AND a.direction = 'outbound'
 	   AND a.archived_at IS NULL
+	   AND NOT ` + ImportedHistorySQL + `
 	   AND a.occurred_at <= $%[1]d::timestamptz - make_interval(days => $%[5]d::int)
 	   AND a.occurred_at >= $%[1]d::timestamptz - make_interval(days => $%[5]d::int + %[6]d)
 	   AND %[2]s
@@ -256,10 +267,7 @@ var awaitingRepliesSQL = `
 	   -- A customer: a lead, someone at a prospect or customer company, or a
 	   -- record with an open deal or a lead being worked.
 	   AND EXISTS (SELECT 1 FROM activity_link sales WHERE sales.activity_id = a.id AND %[11]s)
-	   -- Set aside by this reader: not theirs, or snoozed and not yet lifted.
-	   AND NOT EXISTS (SELECT 1 FROM activity_reader_state mine
-	                    WHERE mine.activity_id = a.id AND mine.reader_id = $%[9]d
-	                      AND (mine.state = 'not_mine' OR (mine.state = 'snoozed' AND NOT %[10]s)))
+	   AND NOT ` + readerSetAsideSQL("$%[9]d", "%[10]s") + `
 	 GROUP BY a.id, a.subject, a.occurred_at
 	 ORDER BY a.occurred_at DESC, a.id DESC
 	 LIMIT %[12]d`

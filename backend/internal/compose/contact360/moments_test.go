@@ -53,9 +53,10 @@ func TestTheLadderSelectsExactlyOneMoment(t *testing.T) {
 	// long gap, and a promise is overdue.
 	replied := at(1)
 	page := &crmcontracts.Contact360{
-		NextMeeting:    meeting(ahead(24)),
-		LastInboundAt:  &replied,
-		LastOutboundAt: new(at(40)),
+		NextMeeting:       meeting(ahead(24)),
+		LastInboundAt:     &replied,
+		LastLiveInboundAt: &replied,
+		LastOutboundAt:    new(at(40)),
 		Claims: &[]crmcontracts.ConversationClaim{{
 			Kind:             crmcontracts.ConversationClaimKindCommitmentOurs,
 			Status:           crmcontracts.ConversationClaimStatusOpen,
@@ -65,7 +66,7 @@ func TestTheLadderSelectsExactlyOneMoment(t *testing.T) {
 			SourceQuote:      "I'll get you the model by Friday",
 		}},
 	}
-	got := deriveMoment(readerCtx(), now, page)
+	got := momentCopyFor("en").deriveMoment(readerCtx(), now, page)
 	if got.Rule != crmcontracts.ContactMomentRuleMeetingPrep {
 		t.Fatalf("meeting prep outranks every rung below it, got %q", got.Rule)
 	}
@@ -76,11 +77,12 @@ func TestTheLadderSelectsExactlyOneMoment(t *testing.T) {
 func TestAMeetingBeyondSeventyTwoHoursDoesNotWin(t *testing.T) {
 	replied := at(1)
 	page := &crmcontracts.Contact360{
-		NextMeeting:    meeting(ahead(96)),
-		LastInboundAt:  &replied,
-		LastOutboundAt: new(at(40)),
+		NextMeeting:       meeting(ahead(96)),
+		LastInboundAt:     &replied,
+		LastLiveInboundAt: &replied,
+		LastOutboundAt:    new(at(40)),
 	}
-	got := deriveMoment(readerCtx(), now, page)
+	got := momentCopyFor("en").deriveMoment(readerCtx(), now, page)
 	if got.Rule != crmcontracts.ContactMomentRuleReEngaged {
 		t.Fatalf("a meeting four days out should not beat a fresh reply, got %q", got.Rule)
 	}
@@ -90,14 +92,15 @@ func TestAMeetingBeyondSeventyTwoHoursDoesNotWin(t *testing.T) {
 // rather than "last touch", because last touch cannot tell the two apart.
 func TestAnAnsweredConversationIsNotGoneQuiet(t *testing.T) {
 	page := &crmcontracts.Contact360{
-		LastOutboundAt: new(at(30)),
-		LastInboundAt:  new(at(2)),
-		Activities:     timelineOf(),
+		LastOutboundAt:    new(at(30)),
+		LastInboundAt:     new(at(2)),
+		LastLiveInboundAt: new(at(2)),
+		Activities:        timelineOf(),
 		Network: &struct {
 			Colleagues []crmcontracts.ContactNetworkColleague `json:"colleagues"`
 		}{},
 	}
-	got := deriveMoment(readerCtx(), now, page)
+	got := momentCopyFor("en").deriveMoment(readerCtx(), now, page)
 	if got.Rule == crmcontracts.ContactMomentRuleGoneQuiet {
 		t.Fatal("they answered after our last message; silence is not the story")
 	}
@@ -108,10 +111,11 @@ func TestAnAnsweredConversationIsNotGoneQuiet(t *testing.T) {
 // a verdict has to be able to see what produced it.
 func TestGoneQuietNamesTheRuleItFiredOn(t *testing.T) {
 	page := &crmcontracts.Contact360{
-		LastOutboundAt: new(at(9)),
-		LastInboundAt:  new(at(16)),
+		LastOutboundAt:    new(at(9)),
+		LastInboundAt:     new(at(16)),
+		LastLiveInboundAt: new(at(16)),
 	}
-	got := deriveMoment(readerCtx(), now, page)
+	got := momentCopyFor("en").deriveMoment(readerCtx(), now, page)
 	if got.Rule != crmcontracts.ContactMomentRuleGoneQuiet {
 		t.Fatalf("nine days unanswered past a seven-day rule is gone quiet, got %q", got.Rule)
 	}
@@ -139,81 +143,10 @@ func TestGoneQuietNamesTheRuleItFiredOn(t *testing.T) {
 // only the winning page reaches is a rung no test covers.
 func TestEveryOfferedActionEitherGoesSomewhereOrSaysWhyItCannot(t *testing.T) {
 	// One page per rung, each built to make that rung fire.
-	pages := map[string]*crmcontracts.Contact360{
-		"meeting prep": {NextMeeting: &crmcontracts.Contact360NextMeeting{StartsAt: ahead(24)}},
-		"gone quiet":   {LastOutboundAt: new(at(9)), LastInboundAt: new(at(16))},
-		"thin relationship": {
-			Activities: timelineOf(),
-			Network: &struct {
-				Colleagues []crmcontracts.ContactNetworkColleague `json:"colleagues"`
-			}{},
-		},
-		"role change": {
-			RelationshipChanges: &[]crmcontracts.ContactRelationshipChange{{
-				Kind: crmcontracts.ContactRelationshipChangeKind(relstrength.ChangeRepliedAfterGap),
-				At:   at(2),
-			}},
-			Commercial: &crmcontracts.Contact360Commercial{Deal: &crmcontracts.Contact360CommercialDeal{
-				DealId: openapi_types.UUID(ids.NewV7()), Title: "Dispatch integration",
-			}},
-		},
-		// The same rung with NO deal visible, which is the reader who lacks the
-		// deal grant: the action must block rather than point at a record they
-		// cannot open.
-		"role change, no deal": {
-			RelationshipChanges: &[]crmcontracts.ContactRelationshipChange{{
-				Kind: crmcontracts.ContactRelationshipChangeKind(relstrength.ChangeRepliedAfterGap),
-				At:   at(2),
-			}},
-		},
-		"missing next step": {
-			Commercial: &crmcontracts.Contact360Commercial{Deal: &crmcontracts.Contact360CommercialDeal{
-				DealId: openapi_types.UUID(ids.NewV7()), Title: "Dispatch integration",
-			}},
-		},
-		// Rung 2 wants inbound that arrived after a long silence of ours.
-		"re-engaged": {
-			LastOutboundAt: new(at(40)),
-			LastInboundAt:  new(at(3)),
-		},
-		// Rung 4 wants an open commitment OF OURS whose date has passed.
-		"overdue promise": {
-			Claims: &[]crmcontracts.ConversationClaim{{
-				Kind:             crmcontracts.ConversationClaimKindCommitmentOurs,
-				Status:           crmcontracts.ConversationClaimStatusOpen,
-				Body:             "Send the revised dispatch quote",
-				SourceQuote:      "Ich schicke dir das Angebot bis Freitag.",
-				SourceActivityId: openapi_types.UUID(ids.NewV7()),
-				DueAt:            new(at(6)),
-			}},
-		},
-		// Rung 5b wants an open task filed against them, and it must fire with
-		// no date on it — that is what the transcript reader files.
-		"open promise": {
-			NextSteps: &struct {
-				Data []crmcontracts.Activity `json:"data"`
-				Page crmcontracts.PageInfo   `json:"page"`
-			}{Data: []crmcontracts.Activity{{
-				Id: openapi_types.UUID(ids.NewV7()), Kind: "task",
-				Subject: new("Send the MCP whitepaper"), OccurredAt: at(1),
-			}}},
-		},
-		// The overdue rung reads BOTH sources; this page reaches it through the
-		// task list, the one above it through a claim.
-		"overdue task": {
-			NextSteps: &struct {
-				Data []crmcontracts.Activity `json:"data"`
-				Page crmcontracts.PageInfo   `json:"page"`
-			}{Data: []crmcontracts.Activity{{
-				Id: openapi_types.UUID(ids.NewV7()), Kind: "task",
-				Subject: new("Send the signed contract"), OccurredAt: at(72), DueAt: new(at(30)),
-			}}},
-		},
-		"nothing needed": {},
-	}
+	pages := momentPages()
 	for name, page := range pages {
 		t.Run(name, func(t *testing.T) {
-			assertActionsAreHonest(t, deriveMoment(readerCtx(), now, page))
+			assertActionsAreHonest(t, momentCopyFor("en").deriveMoment(readerCtx(), now, page))
 		})
 	}
 
@@ -225,9 +158,9 @@ func TestEveryOfferedActionEitherGoesSomewhereOrSaysWhyItCannot(t *testing.T) {
 	// ok=false every time and is judged by nothing, which reads as covered and
 	// is not — so a rung that never fires fails here rather than passing quietly.
 	t.Run("every rung", func(t *testing.T) {
-		fired := make(map[int]bool, len(momentLadder))
+		fired := make(map[int]bool, len(momentCopyFor("en").ladder()))
 		for _, page := range pages {
-			for i, rung := range momentLadder {
+			for i, rung := range momentCopyFor("en").ladder() {
 				moment, ok := rung(readerCtx(), now, page)
 				if !ok {
 					continue
@@ -245,8 +178,8 @@ func TestEveryOfferedActionEitherGoesSomewhereOrSaysWhyItCannot(t *testing.T) {
 }
 
 // dispatchedByTheContactPage is the set of destination surfaces the contact page
-// actually opens — the `switch` in frontend/src/screens/contactpage.tsx's
-// runContactMomentAction.
+// actually opens: the `switch` in runContactMomentAction, in
+// frontend/src/features/contacts/contactpage.drawers.tsx.
 //
 // The contract admits more surfaces than the page handles, and the ones it does
 // not handle fall to a `default` that deliberately does nothing rather than
@@ -316,7 +249,7 @@ func TestAQuietRecordStillGetsAnAnswer(t *testing.T) {
 			Colleagues []crmcontracts.ContactNetworkColleague `json:"colleagues"`
 		}{Colleagues: []crmcontracts.ContactNetworkColleague{{}}},
 	}
-	got := deriveMoment(readerCtx(), now, page)
+	got := momentCopyFor("en").deriveMoment(readerCtx(), now, page)
 	if got.Rule != crmcontracts.ContactMomentRuleNothingNeeded {
 		t.Fatalf("a record with nothing pending gets the quiet success state, got %q", got.Rule)
 	}
@@ -326,7 +259,7 @@ func TestAQuietRecordStillGetsAnAnswer(t *testing.T) {
 // same as empty, and only one of them is a fact about the relationship.
 func TestAWithheldSectionDoesNotProduceAThinRelationshipClaim(t *testing.T) {
 	page := &crmcontracts.Contact360{}
-	got := deriveMoment(readerCtx(), now, page)
+	got := momentCopyFor("en").deriveMoment(readerCtx(), now, page)
 	if got.Rule == crmcontracts.ContactMomentRuleThinRelationship {
 		t.Fatal("activities and network were withheld, not empty; the page must not call the relationship thin")
 	}
@@ -339,7 +272,7 @@ func TestAnEmptyRelationshipDoesNotInventEvidence(t *testing.T) {
 			Colleagues []crmcontracts.ContactNetworkColleague `json:"colleagues"`
 		}{Colleagues: []crmcontracts.ContactNetworkColleague{}},
 	}
-	got := deriveMoment(readerCtx(), now, page)
+	got := momentCopyFor("en").deriveMoment(readerCtx(), now, page)
 	if got.Rule != crmcontracts.ContactMomentRuleThinRelationship || got.Headline != "No interactions recorded" {
 		t.Fatalf("empty relationship: %+v", got)
 	}
@@ -399,7 +332,7 @@ func TestARuleDoesNotClaimAbsenceForASectionItCouldNotRead(t *testing.T) {
 	// An open deal with no visible schedule. Allowed to look, the page says
 	// nothing is scheduled; forbidden to look, it must not.
 	visible := &crmcontracts.Contact360{Commercial: deal}
-	if got := deriveMoment(readerCtx(), now, visible).Rule; got != crmcontracts.ContactMomentRuleMissingNextStep {
+	if got := momentCopyFor("en").deriveMoment(readerCtx(), now, visible).Rule; got != crmcontracts.ContactMomentRuleMissingNextStep {
 		t.Fatalf("with the schedule readable and empty, the gap IS the finding, got %q", got)
 	}
 
@@ -409,7 +342,7 @@ func TestARuleDoesNotClaimAbsenceForASectionItCouldNotRead(t *testing.T) {
 			crmcontracts.Contact360SectionsOmittedContact360SectionsOmittedNextMeeting,
 		},
 	}
-	if got := deriveMoment(readerCtx(), now, withheldSchedule).Rule; got == crmcontracts.ContactMomentRuleMissingNextStep {
+	if got := momentCopyFor("en").deriveMoment(readerCtx(), now, withheldSchedule).Rule; got == crmcontracts.ContactMomentRuleMissingNextStep {
 		t.Error("the schedule was withheld, so 'nothing is scheduled' is not something this page knows")
 	}
 }
@@ -417,12 +350,12 @@ func TestARuleDoesNotClaimAbsenceForASectionItCouldNotRead(t *testing.T) {
 // And the quiet fall-through says so too, rather than reporting a withheld
 // timeline as a clean bill of health.
 func TestNothingNeededAdmitsWhenItCouldNotSeeEverything(t *testing.T) {
-	full := deriveMoment(readerCtx(), now, &crmcontracts.Contact360{})
+	full := momentCopyFor("en").deriveMoment(readerCtx(), now, &crmcontracts.Contact360{})
 	if full.Rule != crmcontracts.ContactMomentRuleNothingNeeded {
 		t.Fatalf("an empty readable page is the quiet state, got %q", full.Rule)
 	}
 
-	partial := deriveMoment(readerCtx(), now, &crmcontracts.Contact360{
+	partial := momentCopyFor("en").deriveMoment(readerCtx(), now, &crmcontracts.Contact360{
 		SectionsOmitted: []crmcontracts.Contact360SectionsOmitted{
 			crmcontracts.Contact360SectionsOmittedContact360SectionsOmittedActivities,
 		},
@@ -441,19 +374,19 @@ func TestNothingNeededAdmitsWhenItCouldNotSeeEverything(t *testing.T) {
 // for the whole action vocabulary; what this pins is the JOIN — that the rung
 // this page opens on really does mint a verb that pass has to reach.
 func TestTheQuietRungMintsAVerbTheWithholdingCovers(t *testing.T) {
-	quiet := nothingNeededMoment(readerCtx(), now, &crmcontracts.Contact360{})
+	quiet := momentCopyFor("en").nothingNeededMoment(readerCtx(), now, &crmcontracts.Contact360{})
 	if quiet.RecommendedAction.Kind != crmcontracts.ContactMomentActionKindLogActivity {
 		t.Fatalf("the quiet moment's action is %q, want log_activity — this test needs that rung", quiet.RecommendedAction.Kind)
 	}
 
 	reader := quiet
-	momentaction.Withhold(as(map[string]principal.ObjectGrant{"contact": {Read: true}}), &reader)
+	momentaction.Withhold(as(map[string]principal.ObjectGrant{"contact": {Read: true}}), "en", &reader)
 	if reader.RecommendedAction.State != crmcontracts.ContactMomentActionStateBlocked {
 		t.Errorf("state = %q for a caller without activity.create, want blocked", reader.RecommendedAction.State)
 	}
 
 	writer := quiet
-	momentaction.Withhold(as(map[string]principal.ObjectGrant{"contact": {Read: true}, "activity": {Create: true}}), &writer)
+	momentaction.Withhold(as(map[string]principal.ObjectGrant{"contact": {Read: true}, "activity": {Create: true}}), "en", &writer)
 	if writer.RecommendedAction.State != crmcontracts.ContactMomentActionStateAvailable || writer.RecommendedAction.Destination == nil {
 		t.Errorf("a caller holding activity.create got %q with destination %v, want the action untouched", writer.RecommendedAction.State, writer.RecommendedAction.Destination)
 	}
@@ -482,7 +415,7 @@ func TestAnOpenUndatedTaskIsTheMoment(t *testing.T) {
 		}},
 	}
 
-	moment := deriveMoment(readerCtx(), now, page)
+	moment := momentCopyFor("en").deriveMoment(readerCtx(), now, page)
 	if moment.Rule != crmcontracts.ContactMomentRuleOpenPromise {
 		t.Fatalf("rule = %q, want open_promise — an open task is owed, dated or not", moment.Rule)
 	}
@@ -502,21 +435,21 @@ func TestAnOpenUndatedTaskIsTheMoment(t *testing.T) {
 	// A task somebody specific holds is owed by that desk, not by whoever is
 	// reading the card.
 	page.NextSteps.Data[0].AssigneeId = new(openapi_types.UUID(ids.NewV7()))
-	if got := deriveMoment(readerCtx(), now, page).Headline; got != "Your team owes them: Send the MCP whitepaper" {
+	if got := momentCopyFor("en").deriveMoment(readerCtx(), now, page).Headline; got != "Your team owes them: Send the MCP whitepaper" {
 		t.Errorf("headline for an assigned task = %q, want it attributed to its holder", got)
 	}
 	page.NextSteps.Data[0].AssigneeId = nil
 
 	// A task due later today reads as due today rather than counting zero days.
 	page.NextSteps.Data[0].DueAt = new(now.Add(2 * time.Hour))
-	if got := deriveMoment(readerCtx(), now, page).WhyNow; got != "Due today." {
+	if got := momentCopyFor("en").deriveMoment(readerCtx(), now, page).WhyNow; got != "Due today." {
 		t.Errorf("why_now for a task due later today = %q, want \"Due today.\"", got)
 	}
 
 	// Done tasks never reach the section, so a page whose section is empty is
 	// the quiet state — and only then may the card say nothing is owed.
 	page.NextSteps.Data = nil
-	if got := deriveMoment(readerCtx(), now, page).Rule; got != crmcontracts.ContactMomentRuleNothingNeeded {
+	if got := momentCopyFor("en").deriveMoment(readerCtx(), now, page).Rule; got != crmcontracts.ContactMomentRuleNothingNeeded {
 		t.Errorf("with no open task, rule = %q, want nothing_needed", got)
 	}
 }
@@ -529,8 +462,9 @@ func TestAnOpenUndatedTaskIsTheMoment(t *testing.T) {
 func TestAnOverdueTaskOutranksASilence(t *testing.T) {
 	quiet := func() *crmcontracts.Contact360 {
 		return &crmcontracts.Contact360{
-			LastOutboundAt: new(now.Add(-9 * 24 * time.Hour)),
-			LastInboundAt:  new(now.Add(-16 * 24 * time.Hour)),
+			LastOutboundAt:    new(now.Add(-9 * 24 * time.Hour)),
+			LastInboundAt:     new(now.Add(-16 * 24 * time.Hour)),
+			LastLiveInboundAt: new(now.Add(-16 * 24 * time.Hour)),
 		}
 	}
 	task := func(due time.Time) []crmcontracts.Activity {
@@ -542,7 +476,7 @@ func TestAnOverdueTaskOutranksASilence(t *testing.T) {
 
 	// The silence alone is the moment, so the two cases below are a change of
 	// rung rather than a page that only ever had one answer.
-	if got := deriveMoment(readerCtx(), now, quiet()).Rule; got != crmcontracts.ContactMomentRuleGoneQuiet {
+	if got := momentCopyFor("en").deriveMoment(readerCtx(), now, quiet()).Rule; got != crmcontracts.ContactMomentRuleGoneQuiet {
 		t.Fatalf("with no task, rule = %q, want gone_quiet — this test needs the silence to fire", got)
 	}
 
@@ -551,7 +485,7 @@ func TestAnOverdueTaskOutranksASilence(t *testing.T) {
 		Data []crmcontracts.Activity `json:"data"`
 		Page crmcontracts.PageInfo   `json:"page"`
 	}{Data: task(now.Add(-30 * time.Hour))}
-	moment := deriveMoment(readerCtx(), now, late)
+	moment := momentCopyFor("en").deriveMoment(readerCtx(), now, late)
 	if moment.Rule != crmcontracts.ContactMomentRuleOverduePromise {
 		t.Errorf("rule = %q, want overdue_promise — a promise we are late on outranks their silence, "+
 			"and one rung covers both places a promise is written down", moment.Rule)
@@ -569,7 +503,7 @@ func TestAnOverdueTaskOutranksASilence(t *testing.T) {
 		Data []crmcontracts.Activity `json:"data"`
 		Page crmcontracts.PageInfo   `json:"page"`
 	}{Data: task(now.Add(48 * time.Hour))}
-	if got := deriveMoment(readerCtx(), now, ahead).Rule; got != crmcontracts.ContactMomentRuleGoneQuiet {
+	if got := momentCopyFor("en").deriveMoment(readerCtx(), now, ahead).Rule; got != crmcontracts.ContactMomentRuleGoneQuiet {
 		t.Errorf("rule = %q for a promise still ahead of its date, want gone_quiet", got)
 	}
 }
@@ -598,10 +532,10 @@ func TestReassigningAPromiseRearmsItsDismissal(t *testing.T) {
 		}{Data: []crmcontracts.Activity{task}},
 	}
 
-	ours := deriveMoment(readerCtx(), now, page)
+	ours := momentCopyFor("en").deriveMoment(readerCtx(), now, page)
 
 	page.NextSteps.Data[0].AssigneeId = new(openapi_types.UUID(ids.NewV7()))
-	theirs := deriveMoment(readerCtx(), now, page)
+	theirs := momentCopyFor("en").deriveMoment(readerCtx(), now, page)
 
 	if theirs.Headline == ours.Headline {
 		t.Fatalf("both readings say %q; this test needs the card to change", ours.Headline)
@@ -640,7 +574,7 @@ func TestTheLatestOverduePromiseWinsWhicheverSourceHoldsIt(t *testing.T) {
 	}
 
 	// The task is the more recent deadline, so it leads.
-	recent := deriveMoment(readerCtx(), now, pageWith(now.Add(-2*24*time.Hour)))
+	recent := momentCopyFor("en").deriveMoment(readerCtx(), now, pageWith(now.Add(-2*24*time.Hour)))
 	if recent.Rule != crmcontracts.ContactMomentRuleOverduePromise {
 		t.Fatalf("rule = %q, want overdue_promise", recent.Rule)
 	}
@@ -649,8 +583,8 @@ func TestTheLatestOverduePromiseWinsWhicheverSourceHoldsIt(t *testing.T) {
 	}
 
 	// The claim is, so it leads — and it brings the quote a task cannot.
-	older := deriveMoment(readerCtx(), now, pageWith(now.Add(-30*24*time.Hour)))
-	if older.Headline != "You owe them: Send the revised quote" {
+	older := momentCopyFor("en").deriveMoment(readerCtx(), now, pageWith(now.Add(-30*24*time.Hour)))
+	if older.Headline != "Your team owes them: Send the revised quote" {
 		t.Errorf("headline = %q, want the claim, whose deadline passed most recently", older.Headline)
 	}
 	if older.Evidence[0].Snippet == nil {
@@ -695,7 +629,7 @@ func TestTheRungLooksPastTheOldestOverduePromise(t *testing.T) {
 
 	// Yesterday's claim is the most recent slip, ahead of the 5-day task and
 	// the 10-day claim.
-	if got := deriveMoment(readerCtx(), now, page).Headline; got != "You owe them: Send yesterday's quote" {
+	if got := momentCopyFor("en").deriveMoment(readerCtx(), now, page).Headline; got != "Your team owes them: Send yesterday's quote" {
 		t.Errorf("headline = %q, want the promise that slipped most recently", got)
 	}
 
@@ -706,7 +640,7 @@ func TestTheRungLooksPastTheOldestOverduePromise(t *testing.T) {
 		Subject: new("Send this morning's file"), OccurredAt: now.Add(-24 * time.Hour),
 		DueAt: &recent,
 	})
-	if got := deriveMoment(readerCtx(), now, page).Headline; got != "You owe them: Send this morning's file" {
+	if got := momentCopyFor("en").deriveMoment(readerCtx(), now, page).Headline; got != "You owe them: Send this morning's file" {
 		t.Errorf("headline = %q, want the task that slipped most recently", got)
 	}
 }
@@ -726,7 +660,7 @@ func TestTheLateTaskCardKeepsItsDismissalKey(t *testing.T) {
 		}}},
 	}
 
-	moment := deriveMoment(readerCtx(), now, page)
+	moment := momentCopyFor("en").deriveMoment(readerCtx(), now, page)
 	if moment.ClaimKey != "moment:overdue_task" {
 		t.Errorf("claim key = %q, want moment:overdue_task — dismissals are looked up by exact "+
 			"key, so renaming it un-dismisses every task a reader already put away", moment.ClaimKey)
@@ -756,12 +690,12 @@ func TestAnUpcomingCommitmentIsTheMomentWithNoTaskFiled(t *testing.T) {
 		}},
 	}
 
-	moment := deriveMoment(readerCtx(), now, page)
+	moment := momentCopyFor("en").deriveMoment(readerCtx(), now, page)
 
 	if moment.Rule != crmcontracts.ContactMomentRuleOpenPromise {
 		t.Fatalf("rule = %q, want open_promise; a commitment nobody typed as a task is still owed", moment.Rule)
 	}
-	if moment.Headline != "You owe them: Send the security questionnaire" {
+	if moment.Headline != "Your team owes them: Send the security questionnaire" {
 		t.Errorf("headline = %q, want the promise itself", moment.Headline)
 	}
 	if moment.Evidence[0].Snippet == nil {
@@ -801,10 +735,10 @@ func TestTheNearestUpcomingPromiseWinsWhicheverSourceHoldsIt(t *testing.T) {
 		}
 	}
 
-	if got := deriveMoment(readerCtx(), now, pageWith(9, 2)).Headline; got != "You owe them: Book the workshop" {
+	if got := momentCopyFor("en").deriveMoment(readerCtx(), now, pageWith(9, 2)).Headline; got != "You owe them: Book the workshop" {
 		t.Errorf("headline = %q, want the task, whose deadline is nearer", got)
 	}
-	if got := deriveMoment(readerCtx(), now, pageWith(2, 9)).Headline; got != "You owe them: Send the questionnaire" {
+	if got := momentCopyFor("en").deriveMoment(readerCtx(), now, pageWith(2, 9)).Headline; got != "Your team owes them: Send the questionnaire" {
 		t.Errorf("headline = %q, want the claim, whose deadline is nearer", got)
 	}
 }
@@ -833,8 +767,8 @@ func TestTwoPromisesFromOneMessageDismissApart(t *testing.T) {
 		}
 	}
 
-	nda := openClaimCard(now, claim("Send the NDA"))
-	quote := openClaimCard(now, claim("Send the quote"))
+	nda := momentCopyFor("en").openClaimCard(now, claim("Send the NDA"))
+	quote := momentCopyFor("en").openClaimCard(now, claim("Send the quote"))
 
 	if nda.ClaimKey == quote.ClaimKey {
 		t.Errorf("both promises carry claim key %q; dismissing one would silence the other", nda.ClaimKey)
@@ -873,20 +807,20 @@ func TestDismissingOnePromiseShowsTheNext(t *testing.T) {
 		Claims: &[]crmcontracts.ConversationClaim{claim("Send the NDA", 2), claim("Send the quote", 5)},
 	}
 
-	first := deriveMoment(readerCtx(), now, page)
-	if first.Headline != "You owe them: Send the NDA" {
+	first := momentCopyFor("en").deriveMoment(readerCtx(), now, page)
+	if first.Headline != "Your team owes them: Send the NDA" {
 		t.Fatalf("headline = %q, want the nearer promise first", first.Headline)
 	}
 
 	// The reader puts that one away. The second promise is untouched.
-	next := deriveMomentPast(readerCtx(), now, page, func(m crmcontracts.ContactMoment) bool {
+	next := momentCopyFor("en").deriveMomentPast(readerCtx(), now, page, func(m crmcontracts.ContactMoment) bool {
 		return m.ClaimKey == first.ClaimKey
-	}, asIs)
+	})
 	if next.Rule == crmcontracts.ContactMomentRuleNothingNeeded {
 		t.Fatal("dismissing one promise reported the contact as needing nothing, " +
 			"while a second promise is still open")
 	}
-	if next.Headline != "You owe them: Send the quote" {
+	if next.Headline != "Your team owes them: Send the quote" {
 		t.Errorf("headline = %q, want the promise the reader has not dismissed", next.Headline)
 	}
 }
@@ -908,7 +842,7 @@ func TestDismissingEveryPromiseReachesTheQuietState(t *testing.T) {
 			OccurredAt:       &said,
 		}},
 	}
-	got := deriveMomentPast(readerCtx(), now, page, func(crmcontracts.ContactMoment) bool { return true }, asIs)
+	got := momentCopyFor("en").deriveMomentPast(readerCtx(), now, page, func(crmcontracts.ContactMoment) bool { return true })
 	if got.Rule != crmcontracts.ContactMomentRuleNothingNeeded {
 		t.Errorf("rule = %q, want nothing_needed once every card is dismissed", got.Rule)
 	}
@@ -928,11 +862,12 @@ func TestDismissingEveryPromiseReachesTheQuietState(t *testing.T) {
 // reason the old sentence could not be true.
 func TestTheReEngagementRungAttributesTheSilenceToUs(t *testing.T) {
 	page := &crmcontracts.Contact360{
-		LastOutboundAt: new(at(60)),
-		LastInboundAt:  new(at(1)),
+		LastOutboundAt:    new(at(60)),
+		LastInboundAt:     new(at(1)),
+		LastLiveInboundAt: new(at(1)),
 	}
 
-	got := deriveMoment(readerCtx(), now, page)
+	got := momentCopyFor("en").deriveMoment(readerCtx(), now, page)
 
 	if got.Rule != crmcontracts.ContactMomentRuleReEngaged {
 		t.Fatalf("rule = %q, want re_engaged", got.Rule)
@@ -961,3 +896,90 @@ func TestTheReEngagementRungAttributesTheSilenceToUs(t *testing.T) {
 // The rung is deliberately not narrowed to the deciding roles: a deal with no
 // next step is worth saying whoever the seat belongs to. What was wrong was the
 // sentence.
+
+// Email an import brought in as history is not a reply. Only mail written live
+// raises the re-engaged suggestion; the engagement date still shows it.
+func TestImportedInboundDoesNotRaiseTheReEngagedSuggestion(t *testing.T) {
+	imported := &crmcontracts.Contact360{
+		LastOutboundAt: new(at(60)),
+		LastInboundAt:  new(at(3)),
+	}
+	if got := momentCopyFor("en").deriveMoment(readerCtx(), now, imported); got.Rule == crmcontracts.ContactMomentRuleReEngaged {
+		t.Fatalf("an imported inbound raised %q", got.Rule)
+	}
+	live := &crmcontracts.Contact360{
+		LastOutboundAt:    new(at(60)),
+		LastInboundAt:     new(at(3)),
+		LastLiveInboundAt: new(at(3)),
+	}
+	if got := momentCopyFor("en").deriveMoment(readerCtx(), now, live); got.Rule != crmcontracts.ContactMomentRuleReEngaged {
+		t.Fatalf("a live inbound gave %q, want re_engaged", got.Rule)
+	}
+}
+
+func momentPages() map[string]*crmcontracts.Contact360 {
+	return map[string]*crmcontracts.Contact360{
+		"meeting prep": {NextMeeting: &crmcontracts.Contact360NextMeeting{StartsAt: ahead(24)}},
+		"gone quiet":   {LastOutboundAt: new(at(9)), LastInboundAt: new(at(16)), LastLiveInboundAt: new(at(16))},
+		"thin relationship": {
+			Activities: timelineOf(),
+			Network: &struct {
+				Colleagues []crmcontracts.ContactNetworkColleague `json:"colleagues"`
+			}{},
+		},
+		"role change": {
+			RelationshipChanges: &[]crmcontracts.ContactRelationshipChange{{
+				Kind: crmcontracts.ContactRelationshipChangeKind(relstrength.ChangeRepliedAfterGap),
+				At:   at(2),
+			}},
+			Commercial: &crmcontracts.Contact360Commercial{Deal: &crmcontracts.Contact360CommercialDeal{
+				DealId: openapi_types.UUID(ids.NewV7()), Title: "Dispatch integration",
+			}},
+		},
+		"role change, no deal": {
+			RelationshipChanges: &[]crmcontracts.ContactRelationshipChange{{
+				Kind: crmcontracts.ContactRelationshipChangeKind(relstrength.ChangeRepliedAfterGap),
+				At:   at(2),
+			}},
+		},
+		"missing next step": {
+			Commercial: &crmcontracts.Contact360Commercial{Deal: &crmcontracts.Contact360CommercialDeal{
+				DealId: openapi_types.UUID(ids.NewV7()), Title: "Dispatch integration",
+			}},
+		},
+		"re-engaged": {
+			LastOutboundAt:    new(at(40)),
+			LastInboundAt:     new(at(3)),
+			LastLiveInboundAt: new(at(3)),
+		},
+		"overdue promise": {
+			Claims: &[]crmcontracts.ConversationClaim{{
+				Kind:             crmcontracts.ConversationClaimKindCommitmentOurs,
+				Status:           crmcontracts.ConversationClaimStatusOpen,
+				Body:             "Send the revised dispatch quote",
+				SourceQuote:      "Ich schicke dir das Angebot bis Freitag.",
+				SourceActivityId: openapi_types.UUID(ids.NewV7()),
+				DueAt:            new(at(6)),
+			}},
+		},
+		"open promise": {
+			NextSteps: &struct {
+				Data []crmcontracts.Activity `json:"data"`
+				Page crmcontracts.PageInfo   `json:"page"`
+			}{Data: []crmcontracts.Activity{{
+				Id: openapi_types.UUID(ids.NewV7()), Kind: "task",
+				Subject: new("Send the MCP whitepaper"), OccurredAt: at(1),
+			}}},
+		},
+		"overdue task": {
+			NextSteps: &struct {
+				Data []crmcontracts.Activity `json:"data"`
+				Page crmcontracts.PageInfo   `json:"page"`
+			}{Data: []crmcontracts.Activity{{
+				Id: openapi_types.UUID(ids.NewV7()), Kind: "task",
+				Subject: new("Send the signed contract"), OccurredAt: at(72), DueAt: new(at(30)),
+			}}},
+		},
+		"nothing needed": {},
+	}
+}

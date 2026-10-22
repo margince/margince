@@ -1,0 +1,62 @@
+/* The grant grid: one row per subject, one column per verb, on the `.table`
+   skin. Structure only; colours and gaps read tokens. */
+
+/* `.table` rules every header strongly; a row's own header divides rows. */
+.grant-matrix tbody th {
+  border-bottom-color: var(--borderSubtle);
+  vertical-align: middle;
+}
+
+.grant-matrix thead th {
+  white-space: nowrap;
+}
+
+.grant-matrix thead th:not(:first-child),
+.grant-matrix .grant-cell {
+  text-align: center;
+}
+
+/* Bounded both ways, because the pinned column is what a phone keeps while
+   the verbs scroll under it: a name neither crushed nor taking the screen. */
+.grant-row-head {
+  min-inline-size: 8rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  max-inline-size: 12rem;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+
+/* A run's name stands over its rows, spaced from the run above, with no rule
+   of its own: the rows under it are what the hairlines divide. */
+.grant-matrix > tbody > .grant-group > th {
+  padding-block: var(--space-5) var(--space-1);
+  border-bottom: 0;
+}
+
+.grant-matrix > tbody:first-of-type > .grant-group > th {
+  padding-block-start: var(--space-3);
+}
+
+.table-scroll-sticky > .grant-matrix > tbody > .grant-group:hover > th {
+  background: none;
+}
+
+.grant-cell .switchrow {
+  display: inline-flex;
+}
+
+/* The refusal is read per switch and seen once above the grid. `.table-scroll`
+   holds the hidden line, so it scrolls with the grid and never widens the page. */
+.grant-cell .switchreason {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

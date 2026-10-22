@@ -1,0 +1,118 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package compose
+
+import (
+	"context"
+	"errors"
+	"fmt"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/modules/migration"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+)
+
+// isArchived reads a record of the given object with archived rows included, so
+// a row-scope miss still answers not-found rather than reading as archived.
+func (w *csvWriters) isArchived(ctx context.Context, object string, id ids.UUID) (bool, error) {
+	switch object {
+	case migration.ObjectLead:
+		lead, err := w.contacts.GetLead(ctx, ids.From[ids.LeadKind](id), storekit.IncludeArchived)
+		return err == nil && lead.ArchivedAt != nil, err
+	case migration.ObjectCompany:
+		company, err := w.contacts.GetCompany(ctx, ids.From[ids.CompanyKind](id), storekit.IncludeArchived)
+		return err == nil && company.ArchivedAt != nil, err
+	case migration.ObjectContact:
+		contact, err := w.contacts.GetContact(ctx, ids.From[ids.ContactKind](id), storekit.IncludeArchived)
+		return err == nil && contact.ArchivedAt != nil, err
+	case migration.ObjectDeal:
+		deal, err := w.deals.GetDeal(ctx, ids.From[ids.DealKind](id), storekit.IncludeArchived)
+		return err == nil && deal.ArchivedAt != nil, err
+	case migration.ObjectActivity:
+		activity, err := w.activities.GetActivity(ctx, ids.From[ids.ActivityKind](id), storekit.IncludeArchived)
+		return err == nil && activity.ArchivedAt != nil, err
+	default:
+		return false, fmt.Errorf("import: %q is not an importable object: %w", object, apperrors.ErrConflict)
+	}
+}
+
+// errBoundRecordArchived reports a key whose record was archived by anything
+// other than a finished undo of the run that landed it.
+var errBoundRecordArchived = errors.New("the record this row landed as is archived")
+
+// lookup resolves an external id to the record an earlier run landed for it.
+//
+// A bound key of an undone run is free whatever its record is. Undo never
+// touched that record, so its liveness says nothing about the run. A created
+// key of an undone run, whose record is archived, is free again.
+// Any other archived record keeps the key. A paused undo still pages its
+// rows, and a record archived by hand must not come back as a twin.
+func (w *csvWriters) lookup(ctx context.Context, object, externalID string) (ids.UUID, bool, error) {
+	if object != w.object {
+		return ids.UUID{}, false, fmt.Errorf("import: this run carries %q, not %q", w.object, object)
+	}
+	if id, ok := w.nativeIDs[externalID]; ok {
+		return id, true, nil
+	}
+	binding, found, err := w.bindingOf(ctx, externalID)
+	if err != nil || !found {
+		return ids.UUID{}, false, err
+	}
+	if binding.RunStatus == migration.StatusUndone && binding.Origin == migration.OriginBound {
+		return ids.UUID{}, false, nil
+	}
+	archived, err := w.isArchived(ctx, object, binding.NativeID)
+	if err != nil {
+		return ids.UUID{}, false, err
+	}
+	switch {
+	case !archived:
+		w.nativeIDs[externalID] = binding.NativeID
+		return binding.NativeID, true, nil
+	case binding.RunStatus == migration.StatusUndone:
+		return ids.UUID{}, false, nil
+	default:
+		return binding.NativeID, true, errBoundRecordArchived
+	}
+}
+
+// bindingOf is the identity-map entry for one key: from the run's preloaded
+// map when the dry run read it, else from the store.
+func (w *csvWriters) bindingOf(ctx context.Context, externalID string) (migration.Binding, bool, error) {
+	if w.bindings != nil {
+		binding, found := w.bindings[externalID]
+		return binding, found, nil
+	}
+	return w.identities.LookupBinding(ctx, w.sourceSystem, w.object, externalID)
+}
+
+// preloadBindings reads every key this part's source has landed, in one query.
+// Only a dry run preloads: it writes nothing, so the map stays exact for the
+// whole run, while a commit lands keys as it goes.
+func (w *csvWriters) preloadBindings(ctx context.Context) error {
+	bindings, err := w.identities.BindingsOf(ctx, w.sourceSystem, w.object)
+	if err != nil {
+		return err
+	}
+	w.bindings = bindings
+	return nil
+}
+
+// bind records the ref of a row that named an existing record by id, so a later
+// slice or a later import finds it. Undo never archives a bound record. It
+// binds even when the update is then refused. The row still names a live
+// company the caller can see, which the dry run counted as linkable.
+func (w *csvWriters) bind(ctx context.Context, row migration.Row, id ids.UUID) error {
+	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+		return w.identities.RecordIdentityTx(ctx, tx, w.runID, w.sourceSystem, w.object, row.ExternalID, id, migration.OriginBound)
+	}); err != nil {
+		return err
+	}
+	w.links.markLanded(w.object, row.ExternalID, id)
+	return nil
+}

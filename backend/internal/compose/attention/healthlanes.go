@@ -37,6 +37,8 @@ type CaptureConcern struct {
 	Provider     string
 	// AccountLabel is the display-only mailbox address when one was recorded.
 	AccountLabel string
+	// Calendar is true for a connection that carries a calendar rather than mail.
+	Calendar bool
 
 	// FailingSince is when this concern's failure streak began, nil for a
 	// condition that is a state rather than a streak — a disconnected mailbox
@@ -46,6 +48,8 @@ type CaptureConcern struct {
 	// hour-old outage and a mailbox idling between ticks reach here identically
 	// without it.
 	FailingSince *time.Time
+	// LastSyncedAt is the connection's last good sync, nil when it never had one.
+	LastSyncedAt *time.Time
 }
 
 // AIWork is the reader's own AI runs that went wrong — failed inside the

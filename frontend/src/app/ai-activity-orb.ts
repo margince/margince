@@ -33,6 +33,7 @@ export const ACTIVITY_LANE: Readonly<Record<ActivityKind, AgentLane>> = {
   // something in that it did not have a moment ago.
   capture_classify: "ingest",
   owed_verdict: "ingest",
+  tag_suggest: "ingest",
   capture_confidentiality_verdict: "ingest",
   capture_counterparty_verdict: "ingest",
   cold_start: "ingest",

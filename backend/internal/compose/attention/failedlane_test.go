@@ -36,6 +36,7 @@ func TestAFailedDecisionComesBackToItsDecider(t *testing.T) {
 	contact := ids.NewV7()
 	svc := failedLaneService(&stubFailedEffects{rows: []FailedEffect{{
 		ID: ids.NewV7(), Kind: "send_email",
+		Summary:    new("Send the revised offer"),
 		Sentence:   "this was approved, but the work it released did not run",
 		FailedAt:   readInstant,
 		TargetType: "contact", TargetID: contact,
@@ -57,8 +58,11 @@ func TestAFailedDecisionComesBackToItsDecider(t *testing.T) {
 		t.Fatalf("lane carries %d items (count %v), want 2 and 2", len(items), out.Counts.DidNotRun)
 	}
 	targeted := items[0]
-	if targeted.Title == nil || *targeted.Title != "this was approved, but the work it released did not run" {
-		t.Errorf("the card's title = %v, want the recorded sentence", targeted.Title)
+	if targeted.Title == nil || *targeted.Title != "Send the revised offer" {
+		t.Errorf("the card's title = %v, want the proposed action", targeted.Title)
+	}
+	if targeted.Detail == nil || *targeted.Detail != "this was approved, but the work it released did not run" {
+		t.Fatalf("failure explanation missing: %+v", targeted)
 	}
 	if targeted.Subject == nil || targeted.Subject.Type != "contact" || !slices.Contains(targeted.Actions, "open") {
 		t.Errorf("a failure about a named record must offer open on it: %+v", targeted)
@@ -118,5 +122,40 @@ func TestTheFailedLaneKeepsAbsentWithheldAndEmptyApart(t *testing.T) {
 	}
 	if clearDay.DidNotRun == nil || len(*clearDay.DidNotRun) != 0 {
 		t.Errorf("a clear lane should be an empty list, got %v", clearDay.DidNotRun)
+	}
+}
+
+// Every failure can be acknowledged, or it stays on the list for good. Retry
+// is offered only where approving again would run the work, because the
+// approve endpoint refuses the rest as already decided.
+func TestAFailureOffersAcknowledgeAlwaysAndRetryOnlyWhereItWouldRun(t *testing.T) {
+	svc := failedLaneService(&stubFailedEffects{rows: []FailedEffect{{
+		ID: ids.NewV7(), Kind: "send_email",
+		Sentence: "this was approved, but the work it released did not run",
+		FailedAt: readInstant, Retryable: true,
+	}, {
+		ID: ids.NewV7(), Kind: "volume_release",
+		Sentence: "the agent's window could not be widened, so the approval has not taken effect",
+		FailedAt: readInstant,
+	}}})
+
+	out, err := svc.Assemble(pageReader())
+	if err != nil {
+		t.Fatalf("assembling: %v", err)
+	}
+	items := *out.DidNotRun
+	if len(items) != 2 {
+		t.Fatalf("lane carries %d items, want 2", len(items))
+	}
+	for _, item := range items {
+		if !slices.Contains(item.Actions, "acknowledge") {
+			t.Errorf("a failure offers no acknowledge, so nothing takes it off the list: %+v", item.Actions)
+		}
+	}
+	if !slices.Contains(items[0].Actions, "retry") {
+		t.Errorf("a failure whose work can run again offers no retry: %+v", items[0].Actions)
+	}
+	if slices.Contains(items[1].Actions, "retry") {
+		t.Errorf("a failure nothing can re-run offers retry: %+v", items[1].Actions)
 	}
 }

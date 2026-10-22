@@ -9,6 +9,7 @@ package compose
 import (
 	"bytes"
 	"context"
+	"net/http"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -16,10 +17,29 @@ import (
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
+
+// UploadAttachment holds an agent to the file size attach_document takes, so a
+// passport files no larger a file over REST than over MCP. A human keeps the
+// route's own limit.
+func (s Server) UploadAttachment(w http.ResponseWriter, r *http.Request) {
+	handlers := s.activitiesHandlers
+	if p, ok := principal.Actor(r.Context()); ok && p.Type == principal.PrincipalAgent {
+		handlers = handlers.WithFileCeiling(activities.FileCeiling{
+			Bytes:  agents.AttachLimit(s.uploadLimits.Attachment),
+			Refuse: agentFileTooLarge,
+		})
+	}
+	handlers.UploadAttachment(w, r)
+}
+
+// agentFileTooLarge is the tool's own refusal, naming the multipart part.
+func agentFileTooLarge(size, limit int64) error {
+	return agents.TooLargeToAttach("file", size, limit)
+}
 
 // documentSeam reads the object store and the upload limit off srv per call,
 // because both arrive by option after the registry is built (see importSeam).
@@ -41,7 +61,8 @@ func (d documentSeam) Attach(ctx context.Context, upload agents.DocumentUpload) 
 	stored, err := d.store().UploadAttachment(ctx, activities.AttachmentInput{
 		EntityType: upload.EntityType, EntityID: upload.EntityID,
 		Filename: upload.Filename, ContentType: upload.ContentType,
-		Content: bytes.NewReader(upload.Content),
+		Content:    bytes.NewReader(upload.Content),
+		ContractID: upload.ContractID,
 	})
 	if err != nil {
 		return agents.AttachedDocument{}, err
@@ -100,7 +121,7 @@ func (d documentSeam) MaxBytes(context.Context) int64 {
 	if d.srv != nil {
 		return d.srv.uploadLimits.Attachment
 	}
-	return deployconfig.Config{}.EffectiveUploads().Attachment
+	return DefaultUploadLimits().Attachment
 }
 
 // attachedDocument is the wire row without what an agent has no use for; the
@@ -115,6 +136,7 @@ func attachedDocument(att crmcontracts.Attachment) agents.AttachedDocument {
 		Checksum:     orZero(att.Checksum),
 		CapturedBy:   orZero(att.CapturedBy),
 		CreatedAt:    att.CreatedAt,
+		ContractID:   (*ids.UUID)(att.ContractId),
 	}
 }
 

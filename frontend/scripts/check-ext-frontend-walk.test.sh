@@ -78,6 +78,8 @@ CASES=(
 #                           the refused mount is DERIVED from crm.yaml, and that
 #                           a waiver without a reason is still a finding. A test,
 #                           not a gate; the gate itself is measured above.
+#   check-space-tokens.test.sh — the space-tokens gate's verdict suite. A test,
+#                           not a gate; the gate itself is measured above.
 #   check-ext-frontend-walk.test.sh — this file.
 EXCUSED=(
   check-ds-spacing.sh
@@ -86,6 +88,7 @@ EXCUSED=(
   check-ds-spacing-roles.test.sh
   check-contract-fetch.test.sh
   check-font-lock.test.sh
+  check-space-tokens.test.sh
   check-ext-frontend-walk.test.sh
 )
 

@@ -20,6 +20,7 @@ run:
     - bench
     - e2e_llm
     - voicelive
+    - vendorlive
 
 issues:
   # Only findings introduced after the merge-base with origin/main fail.

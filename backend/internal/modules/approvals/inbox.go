@@ -69,13 +69,18 @@ type row struct {
 	// reader is shown. Nil on every row whose effect ran.
 	EffectFailedAt *time.Time
 	EffectFailure  *string
+	// EffectRanAt is when the released work last ran to the end.
+	EffectRanAt *time.Time
+	// RequestedDecider is the one member the request is for, stored at staging
+	// (decider.go). Nil only on a row decided before the column existed.
+	RequestedDecider *ids.UUID
 }
 
 const columns = `id, kind, status, proposed_by, on_behalf_of, passport_id, staged_by_connection,
 	target_entity_type, target_entity_id, target_version,
 	co_target_entity_type, co_target_entity_id, co_target_version, target_label, summary,
 	proposed_change, diff_hash, expires_at, decided_by, decided_at, consumed_at, created_at,
-	bundle_id, evidence, effect_failed_at, effect_failure`
+	bundle_id, evidence, effect_failed_at, effect_failure, effect_ran_at, requested_decider_id`
 
 func scan(r pgx.Row) (row, error) {
 	var a row
@@ -83,7 +88,7 @@ func scan(r pgx.Row) (row, error) {
 		&a.TargetType, &a.TargetID, &a.TargetVersion,
 		&a.CoTargetType, &a.CoTargetID, &a.CoTargetVersion, &a.TargetLabel, &a.Summary,
 		&a.ProposedChange, &a.DiffHash, &a.ExpiresAt, &a.DecidedBy, &a.DecidedAt, &a.ConsumedAt, &a.CreatedAt,
-		&a.BundleID, &a.Evidence, &a.EffectFailedAt, &a.EffectFailure)
+		&a.BundleID, &a.Evidence, &a.EffectFailedAt, &a.EffectFailure, &a.EffectRanAt, &a.RequestedDecider)
 	return a, err
 }
 
@@ -101,6 +106,11 @@ func (a row) effectiveStatus(now time.Time) string {
 		return StatusExpired
 	}
 	return a.Status
+}
+
+// PendingAt applies the same lazy expiry as the approval inbox.
+func (a row) PendingAt(now time.Time) bool {
+	return a.effectiveStatus(now) == statusPending
 }
 
 // inboxBatch is the scan window List filters per round trip; List keeps
@@ -124,10 +134,16 @@ const statusPending = "pending"
 // every type of that id, so the transport refuses a half-reference and one
 // never reaches here.
 type ListInput struct {
-	Status     *string
-	Kind       *string
-	TargetType *string
-	TargetID   *ids.UUID
+	IncludeMuted bool
+	mutedFor     *ids.UUID
+	// RequestedForReader narrows personal attention before pagination.
+	RequestedForReader bool
+	RequestedForOwners []ids.UUID
+	OnlyUnassigned     bool
+	Status             *string
+	Kind               *string
+	TargetType         *string
+	TargetID           *ids.UUID
 	// BundleID narrows the read to the proposals ONE act staged together. It
 	// composes with the other filters rather than replacing them, and it does
 	// not relax the per-row decidability probe: a member the caller could not
@@ -190,12 +206,17 @@ func (s *Service) List(ctx context.Context, in ListInput) ([]row, storekit.Page,
 		return nil, storekit.Page{}, err
 	}
 	p, _ := principal.Actor(ctx)
+	if !in.IncludeMuted && !p.UserID.IsZero() {
+		in.mutedFor = &p.UserID
+	}
 	if in.FailedForDecider {
 		if p.UserID.IsZero() {
 			return nil, storekit.Page{}, apperrors.ErrPermissionDenied
 		}
 		in.failedDecider = &p.UserID
 	}
+	// Kept for the in-process seams, which pass their own limit; the HTTP
+	// binder clamps before it gets here.
 	if in.Limit <= 0 || in.Limit > inboxBatch {
 		in.Limit = 50
 	}
@@ -243,7 +264,12 @@ func (s *Service) List(ctx context.Context, in ListInput) ([]row, storekit.Page,
 // page returned, so the batches walk forward through the table instead of
 // re-filtering the newest rows on every request.
 func scanInbox(ctx context.Context, tx pgx.Tx, p principal.Principal, in ListInput, start *keysetStart) ([]row, storekit.Page, error) {
-	decide := func(a row) (bool, error) { return decidable(ctx, tx, p, a) }
+	decide := func(a row) (bool, error) {
+		if !requestedInScope(a, p.UserID, in) {
+			return false, nil
+		}
+		return decidable(ctx, tx, p, a)
+	}
 	var out []row
 	from := start
 	for {
@@ -265,31 +291,9 @@ func scanInbox(ctx context.Context, tx pgx.Tx, p principal.Principal, in ListInp
 	return capPage(out, in.Limit, nil)
 }
 
-// listForTarget answers the inbox scoped to ONE record.
-//
-// Every row shares that target, so the target-visibility half of decidable is
-// asked ONCE for the record rather than once per row — the inbox's per-row
-// probe exists only because its rows point at different records. The two halves
-// that vary by row stay in the loop: the per-kind grant check, and the self-only
-// narrowing (withheldFromOtherSeats), which is per-row because it compares the
-// caller against the seat THAT ROW was staged for and not against the target.
-//
-// A target the caller could not read — its type ungranted, or its row outside
-// their scope — answers an EMPTY list, never a refusal: nothing staged against a
-// record they cannot see is decidable, and saying so is the same
-// existence-hiding answer the record's own read gives.
-//
-// The scan is bounded at PendingScanCap, so a full scan is also a reason to
-// report has_more: past the cap this read cannot tell a client it has seen
-// everything, and claiming otherwise is the lie the flag exists to prevent.
+// A shared target can carry both live-record work and a reversal of an archived
+// promotion, so the proposal kind participates in each visibility check.
 func listForTarget(ctx context.Context, tx pgx.Tx, p principal.Principal, in ListInput, start *keysetStart) ([]row, storekit.Page, error) {
-	visible, err := targetVisible(ctx, tx, in.TargetType, in.TargetID)
-	if err != nil {
-		return nil, storekit.Page{}, err
-	}
-	if !visible {
-		return []row{}, storekit.Page{}, nil
-	}
 	q, args := approvalPageQuery(in, start)
 	batch, err := collect(ctx, tx, q, args)
 	if err != nil {
@@ -300,7 +304,10 @@ func listForTarget(ctx context.Context, tx pgx.Tx, p principal.Principal, in Lis
 		scanned = &batch[len(batch)-1]
 	}
 	granted := func(a row) (bool, error) {
-		return requireDecisionGrants(p, a) == nil && !withheldFromOtherSeats(p, a), nil
+		if !requestedInScope(a, p.UserID, in) {
+			return false, nil
+		}
+		return decidable(ctx, tx, p, a)
 	}
 	out, _, err := appendDecidable(batch, nil, in.Limit+1, granted)
 	if err != nil {
@@ -316,6 +323,9 @@ func listForTarget(ctx context.Context, tx pgx.Tx, p principal.Principal, in Lis
 // and the record page together instead of drifting between copies.
 func approvalWhere(in ListInput, from *keysetStart, arg func(any) int) string {
 	var terms []string
+	if in.mutedFor != nil {
+		terms = append(terms, fmt.Sprintf("(status <> 'pending' OR passport_id IS NOT NULL OR NOT (kind = ANY($%d)) OR NOT EXISTS (SELECT 1 FROM approval_preference pref WHERE pref.user_id = $%d AND pref.kind = approval.kind AND pref.muted))", arg(muteableKinds()), arg(*in.mutedFor)))
+	}
 	if in.Status != nil {
 		terms = append(terms, fmt.Sprintf("status = $%d", arg(*in.Status)))
 	}
@@ -338,7 +348,7 @@ func approvalWhere(in ListInput, from *keysetStart, arg func(any) int) string {
 		terms = append(terms, fmt.Sprintf("decided_at > $%d", arg(*in.DecidedAfter)))
 	}
 	if in.failedDecider != nil {
-		terms = append(terms, fmt.Sprintf("effect_failed_at IS NOT NULL AND decided_by = $%d", arg(*in.failedDecider)))
+		terms = append(terms, fmt.Sprintf("decided_by = $%d AND %s", arg(*in.failedDecider), stillFailing), noCompletedStageReplacement)
 	}
 	if from != nil {
 		terms = append(terms, fmt.Sprintf("(created_at, id) < ($%d, $%d)", arg(from.createdAt), arg(from.id)))

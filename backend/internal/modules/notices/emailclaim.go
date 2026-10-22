@@ -24,10 +24,10 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // maxMailErrorRunes bounds the stored cause, matching the CHECK on both
@@ -48,8 +48,9 @@ const maxMailErrorRunes = 500
 // one. The sender needs the seat in order to resolve an address for it, which
 // is a different question from anything the centre displays.
 type EmailAttempt struct {
-	Notice    Notice
-	Recipient ids.UserID
+	ApprovalID *ids.ApprovalID
+	Notice     Notice
+	Recipient  ids.UserID
 }
 
 // ClaimEmailAttempt takes this notice's ONE mail attempt, or reports that there
@@ -76,6 +77,7 @@ func (s *Store) ClaimEmailAttempt(ctx context.Context, id ids.UUID) (EmailAttemp
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var recipient ids.UUID
 		var claimedAt time.Time
+		var noticeKey string
 		// Both halves are nullable and the table pairs them, so either arriving
 		// alone is a row the constraint should have refused.
 		var targetType *string
@@ -85,14 +87,18 @@ func (s *Store) ClaimEmailAttempt(ctx context.Context, id ids.UUID) (EmailAttemp
 			   SET email_attempted_at = now()
 			 WHERE id = $1 AND email_attempted_at IS NULL AND read_at IS NULL
 			 RETURNING recipient_user_id, kind, subject, body,
-			           target_type, target_id, created_at, origin, email_attempted_at`, id)
+			           target_type, target_id, created_at, origin, email_attempted_at, coalesce(dedupe_key,'')`, id)
 		switch scanErr := row.Scan(&recipient, &attempt.Notice.Kind, &attempt.Notice.Subject,
 			&attempt.Notice.Body, &targetType, &targetID, &attempt.Notice.CreatedAt,
-			&attempt.Notice.Origin, &claimedAt); {
+			&attempt.Notice.Origin, &claimedAt, &noticeKey); {
 		case errors.Is(scanErr, pgx.ErrNoRows):
 			return nil
 		case scanErr != nil:
 			return fmt.Errorf("notices: claiming the notice's mail attempt: %w", scanErr)
+		}
+		if approval, ok := approvalOfNoticeKey(attempt.Notice.Kind, noticeKey); ok {
+			typed := ids.From[ids.ApprovalKind](approval)
+			attempt.ApprovalID = &typed
 		}
 		attempt.Notice.ID = id
 		attempt.Recipient = ids.From[ids.UserKind](recipient)
@@ -123,7 +129,7 @@ func (s *Store) ClaimEmailAttempt(ctx context.Context, id ids.UUID) (EmailAttemp
 // reads to find out why a message did not arrive would bury the relay failures
 // that column exists for.
 func (s *Store) EmailFailed(ctx context.Context, id ids.UUID, cause string) error {
-	cause = truncate(cause, maxMailErrorRunes)
+	cause = textcut.Runes(cause, maxMailErrorRunes)
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// Predicated on the claim, which is what the table's own CHECK says
 		// too: a cause beside no attempt describes a send that never happened.

@@ -171,22 +171,32 @@ func (s Scope) universe(t testing.TB) string {
 	if s.Tree != "" {
 		return s.Tree
 	}
-	dir, err := os.Getwd()
+	return ModuleRoot(t)
+}
+
+// ModuleRoot answers the directory holding go.mod, found by walking up from the
+// working directory, and spells it relative to that directory: "." for a gate
+// running from the module root. ParseFile caches one tree per spelled path, so
+// a gate that walked the absolute spelling held a second copy of every file.
+func ModuleRoot(t testing.TB) string {
+	t.Helper()
+	cwd, err := os.Getwd()
 	if err != nil {
-		t.Errorf("resolving the working directory to find the module root: %v", err)
-		return ""
+		t.Fatalf("resolving the working directory to find the module root: %v", err)
 	}
-	for {
+	for dir := cwd; ; {
 		// A stat that does not succeed is the answer "no go.mod here", which the
 		// loop handles by moving up; reaching the filesystem root is the failure.
 		if info, statErr := os.Stat(filepath.Join(dir, "go.mod")); statErr == nil && !info.IsDir() {
-			return dir
+			rel, relErr := filepath.Rel(cwd, dir)
+			if relErr != nil {
+				t.Fatalf("spelling the module root %s relative to %s: %v", dir, cwd, relErr)
+			}
+			return rel
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
-			t.Errorf("no go.mod above the working directory: a Scope with no Tree is bounded by the module "+
-				"root, and there is none (searched up from %s)", dir)
-			return ""
+			t.Fatalf("no go.mod above the working directory (searched up from %s), so there is no module tree to read", cwd)
 		}
 		dir = parent
 	}

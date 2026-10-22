@@ -1,0 +1,76 @@
+/* SPDX-License-Identifier: BUSL-1.1
+ * SPDX-FileCopyrightText: 2026 Gradion
+ *
+ * Settings → Capture activity. Every value is a token: the surface has to be
+ * right in both themes, and a literal colour is the one thing that cannot be.
+ */
+
+/* The counters plate fills the stacked row that names it. A grid of `1fr`
+ * slots has no width of its own, and the control half of a stacked SettingRow
+ * is a flex ROW — so without this the strip is as wide as its widest reading
+ * and the rest of the card is empty beside it. */
+.capture-activity__funnel {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* The message column takes the spare width and truncates, so the table never
+ * widens. Not DataTable's `grow`: it holds a long reason caption on one line. */
+.table td:has(> .capture-activity__content) {
+  inline-size: 100%;
+}
+.capture-activity__content {
+  display: block;
+  inline-size: 0;
+  min-inline-size: 100%;
+}
+.capture-activity__content > .cell-stack {
+  align-items: stretch;
+}
+.capture-activity__line {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A time and a transport name are short; the message column gives way first. */
+.capture-activity__nowrap {
+  white-space: nowrap;
+}
+
+/* "No sender recorded" is a statement about this message, not a value. */
+.capture-activity__absent {
+  font-style: italic;
+}
+
+/* The funnel slots are filters. A pressed button rather than a Switch: a
+ * Switch IS the action it names, and narrowing a list is not an action on the
+ * data — it changes what this reader is looking at and nothing else.
+ *
+ * Nothing left to declare. StatStrip owns a slot that is a control now: the
+ * button's own chrome, the reset that reaches the card inside it, the pressed
+ * fill and the focus ring all live in statstrip.css beside the plate's other
+ * chrome. This used to be `all: unset` plus a pressed state and a focus ring,
+ * and the `all: unset` tied `.stat-strip > *` on specificity — so which of them
+ * drew the slot was decided by stylesheet import order rather than by intent,
+ * and the pressed fill was repainted by the StatCard's own background anyway. */
+
+/* Said once, about the installation, above the rows it qualifies. Meta ink and
+ * the small size, because it is the list's own footnote rather than a warning:
+ * a deployment that stores no addresses is the DEFAULT posture, and colouring
+ * it as a problem would tell every reader their installation is misconfigured. */
+.capture-activity__note {
+  margin: 0;
+  max-width: 60ch;
+}
+.capture-activity__drawer-sub,
+.capture-activity__drawer-transport {
+  margin: 0 0 var(--space-3);
+}
+
+/* WHICH message the ladder below is about. Not muted like the two lines above
+   it: those describe the surface, while this names the correspondence the
+   reader came to check and is the one line here they can act on. */
+.capture-activity__drawer-message {
+  margin: 0 0 var(--space-3);
+}

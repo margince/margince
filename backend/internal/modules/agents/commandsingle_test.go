@@ -125,7 +125,7 @@ func TestEachAnchoredCommandReadsItsRecordOnce(t *testing.T) {
 		},
 		{
 			"enrich",
-			oneRecord(datasource.EntityCompany, id, `{"name":"Acme"}`, 3),
+			oneRecord(datasource.EntityCompany, id, `{"name":"Acme","domains":[{"domain":"acme.example"}]}`, 3),
 			func(p *tallyingProvider) GovernedCall {
 				return NewEnrichCall(p, nil, EnrichCommand{CompanyID: id, Depth: EnrichDepthPage})
 			},
@@ -283,7 +283,7 @@ func TestTheSinglePurposeGuardsRefuseWhatExecutionWouldRefuse(t *testing.T) {
 		},
 		{
 			"an enrich of a target that is not an absolute http(s) URL",
-			NewEnrichCall(oneRecord(datasource.EntityCompany, id, `{}`, 1),
+			NewEnrichCall(oneRecord(datasource.EntityCompany, id, `{"domains":[{"domain":"acme.example"}]}`, 1),
 				nil, EnrichCommand{CompanyID: id, URL: "acme.test/about", Depth: EnrichDepthPage}),
 			"absolute http(s) URL",
 		},
@@ -365,6 +365,9 @@ func TestAMergeStagesTheSurvivorAndNamesBothHalves(t *testing.T) {
 		t.Errorf("staged target %s, want the SURVIVOR %s — an approval bound to the archived half pins a "+
 			"row the merge is about to retire", info.TargetID, survivor)
 	}
+	if info.CoTargetType != "contact" || info.CoTargetID != source {
+		t.Fatalf("source pin = %s/%s, want contact/%s", info.CoTargetType, info.CoTargetID, source)
+	}
 	if info.TargetVersion == nil || *info.TargetVersion != 7 {
 		t.Errorf("TargetVersion = %v, want the survivor's 7", info.TargetVersion)
 	}
@@ -430,7 +433,7 @@ func TestTheTwoEnrichDepthsAreDistinctCommandsWithDistinctSummaries(t *testing.T
 	summaries := map[EnrichDepth]string{}
 	for _, cmd := range []EnrichCommand{page, site} {
 		info, err := StageSubject(context.Background(),
-			NewEnrichCall(oneRecord(datasource.EntityCompany, company, `{"name":"Acme"}`, 1), nil, cmd))
+			NewEnrichCall(oneRecord(datasource.EntityCompany, company, `{"name":"Acme","domains":[{"domain":"acme.example"}]}`, 1), nil, cmd))
 		if err != nil {
 			t.Fatalf("staging depth %q answered %v", cmd.Depth, err)
 		}

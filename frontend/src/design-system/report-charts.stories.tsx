@@ -95,7 +95,7 @@ export const MissingObservations: Story = {
   ),
 };
 export const OneObservation: Story = {
-  render: () => <Readings rows={[trend[2]]} />,
+  render: () => <Readings rows={trend.slice(2, 3)} />,
 };
 export const NoObservations: Story = { render: () => <Readings rows={[]} /> };
 export const OwnerTargets: Story = {

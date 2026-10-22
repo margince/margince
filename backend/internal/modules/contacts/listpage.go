@@ -36,7 +36,8 @@ const whereAlways = "1=1"
 // named after their objects.
 type listPageSpec[T any] struct {
 	entity  string
-	columns string
+	prepare func(context.Context, pgx.Tx) (context.Context, error)
+	columns func(context.Context, func(any) int) (string, error)
 	// fields is the core sortable vocabulary (data-model §13.5); active
 	// cf_ columns join it per request.
 	fields map[string]storekit.SortField
@@ -69,7 +70,28 @@ func listPage[T any](ctx context.Context, s *Store, sortSpec *string, limitIn *i
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
-	limit := storekit.ClampLimit(limitIn)
+	var recs []T
+	var page storekit.Page
+	err = s.txSnapshot(ctx, func(tx pgx.Tx) error {
+		prepared := ctx
+		if spec.prepare != nil {
+			var err error
+			prepared, err = spec.prepare(ctx, tx)
+			if err != nil {
+				return err
+			}
+		}
+		var err error
+		recs, page, err = listPageTx(prepared, tx, sortSpec, storekit.ClampLimit(limitIn), active, spec)
+		return err
+	})
+	if recs == nil {
+		recs = []T{}
+	}
+	return recs, page, err
+}
+
+func listPageTx[T any](ctx context.Context, tx pgx.Tx, sortSpec *string, limit int, active []fieldcatalog.Column, spec listPageSpec[T]) ([]T, storekit.Page, error) {
 
 	where := []string{whereAlways}
 	args := []any{}
@@ -107,49 +129,53 @@ func listPage[T any](ctx context.Context, s *Store, sortSpec *string, limitIn *i
 		return nil, storekit.Page{}, err
 	}
 
+	columns, err := spec.columns(ctx, arg)
+	if err != nil {
+		return nil, storekit.Page{}, err
+	}
 	var recs []T
 	var page storekit.Page
-	// txSnapshot, not tx: the page and its total are two statements whose
-	// answers are shown as one, so they have to see one snapshot.
-	err = s.txSnapshot(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx,
-			`SELECT `+spec.columns+storekit.SelectSuffix(active)+sorted.CursorKeySuffix()+
-				` FROM `+spec.entity+` WHERE `+strings.Join(where, " AND ")+
-				sorted.OrderBy()+storekit.SQLf(` LIMIT %d`, limit+1),
-			args...)
-		if err != nil {
-			return err
-		}
-		defer rows.Close()
 
-		var cursorKeys []*string
-		if recs, cursorKeys, err = spec.scan(rows, active, sorted); err != nil {
-			return err
-		}
-		if len(recs) > limit {
-			recs = recs[:limit]
-			createdAt, id := spec.cursorKey(recs[len(recs)-1])
-			next, err := sorted.EncodePageCursor(cursorKeys[limit-1], createdAt, id)
-			if err != nil {
-				return err
-			}
-			page = storekit.Page{HasMore: true, NextCursor: next}
-		}
-		// Counted on the page's OWN transaction, so the number and the rows
-		// describe one instant. A count in a second transaction would let a
-		// concurrent insert land between them and print a total the page
-		// cannot be a window onto.
-		var n int
-		if err := tx.QueryRow(ctx, total.sql, total.args...).Scan(&n); err != nil {
-			return fmt.Errorf("count %s: %w", spec.entity, err)
-		}
-		page.Total = &n
-		return spec.attach(ctx, tx, recs)
-	})
-	if recs == nil {
-		recs = []T{}
+	rows, err := tx.Query(ctx,
+		`SELECT `+columns+storekit.SelectSuffix(active)+sorted.CursorKeySuffix()+
+			` FROM `+spec.entity+` WHERE `+strings.Join(where, " AND ")+
+			sorted.OrderBy()+storekit.SQLf(` LIMIT %d`, limit+1),
+		args...)
+	if err != nil {
+		return nil, storekit.Page{}, err
 	}
-	return recs, page, err
+	defer rows.Close()
+
+	var cursorKeys []*string
+	if recs, cursorKeys, err = spec.scan(rows, active, sorted); err != nil {
+		return nil, storekit.Page{}, err
+	}
+	if len(recs) > limit {
+		recs = recs[:limit]
+		createdAt, id := spec.cursorKey(recs[len(recs)-1])
+		next, err := sorted.EncodePageCursor(cursorKeys[limit-1], createdAt, id)
+		if err != nil {
+			return nil, storekit.Page{}, err
+		}
+		page = storekit.Page{HasMore: true, NextCursor: next}
+	}
+	// The count shares the page snapshot so concurrent inserts cannot change its total.
+	var n int
+	if err := tx.QueryRow(ctx, total.sql, total.args...).Scan(&n); err != nil {
+		return nil, storekit.Page{}, fmt.Errorf("count %s: %w", spec.entity, err)
+	}
+	page.Total = &n
+	// On the page's own snapshot, so what it reports about the boundary
+	// describes the same instant the rows do. It costs nothing unless the
+	// caller asked to be told, and nothing at all on a table without
+	// capture privacy.
+	if err := auth.NoteCaptureWithheld(ctx, tx, spec.entity); err != nil {
+		return nil, storekit.Page{}, err
+	}
+	if err := spec.attach(ctx, tx, recs); err != nil {
+		return nil, storekit.Page{}, err
+	}
+	return recs, page, nil
 }
 
 // listFilters is the optional-filter set the record lists share; each
@@ -334,7 +360,7 @@ func (f listFilters) clauses(ctx context.Context, active []fieldcatalog.Column, 
 	if !f.IncludeArchived {
 		where = append(where, "archived_at IS NULL")
 	}
-	ownership, err := f.ownershipClause(arg)
+	ownership, err := storekit.OwnershipClause(f.OwnerID, f.OwnerTeamID, f.Unassigned, arg)
 	if err != nil {
 		return nil, err
 	}
@@ -377,43 +403,6 @@ func (f listFilters) clauses(ctx context.Context, active []fieldcatalog.Column, 
 		where = append(where, clause)
 	}
 	return where, nil
-}
-
-// ownershipClause spells the three owner dials as ONE predicate, because they
-// answer one question — whose rows — and a caller who sends two of them has
-// asked for two different answers. Combining them is refused rather than
-// silently resolved: `owner_id` AND `unassigned=true` can only ever match
-// nothing, and an empty page is indistinguishable from an honest one.
-//
-// Every clause here NARROWS. The caller's row-scope predicate is already in the
-// WHERE chain (auth.ScopeClauseFor, added before these), so a team id the
-// caller cannot see filters their own visible rows down to nothing instead of
-// reaching that team's — the filter cannot widen what authorization admitted.
-func (f listFilters) ownershipClause(arg func(any) int) (string, error) {
-	unassigned := f.Unassigned != nil && *f.Unassigned
-	named := 0
-	for _, set := range []bool{f.OwnerID != nil, f.OwnerTeamID != nil, unassigned} {
-		if set {
-			named++
-		}
-	}
-	if named > 1 {
-		return "", httperr.Validation("owner_id", "conflicting_filters",
-			"owner_id, owner_team_id and unassigned each name a different set of rows; send one")
-	}
-	switch {
-	case f.OwnerID != nil:
-		return storekit.SQLf("owner_id = $%d", arg(*f.OwnerID)), nil
-	case f.OwnerTeamID != nil:
-		return storekit.SQLf(
-			"owner_id IN (SELECT tm.user_id FROM team_membership tm WHERE tm.team_id = $%d)",
-			arg(*f.OwnerTeamID)), nil
-	case unassigned:
-		return "owner_id IS NULL", nil
-	}
-	// `unassigned=false` is not "only owned rows": the reader asked to stop
-	// narrowing, and the honest answer to that is the unnarrowed list.
-	return "", nil
 }
 
 // capturedByKindArg maps the optional provenance parameter onto the store

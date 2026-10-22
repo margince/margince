@@ -170,9 +170,28 @@ print("")' "$email"
 # written nothing, and the first evidence was an assistant finding an empty CRM.
 # A fixture that fails must fail loudly — the run is worthless either way, and
 # only one of the two says why.
+# The source every fixture row is stamped with. Free-form on the write side, and
+# worth spending: a row a reader finds in a failing transcript says which lane
+# put it there.
+FIXTURE_SOURCE="seed:llm-fixtures"
+
+# with_source adds FIXTURE_SOURCE to a record's create body that names none,
+# because every record create requires a source.
+with_source() {
+  local path="$1" body="$2"
+  case "$path" in
+    /companies|/contacts|/relationships|/deals|/projects|/tasks|/activities|/leads) ;;
+    *) printf '%s' "$body"; return 0 ;;
+  esac
+  printf '%s' "$body" | FIXTURE_SOURCE="$FIXTURE_SOURCE" python3 -c 'import json,os,sys
+row=json.load(sys.stdin)
+row.setdefault("source", os.environ["FIXTURE_SOURCE"])
+print(json.dumps(row, ensure_ascii=False))'
+}
+
 create_or_die() {
   local path="$1" body="$2" what="$3" response id
-  response="$(api POST "$path" "$body")"
+  response="$(api POST "$path" "$(with_source "$path" "$body")")"
   id="$(printf '%s' "$response" | python3 -c 'import json,sys
 try: print(json.load(sys.stdin).get("id",""))
 except Exception: print("")')"
@@ -280,7 +299,7 @@ link_employment() {
   local contact="$1" company="$2" what="$3" body code
   body="$(printf '{"kind":"employment","contact_id":"%s","company_id":"%s"}' \
     "$contact" "$company")"
-  code="$(status_of POST /relationships "$body")"
+  code="$(status_of POST /relationships "$(with_source /relationships "$body")")"
   [[ "$code" = "201" || "$code" = "409" ]] || {
     echo "employing $what answered HTTP $code" >&2; exit 1; }
 }
@@ -509,11 +528,6 @@ print("")' "$email"
 days_ahead() {
   date -u -v+"$1"d '+%Y-%m-%d' 2>/dev/null || date -u -d "$1 days" '+%Y-%m-%d'
 }
-
-# The source every fixture row is stamped with. Free-form on the write side, and
-# worth spending: a row a reader finds in a failing transcript says which lane
-# put it there.
-FIXTURE_SOURCE="seed:llm-fixtures"
 
 # --- CASE 8: two proposals waiting for a human decision ---------------------
 #
@@ -1435,7 +1449,7 @@ if [[ -z "$heike" ]]; then
     body="$(printf '{"kind":"email","direction":"outbound","occurred_at":"%s","subject":"Austausch Armaturen","body":"Danke für das Gespräch, ich schicke die Unterlagen.","links":[{"entity_type":"contact","entity_id":"%s"}]}' \
       "$(days_ago $((n * 6)))" "$heike")"
     code="$(curl -sS -b "$sofia_cookies" -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' \
-      -d "$body" "$API_BASE/v1/activities")"
+      -d "$(with_source /activities "$body")" "$API_BASE/v1/activities")"
     [[ "$code" = "201" ]] || { echo "Sofia's mail to Heike Brandt answered HTTP $code" >&2; exit 1; }
   done
   rm -f "$sofia_cookies"
@@ -1484,6 +1498,71 @@ if [[ "$(lane_psql "SELECT count(*) FROM forecast_snapshot WHERE trigger = 'dail
   code="$(status_of PATCH "/deals/$valantic_deal" "$slipped")"
   [[ "$code" = "200" ]] || { echo "slipping the valantic deal answered HTTP $code" >&2; exit 1; }
   freeze_forecast
+fi
+
+# --- CASE 7: meetings in two standings, above the privacy floor --------------
+#
+# run_analytics_query withholds a group of fewer than five records, and then one
+# more group so the total cannot give the first one away. So each standing needs
+# five or more, and so do the tasks, which group as "no standing". With case 23's
+# two bookings and case 59's signing, the seed holds 6 held and 8 booked
+# meetings; case 7's judge checks those two numbers. Filed on Henning Voss:
+# without a host they leave case 23's calendar as it is. The tasks are done
+# weeks ago, so no list of open or late work shows them.
+if [[ "$(lane_psql "SELECT count(*) FROM activity WHERE subject LIKE 'Abstimmung Nordholz %'")" -eq 0 ]]; then
+  for n in 1 2 3 4 5; do
+    body="$(printf '{"due_at":"%s","subject":"Protokoll Abstimmung Nordholz %s","links":[{"entity_type":"contact","entity_id":"%s"}]}' \
+      "$(days_ago $((n * 7 + 30)))" "$n" "$henning")"
+    task="$(create_or_die "/tasks" "$body" "task $n for Nordholz")"
+    code="$(status_of PATCH "/activities/$task" '{"is_done":true}')"
+    [[ "$code" = "200" ]] || { echo "completing task $n for Nordholz answered HTTP $code" >&2; exit 1; }
+  done
+  for n in 1 2 3 4 5; do
+    body="$(printf '{"kind":"meeting","meeting_status":"held","occurred_at":"%s","subject":"Abstimmung Nordholz %s","links":[{"entity_type":"contact","entity_id":"%s"}]}' \
+      "$(days_ago $((n * 7)))" "$n" "$henning")"
+    create_or_die "/activities" "$body" "held meeting $n with Nordholz" >/dev/null
+  done
+  for n in 6 7 8 9 10 11; do
+    body="$(printf '{"kind":"meeting","meeting_status":"booked","occurred_at":"%sT14:00:00Z","subject":"Abstimmung Nordholz %s","links":[{"entity_type":"contact","entity_id":"%s"}]}' \
+      "$(days_ahead $((n * 3)))" "$n" "$henning")"
+    create_or_die "/activities" "$body" "booked meeting $n with Nordholz" >/dev/null
+  done
+fi
+
+# --- CASE 59: a signed contract to file on the meeting it was signed in -------
+#
+# THE PROJECT IS THE DOOR TO THE CONTRACT. An agent reads contracts only through
+# read_project_360, so the contract names the project, and the meeting is on the
+# project's timeline beside it: one read hands the run both ids it must file
+# against. The contract carries no value or dates, so no forecast, revenue or
+# board-pack figure another case asserts moves.
+#
+# A company, project and contact of their own, named after nothing another case
+# searches for. The meeting is with the contact and not the company, because a
+# meeting cannot be filed against a company (see case 9).
+harzer="$(company_id_by_name "Harzer Steuerungstechnik GmbH")"
+if [[ -z "$harzer" ]]; then
+  body="$(printf '{"display_name":"Harzer Steuerungstechnik GmbH","owner_id":"%s","industry":"Steuerungstechnik"}' "$me")"
+  harzer="$(create_or_die "/companies" "$body" "Harzer Steuerungstechnik GmbH")"
+fi
+albers="$(seed_contact "Katrin Albers" "katrin.albers@harzer-steuerung.test" "$me")"
+link_employment "$albers" "$harzer" "Katrin Albers at Harzer Steuerungstechnik"
+goslar="$(api GET "/projects?q=$(url_encode "Leitstand Goslar")&limit=50" | python3 -c 'import json,sys
+for row in json.load(sys.stdin).get("data", []):
+    if row.get("name") == "Leitstand Goslar":
+        print(row["id"]); break
+else:
+    print("")')"
+if [[ -z "$goslar" ]]; then
+  body="$(printf '{"name":"Leitstand Goslar","company_id":"%s","owner_id":"%s","source":"%s","description":"Neuer Leitstand für das Werk Goslar."}' \
+    "$harzer" "$me" "$FIXTURE_SOURCE")"
+  goslar="$(create_or_die "/projects" "$body" "the Leitstand Goslar project")"
+  body="$(printf '{"company_id":"%s","project_id":"%s","title":"Servicevertrag Leitstand Goslar","contract_number":"HST-2026-014"}' \
+    "$harzer" "$goslar")"
+  create_or_die "/contracts" "$body" "the Leitstand Goslar service contract" >/dev/null
+  body="$(printf '{"kind":"meeting","meeting_status":"held","occurred_at":"%s","subject":"Vertragsunterzeichnung Leitstand Goslar","body":"Servicevertrag mit Katrin Albers unterzeichnet.","source":"%s","links":[{"entity_type":"contact","entity_id":"%s"},{"entity_type":"project","entity_id":"%s"}]}' \
+    "$(days_ago 1)" "$FIXTURE_SOURCE" "$albers" "$goslar")"
+  create_or_die "/activities" "$body" "the Leitstand Goslar signing meeting" >/dev/null
 fi
 
 # --- THE ROSTER IS VERIFIED, not assumed ---------------------------------

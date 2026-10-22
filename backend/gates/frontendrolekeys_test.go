@@ -35,7 +35,7 @@ import (
 // two fixed-role helpers (useHoldsAdminRole, useHoldsOperatorSeat) that cover
 // authorities the RbacObject vocabulary does not name yet, and it documents
 // each as exceptional. Every other screen asks it, or asks useCan.
-const capabilityModule = "src/app/capability.ts"
+const capabilityModule = "src/lib/capability.ts"
 
 // roleKeyComparison matches a role key being COMPARED, not merely mentioned.
 //
@@ -308,7 +308,7 @@ func TestTheClientKnowsEachSeededRoleByTheNameIdentityStores(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the identity service source: %v", err)
 	}
-	client, err := os.ReadFile(filepath.Join("..", "frontend", "src", "screens", "roles.queries.ts"))
+	client, err := os.ReadFile(filepath.Join("..", "frontend", "src", "lib", "roles.queries.ts"))
 	if err != nil {
 		t.Fatalf("reading the client's role table: %v", err)
 	}

@@ -487,6 +487,13 @@ func TestAMergeCarriesTheRetiringContactsOverride(t *testing.T) {
 		t.Fatalf("precondition: the survivor already holds %d override(s)", got)
 	}
 
+	scope, err := contactsStore.PreviewMergeSurvivorship(admin, "contact", vouched, survivor, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(scope.Overrides) != 1 || scope.Overrides[0].Category != "marketing" || scope.Overrides[0].Authority != "admin" || scope.Overrides[0].Reason != "confirmed the opt-in on a call before the records were merged" {
+		t.Fatalf("override preview = %+v", scope.Overrides)
+	}
 	if _, err := contactsStore.MergeContact(admin,
 		ids.From[ids.ContactKind](vouched), ids.From[ids.ContactKind](survivor), nil); err != nil {
 		t.Fatalf("merging: %v", err)
@@ -500,7 +507,7 @@ func TestAMergeCarriesTheRetiringContactsOverride(t *testing.T) {
 		survivor).Scan(&carriedFrom); err != nil {
 		t.Fatalf("reading the carried override: %v", err)
 	}
-	if carriedFrom == nil {
+	if carriedFrom == nil || *carriedFrom != scope.Overrides[0].ID {
 		t.Error("the carried override names no origin, so nothing says which merge produced it")
 	}
 
@@ -552,6 +559,10 @@ func TestACarryDoesNotDuplicateAnEquallyStrongOverrideTheSurvivorHolds(t *testin
 		}
 	}
 
+	scope, err := contactsStore.PreviewMergeSurvivorship(admin, "contact", retiring, survivor, nil, nil)
+	if err != nil || len(scope.Overrides) != 0 {
+		t.Fatalf("duplicate override preview = %+v, %v", scope.Overrides, err)
+	}
 	if _, err := contactsStore.MergeContact(admin,
 		ids.From[ids.ContactKind](retiring), ids.From[ids.ContactKind](survivor), nil); err != nil {
 		t.Fatalf("merging: %v", err)
@@ -581,6 +592,10 @@ func TestAnUnwiredMergeRefusesOnlyWhenAnOverrideWouldBeLost(t *testing.T) {
 		t.Fatalf("recording the override: %v", err)
 	}
 
+	scope, previewErr := unwired.PreviewMergeSurvivorship(admin, "contact", vouched, survivor, nil, nil)
+	if _, ok := errors.AsType[*contacts.OverrideCarrierNotWiredError](previewErr); !ok || len(scope.Overrides) != 0 {
+		t.Fatalf("unwired override preview = %+v, %v", scope, previewErr)
+	}
 	_, err := unwired.MergeContact(admin,
 		ids.From[ids.ContactKind](vouched), ids.From[ids.ContactKind](survivor), nil)
 	if err == nil {

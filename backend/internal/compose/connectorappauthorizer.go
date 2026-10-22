@@ -59,21 +59,21 @@ var (
 	)
 )
 
-// resolveApp picks the client ONE call will use: the stored app where the
-// installation has one, the deployment's otherwise.
+// resolveApp picks the client one call will use: the deployment's app where it
+// composed one, the installation's stored app otherwise.
 //
-// A resolution error is returned rather than falling back: a sealed secret that
-// will not open means the vault's root key moved, and quietly connecting with an
-// older environment copy would hide that behind a flow that half works.
+// A boot source locks the stored app, so the stored app may not read first.
+// A stored app left from before is ignored, not deleted. A stored app that
+// cannot be read is an error, not an absence: its vault root key moved.
 //
-// Generic over the vendor's own client type. The two vendors own separate OAuth
-// interfaces and cannot share one, but this rule — stored wins, environment is
-// the fallback, a fault is neither — is one rule, and a second copy of it is the
-// copy that would keep falling back on the day the first stopped.
+// Generic over the vendor's client type, so both vendors share this one rule.
 func resolveApp[T comparable](
 	ctx context.Context, resolve appResolver, env T, build func(capture.ConnectorApp) T, absent error,
 ) (T, error) {
 	var zero T
+	if env != zero {
+		return env, nil
+	}
 	if resolve != nil {
 		app, stored, err := resolve(ctx)
 		if err != nil {
@@ -83,17 +83,14 @@ func resolveApp[T comparable](
 			return build(app), nil
 		}
 	}
-	if env != zero {
-		return env, nil
-	}
 	return zero, absent
 }
 
 // googleAppAuthorizer performs the token half of the Google handshake against
 // the app the installation is using AT THE MOMENT OF THE CALL.
 type googleAppAuthorizer struct {
-	// resolve reports the stored app; `stored` false means this installation has
-	// none and the environment's app, where there is one, is what to use.
+	// resolve reports the stored app, read only where the environment composed
+	// none.
 	resolve appResolver
 	// env is the app the deployment composed, or nil where it composed none.
 	env googleconn.Authorizer
@@ -165,8 +162,8 @@ func (a graphAppAuthorizer) Refresh(
 	return c.Refresh(ctx, refreshToken, granted)
 }
 
-// newGmailAuthorizer builds the mail connector's per-call authorizer over the
-// given stored-app resolver, with the environment's app as the fallback.
+// newGmailAuthorizer builds the mail connector's per-call authorizer: the
+// environment's app where there is one, the stored app otherwise.
 func newGmailAuthorizer(resolve appResolver, c GmailConfig) googleAppAuthorizer {
 	var env googleconn.Authorizer
 	if c.canSync() {

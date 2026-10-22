@@ -17,7 +17,9 @@ import (
 
 // Handlers is this module's transport.
 type Handlers struct {
-	store *Store
+	store         *Store
+	mailLanguage  func(context.Context) string
+	inviteContext func(context.Context) (string, string, error)
 	// inviteMailer carries a buyer's invitation to a relay. Nil means the
 	// installation has no outbound mail configured: invitations are still
 	// recorded and their credential still returned, and the response reports
@@ -100,7 +102,7 @@ func (h Handlers) UpdateDealRoom(w http.ResponseWriter, r *http.Request, id crmc
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	room, err := h.store.UpdateRoom(r.Context(), pathID(id), updateInput(req, ifVersion))
+	room, err := h.store.UpdateRoom(r.Context(), pathID(id), updateInput(req, httperr.ClearedFields(r), ifVersion))
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -158,6 +160,10 @@ func (h Handlers) SetDealRoomExpiry(w http.ResponseWriter, r *http.Request, id c
 	}
 	var req crmcontracts.SetDealRoomExpiryRequest
 	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	if err := httperr.RequireSent(r, "expires_at", "send expires_at: a time, or null to remove the expiry"); err != nil {
+		httperr.Write(w, r, err)
 		return
 	}
 	room, err := h.store.SetExpiry(r.Context(), pathID(id), req.ExpiresAt, ifVersion)

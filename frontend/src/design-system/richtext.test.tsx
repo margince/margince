@@ -147,15 +147,13 @@ describe("the writing surface inside a host that hands it a height", () => {
   // the unit suite runs lays anything out: happy-dom and jsdom both answer zero
   // for every height, so a test that measured the drawer would pass with the
   // frame free to shrink to nothing again.
-  it("keeps a frame the reply drawer cannot squeeze to nothing", () => {
+  it("keeps a frame the composer cannot squeeze to nothing", () => {
     const css = readFileSync(
-      join(here, "..", "screens", "composethread.css"),
+      join(here, "..", "features", "mail", "compose.css"),
       "utf8",
     );
     const frame =
-      css
-        .split(".compose-split > .compose-fields > .richtext {")[1]
-        ?.split("}")[0] ?? "";
+      css.split(".compose-fields > .richtext {")[1]?.split("}")[0] ?? "";
 
     expect(frame).toContain("min-block-size");
     expect(frame).not.toContain("min-block-size: 0");

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 
 	"github.com/jackc/pgx/v5"
 
@@ -60,6 +61,66 @@ func (s *Store) insertRun(ctx context.Context, tx pgx.Tx, conn admittedConnectio
 	return id, false, nil
 }
 
+// claimCategories takes this run's per-category admission claims. It reports
+// false when a live run on the same contact already holds one of them.
+//
+// The inserts go in sorted order. Two runs asking for shared categories in a
+// different order then wait on each other instead of deadlocking. A trigger on
+// provider_run releases the rows when the run leaves the live set, so no
+// writer of the state has to remember them.
+func (s *Store) claimCategories(ctx context.Context, tx pgx.Tx, runID string, in provider.QueueInput, cats []provider.Category) (bool, error) {
+	names := categoryStrings(cats)
+	sort.Strings(names)
+	// A run queued before the claim table existed holds no claim rows, so the
+	// index cannot see it. Every run admitted since writes its claims in the
+	// admitting transaction. So no such run is being created right now, and a
+	// plain read of what it asked for is enough.
+	var unclaimedOverlap bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+		  SELECT 1 FROM provider_run r
+		   WHERE r.contact_id = $1 AND r.provider = $2 AND r.id <> $3
+		     AND r.state IN ('queued','submitting','in_progress','submission_unknown')
+		     AND r.requested_categories && $4::text[]
+		     AND NOT EXISTS (SELECT 1 FROM provider_run_category c WHERE c.run_id = r.id))`,
+		in.ContactID, in.Provider, runID, names).Scan(&unclaimedOverlap); err != nil {
+		return false, fmt.Errorf("integrations: checking runs queued without claims: %w", err)
+	}
+	if unclaimedOverlap {
+		return false, nil
+	}
+	for _, category := range names {
+		tag, err := tx.Exec(ctx, `
+			INSERT INTO provider_run_category (run_id, contact_id, provider, category)
+			VALUES ($1, $2, $3, $4)
+			ON CONFLICT DO NOTHING`,
+			runID, in.ContactID, in.Provider, category)
+		if err != nil {
+			return false, fmt.Errorf("integrations: claiming the category for this run: %w", err)
+		}
+		if tag.RowsAffected() == 0 {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
+// handOff commits the submit job with the run. It is REQUIRED, not optional:
+// a queued run with no job is not a run. It would sit in the live-run index
+// forever, blocking every later attempt at the same subject while nothing
+// ever executed it. A missing enqueue is a wiring bug, so it fails here
+// rather than committing a row that looks queued and is inert.
+func (s *Store) handOff(ctx context.Context, tx pgx.Tx, runID string) error {
+	ws, err := s.db.Workspace(ctx)
+	if err != nil {
+		return fmt.Errorf("integrations: resolving the workspace for the submit job: %w", err)
+	}
+	if err := s.enqueueSubmit(ctx, tx, runID, ws.String()); err != nil {
+		return fmt.Errorf("integrations: scheduling the submission: %w", err)
+	}
+	return nil
+}
+
 // insertSkipped records a run that never reached the provider, and why. It
 // takes no reservation: nothing was spent, so nothing is held.
 func (s *Store) insertSkipped(ctx context.Context, tx pgx.Tx, conn admittedConnection, in provider.QueueInput,
@@ -88,7 +149,7 @@ func (s *Store) insertSkipped(ctx context.Context, tx pgx.Tx, conn admittedConne
 	if err != nil {
 		return provider.Run{}, fmt.Errorf("integrations: recording the skipped run: %w", err)
 	}
-	return s.readRun(ctx, tx, id)
+	return readRun(ctx, tx, id)
 }
 
 // markSkipped turns an already-inserted run into a skip, for the refusals
@@ -105,7 +166,7 @@ func (s *Store) markSkipped(ctx context.Context, tx pgx.Tx, runID string, reason
 }
 
 // readRun loads one run and its reservations.
-func (s *Store) readRun(ctx context.Context, tx pgx.Tx, runID string) (provider.Run, error) {
+func readRun(ctx context.Context, tx pgx.Tx, runID string) (provider.Run, error) {
 	var r provider.Run
 	var contactID, skipReason, safeCode *string
 	var snapJSON []byte
@@ -168,17 +229,9 @@ func (s *Store) GetRun(ctx context.Context, contactID, runID string) (provider.R
 	}
 	var out provider.Run
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// Existence-hiding: a run belonging to a contact this caller cannot
-		// see answers 404, never 403.
-		if err := auth.EnsureVisible(ctx, tx, "contact", uuidOf(&contactID)); err != nil {
-			return err
-		}
-		run, err := s.readRun(ctx, tx, runID)
+		run, err := ReadRunForContactTx(ctx, tx, contactID, runID)
 		if err != nil {
 			return err
-		}
-		if run.ContactID != contactID {
-			return apperrors.ErrNotFound
 		}
 		out = run
 		return nil
@@ -187,6 +240,24 @@ func (s *Store) GetRun(ctx context.Context, contactID, runID string) (provider.R
 		return provider.Run{}, err
 	}
 	return out, nil
+}
+
+// ReadRunForContactTx shares the authorized run view with transactional merge previews.
+func ReadRunForContactTx(ctx context.Context, tx pgx.Tx, contactID, runID string) (provider.Run, error) {
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
+		return provider.Run{}, err
+	}
+	if err := auth.EnsureVisible(ctx, tx, "contact", uuidOf(&contactID)); err != nil {
+		return provider.Run{}, err
+	}
+	run, err := readRun(ctx, tx, runID)
+	if err != nil {
+		return provider.Run{}, err
+	}
+	if run.ContactID != contactID {
+		return provider.Run{}, apperrors.ErrNotFound
+	}
+	return run, nil
 }
 
 func nullableUUID(s string) *string {

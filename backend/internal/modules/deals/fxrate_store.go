@@ -66,7 +66,14 @@ func fxInvalid(field, code, message string) error {
 // transaction, so a write that waited for the pool across the local day boundary
 // judges the day it commits.
 func (s *Store) effectiveToday(ctx context.Context, tx pgx.Tx) (time.Time, error) {
-	tzName, err := s.installation.Timezone(ctx, tx)
+	return s.todayIn(ctx, tx, s.installation.Timezone)
+}
+
+// todayIn is the store clock's calendar day in the zone zoneOf answers. The
+// rate sheet and the Value sort both judge "today" through it. So the rate in
+// force on the sheet is the rate the list converts at.
+func (s *Store) todayIn(ctx context.Context, tx pgx.Tx, zoneOf InstallationValue) (time.Time, error) {
+	tzName, err := zoneOf(ctx, tx)
 	if err != nil {
 		return time.Time{}, fmt.Errorf("resolve the installation's timezone: %w", err)
 	}
@@ -281,18 +288,52 @@ func (s *Store) ListLatestFxRates(ctx context.Context) ([]FxRateRow, error) {
 		if err != nil {
 			return err
 		}
-		r, err := tx.Query(ctx, `
-			SELECT DISTINCT ON (from_currency) from_currency, to_currency, rate::text, rate_date
-			FROM fx_rate WHERE to_currency = $1
-			ORDER BY from_currency, rate_date DESC`, base)
-		if err != nil {
-			return fmt.Errorf("list fx_rate: %w", err)
-		}
-		defer r.Close()
-		rows, err = scanFxRows(r)
+		rows, err = sheetHeadTx(ctx, tx, base)
 		return err
 	})
 	return rows, err
+}
+
+// RateSheetCurrencies returns the base currency and the foreign currencies on
+// the sheet head, in code order, for a currency picker to offer first.
+// The gate is deal read, not fx_rate read: the answer holds codes and never
+// a rate. Every role that may create a deal needs it for the picker, so the
+// base is read without the installation_settings gate too.
+func (s *Store) RateSheetCurrencies(ctx context.Context) (string, []string, error) {
+	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+		return "", nil, err
+	}
+	var base string
+	codes := []string{}
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		if base, err = s.installation.BaseCurrencyApplied(ctx, tx); err != nil {
+			return err
+		}
+		rows, err := sheetHeadTx(ctx, tx, base)
+		if err != nil {
+			return err
+		}
+		for _, row := range rows {
+			codes = append(codes, row.FromCurrency)
+		}
+		return nil
+	})
+	return base, codes, err
+}
+
+// sheetHeadTx reads the sheet head for both sheet reads: the latest-dated row
+// per foreign currency that converts into base, ordered by currency code.
+func sheetHeadTx(ctx context.Context, tx pgx.Tx, base string) ([]FxRateRow, error) {
+	r, err := tx.Query(ctx, `
+		SELECT DISTINCT ON (from_currency) from_currency, to_currency, rate::text, rate_date
+		FROM fx_rate WHERE to_currency = $1
+		ORDER BY from_currency, rate_date DESC`, base)
+	if err != nil {
+		return nil, fmt.Errorf("list fx_rate: %w", err)
+	}
+	defer r.Close()
+	return scanFxRows(r)
 }
 
 // ListEffectiveFxRates returns the rate in force TODAY per foreign currency —

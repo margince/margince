@@ -5,14 +5,14 @@ import {
 } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { api } from "../api/client";
-import { ProblemError, throwProblem } from "../screens/common";
-import { ENTITY_NAME_KEY } from "../screens/entityref";
+import { ENTITY_NAME_KEY } from "../components/entityref";
 import {
   ConnectivityError,
   reportReached,
   reportUnreached,
   watchConnectivity,
-} from "./connectivity";
+} from "../lib/connectivity";
+import { ProblemError, throwProblem } from "../lib/problem";
 import {
   createQueryClient,
   liveInterval,
@@ -24,11 +24,11 @@ import {
 // doubles a refusal the server already made final, and an unreported failure
 // leaves nothing behind for whoever has to explain it. Both are pinned here.
 
-function problem(status: number): ProblemError {
+function problem(status: number, code?: string): ProblemError {
   return new ProblemError({
     type: "about:blank",
     status,
-    code: "test_case",
+    code,
     detail: "a server problem",
   });
 }
@@ -39,9 +39,10 @@ afterEach(() => {
 
 describe("the query retry policy", () => {
   it("retries a server error, at most twice", () => {
-    expect(retryQuery(0, problem(503))).toBe(true);
-    expect(retryQuery(1, problem(503))).toBe(true);
-    expect(retryQuery(2, problem(503))).toBe(false);
+    const unavailable = problem(503, "service_unavailable");
+    expect(retryQuery(0, unavailable)).toBe(true);
+    expect(retryQuery(1, unavailable)).toBe(true);
+    expect(retryQuery(2, unavailable)).toBe(false);
   });
 
   it("never retries a refusal the server has settled, however early", () => {
@@ -51,19 +52,39 @@ describe("the query retry policy", () => {
     // it for a surface the contract specifies and this build does not wire —
     // so a retry here is three requests and three console errors for one
     // settled answer, read first by an operator looking for a real fault.
-    for (const status of [501, 505]) {
-      expect(retryQuery(0, problem(status)), String(status)).toBe(false);
+    for (const [status, code] of [
+      [501, "not_implemented"],
+      [505, undefined],
+    ] as const) {
+      expect(retryQuery(0, problem(status, code)), String(status)).toBe(false);
     }
     // And the neighbours are still retried, so the exclusion is these two
     // rather than a range that swallowed them.
-    for (const status of [500, 502, 503, 504]) {
-      expect(retryQuery(0, problem(status)), String(status)).toBe(true);
+    for (const [status, code] of [
+      [500, "internal"],
+      [502, "provider_unusable"],
+      [503, "service_unavailable"],
+      [504, undefined],
+    ] as const) {
+      expect(retryQuery(0, problem(status, code)), String(status)).toBe(true);
     }
   });
 
+  it("never retries a host calendar the server could not read", () => {
+    expect(retryQuery(0, problem(502, "calendar_unavailable"))).toBe(false);
+  });
+
   it("never retries a client error, however early the failure", () => {
-    for (const status of [400, 401, 403, 404, 409, 422, 429]) {
-      expect(retryQuery(0, problem(status)), String(status)).toBe(false);
+    for (const [status, code] of [
+      [400, "invalid_argument"],
+      [401, "unauthorized"],
+      [403, "permission_denied"],
+      [404, "not_found"],
+      [409, "conflict"],
+      [422, "validation_error"],
+      [429, "rate_limited"],
+    ] as const) {
+      expect(retryQuery(0, problem(status, code)), String(status)).toBe(false);
     }
   });
 
@@ -93,11 +114,16 @@ describe("the query client defaults", () => {
   // kinds of key, because what a change could get wrong is one kind while the
   // other stays right.
   //
-  // The predicates, not the defaults they are installed as: what they are
-  // wired to is proved end to end in screens/liverecord.test.tsx, by driving
-  // each record page's own read through this client.
+  // The predicates, not the defaults they are installed as. What they are
+  // wired to is proved end to end in features/records/liverecord.test.tsx,
+  // which drives each record page's own read through this client.
   it("repeats a record read, and nothing else", () => {
     expect(liveInterval({ queryKey: ["contact360", "p-1"] })).toBe(60_000);
+    expect(liveInterval({ queryKey: ["contact", "p-1"] })).toBe(60_000);
+    expect(liveInterval({ queryKey: ["company", "o-1"] })).toBe(60_000);
+    expect(liveInterval({ queryKey: ["contact", "p-1", "employer"] })).toBe(
+      false,
+    );
     expect(liveInterval({ queryKey: ["me", "ai-activity"] })).toBe(false);
   });
 

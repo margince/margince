@@ -1,0 +1,439 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import { useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import type { components } from "../../api/schema";
+import { useUnsavedGuard } from "../../components/unsaved";
+import { Button, TextInput } from "../../design-system/atoms";
+import { Callout } from "../../design-system/callout";
+import { describedByIds } from "../../design-system/describedby";
+import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
+import { QueryGate } from "../../design-system/querystates";
+import { Select } from "../../design-system/select";
+import { SettingList, SettingRow } from "../../design-system/settingrow";
+import { StatCard } from "../../design-system/statcard";
+import { StatStrip } from "../../design-system/statstrip";
+import { boundsText } from "../../format/bounds";
+import { formatDateTime, formatNumber } from "../../format/format";
+import { formatInterval } from "../../format/interval";
+import { type FieldLock, lockFor } from "../../format/settinglocks";
+import { UTC_ZONE } from "../../format/timezone";
+import { type Locale, type Translator, useLocale, useT } from "../../i18n";
+import { useCan, useCanWrite } from "../../lib/capability";
+import { problemMessageOf } from "../../lib/problem";
+import { useInstallationSettings } from "../../lib/uploadlimit";
+import { useUpdateInstallationSettings } from "../sign-in/installation-settings";
+import {
+  AGENT_ALLOWANCE_BOUNDS,
+  type Allowances,
+  COUNTS,
+  type Counts,
+  changesOf,
+  chosenWindow,
+  type Draft,
+  defaultsDraft,
+  draftOf,
+  hasRefusal,
+  parseDraft,
+} from "./agentallowances.draft";
+import { useResetLine } from "./agentusage";
+
+type Locks = components["schemas"]["InstallationSettings"]["locks"];
+
+// The lengths an admin picks from. The one already saved is added when it is
+// not among them, so a value set through the API still shows and keeps.
+const WINDOW_PRESETS = [1, 6, 12, 24, 168] as const;
+
+// What one passport may do in each window: the values at rest, and an edit
+// form behind a button. A count binds within a minute, a window length at the
+// next reset.
+export function AgentAllowancesCard() {
+  const t = useT();
+  const canRead = useCan("installation_settings", "read");
+  const canManage = useCanWrite("installation_settings", "update");
+  const query = useInstallationSettings(canRead);
+  if (!canRead) {
+    return null;
+  }
+  const title = t("agentAllowances.title");
+  return (
+    <Panel title={title}>
+      <PanelBody className="form-stack">
+        <PanelIntro>{t("agentAllowances.sub")}</PanelIntro>
+        {!canManage && <PanelIntro>{t("operations.adminOnly")}</PanelIntro>}
+      </PanelBody>
+      <QueryGate query={query} pendingLabel={title}>
+        {(settings) => {
+          // A server older than this screen answers without them.
+          if (settings.agent_allowances == null) {
+            return null;
+          }
+          return (
+            <AllowancesBody
+              allowances={settings.agent_allowances}
+              locks={settings.locks}
+              canManage={canManage}
+            />
+          );
+        }}
+      </QueryGate>
+    </Panel>
+  );
+}
+
+// Edit's refusal when a boot source sets every allowance, each reason once:
+// the form would open with nothing in it to change.
+function lockedEditReason(locks: Locks, t: Translator): string | undefined {
+  const properties = [
+    ...COUNTS.map((row) => row.property),
+    "agent_window_hours",
+  ];
+  const reasons = properties.map((property) => {
+    const lock = lockFor(locks, `installation.${property}`, t);
+    return lock.disabled ? lock.reason : null;
+  });
+  if (reasons.includes(null)) {
+    return undefined;
+  }
+  return [...new Set(reasons)].join(" ");
+}
+
+function AllowancesBody({
+  allowances,
+  locks,
+  canManage,
+}: Readonly<{ allowances: Allowances; locks: Locks; canManage: boolean }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const queryClient = useQueryClient();
+  const [draft, setDraft] = useState<Draft | null>(null);
+  useUnsavedGuard(draft !== null);
+  // A new allowance is the limit every usage bar is drawn against.
+  const update = useUpdateInstallationSettings(() => {
+    setDraft(null);
+    for (const key of [["passports"], ["agent-usage"]]) {
+      void queryClient.invalidateQueries({ queryKey: key });
+    }
+  });
+  const resetLine = useResetLine();
+  return (
+    <>
+      {draft === null ? (
+        <AllowanceReadout allowances={allowances} locale={locale} />
+      ) : (
+        <AllowanceForm
+          allowances={allowances}
+          locks={locks}
+          draft={draft}
+          locale={locale}
+          busy={update.isPending}
+          onDraft={setDraft}
+          onSave={(patch) => update.mutate(patch)}
+          onCancel={() => {
+            setDraft(null);
+            update.reset();
+          }}
+        />
+      )}
+      <PanelBody className="form-stack">
+        <p className="t-caption">
+          {t("agentAllowances.windowLine", {
+            interval: formatInterval(
+              allowances.agent_window_hours * 3_600,
+              locale,
+            ),
+          })}
+          {" · "}
+          {resetLine(allowances.agent_window_resets_at)}
+        </p>
+        <PendingWindow allowances={allowances} />
+        {draft === null && <DefaultsNote allowances={allowances} />}
+        {draft === null && canManage && (
+          <div className="card-actions">
+            <Button
+              reason={lockedEditReason(locks, t)}
+              onClick={() => {
+                update.reset();
+                setDraft(draftOf(allowances));
+              }}
+            >
+              {t("agentAllowances.edit")}
+            </Button>
+          </div>
+        )}
+        {update.isError && (
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("operations.updateFailed")}
+          >
+            {problemMessageOf(update.error, t)}
+          </Callout>
+        )}
+        <p className="t-caption">
+          {t("agentAllowances.burst", {
+            calls: formatNumber(allowances.mcp_calls_per_minute, locale),
+            streams: formatNumber(
+              allowances.mcp_stream_opens_per_minute,
+              locale,
+            ),
+          })}
+        </p>
+      </PanelBody>
+    </>
+  );
+}
+
+function AllowanceReadout({
+  allowances,
+  locale,
+}: Readonly<{ allowances: Allowances; locale: Locale }>) {
+  const t = useT();
+  return (
+    <StatStrip testId="allowance-readout">
+      {COUNTS.map((row) => (
+        <StatCard
+          key={row.property}
+          label={t(`agentAllowances.${row.copy}.label`)}
+          value={formatNumber(allowances[row.property], locale)}
+          detail={t(
+            row.release
+              ? "agentAllowances.note.release"
+              : "agentAllowances.note.stop",
+          )}
+        />
+      ))}
+    </StatStrip>
+  );
+}
+
+// Says in words whether any value is off its default, so a reader of the plain
+// numbers knows if they are looking at what ships.
+function DefaultsNote({ allowances }: Readonly<{ allowances: Allowances }>) {
+  const t = useT();
+  const atDefaults =
+    COUNTS.every(
+      (row) => allowances[row.property] === allowances.defaults[row.property],
+    ) && chosenWindow(allowances) === allowances.defaults.agent_window_hours;
+  return (
+    <Callout
+      tone="info"
+      title={t(
+        atDefaults
+          ? "agentAllowances.state.defaults"
+          : "agentAllowances.state.changed",
+      )}
+    >
+      {t("agentAllowances.state.body")}
+    </Callout>
+  );
+}
+
+function AllowanceForm({
+  allowances,
+  locks,
+  draft,
+  locale,
+  busy,
+  onDraft,
+  onSave,
+  onCancel,
+}: Readonly<{
+  allowances: Allowances;
+  locks: Locks;
+  draft: Draft;
+  locale: Locale;
+  busy: boolean;
+  onDraft: (next: Draft) => void;
+  onSave: (
+    patch: Partial<Record<Counts | "agent_window_hours", number>>,
+  ) => void;
+  onCancel: () => void;
+}>) {
+  const t = useT();
+  const lockOf = (property: keyof Draft): FieldLock =>
+    lockFor(locks, `installation.${property}`, t);
+  const windowLock = lockOf("agent_window_hours");
+  const parsed = parseDraft(draft);
+  const patch = changesOf(allowances, parsed);
+  const changed = Object.keys(patch).length > 0;
+  return (
+    <>
+      <SettingList bleed="settings">
+        {COUNTS.map((row) => {
+          const refused = parsed[row.property] === null;
+          const lock = lockOf(row.property);
+          return (
+            <SettingRow
+              key={row.property}
+              label={t(`agentAllowances.${row.copy}.label`)}
+              description={t(`agentAllowances.${row.copy}.help`)}
+              control={(control) => (
+                <div className="settingrow-measure numbersetting">
+                  <TextInput
+                    {...control}
+                    className="t-num"
+                    data-testid={`allowance-${row.property}`}
+                    inputMode="numeric"
+                    aria-describedby={describedByIds(
+                      control["aria-describedby"],
+                      `${control.id}-note`,
+                    )}
+                    aria-invalid={refused ? true : undefined}
+                    value={draft[row.property]}
+                    disabled={busy || lock.disabled}
+                    onChange={(e) =>
+                      onDraft({ ...draft, [row.property]: e.target.value })
+                    }
+                  />
+                  <span id={`${control.id}-note`} className="t-caption">
+                    {lock.disabled
+                      ? lock.reason
+                      : refused
+                        ? t(
+                            "operations.refusal.count",
+                            boundsText(
+                              AGENT_ALLOWANCE_BOUNDS[row.property],
+                              locale,
+                            ),
+                          )
+                        : t("agentAllowances.default", {
+                            value: formatNumber(
+                              allowances.defaults[row.property],
+                              locale,
+                            ),
+                          })}
+                  </span>
+                </div>
+              )}
+            />
+          );
+        })}
+        <SettingRow
+          label={t("agentAllowances.window.label")}
+          description={
+            windowLock.disabled
+              ? windowLock.reason
+              : t("agentAllowances.window.help")
+          }
+          control={(control) => (
+            <Select
+              {...control}
+              value={draft.agent_window_hours}
+              disabled={busy || windowLock.disabled}
+              options={windowOptions(allowances, locale)}
+              onChange={(value) =>
+                onDraft({ ...draft, agent_window_hours: value })
+              }
+              testId="allowance-agent_window_hours"
+            />
+          )}
+        />
+      </SettingList>
+      <PanelBody className="form-stack">
+        {changed && (
+          <Diff allowances={allowances} patch={patch} locale={locale} />
+        )}
+        <div className="form-actions">
+          <Button
+            variant="primary"
+            disabled={!changed || hasRefusal(parsed)}
+            pending={busy}
+            onClick={() => onSave(patch)}
+          >
+            {t("agentAllowances.save")}
+          </Button>
+          <Button disabled={busy} onClick={onCancel}>
+            {t("agentAllowances.cancel")}
+          </Button>
+          <Button
+            disabled={busy}
+            onClick={() =>
+              onDraft(
+                defaultsDraft(
+                  allowances,
+                  (property) => lockOf(property).disabled,
+                ),
+              )
+            }
+          >
+            {t("agentAllowances.useDefaults")}
+          </Button>
+        </div>
+      </PanelBody>
+    </>
+  );
+}
+
+function windowOptions(allowances: Allowances, locale: Locale) {
+  const hours = new Set<number>([...WINDOW_PRESETS, chosenWindow(allowances)]);
+  return [...hours]
+    .sort((a, b) => a - b)
+    .map((value) => ({
+      value: String(value),
+      label: formatInterval(value * 3_600, locale),
+    }));
+}
+
+// What a save would do, before it does it. A count binds within a minute; a
+// window length waits for the next reset, and the line says so.
+function Diff({
+  allowances,
+  patch,
+  locale,
+}: Readonly<{
+  allowances: Allowances;
+  patch: Partial<Record<Counts | "agent_window_hours", number>>;
+  locale: Locale;
+}>) {
+  const t = useT();
+  const lines = COUNTS.flatMap((row) => {
+    const next = patch[row.property];
+    return next === undefined
+      ? []
+      : [
+          t("agentAllowances.diff.count", {
+            label: t(`agentAllowances.${row.copy}.label`),
+            from: formatNumber(allowances[row.property], locale),
+            to: formatNumber(next, locale),
+          }),
+        ];
+  });
+  const hours = patch.agent_window_hours;
+  return (
+    <Callout tone="warning" title={t("agentAllowances.diff.title")}>
+      {lines.length > 0 && <p>{lines.join(" · ")}</p>}
+      {lines.length > 0 && <p>{t("agentAllowances.diff.counts")}</p>}
+      {hours !== undefined && (
+        <p>
+          {t("agentAllowances.diff.window", {
+            from: formatInterval(chosenWindow(allowances) * 3_600, locale),
+            to: formatInterval(hours * 3_600, locale),
+          })}
+        </p>
+      )}
+    </Callout>
+  );
+}
+
+// A saved window length that has not taken over yet. Said out loud, because
+// the readout still shows the length in force and a reader would think the
+// save did nothing.
+function PendingWindow({ allowances }: Readonly<{ allowances: Allowances }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const hours = allowances.agent_window_next_hours;
+  const from = allowances.agent_window_next_starts_at;
+  if (hours == null || from == null) {
+    return null;
+  }
+  return (
+    <Callout tone="info" title={t("agentAllowances.pending.title")}>
+      {t("agentAllowances.pending.body", {
+        interval: formatInterval(hours * 3_600, locale),
+        date: formatDateTime(from, locale, UTC_ZONE),
+      })}
+    </Callout>
+  );
+}

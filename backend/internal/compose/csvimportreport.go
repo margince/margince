@@ -17,6 +17,7 @@ package compose
 import (
 	"context"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 )
 
@@ -24,6 +25,15 @@ func refinePrediction(ctx context.Context, source *migration.CSVSource, writers 
 	p, err := predictPages(ctx, source, writers, object)
 	if err != nil {
 		return migration.Report{}, err
+	}
+	if report.ReviewPlan == nil {
+		report.ReviewPlan = &migration.ReviewPlan{Version: 1, Complete: true}
+	}
+	if !p.review.Complete {
+		report.ReviewPlan.Complete, report.ReviewPlan.Rows = false, nil
+	}
+	for _, row := range p.review.Rows {
+		report.ReviewPlan.Add(row)
 	}
 	for i := range report.Objects {
 		if report.Objects[i].Object != object {
@@ -34,27 +44,20 @@ func refinePrediction(ctx context.Context, source *migration.CSVSource, writers 
 		report.Objects[i].Unchanged = p.unchanged
 		report.Objects[i].Skipped = append(report.Objects[i].Skipped, p.skipped...)
 		report.Objects[i].Collisions = append(report.Objects[i].Collisions, p.collisions...)
+		report.Objects[i].Warnings = append(report.Objects[i].Warnings, p.warnings...)
 		report.Objects[i].WillDuplicate += p.duplicates
+		report.Objects[i].ClosedWon += p.closedWon
+		report.Objects[i].ClosedLost += p.closedLost
 	}
 	return withPredictedLinks(ctx, source, writers, report, p.absent)
 }
 
-// withPredictedLinks answers, before anything is written, how many of the
-// employer links the file asks for will actually find a company.
-//
-// The engine's own dry run counts edges OFFERED — it has no writer, so it cannot
-// resolve an endpoint. That number alone would tell a contact approving a file of
-// 12,000 contacts that 12,000 links are coming, when the truthful answer might be
-// 3,000 and 9,000 companies nobody has imported yet. So the resolvable half is
-// computed here through the SAME resolver the commit will use, and the names that
-// resolve to nothing are listed rather than counted — the answer a contact needs
-// is WHICH company was not found, because that is the row they have to go fix.
-//
-// Only the COMPANY end is resolved. At dry-run time no contact has landed, so the
-// contact end would answer "not imported" for every row, and predicting that would
-// be worse than saying nothing. The asymmetry is deliberate: a preview reports
-// what it can honestly know, and claiming more is the preview/commit disagreement
-// this whole pass exists to prevent.
+// withPredictedLinks adds how many of one part's employer links will find a
+// company. Parts add to one count, which predictEveryPart starts at zero.
+// The engine's dry run has no writer, so it counts links offered, not links
+// that resolve. This uses the commit's resolver and lists each unfound name,
+// the row a reader has to fix. Only the company end is resolved: no contact
+// has landed yet, so the contact end would read "not imported" on every row.
 func withPredictedLinks(ctx context.Context, source *migration.CSVSource, writers *csvWriters,
 	report migration.Report, absent []string,
 ) (migration.Report, error) {
@@ -73,91 +76,82 @@ func withPredictedLinks(ctx context.Context, source *migration.CSVSource, writer
 	for _, id := range absent {
 		willNotLand[id] = true
 	}
-	resolvable := 0
 	for _, edge := range edges {
 		if willNotLand[edge.FromID] {
-			report.AssociationsSkipped = append(report.AssociationsSkipped, migration.SkippedAssoc{
-				From:   edge.FromType + "/" + edge.FromID,
-				To:     edge.ToType + "/" + edge.ToID,
-				Reason: "this row will not be imported, so there is nobody to link to " + edge.ToID,
-			})
+			report.AssociationsSkipped = append(report.AssociationsSkipped,
+				skippedAssocFor(edge, migration.Why(migration.ReasonLinkRowNotImported, "name", edge.ToID)))
 			continue
 		}
-		resolved, err := writers.resolveEmployer(ctx, edge.ToID)
+		why, err := writers.predictLink(ctx, edge)
 		if err != nil {
 			return migration.Report{}, err
 		}
-		if resolved.found {
-			resolvable++
+		if why.Code == "" {
+			report.Associations++
 			continue
 		}
-		report.AssociationsSkipped = append(report.AssociationsSkipped, migration.SkippedAssoc{
-			From:   edge.FromType + "/" + edge.FromID,
-			To:     edge.ToType + "/" + edge.ToID,
-			Reason: resolved.reason,
-		})
+		report.AssociationsSkipped = append(report.AssociationsSkipped, skippedAssocFor(edge, why))
 	}
-	report.Associations = resolvable
 	return report, nil
 }
 
+// skippedAssocFor is the report's line for an edge left unapplied for why.
+func skippedAssocFor(edge migration.Assoc, why migration.Reason) migration.SkippedAssoc {
+	return migration.SkippedAssoc{
+		From: edge.FromType + "/" + edge.FromID, To: edge.ToType + "/" + edge.ToID,
+		Reason: why.English(), Code: why.Code, Params: why.Params,
+	}
+}
+
+// predictLink answers why an edge will not find its company, or the zero
+// reason when it will. A company_ref goes through the run's resolver, which counts a company of
+// this upload. A company name goes through the name match the commit runs.
+func (w *csvWriters) predictLink(ctx context.Context, edge migration.Assoc) (migration.Reason, error) {
+	if edge.ToType == migration.AssocTargetCompanyRef {
+		answer, err := w.links.resolveCompany(ctx, edge.ToID)
+		if err != nil || answer.resolves() {
+			return migration.Reason{}, err
+		}
+		return answer.Why, nil
+	}
+	resolved, err := w.resolveEmployer(ctx, edge.ToID)
+	if err != nil || resolved.found {
+		return migration.Reason{}, err
+	}
+	return resolved.why, nil
+}
+
 // predictPages walks the source and tallies what the commit would do with each
-// row, page by page, the same way the engine will walk it.
+// row, page by page, the same way the engine will walk it. A row predicted to
+// land is marked pending, so a later file's link to it resolves.
 func predictPages(ctx context.Context, source *migration.CSVSource, writers *csvWriters, object string) (p prediction, err error) {
-	collision, skipReason := collisionWordingFor(object)
+	p.review = migration.ReviewPlan{Version: 1, Complete: true}
 	for offset := 0; ; offset += importPredictPage {
 		rows, err := source.Rows(ctx, object, offset, importPredictPage)
 		if err != nil {
 			return prediction{}, err
 		}
+		if err := writers.readPageEmails(ctx, rows); err != nil {
+			return prediction{}, err
+		}
 		for _, row := range rows {
-			outcome, refusal, err := writers.predictRow(ctx, row)
+			outcome, problem, err := writers.predictRow(ctx, row)
 			if err != nil {
 				return prediction{}, err
 			}
-			switch outcome {
-			case predictCreate:
-				p.created++
-			case predictUpdate:
-				p.updated++
-			case predictUnchanged:
-				p.unchanged++
-			case predictUnwritable:
-				p.absent = append(p.absent, row.ExternalID)
-				// Disclosed as a skip rather than counted as a create: the
-				// commit will refuse this row, and the report exists to say so
-				// before a human approves it.
-				p.skipped = append(p.skipped, migration.SkippedRow{
-					ExternalID: row.ExternalID,
-					Line:       row.Line,
-					Reason:     refusal,
-				})
-			case predictCollidesSkipped:
-				p.absent = append(p.absent, row.ExternalID)
-				// The run asked to skip duplicates, so this row is a skip and
-				// the preview says so — the commit must not be the first place
-				// a contact learns the row did not land.
-				p.duplicates++
-				p.skipped = append(p.skipped, migration.SkippedRow{
-					ExternalID: row.ExternalID,
-					Line:       row.Line,
-					Reason:     skipReason,
-				})
-			case predictCollides:
-				p.duplicates++
-				// Still a create — the commit lands it and files a review pair
-				// — so it is counted as one. The warning rides separately:
-				// Skipped is load-bearing arithmetic (the contract's four
-				// counts sum to rows_read, and `unchanged` is derived by
-				// subtracting them), so a row counted as BOTH created and
-				// skipped would report two outcomes for one row.
-				p.created++
-				p.collisions = append(p.collisions, migration.SkippedRow{
-					ExternalID: row.ExternalID,
-					Line:       row.Line,
-					Reason:     collision,
-				})
+			if p.review.Complete {
+				review, err := writers.reviewRow(ctx, row, outcome)
+				if err != nil {
+					return prediction{}, err
+				}
+				p.review.Add(review)
 			}
+			if !p.tally(object, row, outcome, problem) {
+				writers.links.markRefused(object, row.ExternalID)
+				continue
+			}
+			p.countClosedDeal(writers.dealStages, object, row, outcome)
+			writers.markPredictedRow(row, outcome)
 		}
 		if len(rows) < importPredictPage {
 			return p, nil
@@ -165,41 +159,76 @@ func predictPages(ctx context.Context, source *migration.CSVSource, writers *csv
 	}
 }
 
-// collisionDisclosure is what the report says about a row naming a company the
-// CRM already holds. It is not a refusal: the commit creates the row and files
-// the pair on the dedupe review queue, exactly as a manual create would. The
-// disclosure exists so a reader reading "create 3" before approving is not
-// surprised by a duplicate afterwards.
-const collisionDisclosure = "a company of this name is already in the CRM; " +
-	"importing this row creates a second one and files the pair for review"
-
-// duplicateSkipReason is what the report says about a row the run chose to
-// leave alone, under `on_duplicate: skip`.
-const duplicateSkipReason = "a company of this name is already in the CRM, and this run was asked to skip duplicates"
-
-// The same two sentences for a contact run, which must not tell its reader that a
-// company was found.
-//
-// The disclosure is not merely the company one with a noun swapped. An address
-// the estate already holds is REFUSED by the store — uq_contact_email_dedupe is a
-// real key, where a company name is not — so promising "a second one is created"
-// would be false for the very case a reader is most likely to hit.
-const contactCollisionDisclosure = "someone matching this row is already in the CRM; " +
-	"a row naming an address already held is refused, and a near match creates and files the pair for review"
-
-const contactDuplicateSkipReason = "someone matching this row is already in the CRM, and this run was asked to skip duplicates"
-
-// collisionWordingFor names the sentences that match what this run imports.
-func collisionWordingFor(object string) (disclosure, skipReason string) {
-	if object == migration.ObjectContact {
-		return contactCollisionDisclosure, contactDuplicateSkipReason
+// tally counts one row's predicted outcome and answers whether the row lands.
+func (p *prediction) tally(object string, row migration.Row, outcome predictedOutcome, problem *migration.SkippedRow) bool {
+	collision, skipWhy := collisionWordingFor(object)
+	switch outcome {
+	case predictUnwritable:
+		p.absent = append(p.absent, row.ExternalID)
+		// Disclosed as a skip rather than counted as a create. The commit will
+		// refuse this row, and the report says so before a human approves it.
+		p.skipped = append(p.skipped, *problem)
+		return false
+	case predictCollidesSkipped:
+		p.absent = append(p.absent, row.ExternalID)
+		// The run asked to skip duplicates, so the preview reports this row as a
+		// skip. The commit must not be the first place a contact learns of it.
+		p.duplicates++
+		p.skipped = append(p.skipped, migration.SkippedRow{ExternalID: row.ExternalID, Line: row.Line}.Because(skipWhy))
+		return false
+	case predictCollides:
+		p.duplicates++
+		// Still a create (the commit lands it and files a review pair), so it is
+		// counted as one, with the warning kept apart. The four counts sum to
+		// rows_read, so a row counted as created and skipped reports two outcomes.
+		p.created++
+		p.collisions = append(p.collisions, migration.SkippedRow{ExternalID: row.ExternalID, Line: row.Line}.Because(collision))
+	case predictUpdate:
+		p.updated++
+	case predictUnchanged:
+		p.unchanged++
+	case predictCreate:
+		p.created++
 	}
-	return collisionDisclosure, duplicateSkipReason
+	if problem != nil {
+		p.warnings = append(p.warnings, *problem)
+	}
+	return true
+}
+
+// countClosedDeal tallies a deal that will be created on a won or lost stage,
+// which the commit writes as closed history.
+func (p *prediction) countClosedDeal(stages dealStages, object string, row migration.Row, outcome predictedOutcome) {
+	if object != migration.ObjectDeal || (outcome != predictCreate && outcome != predictCollides) {
+		return
+	}
+	choice, named, _ := stages.stageOf(textFields(row.Fields))
+	switch {
+	case !named:
+	case choice.semantic == crmcontracts.StageSemanticWon:
+		p.closedWon++
+	case choice.semantic == crmcontracts.StageSemanticLost:
+		p.closedLost++
+	}
+}
+
+// collisionWordingFor names two reasons. The disclosure is for a row that lands
+// beside a record the estate holds. The skip is for a row the run leaves alone.
+//
+// The contact disclosure is not the company one with a noun swapped. The store
+// refuses an address it already holds, where a company name is no key. Promising
+// "a second one is created" would be false for the case a reader most often hits.
+func collisionWordingFor(object string) (disclosure, skip migration.Reason) {
+	if object == migration.ObjectContact {
+		return contactCollisionWhy, contactDuplicateSkipWhy
+	}
+	return companyCollisionWhy, companyDuplicateSkipWhy
 }
 
 // prediction is what one walk of the source concluded: the three outcomes a
 // commit can have, plus the rows it will refuse outright.
 type prediction struct {
+	review    migration.ReviewPlan
 	created   int
 	updated   int
 	unchanged int
@@ -212,7 +241,12 @@ type prediction struct {
 	// duplicate this run asked to skip. Their employer links cannot be written,
 	// so the preview must not count them as resolvable.
 	absent []string
+	// warnings are rows that land with something reported about them, such
+	// as a dropped link.
+	warnings []migration.SkippedRow
 	// duplicates counts the same rows. It is reported to the human as its own
 	// number ("100 companies, 94 duplicates") and never summed with the four.
 	duplicates int
+	// closedWon and closedLost count the new deals that land already closed.
+	closedWon, closedLost int
 }

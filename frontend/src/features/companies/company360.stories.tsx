@@ -1,0 +1,655 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { components } from "../../api/schema";
+import { company360 } from "../../testing/company.fixtures";
+import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+  StoryProviders,
+} from "../../testing/story-utils";
+import {
+  DealsCard,
+  NextSteps,
+  ProposedNextSteps,
+  StateStrip,
+} from "./company360";
+
+// The company view's Panel-shaped cards, rendered straight from a payload
+// rather than through the screen — so the three answers a card can give are
+// visible side by side: here it is, there is none, and your role cannot
+// read this.
+//
+// This gallery is what the live stack CANNOT show: every seeded demo
+// account grants the viewer full RBAC and omits nothing, so SectionWithheld
+// is a state no browser session reaches. It is real — a role scoped to
+// fewer objects hits it on every 360 read that names a section it may not
+// see — and this is the only place it can be looked at.
+
+const meta: Meta = {
+  title: "Records/Company 360/Cards",
+  parameters: { layout: "padded" },
+};
+export default meta;
+
+type Story = StoryObj;
+type View = components["schemas"]["Company360"];
+type FinanceSummary = components["schemas"]["CompanyFinanceSummary"];
+
+const page = { has_more: false, next_cursor: null };
+
+const populated: View = {
+  ...company360,
+  as_of: "2026-07-13T09:00:00Z",
+  company: {
+    id: "o-1",
+    display_name: "Brandt Automotive GmbH",
+    lifecycle: "customer",
+    captured_by: "human:u1",
+    source: "manual",
+    created_at: "2026-06-01T08:00:00Z",
+    updated_at: "2026-06-01T08:00:00Z",
+  },
+  sections_omitted: [],
+  suggestions_dropped: 0,
+  // Two suggestions from two different rules, so the card shows what makes it
+  // useful: each row's own reason, and its own evidence.
+  suggestions: [
+    {
+      kind: "stalled_deal",
+      reason:
+        '"Fleet retrofit 2026" has had no activity long enough to count as stalled.',
+      fingerprint: "fp-1",
+      subject_type: "deal",
+      subject_id: "d-1",
+      evidence: [{ entity_type: "deal", entity_id: "d-1" }],
+    },
+    {
+      kind: "no_reply",
+      reason: "You reached out 11 days ago and nobody has come back.",
+      fingerprint: "fp-2",
+      evidence: [{ entity_type: "activity", entity_id: "a-1" }],
+    },
+  ],
+  contacts: {
+    data: [
+      {
+        contact_id: "p-1",
+        full_name: "Dana Buyer",
+        title: "Head of Fleet",
+        primary_email: "dana@brandt.example",
+        deal_roles: [{ deal_id: "d-1", role: "champion" }],
+        consent: { marketing_email: "granted" },
+        strength: {
+          score: 71,
+          bucket: "strong",
+          factors: {
+            recency: 0.9,
+            frequency: 0.6,
+            reciprocity: 0.8,
+            direction: 0.8,
+          },
+        },
+      },
+      {
+        contact_id: "p-2",
+        full_name: "Kim Ops",
+        title: "Operations",
+        deal_roles: [],
+        consent: { marketing_email: "unknown" },
+        strength: {
+          score: 18,
+          bucket: "weak",
+          factors: {
+            recency: 0.3,
+            frequency: 0.1,
+            reciprocity: 0.5,
+            direction: 0.4,
+          },
+        },
+      },
+    ],
+    page,
+  },
+  deals: {
+    data: [
+      {
+        deal_id: "d-1",
+        name: "Fleet retrofit 2026",
+        status: "open",
+        stage_name: "Proposal",
+        amount: { amount_minor: 4_800_000, currency: "EUR" },
+        stalled: false,
+        // The named reason. A deal carrying one never also reads "stalled":
+        // an overdue task IS a reason, and a stall is the absence of one.
+        attention: {
+          kind: "overdue_task",
+          title: "Send the retrofit quote",
+          who: "Ida Keller",
+          due_at: "2026-07-02T09:00:00Z",
+        },
+      },
+      {
+        deal_id: "d-2",
+        name: "Depot pilot",
+        status: "open",
+        stage_name: "Discovery",
+        amount: { amount_minor: 900_000, currency: "EUR" },
+        stalled: true,
+      },
+    ],
+    page,
+    won_lifetime: { amount_minor: 12_000_000, currency: "EUR" },
+    lost_count: 1,
+  },
+  // Two projects, three of the work card's shapes: a commitment they made and
+  // have not kept, a project nobody has filed against, and one with neither.
+  projects: [
+    {
+      project_id: "pr-1",
+      name: "Depot fit-out",
+      key: "DEP-12",
+      phase: "delivering",
+      target_end_date: "2026-09-30",
+      quiet: false,
+      attention: {
+        kind: "commitment_theirs",
+        title: "we'll confirm the depot slot once facilities sign off",
+        who: "Ida Keller",
+        due_at: "2026-07-10T09:00:00Z",
+        source_activity_id: "a-1",
+      },
+    },
+    {
+      project_id: "pr-2",
+      name: "Telemetry pilot",
+      key: "TEL-3",
+      phase: "pursuing",
+      last_activity_at: "2026-05-20T09:00:00Z",
+      quiet: true,
+    },
+  ],
+  projects_page: page,
+  activities: {
+    data: [
+      {
+        id: "a-1",
+        kind: "email",
+        direction: "outbound",
+        subject: "Re: retrofit timeline",
+        occurred_at: "2026-07-12T10:00:00Z",
+        is_done: true,
+        source: "manual",
+        captured_by: "human:u-1",
+        created_at: "2026-07-12T10:00:00Z",
+        updated_at: "2026-07-12T10:00:00Z",
+        links: [{ entity_type: "deal", entity_id: "d-1" }],
+      },
+    ],
+    page,
+  },
+  next_steps: {
+    data: [
+      {
+        activity_id: "a-2",
+        subject: "Send the renewal paperwork",
+        due_at: "2026-07-01T09:00:00Z",
+        overdue: true,
+        linked_deal_id: null,
+        linked_contact_id: null,
+        assignee_id: null,
+      },
+      {
+        activity_id: "a-3",
+        subject: "Confirm the depot walkthrough date",
+        due_at: "2026-08-04T09:00:00Z",
+        overdue: false,
+        linked_deal_id: null,
+        linked_contact_id: null,
+        assignee_id: null,
+      },
+    ],
+    page,
+  },
+  pending_approvals: { data: [], page },
+  tags: [{ id: "t-1", name: "Key account" }],
+  since_last_visit: {
+    baseline_at: "2026-07-10T09:00:00Z",
+    new_activities: 2,
+    deal_stage_moves: 1,
+    pending_proposals: 0,
+  },
+  state_strip: {
+    account: { lifecycle: "customer", relationship_types: ["customer"] },
+    engagement: {
+      state: "active",
+      last_inbound_at: "2026-07-11T09:00:00Z",
+      last_outbound_at: "2026-07-12T09:00:00Z",
+    },
+    commercial: {
+      open_count: 2,
+      stalled_count: 1,
+      priced_count: 2,
+      converted_count: 0,
+      open_pipeline_minor_base: 5_700_000,
+      base_currency: "EUR",
+      next_close_on: "2026-08-15",
+    },
+    // What the account is already SIGNED for, beside the pipeline that is
+    // still moving. Both bases are present because the panel must show them
+    // apart: a three-year total and a per-year figure span different periods,
+    // and one figure covering both would describe nothing.
+    contracts: {
+      active_count: 2,
+      priced_count: 2,
+      cancellation_pending: false,
+      base_currency: "EUR",
+      total_basis_value_minor_base: 30_000_000,
+      annualized_value_minor_base: 12_000_000,
+      nearest_renewal_on: "2027-03-01",
+    },
+  },
+  // Two rated dimensions, not one: HealthSummaryStat's verdict is a worst-of
+  // over relationship, commercial and payment, and a fixture that only ever
+  // rated one dimension could never show the "N of 3 rated" count meaning
+  // anything. Days-since-inbound matches the engagement block's own
+  // last_inbound_at (as_of minus two days), and reply_balance sits inside the
+  // 0.34-0.66 band on purpose: that is the branch HealthStat calls "Balanced"
+  // rather than one-sided, so the fixture exercises the reading the state
+  // strip most often shows for a healthy account.
+  health: {
+    relationship: {
+      rating: "strong",
+      reason: "Two contacts active, replies arrive within a day.",
+    },
+    commercial: {
+      rating: "good",
+      reason: "One deal stalled, the other moving on schedule.",
+    },
+    days_since_last_inbound: 2,
+    reply_balance: 0.5,
+    last_meeting_at: "2026-07-05T14:00:00Z",
+    active_contacts: 2,
+    single_threaded: false,
+    open_commitments: 1,
+  },
+};
+
+// The same account read by someone whose role cannot see deals, contacts or
+// the state strip: each card says so rather than reading as an account with
+// no pipeline, no contacts and no standing. This is the state no seeded demo
+// account can reach — every one of them grants the viewer full RBAC — so
+// this gallery is the only place a reader ever sees it rendered.
+const withheld: View = {
+  ...company360,
+  ...populated,
+  deals: undefined,
+  contacts: undefined,
+  state_strip: undefined,
+  sections_omitted: ["deals", "contacts", "state_strip"],
+  // The reasons are a separate grant from the rows: this reader can list the
+  // projects and cannot read the conversations behind them, so the card shows
+  // the rows and says the statuses are incomplete.
+  attention_withheld: true,
+};
+
+// An account nobody has worked yet — every card in its own empty state.
+const empty: View = {
+  ...company360,
+  ...populated,
+  contacts: { data: [], page },
+  deals: {
+    data: [],
+    page,
+    won_lifetime: { amount_minor: 0, currency: "EUR" },
+    lost_count: 0,
+  },
+  projects: [],
+  projects_page: page,
+  activities: { data: [], page },
+  next_steps: { data: [], page },
+  // Nothing to advise on a dormant account: the card renders nothing at all,
+  // which is the state this story exists to show.
+  suggestions: [],
+  tags: [],
+  since_last_visit: {
+    baseline_at: null,
+    new_activities: 0,
+    deal_stage_moves: 0,
+    pending_proposals: 0,
+  },
+};
+
+function Cards({ view }: Readonly<{ view: View }>) {
+  installFetchStub({
+    "GET /me": meRoute({ company: ["read", "update"] }),
+    "GET /signals": () => jsonResponse({ data: [], page }),
+    // The prepared questions answer from the account; the story serves the
+    // deterministic floor, which is what a deployment with no model lane shows.
+    "POST /companies/o-1/ask": () =>
+      jsonResponse({
+        company_id: "o-1",
+        question: "whats_open",
+        generated_at: "2026-07-13T09:00:00Z",
+        generated_by: "deterministic",
+        // The answer follows the account the story renders: an account with no
+        // deals must not answer with one, or the empty-state story shows a
+        // populated card.
+        sentences: view.deals?.data?.length
+          ? [
+              {
+                text: "2 open deal(s) worth about 57000 EUR.",
+                evidence: [{ entity_type: "deal", entity_id: "d-1" }],
+              },
+            ]
+          : [],
+      }),
+  });
+  return (
+    <StoryProviders>
+      <div style={{ display: "grid", gap: "var(--space-3)", maxWidth: 420 }}>
+        <DealsCard view={view} />
+        <NextSteps view={view} />
+      </div>
+    </StoryProviders>
+  );
+}
+
+export const Populated: Story = { render: () => <Cards view={populated} /> };
+
+export const SectionWithheld: Story = {
+  render: () => <Cards view={withheld} />,
+};
+
+export const NothingYet: Story = { render: () => <Cards view={empty} /> };
+
+// The open-task list with a step nobody has accepted yet standing above it:
+// the account has an open deal, nothing is scheduled, and the rule that
+// noticed both has worked out the one thing to do about it. The byline and
+// the indigo verb are the claim the row makes — a machine wrote this sentence
+// — and pressing it writes the task the list beneath is currently empty of.
+//
+// No seeded demo account reaches this pairing, and for a structural reason:
+// every one of them already carries an open task, which is exactly the
+// condition that silences the rule.
+const recommending: View = {
+  ...company360,
+  ...populated,
+  next_steps: { data: [], page },
+  suggestions: [
+    {
+      kind: "no_next_step",
+      title: 'Agree the next step on "Fleet retrofit 2026"',
+      reason:
+        '"Fleet retrofit 2026" is open and no task says what happens next.',
+      fingerprint: "fp-3",
+      evidence: [{ entity_type: "deal", entity_id: "d-1" }],
+      action: {
+        kind: "add_task",
+        deal_id: "d-1",
+        task: {
+          subject: 'Agree the next step on "Fleet retrofit 2026"',
+          source: "manual",
+          links: [{ entity_type: "deal", entity_id: "d-1" }],
+        },
+      },
+    },
+  ],
+};
+
+function RecommendedStep() {
+  installFetchStub({
+    "GET /me": meRoute({ company: ["read", "update"] }),
+  });
+  return (
+    <StoryProviders>
+      <div style={{ display: "grid", gap: "var(--space-3)", maxWidth: 420 }}>
+        <NextSteps
+          view={recommending}
+          proposed={
+            <ProposedNextSteps
+              companyId="o-1"
+              view={recommending}
+              onOpenReceipt={() => undefined}
+            />
+          }
+        />
+      </div>
+    </StoryProviders>
+  );
+}
+
+export const NextStepRecommended: Story = {
+  render: () => <RecommendedStep />,
+};
+
+// A connected finance source, shaped exactly like companyfinance.stories.tsx's
+// own `connected` fixture: two stories reading the same wire shape must not
+// drift into two different ideas of what "connected" looks like. It carries the
+// windows the strip does NOT draw as well as the one it does, because the strip's
+// money slot is a glance at the trailing year and the wire it reads from is the
+// Finance tab's whole summary — a fixture holding only `net_invoiced` could not
+// show that the other figures stay off the row.
+// The lifetime total is larger than the trailing-year one on purpose: lifetime
+// is everything this account has ever been billed, so it can never read smaller
+// than one year's worth of it, and a slot that reached for the wrong window
+// would be visibly wrong rather than plausibly wrong.
+const connectedFinance: FinanceSummary = {
+  company_id: "o-1",
+  state: "connected",
+  provider: "offline_demo",
+  last_synced_at: "2026-08-10T06:00:00Z",
+  net_invoiced_lifetime: { amount_minor: 9_400_000, currency: "EUR" },
+  net_invoiced: { amount_minor: 1_864_200, currency: "EUR" },
+  open_balance: { amount_minor: 240_000, currency: "EUR" },
+  overdue: { amount_minor: 89_000, currency: "EUR" },
+  median_days_after_due: 4,
+};
+
+// The two lookups below are keyed on the real wire enums (Lifecycle,
+// RelationshipType), but StateStrip's own label props take a bare `string` —
+// StateStrip: the record's own readings row, above the tabs — FIVE slots on
+// every account, drawn by the shared StatStrip the contact record uses.
+//
+// Three of the four stories are states nothing seeded reaches. Withheld is the
+// whole-strip permission boundary, which no demo account carries. Connected is
+// the money figure and the provider name on its detail line, which the demo
+// stack's finance stub — always `no_connection` — never produces. And Unanswered
+// is the row where four of the five readings are absent: it is the state that
+// proves a slot with nothing to report still draws and still says which reading
+// it is missing, which is precisely what no populated fixture can show.
+//
+// `Strip` itself returns `<StoryProviders>`, so it sits outside the
+// LocaleProvider it renders and cannot call `useT` directly. `StripBody` is the
+// inner component that mounts inside that context. It mirrors the real caller's
+// label wiring (companyreading.tsx), so the story draws copy, not the wire enum.
+function StripBody({ view }: Readonly<{ view?: View }>) {
+  return <StateStrip companyId="o-1" view={view} />;
+}
+
+function Strip({
+  view,
+  finance = { company_id: "o-1", state: "no_connection" },
+}: Readonly<{ view?: View; finance?: FinanceSummary }>) {
+  installFetchStub({
+    "GET /me": meRoute({ company: ["read", "update"] }), // The customer branch's money slot reads this directly (MoneyStat) —
+    // the same query the finance card and the payment health dimension run —
+    // so a customer story with nothing stubbed here fires a real request the
+    // static build has nowhere to send.
+    "GET /companies/o-1/finance-summary": () => jsonResponse(finance),
+  });
+  return (
+    <StoryProviders>
+      {/* Room for the row to use, not a promise about its shape: the strip's
+          column count answers to the VIEWPORT, not to this box.
+          design-system/statstrip.css folds it to three columns at max-width
+          68rem (1088px), and the render gate shoots at 1024px wide
+          (frontend/scripts/fe-uat.mjs), so the captured screenshot is always
+          the three-column fold — five slots as three then two, which is the
+          fold this row is sized for. The single row is what opening Storybook
+          in a wide window shows. */}
+      <div style={{ maxWidth: 1200 }}>
+        <StripBody view={view} />
+      </div>
+    </StoryProviders>
+  );
+}
+
+export const StateStripPopulated: Story = {
+  render: () => <Strip view={populated} />,
+};
+
+// The customer row with a real accounting connection behind it: the money
+// figure and its provider name (MoneyStat's detail line) instead of the
+// "connect your accounting" fallback every other story here shows. The
+// overdue figure is also what pushes HealthSummaryStat's payment dimension
+// to "at_risk" (usePaymentHealth reads the same query), so this is the only
+// story where that slot carries a verdict rather than its denominator.
+export const StateStripConnected: Story = {
+  render: () => <Strip view={populated} finance={connectedFinance} />,
+};
+
+// The row with almost nothing to report, and still five slots: no open deals, no
+// expected close, no health section at all, and no finance connection. This is
+// the state where the rule the row is built on is visible — every slot says WHICH
+// reading it has none of, because a slot that vanished would leave the reader
+// unable to tell which one went missing.
+export const StateStripUnanswered: Story = {
+  render: () => (
+    <Strip
+      view={{
+        ...company360,
+        ...populated,
+        health: undefined,
+        state_strip: {
+          account: { lifecycle: "prospect", relationship_types: [] },
+          commercial: {
+            open_count: 0,
+            stalled_count: 0,
+            priced_count: 0,
+            converted_count: 0,
+          },
+        },
+      }}
+    />
+  ),
+};
+
+// Silence with nothing sent, and silence after we wrote. The reading carries
+// only the inbound side, so the two used to collapse into one sentence — and
+// the second of them, the account that is being ignored, is the one a rep acts
+// on. The outbound date is what tells them apart and what dates the reading.
+// The two silences, drawn one after the other: the first carries NO tone,
+// because an account nobody has approached is a fact about how far it has been
+// worked rather than bad news, and the second does.
+export const StateStripNoExchange: Story = {
+  render: () => (
+    <Strip
+      view={{
+        ...company360,
+        ...populated,
+        last_inbound_at: undefined,
+        last_outbound_at: undefined,
+        health: { days_since_last_inbound: null },
+      }}
+    />
+  ),
+};
+
+export const StateStripUnansweredExchange: Story = {
+  render: () => (
+    <Strip
+      view={{
+        ...company360,
+        ...populated,
+        last_inbound_at: undefined,
+        last_outbound_at: "2026-08-08T09:00:00Z",
+        health: { days_since_last_inbound: null },
+      }}
+    />
+  ),
+};
+
+// A quiet account. The slot says how long nothing has come back, in the same
+// words the unanswered slot uses — a share of the exchange would describe a
+// conversation that has stopped, so the reading carries one and does not say
+// it. The live rows below are where the share belongs.
+export const StateStripQuiet: Story = {
+  render: () => (
+    <Strip
+      view={{
+        ...company360,
+        ...populated,
+        health: { days_since_last_inbound: 62, reply_balance: 0.18 },
+      }}
+    />
+  ),
+};
+
+// The same balance on a relationship that is still running, which is the row
+// the share is a reading of: below a third coming from them is us talking to
+// ourselves, whatever the dates say.
+export const StateStripOneSided: Story = {
+  render: () => (
+    <Strip
+      view={{
+        ...company360,
+        ...populated,
+        health: { days_since_last_inbound: 3, reply_balance: 0.18 },
+      }}
+    />
+  ),
+};
+
+// The row at phone width, where every slot is one full-width ROW: label and
+// basis leading, figure on the trailing edge, one hairline between and no
+// boxes at all. Two-up here, a ten-character value ellipsized in the middle of
+// itself — "No exch…" — and the money made it worse, which is where decision
+// 13 came from. The figure is compact everywhere now and the fold does the
+// rest.
+export const StateStripPhone: Story = {
+  tags: ["uat-phone"],
+  render: () => <Strip view={populated} finance={connectedFinance} />,
+};
+
+// A former customer whose accounting IS connected and has billed nothing in
+// the window. The stage under the word is read rather than assumed — this slot
+// used to say "Customer" on an account that had stopped buying.
+export const StateStripFormerCustomerNothingBilled: Story = {
+  render: () => (
+    <Strip
+      view={{
+        ...company360,
+        ...populated,
+        state_strip: {
+          account: {
+            lifecycle: "former_customer",
+            relationship_types: ["customer"],
+          },
+          commercial: {
+            open_count: 0,
+            stalled_count: 0,
+            priced_count: 0,
+            converted_count: 0,
+          },
+        },
+      }}
+      finance={{ company_id: "o-1", state: "connected" }}
+    />
+  ),
+};
+
+export const StateStripWithheld: Story = {
+  render: () => (
+    <Strip
+      view={{
+        ...company360,
+        ...populated,
+        state_strip: undefined,
+        sections_omitted: ["state_strip"],
+      }}
+    />
+  ),
+};

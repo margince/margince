@@ -56,6 +56,7 @@ const (
 // What this list buys is that the divergence is now WRITTEN DOWN, per table,
 // and that a NEW one fails. #2205 carries the rulings.
 var clearedOnlyByTheEraser = gatekit.Waive(map[string]string{
+	"notice":                      "Copies of approval summaries remain when anonymization retains the source approvals. This follows the existing approval gap recorded under #2205; erasure clears both in one transaction.",
 	"erasure_suppression":         "THE difference the two acts are meant to have. An erased subject's identifiers are hashed onto the suppression list so a later capture cannot re-create them; an anonymized subject may lawfully return, so writing one would refuse a contact the product is allowed to know again.",
 	"activity_retention_evidence": "records WHY the statutory correspondence floor held a row back from an erasure. The anonymize applies no floor, so it holds nothing back and has nothing to record — an absence produced by the floor difference, not data surviving.",
 	"activity":                    "the subject's own words in an activity's content survive an anonymize; the eraser redacts them under the statutory correspondence floor. Anonymize applies no floor at all, so it is not that it keeps less — it never asked.",
@@ -70,6 +71,7 @@ var clearedOnlyByTheEraser = gatekit.Waive(map[string]string{
 	"deal_room_engagement":        "an anonymized subject's deal-room engagement records survives the action. Recorded as the state this gate froze, not as a decision that it is right — the ruling is #2205.",
 	"deal_room_participant":       "an anonymized subject's deal-room participant seats survives the action. Recorded as the state this gate froze, not as a decision that it is right — the ruling is #2205.",
 	"deal_room_session":           "an anonymized subject's deal-room sessions survives the action. Recorded as the state this gate froze, not as a decision that it is right — the ruling is #2205.",
+	"deal_stage_evidence":         "the quotation a deal's stage evidence holds of a message, cleared when the message's text is destroyed. The anonymize never empties an activity, so the words survive in the message and the quotation of them survives beside it: the same absence the `activity` entry records, one table further out.",
 	"lead":                        "the lead row is anonymized by the eraser's own lead pass; the contact/anonymize action does not reach it, so a subject who exists as both a contact and a lead is anonymized as one and not the other. That split is the finding, not a decision.",
 	"lead_manual_signal":          "an anonymized subject's manual lead signals, which are notes a colleague wrote about them survives the action. Recorded as the state this gate froze, not as a decision that it is right — the ruling is #2205.",
 	"lead_score_history":          "an anonymized subject's lead score history survives the action. Recorded as the state this gate froze, not as a decision that it is right — the ruling is #2205.",

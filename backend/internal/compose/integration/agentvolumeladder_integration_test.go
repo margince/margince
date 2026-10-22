@@ -5,15 +5,15 @@
 
 package integration
 
-// The §2.4 ladder over the REAL stack: a live Redis counter, a real approval
-// row, a real decision by a real human, and the same passport reading again.
+// The volume ladder over the real stack. It uses a live Redis counter, a real
+// approval row and a real decision by a real human. Then the same passport
+// changes again.
 //
-// The unit suites prove each half against a stub. What only this lane can prove
-// is that the halves meet — that the window the gate refused on is the window the
-// approval widened, through the actual approvals HTTP surface, with the same
-// meter pointer at both ends. Every wiring fault this change could have has the
-// same symptom: an approval that reads as granted and an agent that stays
-// refused.
+// The unit suites prove each half against a stub. Only this lane proves that the
+// halves meet. The window the gate refused on must be the window the approval
+// widened, through the approvals HTTP surface, with one meter pointer at both
+// ends. A wiring fault shows as an approval that reads as granted while the
+// agent stays refused.
 
 import (
 	"net/http"
@@ -96,23 +96,23 @@ func callTool(t *testing.T, e *apptest.AppEnv, bearer map[string]string, tool st
 	}
 }
 
-// BYO-STEP-1, whole: a read past the threshold is refused, the question reaches
-// the human who lent the passport, their approval widens THAT window, and the
-// same passport reads again — through the same door, with nothing else changed.
-func TestAReadPastItsThresholdIsReleasedByTheHumanWhoLentThePassport(t *testing.T) {
-	e, meter := ladderApp(t, "ladder-read", agentvolume.Limits{Reads: 100})
-	bearer, passport := passportWithID(t, e, "reading agent", "read")
-	seedContacts(t, e, 2)
-	spendCounter(t, e, meter, passport, agentvolume.Reads, 120)
+// BYO-STEP-2, whole: a change past the threshold is refused and the question
+// reaches the human who lent the passport. Their approval widens that window,
+// and the same passport changes again through the same door.
+func TestAWritePastItsThresholdIsReleasedByTheHumanWhoLentThePassport(t *testing.T) {
+	e, meter := ladderApp(t, "ladder-write", agentvolume.Limits{Writes: 10})
+	bearer, passport := passportWithID(t, e, "writing agent", "read", "write")
+	spendCounter(t, e, meter, passport, agentvolume.Writes, 12)
 
-	if status := e.Call(t, "GET", "/v1/contacts", nil, bearer, nil); status != http.StatusTooManyRequests {
-		t.Fatalf("a read past its threshold → %d, want 429", status)
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Refused"}, bearer, nil); status != http.StatusTooManyRequests {
+		t.Fatalf("a write past its threshold → %d, want 429", status)
 	}
 
-	// The REST door refuses without staging (it has no tool to name), so the
-	// question is put through the MCP door — which is the door the ladder is
-	// written for.
-	callTool(t, e, bearer, "search_records", AnyMap{"query": "Metered"})
+	// The REST door refuses without staging, because it has no tool to name. The
+	// question is put through the MCP door, which the ladder is written for.
+	callTool(t, e, bearer, "create_record", AnyMap{
+		"record_type": "contact", "fields": AnyMap{"source": "manual", "full_name": "Metered"},
+	})
 
 	id, staged, summary := pendingStepUp(t, e)
 	if staged != passport {
@@ -122,13 +122,13 @@ func TestAReadPastItsThresholdIsReleasedByTheHumanWhoLentThePassport(t *testing.
 		t.Error("the step-up carries no sentence for a human to answer")
 	}
 
-	// The human decides through the real surface — the same POST the inbox
-	// makes — and the release is applied as a consequence of that decision.
+	// The human decides through the real surface (the same POST the inbox
+	// makes) and the release is applied as a consequence of that decision.
 	if status := e.Call(t, "POST", "/v1/approvals/"+id.String()+"/approve", nil, nil, nil); status != http.StatusOK {
 		t.Fatalf("approving the step-up → %d", status)
 	}
 
-	if status := e.Call(t, "GET", "/v1/contacts", nil, bearer, nil); status != http.StatusOK {
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Admitted"}, bearer, nil); status != http.StatusCreated {
 		t.Errorf("the agent is still refused after its human approved the step-up → %d; "+
 			"the window the gate reads and the window the approval widened are not the same window", status)
 	}
@@ -139,21 +139,47 @@ func TestAReadPastItsThresholdIsReleasedByTheHumanWhoLentThePassport(t *testing.
 // more allowance, so the agent that spends it is refused again and its human is
 // asked again.
 func TestOneReleaseIsOneMoreAllowanceAndNotAStandingPermission(t *testing.T) {
-	e, meter := ladderApp(t, "ladder-once", agentvolume.Limits{Reads: 100})
-	bearer, passport := passportWithID(t, e, "reading agent", "read")
-	seedContacts(t, e, 2)
-	spendCounter(t, e, meter, passport, agentvolume.Reads, 120)
-	callTool(t, e, bearer, "search_records", AnyMap{"query": "Metered"})
+	e, meter := ladderApp(t, "ladder-once", agentvolume.Limits{Writes: 10})
+	bearer, passport := passportWithID(t, e, "writing agent", "read", "write")
+	spendCounter(t, e, meter, passport, agentvolume.Writes, 12)
+	callTool(t, e, bearer, "create_record", AnyMap{
+		"record_type": "contact", "fields": AnyMap{"source": "manual", "full_name": "Metered"},
+	})
 	id, _, _ := pendingStepUp(t, e)
 	if status := e.Call(t, "POST", "/v1/approvals/"+id.String()+"/approve", nil, nil, nil); status != http.StatusOK {
 		t.Fatalf("approving the step-up → %d", status)
 	}
 
 	// The released allowance is spent too.
-	spendCounter(t, e, meter, passport, agentvolume.Reads, 100)
+	spendCounter(t, e, meter, passport, agentvolume.Writes, 10)
+
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Refused again"}, bearer, nil); status != http.StatusTooManyRequests {
+		t.Errorf("a second crossing after one release → %d, want 429: approving once granted a standing permission", status)
+	}
+}
+
+// BYO-STEP-4: a spent CALL ceiling suspends the passport for every verb and
+// reaches no inbox. Releasing it would release every other counter at once.
+func TestASpentCallCeilingAsksNobodyAnything(t *testing.T) {
+	e, meter := ladderApp(t, "ladder-calls", agentvolume.Limits{Calls: 5})
+	bearer, passport := passportWithID(t, e, "calling agent", "read", "write")
+	seedContacts(t, e, 2)
+	spendCounter(t, e, meter, passport, agentvolume.Calls, 5)
 
 	if status := e.Call(t, "GET", "/v1/contacts", nil, bearer, nil); status != http.StatusTooManyRequests {
-		t.Errorf("a second crossing after one release → %d, want 429: approving once granted a standing permission", status)
+		t.Fatalf("a read past the call ceiling → %d, want 429", status)
+	}
+	callTool(t, e, bearer, "create_record", AnyMap{
+		"record_type": "contact", "fields": AnyMap{"source": "manual", "full_name": "Suspended"},
+	})
+
+	var staged int
+	if err := e.Owner.QueryRow(t.Context(),
+		`SELECT count(*) FROM approval WHERE kind = $1`, approvals.KindVolumeRelease).Scan(&staged); err != nil {
+		t.Fatalf("counting staged step-ups: %v", err)
+	}
+	if staged != 0 {
+		t.Errorf("a suspension reached a human's inbox %d times; no approval lifts it", staged)
 	}
 }
 

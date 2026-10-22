@@ -23,15 +23,15 @@ afterEach(cleanup);
 // background and no border, so a DOM assertion here could only ever prove the
 // class name it already asked for.
 describe("statstrip.css draws a selected slot on the pane inside it", () => {
-  it("marks the pressed slot's pane with the accent wash and edge, never a ring", () => {
+  it("marks the pressed slot's pane with the neutral inset ground and edge, never a ring", () => {
     const pressed =
       /\.stat-strip > \[aria-pressed="true"\] > \.stat-card\s*\{([^}]*)\}/.exec(
         stripCss(),
       );
     expect(pressed).not.toBeNull();
     const body = pressed?.[1] ?? "";
-    expect(body).toMatch(/background:\s*var\(--accentLight\)/);
-    expect(body).toMatch(/border-color:\s*var\(--accentMed\)/);
+    expect(body).toMatch(/background:\s*var\(--bgInset\)/);
+    expect(body).toMatch(/border-color:\s*var\(--borderStrong\)/);
     // A ring is a second box. `inset 0 0 0 <n>px` is its spelling, and it
     // must not come back.
     expect(stripCss()).not.toMatch(/inset 0 0 0/);

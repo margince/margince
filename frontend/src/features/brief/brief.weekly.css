@@ -1,0 +1,258 @@
+/* The week just gone, as a report: one reading column, a label over each
+   section, white panels for what is listed, and a closing line. */
+.brief-weekly-deal-name {
+  color: var(--textPrimary);
+  font-weight: var(--fontWeightMedium);
+}
+
+/* ── The week's workings ───────────────────────────────────────────────────
+ * Slots six to ten of what used to be one ten-slot strip. A strip is read
+ * ACROSS as a single comparison and ten slots folded into two ranks, which is
+ * a table wearing a strip's clothes; these five are looked up ONE at a time by
+ * somebody who already read the outcomes, so they draw as a definition list.
+ *
+ * Wrapping pairs rather than a grid of fixed columns: the labels differ in
+ * length across three languages, and a fixed track that fits "Decided" leaves
+ * "Zusagen, eingelöst" clipped. */
+
+.brief-weekly-workings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-6);
+  /* The block above pays the interval, not this list: the outcomes body is a
+     stack and a margin here would be a second gap on top of its one. */
+  margin: 0;
+}
+
+.brief-weekly-working {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+/* The browser's own indent on a `dd` would stagger every pair by 40px. */
+.brief-weekly-working dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.brief-weekly-learnings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+/* One lesson per row: its kind first, then the claim and what it rests on. */
+.brief-weekly-learning {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.brief-weekly-learning > p {
+  margin: 0;
+}
+
+/* The absence, as the prose it is: the body's own gutter is the interval. */
+.weekly-learnings-empty {
+  margin: 0;
+}
+
+/* What a lesson RESTS ON, beside the claim: a set of references rather than a
+   bulleted list, so the browser's disc and its 40px indent both go. */
+.weekly-learnings-citations {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+}
+
+/* ── The report ─────────────────────────────────────────────────────────────
+ * One column at a reading width, so the week reads as a document rather than
+ * a dashboard. */
+.brief-weekly-page {
+  max-width: 55rem;
+  margin-inline: auto;
+  padding-block: var(--space-10) var(--space-16);
+}
+.brief-weekly-page .glance {
+  gap: var(--space-4);
+}
+.brief-weekly-page .glance-greeting {
+  font: var(--fontDisplayLarge);
+}
+.brief-weekly-page .glance-sentence {
+  font: var(--fontLead);
+  max-width: none;
+}
+.brief-report {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+.brief-report-stepper {
+  display: flex;
+  gap: var(--gapActions);
+}
+/* Margince's own paragraph about the week, the report's opening. */
+.brief-report-narrative {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+.brief-report-narrative > p {
+  margin: 0;
+  font: var(--fontHeadingMedium);
+  font-weight: var(--fontWeightMedium);
+}
+.brief-report-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+/* A section's label, with a total or a verb at its end where it has one. */
+.brief-report-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+}
+/* The headline figures, as one plate of tiles with a rule between them. The
+   rules are each tile's own top and start edge. The grid steps out by one
+   rule so the panel clips the outer ones, and a wrapped row keeps its rules. */
+.brief-report-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  margin-block-start: -1px; /* ds:ignore one rule's width, clipped by the panel */
+  margin-inline-start: -1px; /* ds:ignore one rule's width, clipped by the panel */
+}
+.brief-report-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--padPanel);
+  border-block-start: 1px solid var(--borderSubtle);
+  border-inline-start: 1px solid var(--borderSubtle);
+}
+.brief-report-tile-label {
+  color: var(--textSecondary);
+}
+.brief-report-tile-figure {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.brief-report-tile-value {
+  font: var(--fontHeadingXXLarge);
+}
+.brief-report-tile-of {
+  font: var(--fontHeadingMedium);
+  color: var(--textSecondary);
+}
+.brief-report-tile-money {
+  font: var(--fontHeadingSmall);
+  color: var(--accentText);
+}
+/* The share, as one bar: dark ink, and the danger tone in a week that fell. */
+.brief-report-tile-bar {
+  display: block;
+  inline-size: 100%;
+  block-size: var(--space-1);
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--bgHover);
+  overflow: hidden;
+}
+.brief-report-tile-bar > span {
+  display: block;
+  block-size: 100%;
+  border-radius: inherit;
+  background: var(--textPrimary);
+}
+.brief-report-tile-bar > span[data-down="true"] {
+  background: var(--danger);
+}
+.brief-report-figure-line {
+  display: block;
+}
+/* A badge beside text keeps its whole word; the text beside it wraps. */
+.brief-report-keep {
+  display: flex;
+  flex: none;
+}
+/* The change on last week, as a pill the width of its words. */
+.brief-report-figure-delta {
+  display: flex;
+}
+.brief-report-total {
+  margin: 0;
+  font-weight: var(--fontWeightMedium);
+}
+/* What the week won against what it lost, as one bar of two shares. */
+.brief-report-split {
+  display: flex;
+  gap: var(--space-1);
+  block-size: var(--space-2);
+}
+.brief-report-split > span {
+  border-radius: var(--r-xs);
+}
+.brief-report-split-won {
+  background: var(--accent);
+}
+.brief-report-split-lost {
+  background: var(--warning);
+}
+/* One deal: what it is and when, its outcome, and what it closed at. */
+.brief-report-deal {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  inline-size: 100%;
+}
+.brief-report-deal-what {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.brief-report-deal-amount {
+  min-inline-size: 6rem;
+  text-align: end;
+  font-weight: var(--fontWeightBold);
+}
+/* A lost deal's worth is what the week did not get. */
+.brief-report-deal-amount[data-outcome="lost"] {
+  color: var(--textSecondary);
+  text-decoration: line-through;
+}
+.brief-report-stage {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--textSecondary);
+}
+.brief-report-footnote {
+  margin: 0;
+}
+/* What a table row's figure rests on, under its name. */
+.brief-report-basis {
+  display: block;
+}
+.brief-report-actions {
+  display: flex;
+  gap: var(--gapActions);
+}
+.brief-report-closing {
+  padding-block-start: var(--space-4);
+  border-block-start: 1px solid var(--borderSubtle);
+}
+.brief-report-closing > p {
+  margin: 0;
+}

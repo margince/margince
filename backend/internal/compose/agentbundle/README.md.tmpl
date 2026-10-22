@@ -1,0 +1,223 @@
+# Margince skill
+
+Margince works from your AI tool in two ways. You can connect the tool to Margince and sign in
+once, with no passport to copy or renew. Or you can give a script or your own code an agent
+passport and this skill. Either way the tool works as you, and can do only what you can do.
+
+## Connect your AI tool
+{{if .MCPURL}}
+This is the address an AI tool connects to:
+
+```text
+{{.MCPURL}}
+```
+
+The steps below match **Settings → AI access** in Margince. Each tool also has its own guide,
+linked under its steps.
+
+<!-- connect: claude-company -->
+### Claude, through your company
+
+Your Claude owner adds Margince once for the whole team:
+
+1. In Claude, open the admin settings, then "Connectors".
+2. Choose "Add", then "Custom", then "Web".
+3. Name it Margince and paste the address above.
+4. Choose "Add".
+
+Then everyone on the team:
+
+1. In Claude, opens "Customize", then "Connectors".
+2. Finds Margince and chooses "Connect".
+3. Signs in to Margince and chooses "Authorize".
+
+Claude's guide: https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp
+
+<!-- connect: claude-own -->
+### Claude, on a plan you pay for
+
+1. In Claude, open "Customize", then "Connectors".
+2. Choose "+ Add", then "Add custom connector", and paste the address above.
+3. Margince opens. Sign in and choose "Authorize".
+
+On the Free plan, Claude allows one custom connector.
+
+Claude's guide: https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp
+
+<!-- connect: chatgpt-company -->
+### ChatGPT, through your company
+
+Your ChatGPT admin adds Margince once for your company:
+
+1. In ChatGPT, open "Plugins", choose "+", then "Add custom MCP server".
+2. Name it Margince, paste the address above, choose OAuth, and choose "Create as a plugin".
+3. In the ChatGPT admin settings, open "Apps", then "Drafts", and choose "Publish".
+
+Then everyone, in a chat, types @, picks Margince, signs in to Margince and chooses
+"Authorize".
+
+OpenAI's guide: https://help.openai.com/en/articles/12584461-developer-mode-and-mcp-apps-in-chatgpt
+
+<!-- connect: chatgpt-own -->
+### ChatGPT, on a plan you pay for
+
+1. In ChatGPT, open "Plugins".
+2. Choose "+", then "Add custom MCP server", name it Margince and paste the address above.
+3. Choose "Create as a plugin". Margince opens. Sign in and choose "Authorize".
+
+On a plan you pay for yourself this needs Pro, and ChatGPT can look things up in Margince but
+not change them.
+
+OpenAI's guide: https://help.openai.com/en/articles/12584461-developer-mode-and-mcp-apps-in-chatgpt
+
+<!-- connect: copilot-company -->
+### Microsoft Copilot, through your company
+
+Someone at your company adds Margince to a Copilot agent once:
+
+1. In Copilot Studio, open the agent, then "Tools", "Add a tool", "New tool" and
+   "Model Context Protocol".
+2. Name it Margince, describe it as your CRM, and paste the address above.
+3. Under authentication choose "OAuth 2.0", then "Dynamic discovery", then "Create" and "Next".
+4. Choose "Create a new connection", then "Add to agent", and publish the agent to
+   Microsoft 365 Copilot and Teams.
+
+Your company's data policies for connectors also apply to Margince. Then everyone opens
+Copilot in Teams or Microsoft 365, chooses the agent with Margince, and signs in to Margince
+when it asks.
+
+Microsoft's guide: https://learn.microsoft.com/en-us/microsoft-copilot-studio/mcp-add-existing-server-to-agent
+
+<!-- connect: copilot-own -->
+### Microsoft Copilot, on a personal account
+
+Copilot outside work cannot connect to other apps. Use Copilot through work, or another tool
+on this page.
+
+Microsoft's guide, for Copilot through work: https://learn.microsoft.com/en-us/microsoft-copilot-studio/mcp-add-existing-server-to-agent
+
+<!-- connect: gemini-company -->
+### Gemini, through work or school
+
+Your Gemini Enterprise admin adds Margince once for your company:
+
+1. Ask a Margince admin for a client ID and secret. In **Settings → MCP → MCP
+   clients**, they choose "Register a client" and add the redirect URI
+   https://vertexaisearch.cloud.google.com/oauth-redirect.
+2. In Gemini Enterprise, open "Manage team", then "Connected apps", and choose "Add MCP Server".
+3. Paste the address above as the server URL, name it Margince and choose "Next". Choose "OAuth
+   2.0", then paste the authorization URL, token URL, client ID and client secret the Margince admin
+   gave you. Margince shows each one when it registers the client.
+4. Enter the scopes the Margince admin gave you, turn on PKCE if the form offers it, then choose
+   "Verify Auth" and "Continue".
+5. Choose a multi-region location, name the data connector and choose "Add". Gemini adds it turned off, so turn it on for your
+   team.
+
+Then everyone, in Gemini, opens "Connected apps", chooses "Connect" next to Margince, signs in to
+Margince and chooses "Authorize".
+
+Google's guide: https://support.google.com/g/answer/17106276
+
+<!-- connect: gemini-own -->
+### Gemini, on a personal Google account
+
+1. On gemini.google.com, open "Settings", then "Connected Apps".
+2. Choose "Add a custom app" and paste the address above.
+3. Margince opens. Sign in and choose "Authorize".
+
+For now this works only in the US, in English, on the web.
+
+Google's guide: https://support.google.com/gemini/answer/17209137
+
+### Coding agents
+
+Run the command, then sign in in the browser. No passport is needed.
+
+<!-- connect: claude-code -->
+- **Claude Code.** Run `claude mcp add --transport http margince {{.MCPURL}}`, then `/mcp`
+  inside Claude Code. Guide: https://code.claude.com/docs/en/mcp
+<!-- connect: codex -->
+- **Codex.** Run `codex mcp add margince --url {{.MCPURL}}`, then
+  `codex mcp login margince`. Guide: https://learn.chatgpt.com/docs/extend/mcp?surface=cli
+<!-- connect: antigravity -->
+- **Antigravity.** Add `{ "mcpServers": { "margince": { "serverUrl": "{{.MCPURL}}" } } }` to
+  `~/.gemini/config/mcp_config.json`. Then open its agent settings, "Customizations", and
+  choose "Authenticate" next to margince. Guide:
+  https://antigravity.google/docs/mcp
+{{else}}
+This Margince does not accept AI tool connections yet. Ask an administrator or operations user
+to turn them on. Until then, use a passport as the next section says.
+{{end}}
+## Scripts and your own code
+
+The rest of this page is for a script, your own code, or an AI tool you give this skill to.
+The tool calls the Margince API at `{{.BaseURL}}` with your agent passport, and can do what you
+can do there with the permissions you ticked on that passport, and nothing more.
+
+The folder holds four files:
+
+- `SKILL.md`: the rules the AI tool follows.
+- `INDEX.md`: every call a passport can make, one row each.
+- `openapi.yaml`: those calls in full.
+- `README.md`: this page.
+
+No passport is in this folder. You save it apart, so one download serves every
+passport you make.
+
+### Save your passport
+
+Create a passport in Margince under **Settings → AI access**, in **For developers**, and copy
+it. It is shown once. Never type it on a command line, where your shell history keeps it. Save
+it in one of these places, under the name `MARGINCE_PASSPORT`:
+
+- **macOS Keychain.** Run the command below. It asks for the passport and keeps it in
+  your login keychain.
+
+  ```sh
+  security add-generic-password -a "$USER" -s MARGINCE_PASSPORT -w
+  ```
+
+- **1Password.** Save it as an item, and give the AI tool the item's reference, for
+  example `op://Private/Margince passport/credential`.
+- **Your shell, for this session only.** Run the command below and paste the passport
+  when it waits. Nothing is shown and nothing is written to your history.
+
+  ```sh
+  read -rs MARGINCE_PASSPORT && export MARGINCE_PASSPORT
+  ```
+
+The AI tool reads the passport from `MARGINCE_PASSPORT` only, so set it in the shell
+you start the tool from. From the Keychain:
+
+```sh
+export MARGINCE_PASSPORT="$(security find-generic-password -s MARGINCE_PASSPORT -w)"
+```
+
+From 1Password: `export MARGINCE_PASSPORT="$(op read '<item reference>')"`.
+
+### Install the skill
+
+Unzip `margince-skill.zip`. It holds one folder, `margince`.
+
+- **Claude Code.** Move the `margince` folder to `~/.claude/skills/margince`. Claude finds
+  it the next time it starts.
+- **Claude Desktop.** Add `margince-skill.zip` as a skill in the app's settings.
+- **Codex.** Move the folder where you keep such files, for example `~/margince`, and
+  add this line to your `AGENTS.md`: "To work in Margince, read `~/margince/SKILL.md`
+  first."
+- **Antigravity.** Move the folder the same way, and add the same line to your `GEMINI.md`.
+
+### Try it
+
+With the passport in `MARGINCE_PASSPORT`, this lists one company you can see:
+
+```sh
+curl '{{.BaseURL}}/companies?limit=1' -H "Authorization: Bearer $MARGINCE_PASSPORT"
+```
+
+### When a passport ends
+
+A passport made in Settings lasts 30 days. To stop an agent sooner, choose **Revoke** on
+the passport in **Settings → AI access**, under **For developers**. It loses access on its
+next call. Then make a new passport and save it under the same name. The skill does not
+change.

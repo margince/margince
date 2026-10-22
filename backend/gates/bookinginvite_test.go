@@ -5,33 +5,8 @@
 
 package gates
 
-// What booking a meeting claims to do and what it does, held against each
-// other.
-//
-// `POST /bookings` accepted `attendee_emails`, decoded them into a struct field,
-// and dropped them. The contract said it "sends an invite" and the screen said
-// "the invite is on its way". Neither was true for any deployment of this build:
-// the calendar integrations are capture-only and `platform/mailer` is the
-// password-reset seam, so there was no transport to configure. A rep typed a
-// client's address, was told the client had been told, and the client had not.
-//
-// Fixing the words alone is a fix that expires. Whoever wires a real transport
-// later has no reason to look at the contract, and the sentence that was
-// removed for being false stays removed while it is true — so `book_meeting`
-// would then send an invite that its own tool description denies, and an agent
-// reading that description would tell a user no invite went out.
-//
-// So this holds the two together and FAILS IN BOTH DIRECTIONS:
-//
-//   - a contract that claims delivery while nothing reads the addresses is the
-//     original defect;
-//   - a tree that reads the addresses while the contract denies delivery is the
-//     same defect inverted, and it is the one that will actually happen next.
-//
-// The capability is derived from the code rather than declared: whether any
-// non-test file OUTSIDE the request decoder does anything with the attendee
-// addresses. That is what "there is a transport" means here, and it needs no
-// list to maintain.
+// Address use is a conservative signal of invitation delivery. Decoder reads
+// and display-only intended-attendee projections are checked separately.
 
 import (
 	"go/ast"
@@ -65,21 +40,8 @@ var deliveryClaims = []string{
 // attendeeField is the parsed request value.
 const attendeeField = "AttendeeEmails"
 
-// attendeeDecoder is the function that legitimately names the addresses without
-// doing anything with them: the HTTP handler that decodes the request.
-//
-// That it is the only such function is not asserted here, it is what the test
-// below MEASURES — every other function naming the field is reported, so a
-// second decoder appearing is a finding rather than a silent exemption.
-//
-// Held by: TestTheBookingContractDoesNotPromiseAnInviteItCannotSend
-// (this file)
-//
-// A function rather than a file. `scheduling.go` holds both that decoder and
-// `Store.BookMeeting`, which is the most likely place a transport would be
-// wired — so excluding the file excluded the very function whose change this
-// gate exists to notice.
-const attendeeDecoder = "method Handlers.BookMeeting"
+// The decoder anchors the field census; a rename must fail rather than shorten it.
+const attendeeDecoder = "internal/modules/activities/booking.go:method Handlers.BookMeeting"
 
 func TestTheBookingContractDoesNotPromiseAnInviteItCannotSend(t *testing.T) {
 	t.Parallel()
@@ -100,7 +62,7 @@ func TestTheBookingContractDoesNotPromiseAnInviteItCannotSend(t *testing.T) {
 			"does not have, and it is the tool description an agent reads before telling "+
 			"somebody the invite went out.", attendeeDecoder, noSendStatement)
 	case len(consumers) > 0 && disclaims:
-		t.Errorf("%v now do something with the attendee addresses, but crm.yaml still "+
+		t.Errorf("%v use attendee addresses beyond an intended-attendee display, but crm.yaml still "+
 			"says %q. Whoever wired the transport has left the operation denying it, and "+
 			"an agent reading that will tell a user nothing was sent.",
 			consumers, noSendStatement)
@@ -128,6 +90,8 @@ func TestTheBookingContractDoesNotPromiseAnInviteItCannotSend(t *testing.T) {
 func attendeeConsumers(t *testing.T) []string {
 	t.Helper()
 	var found []string
+	decoderMatches := 0
+	decoderNamesField := false
 	err := filepath.Walk("internal", func(path string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() || !strings.HasSuffix(path, ".go") ||
 			strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_gen.go") {
@@ -143,7 +107,12 @@ func attendeeConsumers(t *testing.T) []string {
 				continue
 			}
 			name := funcLabel(fn)
-			if name == attendeeDecoder || !namesAttendees(fn.Body) {
+			if filepath.ToSlash(path)+":"+name == attendeeDecoder {
+				decoderMatches++
+				decoderNamesField = namesAttendees(fn.Body)
+				continue
+			}
+			if !attendeeDeliveryMention(fn) {
 				continue
 			}
 			found = append(found, filepath.ToSlash(path)+":"+name)
@@ -152,6 +121,9 @@ func attendeeConsumers(t *testing.T) []string {
 	})
 	if err != nil {
 		t.Fatalf("walking for readers of the attendee addresses: %v", err)
+	}
+	if decoderMatches != 1 || !decoderNamesField {
+		t.Fatal("booking decoder no longer names AttendeeEmails; re-derive the gate anchor")
 	}
 	return found
 }

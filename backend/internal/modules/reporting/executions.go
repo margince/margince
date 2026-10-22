@@ -92,7 +92,7 @@ func (s *Service) Freeze(ctx context.Context, reportID ids.UUID, revision int64,
 		return crmcontracts.ReportingExecution{}, err
 	}
 	if len(key) < 1 || len(key) > 128 {
-		return crmcontracts.ReportingExecution{}, invalid("supply a stable idempotency key of 1–128 characters")
+		return crmcontracts.ReportingExecution{}, refuse("Idempotency-Key", "invalid", "supply a stable idempotency key of 1–128 characters")
 	}
 	owner, err := actorID(ctx)
 	if err != nil {

@@ -93,7 +93,7 @@ func acmeDeepBrain() laneFake {
 func newDeepReadTestWorker(e *integration.Env, site *fakeSite, brain completer) (*siteDeepReadWorker, *approvals.Service) {
 	svc := approvals.NewService(e.DB())
 	svc.WithEffect(deepReadProposalKind, deepReadAcceptEffect(svc, e.Contacts))
-	svc.WithEffect(siteLeadProposalKind, siteLeadAcceptEffect(svc, newCaptureSink(e.Pool, CaptureConfig{})))
+	svc.WithEffect(siteLeadProposalKind, siteLeadAcceptEffect(svc, newCaptureSink(e.Pool, CaptureConfig{}), e.Pool, &siteLeadNoticeLane{}))
 	return &siteDeepReadWorker{
 		pool:      e.Pool,
 		contacts:  e.Contacts,
@@ -105,7 +105,7 @@ func newDeepReadTestWorker(e *integration.Env, site *fakeSite, brain completer) 
 		// while production asked the question with the wrong authority.
 		authority:  identity.NewService(e.Pool),
 		autoEnrich: capture.NewAutoEnrichStore(e.DB()),
-		settings:   capture.NewSettings(NewSettingsStore(e.Pool)),
+		settings:   capture.NewSettings(NewSettingsStore(e.Pool), StoredConfig(e.Pool)),
 		log:        slog.New(slog.NewTextHandler(io.Discard, nil)),
 	}, svc
 }
@@ -807,7 +807,7 @@ func TestDeepReadHonoursThePageLimitAnAdminSetBeforeItStarted(t *testing.T) {
 	read, args := startDeepRead(t, e, company)
 
 	onePage := 1
-	if _, err := capture.NewSettings(NewSettingsStore(e.Pool)).Update(e.Admin(),
+	if _, err := capture.NewSettings(NewSettingsStore(e.Pool), StoredConfig(e.Pool)).Update(e.Admin(),
 		capture.SettingsPatch{SiteReadMaxPages: &onePage}); err != nil {
 		t.Fatal(err)
 	}

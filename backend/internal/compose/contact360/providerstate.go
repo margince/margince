@@ -85,19 +85,19 @@ func resolveProviderState(runs []providerRunRow, status string, lookupable bool)
 		return crmcontracts.ContactProviderProfileStateNeverRun
 	}
 	latest := runs[0]
-	if latest.state == string(provider.RunCompleted) && latest.claimsUnwritten {
+	if latest.State == provider.RunCompleted && latest.ClaimsUnwritten {
 		// Paid, and the values never reached the record. Its own state
 		// because it is neither a success nor a failure: the customer was
 		// charged and has nothing to show for it, which is a thing somebody
 		// needs to see rather than a completed run with empty fields.
 		return crmcontracts.ContactProviderProfileStateCompletedClaimsUnwritten
 	}
-	if latest.state == string(provider.RunSkipped) {
+	if latest.State == provider.RunSkipped {
 		// A skip is a decision, and its REASON is what the reader needs. An
 		// exhausted budget is a fact about the installation's wallet; telling
 		// somebody "this contact is not eligible" instead would send them
 		// looking at the contact for a problem that is not there.
-		return skipStates[latest.skipReason]
+		return skipStates[string(latest.SkipReason)]
 	}
 	// A run that FAILED on a record nothing can match on is a gravestone, not
 	// news about the vendor.
@@ -114,10 +114,10 @@ func resolveProviderState(runs []providerRunRow, status string, lookupable bool)
 	// charged too. Those are material facts about money that outrank a missing
 	// employer, so they are answered above and reach this line only if the run
 	// is neither.
-	if !lookupable && staleFault[latest.state] {
+	if !lookupable && staleFault[string(latest.State)] {
 		return crmcontracts.ContactProviderProfileStateNothingToLookUp
 	}
-	if mapped, ok := providerRunStates[latest.state]; ok {
+	if mapped, ok := providerRunStates[string(latest.State)]; ok {
 		return mapped
 	}
 	return crmcontracts.ContactProviderProfileStateProviderError

@@ -55,6 +55,9 @@ func (s *Store) takeEmailRequest(ctx context.Context, tx pgx.Tx, in LogActivityI
 	if err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
+	if err := prepareRequestAcceptance(ctx, tx, &request, userID, pending); err != nil {
+		return crmcontracts.Activity{}, false, err
+	}
 	// Replay carries the source's content gate AND the task's: a caller cannot
 	// use a visible source to obtain somebody else's private reminder.
 	replay, err := replayedActivity(ctx, tx, request)
@@ -62,7 +65,7 @@ func (s *Store) takeEmailRequest(ctx context.Context, tx pgx.Tx, in LogActivityI
 		return crmcontracts.Activity{}, false, err
 	}
 	if replay != nil {
-		return replayRequestTask(ctx, tx, *replay, pending)
+		return replayRequestTask(ctx, tx, *replay, pending, userID)
 	}
 	if !pending {
 		return crmcontracts.Activity{}, false, apperrors.ErrConflict
@@ -72,6 +75,7 @@ func (s *Store) takeEmailRequest(ctx context.Context, tx pgx.Tx, in LogActivityI
 	}
 	request.Body = in.Body
 	request.DueAt, request.RemindAt = in.DueAt, in.RemindAt
+	request.CustomFields, request.customColumns, request.customChecked = in.CustomFields, in.customColumns, in.customChecked
 	return s.LogActivityTx(ctx, tx, request)
 }
 
@@ -92,7 +96,7 @@ func requestAcceptingUser(ctx context.Context, in LogActivityInput) (ids.UUID, e
 	return actor.UserID, nil
 }
 
-func replayRequestTask(ctx context.Context, tx pgx.Tx, replay crmcontracts.Activity, pending bool) (crmcontracts.Activity, bool, error) {
+func replayRequestTask(ctx context.Context, tx pgx.Tx, replay crmcontracts.Activity, pending bool, userID ids.UUID) (crmcontracts.Activity, bool, error) {
 	task, err := readActivityContent(ctx, tx, ids.From[ids.ActivityKind](ids.UUID(replay.Id)), storekit.IncludeArchived)
 	if err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) {
@@ -100,10 +104,13 @@ func replayRequestTask(ctx context.Context, tx pgx.Tx, replay crmcontracts.Activ
 		}
 		return crmcontracts.Activity{}, false, err
 	}
+	if task.AssigneeId == nil || ids.UUID(*task.AssigneeId) != userID {
+		return crmcontracts.Activity{}, false, &requestHeldError{}
+	}
 	if task.ArchivedAt != nil && (task.IsDone == nil || !*task.IsDone) && !pending {
 		return crmcontracts.Activity{}, false, apperrors.ErrConflict
 	}
-	return restoreRequestTask(ctx, tx, task)
+	return restoreRequestTask(ctx, tx, task, pending, userID)
 }
 
 // emailRequestTask is the reply reminder for one request, filed under who

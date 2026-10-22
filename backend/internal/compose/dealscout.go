@@ -7,13 +7,8 @@ package compose
 // where the evidence says commercial motion is under way, and hands each one
 // to deals as a suggestion.
 //
-// Deterministic on purpose, the posture signalscan.go argues for: a wrong
-// suggestion is a card somebody dismisses, and no model decides that a deal
-// exists. Three kinds of evidence count, each already on record:
-//
-//   - a held meeting with somebody outside at the company;
-//   - both a new_opportunity and a commitment_made signal on it within thirty days;
-//   - a proposal or contract sent to it as a document.
+// A verified buyer request and a commitment establish the commercial matter.
+// Meetings and documents corroborate it without assigning a buyer of their own.
 //
 // Only evidence the whole workspace may read is used: an activity with the
 // workspace audience on a thread nobody holds, and a signal visible to the
@@ -71,7 +66,9 @@ func RunDealScout(ctx context.Context, tx pgx.Tx, now time.Time) (DealScoutPass,
 func scoutPass(ctx context.Context, tx pgx.Tx, now time.Time, companyCap int) (DealScoutPass, error) {
 	var pass DealScoutPass
 	var err error
-	if pass.Superseded, err = deals.SupersedeStaleSuggestionsTx(ctx, tx); err != nil {
+	if pass.Superseded, err = deals.SupersedeStaleSuggestionsTx(ctx, tx, func(arg func(any) int) string {
+		return verifiedSuggestionBuyer("s.id", "s.company_id", fmt.Sprintf("$%d::timestamptz", arg(now.Add(-dealScoutWindow))), fmt.Sprintf("$%d::timestamptz", arg(now)))
+	}); err != nil {
 		return pass, err
 	}
 	pairs, err := contacts.OpenDuplicateCompanyPairsTx(ctx, tx)

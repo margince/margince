@@ -24,37 +24,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
-// runKey scopes the idempotency claim to the automation instance: two
-// instances of one type each apply once per event, and a replay of
-// either finds its own claim.
-//
-// For a CLOCK trigger (Trigger.Schedule set) the handler's
-// IdempotencyKey must derive this from the ANCHOR that makes the
-// condition true (last_activity_at, a due date, …), never from ev.ID —
-// a clock condition is continuously true once its anchor is stale
-// enough, so the key has to be stable across every re-evaluation of the
-// SAME anchor and only change when the anchor itself moves. An
-// event-trigger key carries ev.ID (or content derived from the event),
-// which is exactly why an event trigger's non-match is safe to record
-// (recordSkip below) and a clock trigger's is not (runOne's !matched
-// branch).
-// Two readers decode this shape back out of the row: ListRuns
-// (automations_runs.go) for one instance's history, and troubledRunsSQL
-// (troubledruns.go) for the cross-instance health read — a change to the
-// "@<automation id>" suffix lands on both.
+// runKey claims one run per handler, event and automation instance. The
+// automation id stays last: every reader takes it from runAutomationIDSQL.
 func runKey(h workflow.Handler, ev workflow.Event) string {
 	return retryPrefix(ev) + h.IdempotencyKey(ev) + "@" + ev.AutomationID.String()
 }
 
-// retryPrefix marks a re-driven firing so its run claims its own row instead
-// of colliding with the failed run it retries.
-//
-// It PREFIXES for a reason that is easy to get backwards: both readers of this
-// shape match "@<automation id>" anchored at the END of the key — ListRuns
-// (automations_runs.go) and troubledRunsSQL (troubledruns.go). A marker
-// appended after the automation id would break both, and it would break them
-// silently: retried runs would simply stop appearing in the health lane that
-// offered the retry, with nothing failing anywhere.
+// retryPrefix gives a re-driven firing its own claim beside the failed run's.
+// It prefixes, because readers take the automation id from the key's end.
 func retryPrefix(ev workflow.Event) string {
 	if ev.RetryAttempt == 0 {
 		return ""

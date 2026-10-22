@@ -283,7 +283,7 @@ func TestAMergeNeedsWriteAuthorityOnBothEnds(t *testing.T) {
 	survivor := e.SeedID(t,
 		`INSERT INTO contact (id, full_name, owner_id, source, captured_by)
 		 VALUES ($1, 'Merge Survivor', $2, 'manual', 'human:x')`, e.Rep3)
-	store := contacts.NewStore(e.DB())
+	store := contacts.NewStore(e.DB()).WithGrantCarrier(identity.NewServiceFor(e.DB()))
 
 	// Read on the source, write on the survivor: the caller may change what the
 	// record folds INTO and not the record itself. The source is archived and
@@ -388,7 +388,7 @@ func TestAReadShareOfADealCannotEditItsOffer(t *testing.T) {
 	if _, err := e.Owner.Exec(context.Background(),
 		`INSERT INTO offer (id, deal_id, offer_number, currency, source, captured_by)
 		 VALUES ($1, $2, $3, 'EUR', 'manual', 'human:fixture')`,
-		offer, deal, "AN-"+offer.String()); err != nil {
+		offer, deal, fixtureOfferNumber(offer)); err != nil {
 		t.Fatalf("seeding the offer: %v", err)
 	}
 

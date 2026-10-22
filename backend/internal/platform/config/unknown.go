@@ -6,19 +6,15 @@ package config
 // A misspelled variable currently does nothing at all.
 //
 // MARGINCE_REDDIS=… is not an error, not a warning, and not a different
-// behaviour — the process reads MARGINCE_REDIS, finds nothing, and takes the
-// default. The operator sees a working installation ignoring the setting they
-// just made, with no thread to pull. That is the failure this reports.
+// behaviour: the process reads MARGINCE_REDIS, finds nothing, and takes the
+// default. The operator has no thread to pull, and this report is that thread.
 //
-// It is a WARNING and never a refusal. A deployment legitimately carries
-// variables this process does not read — another role's, the entrypoint's, the
-// build's — so refusing to boot on one would turn a helpful observation into an
-// outage. The observation is the whole value.
+// It is a warning and never a refusal. A deployment carries variables no
+// program reads, such as the entrypoint's and the build's.
 
 import (
 	"log/slog"
 	"os"
-	"sort"
 	"strings"
 )
 
@@ -37,16 +33,13 @@ const namespace = "MARGINCE_"
 //   - the container entrypoint writes the bootstrap credential from
 //     MARGINCE_ADMIN_PASSWORD before the api starts (ADR-0061 §2);
 //   - the build stamps MARGINCE_BUILD_REVISION and MARGINCE_COMPOSITION_FRONTEND
-//     into the image, and they outlive the build inside it.
+//     into the image, and they outlive the build inside it;
+//   - the desktop launcher takes its web port from MARGINCE_PORT in the
+//     margince.env it also hands the roles as --env-file.
 //
 // MARGINCE_ADMIN_PASSWORD_FILE is deliberately NOT here. The entrypoint records
 // that it was retired and its path hardcoded, so an operator still setting it is
 // being ignored — which is exactly what this report exists to say out loud.
-//
-// MARGINCE_OWNER_DSN is likewise not here. It is the migrate role's, and the
-// report now says only "this role does not read it", which is true of both the
-// api and the worker — and worth saying, because that DSN is the superuser
-// credential FORCE row-level security does not bind.
 //
 // The names are assembled from the prefix rather than written whole, because
 // the tree-wide documentation gate reads every quoted MARGINCE_* literal as a
@@ -56,41 +49,24 @@ var consumedByTheContainerNotTheProcess = map[string]bool{
 	namespace + "ADMIN_PASSWORD":       true,
 	namespace + "BUILD_REVISION":       true,
 	namespace + "COMPOSITION_FRONTEND": true,
+	namespace + "PORT":                 true,
 }
 
-// Undeclared reports the namespaced variables present in environ that no item
-// declares and nothing else is known to consume — the typo report.
-//
-// environ is the "NAME=value" form os.Environ returns. Only the NAME half is
-// ever read or returned: a misspelled secret is still a secret, and a warning
-// that echoed it would leak the value while complaining about the name.
-func (r *Registry) Undeclared(environ []string) []string {
-	var unknown []string
-	for _, entry := range environ {
-		name, value, ok := strings.Cut(entry, "=")
-		switch {
-		case !ok, !strings.HasPrefix(name, namespace):
-			continue
-		// Set to nothing IS unset: .env.example ships its optional lines as
-		// bare NAME= placeholders, both entrypoints export them with `set -a`,
-		// and cliflags.Apply already treats an empty value as absent. There is
-		// no value being ignored, so there is nothing to report.
-		case value == "":
-			continue
-		// The suite's own plumbing — where its database is, whether to record a
-		// benchmark. Not installation configuration, and present in every
-		// developer's shell.
-		case strings.HasPrefix(name, namespace+"TEST_"), strings.HasPrefix(name, namespace+"BENCH_"):
-			continue
-		case consumedByTheContainerNotTheProcess[name]:
-			continue
-		}
-		if _, declared := r.items[name]; !declared {
-			unknown = append(unknown, name)
-		}
+// reportable is whether a variable is one the typo report may name at all,
+// before asking whether any setting declares it.
+func reportable(name, value string) bool {
+	switch {
+	case !strings.HasPrefix(name, namespace):
+		return false
+	// An empty value is unset: .env.example ships bare NAME= placeholders,
+	// and the entrypoints export them.
+	case value == "":
+		return false
+	// The test suite's own plumbing, present in every developer's shell.
+	case strings.HasPrefix(name, namespace+"TEST_"), strings.HasPrefix(name, namespace+"BENCH_"):
+		return false
 	}
-	sort.Strings(unknown)
-	return unknown
+	return !consumedByTheContainerNotTheProcess[name]
 }
 
 // Environ is the process environment in "NAME=value" form — the only os.Environ
@@ -98,15 +74,9 @@ func (r *Registry) Undeclared(environ []string) []string {
 func Environ() []string { return os.Environ() }
 
 // WarnUndeclared writes the report, or nothing when there is nothing to say.
-// It takes the names Undeclared produced rather than the registry, so a role
-// can compute them where its surface is assembled and report them where its
-// logger exists.
 //
-// One implementation rather than one per role, because the sentence is the
-// load-bearing part: it claims only that THIS role does not read the variable,
-// which is all a single role's registry can know. Two copies would be two
-// chances to word it as "no such variable" — the claim that talks an operator
-// into deleting configuration a sibling role depends on.
+// Worded as "no such variable", the line would talk an operator into deleting
+// configuration the entrypoint depends on.
 //
 // Names travel, values never do: a misspelled secret is still a secret, and a
 // warning that echoed one would leak the value while complaining about the name.
@@ -114,6 +84,17 @@ func WarnUndeclared(logger *slog.Logger, unknown []string) {
 	if len(unknown) == 0 {
 		return
 	}
-	logger.Warn("set but not read by this process — check the spelling, or ignore this if another role reads it",
+	logger.Warn("set but read by no Margince program — check the spelling, or ignore this if the entrypoint reads it",
 		"variables", unknown)
+}
+
+// Report logs what Load found once a program's logger exists: the trace when
+// one was asked for, then the variables no program reads.
+func (c *Config) Report(logger *slog.Logger) {
+	if c.tracing {
+		for _, line := range c.TraceLines() {
+			logger.Info(line)
+		}
+	}
+	WarnUndeclared(logger, c.warnings)
 }

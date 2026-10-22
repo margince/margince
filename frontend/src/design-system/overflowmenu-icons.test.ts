@@ -178,13 +178,13 @@ describe("an item in an overflow menu carries words, not glyphs", () => {
     // The subject, read off its owner. Renaming the component without renaming
     // it here leaves the walk below matching a tag nothing writes any more —
     // a green gate over a tree it never looked at.
-    const atoms = readFileSync(
-      join(srcDir, "design-system", "atoms.tsx"),
+    const owner = readFileSync(
+      join(srcDir, "design-system", "overflowmenu.tsx"),
       "utf8",
     );
     expect(
-      new RegExp(`export function ${MENU}\\b`).test(atoms),
-      `${MENU} is not exported from design-system/atoms.tsx — this gate watches a component that no longer exists`,
+      new RegExp(`export function ${MENU}\\b`).test(owner),
+      `${MENU} is not exported from design-system/overflowmenu.tsx — this gate watches a component that no longer exists`,
     ).toBe(true);
   });
 

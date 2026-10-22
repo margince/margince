@@ -25,6 +25,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/kernel/calendarmethod"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 )
@@ -43,6 +44,9 @@ the reader among the Cc recipients only is informs_us even when its text asks fo
 is asks_us only when the text names the copied reader as the one to act. A message that
 carries a calendar invitation is asks_us only when it also asks something a calendar reply cannot
 answer.
+A message that is a reply to a calendar invitation (an attendee accepting, declining or proposing
+another time through their calendar) is informs_us unless its own words ask the recipient side
+something new: the calendar has already recorded the answer.
 A message WITHOUT a calendar invitation that proposes a specific time for a call or a meeting, or
 accepts one the recipient side has not yet confirmed, is asks_us: the slot is not agreed until they
 answer, so the sender is waiting on them. A message confirming a time the recipient side has
@@ -56,7 +60,13 @@ question to answer, a time to confirm, a point it defers or reserves. A reply th
 everything we asked and leaves nothing open is informs_us, however long it is.
 Judge only the sender's new words. Quoted earlier requests and signatures do not create a new
 obligation. Acknowledgements, returning a document, and "I will get back to you" are informs_us
-unless the new text separately asks the recipient to do something.`
+unless the new text separately asks the recipient to do something.
+A tentative offer such as "If useful, I could draft something next week" is informs_us unless it
+also asks for an answer or decision. Do not turn willingness to help into a request to accept it.
+A newsletter or mass promotion inviting all subscribers to book or buy is informs_us: a general
+call to action does not leave this recipient a pending obligation. A personal request directed
+to this recipient is still asks_us, including a supplier quote or a private errand. Commercial
+relevance is separate from whether the recipient has been asked to act.`
 
 // SystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
 func SystemFor(fence promptfence.Fence) string {
@@ -97,7 +107,10 @@ func Prompt(fence promptfence.Fence, batch []activities.OwedCandidate) string {
 		if len(m.Cc) > 0 {
 			fmt.Fprintf(&message, "Cc: %s\n", strings.Join(m.Cc, ", "))
 		}
-		if m.HasCalendarPart {
+		switch {
+		case calendarmethod.IsResponse(m.CalendarMethod):
+			fmt.Fprintf(&message, "This message is a reply to a calendar invitation (method %s).\n", m.CalendarMethod)
+		case m.HasCalendarPart:
 			message.WriteString("This message carried a calendar invitation.\n")
 		}
 		message.WriteString("\n" + activities.SplitEmailBody(m.Body).Main)
@@ -107,13 +120,14 @@ func Prompt(fence promptfence.Fence, batch []activities.OwedCandidate) string {
 	return prompt.String()
 }
 
-// rulesetSample is one fixed candidate that exercises every optional line
-// of Prompt, so a label edit anywhere in the template moves the stamp.
+// rulesetSamples are fixed candidates that together exercise every optional
+// line of Prompt, so a label edit anywhere in the template moves the stamp.
+// Two, because a message renders either the invitation or the response line.
 //
 // Fixed in every field, including the id and the date: the digest must be a
 // property of the CODE, and anything minted per call would move it on every
 // process start.
-var rulesetSample = activities.OwedCandidate{
+var rulesetSamples = []activities.OwedCandidate{{
 	// The contract's own word for the kind, like the cert case beside it: a
 	// second spelling here would stamp a sample the store never produces.
 	ID: ids.Nil, Kind: string(crmcontracts.ActivityKindEmail),
@@ -124,7 +138,11 @@ var rulesetSample = activities.OwedCandidate{
 		Subject: "the plan", Body: "Here is the plan. When suits you?",
 		At: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
 	},
-}
+}, {
+	ID: ids.Nil, Kind: string(crmcontracts.ActivityKindEmail),
+	Subject: "Declined: the plan", Body: "Declined.",
+	HasCalendarPart: true, CalendarMethod: "REPLY",
+}}
 
 // Ruleset names the rules a verdict written by this build was judged under.
 //
@@ -151,5 +169,5 @@ var rulesetSample = activities.OwedCandidate{
 // failure mode is re-judging every workspace after every restart, silently.
 // TestAUserTurnDigestedAloneIsNotStable holds this.
 var Ruleset = ai.PromptDigest(func(fence promptfence.Fence) string {
-	return SystemFor(fence) + "\n" + Prompt(fence, []activities.OwedCandidate{rulesetSample})
+	return SystemFor(fence) + "\n" + Prompt(fence, rulesetSamples)
 })

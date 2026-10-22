@@ -37,7 +37,7 @@ const LINKED: readonly LinkedProject[] = [
     project_id: "p-1",
     name: "Warehouse rollout",
     key: "WH-14",
-    phase: <Badge tone="accent">Delivery</Badge>,
+    phase: <Badge tone="info">Delivery</Badge>,
   },
   {
     project_id: "p-2",
@@ -114,7 +114,9 @@ export const Empty: Story = { render: () => <Live over={{ linked: [] }} /> };
  * than "attach" — the same section, one truthful word apart.
  */
 export const HoldsOnlyOne: Story = {
-  render: () => <Live over={{ linked: [LINKED[0]], allowsMany: false }} />,
+  render: () => (
+    <Live over={{ linked: LINKED.slice(0, 1), allowsMany: false }} />
+  ),
 };
 
 /**

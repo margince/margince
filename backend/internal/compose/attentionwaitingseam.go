@@ -19,6 +19,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -27,7 +28,8 @@ import (
 // own gated read. The thread walk, the discover gate and the audience arm all
 // live there; nothing about who may see what is decided here.
 type attentionWaiting struct {
-	store *activities.Store
+	store    *activities.Store
+	contacts *contacts.Store
 	// deals answers the same-day next-step figure /worklist/response carries
 	// beside the waiting work's own two.
 	deals *deals.Store
@@ -88,9 +90,9 @@ func (w attentionWaiting) Hidden(
 }
 
 func (w attentionWaiting) Unanswered(
-	ctx context.Context, asOf time.Time,
+	ctx context.Context, asOf time.Time, owner *ids.UUID,
 ) ([]attention.WaitingCustomer, bool, error) {
-	kept, cut, err := w.waitingPages(ctx, asOf)
+	kept, cut, err := w.waitingPages(ctx, asOf, owner)
 	if err != nil {
 		return nil, false, err
 	}
@@ -98,7 +100,8 @@ func (w attentionWaiting) Unanswered(
 	if err != nil {
 		return nil, false, err
 	}
-	return w.asWaitingCustomers(kept, summaries), cut, nil
+	rows, err := w.asWaitingCustomers(ctx, kept, summaries)
+	return rows, cut, err
 }
 
 // asWaitingCustomers carries the module's rows across in the queue's
@@ -109,8 +112,12 @@ func (w attentionWaiting) Unanswered(
 // ranking, when a summary is withheld — is the part that would go quietly
 // wrong in a second copy.
 func (w attentionWaiting) asWaitingCustomers(
-	kept []activities.WaitingReply, summaries map[ids.UUID]crmcontracts.EmailSummary,
-) []attention.WaitingCustomer {
+	ctx context.Context, kept []activities.WaitingReply, summaries map[ids.UUID]crmcontracts.EmailSummary,
+) ([]attention.WaitingCustomer, error) {
+	suppliers, err := w.waitingSuppliers(ctx, kept)
+	if err != nil {
+		return nil, err
+	}
 	out := make([]attention.WaitingCustomer, 0, len(kept))
 	for _, row := range kept {
 		// Nil when this wait is not an email, or is one whose content the
@@ -120,6 +127,10 @@ func (w attentionWaiting) asWaitingCustomers(
 		var summary *crmcontracts.EmailSummary
 		if got, ok := summaries[row.ActivityID]; ok {
 			summary = &got
+		}
+		supplier := suppliers[row.CompanyID]
+		if row.CompanyID == (ids.UUID{}) {
+			supplier = suppliers[row.ContactID]
 		}
 		out = append(out, attention.WaitingCustomer{
 			ActivityID:         row.ActivityID,
@@ -140,13 +151,19 @@ func (w attentionWaiting) asWaitingCustomers(
 			AsksNothing:       row.OwedVerdict == activities.OwedVerdictInformsUs,
 			ConfirmedRequest:  row.OwedVerdict == activities.OwedVerdictAsksUs,
 			ActionUnconfirmed: row.OwedVerdict == "",
+			NonBuyer:          row.CaptureLabel == "noise" || (!row.HasOpenDeal && supplier),
+			DirectRecipients:  row.DirectRecipients,
 			OwnerID:           row.OwnerID,
+			OwnerKnown:        row.OwnerKnown,
 			EarlierRequests:   row.EarlierRequests,
 			FirstAskedAt:      row.FirstAskedAt,
 			MeetingBookedAt:   row.MeetingBookedAt,
+			SenderWasStranger: row.SenderWasStranger,
+			BccOnly:           row.BccOnly,
+			ForeignLink:       row.ForeignLink,
 		})
 	}
-	return out
+	return out, nil
 }
 
 // HiddenRows names the threads one hiding rule is keeping off this reader's
@@ -165,7 +182,7 @@ func (w attentionWaiting) HiddenRows(
 	if err != nil {
 		return nil, err
 	}
-	return w.asWaitingCustomers(kept, summaries), nil
+	return w.asWaitingCustomers(ctx, kept, summaries)
 }
 
 // waitingRefillRounds bounds how many pages one assembly will read.
@@ -192,12 +209,18 @@ const waitingRefillRounds = 3
 // only when the LAST page was also full, so a refill that reached the end of
 // the matching rows reports a complete scan rather than inheriting the first
 // page's truncation.
-func (w attentionWaiting) waitingPages(ctx context.Context, asOf time.Time) ([]activities.WaitingReply, bool, error) {
+func (w attentionWaiting) waitingPages(ctx context.Context, asOf time.Time, owner *ids.UUID) ([]activities.WaitingReply, bool, error) {
 	var kept []activities.WaitingReply
-	var before time.Time
+	var before activities.WaitingPosition
 	cut := false
 	for range waitingRefillRounds {
-		rows, err := w.store.WaitingRepliesBefore(ctx, asOf, before)
+		var rows []activities.WaitingReply
+		var err error
+		if owner == nil {
+			rows, err = w.store.WaitingRepliesBefore(ctx, asOf, before)
+		} else {
+			rows, err = w.store.WaitingRepliesForOwnerBefore(ctx, asOf, before, *owner)
+		}
 		if err != nil {
 			return nil, false, err
 		}
@@ -215,7 +238,8 @@ func (w attentionWaiting) waitingPages(ctx context.Context, asOf time.Time) ([]a
 		}
 		// The page is ordered newest first, so the oldest row on it is where
 		// the next page starts.
-		before = rows[len(rows)-1].OccurredAt
+		last := rows[len(rows)-1]
+		before = activities.WaitingPosition{At: last.OccurredAt, ID: last.ActivityID}
 	}
 	// Folded across pages as well as within one: two mails with the same sender
 	// and subject are one conversation whichever page each arrived on, and a

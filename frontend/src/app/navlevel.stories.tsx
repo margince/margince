@@ -3,9 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { House, UserRound } from "lucide-react";
-import { StoryProviders } from "../screens/story-utils";
+import { useRef } from "react";
+import { expect, userEvent, waitFor, within } from "storybook/test";
+import { StoryProviders } from "../testing/story-utils";
 import { type NavSection, railTrail } from "./nav";
 import { NavLevelView } from "./navlevel";
+import { useNavTip } from "./navtip";
 
 // One level of the sidebar as the rail draws it: the rows, their groups, the
 // badge a row carries, and the way back up when the reader has drilled.
@@ -47,8 +50,14 @@ const SETTINGS: NavSection = {
   ],
 };
 
-const primary = railTrail({ screen: "home" })[0];
+const [primary] = railTrail({ screen: "home" });
 const settings = railTrail({ screen: "settings", id: "account" }, SETTINGS);
+const [settingsTop, settingsDrilled] = settings;
+if (!primary || !settingsTop || !settingsDrilled) {
+  throw new Error(
+    "railTrail no longer answers with the levels these stories draw",
+  );
+}
 
 function level(
   which: (typeof settings)[number],
@@ -118,13 +127,49 @@ export const Collapsed: Story = {
   render: level(primary, COLLAPSED, { tasks: 1204, inbox: 12 }),
 };
 
+function LiveCollapsedRail({
+  which,
+}: Readonly<{ which: (typeof settings)[number] }>) {
+  const nav = useRef<HTMLElement | null>(null);
+  const state = useNavTip(true, nav);
+  return (
+    <StoryProviders>
+      <nav ref={nav} className="rail collapsed">
+        <NavLevelView
+          level={which}
+          state={state}
+          onSelect={() => {}}
+          onWalkUp={() => {}}
+        />
+      </nav>
+    </StoryProviders>
+  );
+}
+
+export const CollapsedTipEscape: Story = {
+  render: () => <LiveCollapsedRail which={primary} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const [row] = canvas.getAllByRole("link");
+    if (row === undefined) {
+      throw new Error("the collapsed rail drew no rows");
+    }
+    await userEvent.hover(row);
+    await waitFor(() => expect(canvas.getByRole("tooltip")).toBeVisible());
+
+    await userEvent.keyboard("{Escape}");
+
+    await waitFor(() => expect(canvas.queryByRole("tooltip")).toBeNull());
+  },
+};
+
 /**
  * A drilled level, which is the case the component exists for: the same rows in
  * the same groups, named by the label over the first of them, with the way out
  * of the section above them.
  */
 export const Drilled: Story = {
-  render: level(settings[1], RESTING, undefined, settings[0]),
+  render: level(settingsDrilled, RESTING, undefined, settingsTop),
 };
 
 /** At 390px the rail is the phone's own bar rather than a column, so the rows

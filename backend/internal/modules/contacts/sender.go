@@ -5,13 +5,8 @@ package contacts
 
 import "fmt"
 
-// The identifier columns quick-find matches a pasted address or domain
-// against. Named here beside the sender predicate because both answer the same
-// question about a record — which real-world handle names it.
+// The FK each identifier table names its record by.
 const (
-	emailColumn  = "email"
-	domainColumn = "domain"
-	// The FK each identifier table names its record by.
 	contactFK = "contact_id"
 	companyFK = "company_id"
 )

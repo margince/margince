@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/freemail"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -292,8 +293,11 @@ func fuzzyContact(ctx context.Context, tx pgx.Tx, c ContactCandidate) (ContactRe
 // contactConfidence is the PO-F-1 score: weights sum to 1.0, so the
 // result is in [0,1] and comparable against the threshold directly.
 func contactConfidence(c ContactCandidate, row contactCandidateRow) float64 {
-	return dedupeNameWeight*nameSimilarity(c.FullName, row.fullName) +
-		dedupeCompanyDomainWeight*companyMatch(c, row)
+	name := dedupeNameWeight * nameSimilarity(c.FullName, row.fullName)
+	if !namesCorroborate(c.FullName, row.fullName) {
+		return name
+	}
+	return name + dedupeCompanyDomainWeight*companyMatch(c, row)
 }
 
 // companyMatch is PO-F-1's employer agreement term, most-specific first: a shared
@@ -357,7 +361,7 @@ func candidateSharesDomain(c ContactCandidate, domain string) bool {
 
 // normalizeEmail matches how contact_email stores the address: the insert
 // path lowercases on write, so the exact tier compares like for like.
-func normalizeEmail(e string) string { return strings.ToLower(strings.TrimSpace(e)) }
+func normalizeEmail(e string) string { return correspondence.Fold(e) }
 
 // normalizeDomain matches company_domain's storage contract:
 // lowercase only — never unaccent, or münich.example would collide with

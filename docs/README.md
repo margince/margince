@@ -42,9 +42,8 @@ An installation needs these documents before it may read the mail of its own tea
 customer signs them, and Margince does not check them.
 [handbook/compliance.md](handbook/compliance.md) says why.
 
-- [compliance/en/README.md](compliance/en/README.md): the list, in English, with each German document
-  next to its English copy. Sign the German ones in [compliance/de/](compliance/de/), because only
-  the German text is the legal one.
+- [compliance/README.md](compliance/README.md): the list, with each German document next to its
+  English copy. `extensions/de` ships them, and only the German text is the legal one.
 
 ### Attacks: what we must do as the maker
 
@@ -89,6 +88,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [add-an-rbac-object.md](how-to/add-an-rbac-object.md): add a new kind of record to RBAC.
 - [create-a-workflow.md](how-to/create-a-workflow.md): add a new starter workflow.
 - [apply-migrations.md](how-to/apply-migrations.md): write and run a database migration.
+- [add-a-data-task.md](how-to/add-a-data-task.md): add a data task.
+- [data-tasks.md](explanation/data-tasks.md): how a data task keeps its place.
 - [claim-a-red-main.md](how-to/claim-a-red-main.md): say that you fix a red `main` before you start.
 - [work-on-an-issue.md](how-to/work-on-an-issue.md): check that an issue is free, claim it, and release
   it when you stop.
@@ -99,6 +100,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [improve-mcp-quality.md](how-to/improve-mcp-quality.md): find why a model fails an MCP test, and fix
   the right part.
 - [run-the-frontend.md](how-to/run-the-frontend.md): run the web app while you develop.
+- [move-frontend-code.md](how-to/move-frontend-code.md): put a frontend file in the folder that owns it.
 - [connect-a-mailbox.md](how-to/connect-a-mailbox.md): set up the provider apps and settings that mailbox
   and calendar capture need.
 - [enrich-with-a-local-llm.md](how-to/enrich-with-a-local-llm.md): use a local model on Ollama or
@@ -111,10 +113,16 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [connect-telegram.md](how-to/connect-telegram.md): set up the Telegram bot, and read what each error means.
 - [import-a-company-spreadsheet.md](how-to/import-a-company-spreadsheet.md): import a CSV file of
   companies over MCP or REST.
+- [run-import-jobs.md](how-to/run-import-jobs.md): run the import worker, and read an import that
+  has stopped.
 - [connect-a-cloud-model-provider.md](how-to/connect-a-cloud-model-provider.md): use your own key for a
   cloud model provider.
 - [recover-after-a-provider-outage.md](how-to/recover-after-a-provider-outage.md): what to do after a
   model provider goes down.
+- [back-up-an-installation.md](how-to/back-up-an-installation.md): which data to copy, when, and who does
+  which part.
+- [run-a-restore-drill.md](how-to/run-a-restore-drill.md): test that a copy of your data can be
+  used, and record the time it takes.
 - [certify-an-ai-model.md](how-to/certify-an-ai-model.md): test a model against a task before you use it
   (`make e2e-ai`).
 - [certify-a-decision-site.md](how-to/certify-a-decision-site.md): test a model for one place in the code
@@ -142,9 +150,13 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [entity-model/](reference/entity-model/README.md): every table and field, one page per part
   of the product.
   Generated.
+- [webhook-events.md](reference/webhook-events.md): every webhook event and the fields it holds.
+  Generated.
 - [meeting-brief.md](reference/meeting-brief.md): the brief a user reads before a meeting.
-- [agent-tools.md](reference/agent-tools.md): each agent tool, and what it may do.
-- [mcp-info.md](reference/mcp-info.md): the MCP tools as a client sees them. Generated.
+- [agent-tools.md](reference/agent-tools.md): every agent tool, whether a human must approve it, and the pages
+  that go with it.
+- [mcp-protocol.md](reference/mcp-protocol.md): how `/mcp` works: message forms, limits and client sign-in.
+- [mcp-info.md](reference/mcp-info.md): each MCP tool's text as a client sees it. Generated.
 - [ai-prompts.md](reference/ai-prompts.md): every text this build sends to a model. Generated.
 - [agent-tool-budget.md](reference/agent-tool-budget.md): what the tool list of each agent costs a
   model. Generated.
@@ -165,6 +177,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
   write one.
 - [gate-inventory.md](reference/gate-inventory.md): every check in `backend/`, by kind. Generated.
 - [configuration.md](reference/configuration.md): every setting of each program.
+- [rest-api.md](reference/rest-api.md): the rules every REST call follows, and where its OpenAPI document is.
 - [ai-provider-key-test.md](reference/ai-provider-key-test.md): what the Test button on the Models page
   checks.
 - [ai-thinking.md](reference/ai-thinking.md): how much a model thinks before it answers, and where you
@@ -188,6 +201,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [ui-copy-style.md](reference/ui-copy-style.md): how to write English text in the app.
 - [docs-prose-style.md](reference/docs-prose-style.md): how to write a doc page.
 - [ui-copy-style-de.md](reference/ui-copy-style-de.md): what German text in the app adds.
+- [ui-copy-style-vi.md](reference/ui-copy-style-vi.md): what Vietnamese text in the app adds.
 - [issue-labels.md](reference/issue-labels.md): every issue label. `AGENTS.md` has the short form.
 - [license-release-rule.md](reference/license-release-rule.md): the license date on each release.
   [backend-onboarding.md](explanation/backend-onboarding.md) and `AGENTS.md` have the license line each
@@ -198,6 +212,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
 A generated page, and each `perfbench/` record, says so in its first line. Do not change them by hand.
 
 ### Explanation: understand the why
+
+- [shared-record-language.md](explanation/shared-record-language.md): text on shared records.
 
 #### The shape of the system
 
@@ -285,6 +301,8 @@ A generated page, and each `perfbench/` record, says so in its first line. Do no
 ### Run it in production
 
 - [deploy-margince.md](how-to/deploy-margince.md): run Margince on your own servers.
+- [change-a-setting.md](how-to/change-a-setting.md): change a setting, check it before a start, and see
+  where each value comes from.
 - [self-hosting.md](explanation/self-hosting.md): why it runs the way it does, and what it does when
   something fails.
 - [deployment.md](deployment.md): the old page, now a pointer to the two above.

@@ -32,7 +32,7 @@ import (
 // reporting query.
 const (
 	previewDefaultWindowDays = 30
-	previewMaxWindowDays     = 365
+	previewMaxWindowDays     = 90
 	previewSampleLimit       = 5
 )
 

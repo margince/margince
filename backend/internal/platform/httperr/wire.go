@@ -16,7 +16,6 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -34,10 +33,9 @@ const codeBodyTooLarge = "body_too_large"
 // amplification on the cheapest endpoints.
 const MaxBodyBytes = 1 << 20
 
-// A body that carries FILES rides a SECOND, wider ceiling, which cannot live
-// under the JSON bound and is not a constant here: it is per route and the
-// operator sets it (OPS-CFG-12, `uploads` in margince.yaml), resolved by
-// platform/deployconfig and injected where routes are known.
+// A body that carries FILES rides a SECOND, wider ceiling, outside the JSON
+// bound. The operator sets it per route (OPS-CFG-12, `uploads` in
+// margince.yaml), and compose injects it where routes are known.
 //
 // A second ceiling, never an exemption. An exempt route is an unbounded one the
 // day somebody forgets its own cap, and a handler cannot supply that cap itself
@@ -107,23 +105,41 @@ func DecodeOrRefusal(w http.ResponseWriter, r *http.Request, into any) error {
 
 //craft:ignore naked-any the JSON deserialization seam: the decode target is whichever contract request struct the handler owns
 func decodeRefusal(w http.ResponseWriter, r *http.Request, into any, owned func(string) bool, closed bool) error {
+	raw, err := readBody(w, r)
+	if err != nil {
+		return err
+	}
+	return decodeRaw(r, raw, into, owned, closed)
+}
+
+// readBody reads the capped body, answering the refusal a short or oversized
+// read owes.
+func readBody(w http.ResponseWriter, r *http.Request) (json.RawMessage, error) {
 	raw, err := io.ReadAll(http.MaxBytesReader(w, r.Body, MaxBodyBytes))
 	if err != nil {
 		if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
-			return BodyTooLargeRefusal("request body exceeds the 1 MiB cap")
+			return nil, BodyTooLargeRefusal("request body exceeds the 1 MiB cap")
 		}
 		// A read that failed mid-body is a transport fact — timed-out sockets
 		// carry host and port — so the caller is told what to do about it and
 		// the operator's half stays in the log.
 		slog.WarnContext(r.Context(), "reading request body",
 			"method", r.Method, "path", loggedPath(r), "err", err)
-		return Validation("body", "malformed_json",
+		return nil, Validation("body", "malformed_json",
 			"the request body could not be read to the end; resend the request with a complete body")
 	}
-	// A field key that only case-folds onto a contract field (or is
-	// unknown) is refused rather than matched by encoding/json's
-	// case-insensitive fallback — the same gate the provider seam applies,
-	// so REST and MCP agree on which keys are a field patch.
+	return raw, nil
+}
+
+// decodeRaw decodes a body already read, by the rules Decode states.
+//
+//craft:ignore naked-any the JSON deserialization seam: the decode target is whichever contract request struct the handler owns
+func decodeRaw(r *http.Request, raw json.RawMessage, into any, owned func(string) bool, closed bool) error {
+	if datasource.HasCustomFieldMap(into) {
+		return decodeCustomFieldBody(r, raw, into)
+	}
+	// A key that only case-folds onto a contract field, or is unknown, is refused
+	// rather than matched by encoding/json. The provider seam applies the same gate.
 	if kErr := datasource.RejectNonCanonicalKeys(raw, into); kErr != nil {
 		return Validation("body", "unknown_field", kErr.Error())
 	}
@@ -143,6 +159,9 @@ func decodeRefusal(w http.ResponseWriter, r *http.Request, into any, owned func(
 	}
 	if dec.More() {
 		return Validation("body", "malformed_json", "trailing content after the JSON value")
+	}
+	if outOfRange := datasource.RejectOutOfRangeTimes(into); outOfRange != nil {
+		return Validation(outOfRange.Field, "out_of_range", outOfRange.Error())
 	}
 	stashPresentFields(r, raw)
 	return nil
@@ -219,6 +238,10 @@ func PresentField(r *http.Request, name string) (value json.RawMessage, present 
 //
 //craft:ignore naked-any mirror of Decode's seam target
 func bodyDecodeRefusal(r *http.Request, raw json.RawMessage, into any, err error) error {
+	// A target's own unmarshaler may refuse a key (the lead patch does).
+	if unknown, ok := errors.AsType[*datasource.UnknownFieldError](err); ok {
+		return Validation("body", "unknown_field", unknown.Error())
+	}
 	if refusal := datasource.LocalizeFieldFault(raw, into, err, bodyProbe); refusal != nil {
 		detail, withheld := fieldShapeDetail(refusal)
 		if withheld {
@@ -247,25 +270,29 @@ func bodyProbe(single json.RawMessage, probe any) error {
 
 // WriteJSON writes a JSON response with the given status.
 //
-// It is the one place a record becomes a REST response, which is what makes it
-// the place to count them: a writer carrying a ServedMeter is told what this
-// body hands over BEFORE any of it is written, so a door bounding an agent's
-// reads can still withhold an answer it cannot charge for. An unmetered writer —
-// every human request, and every composition with no volume meter — takes the
-// path it always did.
-//
 //craft:ignore naked-any the JSON serialization seam: body is whichever contract response struct the handler produced
 func WriteJSON(w http.ResponseWriter, status int, body any) {
-	if meter, metered := w.(ServedMeter); metered && !meter.NoteServed(recordsIn(body)) {
-		return
-	}
 	// A list with no rows is `[]`, never `null` — see withEmptyLists for why
 	// that is a contract question rather than a cosmetic one.
-	body = withEmptyLists(body)
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	//craft:ignore swallowed-errors WriteHeader already committed the response — nothing can report an encode failure to the client anymore
-	_ = json.NewEncoder(w).Encode(body)
+	if err := writeEncoded(w, status, "application/json", withEmptyLists(body)); err != nil {
+		slog.Error("encoding a JSON response", "status", status, "err", err)
+		DropSuccessHeaders(w.Header())
+		writeProblem(w, problem{Status: http.StatusInternalServerError, Code: codeInternal})
+	}
+}
+
+// successHeaders describe a body that a failure replaces. Headers the chassis
+// set for every response (security, CORS, cache policy) are not among them.
+var successHeaders = []string{
+	"Location", "Content-Location", "ETag", "Last-Modified", "Content-Disposition", "Content-Length",
+}
+
+// DropSuccessHeaders removes what a handler set for the success it was about
+// to send, before a failure is answered in its place.
+func DropSuccessHeaders(header http.Header) {
+	for _, name := range successHeaders {
+		header.Del(name)
+	}
 }
 
 // CustomFieldFilters collects a list request's cf_* query parameters —
@@ -277,7 +304,7 @@ func WriteJSON(w http.ResponseWriter, status int, body any) {
 func CustomFieldFilters(r *http.Request) map[string]string {
 	var filters map[string]string
 	for key, values := range r.URL.Query() {
-		if !strings.HasPrefix(key, "cf_") || len(values) == 0 {
+		if !datasource.IsCustomFieldKey(key) || len(values) == 0 {
 			continue
 		}
 		if filters == nil {
@@ -431,6 +458,26 @@ func splitUnquoted(s string, sep byte) []string {
 	return parts
 }
 
+// RequireSent refuses a body that left out a field the contract makes required
+// but nullable. A null there clears the value and a missing key must not. Both
+// decode to a nil pointer, so only the raw body tells them apart.
+func RequireSent(r *http.Request, field, message string) error {
+	if _, sent := PresentField(r, field); !sent {
+		return Validation(field, "required", message)
+	}
+	return nil
+}
+
+// RequireAnyField refuses a patch body that carried no key at all.
+// A schema with `minProperties: 1` calls an empty object a mistake. The decoded
+// struct of an all-optional patch cannot tell it from a real edit.
+func RequireAnyField(r *http.Request) error {
+	if fields, ok := r.Context().Value(presentFieldsKey{}).(map[string]json.RawMessage); ok && len(fields) > 0 {
+		return nil
+	}
+	return Validation("body", "required", "send at least one field to change")
+}
+
 // ClearedFields names the top-level keys the body sent as an explicit null.
 //
 // A nullable contract field decodes to a nil pointer whether the caller sent
@@ -448,15 +495,5 @@ func ClearedFields(r *http.Request) []string {
 	if !ok {
 		return nil
 	}
-	cleared := make([]string, 0, len(fields))
-	for name, raw := range fields {
-		if string(raw) == "null" {
-			cleared = append(cleared, name)
-		}
-	}
-	if len(cleared) == 0 {
-		return nil
-	}
-	sort.Strings(cleared)
-	return cleared
+	return NullKeys(fields)
 }

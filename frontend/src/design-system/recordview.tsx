@@ -5,14 +5,10 @@ import { ArrowLeft } from "lucide-react";
 import type { ReactNode } from "react";
 import { useT } from "../i18n";
 import { Avatar } from "./atoms";
-import {
-  GroupedTimelineList,
-  type TimelineEntry,
-  type TimelineGroup,
-  TimelineList,
-} from "./composed";
 import { Heading } from "./heading";
 import { PageZones, type PageZonesShape } from "./pagezones";
+import { GroupedTimelineList, TimelineList } from "./timeline";
+import type { TimelineEntry, TimelineGroup } from "./timelineentry";
 import { useTruncationTooltip } from "./tooltip";
 
 // Where a record's verbs land. Three places can hold them — beside the
@@ -279,9 +275,9 @@ export function RecordView({
   // note, since the mirror cannot serve entity-scoped activity reads. Keeps the
   // section honest instead of rendering an empty list that reads as "no activity".
   timelineNotice?: ReactNode;
-  // The id the timeline SECTION carries, so a reading's door can scroll to the
-  // record's story (app/reveal) rather than route. It belongs here because the
-  // section is inside the work column this component draws, where a caller has
+  // The id the timeline section carries, so a reading's door can scroll to the
+  // record's story (lib/reveal) rather than route. It belongs here because the
+  // section is inside the work column this component draws. There a caller has
   // nothing to wrap an anchor of its own around.
   timelineAnchorId?: string;
   // The bar that chooses which part of the record is below it. It runs the

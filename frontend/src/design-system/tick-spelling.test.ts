@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Tick gate: `Checkbox` and `Radio` in atoms.tsx are the product's ONLY tick
+// Tick gate: `Checkbox` and `Radio` in field.tsx are the product's only tick
 // controls.
 //
 // A tick is four decisions — the box's size, its accent, its focus ring, and
@@ -30,9 +30,9 @@
 //   intent something later submits, and the README says which to reach for.
 //
 //   a BARE `<input type="checkbox">` / `type="radio"` is the right element with
-//   the wrong surface — it is what `Toggle` in atoms.tsx exists to wrap, and a
+//   the wrong surface — it is what `Toggle` in field.tsx exists to wrap, and a
 //   call site that writes its own wrapper is deciding the size and the gap
-//   again. `atoms.tsx` is the one file allowed to name the element.
+//   again. `field.tsx` is the one file allowed to name the element.
 //
 // NOT in scope, because each is a different control rather than a second
 // spelling of this one: `Switch` (switch.tsx), a `Select`/`MultiSelect` option
@@ -79,7 +79,7 @@ const TICK_TYPES = new Set(["checkbox", "radio"]);
 // arm it owns and from no other. Named by path rather than by shape: "the file
 // that renders the atom" is not something a parser can recognise, and a rule
 // that guessed would exempt the next hand-rolled copy too.
-const ATOMS = join(srcDir, "design-system", "atoms.tsx");
+const FIELD = join(srcDir, "design-system", "field.tsx");
 const SWITCH = join(srcDir, "design-system", "switch.tsx");
 
 // This file plants the probes below, which are deliberate examples of every
@@ -159,7 +159,7 @@ function findTickSpellings(path: string, text: string): string[] {
         if (name === "aria-checked" && !isInput && path !== SWITCH) {
           found.push(`${at(attribute)}: aria-checked on <${tag}>`);
         }
-        if (name === "type" && isInput && path !== ATOMS) {
+        if (name === "type" && isInput && path !== FIELD) {
           const type = stringValue(attribute);
           if (type && TICK_TYPES.has(type)) {
             found.push(`${at(attribute)}: <input type="${type}">`);
@@ -189,11 +189,11 @@ describe("one checkbox, one radio", () => {
     // An empty scan means the gate is pointed at the wrong tree. A census that
     // judged nothing certifies nothing.
     expect(files.length).toBeGreaterThan(100);
-    // And the screens specifically: every hand-rolled tick this gate was
-    // written for lived under src/screens/, and the floor above is one the
-    // design-system half could satisfy on its own.
+    // And the screens: every hand-rolled tick this gate was written for lived
+    // in a screen, now under src/features/. The design-system half alone
+    // could clear the floor above.
     expect(
-      files.some((file) => file.startsWith(`${srcDir}/screens/`)),
+      files.some((file) => file.startsWith(`${srcDir}/features/`)),
       "the census covered no screen, where every tick this gate replaced lived",
     ).toBe(true);
     // And the extension tier: a unit's screen ships in the same bundle, and
@@ -213,14 +213,14 @@ describe("one checkbox, one radio", () => {
   });
 
   it("holds the two owners to their own arm and no other", () => {
-    // atoms.tsx names the element, and that is the whole of its exemption: a
+    // field.tsx names the element, and that is the whole of its exemption: a
     // `role="checkbox"` or an `aria-checked` on a non-input there is still a
     // finding. switch.tsx is the mirror — it carries `aria-checked` and may not
     // carry an input.
-    expect(findTickSpellings(ATOMS, readFileSync(ATOMS, "utf8"))).toEqual([]);
+    expect(findTickSpellings(FIELD, readFileSync(FIELD, "utf8"))).toEqual([]);
     expect(findTickSpellings(SWITCH, readFileSync(SWITCH, "utf8"))).toEqual([]);
     expect(
-      findTickSpellings(ATOMS, "const a = <button aria-checked={on} />;"),
+      findTickSpellings(FIELD, "const a = <button aria-checked={on} />;"),
     ).toEqual(["1: aria-checked on <button>"]);
     expect(
       findTickSpellings(SWITCH, 'const a = <input type="checkbox" />;'),
@@ -295,13 +295,13 @@ describe("the tick detector sees what it claims to", () => {
       name: "role=checkbox on the input that already is one",
       fires: false,
       src: 'const a = <input type="checkbox" role="checkbox" />;',
-      file: "design-system/atoms.tsx",
+      file: "design-system/field.tsx",
     },
     {
       name: "aria-checked on an input",
       fires: false,
       src: "const a = <input type='checkbox' aria-checked={on} />;",
-      file: "design-system/atoms.tsx",
+      file: "design-system/field.tsx",
     },
     // The four out-of-scope shapes, each a different control.
     {

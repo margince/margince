@@ -13,10 +13,10 @@ what the parts are, what the service worker may do, and why its job is so small.
 | Icons | `frontend/public/`: `icon.svg`, `favicon.ico`, `favicon-96x96.png`, `apple-touch-icon.png`, `web-app-manifest-192x192.png` and `-512x512.png` | the icons the browser tab, iOS and the manifest name; `frontend/src/app/sharepreview.test.ts` holds each one to what it declares |
 | Service worker | source `frontend/src/offline/serviceworker.js`, written out as `/sw.js` by `frontend/scripts/vite-pwa.ts` | answers a page request the network could not complete with the offline page, and the offline page's own script; nothing else |
 | Offline page | `frontend/src/offline/page.ts` (the HTML), `present.ts` (block, retry, load again when the network is back), `entry.ts`, `offline.css`; written out as `/assets/offline-<hash>.html` | tells the reader the device cannot reach Margince, in their language, with a retry |
-| Sign-up and install state | `frontend/src/app/pwa.ts` | signs up the worker in a production build; keeps the browser's install offer for the app to show |
+| Sign-up and install state | `frontend/src/lib/pwa.ts` | signs up the worker in a production build; keeps the browser's install offer for the app to show |
 
 What the client stores (the language, theme and the rest) lives behind
-`frontend/src/app/storage.ts`. The offline page reads the stored language through it, the same way
+`frontend/src/lib/storage.ts`. The offline page reads the stored language through it, the same way
 every other reader does.
 
 ## The worker answers two requests, and none is the app
@@ -109,7 +109,7 @@ cache it installed it into. The browser's HTTP cache is not enough: `vite previe
 launcher send no cache headers, and any browser may drop an entry.
 
 The script shares the app's code rather than copying it. `startTheme()` from
-`frontend/src/app/theme.ts` sets the stored theme, so a `light` or `dark` theme the reader set holds
+`frontend/src/lib/theme.ts` sets the stored theme, so a `light` or `dark` theme the reader set holds
 offline too, and `system` follows the device. `preferredLocale()` from `frontend/src/i18n/locale.ts`
 chooses the block. That module carries no catalog. It takes the stored language, then the browser's
 language, then English: the same answer the app gives before the account sets a language.
@@ -121,7 +121,7 @@ normal link that loads the page again without the route.
 
 ## Sign-up and the install offer
 
-`registerServiceWorker()` in `frontend/src/app/pwa.ts` signs up `/sw.js` with scope `/`. It does so
+`registerServiceWorker()` in `frontend/src/lib/pwa.ts` signs up `/sw.js` with scope `/`. It does so
 only in a production build, and only where the browser has service workers. It also waits for the
 window's `load` event, so installing the worker never slows the app's first load. A failed sign-up
 is logged with `console.warn` and changes nothing else.
@@ -144,7 +144,7 @@ answers one of:
 
 ## Network state
 
-`frontend/src/app/connectivity.ts` holds one of three states. The shell's banner
+`frontend/src/lib/connectivity.ts` holds one of three states. The shell's banner
 (`app/connectivitybanner.tsx`) says which problem holds:
 
 - `offline`: the browser reports no network (`navigator.onLine` and the `online`/`offline` events).
@@ -172,7 +172,7 @@ a proxy keeps the shared error line.
 
 ## Install on this device
 
-Settings → Account has a "This device" section with one row, `frontend/src/screens/thisdevice.tsx`,
+Settings → Account has a "This device" section with one row, `frontend/src/features/settings/thisdevice.tsx`,
 built from `useInstallState()` alone:
 
 - `available`: Install asks the browser, and waits while its install window is open.

@@ -168,3 +168,52 @@ func TestAnUnknownGroupingIsRefused(t *testing.T) {
 		t.Fatalf("err = %v", err)
 	}
 }
+
+// A call whose three answers the validator refused served its caller nothing.
+// The task flow counts it unanswered, while the call figures still count each
+// attempt as answered: the model responded, and a refusal is no outage.
+func TestARefusedLadderIsUnansweredInTheFlowButNoProviderFailure(t *testing.T) {
+	env := setupRateStore(t)
+	ws, ctx := env.seedWorkspace(context.Background(), t)
+	meter := NewCallMeter(env.dbFor(ws))
+	task := Task("refused_" + ids.NewV7().String()[:8])
+	logical := ids.NewV7()
+	attempt := func(n int, tier Tier, reason, sentinel string) Call {
+		return Call{
+			LogicalCallID: logical, Attempt: n, IsTerminal: n == 3, Kind: callKindCompletion, Task: task,
+			Tier: tier, Provider: "test", ModelID: "test-" + string(tier), RequestFingerprint: "fp-" + ids.NewV7().String(),
+			AttemptReason: reason, ErrorSentinel: sentinel,
+		}
+	}
+	if err := meter.Record(ctx, []Call{
+		attempt(1, TierCheapCloud, "", ""),
+		attempt(2, TierCheapCloud, attemptReasonSchemaInvalid, ""),
+		attempt(3, TierPremium, attemptReasonSchemaInvalid, sentinelOutputRejected),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	reader, reading := NewCallReadStore(env.dbFor(ws)), diagnosticsReader(ws)
+
+	flow, err := reader.TaskFlow(reading, task, 7*24*time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if flow.Total != 1 || flow.Unanswered != 1 {
+		t.Fatalf("flow = %+v, want the one call unanswered", flow)
+	}
+	for _, step := range flow.Steps {
+		if step.Answered != 0 {
+			t.Errorf("step %s answered %d calls, want none: every answer was refused", step.Tier, step.Answered)
+		}
+		if step.Tier == TierPremium && step.GaveUp[sentinelOutputRejected] != 1 {
+			t.Errorf("premium step gave up for %v, want output_rejected", step.GaveUp)
+		}
+	}
+	rows, err := reader.CallStats(reading, CallStatsQuery{Window: 7 * 24 * time.Hour, GroupBy: GroupByTask, Filter: CallStatsFilter{Task: task}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 || rows[0].Calls != 3 || rows[0].Failed != 0 {
+		t.Errorf("call figures = %+v, want 3 attempts and no provider failure", rows)
+	}
+}

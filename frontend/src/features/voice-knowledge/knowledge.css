@@ -1,0 +1,27 @@
+/* SPDX-License-Identifier: BUSL-1.1
+ * SPDX-FileCopyrightText: 2026 Gradion */
+
+/* An open set: what it covers and how much answers, then its documents. */
+.knowledge-detail {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.knowledge-detail-head {
+  display: grid;
+  gap: var(--space-1);
+}
+.knowledge-detail-head > p {
+  margin: 0;
+}
+/* The documents line up with the set's own text above them, not one cell in. */
+.knowledge-detail .table :is(th, td):first-child {
+  padding-inline-start: 0;
+}
+.knowledge-detail .table :is(th, td):last-child,
+.knowledge-detail .table-scroll > .table > tbody > tr {
+  padding-inline-end: 0;
+}
+.knowledge-detail .table-scroll > .table > tbody > tr {
+  padding-inline-start: 0;
+}

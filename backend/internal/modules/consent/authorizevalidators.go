@@ -41,7 +41,7 @@ import (
 func (g *Gate) validate(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef, category commsauthz.Category, w packRules) (resolution, error) {
 	unsupported := resolution{Category: category, Supported: false, Reason: commsauthz.ReasonNoEvidence}
 	if subject.Kind != entityContact && category != commsauthz.CategoryReplyToInbound &&
-		category != commsauthz.CategoryRequestedFollowup {
+		category != commsauthz.CategoryRequestedFollowup && category != commsauthz.CategoryPrivacyNotice {
 		// A LEAD REACHES ONE ARM AND NO OTHER.
 		//
 		// The correspondence arm asks who wrote to us, and both of its readers
@@ -50,10 +50,12 @@ func (g *Gate) validate(ctx context.Context, tx pgx.Tx, req commsauthz.Request, 
 		// address, and askedToBeContacted returns false for a non-contact rather
 		// than querying a contact-keyed table.
 		//
-		// Every other arm reads a record a lead cannot hold — an invoice or
-		// contract hangs off a company reached through employment, and a
-		// confirmation link is minted against a contact. Those stay unsupported
-		// and fall through to the lead's own grant.
+		// The privacy notice is the one link a lead can hold. A website lead
+		// is told by it before anything else is sent.
+		//
+		// Every other arm reads a record a lead cannot hold. An invoice or
+		// contract hangs off a company, and the record and consent links name
+		// a contact. Those fall through to the lead's own grant.
 		return unsupported, nil
 	}
 	// THE NAMED RECORD MUST BE ONE THE CALLER MAY SEE, before it is read.

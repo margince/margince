@@ -117,4 +117,18 @@ describe("CommandPalette Enter", () => {
     await user.keyboard("{Enter}");
     expect(window.location.hash).toBe("#/deals");
   });
+
+  // A meeting, call, note or task has no page, and is offered all the same:
+  // it opens on the results, in the activity panel.
+  it("offers a meeting search found and opens it in the activity panel", async () => {
+    const user = steppedClock();
+    hits([
+      { type: "activity", id: "a2", title: "Quarterly review with Demo GmbH" },
+    ]);
+    renderPalette();
+    await user.type(screen.getByRole("searchbox"), "quarterly");
+    await screen.findByRole("button", { name: /Quarterly review/ });
+    await user.keyboard("{ArrowDown}{Enter}");
+    expect(window.location.hash).toBe("#/search/quarterly/a2/activity");
+  });
 });

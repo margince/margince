@@ -49,7 +49,7 @@ request to carry the failure back to anybody.
 
 ## The agent bound fails closed
 
-The per-Passport read bound counts in Redis and **fails closed**. With its counter store
+The per-Passport call counters live in Redis and **fails closed**. With its counter store
 unreachable, every governed counter reports its threshold passed and the whole agent surface
 refuses. A control that cannot count must not answer "allowed". On the default api that is visible
 by accident: the inline relay probes the same Redis, so `/readyz` drains the pod. On a
@@ -163,5 +163,8 @@ reference: [configuration.md](../reference/configuration.md).
   90 days (under its current password) is still let in with the right password.
   So a lock tripped by somebody else does not keep the owner out; a new browser
   waits out the lock or resets the password.
+- **The jurisdiction is checked at boot:** a stored `installation.country` with no
+  pack in this build stops the api and the worker. The log names the packs the build
+  carries. Build the pack back in, or change the jurisdiction from a build that carries it.
 - **AI keys fail closed:** a missing/invalid provider key disables the bound AI
   lanes but leaves core CRUD + auth working.

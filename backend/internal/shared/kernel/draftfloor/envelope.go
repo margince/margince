@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -78,8 +79,8 @@ func NewEnvelopeWithRegister(lang textlang.Lang, register textlang.Register,
 		Language:          string(langOrDefault(lang)),
 		ConversationState: string(state.Band),
 		Now:               now.UTC().Format(time.RFC3339),
-		SenderName:        boundedRunes(senderName, IdentityMaxRunes),
-		SenderEmail:       boundedRunes(senderEmail, IdentityMaxRunes),
+		SenderName:        textcut.Runes(senderName, IdentityMaxRunes),
+		SenderEmail:       textcut.Runes(senderEmail, IdentityMaxRunes),
 	}
 	if state.Band != convstate.BandNone {
 		envelope.SilenceDays = strconv.Itoa(state.SilenceDays)
@@ -90,16 +91,6 @@ func NewEnvelopeWithRegister(lang textlang.Lang, register textlang.Register,
 		envelope.Register = string(registerOrFormal(register))
 	}
 	return envelope
-}
-
-// boundedRunes truncates on a rune boundary, so a multi-byte name is cut short
-// rather than cut in half.
-func boundedRunes(value string, maxRunes int) string {
-	runes := []rune(value)
-	if len(runes) <= maxRunes {
-		return value
-	}
-	return string(runes[:maxRunes])
 }
 
 // registerOrFormal resolves an undecided register to Sie.
@@ -141,6 +132,16 @@ func (e Envelope) Greeting(firstName, lastName string) string {
 		return Greeting(e.Lang(), e.Band(), firstName)
 	}
 	return fill(formalGermanGreeting, NameLine(firstName+" "+lastName))
+}
+
+// GreetingTo is the opening line of a message to the recipient and to others
+// further readers. With any others it greets the group, since naming one
+// reader would leave the rest out.
+func (e Envelope) GreetingTo(firstName, lastName string, others int) string {
+	if others > 0 {
+		return GroupGreeting(e.Lang())
+	}
+	return e.Greeting(firstName, lastName)
 }
 
 // formalGermanGreeting is the Sie opening the shared drafting rules prescribe.

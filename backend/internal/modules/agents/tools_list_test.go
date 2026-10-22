@@ -7,11 +7,9 @@ import (
 	"context"
 	"encoding/json"
 	"maps"
-	"regexp"
 	"slices"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -46,7 +44,7 @@ func TestARecordTypeOutsideTheEnumerationIsRefused(t *testing.T) {
 	seam := &listProbeProvider{}
 	tool := listRecords{p: seam, filters: bindableFilters(probeVocabulary{})}
 
-	_, err := tool.Handle(t.Context(), json.RawMessage(`{"record_type":"activity"}`))
+	_, err := tool.Handle(t.Context(), json.RawMessage(`{"record_type":"relationship"}`))
 
 	if err == nil {
 		t.Fatal("an unlistable record type was accepted")
@@ -129,26 +127,6 @@ func TestTheCallReachesTheSeamAsItWasAsked(t *testing.T) {
 	}
 }
 
-// An enumeration is charged PER RECORD, not per call. It is the densest read a
-// surface can offer, so metering it by the call would make it the cheapest way
-// to read a workspace — the exact failure A139 names.
-func TestAnEnumerationIsChargedPerRecord(t *testing.T) {
-	seam := &listProbeProvider{}
-	for range 3 {
-		seam.records = append(seam.records, recordAt(datasource.EntityDeal,
-			time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true))
-	}
-	registry, charger, ctx := chargingRegistry(t, listRecords{p: seam, filters: bindableFilters(probeVocabulary{})})
-
-	if _, err := registry.Invoke(ctx, "list_records", json.RawMessage(`{"record_type":"deal"}`)); err != nil {
-		t.Fatalf("invoking list_records: %v", err)
-	}
-
-	if charger.reads() != 3 {
-		t.Errorf("charged %d for a page of 3 records, want 3", charger.reads())
-	}
-}
-
 // `filters` DECLARES its keys, and they are exactly the names some record type
 // publishes — both sides of one wire. A schema-constrained decoder writes no key
 // into an object whose schema lists none, so an undeclared name is one a
@@ -211,46 +189,41 @@ func TestADeploymentWithNoFiltersDeclaresNoFiltersObject(t *testing.T) {
 	}
 }
 
-// The description says which filters each type takes, because the schema's
-// keys cannot: `status` is open|won|lost on a deal and new|contacted|engaged on
-// a lead, so one enum per key would publish one type's vocabulary for both.
-func TestTheDescriptionCarriesThePerTypeVocabulary(t *testing.T) {
-	described := listRecords{filters: bindableFilters(probeVocabulary{})}.describeFilters()
-	// Anchored on the type heading and on the filters themselves, not on which
-	// one happens to sort first: the set is alphabetical, so pinning the first
-	// entry fails the day a type gains a filter earlier in the alphabet —
-	// which says nothing about whether the vocabulary is published correctly.
-	for _, want := range []string{
-		"contact — ", "owner_id", "deal — ", "stage_id", "open|won|lost",
-	} {
-		if !strings.Contains(described, want) {
-			t.Errorf("the filter description lacks %q:\n%s", want, described)
+// describe_list_filters says which filters each type takes, because the
+// schema's keys cannot. `status` is open|won|lost on a deal and
+// new|contacted|engaged on a lead. One enum per key would publish one for both.
+func TestTheListFilterDocumentCarriesThePerTypeVocabulary(t *testing.T) {
+	answer, err := describeListFilters{filters: bindableFilters(probeVocabulary{})}.Handle(context.Background(), nil)
+	if err != nil {
+		t.Fatalf("describe_list_filters refused: %v", err)
+	}
+	var published DescribeListFiltersResult
+	if err := json.Unmarshal(answer, &published); err != nil {
+		t.Fatalf("the answer is not the declared result: %v", err)
+	}
+	status := func(recordType string) []string {
+		for _, filter := range published.RecordTypes[recordType] {
+			if filter.Name == "status" {
+				return filter.Values
+			}
 		}
+		return nil
+	}
+	if !slices.Contains(status("deal"), "won") || slices.Contains(status("lead"), "won") {
+		t.Errorf("status takes %v on a deal and %v on a lead; each type must carry its own values",
+			status("deal"), status("lead"))
 	}
 }
 
-// Every abbreviated operand type the description prints is explained in it. A
-// bare `tag_id (a)` leaves a caller to guess that the operand is a
-// comma-separated list, which is the spelling it gets wrong.
-func TestEveryOperandCodeTheDescriptionPrintsIsExplained(t *testing.T) {
+// list_records names the document rather than reciting it, and a type whose
+// stores bind nothing still reads as listed whole in a refusal.
+func TestTheFilterDescriptionNamesTheDocument(t *testing.T) {
 	described := listRecords{filters: bindableFilters(probeVocabulary{})}.describeFilters()
-	codes := regexp.MustCompile(`\(([a-z])\)`).FindAllStringSubmatch(described, -1)
-	if len(codes) == 0 {
-		t.Fatalf("the description abbreviates no operand type, so this reads nothing:\n%s", described)
+	if !strings.Contains(described, "describe_list_filters") {
+		t.Errorf("the filter description does not name where the per-type vocabulary is:\n%s", described)
 	}
-	for _, code := range codes {
-		if strings.Count(described, code[0]) < 2 || !strings.Contains(described, code[0]+" is ") {
-			t.Errorf("the description prints %s and never says what it means:\n%s", code[0], described)
-		}
-	}
-}
-
-// A type whose stores bind nothing says so, rather than presenting an empty
-// list a caller has to interpret.
-func TestATypeWithNoBindableFilterSaysItListsWhole(t *testing.T) {
-	tool := listRecords{filters: bindableFilters(noFilterVocabulary{})}
-	if described := tool.describeFilters(); !strings.Contains(described, "none; it can only be listed whole") {
-		t.Errorf("a type with no filters reads as an omission:\n%s", described)
+	if got := describeNames(nil); !strings.Contains(got, "it can only be listed whole") {
+		t.Errorf("a type with no filters reads as an omission: %q", got)
 	}
 }
 

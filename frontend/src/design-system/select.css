@@ -133,7 +133,6 @@
 }
 .select-option-check {
   flex: none;
-  color: var(--accentText);
 }
 /* The mark before a label — a colour swatch, a provider glyph — in the list and
    on the closed face alike. It never shrinks and never grows: a swatch that
@@ -149,11 +148,11 @@
 .select-option.is-active {
   background: var(--bgHover);
 }
+/* The held option is marked by its tick and weight in the primary ink: a
+   chosen value is where the reader is, so it stays neutral. */
 .select-option[aria-selected="true"] {
-  color: var(--accentText);
-}
-.select-option[aria-selected="true"].is-active {
-  background: var(--accentLight);
+  color: var(--textPrimary);
+  font-weight: var(--fontWeightMedium);
 }
 /* A disabled option stays listed and stays readable — a choice this workspace
    cannot make right now is information — but it takes no hover treatment,

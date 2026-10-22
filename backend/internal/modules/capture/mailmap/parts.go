@@ -21,6 +21,7 @@ import (
 
 	"github.com/emersion/go-message/mail"
 
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -127,6 +128,15 @@ func (c *collector) holdCalendar(content []byte) {
 	if c.calendar == nil {
 		c.calendar = content
 	}
+}
+
+// justAdmitted is the body of the part the last take admitted, or nil when that
+// part was refused by a bound.
+func (c *collector) justAdmitted() []byte {
+	if n := len(c.parts); n > 0 && c.parts[n-1].Ordinal == c.ordinal {
+		return c.parts[n-1].Body
+	}
+	return nil
 }
 
 // settle admits whatever was held back, after every part the sender named has
@@ -246,4 +256,35 @@ func (c *collector) admit(filename, declared string, body io.Reader) {
 		DeclaredType: extension.DeclaredTypeDisagreement(declared, sniffed),
 		Body:         content,
 	})
+}
+
+// recordParts hands the collected files to the seam. A mailmap.Part is a
+// candidate the collector may still refuse; a connector.Part cleared every
+// bound. This copy is the one way across, and one set of bounds stands behind both.
+func (m Message) recordParts() []connector.Part {
+	if len(m.parts) == 0 {
+		return nil
+	}
+	out := make([]connector.Part, 0, len(m.parts))
+	for _, part := range m.parts {
+		out = append(out, connector.Part{
+			Ordinal:      part.Ordinal,
+			Filename:     part.Filename,
+			ContentType:  part.ContentType,
+			DeclaredType: part.DeclaredType,
+			Body:         part.Body,
+		})
+	}
+	return out
+}
+
+func (m Message) recordDrops() []connector.PartDrop {
+	if len(m.partDrops) == 0 {
+		return nil
+	}
+	out := make([]connector.PartDrop, 0, len(m.partDrops))
+	for _, drop := range m.partDrops {
+		out = append(out, connector.PartDrop{Reason: drop.Reason, Count: drop.Count})
+	}
+	return out
 }

@@ -47,11 +47,11 @@ prompt: |
   fill in whatever the record itself already tells us and say what is still
   missing.
 
-# All three, because the ask has three halves and no other tool performs any of
-# them. There is no second door onto promotion or onto a lead's terminal state,
-# and "fill in whatever the record itself already tells us" is qualify_lead's
-# whole contract — a value typed in through update_record would be the assistant
-# inventing one, which is the opposite of what was asked.
+# All three actions, because the ask has three halves and no other tool
+# performs any of them. There is no second door onto promotion or onto a lead's
+# terminal state, and "fill in whatever the record itself already tells us" is
+# the qualify action's whole contract — a value typed in through update_record
+# would be the assistant inventing one, which is the opposite of what was asked.
 must_call:
   - qualify_lead
   - promote_lead
@@ -64,7 +64,7 @@ may_call:
   - catch_me_up_on
   - whoami
 
-# `promote_lead.trigger` is deliberately NOT pinned, for the reason case 7 does
+# The promotion's `trigger` is deliberately NOT pinned, for the reason case 7 does
 # not pin `group_by`: more than one value is honest here. Ines replied, so
 # `inbound_reply` is the obvious read of the record — and a rep who says "make
 # her a contact" is also a human's decision, which is `human_qualify`. Pinning
@@ -130,7 +130,7 @@ must_mention:
   # Bruno is the dead end. Same shape, same reason — and "closed off", "dead
   # end" and "no longer live" are the same finding as "disqualified".
   - "(?:disqualif\w*|clos(?:ed|ing)?(?:(?!Ines|Piet)[\s\S]){0,15}(?:off|out)|wrote(?:(?!Ines|Piet)[\s\S]){0,10}off|written off|dead end|not going anywhere|no longer (?:live|active|in the queue))(?:(?!Ines|Piet)[\s\S]){0,200}Bruno|Bruno(?:(?!Ines|Piet)[\s\S]){0,200}(?:disqualif\w*|clos(?:ed|ing)?(?:(?!Ines|Piet)[\s\S]){0,15}(?:off|out)|wrote(?:(?!Ines|Piet)[\s\S]){0,10}off|written off|dead end|not going anywhere|no longer (?:live|active|in the queue))"
-  # The value qualify_lead DERIVED, which is the evidence the fill actually
+  # The value the qualify action DERIVED, which is the evidence the fill actually
   # landed rather than being described. The tool titles the registrable label of
   # the mail domain, so this exact string is what the record now holds.
   - "Brandsma Koeltechniek"
@@ -148,7 +148,7 @@ must_not_mention:
   - "(?:^|[.;\n])(?:(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;,\n])*?(?:(?:promot\w*|convert\w*|turn(?:ed|ing)?(?:(?!Ines|Piet)(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;,\n]){0,20}into a (?:contact|contact))(?:(?!Ines|Piet)(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;,\n]){0,40}Bruno|Bruno(?:(?!Ines|Piet)(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;,\n]){0,25}(?:is|are|'?s) now (?:a )?(?:proper )?(?:contact|contact)|Bruno(?:(?!Ines|Piet)(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;,\n]){0,40}(?:promot\w*|convert\w*|turn(?:ed|ing)?(?:(?!Ines|Piet)(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;,\n]){0,20}into a (?:contact|contact)))"
   - "(?:^|[.;\n])(?:(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;,\n])*?(?:(?:disqualif\w*|clos(?:ed|ing)?(?:(?!Bruno|Piet)(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;,\n]){0,15}(?:off|out)|wrote(?:(?!Bruno|Piet)(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;,\n]){0,10}off|written off)(?:(?!Bruno|Piet)(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;,\n]){0,40}Ines|Ines(?:(?!Bruno|Piet)(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;,\n]){0,40}(?:disqualif\w*|clos(?:ed|ing)?(?:(?!Bruno|Piet)(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;,\n]){0,15}(?:off|out)|wrote(?:(?!Bruno|Piet)(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;,\n]){0,10}off|written off))"
   # Piet is INCOMPLETE, not dead. The tool copy draws that line explicitly
-  # ("qualify_lead when the lead is only missing information"), and an assistant
+  # (qualify for a lead only missing information), and an assistant
   # that clears the queue by writing him off has followed the shape of the ask
   # rather than the record.
   - "(?:^|[.;\n])(?:(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;,\n])*?(?:(?:disqualif\w*|clos(?:ed|ing)?(?:(?!Ines|Bruno)(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;,\n]){0,15}(?:off|out)|wrote(?:(?!Ines|Bruno)(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;,\n]){0,10}off|written off)(?:(?!Ines|Bruno)(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;,\n]){0,40}Piet|Piet(?:(?!Ines|Bruno)(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;,\n]){0,40}(?:disqualif\w*|clos(?:ed|ing)?(?:(?!Ines|Bruno)(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;,\n]){0,15}(?:off|out)|wrote(?:(?!Ines|Bruno)(?!\b(?:not|never|nothing|nobody|no ?one|none|no|cannot|can not|unable|without|instead of|rather than|whether|unclear|unknown|apart from|other than|besides|except|only|\w*n['’]t)\b)[^.;,\n]){0,10}off|written off))"
@@ -156,6 +156,18 @@ must_not_mention:
   # A lead the assistant could not act on is an honest answer; "the CRM has no
   # way to do this" is a conclusion that stops the contact asking.
   - "no way to (?:promote|disqualify|qualify)|(?:cannot|can't|does not|doesn't) (?:promote|disqualify|qualify) leads|(?:CRM|Margince|workspace) (?:has no|does not have a) lead"
+
+
+# The three verbs, read from the world. Promoting and disqualifying both take
+# the lead out of list_records, so each is told by what else exists: Ines as a
+# contact, Bruno as nothing. qualify derives Piet's company from his mail
+# domain, so that value is the server's and not the model's wording.
+must_end_with:
+  - lead "Ines Waldner" records=0
+  - contact "Ines Waldner" records=1
+  - lead "Bruno Kellner" records=0
+  - contact "Bruno Kellner" records=0
+  - lead "Piet Brandsma" company_name=Brandsma Koeltechniek
 
 runs: 3
 pass_at: 2

@@ -5,7 +5,8 @@ package httperr
 
 import (
 	"fmt"
-	"unicode/utf8"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // MaxCallerToken bounds ONE name a refusal quotes back from the caller's own
@@ -66,10 +67,7 @@ func QuoteCaller(s string) string {
 	}
 	// Room for the ellipsis and the closing quote the cut throws away, so the
 	// answer is a quoted token a reader can see the end of.
-	cut := MaxCallerToken - len("…\"")
-	for cut > 0 && !utf8.RuneStart(quoted[cut]) {
-		cut--
-	}
+	cut := len(textcut.Bytes(quoted, MaxCallerToken-len("…\"")))
 	// A cut that lands just after a backslash would emit a dangling escape —
 	// `"abc\` — which reads as a quoting bug in this function rather than as a
 	// truncated name. Drop the orphan.

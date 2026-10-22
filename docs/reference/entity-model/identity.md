@@ -6,11 +6,12 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## app_user
 
-24 columns · primary key `(id)` · referenced by 126 foreign keys
+30 columns · primary key `(id)` · referenced by 139 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
+| `combine_routine_email` | `boolean` |  |  |
 | `delivery_hour_local` | `integer` |  |  |
 | `display_name` | `text` | yes |  |
 | `email` | `text` | yes |  |
@@ -18,22 +19,33 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 | `greeting_name` | `text` |  | At most 100 characters. |
 | `greeting_name_chosen_at` | `timestamp with time zone` |  |  |
 | `is_agent` | `boolean`, default `false` | yes |  |
+| `last_active_at` | `timestamp with time zone` |  |  |
 | `locale` | `text` |  | One of `en`, `de`, `vi`. |
 | `locked_until` | `timestamp with time zone` |  |  |
 | `morning_brief_delivery` | `text` |  |  |
 | `must_change_password` | `boolean`, default `false` | yes |  |
 | `password_hash` | `text` |  |  |
 | `quiet_day_notice` | `boolean` |  |  |
+| `routine_delivery_time` | `text` |  |  |
+| `routine_mail_scope` | `text` |  | One of `personal`, `team`, `combined`. |
+| `routine_mail_team_id` | `uuid` |  | Points at `team.id`. |
 | `seat_type` | `text`, default `'full'::text` | yes | One of `read`, `full`. |
 | `status` | `text`, default `'active'::text` | yes | One of `invited`, `active`, `suspended`, `deactivated`. |
 | `timezone` | `text` |  |  |
 | `weekly_delivery` | `text` |  |  |
+| `weekly_delivery_day` | `integer` |  |  |
 | `work_days` | `smallint[]` |  |  |
 | `work_end_minute` | `smallint` |  |  |
 | `work_start_minute` | `smallint` |  |  |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
+
+**Points at**
+
+| Columns | Table | When the parent goes |
+|---|---|---|
+| `routine_mail_team_id` | `team` | deleting the parent keeps this row and clears the link |
 
 **Rules**
 
@@ -45,9 +57,12 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 - `app_user_greeting_name_length`: `CHECK (((greeting_name IS NULL) OR ((char_length(greeting_name) >= 1) AND (char_length(greeting_name) <= 100))))`
 - `app_user_locale_shipped`: `CHECK ((locale = ANY (ARRAY['en', 'de', 'vi'])))`
 - `app_user_morning_brief_delivery_check`: `CHECK (((morning_brief_delivery IS NULL) OR (morning_brief_delivery = ANY (ARRAY['none', 'email']))))`
+- `app_user_routine_delivery_time_check`: `CHECK ((routine_delivery_time ~ '^(working|([01][0-9]|2[0-3]):00)$'))`
+- `app_user_routine_mail_scope_check`: `CHECK ((routine_mail_scope = ANY (ARRAY['personal', 'team', 'combined'])))`
 - `app_user_seat_type_check`: `CHECK ((seat_type = ANY (ARRAY['read', 'full'])))`
 - `app_user_status_check`: `CHECK ((status = ANY (ARRAY['invited', 'active', 'suspended', 'deactivated'])))`
 - `app_user_weekly_delivery_check`: `CHECK (((weekly_delivery IS NULL) OR (weekly_delivery = ANY (ARRAY['none', 'email']))))`
+- `app_user_weekly_delivery_day_check`: `CHECK (((weekly_delivery_day >= 1) AND (weekly_delivery_day <= 7)))`
 - `app_user_work_days_are_weekdays`: `CHECK (((work_days IS NULL) OR (((cardinality(work_days) >= 1) AND (cardinality(work_days) <= 7)) AND (work_days <@ ARRAY[(1)::smallint, (2)::smallint, (3)::smallint, (4)::smallint, (5)::smallint, (6)::smallint, (7)::smallint]))))`
 - `app_user_work_end_minute_of_day`: `CHECK (((work_end_minute IS NULL) OR ((work_end_minute >= 1) AND (work_end_minute <= 1440))))`
 - `app_user_work_range_is_a_range`: `CHECK ((((work_start_minute IS NULL) = (work_end_minute IS NULL)) AND ((work_start_minute IS NULL) OR (work_start_minute < work_end_minute))))`
@@ -254,13 +269,14 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## oauth_client
 
-10 columns · primary key `(id)` · referenced by 1 foreign key
+11 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `client_id` | `text` | yes |  |
 | `client_name` | `text` | yes |  |
+| `client_secret_hash` | `text` |  |  |
 | `created_via` | `text`, default `'dcr'::text` | yes | One of `dcr`, `admin`, `cimd`. |
 | `deleted_at` | `timestamp with time zone` |  |  |
 | `disabled_at` | `timestamp with time zone` |  |  |
@@ -273,6 +289,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 - `oauth_client_client_id_key`: `UNIQUE (client_id)`
 - `oauth_client_created_via_check`: `CHECK ((created_via = ANY (ARRAY['dcr', 'admin', 'cimd'])))`
+- `oauth_client_secret_is_admin_only`: `CHECK (((client_secret_hash IS NULL) OR (created_via = 'admin')))`
 
 **Indexes**
 
@@ -425,14 +442,19 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## record_grant
 
-11 columns · primary key `(id)` · referenced by 0 foreign keys
+16 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `access` | `text` | yes | 'write' also satisfies 'read'. |
+| `company_id` | `uuid`, generated as `CASE WHEN (record_type = 'company'::text) THEN record_id ELSE NULL::uuid END` |  | Computed by the database. It cannot be written directly. |
+| `contact_id` | `uuid`, generated as `CASE WHEN (record_type = 'contact'::text) THEN record_id ELSE NULL::uuid END` |  | Computed by the database. It cannot be written directly. |
+| `deal_id` | `uuid`, generated as `CASE WHEN (record_type = 'deal'::text) THEN record_id ELSE NULL::uuid END` |  | Computed by the database. It cannot be written directly. |
 | `expires_at` | `timestamp with time zone` |  | Optional TTL; an expired grant matches no rows. |
 | `granted_by` | `uuid` | yes | Points at `app_user.id`. |
+| `lead_id` | `uuid`, generated as `CASE WHEN (record_type = 'lead'::text) THEN record_id ELSE NULL::uuid END` |  | Computed by the database. It cannot be written directly. |
+| `project_id` | `uuid`, generated as `CASE WHEN (record_type = 'project'::text) THEN record_id ELSE NULL::uuid END` |  | Computed by the database. It cannot be written directly. |
 | `reason` | `text` |  | Accountability/lawful-basis note surfaced in the audit row. |
 | `record_id` | `uuid` | yes |  |
 | `record_type` | `text` | yes | One of `contact`, `company`, `deal`, `lead`, `project`. |
@@ -445,11 +467,17 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 | Columns | Table | When the parent goes |
 |---|---|---|
+| `company_id` | `company` | deleting the parent deletes this row |
+| `contact_id` | `contact` | deleting the parent deletes this row |
+| `deal_id` | `deal` | deleting the parent deletes this row |
 | `granted_by` | `app_user` | the parent cannot be deleted while this row points at it |
+| `lead_id` | `lead` | deleting the parent deletes this row |
+| `project_id` | `project` | deleting the parent deletes this row |
 
 **Rules**
 
 - `record_grant_access_check`: `CHECK ((access = ANY (ARRAY['read', 'write'])))`
+- `record_grant_record_shape`: `CHECK ((num_nonnulls(contact_id, company_id, deal_id, lead_id, project_id) = 1))`
 - `record_grant_record_type_check`: `CHECK ((record_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'project'])))`
 - `record_grant_subject_type_check`: `CHECK ((subject_type = ANY (ARRAY['user', 'team'])))`
 - `record_grant_unique`: `UNIQUE (record_type, record_id, subject_type, subject_id)`
@@ -457,6 +485,11 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 **Indexes**
 
+- `idx_record_grant_company`: `btree (company_id) WHERE (company_id IS NOT NULL)`
+- `idx_record_grant_contact`: `btree (contact_id) WHERE (contact_id IS NOT NULL)`
+- `idx_record_grant_deal`: `btree (deal_id) WHERE (deal_id IS NOT NULL)`
+- `idx_record_grant_lead`: `btree (lead_id) WHERE (lead_id IS NOT NULL)`
+- `idx_record_grant_project`: `btree (project_id) WHERE (project_id IS NOT NULL)`
 - `idx_record_grant_subject`: `btree (subject_type, subject_id)`
 - `record_grant_pkey`: `unique, btree (id)`
 - `record_grant_unique`: `unique, btree (record_type, record_id, subject_type, subject_id)`
@@ -581,7 +614,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## team
 
-6 columns · primary key `(id)` · referenced by 7 foreign keys
+6 columns · primary key `(id)` · referenced by 9 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|

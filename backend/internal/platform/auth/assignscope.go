@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // AssigneeNotAllowedError refuses a proposed owner: 422, one code for every
@@ -52,10 +53,10 @@ func (e *AssigneeNotAllowedError) FieldFault() (field, code, message string) {
 // the assigner's whole destination pool.
 func AssigneeEligibleSQL(p principal.Principal, alias string, arg func(any) int) string {
 	return fmt.Sprintf(
-		`%[1]s.status = 'active' AND %[1]s.archived_at IS NULL
-		   AND NOT %[1]s.is_agent AND %[1]s.seat_type <> 'read'
-		   AND %[2]s`,
-		alias, ownerPredicate(p, arg, unownedIsNobodys)(alias))
+		`%[1]s
+		   AND NOT %[2]s.is_agent AND %[2]s.seat_type <> 'read'
+		   AND %[3]s`,
+		workforce.LiveMemberSQL(alias), alias, ownerPredicate(p, arg, unownedIsNobodys)(alias))
 }
 
 // newRecordOwnerSQL is AssigneeEligibleSQL for a NEW record's named owner,
@@ -71,7 +72,7 @@ func AssigneeEligibleSQL(p principal.Principal, alias string, arg func(any) int)
 // swap.
 func newRecordOwnerSQL(p principal.Principal, alias string, arg func(any) int) string {
 	return strings.Replace(AssigneeEligibleSQL(p, alias, arg),
-		alias+".status = 'active'", alias+".status IN ('active', 'invited')", 1)
+		workforce.LiveMemberSQL(alias), workforce.ActivatableMemberSQL(alias), 1)
 }
 
 // EnsureAssignee answers whether the caller may hand work to dest.

@@ -5,20 +5,19 @@
  * from a rule nested under it. */
 
 /* The box the count is pinned to. `position: relative` is the whole job — the
-   trigger inside is an ordinary design-system Button and owns its own
-   geometry, which is why it wears no class of its own here. */
+   trigger inside is a bare design-system Button and owns its own geometry. */
 .notifbell {
   position: relative;
   display: flex;
   align-items: center;
 }
 
-/* The count, pinned to the glyph's corner. It only PLACES the badge; the badge
-   draws itself. `pointer-events: none` so the figure is part of the target
-   rather than a second one inside it. */
+/* The count sits above the glyph's shoulder and covers under a third of it.
+   It only PLACES the badge; the badge draws itself. `pointer-events: none` so
+   the figure is part of the target rather than a second one inside it. */
 .notifbell-count {
   position: absolute;
-  top: -2px;
+  top: calc(var(--space-2) * -1);
   right: -2px;
   pointer-events: none;
 }

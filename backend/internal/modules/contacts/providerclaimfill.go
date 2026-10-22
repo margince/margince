@@ -104,7 +104,7 @@ func fillLinkedIn(ctx context.Context, tx pgx.Tx, subject ids.UUID, _ string, v 
 		// this contact's profile: an empty answer, not a fault to fail on.
 		return nothingFilled, nil //nolint:nilerr // an unreadable answer is an empty answer
 	}
-	rowID, landed, err := insertSocialHandle(ctx, tx, subject, socialLinkedIn, handle)
+	rowID, landed, err := insertSocialHandle(ctx, tx, subject, SocialLinkedIn, handle)
 	if err != nil || !landed {
 		return nothingFilled, err
 	}
@@ -116,7 +116,7 @@ func fillLinkedIn(ctx context.Context, tx pgx.Tx, subject ids.UUID, _ string, v 
 	// pressed save owns a new row carrying the same handle string. A value test
 	// cannot tell that from ours and would delete their row on the next
 	// "delete bought data"; the id survives only while nobody has saved.
-	return filled{appliedField{table: tableContactSocial, field: socialLinkedIn, rowID: &rowID}, true}, nil
+	return filled{appliedField{table: tableContactSocial, field: SocialLinkedIn, rowID: &rowID}, true}, nil
 }
 
 // fillEmployment links the contact to the company the provider names, when
@@ -164,7 +164,7 @@ func fillEmail(ctx context.Context, tx pgx.Tx, subject ids.UUID, providerName st
 	if err != nil {
 		return nothingFilled, fmt.Errorf("contacts: checking a bought address against the erasure list: %w", err)
 	}
-	if suppressed {
+	if suppressed || refuseMachineAddress(address.String()) != nil {
 		return nothingFilled, nil
 	}
 	rowID, landed, err := insertChildRow(ctx, tx, `

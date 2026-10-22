@@ -20,6 +20,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -42,6 +43,7 @@ func (seamRecord) ArchivableTypes(context.Context) ([]datasource.EntityType, err
 	return []datasource.EntityType{
 		datasource.EntityContact, datasource.EntityCompany, datasource.EntityDeal,
 		datasource.EntityProject, datasource.EntityRelationship, datasource.EntityActivity,
+		datasource.EntityProduct, datasource.EntityOfferTemplate, datasource.EntityOffer,
 	}, nil
 }
 
@@ -54,7 +56,7 @@ func (seamRecord) ArchiveAt(_ context.Context, in datasource.ArchiveInput) (data
 func (seamRecord) Read(_ context.Context, ref datasource.EntityRef) (datasource.Record, error) {
 	return datasource.Record{
 		Ref:       ref,
-		Fields:    json.RawMessage(`{"name":"Acme"}`),
+		Fields:    json.RawMessage(`{"name":"Acme","domains":[{"domain":"acme.example"}]}`),
 		Version:   4,
 		Freshness: datasource.FreshnessInfo{Authoritative: true},
 	}, nil
@@ -276,4 +278,54 @@ func anArchivingAgent() context.Context {
 		Type: principal.PrincipalAgent, ID: "agent:archive", OnBehalfOf: ids.NewV7(),
 		Scopes: principal.NewScopeSet(principal.ScopeRead, principal.ScopeWrite),
 	})
+}
+
+// confirmFirstFileTool carries a file and needs an approval, which is what
+// attach_document becomes wherever its tier is raised to confirm-first.
+type confirmFirstFileTool struct{}
+
+func (confirmFirstFileTool) Spec() mcp.ToolSpec {
+	return mcp.ToolSpec{
+		Name: "confirm_first_file", Title: "Confirm-first file", Version: "1", Description: "carries a file and waits",
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierConfirmationRequired,
+		InputSchema: json.RawMessage(`{"type":"object"}`), MaxArgsBytes: agents.MaxMCPRequestBytes,
+	}
+}
+
+func (confirmFirstFileTool) Handle(context.Context, json.RawMessage) (json.RawMessage, error) {
+	return nil, errors.New("a call that must wait for an approval ran")
+}
+
+// A file that would have to wait for an approval is refused, not staged, on
+// both doors, and with one status and code on both.
+func TestAFileThatMustWaitIsRefusedAlikeOnEitherDoor(t *testing.T) {
+	registry := agents.NewRegistry(stubApprovals{}, auth.NewGate(fullSeat{}))
+	registry.Register(confirmFirstFileTool{})
+	_, viaTool := registry.Invoke(agentHolding(t.Context(), principal.ScopeWrite), "confirm_first_file", json.RawMessage(`{}`))
+	_, viaREST := uploadAttachmentCommand(agentPolicy{}, restCommandDeps{}, nil, nil)
+	for door, err := range map[string]error{"the tool door": viaTool, "the REST gate": viaREST} {
+		if !errors.Is(err, agents.ErrFileCannotWait) {
+			t.Errorf("%s answered %v, want the file-cannot-wait refusal", door, err)
+			continue
+		}
+		recorder := httptest.NewRecorder()
+		httperr.Write(recorder, httptest.NewRequest(http.MethodPost, "/v1/attachments", nil), err)
+		var problem struct {
+			Code string `json:"code"`
+		}
+		if decodeErr := json.Unmarshal(recorder.Body.Bytes(), &problem); decodeErr != nil {
+			t.Fatalf("%s's refusal does not decode: %v", door, decodeErr)
+		}
+		if recorder.Code != http.StatusForbidden || problem.Code != "approval_required" {
+			t.Errorf("%s answered %d %q, want 403 approval_required", door, recorder.Code, problem.Code)
+		}
+	}
+}
+
+func (p seamRecord) ReadLeadForReversal(ctx context.Context, id ids.UUID) (datasource.Record, error) {
+	return p.Read(ctx, datasource.EntityRef{Type: datasource.EntityLead, ID: id})
+}
+
+func (p hiddenRecord) ReadLeadForReversal(ctx context.Context, id ids.UUID) (datasource.Record, error) {
+	return p.Read(ctx, datasource.EntityRef{Type: datasource.EntityLead, ID: id})
 }

@@ -15,7 +15,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/compose/installseam"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/contracts"
@@ -149,11 +148,7 @@ func Setup(t *testing.T) *Env {
 	// last and sees a package that has genuinely stopped.
 	testdb.AssertPoolsQuiesced(t)
 	e.Pool = pool
-	e.Contacts = contacts.NewStore(harnessDB(pool, e.WS))
-	e.Deals = deals.NewStore(harnessDB(pool, e.WS), installseam.Deals())
-	e.Projects = ProjectsStore(harnessDB(pool, e.WS))
-	e.Contracts = ContractsStore(harnessDB(pool, e.WS), e.Deals)
-	e.Activities = activities.NewStore(harnessDB(pool, e.WS))
+	e.bindStores(harnessDB(pool, e.WS))
 	return e
 }
 
@@ -293,7 +288,7 @@ func (e *Env) AgentCtx() context.Context {
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:test", SeatType: principal.SeatFull,
-		PassportID: e.AgentPassport,
+		PassportID: e.AgentPassport, OnBehalfOf: e.Rep1,
 	})
 }
 
@@ -359,7 +354,7 @@ func (e *Env) AgentCtxWithPassport(passportID ids.UUID) context.Context {
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:test", SeatType: principal.SeatFull,
-		PassportID: passportID,
+		PassportID: passportID, OnBehalfOf: e.Rep1,
 	})
 }
 

@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { LocaleProvider } from "../i18n";
-import { ProblemError } from "../screens/common";
+import { ProblemError } from "../lib/problem";
 import { ProjectLinks, type ProjectLinksAdapter } from "./projectlinks";
 
 afterEach(cleanup);
@@ -116,8 +116,9 @@ describe("ProjectLinks", () => {
       // of production and proving nothing about it.
       attach: async () => {
         throw new ProblemError({
-          code: "project_link_conflict",
-          detail: "this company still has 2 deal(s) on the project",
+          status: 404,
+          code: "not_found",
+          detail: "not found",
         });
       },
     });
@@ -131,9 +132,7 @@ describe("ProjectLinks", () => {
 
     // The refusal is the one moment the reader most needs to see what they
     // asked for, so the dialog stays.
-    expect(
-      await screen.findByText(/still has 2 deal\(s\) on the project/),
-    ).toBeTruthy();
+    expect(await screen.findByText("not found")).toBeTruthy();
     expect(
       screen.getByRole("searchbox", { name: /Search projects/ }),
     ).toBeTruthy();
@@ -273,5 +272,22 @@ describe("ProjectLinks", () => {
 
     expect(await screen.findByText(/do not have permission/)).toBeTruthy();
     expect(screen.queryByText(/company\.link_project/)).toBeNull();
+  });
+
+  // A caller that supplies `card` owns how a row looks. The section still owns
+  // when the verb exists, so a read-only record gives the card no way to detach.
+  it("hands a supplied card its detach verb only while the record is writable", () => {
+    const card: ProjectLinksAdapter["card"] = (linked, onDetach) => (
+      <p>{`${linked.name}:${onDetach ? "can-detach" : "fixed"}`}</p>
+    );
+    const linked = [{ project_id: "c1", name: "Netcare" }];
+    const detach = async () => undefined;
+
+    draw({ linked, card, detach });
+    expect(screen.getByText("Netcare:can-detach")).toBeTruthy();
+    cleanup();
+
+    draw({ linked, card, detach, readOnly: true });
+    expect(screen.getByText("Netcare:fixed")).toBeTruthy();
   });
 });

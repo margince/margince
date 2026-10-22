@@ -14,11 +14,11 @@ import (
 	"maps"
 	"net/http"
 	"strconv"
-	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/capabilitypath"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -58,6 +58,9 @@ var mapping = []struct {
 	{apperrors.ErrProviderUnusable, http.StatusBadGateway, "provider_unusable"},
 	{apperrors.ErrRetentionHold, http.StatusLocked, "locked"},
 }
+
+// versionSkewDetail tells a reader who lost a version race what to do next.
+const versionSkewDetail = "This record changed after you opened it. Reload it to see the change, then make yours again."
 
 // clientInputValidation maps the typed errors that mean "the CALLER got the
 // request wrong" onto their contract validation shape — each carrying its own
@@ -162,14 +165,7 @@ const MaxFaultText = 300
 
 // boundFaultText caps one caller-facing value from a module-declared fault.
 func boundFaultText(s string) string {
-	if len(s) <= MaxFaultText {
-		return s
-	}
-	cut := MaxFaultText
-	for cut > 0 && !utf8.RuneStart(s[cut]) {
-		cut--
-	}
-	return s[:cut] + "…"
+	return textcut.BytesMarked(s, MaxFaultText, "…")
 }
 
 // messageFaultStatus is the status a message-carrying refusal asked for.
@@ -278,10 +274,21 @@ type Fault struct {
 // of those spends its whole step budget on a call that was already settled.
 var transientCodes = map[string]struct{}{
 	"rate_limited":               {},
+	IdempotencyInProgressCode:    {},
 	"incumbent_budget_exhausted": {},
 	schemaChangedCode:            {},
 	writeContentionCode:          {},
+	SourceBusyCode:               {},
+	AgentBusyCode:                {},
 }
+
+// SourceBusyCode refuses an import test while another run of the same source
+// name is writing. It clears when that write ends.
+const SourceBusyCode = "import_source_busy"
+
+// AgentBusyCode refuses an agent's second import test while its first is still
+// running. It clears when that test ends.
+const AgentBusyCode = "import_agent_busy"
 
 // Transient reports whether repeating the same call unchanged could succeed
 // later. Every other classified fault is settled: something must change (the
@@ -340,6 +347,8 @@ func Classify(err error) (Fault, bool) {
 			Detail:  withDetails.Detail,
 			Details: withDetails.Details,
 			Fields:  withDetails.Fields,
+
+			RetryAfterSeconds: withDetails.RetryAfterSeconds,
 		}, true
 	}
 
@@ -356,6 +365,11 @@ func Classify(err error) (Fault, bool) {
 			if m.sentinel == apperrors.ErrProviderUnusable {
 				f.Detail = m.sentinel.Error()
 				f.InfraCause = err
+			}
+			// A plain wrap around a lost race names a code path. A message written
+			// for the reader is an apperrors.VersionSkewError, answered as a MessageFault above.
+			if m.sentinel == apperrors.ErrVersionSkew {
+				f.Detail = versionSkewDetail
 			}
 			// A sentinel wrapped around an infrastructure failure must not
 			// carry that failure's text to a caller. It gets the sentinel's
@@ -400,17 +414,18 @@ func loggedPath(r *http.Request) string {
 // cause is logged server-side, never leaked to the client.
 func Write(w http.ResponseWriter, r *http.Request, err error) {
 	fault, ok := Classify(err)
-	if !ok && callerLeft(r, err) {
+	if !ok && CallerLeft(r.Context()) {
 		// Debug, not error: nothing failed on our side, and the sweep an operator
-		// reads for faults must not have to rule these out by hand.
+		// reads for faults must not have to rule these out by hand. The cause
+		// stays on the line for a fault that coincided with the cancel.
 		slog.DebugContext(r.Context(), "client closed the request",
-			"method", r.Method, "path", loggedPath(r))
+			"method", r.Method, "path", loggedPath(r), "err", err)
 		w.WriteHeader(statusClientClosedRequest)
 		return
 	}
 	if !ok {
 		slog.ErrorContext(r.Context(), "unhandled error", "method", r.Method, "path", loggedPath(r), "err", err)
-		writeProblem(w, problem{Status: http.StatusInternalServerError, Code: "internal"})
+		writeProblem(w, problem{Status: http.StatusInternalServerError, Code: codeInternal})
 		return
 	}
 	if fault.InfraCause != nil {
@@ -476,6 +491,9 @@ type DetailedError struct {
 	// a surface reading Fields and a client reading the body can never be
 	// looking at two different lists.
 	Fields []FieldError
+
+	// RetryAfterSeconds, when positive, is rendered as a Retry-After header.
+	RetryAfterSeconds int
 }
 
 func (e *DetailedError) Error() string { return fmt.Sprintf("%s: %s", e.Code, e.Detail) }

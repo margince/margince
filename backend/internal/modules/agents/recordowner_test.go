@@ -23,12 +23,32 @@ func (p *pageProbeProvider) Search(context.Context, datasource.SearchQuery) (dat
 	return datasource.SearchResult{Records: p.page}, nil
 }
 
+// Read answers a record of the page as well as one held by id.
+func (p *pageProbeProvider) Read(ctx context.Context, ref datasource.EntityRef) (datasource.Record, error) {
+	for _, record := range p.page {
+		if record.Ref == ref {
+			return record, nil
+		}
+	}
+	return p.queryProbeProvider.Read(ctx, ref)
+}
+
+// rank is a ranked engine that finds the page, in its order.
+func (p *pageProbeProvider) rank(context.Context, RecordSearchQuery) (RecordSearchPage, error) {
+	page := RecordSearchPage{}
+	for _, record := range p.page {
+		page.Hits = append(page.Hits, RecordSearchHit{Ref: record.Ref})
+	}
+	return page, nil
+}
+
 // recordToolsNamedBy registers the record-serving tools the way compose does:
 // the namer arrives as a registry option, not as a per-tool argument.
-func recordToolsNamedBy(p datasource.SystemOfRecordProvider, name SeatNamer) *Registry {
+func recordToolsNamedBy(p *pageProbeProvider, name SeatNamer) *Registry {
 	r := NewRegistry(nil, nil, WithSeatNamer(name))
 	RegisterCoreTools(r, p, nil, nil, nil, nil, nil, nil)
 	RegisterListTool(r, p, noFilterVocabulary{})
+	RegisterRecordSearchTool(r, p, p.rank)
 	return r
 }
 

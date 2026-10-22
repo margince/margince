@@ -90,6 +90,7 @@ var destinationOfSource = map[crmcontracts.WorklistItemSource]crmcontracts.Workl
 	crmcontracts.WorklistItemSourceApproval:            destinationReview,
 	crmcontracts.WorklistItemSourceDedupeCandidate:     destinationReview,
 	crmcontracts.WorklistItemSourceDealSuggestion:      destinationReview,
+	crmcontracts.WorklistItemSourceTagSuggestion:       destinationReview,
 	crmcontracts.WorklistItemSourceIntroductionRequest: destinationReview,
 	crmcontracts.WorklistItemSourceDsr:                 destinationReview,
 	crmcontracts.WorklistItemSourceNoticeCase:          destinationReview,

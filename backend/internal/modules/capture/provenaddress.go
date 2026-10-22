@@ -14,28 +14,19 @@ package capture
 
 import (
 	"context"
-	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// providerAttestedLabels are the transports whose account_label the PROVIDER
-// supplied, read out of an OAuth-sealed credential bundle that the connecting
-// caller never authored.
-//
-// An allowlist rather than a denylist of imap: a transport added later is
-// unproven until somebody looks at its AccountLabel and adds it here, which is
-// the direction this must fail in.
 const (
-	providerGmail    = "gmail"
-	providerGcal     = "gcal"
-	providerGraph    = "graph"
-	providerGraphcal = "graphcal"
+	providerGmail = "gmail"
+	providerGraph = "graph"
 )
-
-var providerAttestedLabels = []string{providerGmail, providerGcal, providerGraph, providerGraphcal}
 
 // SeatProvedAddressTx reports whether one seat has proven one address is a
 // mailbox of theirs, on evidence a third party supplied.
@@ -88,32 +79,13 @@ func SeatProvedAddressTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, address 
 	if folded == "" || seat == ids.Nil {
 		return false, nil
 	}
-	// The label is stored in whatever shape the provider gave it — `Rep
-	// <rep@co>` included — so it is folded in Go rather than compared in SQL,
-	// the way ownerIdentitiesTx already folds it. A display-form label compared
-	// as a whole address matches no header.
-	rows, err := tx.Query(ctx, `
-		SELECT account_label FROM capture_connection
-		 WHERE user_id = $1 AND coalesce(account_label, '') <> '' AND archived_at IS NULL
-		   AND status = 'connected' AND provider = ANY($2)`,
-		seat, providerAttestedLabels)
+	proved, err := provedAddressesTx(ctx, tx)
 	if err != nil {
-		return false, fmt.Errorf("capture: reading whether a seat proved %s: %w", address, err)
+		return false, err
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var candidate string
-		if err := rows.Scan(&candidate); err != nil {
-			return false, fmt.Errorf("capture: reading whether a seat proved %s: %w", address, err)
-		}
-		if foldAddress(bareAddress(candidate)) == folded {
-			return true, nil
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return false, fmt.Errorf("capture: reading whether a seat proved %s: %w", address, err)
-	}
-	return false, nil
+	return slices.ContainsFunc(proved, func(p ProvedAddress) bool {
+		return p.Seat == seat && p.Address == folded
+	}), nil
 }
 
 // SeatsProvingAddressTx counts the seats that have proven one address.
@@ -130,47 +102,97 @@ func SeatsProvingAddressTx(ctx context.Context, tx pgx.Tx, address string) (int,
 	if folded == "" {
 		return 0, nil
 	}
-	rows, err := tx.Query(ctx, `
-		SELECT user_id, account_label FROM capture_connection
-		 WHERE coalesce(account_label, '') <> '' AND archived_at IS NULL
-		   AND status = 'connected' AND provider = ANY($1)`,
-		providerAttestedLabels)
+	proved, err := provedAddressesTx(ctx, tx)
 	if err != nil {
-		return 0, fmt.Errorf("capture: counting who proved %s: %w", address, err)
+		return 0, err
 	}
-	defer rows.Close()
-	seats := map[ids.UUID]struct{}{}
-	for rows.Next() {
-		var seat ids.UUID
-		var candidate string
-		if err := rows.Scan(&seat, &candidate); err != nil {
-			return 0, fmt.Errorf("capture: counting who proved %s: %w", address, err)
-		}
-		if foldAddress(bareAddress(candidate)) == folded {
-			seats[seat] = struct{}{}
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return 0, fmt.Errorf("capture: counting who proved %s: %w", address, err)
-	}
-	return len(seats), nil
+	return len(seatsProving(proved)[folded]), nil
 }
 
 // ProvedUnambiguouslyTx is the answer the binding rule actually asks for: this
-// seat proved the address AND no other seat did.
+// seat proved the address, and no other seat did.
 //
 // One function rather than two calls at the call site, because the two
-// questions are one rule — "may this address speak for this seat" — and a
-// caller that asked only the first would attribute a shared mailbox to whoever
-// synced first.
+// questions are one rule: "may this address speak for this seat". A caller that
+// asked only the first would attribute a shared mailbox to whoever synced first.
 func ProvedUnambiguouslyTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, address string) (bool, error) {
-	proved, err := SeatProvedAddressTx(ctx, tx, seat, address)
-	if err != nil || !proved {
-		return false, err
+	folded := foldAddress(bareAddress(address))
+	if folded == "" || seat == ids.Nil {
+		return false, nil
 	}
-	count, err := SeatsProvingAddressTx(ctx, tx, address)
+	proved, err := provedAddressesTx(ctx, tx)
 	if err != nil {
 		return false, err
 	}
-	return count == 1, nil
+	seats := seatsProving(proved)[folded]
+	_, mine := seats[seat]
+	return mine && len(seats) == 1, nil
+}
+
+// ProvedAddress is one address one seat has proven: folded, and as the
+// provider's label spelled it once the display name is stripped.
+type ProvedAddress struct {
+	Seat    ids.UUID
+	Address string
+	Label   string
+}
+
+// Spellings are the forms a stored counterparty_email of this address can take:
+// capture folds a header's address case-only (correspondence.Fold), and
+// foldAddress also normalises the domain.
+func (p ProvedAddress) Spellings() []string {
+	label := correspondence.Fold(p.Label)
+	if label == p.Address {
+		return []string{p.Address}
+	}
+	return []string{p.Address, label}
+}
+
+// UnambiguouslyProvedAddressesTx is ProvedUnambiguouslyTx asked of every
+// address at once: each address one seat alone has proven, with that seat.
+func UnambiguouslyProvedAddressesTx(ctx context.Context, tx pgx.Tx) ([]ProvedAddress, error) {
+	proved, err := provedAddressesTx(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	seats := seatsProving(proved)
+	return slices.DeleteFunc(proved, func(p ProvedAddress) bool {
+		return len(seats[p.Address]) != 1
+	}), nil
+}
+
+// provedAddressesTx reads every address a seat has proven, from the connection
+// labels SeatProvedAddressTx admits.
+//
+// The label is stored in whatever shape the provider gave it, `Rep <rep@co>`
+// included. So it is folded in Go rather than compared in SQL, the way
+// ownerIdentitiesTx already folds it. A display-form label compared as a whole
+// address matches no header.
+func provedAddressesTx(ctx context.Context, tx pgx.Tx) ([]ProvedAddress, error) {
+	labels, err := storekit.ProvedMailboxLabels(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	var out []ProvedAddress
+	for seat, values := range labels {
+		for _, label := range values {
+			bare := bareAddress(label)
+			if folded := foldAddress(bare); folded != "" {
+				out = append(out, ProvedAddress{Seat: seat, Address: folded, Label: bare})
+			}
+		}
+	}
+	return out, nil
+}
+
+// seatsProving groups proven addresses by address, naming each seat once.
+func seatsProving(proved []ProvedAddress) map[string]map[ids.UUID]struct{} {
+	out := map[string]map[ids.UUID]struct{}{}
+	for _, p := range proved {
+		if out[p.Address] == nil {
+			out[p.Address] = map[ids.UUID]struct{}{}
+		}
+		out[p.Address][p.Seat] = struct{}{}
+	}
+	return out
 }

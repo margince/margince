@@ -1,0 +1,694 @@
+/** @vitest-environment happy-dom */
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  cleanup,
+  render as rtlRender,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { components } from "../../api/schema";
+import { EntityRef } from "../../components/entityref";
+import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
+import { DealBulkBar } from "../deals/dealbulk";
+
+type Deal = components["schemas"]["Deal"];
+type Stage = components["schemas"]["Stage"];
+
+// The bulk bar is this file's HOST for the roster picker: it draws the same
+// owner combobox off useRoster("user") and the same partial-list note, with
+// the roster enabled on mount, so these tests reach the picker directly.
+const HOST_DEAL: Deal = {
+  id: "d-1",
+  name: "Brandt renewal",
+  pipeline_id: "p-1",
+  stage_id: "s-1",
+  status: "open",
+  source: "manual",
+  captured_by: "human:u-1",
+  version: 1,
+  created_at: "2026-07-01T08:00:00Z",
+  updated_at: "2026-07-01T08:00:00Z",
+};
+
+const HOST_STAGE: Stage = {
+  id: "s-1",
+  pipeline_id: "p-1",
+  name: "Qualified",
+  position: 1,
+  semantic: "open",
+  win_probability: 40,
+};
+
+function renderRosterHost() {
+  return render(
+    <DealBulkBar deals={[HOST_DEAL]} stages={[HOST_STAGE]} onDone={() => {}} />,
+  );
+}
+
+// EntityRef (P-4 UUID-legibility): a cross-record reference resolves the
+// target's id to its display name and backlinks to its 360.
+//
+// A reference with no name has three readings and they are different facts. A
+// read still in flight is going to answer; an id a roster read to its end does
+// not carry, or one the API answers 404 for, never will; a read that came
+// back 403 or 500 answered nothing at all. Painting the id for all three made
+// every page load show a uuid for a moment — which a reader takes for corrupt
+// data rather than for a page still loading — and made a refused read look
+// exactly like a record that genuinely carries no name.
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+  window.location.hash = "";
+});
+
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+function render(ui: ReactNode) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return rtlRender(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">{ui}</LocaleProvider>
+    </QueryClientProvider>,
+  );
+}
+
+describe("EntityRef", () => {
+  it("renders the resolved name and backlinks to the record's 360 on click", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        if (request.url.includes("/companies/o-1")) {
+          return jsonResponse({ id: "o-1", display_name: "Brandt GmbH" });
+        }
+        return jsonResponse({}, 404);
+      }),
+    );
+    render(<EntityRef kind="company" id="o-1" />);
+
+    // The href IS the destination. Asserting it rather than a click's effect
+    // is the stronger claim: it is also what a new tab, a bookmark and a
+    // middle-click follow, and none of those goes through an onClick.
+    const link = await screen.findByRole("link", { name: "Brandt GmbH" });
+    expect(link.getAttribute("href")).toBe("#/companies/o-1");
+    await userEvent.click(link);
+    expect(window.location.hash).toBe("#/companies/o-1");
+  });
+
+  it("resolves a contact to contacts/{id} and a deal to deals/{id}", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        if (request.url.includes("/contacts/p-1")) {
+          return jsonResponse({ id: "p-1", full_name: "Anna Weber" });
+        }
+        if (request.url.includes("/deals/d-1")) {
+          return jsonResponse({ id: "d-1", name: "Q3 Renewal" });
+        }
+        return jsonResponse({}, 404);
+      }),
+    );
+    const { rerender } = render(<EntityRef kind="contact" id="p-1" />);
+    expect(
+      (await screen.findByRole("link", { name: "Anna Weber" })).getAttribute(
+        "href",
+      ),
+    ).toBe("#/contacts/p-1");
+
+    rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <LocaleProvider initial="en">
+          <EntityRef kind="deal" id="d-1" />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    expect(
+      (await screen.findByRole("link", { name: "Q3 Renewal" })).getAttribute(
+        "href",
+      ),
+    ).toBe("#/deals/d-1");
+  });
+
+  it("resolves a lead to leads/{id} (P-16: lead joins the ENTITY registry)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        if (request.url.includes("/leads/l-1")) {
+          return jsonResponse({ id: "l-1", full_name: "Jordan Lee" });
+        }
+        return jsonResponse({}, 404);
+      }),
+    );
+    render(<EntityRef kind="lead" id="l-1" />);
+    expect(
+      (await screen.findByRole("link", { name: "Jordan Lee" })).getAttribute(
+        "href",
+      ),
+    ).toBe("#/leads/l-1");
+  });
+
+  it("falls back to the id (no link) once the lookup has settled without a name", async () => {
+    // The record answers; it simply carries no display name. That is the one
+    // reading the id belongs to, and the answer has to come back for it.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => jsonResponse({ id: "o-nameless" })),
+    );
+    render(<EntityRef kind="company" id="o-nameless" />);
+    await waitFor(() => expect(screen.getByText("o-nameless")).toBeTruthy());
+    expect(screen.queryByRole("button", { name: "o-nameless" })).toBeNull();
+  });
+
+  it("says the name could not be read when the record lookup fails, and never links it", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => jsonResponse({ title: "Forbidden" }, 403)),
+    );
+    render(<EntityRef kind="company" id="o-403" />);
+
+    expect(await screen.findByText("Name did not load")).toBeTruthy();
+    // Painting the id here would report the reference as settled: a reader
+    // cannot tell a record with no name from one they were refused, and the
+    // second is the one worth acting on.
+    expect(screen.queryByText("o-403")).toBeNull();
+    // A name that failed to load is not a safe link target either.
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("keeps the id when the record is gone or hidden from this reader", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => jsonResponse({ code: "not_found" }, 404)),
+    );
+    render(<EntityRef kind="deal" id="d-gone" />);
+
+    // A 404 is an answer: row-scope hides a record it will not admit exists,
+    // and retrying produces the same one. The id is what a reader is left to
+    // trace, so this is the settled reading rather than the failed one.
+    await waitFor(() => expect(screen.getByText("d-gone")).toBeTruthy());
+    expect(screen.queryByText("Name did not load")).toBeNull();
+  });
+
+  it("says the name could not be read when the roster lookup fails", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => jsonResponse({ title: "Server error" }, 500)),
+    );
+    render(<EntityRef kind="user" id="u-500" />);
+
+    expect(await screen.findByText("Name did not load")).toBeTruthy();
+    expect(screen.queryByText("u-500")).toBeNull();
+  });
+
+  it("says a name is on its way while the record read is in flight, and shows the id only once it has settled", async () => {
+    // The resolvers are held rather than the clock: the test decides when the
+    // read answers, so both readings are asserted without waiting on time.
+    const answer: Array<(response: Response) => void> = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        () =>
+          new Promise<Response>((resolve) => {
+            answer.push(resolve);
+          }),
+      ),
+    );
+    render(<EntityRef kind="company" id="o-slow" />);
+
+    expect(await screen.findByText("Loading…")).toBeTruthy();
+    expect(screen.queryByText("o-slow")).toBeNull();
+
+    for (const resolve of answer) {
+      resolve(jsonResponse({ id: "o-slow" }));
+    }
+
+    // Settled, the id is what is left, and it is a fact a reader can trace —
+    // unlike the same id shown for a read that had simply not answered yet.
+    await waitFor(() => expect(screen.getByText("o-slow")).toBeTruthy());
+    expect(screen.queryByText("Loading…")).toBeNull();
+  });
+
+  it("says a name is on its way while the naming read is in flight, rather than showing the user's id", async () => {
+    const answer: Array<(response: Response) => void> = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        () =>
+          new Promise<Response>((resolve) => {
+            answer.push(resolve);
+          }),
+      ),
+    );
+    render(<EntityRef kind="user" id="u-slow" />);
+
+    expect(await screen.findByText("Loading…")).toBeTruthy();
+    expect(document.body.textContent).not.toContain("u-slow");
+
+    for (const resolve of answer) {
+      resolve(
+        jsonResponse({ data: [{ id: "u-slow", display_name: "Priya Shah" }] }),
+      );
+    }
+
+    await waitFor(() => expect(screen.getByText("Priya Shah")).toBeTruthy());
+  });
+
+  it("shows a dash and fetches nothing when the id is absent", () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    render(<EntityRef kind="contact" id={null} />);
+    expect(screen.getByText("—")).toBeTruthy();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("resolves a user by id and renders the name as plain text (no link)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        if (request.url.includes("/users/names")) {
+          return jsonResponse({
+            data: [
+              { id: "u-1", display_name: "Priya Shah" },
+              { id: "u-2", display_name: "Someone Else" },
+            ],
+          });
+        }
+        return jsonResponse({}, 404);
+      }),
+    );
+    render(<EntityRef kind="user" id="u-1" />);
+
+    await waitFor(() => expect(screen.getByText("Priya Shah")).toBeTruthy());
+    expect(screen.queryByRole("button", { name: "Priya Shah" })).toBeNull();
+  });
+
+  it("resolves a team from the roster list and renders the name as plain text (no link)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        if (request.url.includes("/teams")) {
+          return jsonResponse({
+            data: [{ id: "t-1", name: "Platform Team" }],
+            page: { next_cursor: null, has_more: false },
+          });
+        }
+        return jsonResponse({}, 404);
+      }),
+    );
+    render(<EntityRef kind="team" id="t-1" />);
+
+    await waitFor(() => expect(screen.getByText("Platform Team")).toBeTruthy());
+    expect(screen.queryByRole("button", { name: "Platform Team" })).toBeNull();
+  });
+
+  it("falls back to the raw id as plain text (no link) when the naming read settles without the user", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        if (request.url.includes("/users/names")) {
+          return jsonResponse({
+            data: [{ id: "u-1", display_name: "Priya Shah" }],
+          });
+        }
+        return jsonResponse({}, 404);
+      }),
+    );
+    render(<EntityRef kind="user" id="u-missing" />);
+
+    await waitFor(() => expect(screen.getByText("u-missing")).toBeTruthy());
+    expect(screen.queryByRole("button", { name: "u-missing" })).toBeNull();
+  });
+
+  it("resolves a lead and backlinks to the leads screen on click", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        if (request.url.includes("/leads/l-1")) {
+          return jsonResponse({
+            id: "l-1",
+            full_name: "Jonas Keller",
+            email: "jonas@example.com",
+          });
+        }
+        return jsonResponse({}, 404);
+      }),
+    );
+    render(<EntityRef kind="lead" id="l-1" />);
+
+    expect(
+      (await screen.findByRole("link", { name: "Jonas Keller" })).getAttribute(
+        "href",
+      ),
+    ).toBe("#/leads/l-1");
+  });
+
+  it("uses a caller-supplied user name without reading the roster at all", async () => {
+    const fetched: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        fetched.push(new URL(request.url).pathname);
+        return jsonResponse({ data: [] });
+      }),
+    );
+    render(<EntityRef kind="user" id="u-1" name="Lars Jankowfsky" />);
+
+    // A read that returns its own labels (the connection graph) must not have
+    // its reader shown a raw uuid while /users is in flight — or forever, if
+    // the caller cannot list the roster.
+    expect(await screen.findByText("Lars Jankowfsky")).toBeTruthy();
+    expect(fetched).toHaveLength(0);
+  });
+
+  it("looks the record up when the supplied name is only whitespace, rather than linking a label nobody can read", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        if (request.url.includes("/companies/o-1")) {
+          return jsonResponse({ id: "o-1", display_name: "Brandt GmbH" });
+        }
+        return jsonResponse({}, 404);
+      }),
+    );
+    render(<EntityRef kind="company" id="o-1" name="   " />);
+
+    // Whitespace is the caller saying it has nothing, exactly as an empty
+    // string is. Taken at face value it becomes a link with no readable
+    // label — one a reader can neither read nor find.
+    expect(
+      await screen.findByRole("link", { name: "Brandt GmbH" }),
+    ).toBeTruthy();
+  });
+
+  it("looks the user up when the supplied name is only whitespace", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        if (request.url.includes("/users")) {
+          return jsonResponse({
+            data: [{ id: "u-1", display_name: "Priya Shah" }],
+            page: { next_cursor: null, has_more: false },
+          });
+        }
+        return jsonResponse({}, 404);
+      }),
+    );
+    render(<EntityRef kind="user" id="u-1" name=" " />);
+
+    expect(await screen.findByText("Priya Shah")).toBeTruthy();
+  });
+
+  it("names an invited colleague without walking the roster", async () => {
+    // openapi-fetch always hands the mock a Request, but `fetch` itself also
+    // takes a bare string or URL, and `mockImplementation` checks the
+    // replacement against that whole signature.
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const request = input instanceof Request ? input : new Request(input);
+      return new URL(request.url).pathname.endsWith("/users/names")
+        ? jsonResponse({ data: [{ id: "u-7", display_name: "Dana Kessler" }] })
+        : jsonResponse({ data: [], page: { has_more: false } });
+    });
+    vi.spyOn(globalThis, "fetch").mockImplementation(fetchMock);
+
+    render(<EntityRef kind="user" id="u-7" />);
+
+    expect(await screen.findByText("Dana Kessler")).toBeTruthy();
+    // The walk is the picker's read; naming never arms it.
+    expect(
+      fetchMock.mock.calls.every(([input]) => {
+        const request = input instanceof Request ? input : new Request(input);
+        return new URL(request.url).pathname.endsWith("/users/names");
+      }),
+    ).toBe(true);
+  });
+
+  it("names a deactivated colleague, whom the walk never carried", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
+      jsonResponse({ data: [{ id: "u-9", display_name: "Departed Seat" }] }),
+    );
+
+    render(<EntityRef kind="user" id="u-9" />);
+
+    expect(await screen.findByText("Departed Seat")).toBeTruthy();
+  });
+
+  it("renders the id when the naming read omits it", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
+      jsonResponse({ data: [] }),
+    );
+
+    render(<EntityRef kind="user" id="u-gone" />);
+
+    expect(await screen.findByText(/u-gone/)).toBeTruthy();
+  });
+});
+
+// The roster walk: `/users` and `/teams` are keyset-paged, so ONE page is not
+// the roster. Every picker built on `useRoster` inherits what the walk sees,
+// which is why the walk carries whether it reached the end. A team reference
+// is named off this same walk (`RosterRef`'s team arm); a user reference is
+// named by id and never walks, so these three facts are proven against a
+// team: the walk follows the cursor it was given, it stops at a bound rather
+// than trusting a cursor forever, and neither the stop nor a failed page is
+// allowed to read as a complete roster.
+
+// Pages of a workspace roster, served the way the contract serves them: each
+// response hands back the cursor of the NEXT page, and the last hands back
+// none. The cursor is the page's index, so a request that forgot to echo it
+// would read page one forever and the walk would never terminate.
+function stubPagedRoster(
+  pages: ReadonlyArray<ReadonlyArray<{ id: string; display_name: string }>>,
+) {
+  const cursors: Array<string | null> = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (request: Request) => {
+      const url = new URL(request.url);
+      if (!url.pathname.endsWith("/users")) {
+        // The teams roster answers as an empty workspace: a 404 here would put
+        // a failed read on the surface under test for a list it never asked
+        // about.
+        return jsonResponse({
+          data: [],
+          page: { next_cursor: null, has_more: false },
+        });
+      }
+      const cursor = url.searchParams.get("cursor");
+      cursors.push(cursor);
+      const index = cursor ? Number(cursor) : 0;
+      const last = index === pages.length - 1;
+      return jsonResponse({
+        data: pages[index],
+        page: {
+          next_cursor: last ? null : String(index + 1),
+          has_more: !last,
+        },
+      });
+    }),
+  );
+  return cursors;
+}
+
+// A server that never stops offering another page — the shape the bound exists
+// for. Each page carries one member, named after the page it came from.
+function stubEndlessRoster() {
+  const cursors: Array<string | null> = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (request: Request) => {
+      const url = new URL(request.url);
+      if (!url.pathname.endsWith("/users")) {
+        return jsonResponse({
+          data: [],
+          page: { next_cursor: null, has_more: false },
+        });
+      }
+      const cursor = url.searchParams.get("cursor");
+      cursors.push(cursor);
+      const index = cursor ? Number(cursor) : 0;
+      return jsonResponse({
+        data: [{ id: `u-${index}`, display_name: `Member ${index}` }],
+        page: { next_cursor: String(index + 1), has_more: true },
+      });
+    }),
+  );
+  return cursors;
+}
+
+// The `/teams` counterparts of the two stubs above: a team reference walks
+// to name itself, and a user reference is named by id instead.
+function stubPagedTeamRoster(
+  pages: ReadonlyArray<ReadonlyArray<{ id: string; name: string }>>,
+) {
+  const cursors: Array<string | null> = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (request: Request) => {
+      const url = new URL(request.url);
+      if (!url.pathname.endsWith("/teams")) {
+        return jsonResponse({
+          data: [],
+          page: { next_cursor: null, has_more: false },
+        });
+      }
+      const cursor = url.searchParams.get("cursor");
+      cursors.push(cursor);
+      const index = cursor ? Number(cursor) : 0;
+      const last = index === pages.length - 1;
+      return jsonResponse({
+        data: pages[index],
+        page: {
+          next_cursor: last ? null : String(index + 1),
+          has_more: !last,
+        },
+      });
+    }),
+  );
+  return cursors;
+}
+
+function stubEndlessTeamRoster() {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (request: Request) => {
+      const url = new URL(request.url);
+      if (!url.pathname.endsWith("/teams")) {
+        return jsonResponse({
+          data: [],
+          page: { next_cursor: null, has_more: false },
+        });
+      }
+      const cursor = url.searchParams.get("cursor");
+      const index = cursor ? Number(cursor) : 0;
+      return jsonResponse({
+        data: [{ id: `t-${index}`, name: `Team ${index}` }],
+        page: { next_cursor: String(index + 1), has_more: true },
+      });
+    }),
+  );
+}
+
+describe("the roster walk", () => {
+  it("follows the cursor to the last page, so a team beyond the first still resolves to a name", async () => {
+    const cursors = stubPagedTeamRoster([
+      [{ id: "t-1", name: "Sales" }],
+      [{ id: "t-2", name: "Success" }],
+      [{ id: "t-3", name: "Platform" }],
+    ]);
+    render(<EntityRef kind="team" id="t-3" />);
+
+    // The reference the reader is looking at is on the third page. Read one
+    // page deep it rendered a raw uuid — the same non-answer the id fallback
+    // exists to avoid handing anyone.
+    expect(await screen.findByText("Platform")).toBeTruthy();
+    // Each page asked with the cursor the previous one minted, first page with
+    // none.
+    expect(cursors).toEqual([null, "1", "2"]);
+  });
+
+  it("offers a picker candidate who sits on the second page", async () => {
+    stubPagedRoster([
+      [{ id: "u-1", display_name: "Priya Shah" }],
+      [{ id: "u-2", display_name: "Mor Adler" }],
+    ]);
+    const user = userEvent.setup();
+    renderRosterHost();
+
+    await user.click(
+      await screen.findByRole("combobox", { name: en["bulk.owner"] }),
+    );
+
+    // An assignment is written against ONE subject, so a subject the picker
+    // never offers is an assignment nobody can make.
+    expect(
+      await screen.findByRole("option", { name: "Mor Adler" }),
+    ).toBeTruthy();
+  });
+
+  it("surfaces a page that fails mid-walk as a failed read rather than a roster that ends there", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const url = new URL(request.url);
+        if (url.searchParams.get("cursor") === "1") {
+          return jsonResponse({ title: "Server error" }, 500);
+        }
+        return jsonResponse({
+          data: [{ id: "t-1", name: "Sales" }],
+          page: { next_cursor: "1", has_more: true },
+        });
+      }),
+    );
+    render(<EntityRef kind="team" id="t-2" />);
+
+    // The first page arrived and the second did not. Kept as the entries that
+    // did load, this reads as a roster that simply does not carry `t-2`, and
+    // the id would be printed as the settled answer for a read that never
+    // finished.
+    expect(await screen.findByText("Name did not load")).toBeTruthy();
+    expect(screen.queryByText("t-2")).toBeNull();
+  });
+
+  it("stops at its page budget and tells a picker the list is only part of one", async () => {
+    const cursors = stubEndlessRoster();
+    renderRosterHost();
+
+    // The bound is what makes an unstoppable cursor a short list instead of a
+    // page that never paints — and the picker states the shortfall rather than
+    // presenting what it read as the whole workspace.
+    expect(await screen.findByText("Showing part of the list")).toBeTruthy();
+    // Ten pages, once: the entries and the truncation flag are two readings of
+    // ONE cache entry, so a surface asking for both does not walk twice.
+    expect(cursors).toHaveLength(10);
+  });
+
+  it("says a name did not load, rather than printing the id, when the roster it stopped short of might hold it", async () => {
+    stubEndlessTeamRoster();
+    render(<EntityRef kind="team" id="t-far" />);
+
+    // A roster walked to its end answers about this id: nobody the reader may
+    // list holds it, and the id is what is left to trace. A roster that ran out
+    // of pages has answered nothing about it, and printing the id would state
+    // that non-answer as settled fact.
+    expect(await screen.findByText("Name did not load")).toBeTruthy();
+    expect(screen.queryByText("t-far")).toBeNull();
+  });
+});
+
+// An imported record is often owned by a colleague who has not signed in yet.
+// `useMemberName` (see "names an invited colleague…" above) names them from
+// the by-id read; the picker's walk asks for offerable seats alone, so nobody
+// is offered work they cannot open.
+describe("invited seats", () => {
+  it("does not ask the picker's walk for invited seats", async () => {
+    stubPagedRoster([[{ id: "u-1", display_name: "Priya Shah" }]]);
+    const user = userEvent.setup();
+    renderRosterHost();
+
+    await user.click(
+      await screen.findByRole("combobox", { name: en["bulk.owner"] }),
+    );
+    expect(
+      await screen.findByRole("option", { name: "Priya Shah" }),
+    ).toBeTruthy();
+    const asked = vi
+      .mocked(fetch)
+      .mock.calls.map(([input]) => {
+        const request = input instanceof Request ? input : new Request(input);
+        return new URL(request.url);
+      })
+      .find((url) => url.pathname.endsWith("/users"));
+    expect(asked?.searchParams.has("include_invited")).toBe(false);
+  });
+});

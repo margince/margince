@@ -185,7 +185,7 @@ func (h Handlers) replyAddresses(ctx context.Context, anchor ids.ActivityID) *[]
 // (DRAFT-AC-E-1). answering is the correspondence the draft replies into: its
 // text decides the language, and its shape decides whether there is a thread to
 // reply to at all.
-func DeterministicEmailDraft(answering DraftContext, intent string) (subject, body string) {
+func DeterministicEmailDraft(answering DraftContext) (subject, body string) {
 	lang := answering.language()
 	band := answering.Band
 
@@ -193,19 +193,14 @@ func DeterministicEmailDraft(answering DraftContext, intent string) (subject, bo
 	subject = draftfloor.Subject(lang, band, topic, answering.Threaded)
 
 	phrases := draftfloor.For(lang, band)
-	lines := []string{draftfloor.Greeting(lang, band, answering.Recipient), ""}
-	if phrases.Opener != "" {
-		lines = append(lines, phrases.Opener, "")
-	}
 	// The topic is the only substance this floor has, and dropping it would
 	// leave a draft that says nothing about what it is answering.
+	thread := ""
 	if topic != "" {
-		lines = append(lines, draftfloor.Fill(draftfloor.SubstanceFor(lang).Thread, topic), "")
+		thread = draftfloor.Fill(draftfloor.SubstanceFor(lang).Thread, topic)
 	}
-	if intent := strings.TrimSpace(intent); intent != "" {
-		lines = append(lines, intent, "")
-	}
-	return subject, strings.Join(append(lines, phrases.Ask), "\n")
+	greeting := draftfloor.Greeting(lang, band, answering.Recipient)
+	return subject, draftfloor.Body(lang, greeting, phrases.Opener, thread, phrases.Ask)
 }
 
 // DraftContext is what the floor knows about the correspondence it is writing
@@ -270,6 +265,25 @@ func (c DraftContext) language() textlang.Lang {
 	return draftfloor.DefaultLang
 }
 
+// The wire names of the two fields every mail send requires, shared with the
+// agent door that refuses them blank.
+const (
+	FieldSubject = fieldSubject
+	FieldBody    = fieldBody
+)
+
+// requiredSent answers a send body that left out `subject` or `body`, which
+// both send requests require. An empty string is a value the caller chose.
+func requiredSent(w http.ResponseWriter, r *http.Request) bool {
+	for _, field := range []string{fieldSubject, fieldBody} {
+		if err := httperr.RequireSent(r, field, field+" is required"); err != nil {
+			httperr.Write(w, r, err)
+			return false
+		}
+	}
+	return true
+}
+
 // SendCompanyEmail starts a NEW conversation from a record rather than
 // answering one. It differs from SendEmail in exactly two places — the origin
 // it builds and the links that origin carries — and shares the send itself,
@@ -277,7 +291,7 @@ func (c DraftContext) language() textlang.Lang {
 // drift between the two surfaces (ADR-0087 §1).
 func (h Handlers) SendCompanyEmail(w http.ResponseWriter, r *http.Request, _ crmcontracts.SendCompanyEmailParams) {
 	var req crmcontracts.SendCompanyEmailRequest
-	if !httperr.Decode(w, r, &req) {
+	if !httperr.Decode(w, r, &req) || !requiredSent(w, r) {
 		return
 	}
 	links := linkInputsOf(&req.Links)
@@ -294,7 +308,7 @@ func (h Handlers) SendCompanyEmail(w http.ResponseWriter, r *http.Request, _ crm
 		writeStoreErr(w, r, err)
 		return
 	}
-	in, err := accountSendInput(req)
+	in, err := DecodeCompanyEmailRequest(req)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
@@ -375,7 +389,7 @@ func sendInputFrom(to []openapi_types.Email, cc, bcc *[]openapi_types.Email, sub
 // inherits. Its account-started twin above shares everything after the origin.
 func (h Handlers) SendEmail(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.SendEmailParams) {
 	var req crmcontracts.SendEmailRequest
-	if !httperr.Decode(w, r, &req) {
+	if !httperr.Decode(w, r, &req) || !requiredSent(w, r) {
 		return
 	}
 	// Deliverability — the RFC 8058 header and the visible footer — is

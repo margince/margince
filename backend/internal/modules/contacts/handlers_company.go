@@ -93,7 +93,7 @@ func (h Handlers) CreateCompany(w http.ResponseWriter, r *http.Request, _ crmcon
 	// A declared importer (a HUMAN holding import_run:create) may stamp the
 	// reserved mirror: namespace; everyone else, an agent carrying that human's
 	// grants included, gets the closed door.
-	mapInput := companyCreateInput
+	mapInput := CompanyCreationInput
 	if auth.DeclaredImporter(r.Context()) {
 		mapInput = companyCreateInputFromImporter
 	}

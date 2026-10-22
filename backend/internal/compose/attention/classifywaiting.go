@@ -69,7 +69,7 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 		Because:     waitingBecause(waiting, days, demoted),
 		Actions:     []crmcontracts.WorklistItemActions{},
 	}
-	if demoted.informational || waiting.ActionUnconfirmed || demoted.elsewhere {
+	if demoted.informational || waiting.ActionUnconfirmed || demoted.elsewhere || waiting.NonBuyer {
 		row.Consequence = "none"
 	}
 	// The subject travels because the row exists at all only for a reader the
@@ -142,19 +142,8 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 		// reader is offered: two of the three dispositions are keyed on the
 		// thread and a threadless row can perform neither.
 		threaded: waiting.Threaded,
-		// Who owes the reply, so the scope filters can judge this row the way
-		// they judge a deal-bearing one. A wait carries no deal on the wire, and
-		// without this it is a row the filters cannot place: a named owner's
-		// queue dropped every one of them.
-		owner: waiting.OwnerID,
-		// The same fact for the CLIENT — but NOT through ownerFrom, because a
-		// zero here does not mean what a zero means to the task and lead lanes.
-		// This lane qualifies a row through an ungated lookup and reads its
-		// owner through a gated one, so a customer whose owning record the
-		// reader may not open arrives with no owner id at all. Reporting that
-		// as `unassigned` would turn a withheld fact into a claim that nobody
-		// owes the reply, and the reader has no way to tell the two apart.
-		ownerRef: waitingOwner(waiting.OwnerID),
+		// An unreadable owner must not be described as unassigned.
+		ownerRef: waitingOwner(waiting.OwnerID, waiting.OwnerKnown, waiting.DirectRecipients),
 		// And WHO it is about, which the subject above may have given to a deal.
 		// The decay suppressor reads this rather than the subject, so a contact
 		// whose wait is filed under a deal is still recognised as answered.
@@ -167,6 +156,7 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 // judgement it states.
 type waitingDemotions struct {
 	stale, unproven, elsewhere, informational, booked bool
+	strangerBcc, strangerLink                         bool
 }
 
 // demotionsOf judges one wait against every demotion the lane knows.
@@ -182,7 +172,12 @@ type waitingDemotions struct {
 // the lane's own rules wake the row as plain waiting when that meeting is
 // canceled, a no-show, or over without being held.
 func demotionsOf(waiting WaitingCustomer, days int) waitingDemotions {
+	// A first-time sender's Bcc or foreign-link mail is routine even with an
+	// asks-us verdict. Such mail is written to earn that verdict.
+	firstTime := waiting.SenderWasStranger && !waiting.Engaged && !waiting.HasOpenDeal
 	return waitingDemotions{
+		strangerBcc:   firstTime && waiting.BccOnly,
+		strangerLink:  firstTime && waiting.ForeignLink,
 		stale:         days > waitingStaleDays,
 		unproven:      !waiting.Engaged && !waiting.HasOpenDeal && !waiting.ConfirmedRequest,
 		elsewhere:     waiting.AddressedElsewhere,
@@ -206,7 +201,10 @@ func waitingLevel(waiting WaitingCustomer, d waitingDemotions) int {
 			level = levelMaterialRisk
 		}
 	}
-	if d.unproven || d.elsewhere || d.informational || waiting.ActionUnconfirmed || d.booked {
+	if d.unproven || d.elsewhere || d.informational || waiting.ActionUnconfirmed || waiting.NonBuyer || d.booked {
+		level = levelRoutine
+	}
+	if d.strangerBcc || d.strangerLink {
 		level = levelRoutine
 	}
 	return level
@@ -216,7 +214,11 @@ func waitingLevel(waiting WaitingCustomer, d waitingDemotions) int {
 // card states it: who moved last, then the count that replaces it when a
 // meeting is booked, then every demotion that applied.
 func waitingBecause(waiting WaitingCustomer, days int, d waitingDemotions) []crmcontracts.WorklistReason {
-	because := []crmcontracts.WorklistReason{reason("buyer_wrote_last", nil)}
+	first := crmcontracts.WorklistReasonKindBuyerWroteLast
+	if waiting.NonBuyer {
+		first = crmcontracts.WorklistReasonKindNonBuyerRequest
+	}
+	because := []crmcontracts.WorklistReason{reason(first, nil)}
 	if d.booked {
 		because = append(because, reason("meeting_booked",
 			&crmcontracts.WorklistValue{Kind: valueDate, Date: waiting.MeetingBookedAt}))
@@ -235,6 +237,12 @@ func waitingBecause(waiting WaitingCustomer, days int, d waitingDemotions) []crm
 	}
 	if d.informational {
 		because = append(because, reason("asks_nothing", nil))
+	}
+	if d.strangerBcc {
+		because = append(because, reason("bcc_from_stranger", nil))
+	}
+	if d.strangerLink {
+		because = append(because, reason("link_off_sender", nil))
 	}
 	return because
 }

@@ -7,11 +7,14 @@ package compose
 
 import (
 	"errors"
+	"net/http"
+	"strings"
 	"testing"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -26,38 +29,43 @@ func TestReportingFrameworkRejectsAmbiguousQualificationAndCaptureScopes(t *test
 	valid := crmcontracts.ReportingQualification{PipelineId: openapi_types.UUID(f.env.pipeline), StageIds: []openapi_types.UUID{openapi_types.UUID(f.env.stages[60])}}
 	cases := []struct {
 		name   string
+		field  string
 		change func(*crmcontracts.ReportingFrameworkInput)
-		want   error
 	}{
-		{"no reason", func(in *crmcontracts.ReportingFrameworkInput) { in.Reason = "" }, apperrors.ErrInvalidArgument},
-		{"unknown template", func(in *crmcontracts.ReportingFrameworkInput) { in.Template = "unknown" }, apperrors.ErrInvalidArgument},
-		{"empty stages", func(in *crmcontracts.ReportingFrameworkInput) {
+		{"no reason", "reason", func(in *crmcontracts.ReportingFrameworkInput) { in.Reason = "" }},
+		{"long reason", "reason", func(in *crmcontracts.ReportingFrameworkInput) { in.Reason = strings.Repeat("r", 1001) }},
+		{"unknown template", "template", func(in *crmcontracts.ReportingFrameworkInput) { in.Template = "unknown" }},
+		{"too many captures", "capture_contexts", func(in *crmcontracts.ReportingFrameworkInput) {
+			in.CaptureContexts = make([]crmcontracts.ReportingCaptureContext, 21)
+		}},
+		{"empty stages", "qualification", func(in *crmcontracts.ReportingFrameworkInput) {
 			in.Qualification = []crmcontracts.ReportingQualification{{PipelineId: valid.PipelineId}}
-		}, apperrors.ErrInvalidArgument},
-		{"duplicate pipeline", func(in *crmcontracts.ReportingFrameworkInput) {
+		}},
+		{"duplicate pipeline", "qualification", func(in *crmcontracts.ReportingFrameworkInput) {
 			in.Qualification = []crmcontracts.ReportingQualification{valid, valid}
-		}, apperrors.ErrInvalidArgument},
-		{"duplicate stage", func(in *crmcontracts.ReportingFrameworkInput) {
+		}},
+		{"duplicate stage", "qualification", func(in *crmcontracts.ReportingFrameworkInput) {
 			in.Qualification = []crmcontracts.ReportingQualification{{PipelineId: valid.PipelineId, StageIds: []openapi_types.UUID{valid.StageIds[0], valid.StageIds[0]}}}
-		}, apperrors.ErrInvalidArgument},
-		{"missing stage", func(in *crmcontracts.ReportingFrameworkInput) {
-			in.Qualification = []crmcontracts.ReportingQualification{{PipelineId: valid.PipelineId, StageIds: []openapi_types.UUID{openapi_types.UUID(ids.NewV7())}}}
-		}, apperrors.ErrNotFound},
-		{"owner capture", func(in *crmcontracts.ReportingFrameworkInput) {
+		}},
+		{"owner capture", "capture_contexts", func(in *crmcontracts.ReportingFrameworkInput) {
 			in.CaptureContexts = []crmcontracts.ReportingCaptureContext{{Scope: crmcontracts.ReportingScope{Kind: "owner", Id: ptrUUID(f.env.Rep1)}}}
-		}, apperrors.ErrInvalidArgument},
-		{"duplicate capture", func(in *crmcontracts.ReportingFrameworkInput) {
+		}},
+		{"duplicate capture", "capture_contexts", func(in *crmcontracts.ReportingFrameworkInput) {
 			in.CaptureContexts = []crmcontracts.ReportingCaptureContext{framework.Definition.CaptureContexts[0], framework.Definition.CaptureContexts[0]}
-		}, apperrors.ErrInvalidArgument},
+		}},
 	}
 	for _, test := range cases {
 		t.Run(test.name, func(t *testing.T) {
 			input := framework.Definition
 			test.change(&input)
-			if _, err := f.service.PublishFramework(f.human, framework.Version, input); !errors.Is(err, test.want) {
-				t.Fatalf("invalid framework: %v", err)
-			}
+			_, err := f.service.PublishFramework(f.human, framework.Version, input)
+			requireRefusedField(t, err, test.field)
 		})
+	}
+	missing := framework.Definition
+	missing.Qualification = []crmcontracts.ReportingQualification{{PipelineId: valid.PipelineId, StageIds: []openapi_types.UUID{openapi_types.UUID(ids.NewV7())}}}
+	if _, err := f.service.PublishFramework(f.human, framework.Version, missing); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("missing stage: %v", err)
 	}
 	current, err := f.service.GetFramework(f.human)
 	if err != nil || current.Version != framework.Version {
@@ -130,33 +138,45 @@ func TestReportingTargetsRejectAmbiguousPeriodsAndIdentityChanges(t *testing.T) 
 	f := reportingBusiness(t)
 	cases := []struct {
 		name   string
+		field  string
 		change func(*crmcontracts.ReportingTargetInput)
 	}{
-		{"negative", func(in *crmcontracts.ReportingTargetInput) { in.Value = -1 }},
-		{"inexact", func(in *crmcontracts.ReportingTargetInput) { in.Value = 9007199254740992 }},
-		{"no reason", func(in *crmcontracts.ReportingTargetInput) { in.Reason = " " }},
-		{"unsupported metric", func(in *crmcontracts.ReportingTargetInput) { in.Metric = "stage_age" }},
-		{"partial month", func(in *crmcontracts.ReportingTargetInput) {
+		{"negative", "value", func(in *crmcontracts.ReportingTargetInput) { in.Value = -1 }},
+		{"inexact", "value", func(in *crmcontracts.ReportingTargetInput) { in.Value = 9007199254740992 }},
+		{"no reason", "reason", func(in *crmcontracts.ReportingTargetInput) { in.Reason = " " }},
+		{"unsupported metric", "metric", func(in *crmcontracts.ReportingTargetInput) { in.Metric = "stage_age" }},
+		{"partial month", "period_start", func(in *crmcontracts.ReportingTargetInput) {
 			in.PeriodStart.Time = in.PeriodStart.AddDate(0, 0, 1)
 		}},
-		{"invalid basis", func(in *crmcontracts.ReportingTargetInput) { in.PeriodKind = "unknown" }},
+		{"invalid basis", "period_kind", func(in *crmcontracts.ReportingTargetInput) { in.PeriodKind = "unknown" }},
+		{"owner without an id", "scope", func(in *crmcontracts.ReportingTargetInput) {
+			in.Scope = crmcontracts.ReportingScope{Kind: "owner"}
+		}},
 	}
 	for _, test := range cases {
 		t.Run(test.name, func(t *testing.T) {
 			input := f.target.Definition
 			test.change(&input)
-			if _, err := f.service.CreateTarget(f.human, input); !errors.Is(err, apperrors.ErrInvalidArgument) {
-				t.Fatalf("invalid target: %v", err)
-			}
+			_, err := f.service.CreateTarget(f.human, input)
+			requireRefusedField(t, err, test.field)
 		})
 	}
 	changed := f.target.Definition
 	changed.Metric = "qualified_pipeline_created"
-	if _, err := f.service.UpdateTarget(f.human, ids.UUID(f.target.Id), f.target.Version, changed); !errors.Is(err, apperrors.ErrInvalidArgument) {
-		t.Fatalf("target identity changed: %v", err)
-	}
+	_, err := f.service.UpdateTarget(f.human, ids.UUID(f.target.Id), f.target.Version, changed)
+	requireRefusedField(t, err, "metric")
 	saved, err := f.service.GetTarget(f.human, ids.UUID(f.target.Id))
 	if err != nil || saved.Definition.Metric != f.target.Definition.Metric || saved.Version != f.target.Version {
 		t.Fatalf("invalid update changed target: %+v %v", saved, err)
+	}
+}
+
+// requireRefusedField holds the 422 shape the contract lists: a refusal that
+// names the field to fix, not a bare invalid argument.
+func requireRefusedField(t *testing.T, err error, field string) {
+	t.Helper()
+	fault, ok := httperr.Classify(err)
+	if !ok || fault.Status != http.StatusUnprocessableEntity || len(fault.Fields) != 1 || fault.Fields[0].Field != field {
+		t.Fatalf("want a 422 naming %q, got %v (%+v)", field, err, fault)
 	}
 }

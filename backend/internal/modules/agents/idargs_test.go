@@ -31,6 +31,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net/url"
 	"reflect"
 	"sort"
 	"strings"
@@ -280,7 +281,7 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 		return ReportingAnswer{}, errSeamReached
 	})
 	RegisterMeetingInvitationTool(r, seamProbeInviter{}, seamProbeProvider{})
-	RegisterPipelineTool(r, func(context.Context) ([]Pipeline, error) { return nil, errSeamReached })
+	RegisterPipelineTool(r, func(context.Context, bool) ([]Pipeline, error) { return nil, errSeamReached })
 	RegisterReportTool(r, func(context.Context, string, json.RawMessage) (json.RawMessage, error) {
 		return nil, errSeamReached
 	}, probeReportCatalog, probeReportPlan)
@@ -300,7 +301,7 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	RegisterAssuranceTool(r, func(context.Context) (json.RawMessage, error) {
 		return nil, errSeamReached
 	})
-	RegisterInputChecksTool(r, func(context.Context) (json.RawMessage, error) {
+	RegisterInputChecksTool(r, func(context.Context, InputChecksArgs) (json.RawMessage, error) {
 		return nil, errSeamReached
 	})
 	RegisterCoverageTool(r, func(context.Context) (json.RawMessage, error) {
@@ -309,8 +310,8 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	RegisterIntentTools(r, inertRetriever{}, nil, nil)
 	RegisterChannelProviderTools(r, inertChannelProviderDirectory{})
 	RegisterSlippingTools(r,
-		func(context.Context) ([]SlippingDeal, error) { return nil, errSeamReached },
-		func(context.Context, SlippingDeal) (ids.UUID, string, error) { return ids.UUID{}, "", errSeamReached })
+		func(context.Context, int) ([]SlippingDeal, error) { return nil, errSeamReached },
+		func(context.Context, SlippingDeal) (ids.UUID, string, error) { return ids.UUID{}, "", errSeamReached }, testStalledDays)
 	RegisterCommitmentTool(r, func(context.Context, CommitmentQuery) (CommitmentSweep, error) {
 		return CommitmentSweep{}, errSeamReached
 	})
@@ -340,6 +341,9 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	RegisterRecordFieldsTool(r, RecordFieldsResource{})
 	RegisterAnalyticsVocabularyTool(r, seamProbeAnalyticsVocabulary{})
 	RegisterContextSearchTool(r, seamProbeProvider{}, seamProbeRetriever{})
+	RegisterRecordSearchTool(r, seamProbeProvider{}, func(context.Context, RecordSearchQuery) (RecordSearchPage, error) {
+		return RecordSearchPage{}, nil
+	})
 	RegisterReportEvidenceTool(r, seamProbeProvider{}, func(context.Context, ReportEvidenceQuery) (ReportEvidence, error) {
 		return ReportEvidence{}, errSeamReached
 	})
@@ -347,18 +351,23 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 		return nil, errSeamReached
 	})
 	RegisterWhoamiTool(r, func(context.Context) (ActingIdentity, error) { return ActingIdentity{}, nil })
-	RegisterColleaguesTool(r, func(context.Context, string) ([]Colleague, bool, error) { return nil, false, nil })
+	RegisterColleaguesTool(r, func(context.Context, ColleagueQuery) ([]Colleague, bool, error) { return nil, false, nil })
 	RegisterTagTools(r, stubTags{})
 	RegisterDocumentTools(r, seamProbeDocuments{})
 	RegisterDuplicateTools(r, stubDuplicateQueue{})
 	RegisterListTools(r, &stubLists{})
 	RegisterImportTools(r, stubImports{})
 	RegisterListTool(r, seamProbeProvider{}, probeVocabulary{})
+	RegisterRecordPartsTool(r, seamProbeRecordParts{})
+	RegisterReadViewTool(r, probeViews, func(context.Context, ReadView, map[string]string, url.Values) (json.RawMessage, error) {
+		return nil, errSeamReached
+	})
 	RegisterBriefTool(r, func(context.Context) (ReadBriefResult, error) {
 		return ReadBriefResult{}, errSeamReached
 	})
 	RegisterAnnotateBriefTool(r, func(context.Context, AnnotateBriefArgs) error { return nil })
 	RegisterApprovalTools(r, seamProbeInbox{})
+	RegisterRouters(r)
 	return NewDispatcher(r, bindAuthenticated, "margince-crm", "test").
 		WithLogger(slog.New(slog.NewTextHandler(io.Discard, nil)))
 }
@@ -466,6 +475,9 @@ func TestAMalformedIDIsRefusedAsTheCallersMistakeOnEveryTool(t *testing.T) {
 	// registry.tools IS the universe — walking it rather than a name list is
 	// what makes a newly registered tool inherit the obligation.
 	for name, tool := range s.registry.tools {
+		if _, isRouter := tool.(router); isRouter {
+			continue // its ids are checked by the targets, each walked here
+		}
 		allProps, _ := uuidProps(t, name, tool.Spec().InputSchema)
 		for _, prop := range allProps {
 			probed++
@@ -629,4 +641,66 @@ type seamProbeInviter struct{}
 
 func (seamProbeInviter) InviteMeeting(context.Context, crmcontracts.MeetingInvitationRequest) (crmcontracts.MeetingInvitation, error) {
 	return crmcontracts.MeetingInvitation{}, errSeamReached
+}
+
+// seamProbeRecordParts reports that change_record_parts' arguments reached its seam.
+type seamProbeRecordParts struct{}
+
+func (seamProbeRecordParts) AddOfferLine(_ context.Context, _ ids.UUID, _ json.RawMessage) (json.RawMessage, error) {
+	return nil, errSeamReached
+}
+
+func (seamProbeRecordParts) UpdateOfferLine(_ context.Context, _, _ ids.UUID, _ json.RawMessage) (json.RawMessage, error) {
+	return nil, errSeamReached
+}
+
+func (seamProbeRecordParts) RemoveOfferLine(_ context.Context, _, _ ids.UUID) (json.RawMessage, error) {
+	return nil, errSeamReached
+}
+
+func (seamProbeRecordParts) CreateCompanyFact(_ context.Context, _ ids.UUID, _ json.RawMessage) (json.RawMessage, error) {
+	return nil, errSeamReached
+}
+
+func (seamProbeRecordParts) UpdateCompanyFact(_ context.Context, _ ids.UUID, _, _ string, _ *int64) (json.RawMessage, error) {
+	return nil, errSeamReached
+}
+
+func (seamProbeRecordParts) ConfirmCompanyFact(_ context.Context, _ ids.UUID, _ string, _ *int64) (json.RawMessage, error) {
+	return nil, errSeamReached
+}
+
+func (seamProbeRecordParts) DeleteCompanyFact(_ context.Context, _ ids.UUID, _ string, _ *int64) (json.RawMessage, error) {
+	return nil, errSeamReached
+}
+
+func (seamProbeRecordParts) UpdateCompanyProfileField(_ context.Context, _ ids.UUID, _, _ string, _ *int64) (json.RawMessage, error) {
+	return nil, errSeamReached
+}
+
+func (seamProbeRecordParts) ConfirmCompanyProfileField(_ context.Context, _ ids.UUID, _ string, _ *int64) (json.RawMessage, error) {
+	return nil, errSeamReached
+}
+
+func (seamProbeRecordParts) SetProjectCompany(_ context.Context, _, _ ids.UUID, _ *string) (json.RawMessage, error) {
+	return nil, errSeamReached
+}
+
+func (seamProbeRecordParts) RemoveProjectCompany(_ context.Context, _, _ ids.UUID) (json.RawMessage, error) {
+	return nil, errSeamReached
+}
+
+func (seamProbeRecordParts) SetProjectStakeholder(_ context.Context, _, _ ids.UUID, _ string) (json.RawMessage, error) {
+	return nil, errSeamReached
+}
+
+func (seamProbeRecordParts) RemoveProjectStakeholder(_ context.Context, _, _ ids.UUID) (json.RawMessage, error) {
+	return nil, errSeamReached
+}
+
+// probeViews are two views in the shapes the contract declares: a record's own
+// view, addressed by id, and a reference list with a filter.
+var probeViews = []ReadView{
+	{Name: "company_360", Op: "getCompany360", Pattern: "/v1/companies/{id}/360", PathParams: []string{"id"}},
+	{Name: "stages", Op: "listStages", Pattern: "/v1/stages", Query: []ViewQuery{{Name: "pipeline_id", Type: "string"}}},
 }

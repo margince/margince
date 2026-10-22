@@ -32,6 +32,14 @@ const (
 	SemanticLost StageSemantic = "lost"
 )
 
+// Status is the deal outcome established by entering this stage.
+func (s StageSemantic) Status() DealStatus {
+	if s.Terminal() {
+		return DealStatus(s)
+	}
+	return DealOpen
+}
+
 // Terminal reports whether a stage closes the deal.
 func (s StageSemantic) Terminal() bool { return s == SemanticWon || s == SemanticLost }
 
@@ -73,7 +81,8 @@ const (
 //
 // The buyer-milestone kinds are the ones a seller cannot assert on the
 // buyer's behalf. BuyerConfirmed, EventHeld, DocumentSigned and TermsAccepted
-// each name a thing the OTHER side did; RoleIdentified and Custom do not.
+// each name a thing the OTHER side did; RoleIdentified, Custom and
+// LegalReviewed do not.
 type CriterionKind string
 
 // The criterion kinds, mirroring the stage_exit_criterion.kind CHECK.
@@ -84,6 +93,9 @@ const (
 	CriterionRoleIdentified CriterionKind = "role_identified"
 	CriterionTermsAccepted  CriterionKind = "terms_accepted"
 	CriterionCustom         CriterionKind = "custom"
+	// CriterionLegalReviewed is settled only by an approved legal review, and
+	// is the one kind that blocks an advance; see legalreviewgate.go.
+	CriterionLegalReviewed CriterionKind = "legal_reviewed"
 )
 
 // criterionKindField keeps the refusal and the audit image of a criterion
@@ -117,7 +129,7 @@ func (k CriterionKind) BuyerMilestone() bool {
 	case CriterionBuyerConfirmed, CriterionTermsAccepted:
 		return true
 	case CriterionEventHeld, CriterionDocumentSigned,
-		CriterionRoleIdentified, CriterionCustom:
+		CriterionRoleIdentified, CriterionCustom, CriterionLegalReviewed:
 		return false
 	}
 	return false
@@ -127,11 +139,12 @@ func (k CriterionKind) BuyerMilestone() bool {
 func ParseCriterionKind(raw string) (CriterionKind, error) {
 	switch k := CriterionKind(raw); k {
 	case CriterionBuyerConfirmed, CriterionEventHeld, CriterionDocumentSigned,
-		CriterionRoleIdentified, CriterionTermsAccepted, CriterionCustom:
+		CriterionRoleIdentified, CriterionTermsAccepted, CriterionCustom,
+		CriterionLegalReviewed:
 		return k, nil
 	}
 	return "", &values.ParseError{
 		Field: criterionKindField, Code: "invalid_criterion_kind",
-		Message: "kind is one of buyer_confirmed, event_held, document_signed, role_identified, terms_accepted, custom",
+		Message: "kind is one of buyer_confirmed, event_held, document_signed, role_identified, terms_accepted, custom, legal_reviewed",
 	}
 }

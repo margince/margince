@@ -44,6 +44,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // LinkedInMatchResult reports what one matching pass decided.
@@ -453,21 +454,24 @@ func CompanyLinkedInReach(ctx context.Context, tx pgx.Tx, companyID ids.CompanyI
 	if err := auth.EnsureVisible(ctx, tx, "company", companyID.UUID); err != nil {
 		return nil, err
 	}
-	// Both halves of "still works here", not just archived_at. A reach count is
-	// an offer to ask a colleague for an intro, and a deactivated account is as
-	// unreachable as an archived one — filtering on archived_at alone answers
-	// "ask Lars" about someone who cannot be asked. Spelled out rather than
-	// taken from identity.LiveMemberSQL because a module never imports a
-	// sibling (ADR-0054 §3); TestOnlyOneSpellingOfALiveMember holds the two
-	// together.
+	// Both halves of "still works here", not just archived_at. A reach count
+	// offers to ask a colleague for an intro, and a deactivated account is as
+	// unreachable as an archived one.
+	// A colleague who switched their reach off is left out here, the one place
+	// every reader passes through. Their own page is unchanged.
+	//
+	// LEFT JOIN and a coalesce. A member who never opened the setting has no
+	// account row, which an inner join would read as withheld.
 	rows, err := tx.Query(ctx, `
 		SELECT g.owner_user_id, count(*)
 		  FROM linkedin_connection g
 		  JOIN app_user u ON u.id = g.owner_user_id
-		                 AND u.status = 'active' AND u.archived_at IS NULL
+		                 AND `+workforce.LiveMemberSQL("u")+`
+		  LEFT JOIN linkedin_account a ON a.user_id = g.owner_user_id
 		 WHERE g.matched_company_id = $1
 		   AND g.tombstoned_at IS NULL
 		   AND g.match_status <> 'rejected'
+		   AND coalesce(a.reach_visible_to_team, true)
 		 GROUP BY g.owner_user_id`, companyID)
 	if err != nil {
 		return nil, fmt.Errorf("contacts: counting LinkedIn reach into an account: %w", err)

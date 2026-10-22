@@ -58,7 +58,7 @@ func (s *Service) applyTargets(ctx context.Context, tx pgx.Tx, out *crmcontracts
 	}
 	for index := range out.Charts {
 		chart := &out.Charts[index]
-		if chart.Kind == "owner_attainment" {
+		if chart.Kind == reportingOwnerAttainment {
 			if err := s.ownerTargets(ctx, tx, out.Context, chart); err != nil {
 				return err
 			}
@@ -69,7 +69,9 @@ func (s *Service) applyTargets(ctx context.Context, tx pgx.Tx, out *crmcontracts
 }
 
 func (s *Service) ownerTargets(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, chart *crmcontracts.ReportingChart) error {
-	if chart.Coverage.Withheld {
+	// A failed calculation has no members to fill in: a zero for each would
+	// read as measured sales.
+	if chart.Coverage.Withheld || chart.Coverage.Status == crmcontracts.ReportingStatusFailed {
 		return nil
 	}
 	var b bindings

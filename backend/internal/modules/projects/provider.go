@@ -114,11 +114,14 @@ func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datas
 		return datasource.EntityRef{}, err
 	}
 	var req crmcontracts.CreateProjectRequest
+	if err := datasource.ClaimKeys(raw, claimCallerChosenKey); err != nil {
+		return datasource.EntityRef{}, err
+	}
 	if err := datasource.StrictDecode(raw, &req); err != nil {
 		return datasource.EntityRef{}, err
 	}
 	req.Source = in.Source
-	mapped, err := projectCreateInput(req)
+	mapped, err := ProjectCreationInput(req)
 	if err != nil {
 		return datasource.EntityRef{}, err
 	}
@@ -136,6 +139,9 @@ func (p *Provider) Update(ctx context.Context, in datasource.UpdateInput) (datas
 		return datasource.EntityRef{}, err
 	}
 	var req crmcontracts.UpdateProjectRequest
+	if err := datasource.ClaimKeys(raw, claimCallerChosenKey); err != nil {
+		return datasource.EntityRef{}, err
+	}
 	if err := datasource.StrictDecode(raw, &req); err != nil {
 		return datasource.EntityRef{}, err
 	}

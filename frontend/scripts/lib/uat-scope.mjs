@@ -13,7 +13,7 @@
 const TEST_ONLY_NAME = /\.(test|testkit|stories)\./;
 
 // A test-only module by LOCATION. A `testing/` directory holds the harnesses a
-// suite mounts (src/app/testing/shellharness.tsx renders the shell and exports
+// suite mounts (src/testing/shellharness.tsx renders the shell and exports
 // the queries its tests ask it) — the same thing the names above describe, said
 // by where the file sits, so a story for one would document nothing a reader
 // ships. Only a whole path segment counts, so `src/screens/testingground.tsx`
@@ -26,4 +26,48 @@ export function needsStory(file) {
   if (!/\.[tj]sx$/.test(file)) return false;
   if (TEST_ONLY_NAME.test(file)) return false;
   return !TESTING_DIRECTORY.test(file);
+}
+
+export const ALL_STORIES_FLAG = "--all-stories";
+
+export function scopeFor(argv) {
+  return argv.includes(ALL_STORIES_FLAG) ? "all" : "diff";
+}
+
+export function storiesInScope(entries, scope, importPaths) {
+  const stories = entries.filter((entry) => entry.type === "story");
+  if (scope === "all") return stories;
+  return stories.filter((entry) => importPaths.has(entry.importPath));
+}
+
+// A story file on disk that no story entry came from: the build dropped it.
+export function unresolvedStoryFiles(importPaths, stories) {
+  const registered = new Set(stories.map((entry) => entry.importPath));
+  return [...importPaths].filter((path) => !registered.has(path));
+}
+
+export function uatVerdict({
+  scope,
+  results,
+  unresolved,
+  missing,
+  allowMissing,
+}) {
+  // An all-stories run that captured nothing read a broken index, not a clean tree.
+  const emptyCensus = scope === "all" && results.length === 0;
+  const pass =
+    !emptyCensus &&
+    results.every((result) => result.pass) &&
+    unresolved.length === 0 &&
+    (allowMissing || missing.length === 0);
+  return { pass, emptyCensus };
+}
+
+export function changesSince(git, base) {
+  return [
+    ...new Set([
+      ...git(`diff --name-only --diff-filter=d ${base}`).split("\n"),
+      ...git("ls-files --others --exclude-standard").split("\n"),
+    ]),
+  ].filter(Boolean);
 }

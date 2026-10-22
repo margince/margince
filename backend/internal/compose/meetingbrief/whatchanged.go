@@ -24,7 +24,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -94,16 +93,17 @@ func (s *Service) readLastSpoke(ctx context.Context, tx pgx.Tx, room meeting, pr
 // from the ranked set it takes from, and the conversations captured since.
 // The first line names the baseline, so the reader knows what "since" means.
 func whatChangedSection(in Input, ranked *rankedClaims) []Sentence {
+	said := briefCopyFor(in.Language)
 	if in.LastSpokeAt == nil {
 		return []Sentence{{
-			Text:     "First contact: you have not dealt with anyone in this room before.",
+			Text:     said.Say(changedWords.First),
 			Nature:   natureAssessment,
 			Evidence: []Evidence{{EntityType: citeActivity, EntityID: in.ActivityID}},
 		}}
 	}
 	since := *in.LastSpokeAt
 	out := []Sentence{{
-		Text:     fmt.Sprintf("You last dealt with this room %s.", daysAgoPhrase(in.Now, since)),
+		Text:     said.lastDealtLine(in.Now, since),
 		Evidence: []Evidence{{EntityType: citeActivity, EntityID: in.ActivityID}},
 	}}
 	// After the baseline and not after now: a claim on a future-dated row
@@ -113,7 +113,7 @@ func whatChangedSection(in Input, ranked *rankedClaims) []Sentence {
 	}
 	for _, claim := range ranked.takeAll(after, whatChangedCap) {
 		out = append(out, Sentence{
-			Text:     changedClaimLine(claim),
+			Text:     said.changedClaimLine(claim),
 			Evidence: []Evidence{{EntityType: citeActivity, EntityID: claim.SourceID}},
 		})
 	}
@@ -135,12 +135,12 @@ func whatChangedSection(in Input, ranked *rankedClaims) []Sentence {
 	}
 	if newest != nil {
 		out = append(out, Sentence{
-			Text:     fmt.Sprintf("%s since then, the latest %q.", pluralOf(conversations, "conversation"), subjectOrKind(*newest)),
+			Text:     said.recentConversations(conversations, said.subjectOrKind(*newest)),
 			Evidence: []Evidence{{EntityType: citeActivity, EntityID: newest.ID}},
 		})
 	}
 	if len(out) == 1 {
-		out[0].Text += " Nothing captured has changed since."
+		out[0].Text += " " + said.Say(changedWords.Unchanged)
 	}
 	return out
 }
@@ -148,45 +148,19 @@ func whatChangedSection(in Input, ranked *rankedClaims) []Sentence {
 // whatChangedCap keeps the section to what a reader takes in before a room.
 const whatChangedCap = 5
 
-func changedClaimLine(claim ClaimIn) string {
+func (said briefCopy) changedClaimLine(claim ClaimIn) string {
 	switch claim.Kind {
 	case kindCommitmentOurs:
-		return fmt.Sprintf("Since then we promised %s: %s", claim.ContactName, claim.Body)
+		return fmt.Sprintf(said.Say(changedWords.Ours), claim.ContactName, claim.Body)
 	case kindCommitmentTheirs:
-		return fmt.Sprintf("Since then %s promised: %s", claim.ContactName, claim.Body)
+		return fmt.Sprintf(said.Say(changedWords.Theirs), claim.ContactName, claim.Body)
 	case kindObjection:
-		return fmt.Sprintf("Since then %s objected: %s", claim.ContactName, claim.Body)
+		return fmt.Sprintf(said.Say(changedWords.Objection), claim.ContactName, claim.Body)
 	case kindDecision:
-		return fmt.Sprintf("Since then it was agreed with %s: %s", claim.ContactName, claim.Body)
+		return fmt.Sprintf(said.Say(changedWords.Agreed), claim.ContactName, claim.Body)
 	case kindOpenQuestion:
-		return fmt.Sprintf("Since then %s asked: %s", claim.ContactName, claim.Body)
+		return fmt.Sprintf(said.Say(changedWords.Asked), claim.ContactName, claim.Body)
 	default:
-		return fmt.Sprintf("Since then %s said: %s", claim.ContactName, claim.Body)
+		return fmt.Sprintf(said.Say(changedWords.Said), claim.ContactName, claim.Body)
 	}
-}
-
-func daysAgoPhrase(now, at time.Time) string {
-	days := elapsed.Days(at, now)
-	switch {
-	case days <= 0:
-		return "earlier today"
-	case days == 1:
-		return "yesterday"
-	default:
-		return fmt.Sprintf("%d days ago", days)
-	}
-}
-
-func pluralOf(n int, noun string) string {
-	if n == 1 {
-		return "1 " + noun
-	}
-	return fmt.Sprintf("%d %ss", n, noun)
-}
-
-func subjectOrKind(a ActIn) string {
-	if a.Subject != "" {
-		return a.Subject
-	}
-	return a.Kind
 }

@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -123,18 +124,23 @@ func (s *Store) SchedulingProfile(ctx context.Context) (crmcontracts.SchedulingP
 }
 
 func errCalendarNotConnected() error {
-	return &SchedulingArgumentError{Field: "provider", Code: "required", Message: "Connect a calendar before enabling bookings"}
+	return &SchedulingArgumentError{Field: "provider", Code: "required", Message: "Connect a calendar first"}
+}
+
+// unconnectedAsRefusal turns the provider seam's "no usable connection" into
+// the request the host can act on; every other error is not ours to rename.
+func unconnectedAsRefusal(err error) error {
+	if errors.Is(err, connector.ErrAuthRejected) {
+		return errCalendarNotConnected()
+	}
+	return err
 }
 
 // checkCalendarConnected asks the provider seam whether the host's calendar
 // answers. A host with no connection, or one the provider no longer honours,
 // is told to connect one: a request of theirs, never a server fault.
 func (s *Store) checkCalendarConnected(ctx context.Context, host ids.UserID, provider string) error {
-	err := s.calendar.Check(ctx, host, provider)
-	if errors.Is(err, connector.ErrAuthRejected) {
-		return errCalendarNotConnected()
-	}
-	return err
+	return unconnectedAsRefusal(s.calendar.Check(ctx, host, provider))
 }
 
 func validateSchedulingProfile(p crmcontracts.SchedulingProfile) error {
@@ -152,6 +158,15 @@ func validateSchedulingProfile(p crmcontracts.SchedulingProfile) error {
 	}
 	if p.BlockingCalendars != nil && len(*p.BlockingCalendars) > 10 {
 		return &SchedulingArgumentError{Field: "blocking_calendars", Code: "too_many", Message: "Choose at most ten calendars"}
+	}
+	if p.BlockingCalendars != nil && slices.ContainsFunc(*p.BlockingCalendars, func(id string) bool { return !values.HasVisibleText(id) }) {
+		return &SchedulingArgumentError{Field: "blocking_calendars", Code: "invalid", Message: "Remove the empty calendar entry"}
+	}
+	if p.BlockingCalendars != nil && slices.ContainsFunc(*p.BlockingCalendars, func(id string) bool { return utf8.RuneCountInString(id) > maxSchedulingCalendar }) {
+		return &SchedulingArgumentError{
+			Field: "blocking_calendars", Code: codeTooLong,
+			Message: fmt.Sprintf("A calendar id may be at most %d characters", maxSchedulingCalendar),
+		}
 	}
 	return nil
 }
@@ -203,11 +218,8 @@ func (s *Store) validateBookingCalendars(ctx context.Context, host ids.UserID, p
 		return apperrors.ErrPermissionDenied
 	}
 	calendars, err := s.calendar.List(ctx, host, string(profile.Provider))
-	if errors.Is(err, connector.ErrAuthRejected) {
-		return errCalendarNotConnected()
-	}
 	if err != nil {
-		return err
+		return unconnectedAsRefusal(err)
 	}
 	available := map[string]bool{}
 	writable := false
@@ -233,11 +245,62 @@ func (s *Store) validateBookingCalendars(ctx context.Context, host ids.UserID, p
 	return nil
 }
 
+// schedulingRanges are the whole-number settings and the closed range the
+// contract gives each, walked in the contract's order.
+var schedulingRanges = []struct {
+	field, label, unit string
+	lo, hi             int
+	value              func(crmcontracts.SchedulingProfile) int
+}{
+	{"duration_minutes", "The meeting length", unitMinutes, 15, 480, func(p crmcontracts.SchedulingProfile) int { return p.DurationMinutes }},
+	{"notice_minutes", "The minimum notice", unitMinutes, 0, 10080, func(p crmcontracts.SchedulingProfile) int { return p.NoticeMinutes }},
+	{"horizon_days", "How far ahead guests can book", "days", 1, 90, func(p crmcontracts.SchedulingProfile) int { return p.HorizonDays }},
+	{"buffer_minutes", "The buffer between meetings", unitMinutes, 0, 120, func(p crmcontracts.SchedulingProfile) int { return p.BufferMinutes }},
+}
+
+const (
+	codeTooLong           = "too_long"
+	codeOutOfRange        = "out_of_range"
+	unitMinutes           = "minutes"
+	maxSchedulingTitle    = 200
+	maxSchedulingLocation = 1000
+	maxSchedulingCalendar = 512
+)
+
+// validateSchedulingLimits refuses the first setting outside its limit, naming
+// that field and its limit, so the host is told which setting to correct.
 func validateSchedulingLimits(p crmcontracts.SchedulingProfile) error {
-	if p.DurationMinutes < 15 || p.DurationMinutes > 480 || p.NoticeMinutes < 0 || p.NoticeMinutes > 10080 ||
-		p.HorizonDays < 1 || p.HorizonDays > 90 || p.BufferMinutes < 0 || p.BufferMinutes > 120 ||
-		utf8.RuneCountInString(p.Title) > 200 || utf8.RuneCountInString(p.Location) > 1000 || !values.HasVisibleText(p.Title) || p.CalendarId == "" {
-		return &SchedulingArgumentError{Field: "profile", Code: faultInvalid, Message: "Choose valid meeting details and availability limits"}
+	for _, r := range schedulingRanges {
+		if v := r.value(p); v < r.lo || v > r.hi {
+			return &SchedulingArgumentError{
+				Field: r.field, Code: codeOutOfRange,
+				Message: fmt.Sprintf("%s must be between %d and %d %s", r.label, r.lo, r.hi, r.unit),
+			}
+		}
+	}
+	if !values.HasVisibleText(p.Title) {
+		return &SchedulingArgumentError{Field: "title", Code: "required", Message: "Give the meeting a title guests can read"}
+	}
+	if utf8.RuneCountInString(p.Title) > maxSchedulingTitle {
+		return &SchedulingArgumentError{
+			Field: "title", Code: codeTooLong,
+			Message: fmt.Sprintf("The title may be at most %d characters", maxSchedulingTitle),
+		}
+	}
+	if utf8.RuneCountInString(p.Location) > maxSchedulingLocation {
+		return &SchedulingArgumentError{
+			Field: "location", Code: codeTooLong,
+			Message: fmt.Sprintf("The location may be at most %d characters", maxSchedulingLocation),
+		}
+	}
+	if p.CalendarId == "" {
+		return &SchedulingArgumentError{Field: "calendar_id", Code: "required", Message: "Choose the calendar meetings are created in"}
+	}
+	if utf8.RuneCountInString(p.CalendarId) > maxSchedulingCalendar {
+		return &SchedulingArgumentError{
+			Field: "calendar_id", Code: codeTooLong,
+			Message: fmt.Sprintf("The calendar id may be at most %d characters", maxSchedulingCalendar),
+		}
 	}
 	return nil
 }

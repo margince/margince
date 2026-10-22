@@ -48,7 +48,8 @@ func (f *fakeOAuth) Refresh(_ context.Context, _ string, granted []string) (oaut
 }
 
 type fakeAPI struct {
-	email string
+	email      string
+	receivedAt map[string]time.Time
 	// DeltaInit's canned INBOX round (the initial/bounded anchor).
 	initIDs   []string
 	initDelta string
@@ -143,15 +144,15 @@ func (f *fakeAPI) FindSentByMessageID(_ context.Context, _, id string) (string, 
 // DeltaInit answers per folder, because the two are separate rounds with
 // separate watermarks and a fake that conflated them would let the connector
 // conflate them too.
-func (f *fakeAPI) DeltaInit(_ context.Context, _, folder string, after time.Time) ([]string, string, error) {
+func (f *fakeAPI) DeltaInit(_ context.Context, _, folder string, after time.Time) ([]MessageRef, string, error) {
 	if folder == folderSent {
 		f.sentInitCalls++
 		f.sentInitAfter = after
-		return f.sentInitIDs, f.sentInitDelta, nil
+		return f.messageRefs(f.sentInitIDs), f.sentInitDelta, nil
 	}
 	f.initCalls++
 	f.initAfter = after
-	return f.initIDs, f.initDelta, nil
+	return f.messageRefs(f.initIDs), f.initDelta, nil
 }
 
 func (f *fakeAPI) EnsureSubscription(
@@ -207,13 +208,13 @@ func (f *fakeAPI) GetSubscription(_ context.Context, _, id string) (Subscription
 	return Subscription{ID: id, NotificationURL: url}, nil
 }
 
-func (f *fakeAPI) Delta(_ context.Context, _, deltaLink string) ([]string, []string, string, error) {
+func (f *fakeAPI) Delta(_ context.Context, _, deltaLink string) ([]MessageRef, []string, string, error) {
 	f.deltaCalls++
 	f.seenDelta = deltaLink
 	if f.deltaErr != nil {
 		return nil, nil, "", f.deltaErr
 	}
-	return f.deltaIDs, f.deltaRemoved, f.deltaLink, nil
+	return f.messageRefs(f.deltaIDs), f.deltaRemoved, f.deltaLink, nil
 }
 
 func (f *fakeAPI) GetMIME(_ context.Context, _, id string) ([]byte, error) {
@@ -243,7 +244,7 @@ func (f *fakeAPI) ListAfter(_ context.Context, _ string, _ time.Time, pageToken 
 		if f.sentIDs[id] {
 			folder = sentFolderID
 		}
-		msgs = append(msgs, MessageRef{ID: id, ParentFolderID: folder})
+		msgs = append(msgs, MessageRef{ID: id, ParentFolderID: folder, ReceivedAt: f.receivedAt[id]})
 	}
 	return msgs, f.listNext, nil
 }
@@ -804,4 +805,12 @@ func TestEachGraphRemovalNamesThisConnectorsSourceSystem(t *testing.T) {
 	if got := sink.removed[0]; got.SourceSystem != connectorName || got.SourceID != "AAMkAGI2" {
 		t.Errorf("removal named %+v, want this connector's system and Graph's id", got)
 	}
+}
+
+func (f *fakeAPI) messageRefs(ids []string) []MessageRef {
+	messages := make([]MessageRef, len(ids))
+	for i, id := range ids {
+		messages[i] = MessageRef{ID: id, ReceivedAt: f.receivedAt[id]}
+	}
+	return messages
 }

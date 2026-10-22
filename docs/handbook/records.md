@@ -59,7 +59,7 @@ To add a new contact in Margince, open **Contacts** in the sidebar and choose **
 2. If you like, fill **First name**, **Last name**, **Title** and **LinkedIn**.
 3. Choose **Add email** for each address and set its **Type** (Work, Personal or Other); choose **Add phone** for each number.
 4. Fill any custom fields, then choose **Create**. It stays turned off until the full name is filled.
-If the contact is already in Margince, **View existing record** opens it instead.
+If the contact is already in Margince, **View existing record** opens it instead. An email that belongs to a sending system, such as `noreply@` or `receipts@`, is refused.
 Also called: create a contact, add someone to the CRM, new customer contact.
 
 ### How do I add a contact quickly, or import contacts from vCards?
@@ -79,7 +79,7 @@ Also called: update a contact, change a phone number, rename.
 
 ### Why can't I edit a contact or company?
 A contact or company in Margince takes no edits when it is archived ("This contact is archived and takes no changes."). It also takes none when it is not yours to change: "You cannot edit this contact. Ask the owner to share it, or an administrator for edit rights." Fields you cannot edit show as plain text, with the reason when you point at them.
-If someone else changed the same field while you were editing, your edit is refused: "This record changed since it was opened. Reload and retry."
+If someone else changed the same field while you were editing, your edit is refused: "This record changed after you opened it. Reload it to see the change, then make yours again."
 
 Also called: read-only record, edit greyed out, cannot change.
 
@@ -112,6 +112,8 @@ To merge two duplicate contacts in Margince, open the contact you want to remove
 2. Read the question: "Merge {source} into {target}? This archives {source}."
 3. Choose **Merge**. Margince opens the contact you kept.
 The contact you merged away is archived, not deleted. Leads have no merge; deals have no merge either.
+
+Anyone the merged-away contact was shared with can open the contact you kept. Of their two shares, the higher access stays.
 Also called: combine, deduplicate, remove a duplicate.
 
 ### How do I call a contact?
@@ -195,6 +197,8 @@ To merge two duplicate companies in Margince, open the company you want to remov
 2. Read the question: "Merge {source} into {target}? This archives {source}."
 3. Choose **Merge**. Margince opens the company you kept.
 The company you merged away is archived, not deleted. You cannot merge an archived company.
+
+Anyone the merged-away company was shared with can open the company you kept. Of their two shares, the higher access stays.
 Also called: combine companies, deduplicate accounts.
 
 ### How do I stop a company coming back from email?
@@ -247,8 +251,8 @@ Also called: delete a company, remove a company, delete a contact, remove perman
 Margince has no notes of their own: a note is an activity. The kinds of activity are **email, call, meeting, note, task, message.**
 
 ### Where can I see everything that happened with a customer?
-To see everything that happened with a contact or company in Margince, open the record's **History** tab. It is one timeline of emails, meetings, calls, notes, tasks, messages and field changes.
-1. Under **Timeline filter**, pick **All**, **Threads** (email conversations), **Activities** or **Changes**.
+To see everything that happened with a contact or company in Margince, open the record's **History** tab. **All** is one timeline of emails, meetings, calls, notes, tasks and messages. Field changes are listed under **Changes** alone.
+1. Under **Timeline filter**, pick **All**, **Threads** (email conversations) or **Changes**.
 2. Cut it down with **All kinds** (Email, Calls, Meetings, Notes…), **Search this timeline**, and **From** and **To** dates.
 A company's History also holds what reached it through its deals and the contacts who work there.
 Also called: timeline, activity log, customer history, interaction history.
@@ -256,15 +260,16 @@ Also called: timeline, activity log, customer history, interaction history.
 ### How do I log a note, call or meeting on a record?
 To log an activity in Margince, open the contact, company, lead or deal and choose **Log activity** in its header.
 1. Pick the **Type**: Note, Task, Call or Meeting.
-2. Set the **Date** (or **Due date** for a task), and **Assignee** or **Attendees** where you see them.
-3. Enter a **Subject** (required) and the **Details**. If you enter a meeting transcript, tick **This text is a transcript**. You can then paste the text, or use **Or upload a file** (`.txt` only).
-4. Choose **Log**.
+2. Set the **Date** (or **Due date** for a task), and the **Assignee** for a task.
+3. For a call or meeting, add the contacts who took part under **Other attendees**, or **Attendees** on a company. Add colleagues who took part under **Colleagues who attended**.
+4. Enter a **Subject** (required) and the **Details**. **Details** keeps its format, such as lists, headings and links. You can paste it from a document or as markdown. If you enter a meeting transcript, tick **This text is a transcript**. The text then stays plain, and you can paste it or use **Or upload a file** (`.txt` only).
+5. Add any files under **Attach files**, then choose **Log**. A call or meeting shows in the History of each contact you named, and of their companies.
 Without permission you see "You do not have permission to log activities on this record."
 Also called: add a note, record a call, write a comment.
 
 ### How do I add a task on a record?
-To add a task in Margince, open the contact, company, lead or deal and choose **Add task** in its header. It opens the **Log activity** form set to the Task type.
-Enter a **Subject** (required), a **Due date** and an **Assignee** (or leave it **Unassigned**), then choose **Log**. Open tasks have **Done** and **Snooze 1 day**.
+To add a task in Margince, open the contact, company, lead or deal and choose **Add task** in its header.
+Enter a **Subject** (required), a **Due date** and an **Assignee** (or **Unassigned**), then choose **Log**. History labels tasks **Open** or **Completed**; the company's **Tasks** tab lists open tasks only. Choose **Open task** for **Done** and **Snooze 1 day**.
 Also called: create a to-do, follow-up, reminder.
 
 One activity can link to many records at once, such as a contact and a deal. Everyone can see one you log with no links. A *captured* message with nothing to link to stays held, because nothing has judged who it belongs to.
@@ -323,37 +328,39 @@ If someone else edits the record between your reading the screen and pressing th
 **An agent cannot put a change back.** Only a human can undo a change.
 
 ### Can two users edit the same record at the same time?
-Yes. Two users can edit one contact, company, deal or lead in Margince at once. Each save changes only the fields that user changed, so edits to different fields both go through. If a colleague saved the same field first, your save is refused with "This record changed since it was opened. Reload and retry."
+Yes. Two users can edit one contact, company, deal or lead in Margince at once. Each save changes only the fields that user changed, so edits to different fields both go through. If a colleague saved the same field first, your save is refused with "This record changed after you opened it. Reload it to see the change, then make yours again."
 
 Nothing from your form is saved; close it, load the record again, check the new value and edit again. A project or offer refuses the save after any change since you opened it. Nothing locks a record or shows who else has it open.
 Also called: edit conflict, simultaneous editing, someone overwrote my change.
 
 ## Custom fields
 
-Custom fields in Margince are fields your company adds to the ones every Margince has. The types are **text**, **number**, **date**, **currency**, **picklist**, **multiple choice** and **yes/no**, on contacts, companies, deals, leads, projects and contracts. A field of many choices holds many answers at once, and a filter finds the record by any one of them.
+Custom fields in Margince are fields your company adds to the ones every Margince has. The types are **text**, **number**, **date**, **currency**, **picklist**, **multiple choice** and **yes/no**, on contacts, companies, deals, leads, projects, contracts and activities. A field of many choices holds many answers at once, and a filter finds the record by any one of them.
 
 ### How do I add a custom field?
 To add a custom field in Margince, open Settings → **Fields**, pick the **Object**, and choose **New field**.
-1. Choose the **Object**: Deal, Company, Contact, Lead, Project or Contract.
-2. Choose **New field**, enter a **Label** and pick a **Type**. A picklist needs its choices, and a currency field needs its currency.
+1. Choose the **Object**: Deal, Company, Contact, Lead, Project, Contract or Activity.
+2. Choose **New field**, enter a **Label** and pick a **Type**. A picklist needs its choices, and a currency field needs its currency. Untick **In create forms** to keep the field out of the dialog that creates a record.
 3. Confirm with **Add field**.
-The new field then shows in that record's create and edit forms. Without the right to change fields you see "You have read-only access to custom fields." More on fields is in [Settings](settings.md).
-Also called: custom property, extra column, new attribute.
+The new field then shows on the record page, and in the create form unless you unticked it. Without the right to change fields you see **Read-only settings** at the top of the page. More on fields is in [Settings](settings.md).
+Also called: custom property, extra column, new attribute, hide a field on new records.
 
-**Activities cannot hold a custom field.**
+**A custom field on activities** is offered on every call, meeting, note and task you log, and cannot be kept to one kind. You fill it in **Log activity** and read it when you open the activity. The activity's edit form does not change it, and a colleague who may not read the activity does not see it.
 
-Renaming a field changes its label and keeps your reports working.
+Renaming a field changes its label and keeps your reports working. To take a field out of create forms later, turn off its switch under **In create forms**. The record page still shows it, and you can edit it there.
+
+A deal or company picklist or yes/no field has a switch under **In reports**. Turn it on to group and filter deal reports by that field. A company field groups each deal by its company's value. Everyone who reads deal reports then sees the field's name and choices.
 
 ## Tags
 
-A tag is a shared word this company files records under. Anyone can put one on a record; **only admin and ops seats** add, rename or retire them.
-
-Every tag has its own page that lists the records with it, grouped by type.
+A tag is a shared word this company files records under. Anyone can put one on a record; **only admin and ops seats** add, rename or retire them. Every tag has its own page that lists the records with it, grouped by type.
 
 ### How do I tag a record?
 To tag a contact, company or deal in Margince, open the record, find its **Tags** panel and choose **Add tag**.
 1. Type in **Search tags** and pick a tag. A tag the record already has shows **Already added**.
-2. To take one off, choose **Remove {name}** on the tag. It comes off at once. The toast "{name} removed from this record" offers **Undo**. **Undo** puts the tag back with the same name and date under **Added by**. A retired tag comes off with no **Undo**.
+2. After you tag a contact, Margince may ask "Also tag {company} with {tag}?". It asks when you may change their current company and the company has no such tag yet. **Tag {company}** adds it there too. **Not now** changes nothing.
+3. After you tag a company, Margince asks "Also tag contacts at this company with {tag}?". **Choose contacts** lists who works there now, each with a box to tick. A contact who already has the tag shows "(already tagged)". **Continue** previews the change like any bulk change. The preview names each contact you may not change, and the result offers **Undo**.
+4. To take one off, choose **Remove {name}** on the tag. It comes off at once. The toast "{name} removed from this record" offers **Undo**. **Undo** puts the tag back with the same name and date under **Added by**. A retired tag comes off with no **Undo**.
 
 To see who put a tag on a record and when, point at the tag or move to it with the keyboard.
 
@@ -372,6 +379,19 @@ Two admin actions are worth knowing:
   "{moved} records moved to the surviving tag. {collapsed} already carried both,
   so their duplicate was dropped". An agent may not merge tags on its own; it
   can only suggest a merge for a human to approve.
+
+### Can Margince suggest a tag from mail and meeting notes?
+Yes, for tags an admin marks as suggested. Margince never adds such a tag by itself: you accept or dismiss each suggestion.
+
+1. In **Settings → Tags**, choose **Edit** on the tag.
+2. Under **What shows interest**, describe it in plain words, for example "asks about pricing or a demo of Product X".
+3. Tick "Suggest this tag when mail, meetings, notes or calls show this interest" and save.
+
+Once an hour Margince looks at the captured mail, meetings, notes and calls of the last 30 days. When one of them matches the description, it suggests the tag on the contact or company that item is filed under. With an AI model set up for tag suggestions, the model reads each new item once and judges it by the tag descriptions. After an admin changes any suggested tag, suggestions wait while the model reads the last 30 days again, up to 200 items an hour. Without an AI model, Margince matches each part of the description between commas instead. Each part needs at least three characters, and case does not matter.
+
+A suggestion waits in your Worklist with the other decisions. It names the tag and lists each mail, meeting, note or call it came from. **Add tag** puts the tag on the record as you, and then offers it to the company or its contacts as above. **Not this tag** dismisses it for everyone. The same tag comes back on that record only when a newer mail, meeting, note or call matches the description.
+
+You see a suggestion only when you may read the record and every item it lists. A suggestion that came from mail only its owner can read is shown to that owner alone.
 
 ## Money
 

@@ -1,0 +1,53 @@
+/* The company-profile surface: how its panels stack, and how the comparison
+ * rows of a website read sit inside one. */
+
+/* The page's panels — what we know, where we read it from, and the review a
+ * refresh opens. Owned here rather than by the settings page, because these
+ * cards are also rendered on their own. */
+.company-context-shell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* One proposed change, as a full-bleed row of the review panel: its name and
+ * classification on one line, the old → new diff under them. The left rail is
+ * the only mark that distinguishes a change needing a decision from one that
+ * does not, so it stays. */
+.company-context-comparison {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  border-left: 3px solid var(--accentMed);
+}
+.company-context-comparison.is-human_conflict {
+  border-left-color: var(--warning);
+}
+.company-context-comparison-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  justify-content: space-between;
+}
+
+/* The choices a conflicting change offers, inside the row that carries it. A
+ * row's own interior is not a card seam, so it is separated by the row's gap and
+ * a little more air rather than by a second hairline running across a row the
+ * panel already ruled off. */
+.company-context-resolutions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+.company-context-resolutions .input {
+  flex: 1 1 240px;
+}
+
+/* How much of the site the read actually reached, in the panel's footer band.
+ * It is a caveat on everything above it, not a headline: it used to be set at
+ * 24px, larger than the page's own h1, for a number nobody acts on. */
+.company-context-coverage strong {
+  color: var(--accentText);
+}

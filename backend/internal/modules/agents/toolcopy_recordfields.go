@@ -6,6 +6,14 @@ package agents
 // Written copy for the record write vocabulary. See toolcopy.go for what each
 // field answers.
 
+var describeListFiltersCopy = toolCopy{
+	Purpose: "Answer what list_records may be narrowed by: for each record_type, the filters it " +
+		"takes, the operand each spells (a boolean is \"true\" or \"false\", an array is " +
+		"comma-separated) and the closed values a filter takes.",
+	Limits: "It describes the filters; it lists nothing. A filter another type takes is refused " +
+		"on this one.",
+}
+
 var describeRecordFieldsCopy = toolCopy{
 	Purpose: "Answer what a create_record or update_record `fields` body may SAY: for each " +
 		"record_type, the fields that write accepts, which of them are REQUIRED, the shape each " +

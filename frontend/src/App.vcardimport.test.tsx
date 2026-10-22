@@ -10,6 +10,7 @@ import {
   memoryStorage,
   renderApp,
   sessionOnlyFetch,
+  teardownApp,
 } from "./testing/appharness";
 
 // `#/contacts/import` is asserted through the real router, shell and trail:
@@ -42,8 +43,9 @@ beforeEach(() => {
   vi.stubGlobal("fetch", fetchSpy);
 });
 
-afterEach(() => {
+afterEach(async () => {
   cleanup();
+  await teardownApp();
   vi.unstubAllGlobals();
   window.location.hash = "";
   if (browserLanguages) {

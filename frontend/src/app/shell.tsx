@@ -1,63 +1,29 @@
-import { ChevronDown, Menu, X } from "lucide-react";
 import {
-  type KeyboardEvent,
   type ReactNode,
   type RefObject,
   useCallback,
   useEffect,
-  useId,
   useRef,
   useState,
 } from "react";
-import { Avatar, Badge, Modal } from "../design-system/atoms";
-import { CompanyLogo } from "../design-system/companylogo";
-import { Heading } from "../design-system/heading";
-import { Logomark } from "../design-system/logomark";
-import { useLocale, useT } from "../i18n";
-import { useMe } from "../screens/common";
-import { SETTINGS_SCREEN, useSettingsSection } from "../screens/settingsnav";
+import { PageAsideProvider } from "../components/pageaside";
+import { PageHeadSlot } from "../components/pageheadaction";
+import { SETTINGS_SCREEN } from "../features/settings/settingsnav";
+import { useT } from "../i18n";
+import { EXTENSION_SCREEN, findExtension } from "../lib/extensions";
+import { routeHash, useRoute } from "../lib/router";
+import { useScrollMemory } from "../lib/scrollmemory";
+import { readStored, STORAGE_KEYS, writeStored } from "../lib/storage";
 import { AgentEdge } from "./agent-edge";
-import { AgentRail } from "./agentrail";
-import { BetaBadge } from "./betabadge";
 import { CaptureChip } from "./capture-chip";
 import { ConnectivityBanner } from "./connectivitybanner";
 import { EconomyBanner } from "./economybanner";
 import { EmbedReindexBanner } from "./embedreindexbanner";
-import { EXTENSION_SCREEN, findExtension } from "./extensions";
 import { LicenseBanner } from "./licensebanner";
-import {
-  currentClaim,
-  entryLabel,
-  MOBILE_PRIMARY,
-  NAV,
-  type NavCounts,
-  type NavLevelEntry,
-  type NavLevelGroup,
-  type NavSection,
-  navEntryHref,
-  RAIL_LESS_SCREENS,
-  recordKindOf,
-} from "./nav";
-import {
-  NavLevelView,
-  NavWalkProvider,
-  useNavLevel,
-  useNavWalk,
-} from "./navlevel";
-import { PageAsideProvider } from "./pageaside";
-import {
-  headsItself,
-  PAGE_SUB_KEYS,
-  resolveTitle,
-  sectionHead,
-} from "./pagemeta";
-import { usePopoverDismiss } from "./popover";
+import { type NavCounts, RAIL_LESS_SCREENS } from "./nav";
+import { NavWalkProvider, useNavWalk } from "./navlevel";
 import { useReadingColumn } from "./readingcolumn";
-import { type Route, routeHash, useRoute } from "./router";
-import { useScrollMemory } from "./scrollmemory";
-import { readStored, STORAGE_KEYS, writeStored } from "./storage";
 import { TopBar } from "./topbar";
-import { usePhoneViewport } from "./viewport";
 import "./shell.css";
 
 // The app shell: one sidebar against the left edge of the viewport, and the
@@ -75,6 +41,11 @@ import "./shell.css";
 // The content column carries only what is true of THIS screen: its heading,
 // which stands INSIDE the scroller and scrolls with the page because it belongs
 // to the document, and the agent, which floats at the column's foot.
+import { type RailProps, SettingsRail, WorkspaceRail } from "./shellrail";
+import { PageTitle, SettingsPageTitle, SettingsTopBar } from "./shelltitle";
+
+export { SettingsRail, WorkspaceRail } from "./shellrail";
+export { PageTitle } from "./shelltitle";
 
 // The attention counts the rail badges on the rows a level declares badgeable.
 // They are the levels' own currency (app/subnav.ts), named here for the shell
@@ -83,123 +54,6 @@ import "./shell.css";
 // had counts are lanes inside Today, which reports its numbers on the page. The
 // prop stays because a deeper level declaring `badgeIds` needs this door.
 export type ShellCounts = NavCounts;
-
-// `narrow` is the panel at its 56px width — the caller's own `collapsed &&
-// !sheetOpen`, which is the condition shell.css already uses for every rule
-// that means "this is a rail and not a column". The phone sheet is 600px wide
-// whatever the desktop preference was, so a block reading `collapsed` alone
-// would put the square badge in front of a reader with room for the wordmark.
-function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
-  const t = useT();
-  /* WHAT STAGE THIS PRODUCT IS AT, on the brand's own second line. It stands
-   * beside the name rather than at the foot of a column a demo never scrolls
-   * to, and on every branch below including the one with no installation to
-   * attribute: the marker is a fact about the BUILD, so it does not depend on
-   * whether there is a company name above it. Temporary, and betabadge.tsx
-   * carries the list of what its deletion takes. */
-  const marker = <BetaBadge />;
-  // The installation's own name and marks (ADR-0061: one installation, one
-  // company), from /me, which carries them to every seat — the full company
-  // profile is an admin's read. A disabled observer: the auth gate already
-  // fetched /me, and this re-renders when a company save refreshes it.
-  const installation = useMe(false).data?.installation_brand;
-  // Whose product this is, above whose product it runs on. The reader works
-  // for the company named here and not for us, so the company is the heading
-  // and the product is the line under it.
-  //
-  // Absent profile — the shell mounted before onboarding described anybody —
-  // the block falls back to the product's own mark and name. A company name is
-  // never invented to fill the line.
-  if (!installation) {
-    return (
-      <>
-        <a className="ws" href="#/home" aria-label={t("shell.logoAria")}>
-          <span className="ws-chip">
-            <Logomark />
-          </span>
-          <Heading size="small" as="div" className="ws-name">
-            {t("shell.logoAria")}
-          </Heading>
-        </a>
-        {/* No attribution line here: the product's own mark is already above it,
-            and a company name is never invented to fill the row. */}
-        <span className="ws-company">{marker}</span>
-      </>
-    );
-  }
-  // Which of the company's two marks this width can carry. Collapsed the panel
-  // is a 56px rail with a 32px square to put a face in, where a wordmark is a
-  // row of illegible strokes — so the square icon wins there and the wide mark
-  // wins expanded. An installation that uploaded only a wide mark keeps drawing
-  // it in both, which is exactly what the rail did before the icon existed: a
-  // company's real logo squeezed small still reads as that company, where
-  // falling back to initials would not.
-  const mark =
-    narrow && installation.logo_icon_url
-      ? installation.logo_icon_url
-      : installation.logo_url;
-  if (mark) {
-    return (
-      <>
-        <a
-          className="ws ws-logo"
-          href="#/home"
-          aria-label={t("shell.companyLogoAria", {
-            company: installation.display_name,
-          })}
-        >
-          <CompanyLogo
-            name={installation.display_name}
-            src={mark}
-            fallback={<b>{installation.display_name}</b>}
-          />
-        </a>
-        <span className="ws-company">
-          <span className="ws-company-text">
-            {t("shell.poweredByPrefix")}{" "}
-            <span className="ws-logo-product">{t("shell.logoAria")}</span>
-          </span>
-          {marker}
-        </span>
-      </>
-    );
-  }
-  return (
-    <>
-      <a
-        className="ws"
-        href="#/home"
-        aria-label={t("shell.companyLogoAria", {
-          company: installation.display_name,
-        })}
-      >
-        {/* The mark the onboarding website read resolved from the company's own
-            site, in the slot the product's mark holds otherwise — one slot, so
-            the brand block does not move when onboarding finishes and so the
-            rail's own rules about the mark have one thing to name. Avatar draws
-            its deterministic monogram underneath, and a company whose site
-            declared no icon has a face rather than a gap. */}
-        <span className="ws-chip ws-chip-company">
-          {/* The brand read carries no company id, so the name keys the chip. */}
-          <Avatar
-            identity={installation.display_name}
-            name={installation.display_name}
-          />
-        </span>
-        {/* `as="div"`: the workspace name is the rail's identity, not a section
-            of the page. It sits above every h1 the content column draws, so an
-            h5 here would be a level nothing opened. */}
-        <Heading size="small" as="div" className="ws-name">
-          {installation.display_name}
-        </Heading>
-      </a>
-      <span className="ws-company">
-        <span className="ws-company-text">{t("shell.poweredBy")}</span>
-        {marker}
-      </span>
-    </>
-  );
-}
 
 // WCAG 2.4.1, Bypass Blocks. Every page in the product puts the same block ahead
 // of its content — up to twelve navigation rows and the agent in the sidebar,
@@ -231,533 +85,6 @@ function SkipToContent({
     >
       {t("shell.skipToContent")}
     </button>
-  );
-}
-
-// The panel's own state as classes: the width it is at, whether the phone sheet
-// is open, whether it is mid-collapse, and whether it is showing a drilled-in
-// LEVEL. That last one is a class rather than a CSS `:has()` on the level's own
-// markup, whose specificity is its argument's and would have outranked the
-// sheet's layout from a rule that only means to arrange a panel.
-function railClasses(
-  state: Readonly<{
-    collapsed: boolean;
-    sheetOpen: boolean;
-    leveled: boolean;
-  }>,
-): string {
-  return [
-    "rail",
-    state.collapsed ? "collapsed" : "expanded",
-    state.sheetOpen ? "sheetopen" : "",
-    state.leveled ? "leveled" : "",
-  ]
-    .filter((name) => name !== "")
-    .join(" ");
-}
-
-type RailProps = {
-  route: Route;
-  counts?: ShellCounts;
-  collapsed?: boolean;
-};
-
-export function WorkspaceRail({
-  route,
-  counts,
-  collapsed = false,
-  section,
-}: Readonly<RailProps & { section?: NavSection }>) {
-  const t = useT();
-  // Collapsed items are icon-only, so the label needs a tooltip that satisfies
-  // WCAG 1.4.13: it appears on keyboard focus as well as hover, stays visible
-  // while the pointer is on it (it renders inside the hovered wrapper), and is
-  // dismissible with Escape without moving focus. The tooltip is never the
-  // accessible name — aria-label carries that in both states.
-  const [tip, setTip] = useState<string | null>(null);
-  // At phone width the same markup is a bottom bar; More expands it into a
-  // sheet carrying every destination. One nav element, so there is still exactly
-  // one navigation landmark and no second item list to keep in sync.
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const phone = usePhoneViewport();
-  const nav = useRef<HTMLElement>(null);
-  const more = useRef<HTMLButtonElement>(null);
-  const dismissTip = useCallback((event: KeyboardEvent) => {
-    if (event.key === "Escape") {
-      setTip(null);
-    }
-  }, []);
-
-  // The sheet is a popover over the page, so it dismisses like every other one
-  // in the chrome: Escape from anywhere, any click outside it — which is what
-  // makes the scrim behind it work without being a control of its own.
-  const closeSheet = useCallback(() => setSheetOpen(false), []);
-  usePopoverDismiss(sheetOpen, nav, closeSheet);
-
-  // Which of the route's levels the panel is showing, and the two ways the
-  // reader moves between them (app/navlevel.tsx). A section's entries take the
-  // panel OVER rather than hanging off the destinations: 56px cannot carry two
-  // levels, and 256px carrying both reads as a list of twenty places to go.
-  //
-  // At phone width the panel is a bottom bar of four destinations, and it KEEPS
-  // them on a section route — a bar that hands its four tabs over to a section
-  // loses every destination and is left holding two controls. The section is
-  // reached from the page head there instead (SectionSwitcher below), so no
-  // section is walked into here.
-  const level = useNavLevel(
-    route,
-    phone ? undefined : section,
-    nav,
-    closeSheet,
-  );
-
-  // Opening a sheet that covers the page has to take focus with it, or a
-  // keyboard user is left tabbing through a page they can no longer see; and
-  // closing it has to hand focus back to the control that opened it rather than
-  // dropping it on <body>. Only when the sheet still HOLDS focus — a row that
-  // navigated away has already put focus somewhere better — and only once the
-  // sheet has actually been open: this effect also runs on MOUNT, where a rail
-  // arriving with the level's first row already focused (a walk that crossed into
-  // or out of a section mounts a new rail) would have that focus taken straight
-  // off it and put on More.
-  const sheetOpened = useRef(false);
-  useEffect(() => {
-    if (sheetOpen) {
-      sheetOpened.current = true;
-      nav.current?.querySelector<HTMLElement>(".navwrap .navitem")?.focus();
-      return;
-    }
-    if (sheetOpened.current && nav.current?.contains(document.activeElement)) {
-      sheetOpened.current = false;
-      more.current?.focus();
-    }
-  }, [sheetOpen]);
-
-  // The sheet exists only at phone width — the control that closes it is not
-  // rendered above the breakpoint. Widening the window while it is open would
-  // otherwise leave the page locked and inert with nothing on screen to release
-  // it. The width is already subscribed to above, so this reads that answer
-  // rather than opening a second media query of its own.
-  useEffect(() => {
-    if (sheetOpen && !phone) {
-      setSheetOpen(false);
-    }
-  }, [sheetOpen, phone]);
-
-  // A scrim that only LOOKS blocking is the worst of both worlds: the page it
-  // dims stays reachable by Tab and by a screen reader. `inert` on the content
-  // column takes it out of the tab order, out of the accessibility tree and out
-  // of pointer reach in one attribute — the same guarantee <dialog> gives, which
-  // this nav cannot become without giving up its landmark. The body stops
-  // scrolling for the same reason: a touch that starts on the scrim should
-  // dismiss, not scroll the page underneath.
-  //
-  // The SKIP LINK goes inert with it, and is not an afterthought: it is a sibling
-  // of the nav rather than a child of the column, so Tab past the sheet's last row
-  // wrapped onto it, drew it over the scrim, and pointed at an inert element —
-  // a control that takes focus, shows itself, and does nothing.
-  useEffect(() => {
-    if (!sheetOpen) {
-      return;
-    }
-    const locked = document.querySelectorAll<HTMLElement>(".main, .skiplink");
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    for (const element of locked) {
-      element.inert = true;
-    }
-    return () => {
-      document.body.style.overflow = previous;
-      for (const element of locked) {
-        element.inert = false;
-      }
-    };
-  }, [sheetOpen]);
-
-  // A destination the phone bar hides behind More: there More is the current
-  // tab, and claims what the row it stands in for would (`currentClaim`).
-  const sheetRow = NAV.find((item) => item.screen === level.shown.activeId);
-  const inSheet = sheetRow ? !MOBILE_PRIMARY.has(sheetRow.screen) : false;
-  const moreClaim = inSheet ? currentClaim(level.shown) : undefined;
-
-  // The agent is APP-level chrome: there is one of it, and it belongs to the
-  // whole session rather than to any destination. A drilled-in level is
-  // navigation INSIDE one destination, so an agent standing under it would read
-  // as that destination's own — re-parented under a sub-level, and a second one
-  // the moment a reader walks back out.
-  const leveled = level.parent !== undefined;
-
-  return (
-    <>
-      {/* The scrim dims the page the sheet covers and gives the eye the layer
-          boundary. It carries no behaviour of its own: a click on it lands
-          outside the nav, which is already what closes the sheet. */}
-      {sheetOpen && <div className="railscrim" aria-hidden="true" />}
-      <nav
-        ref={nav}
-        className={railClasses({ collapsed, sheetOpen, leveled })}
-        aria-label={t("shell.railAria")}
-        onKeyDown={dismissTip}
-      >
-        <div className="railhead">
-          <BrandBlock narrow={collapsed && !sheetOpen} />
-        </div>
-        {/* Keyed by depth so a level that arrives is a new element and plays its
-            entrance; two addresses at the SAME depth are the same level with
-            another row current, and nothing should move. */}
-        <NavLevelView
-          key={level.depth}
-          level={level.shown}
-          parent={level.parent}
-          counts={counts}
-          state={{ collapsed, tip, onTip: setTip }}
-          onSelect={level.onSelect}
-          onWalkUp={level.onWalkUp}
-          // At phone width the agent stands in the MIDDLE of the bar rather
-          // than at the foot of a column that is not there — in the row stream,
-          // so a thumb and a Tab key read the bar in the same order. One Core
-          // either way: the foot below renders only above the breakpoint.
-          centre={phone ? <AgentRail route={route} bar={nav} /> : undefined}
-        />
-        {/* Phone-width only: expands the bar into a sheet carrying every
-          destination. Hidden by CSS on the desktop sidebar.
-          It carries the active state for every destination it hides, so the
-          closed bar always shows where you are — the four tabs cannot, because
-          those routes' own rows are display:none at this width. */}
-        <button
-          type="button"
-          ref={more}
-          className={inSheet ? "railmore active" : "railmore"}
-          // Open, this control closes the sheet — so it says so, in the name as
-          // well as in the glyph. A control whose name stays the same while its
-          // job changes is the one a screen reader gets wrong.
-          aria-label={sheetOpen ? t("shell.closeMenu") : t("shell.more")}
-          aria-expanded={sheetOpen}
-          // The state has to reach a screen reader, not just the eye: the hidden
-          // row is out of the accessibility tree at this width. Dropped once the
-          // sheet is open, because the real row is then visible and carrying it
-          // — two elements claiming the current page is worse than none.
-          aria-current={sheetOpen ? undefined : moreClaim}
-          onClick={() => setSheetOpen((open) => !open)}
-        >
-          {sheetOpen ? <X aria-hidden /> : <Menu aria-hidden />}
-          <span className="navlabel">
-            {sheetOpen ? t("shell.closeMenu") : t("shell.more")}
-          </span>
-        </button>
-        <div className="grow" />
-        {/* The sidebar's foot is the agent. It is the one thing in the chrome
-            that reports rather than navigates, and it never claims the current
-            page. It does not carry the licence: the banner over the page states
-            a refused one and the agent panel's pill an absent or refused one.
-            On a drilled-in level it is REDUCED rather than removed
-            (app/agentrail.css): the agent belongs to the whole session, but the
-            column it stands under there is one section's own pages, and the ball
-            at rail size would lead a list it is not about. It goes at phone
-            width, where there is no column to have a foot: the bar's centre cell
-            above is where the agent stands there, and two would be two Cores. */}
-        {!phone && (
-          <div className="railagent">
-            <AgentRail route={route} />
-          </div>
-        )}
-      </nav>
-    </>
-  );
-}
-
-/**
- * The rail on a settings route, carrying the settings level.
- *
- * Which settings entries exist for a principal is a GRANT question, and grants
- * belong to the screen whose cards ask for them (screens/settings.tsx) — the
- * shell only ever receives a finished section. Mounted on that route alone, so
- * no other screen pays for the visibility probes the hook makes.
- */
-export function SettingsRail(props: Readonly<RailProps>) {
-  const section = useSettingsSection(props.route);
-  return <WorkspaceRail {...props} section={section} />;
-}
-
-/**
- * The chrome on a settings route, naming the tab the reader opened.
- *
- * Both halves read the same section the rail does — the hook derives it from the
- * capability cache the rail already warmed, so the trail, the heading and the
- * sidebar cannot disagree about which tab is current.
- */
-function SettingsTopBar({
-  route,
-  collapsed,
-  onToggle,
-  onOpenSearch,
-}: Readonly<{
-  route: Route;
-  collapsed: boolean;
-  onToggle: () => void;
-  onOpenSearch: () => void;
-}>) {
-  const section = useSettingsSection(route);
-  return (
-    <TopBar
-      route={route}
-      section={section}
-      collapsed={collapsed}
-      onToggle={onToggle}
-      onOpenSearch={onOpenSearch}
-    />
-  );
-}
-
-function SettingsPageTitle({ route }: Readonly<{ route: Route }>) {
-  const section = useSettingsSection(route);
-  return <PageTitle route={route} section={section} />;
-}
-
-// One group of the switcher's list, with the section's own heading above it — the
-// same grouping the sidebar's level shows, because it is the same data.
-function SectionPickGroup({
-  section,
-  group,
-  activeId,
-  onPick,
-}: Readonly<{
-  section: NavSection;
-  group: NavLevelGroup;
-  activeId: string;
-  onPick: () => void;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  // The group carrying the section's OWN name goes unheaded here: the sheet has
-  // already said it at heading level 2 above this list, and a group repeating it
-  // would name the section twice in the same view. In the sidebar that group is
-  // what names the level at all, which is why the name lives on the group rather
-  // than being spelled again in this file.
-  const heading =
-    group.headingKey === section.titleKey ? undefined : group.headingKey;
-  return (
-    <div className="sectionpickgroup">
-      {heading && (
-        <Heading size="xsmall" as="h3">
-          {t(heading)}
-        </Heading>
-      )}
-      {group.items.map((entry) => (
-        <a
-          key={entry.id}
-          className="t-body"
-          href={navEntryHref([section.screen], entry)}
-          aria-current={entry.id === activeId ? "page" : undefined}
-          // The sheet covers the page it just navigated to, so a row that acts
-          // takes the sheet with it.
-          onClick={onPick}
-        >
-          <entry.icon size={16} aria-hidden />
-          {entryLabel(entry, locale, t)}
-        </a>
-      ))}
-    </div>
-  );
-}
-
-/**
- * The way between a section's pages at phone width.
- *
- * The sidebar cannot carry them there — it is a bar of four destinations, and
- * handing those four to a section loses the whole product's navigation — so the
- * section lives in the page head instead: a control naming the entry you are on,
- * opening the section's own list.
- *
- * It opens the design system's `Modal`, which IS the full-screen sheet at this
- * width; a second sheet hand-rolled here would be a second set of dismissal,
- * focus and scroll-lock rules to keep in step with it.
- *
- * The LIST claims the current page and the button does not: the entries are the
- * section's navigation, the same links the sidebar's level carries above the
- * breakpoint, while the button is a control that opens them — and a control is
- * not a page. Several elements may name the current page (the trail's last stop
- * and the sidebar's active row both do, and agree); what none of them may do is
- * claim it for something that is not a destination.
- */
-function SectionSwitcher({
-  section,
-  entry,
-}: Readonly<{ section: NavSection; entry: NavLevelEntry }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const [open, setOpen] = useState(false);
-  const titleId = useId();
-  const close = useCallback(() => setOpen(false), []);
-  const label = entryLabel(entry, locale, t);
-  return (
-    <>
-      <button
-        type="button"
-        className="pageswitch"
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        // The visible word is the entry the reader is on; the accessible name
-        // adds what the control does and keeps that word inside it, which is
-        // what WCAG 2.5.3 asks of a control named longer than it reads.
-        aria-label={t("shell.sectionSwitch", { name: label })}
-        onClick={() => setOpen(true)}
-      >
-        <span>{label}</span>
-        <ChevronDown size={16} aria-hidden />
-      </button>
-      <Modal open={open} onClose={close} labelledBy={titleId} intent="drawer">
-        {/* Named by the SECTION: the list is everything Settings holds, and the
-            entry the reader came from is marked inside it. */}
-        <Heading size="large" id={titleId} className="t-h2 modal-title">
-          {t(section.titleKey)}
-        </Heading>
-        {/* Above the rows, exactly where the rail puts it. Without this the
-            search was unreachable at phone width — the one width where the
-            navigation is hardest to scan, since the rail is gone and the whole
-            list is behind this button. */}
-        {section.leadFor?.(close)}
-        <div className="sectionpick">
-          {section.groups.map((group, index) => (
-            <SectionPickGroup
-              key={group.headingKey ?? `group-${index}`}
-              section={section}
-              group={group}
-              activeId={entry.id}
-              onPick={close}
-            />
-          ))}
-        </div>
-      </Modal>
-    </>
-  );
-}
-
-/**
- * The page's own name, standing in the content column above what it names.
- *
- * It is INSIDE the scroller and scrolls away with the page, because the heading
- * belongs to the document rather than to the chrome: the top bar says where you
- * are and stays, this says what this page is and goes when you have read it.
- *
- * No page is named twice. A record's surface prints its own identity block and a
- * composed unit names its own screen, so this yields to both — a second name at
- * heading level would leave a screen reader picking between two page titles.
- */
-export function PageTitle({
-  route,
-  section,
-}: Readonly<{
-  route: Route;
-  section?: NavSection;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const phone = usePhoneViewport();
-
-  const navItem = NAV.find((item) => item.screen === route.screen);
-  const inSection = sectionHead(section, route);
-  // On a screen that publishes a level, the page is the ENTRY the reader opened
-  // rather than the section they opened it from: the section is named by the
-  // trail in the top bar and the sidebar's level, and printing it here
-  // named the section twice and the surface never — a settings page read
-  // "Settings" above a heading reading "Settings" with the audit log under both.
-  //
-  // At every width, now. The heading used to name the SECTION at phone width,
-  // because the sidebar shows destinations there and nothing else on screen said
-  // which section the page belonged to. The trail says it at every width, so the
-  // swap left the phone naming the section twice and the entry twice.
-  const entryTitle = inSection
-    ? entryLabel(inSection.entry, locale, t)
-    : undefined;
-  const title = entryTitle ?? resolveTitle(route.screen, navItem?.labelKey, t);
-  // A record kind, and only then: an id segment that names no record is a
-  // screen's own state — the settings tab, for one — and the page is still the
-  // screen. Printing that slug as the page's name gave Settings an h1 reading
-  // "privacy".
-  const recordNamesPage = recordKindOf(route) !== undefined;
-  // Conditioned on the DESCRIPTOR resolving, not on the screen slug alone. A
-  // unit route is deliberately absent from both the NAV rail and
-  // OFF_RAIL_TITLE_KEYS, so resolveTitle falls through to shell.unknownPage —
-  // and a unit this installation did not compose is genuinely an unknown page,
-  // whose screen says so in words. That case keeps the heading rather than
-  // yielding to a surface that will not name itself either.
-  const unitNamesPage =
-    route.screen === EXTENSION_SCREEN && findExtension(route.id) !== null;
-  // A page that heads ITSELF. Brief greets the reader by name in its own h1,
-  // so the shell printing the nav label above it named the page twice at heading
-  // level — a document outline with two top-level headings, which is exactly
-  // what the branches above exist to prevent for records and units.
-  //
-  // Asked of the route, through pagemeta's one predicate: a focused filter
-  // page heads itself where the library under the same screen does not, and
-  // the predicate is the one place to read which pages do this.
-  const selfHeaded = headsItself(route);
-  // Read only on the branch that prints an h1: a surface naming itself gets no
-  // subtitle from here either, or the page would carry a description of a
-  // heading it is not showing. The ENTRY's own line first: a section is many
-  // pages behind one screen, and the screen-keyed table carries only a sentence
-  // true of all of them. The table remains for screens that ARE one page.
-  const subKey = inSection?.entry.subKey ?? PAGE_SUB_KEYS[route.screen];
-  // Whose state the page changes. Only a settings entry carries one, and only
-  // then: on every other screen the answer is the record in front of you.
-  const scopeKey = inSection?.entry.scopeKey;
-
-  if (recordNamesPage || unitNamesPage || selfHeaded) {
-    return null;
-  }
-
-  // At phone width a section's page IS its switcher: the control names the page
-  // and opens the others, so it stands AS the heading rather than under a
-  // heading repeating it. The page is still named exactly once at heading level,
-  // and the trail above it is the only other place the name appears — the same
-  // arithmetic as every other route.
-  const switcher = phone && inSection && (
-    <SectionSwitcher section={inSection.section} entry={inSection.entry} />
-  );
-
-  return (
-    <div className="pagetitle">
-      <div className="pagetitle-text">
-        {/* The heading is named by the PAGE even when a control is all it
-            contains. Name-from-content would otherwise reach into the switcher's
-            own `aria-label` — "Privacy & retention — change section" — and put an
-            instruction in the document's heading list. The control keeps that
-            name; the heading states the page. */}
-        {/* The heading and the scope share one ROW: `.pagetitle-text` stacks its
-            children, so a badge placed as a sibling would sit under the heading
-            at full width and read as a second line of the title. */}
-        <div className="pagetitle-head">
-          <Heading
-            size="xlarge"
-            className={switcher ? "t-display pageswitchhead" : "t-display"}
-            aria-label={switcher ? title : undefined}
-          >
-            {switcher || title}
-          </Heading>
-          {/* Beside the heading rather than inside it: the scope is about the
-              page, not part of its name, and a heading carrying it would read
-              "Capture rules Company" in every document outline and screen
-              reader. Neutral: company-wide is the ordinary case, not a
-              warning. */}
-          {scopeKey && (
-            <Badge>
-              {/* The mixed page says something different from the others: not
-                  WHO it affects, but that it has no single answer and each
-                  setting states its own. "Who this page affects: Mixed" would
-                  be a non-sentence. */}
-              <span className="sr-only">
-                {scopeKey === "settings.scope.mixed"
-                  ? t("settings.scopeAriaMixed")
-                  : t("settings.scopeAria", { scope: t(scopeKey) })}
-              </span>
-              <span aria-hidden="true">{t(scopeKey)}</span>
-            </Badge>
-          )}
-        </div>
-        {subKey && <p className="pagesub t-sub">{t(subKey)}</p>}
-      </div>
-    </div>
   );
 }
 
@@ -806,29 +133,20 @@ export function Shell({
   // a section route is a different component, mounted on the way in and gone
   // again on the way out.
   const walk = useNavWalk(route, !railless && !leveled);
+  const [headSlot, setHeadSlot] = useState<HTMLElement | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
-  // A route change opens a different page, and a page opens at its top. Nothing
-  // in the browser does this for us here: the document itself never scrolls
-  // (`.app` is exactly one viewport tall), the content COLUMN does, and that
-  // column is the same element on every route — so it carries the offset the
-  // last page was left at straight into the next one. Reading a scrolled AI
-  // settings page and then opening another entry landed the reader partway down
-  // whatever the new page happened to have at that offset, and fewer, longer
-  // settings pages made it worse.
+  // A page opens at its top. The document never scrolls; the content column
+  // does, and it is one element on every route, so it would carry the old offset.
   //
   // Keyed by the ADDRESS, not by `route`: useRoute parses a fresh object every
   // render, so a dependency on the object would re-run this on every keystroke a
   // screen handles and fight a reader who has scrolled deliberately.
-  // Assigning scrollTop rather than calling scrollTo: it is the same instant jump,
-  // it is what the list surface's own reset already uses, and it is a property
-  // every environment the tests run in actually has.
   const address = routeHash(route);
-  // A new page opens at its top; a page the reader is RETURNING to opens where
-  // they left it. Both live in app/scrollmemory.ts, because the second one needs
-  // an identity for the history entry that the browser does not give an entry,
-  // and a retry while the column grows — a list restores its rows a moment after
-  // the address arrives, so a single assignment lands against a column that is
-  // still short and gets clamped.
+  // A new page opens at its top; a page the reader is returning to opens where
+  // they left it. Both live in lib/scrollmemory.ts. The second needs an identity
+  // for the history entry, which the browser does not give, and a retry while the
+  // column grows. A list restores its rows a moment after the address arrives,
+  // so a single assignment lands on a column still short and gets clamped.
   useScrollMemory(scroller, address);
 
   const toggle = useCallback(() => {
@@ -959,11 +277,13 @@ export function Shell({
             own controls. */}
           <div className="scroll" ref={scroller} tabIndex={-1}>
             {leveled ? (
-              <SettingsPageTitle route={route} />
+              <SettingsPageTitle route={route} actionSlot={setHeadSlot} />
             ) : (
-              <PageTitle route={route} />
+              <PageTitle route={route} actionSlot={setHeadSlot} />
             )}
-            {children}
+            <PageHeadSlot.Provider value={headSlot}>
+              {children}
+            </PageHeadSlot.Provider>
           </div>
         </main>
         {/* The agent's own periphery, drawn around the WHOLE workspace rather than
@@ -977,5 +297,5 @@ export function Shell({
   );
 }
 
-export { navigate } from "./router";
+export { navigate } from "../lib/router";
 export { useRoute };

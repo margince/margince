@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -27,6 +28,10 @@ import (
 type LastTouch struct {
 	InboundAt  *time.Time
 	OutboundAt *time.Time
+	// LiveInboundAt is InboundAt without the email an import brought in as
+	// history. Only the re-engaged suggestion reads it; every other consumer
+	// counts imported mail as engagement.
+	LiveInboundAt *time.Time
 }
 
 // LastTouchFor answers the two moments for every contact in the set the caller
@@ -85,11 +90,12 @@ func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, op
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT c.id,
 		       (SELECT max(a.occurred_at) %[1]s AND a.direction = 'inbound' AND %[2]s AND %[5]s),
-		       (SELECT max(a.occurred_at) %[1]s AND a.direction = 'outbound' AND %[5]s)
+		       (SELECT max(a.occurred_at) %[1]s AND a.direction = 'outbound' AND %[5]s),
+		       (SELECT max(a.occurred_at) %[1]s AND a.direction = 'inbound' AND %[2]s AND %[5]s AND NOT %[6]s)
 		FROM contact c
 		WHERE c.id = ANY($%[3]d) AND c.archived_at IS NULL AND (%[4]s)`,
 		reached, contacts.SenderPredicate("c.id", "a"), wantedPos, visible,
-		relstrength.NotCalledOffSQL("a")), args...)
+		relstrength.NotCalledOffSQL("a"), activities.ImportedHistorySQL), args...)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +103,7 @@ func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, op
 	for rows.Next() {
 		var contactID ids.ContactID
 		var touch LastTouch
-		if err := rows.Scan(&contactID, &touch.InboundAt, &touch.OutboundAt); err != nil {
+		if err := rows.Scan(&contactID, &touch.InboundAt, &touch.OutboundAt, &touch.LiveInboundAt); err != nil {
 			return nil, err
 		}
 		out[contactID] = touch

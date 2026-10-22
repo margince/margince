@@ -233,13 +233,10 @@ func recordClaim(
 	if err != nil {
 		t.Fatalf("logging the evidence: %v", err)
 	}
-	claim, err := contacts.NewStore(e.DB()).RecordConversationClaim(e.Admin(), contacts.ClaimInput{
+	claim := e.RecordClaim(e.Admin(), t, contacts.ClaimInput{
 		ContactID: ids.From[ids.ContactKind](contactID), Kind: "commitment_theirs",
 		Body: body, ActivityID: ids.UUID(message.Id), Quote: body, Source: "manual",
 	})
-	if err != nil {
-		t.Fatalf("recording the claim: %v", err)
-	}
 	// Status and needs_review are the extractor's own lifecycle columns and
 	// have no writer on this path; set directly so the read's filter is
 	// exercised against the states it exists to reject.

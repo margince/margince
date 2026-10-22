@@ -67,11 +67,11 @@ only because that file has no `email:` block. The switch draws the link and wire
 
 The request form behind the link is the real one. So to send it to an installation with no mailer
 gets a `501 not_implemented` back, and shows it as the failure note of the form. The confirmation,
-the deep-link form and the refusal of a spent token are checked in `src/screens/auth.test.tsx`
+the deep-link form and the refusal of a spent token are checked in `src/features/sign-in/auth.test.tsx`
 instead, because no one can reach them here.
 
 When a switch is not set, it reads `undefined` and nothing changes. `src/app/ui-preview.test.ts` and
-the `federated sign-in` cases in `src/screens/auth.test.tsx` pin both positions of both switches.
+the `federated sign-in` cases in `src/features/sign-in/auth.test.tsx` pin both positions of both switches.
 The `e2e` lane builds without any of them, so `offers no identity provider that does not work` still
 measures the real default.
 
@@ -83,20 +83,25 @@ measures the real default.
   refuses one. That test is a vitest gate over the TypeScript AST, and `make native-controls` runs
   it on its own. `pnpm storybook` shows every control.
 - `src/design-system/`: tokens, building blocks and their stories. Read
-  [its README](src/design-system/README.md) before you build a control.
-- `src/app/`: the shell, the top bar, `nav.ts` and `theme.ts`. The shell is a labeled sidebar that
+  [its README](src/design-system/README.md) before you build a control. It never imports `app/`,
+  `components/` or `features/`.
+- `src/lib/`: shared code that draws nothing: the hash router, URL state, `theme.ts`, `capability.ts`,
+  how a server problem reads, and the session. `theme.ts` resolves and applies `light` or `dark` before React
+  mounts, so a screen before sign-in can be dark at all.
+- `src/app/`: the shell, the top bar and `nav.ts`. The shell is a labeled sidebar that
   folds down to the standard rail, and it keeps that choice. At phone width the same markup is a
   bottom bar with a More menu for the rest.
 
   `nav.ts` holds the standard nav items in groups. A label
   is for display and never a route ID: `deals` shows as Pipeline, `inbox` as Approvals, `ai` as Ask
-  Margince. `theme.ts` resolves and applies `light` or `dark` before React mounts, so a screen before
-  sign-in can be dark at all. Also here: the hash router and the `⌘K` palette. The agent
+  Margince. Also here: the `⌘K` palette. The agent
   section at the foot of the rail is here too (`agentrail.tsx`): the one AI control in
   the frame of the app. See
   [docs/explanation/frontend-architecture.md](../docs/explanation/frontend-architecture.md).
-- `src/screens/`: one file per surface, or one folder when a surface is a state machine
-  (`onboarding-conversation/`). Routes that are not built yet render a pending state.
+- `src/components/`: screen parts that many features share, such as the create and edit dialogs
+  and the list query. It never imports `app/` or `features/`.
+- `src/features/<name>/`: one folder per feature, with its screens, tests and stories. A feature
+  never imports another feature or the shell. Routes that are not built yet render a pending state.
 - `src/i18n/`: `en.ts`, `de.ts` and `vi.ts`. Key parity is checked at compile time and at run time.
 - `src/format/`: the display edge. Money, date and duration formatting, IANA zones only, and the FX
   lineage display (it uses the IR `base_value` as it is, and never multiplies).
@@ -123,7 +128,7 @@ measures the real default.
    (checked by a walk of the TS AST).
 5. No emoji in source strings: Lucide only. The 🟢/🟡 autonomy meanings render through the `.dot`
    token component.
-6. One service worker ships, and only `src/app/pwa.ts` registers it. From Cache Storage it answers only
+6. One service worker ships, and only `src/lib/pwa.ts` registers it. From Cache Storage it answers only
    two things. One is the offline page, for a page load the network could not make. The other is that
    page's own script ([pwa.md](../docs/explanation/pwa.md)).
 7. WCAG 2.2 AA (axe) in the `e2e` lane. The budget for how fast it feels is not here.

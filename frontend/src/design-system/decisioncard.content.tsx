@@ -2,6 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useId, useState } from "react";
+import type { components } from "../api/schema";
+import type { Translator } from "../i18n";
+import { useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import type { DecisionApproval, DecisionCardLabels } from "./decisioncard";
 import type {
   DecisionDiff,
@@ -9,6 +13,7 @@ import type {
   PayloadField,
 } from "./decisioncard.payload";
 import { type Fact, FactList } from "./factlist";
+import { safeHref } from "./richtext-html";
 import { EvidenceChip, FieldDiff } from "./trust";
 
 // What a DecisionCard DRAWS of the proposal it carries: the drafted message,
@@ -97,7 +102,19 @@ export function DecisionContent({
   const facts: readonly Fact[] = rest.map((field) => ({
     key: field.key,
     term: field.label,
-    value: <span className="dcard-fact">{field.value}</span>,
+    value:
+      field.href && safeHref(field.href) ? (
+        <a
+          className="dcard-fact"
+          href={safeHref(field.href)}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {field.value}
+        </a>
+      ) : (
+        <span className="dcard-fact">{field.value}</span>
+      ),
   }));
   return (
     <>
@@ -113,7 +130,7 @@ export function DecisionContent({
       {diffs.map((diff) => (
         <div className="dcard-diff" key={diff.field}>
           <span className="t-eyebrow dcard-draft-label">
-            {diff.field.replaceAll("_", " ")}
+            {diff.label ?? diff.field.replaceAll("_", " ")}
           </span>
           <FieldDiff oldValue={diff.from} newValue={diff.to} />
         </div>
@@ -123,10 +140,7 @@ export function DecisionContent({
   );
 }
 
-// The receipts, always on the card and never behind a popover: this is the one
-// surface where a contact has to be able to check a claim BEFORE agreeing to it.
-// Collapsed in the row layout, where a queue of verbatim snippets would bury
-// the verbs; open in the deck, where there is one card and room to read it.
+// Authorized preview quotations stay visible before a decision; legacy row evidence can collapse.
 export function DecisionEvidence({
   evidence,
   collapsed,
@@ -134,6 +148,7 @@ export function DecisionEvidence({
   evidence: DecisionApproval["evidence"];
   collapsed: boolean;
 }>) {
+  const t = useT();
   // Two rows of one source can open with the same twelve characters — a quoted
   // thread quotes itself — and a duplicate key hands one chip's expansion state
   // to another on the next render. So the key carries an occurrence count of the
@@ -162,7 +177,7 @@ export function DecisionEvidence({
             collapsed={collapsed}
             evidence={{
               snippet: item.evidence_snippet,
-              source: item.source_type ?? "",
+              source: evidenceSourceLabel(item.source_type, t),
               lines: item.source_lines,
             }}
           />
@@ -170,4 +185,40 @@ export function DecisionEvidence({
       )}
     </>
   );
+}
+
+type EvidenceSourceType = NonNullable<
+  components["schemas"]["ApprovalEvidence"]["source_type"]
+>;
+
+// Every record kind the contract lets an approval's evidence name, so a kind
+// added to it fails the compiler here until it has words.
+const EVIDENCE_SOURCES: Readonly<Record<EvidenceSourceType, MessageKey>> = {
+  activity: "decision.evidenceSource.activity",
+  deal: "decision.evidenceSource.deal",
+  signal: "decision.evidenceSource.signal",
+  relationship: "decision.evidenceSource.relationship",
+  page: "decision.evidenceSource.page",
+  contract: "decision.evidenceSource.contract",
+};
+
+// Read through a map rather than by index, so a wire string spelled
+// `constructor` finds nothing instead of Object's prototype.
+const EVIDENCE_SOURCE_KEYS: ReadonlyMap<string, MessageKey> = new Map(
+  Object.entries(EVIDENCE_SOURCES),
+);
+
+/**
+ * What an approval's evidence chip names as its source: the record kind in the
+ * reader's words, never the wire enum. A kind a newer server sends reads as a
+ * plain "Source"; a missing one names nothing.
+ */
+export function evidenceSourceLabel(
+  type: string | null | undefined,
+  t: Translator,
+): string {
+  if (!type) {
+    return "";
+  }
+  return t(EVIDENCE_SOURCE_KEYS.get(type) ?? "decision.evidenceSource.unknown");
 }

@@ -36,12 +36,15 @@ func TestACommitmentEditReachesOnlyTheWordingAndTheDay(t *testing.T) {
 		{"a day that is not a date", func(p *CommitmentTaskProposal) { p.DueDate = "Friday" }, true},
 		{"the locator", func(p *CommitmentTaskProposal) { p.Locator = "xyz" }, true},
 		{"the party", func(p *CommitmentTaskProposal) { p.Party = "Dana" }, true},
+		{"the promiser", func(p *CommitmentTaskProposal) { id := ids.NewV7(); p.PromiserSeatID = &id }, true},
+		{"promiser resolution", func(p *CommitmentTaskProposal) { p.PromiserUnresolved = true }, true},
+		{"the assignee", func(p *CommitmentTaskProposal) { id := ids.NewV7(); p.SeatID = &id }, true},
 		{"the quote", func(p *CommitmentTaskProposal) { p.Quote = "something else" }, true},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			edited := staged
 			c.edit(&edited)
-			err := commitmentTaskPrecheck()(context.Background(), mustJSON(t, staged), mustJSON(t, edited))
+			err := refuseCommitmentEdit(mustJSON(t, staged), mustJSON(t, edited))
 			var invalid *approvals.InvalidEditError
 			if c.refuse && !errors.As(err, &invalid) {
 				t.Errorf("editing %s: err = %v, want an invalid edit", c.name, err)
@@ -66,13 +69,13 @@ func mustJSON(t *testing.T, v CommitmentTaskProposal) json.RawMessage {
 func TestACommitmentEditThatIsNotAProposalIsRefused(t *testing.T) {
 	staged := mustJSON(t, CommitmentTaskProposal{Summary: "Send pricing", Locator: "abc"})
 	var invalid *approvals.InvalidEditError
-	if err := commitmentTaskPrecheck()(context.Background(), staged, json.RawMessage(`{"summary":`)); !errors.As(err, &invalid) {
+	if err := refuseCommitmentEdit(staged, json.RawMessage(`{"summary":`)); !errors.As(err, &invalid) {
 		t.Errorf("an edit that is not JSON: err = %v, want an invalid edit", err)
 	}
-	if err := commitmentTaskPrecheck()(context.Background(), json.RawMessage(`[`), staged); err == nil {
+	if err := refuseCommitmentEdit(json.RawMessage(`[`), staged); err == nil {
 		t.Error("a staged payload that is not JSON was compared as if it were")
 	}
-	if err := commitmentTaskPrecheck()(context.Background(), staged, nil); err != nil {
+	if err := refuseCommitmentEdit(staged, nil); err != nil {
 		t.Errorf("accepting with no edit: %v", err)
 	}
 }

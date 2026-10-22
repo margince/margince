@@ -31,5 +31,6 @@ func reportingRetentionSelector() string {
  LEFT JOIN deal ad ON ad.id=l.deal_id LEFT JOIN lead al ON al.id=l.lead_id LEFT JOIN project ap ON ap.id=l.project_id
  WHERE l.activity_id=c.source_id AND (COALESCE(ac.legal_hold,false) OR COALESCE(ao.legal_hold,false)
  OR COALESCE(ad.legal_hold,false) OR COALESCE(al.legal_hold,false) OR COALESCE(ap.legal_hold,false))))))
+ AND NOT ` + heldQuestionSource() + `
  ORDER BY edition.captured_at,edition.id LIMIT ` + p[1]
 }

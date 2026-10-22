@@ -154,15 +154,16 @@ func wirePrivacyInformation(info PrivacyInformation) crmcontracts.PrivacyInforma
 	for _, r := range info.Rights {
 		rights = append(rights, crmcontracts.PrivacyInformationPageRights(r))
 	}
-	purposes := info.Purposes
-	if purposes == nil {
-		purposes = []string{}
+	purposes, keys := info.Purposes, info.PurposeKeys
+	if purposes == nil || keys == nil {
+		purposes, keys = []string{}, []string{}
 	}
 	out := crmcontracts.PrivacyInformationPage{
-		Kind:       crmcontracts.PrivacyInformationPageKindPrivacyNotice,
-		AcquiredAs: info.AcquiredAs,
-		Purposes:   &purposes,
-		Rights:     rights,
+		Kind:        crmcontracts.PrivacyInformationPageKindPrivacyNotice,
+		AcquiredAs:  info.AcquiredAs,
+		Purposes:    &purposes,
+		PurposeKeys: &keys,
+		Rights:      rights,
 	}
 	if info.AcquiredAt != nil {
 		at := *info.AcquiredAt

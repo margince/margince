@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useId, useState } from "react";
 import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
-import { ProblemError } from "../screens/common";
+import { ProblemError } from "../lib/problem";
 import { Button, Field, Modal, TextInput } from "./atoms";
 import { ErrorLine } from "./errorline";
 import { Heading } from "./heading";
@@ -29,7 +29,7 @@ export default meta;
 type Story = StoryObj;
 
 const conflict = new ProblemError({
-  code: "version_conflict",
+  code: "version_skew",
   detail: "Somebody else changed this record. Re-read it and try again.",
 });
 

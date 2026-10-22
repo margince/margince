@@ -36,6 +36,8 @@ var narrowedSites = map[string]string{
 	// ends up wearing — including the unsure this site records rather than
 	// guessing — is decided by that second answer.
 	"request_settlement/request_settle": aitasks.ScopeSingleCall,
+	// A batch the models decline is asked again item by item.
+	"tag_suggest/interest": aitasks.ScopeSingleCall,
 	// An unreadable verdict is asked again, and the retry's score is the score.
 	"cert_judge/judge": aitasks.ScopeSingleCall,
 	// A deep read calls this once per crawled page and merges the answers.

@@ -14,9 +14,11 @@ package httperr
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"slices"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -81,6 +83,18 @@ func Validation(field, code, message string) *DetailedError {
 	}
 }
 
+// RequirePair refuses a filter that names half of a discriminated reference.
+// Ignoring the half would list rows the caller did not ask for. A type alone
+// matches every record of that type, and an id alone every type carrying it.
+// Both set or both absent answers nil.
+func RequirePair[A, B any](first string, a *A, second string, b *B) *DetailedError {
+	if (a == nil) == (b == nil) {
+		return nil
+	}
+	return Validation(first, "requires_pair",
+		"filtering by "+first+" needs "+second+" too: supply both or neither")
+}
+
 // RequireNonBlank is the one rule for a record's required name, on create and
 // edit alike. It answers the trimmed text, so what was accepted is what is stored.
 func RequireNonBlank(field, raw string) (string, error) {
@@ -89,6 +103,16 @@ func RequireNonBlank(field, raw string) (string, error) {
 		return "", Validation(field, "required", field+" is required")
 	}
 	return name, nil
+}
+
+// RequireWithin refuses text longer than limit characters. The contract counts
+// characters, not bytes, so a German or Vietnamese sentence is not refused for
+// its accents.
+func RequireWithin(field, text string, limit int) error {
+	if utf8.RuneCountInString(text) > limit {
+		return Validation(field, "too_long", fmt.Sprintf("%s holds at most %d characters", field, limit))
+	}
+	return nil
 }
 
 // RefuseNull refuses a PATCH that sent a required field as an explicit null.
@@ -163,6 +187,9 @@ func Duplicate(code, existingID string) *DetailedError {
 	return e
 }
 
+// codeInternal is the wire code of every opaque 500.
+const codeInternal = "internal"
+
 func writeProblem(w http.ResponseWriter, p problem) {
 	if p.Type == "" {
 		p.Type = problemTypeBase + p.Code
@@ -170,8 +197,27 @@ func writeProblem(w http.ResponseWriter, p problem) {
 	if p.Title == "" {
 		p.Title = http.StatusText(p.Status)
 	}
-	w.Header().Set("Content-Type", "application/problem+json")
-	w.WriteHeader(p.Status)
-	//craft:ignore swallowed-errors the status line is already on the wire — an encode failure here has no recovery path and no channel back to the client
-	_ = json.NewEncoder(w).Encode(p)
+	if err := writeEncoded(w, p.Status, "application/problem+json", p); err != nil {
+		slog.Error("encoding a problem response; answering it without its details", "code", p.Code, "err", err)
+		p.Details = nil
+		//craft:ignore swallowed-errors without Details a problem holds only strings and an int, which always encode
+		_ = writeEncoded(w, p.Status, "application/problem+json", p)
+	}
+}
+
+// writeEncoded encodes body in full before the status line goes out. A value
+// encoding/json refuses is then an error the caller can still answer, rather
+// than a success status followed by no body.
+//
+//craft:ignore naked-any the JSON serialization seam, shared by WriteJSON and writeProblem
+func writeEncoded(w http.ResponseWriter, status int, contentType string, body any) error {
+	encoded, err := json.Marshal(body)
+	if err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", contentType)
+	w.WriteHeader(status)
+	//craft:ignore swallowed-errors the status line is already on the wire, so a failed write (the client left) has no channel back
+	_, _ = w.Write(append(encoded, '\n'))
+	return nil
 }

@@ -19,14 +19,23 @@
 // scope, and it is a property of this file rather than of a caller's care.
 package techprofile
 
-import "strings"
+import (
+	"sort"
+	"strings"
+)
 
-// Signal is one observation ready to be written: which field it belongs to,
-// the stable key that filters and comparisons use, the label a reader reads,
-// and the public record that proves it.
+// Signal is one observation ready to be written.
+//
+// It carries the field it belongs to, the stable key filters match on, and the
+// public record that proves it.
 type Signal struct {
 	Field string
 	Key   string
+	// Label is a vendor's own name, and empty for an enumerated signal.
+	//
+	// Shopify is Shopify in every language, so a vendor names itself here. A
+	// service or a posture is named from its key where the record's language
+	// is known, because this package classifies and does not translate.
 	Label string
 	// Evidence is the public record this was read from — the MX host, the
 	// certificate hostname, the matched marker. It is what an audit answer
@@ -104,15 +113,9 @@ func MailProvider(domain string, mxHosts []string) (Signal, bool) {
 			}
 		}
 		if host == domain || strings.HasSuffix(host, "."+domain) {
-			return Signal{
-				Field: FieldMailProvider, Key: MailSelfHosted,
-				Label: "Eigener Mailserver", Evidence: host,
-			}, true
+			return Signal{Field: FieldMailProvider, Key: MailSelfHosted, Evidence: host}, true
 		}
-		return Signal{
-			Field: FieldMailProvider, Key: MailOther,
-			Label: "Anderer Anbieter", Evidence: host,
-		}, true
+		return Signal{Field: FieldMailProvider, Key: MailOther, Evidence: host}, true
 	}
 	return Signal{}, false
 }
@@ -143,33 +146,44 @@ func EmailSecurity(rootTXT, dmarcTXT []string, dkimFound bool) []Signal {
 	var signals []Signal
 	for _, record := range rootTXT {
 		if strings.HasPrefix(strings.ToLower(strings.TrimSpace(record)), "v=spf1") {
-			signals = append(signals, Signal{
-				Field: FieldEmailSecurity, Key: SecuritySPF,
-				Label: "SPF veröffentlicht", Evidence: evidenceSPF,
-			})
+			signals = append(signals, Signal{Field: FieldEmailSecurity, Key: SecuritySPF})
 			break
 		}
 	}
 	if policy, ok := dmarcPolicy(dmarcTXT); ok {
-		signals = append(signals, Signal{
-			Field: FieldEmailSecurity, Key: policy.key,
-			Label: policy.label, Evidence: policy.evidence,
-		})
+		signals = append(signals, Signal{Field: FieldEmailSecurity, Key: policy.key})
 	}
 	if dkimFound {
-		signals = append(signals, Signal{
-			Field: FieldEmailSecurity, Key: SecurityDKIM,
-			Label: "DKIM eingerichtet", Evidence: "DKIM-Selector beantwortet",
-		})
+		signals = append(signals, Signal{Field: FieldEmailSecurity, Key: SecurityDKIM})
 	}
 	return signals
 }
 
-// The evidence strings, which name the record kind and its policy rather than
-// quoting anything the record contains.
-const (
-	evidenceSPF = "SPF-Eintrag (v=spf1)"
-)
+// securityPostures is the closed set of email-security keys this package
+// classifies.
+//
+// A posture carries no label or evidence prose of its own. Both are stored on
+// a record, so both are written where the record's language is known, and this
+// package classifies rather than translates.
+var securityPostures = map[string]bool{
+	SecuritySPF:             true,
+	SecurityDMARCNone:       true,
+	SecurityDMARCQuarantine: true,
+	SecurityDMARCReject:     true,
+	SecurityDKIM:            true,
+}
+
+// SecurityPostureKeys lists the email-security keys this package classifies,
+// sorted. Exported so a surface that names each posture in its own language
+// walks the owner's set rather than keeping a copy of it.
+func SecurityPostureKeys() []string {
+	keys := make([]string, 0, len(securityPostures))
+	for key := range securityPostures {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
+}
 
 // EmailSecurityFromKeys rebuilds the posture signals from the canonical keys a
 // cache remembered.
@@ -179,26 +193,16 @@ const (
 // stored it — and, more to the point, so the cache never has to hold anything
 // but the keys.
 func EmailSecurityFromKeys(keys []string) []Signal {
-	known := map[string]struct{ label, evidence string }{
-		SecuritySPF:             {"SPF veröffentlicht", evidenceSPF},
-		SecurityDMARCNone:       {"DMARC nur beobachtend", "DMARC-Eintrag: p=none"},
-		SecurityDMARCQuarantine: {"DMARC in Quarantäne", "DMARC-Eintrag: p=quarantine"},
-		SecurityDMARCReject:     {"DMARC durchgesetzt", "DMARC-Eintrag: p=reject"},
-		SecurityDKIM:            {"DKIM eingerichtet", "DKIM-Selector beantwortet"},
-	}
 	signals := make([]Signal, 0, len(keys))
 	for _, key := range keys {
-		if entry, ok := known[key]; ok {
-			signals = append(signals, Signal{
-				Field: FieldEmailSecurity, Key: key,
-				Label: entry.label, Evidence: entry.evidence,
-			})
+		if securityPostures[key] {
+			signals = append(signals, Signal{Field: FieldEmailSecurity, Key: key})
 		}
 	}
 	return signals
 }
 
-type dmarcLevel struct{ key, label, evidence string }
+type dmarcLevel struct{ key string }
 
 // dmarcPolicy reads the p= tag out of a _dmarc TXT record.
 //
@@ -208,9 +212,9 @@ type dmarcLevel struct{ key, label, evidence string }
 // email address.
 func dmarcPolicy(dmarcTXT []string) (dmarcLevel, bool) {
 	levels := map[string]dmarcLevel{
-		"none":       {SecurityDMARCNone, "DMARC nur beobachtend", "DMARC-Eintrag: p=none"},
-		"quarantine": {SecurityDMARCQuarantine, "DMARC in Quarantäne", "DMARC-Eintrag: p=quarantine"},
-		"reject":     {SecurityDMARCReject, "DMARC durchgesetzt", "DMARC-Eintrag: p=reject"},
+		"none":       {SecurityDMARCNone},
+		"quarantine": {SecurityDMARCQuarantine},
+		"reject":     {SecurityDMARCReject},
 	}
 	for _, record := range dmarcTXT {
 		trimmed := strings.TrimSpace(record)

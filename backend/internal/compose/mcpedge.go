@@ -42,7 +42,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
-	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -119,7 +118,7 @@ func (s *Server) mcpHandler(pool *pgxpool.Pool, auth *identity.Service, log *slo
 		agents.WithResourceProvider(composeResources(
 			mcpResourceProviders(
 				agents.NewCapabilitiesResource(s.toolRegistry),
-				search.NewQuerySchemaResource(queryVocabulary(pool)), s.appViews)...,
+				search.NewQuerySchemaResource(queryVocabulary(pool)), InstallationDB(pool), s.appViews)...,
 		)),
 		// And the OTHER half of the same promise. A tool's UI.ResourceURI is a
 		// constant baked at registration; whether that document arrived is a
@@ -135,7 +134,7 @@ func (s *Server) mcpHandler(pool *pgxpool.Pool, auth *identity.Service, log *slo
 		// per-kind effects belong to the DECIDE path, and a task neither decides
 		// nor triggers one. What it does is read a decision and then take the
 		// ordinary redemption route through Registry.Invoke.
-		agents.WithTaskStore(toolTasks(pool), approvalsAdapter{svc: approvals.NewService(InstallationDB(pool))}))
+		agents.WithTaskStore(toolTasks(pool), approvalsAdapter{svc: NewApprovalsService(InstallationDB(pool))}))
 }
 
 // mcpAuthenticate binds one request to its agent principal. It runs on EVERY
@@ -201,6 +200,14 @@ type mcpLimiters struct {
 	peerCeiling *ratelimit.Limiter // 600/min per (endpoint group, peer) — the shared ceiling no chosen key escapes
 }
 
+// The per-minute bounds of the MCP transport. They guard the server against a
+// flood and do not set what an agent may do. So the build fixes them, and the
+// settings page shows them read-only.
+const (
+	mcpCallsPerMinute       = 240
+	mcpStreamOpensPerMinute = 30
+)
+
 func newMCPLimiters() mcpLimiters { return newMCPLimitersWithClock(time.Now) }
 
 // newMCPLimitersWithClock takes the clock for the same reason
@@ -209,10 +216,10 @@ func newMCPLimiters() mcpLimiters { return newMCPLimitersWithClock(time.Now) }
 // numbers such a test pins must be the numbers a deployment actually runs.
 func newMCPLimitersWithClock(now func() time.Time) mcpLimiters {
 	return mcpLimiters{
-		perPassport: ratelimit.NewWithClock("mcp/per-passport", ratelimit.FailOpen, 240, time.Minute, now),
+		perPassport: ratelimit.NewWithClock("mcp/per-passport", ratelimit.FailOpen, mcpCallsPerMinute, time.Minute, now),
 		preAuth:     ratelimit.NewWithClock("mcp/pre-auth", ratelimit.FailClosed, 60, time.Minute, now),
 		preAuthPeer: ratelimit.NewWithClock("mcp/pre-auth-per-peer", ratelimit.FailClosed, 600, time.Minute, now),
-		streams:     ratelimit.NewWithClock("mcp/stream-open", ratelimit.FailOpen, 30, time.Minute, now),
+		streams:     ratelimit.NewWithClock("mcp/stream-open", ratelimit.FailOpen, mcpStreamOpensPerMinute, time.Minute, now),
 		token:       ratelimit.NewWithClock("mcp/token", ratelimit.FailClosed, 60, time.Minute, now),
 		authorize:   ratelimit.NewWithClock("mcp/authorize", ratelimit.FailClosed, 60, time.Minute, now),
 		revoke:      ratelimit.NewWithClock("mcp/revoke", ratelimit.FailClosed, 60, time.Minute, now),
@@ -255,8 +262,12 @@ func mcpEdge(next http.Handler, lim mcpLimiters, allowedOrigin string) http.Hand
 		// credential just died produces a handful, so real traffic never
 		// approaches it — while a grinder now meets a bound at 600 lookups a
 		// minute instead of none.
-		if lim.preAuth.Blocked(failures) || lim.preAuthPeer.Blocked(peer) {
-			httperr.Write(w, r, apperrors.ErrBudgetExceeded)
+		if lim.preAuth.Blocked(failures) {
+			writeMCPRefused(w, r, lim.preAuth)
+			return
+		}
+		if lim.preAuthPeer.Blocked(peer) {
+			writeMCPRefused(w, r, lim.preAuthPeer)
 			return
 		}
 		if credential != "" {
@@ -264,12 +275,12 @@ func mcpEdge(next http.Handler, lim mcpLimiters, allowedOrigin string) http.Hand
 			// it gets its own tighter bucket. It is metered here, ahead of the
 			// transport's method dispatch, so what bounds the churn is whether
 			// the request was made — not what the transport answers it with.
-			bucket := lim.perPassport
+			bucket, what := lim.perPassport, "tool calls on this credential"
 			if r.Method == http.MethodGet {
-				bucket = lim.streams
+				bucket, what = lim.streams, "stream opens on this credential"
 			}
 			if !bucket.Allow(credential) {
-				httperr.Write(w, r, apperrors.ErrBudgetExceeded)
+				writeMCPRateLimited(w, r, bucket, what)
 				return
 			}
 		}
@@ -282,6 +293,31 @@ func mcpEdge(next http.Handler, lim mcpLimiters, allowedOrigin string) http.Hand
 			lim.preAuth.Record(failures)
 			lim.preAuthPeer.Record(peer)
 		}
+	})
+}
+
+// writeMCPRateLimited answers an MCP edge ceiling with the ceiling named and the
+// wait a client needs, so it does not have to guess a backoff.
+func writeMCPRateLimited(w http.ResponseWriter, r *http.Request, bucket *ratelimit.Limiter, what string) {
+	wait := bucket.RetryAfterSeconds()
+	writeMCPWait(w, r, wait, fmt.Sprintf("too many %s: the limit is %d every %d seconds. Wait %d seconds and send the request again.",
+		what, bucket.Limit(), wait, wait))
+}
+
+// writeMCPRefused answers a pre-auth ceiling without claiming a count: those
+// limiters fail closed. An unreachable shared store trips them too. A count the
+// caller never reached would be false.
+func writeMCPRefused(w http.ResponseWriter, r *http.Request, bucket *ratelimit.Limiter) {
+	wait := bucket.RetryAfterSeconds()
+	writeMCPWait(w, r, wait, fmt.Sprintf("requests from this caller are refused for now. Wait %d seconds and send the request again.", wait))
+}
+
+func writeMCPWait(w http.ResponseWriter, r *http.Request, wait int, detail string) {
+	httperr.Write(w, r, &httperr.DetailedError{
+		Status:            http.StatusTooManyRequests,
+		Code:              "rate_limited",
+		Detail:            detail,
+		RetryAfterSeconds: wait,
 	})
 }
 

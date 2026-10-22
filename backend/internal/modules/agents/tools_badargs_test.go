@@ -322,3 +322,16 @@ func TestEchoSafeLeavesAMessageThatFitsAlone(t *testing.T) {
 		}
 	}
 }
+
+// A tool argument shares the REST body's date-time bound, and the refusal names
+// the argument so the agent can correct it.
+func TestADateTimeArgumentNoZoneCanRenderIsRefusedByName(t *testing.T) {
+	var args struct {
+		DueAt *time.Time `json:"due_at"`
+	}
+	err := decodeArgs(json.RawMessage(`{"due_at":"9999-12-31T23:59:59Z"}`), &args)
+	bad, ok := errors.AsType[*BadArgsError](err)
+	if !ok || bad.Field != "due_at" {
+		t.Fatalf("decodeArgs → %v, want a BadArgsError naming due_at", err)
+	}
+}

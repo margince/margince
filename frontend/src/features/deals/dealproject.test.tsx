@@ -1,0 +1,656 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+/** @vitest-environment happy-dom */
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  cleanup,
+  render as rtlRender,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { components } from "../../api/schema";
+import { pickOption } from "../../design-system/select-testing";
+import { LocaleProvider } from "../../i18n";
+import { jsonResponse } from "../../testing/company.fixtures";
+import { meFixture } from "../../testing/mefixture";
+import { project } from "../../testing/projects.fixtures";
+import { dealProjectFields } from "./dealproject";
+import { DealScreen, DealsScreen } from "./deals";
+
+// Where a deal meets its project: the picker on the create form posts the
+// chosen project's id, the inline "new project" answer is born on the deal's
+// company before the deal is, the deal page draws its project as a linked
+// chip, and a won deal without one is offered the company's single open
+// project once.
+
+type Deal = components["schemas"]["Deal"];
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+  window.location.hash = "";
+});
+
+function render(ui: ReactNode) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return rtlRender(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">{ui}</LocaleProvider>
+    </QueryClientProvider>,
+  );
+}
+
+/**
+ * The create form, scoped to the dialog it is in.
+ *
+ * The list behind it carries a column picker, and a column's tick is now a real
+ * labelled control — so "Value" and "via Partner" name a field in the form AND
+ * a column in that menu. The dialog is the boundary between the record being
+ * made and the list it will join.
+ */
+function inForm() {
+  return within(screen.getByRole("dialog"));
+}
+
+/** Searches the create form's company field by `name` and picks the match. */
+async function pickCompany(
+  user: ReturnType<typeof userEvent.setup>,
+  name: string,
+) {
+  await user.type(inForm().getByLabelText("Company"), name);
+  await user.click(await inForm().findByRole("button", { name }));
+}
+
+const stages = [
+  {
+    id: "s1",
+    pipeline_id: "pl",
+    name: "Qualify",
+    position: 1,
+    semantic: "open" as const,
+    win_probability: 20,
+  },
+  {
+    id: "s3",
+    pipeline_id: "pl",
+    name: "Won",
+    position: 3,
+    semantic: "won" as const,
+    win_probability: 100,
+  },
+];
+
+function deal(overrides: Partial<Deal> = {}): Deal {
+  return {
+    id: "d1",
+    name: "Fleet retrofit",
+    pipeline_id: "pl",
+    stage_id: "s1",
+    status: "open",
+    company_id: "o-1",
+    source: "manual",
+    captured_by: "u-me",
+    // The caller's own deal: absent means NOT writable per the contract.
+    writable: true,
+    version: 7,
+    created_at: "2026-06-01T09:00:00Z",
+    updated_at: "2026-06-01T09:00:00Z",
+    ...overrides,
+  };
+}
+
+type Call = {
+  method: string;
+  url: string;
+  body: unknown;
+  ifMatch: string | null;
+};
+
+/** The deal surfaces' reads, plus a record of every write. */
+function dealBackend(opts: {
+  deals?: Deal[];
+  projects?: ReturnType<typeof project>[];
+  // What an advance answers; null for the default success.
+  onAdvance?: () => Response | null;
+  companies?: { id: string; display_name: string }[];
+  // Companies past the first page: a search by name finds them, a plain list
+  // read never does.
+  farCompanies?: { id: string; display_name: string }[];
+  // Which companies the server would match each project for, by project id.
+  // A project is worked by several companies and a row names only its ANCHOR,
+  // so a fixture that could not say this could not express the case the deal
+  // form exists to serve: the company on a project as a partner.
+  projectCompanies?: Record<string, string[]>;
+  // What the deal reads back as once a PATCH has landed.
+  afterPatch?: (row: Deal) => Deal;
+  users?: { id: string; display_name: string; is_agent: boolean }[];
+}): Call[] {
+  const writes: Call[] = [];
+  let current: Deal = opts.deals?.[0] ?? deal();
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (request: Request) => {
+      const url = request.url;
+      const pathname = new URL(url).pathname;
+      const method = request.method;
+      if (method !== "GET") {
+        // A report is a read that travels as a POST; it is not a write and
+        // is not recorded as one.
+        if (pathname.endsWith("/reports/deals-by-stage")) {
+          return jsonResponse({
+            report: "deals-by-stage",
+            plan: {},
+            columns: [],
+            rows: [],
+          });
+        }
+        const text = await request.text();
+        writes.push({
+          method,
+          url,
+          body: text ? JSON.parse(text) : null,
+          ifMatch: request.headers.get("If-Match"),
+        });
+        if (method === "POST" && pathname.endsWith("/projects")) {
+          return jsonResponse(
+            project({ id: "pr-born", name: "Born here" }),
+            201,
+          );
+        }
+        if (method === "POST" && pathname.endsWith("/deals")) {
+          return jsonResponse(deal({ id: "d-new" }), 201);
+        }
+        if (method === "POST" && pathname.endsWith("/advance")) {
+          const answer = opts.onAdvance?.();
+          if (answer) {
+            return answer;
+          }
+        }
+        if (method === "PATCH" && opts.afterPatch) {
+          current = opts.afterPatch(current);
+        }
+        return jsonResponse(current);
+      }
+      if (pathname.endsWith("/me")) {
+        return jsonResponse(
+          meFixture({
+            allow: {
+              deal: ["read", "create", "update"],
+              project: ["read", "create", "update"],
+            },
+          }),
+        );
+      }
+      if (pathname.endsWith("/users")) {
+        return jsonResponse({
+          data: opts.users ?? [],
+          page: { next_cursor: null, has_more: false },
+        });
+      }
+      if (pathname.endsWith("/pipelines")) {
+        return jsonResponse({
+          data: [
+            { id: "pl", name: "Sales", is_default: true, position: 0, stages },
+          ],
+          page: { next_cursor: null },
+        });
+      }
+      if (pathname.endsWith("/companies")) {
+        const firstPage = opts.companies ?? [
+          { id: "o-1", display_name: "Brandt Automotive" },
+        ];
+        const q = new URL(url).searchParams.get("q");
+        return jsonResponse({
+          data: q
+            ? [...firstPage, ...(opts.farCompanies ?? [])].filter((company) =>
+                company.display_name.includes(q),
+              )
+            : firstPage,
+          page: { next_cursor: null },
+        });
+      }
+      if (pathname.endsWith("/companies/o-1")) {
+        return jsonResponse({ id: "o-1", display_name: "Brandt Automotive" });
+      }
+      if (pathname.endsWith("/projects")) {
+        // The list endpoint answers about ONE company when asked, which is what
+        // both deal forms now do. It matches ANY of a project's companies, not
+        // just the anchor — the whole reason the narrowing cannot be done in
+        // the browser — so a fixture may name the others through
+        // `projectCompanies`, and falls back to the anchor when it does not.
+        const asked = new URL(url).searchParams.get("company_id");
+        const rows = (opts.projects ?? []).filter((row) => {
+          if (!asked) {
+            return true;
+          }
+          const on = opts.projectCompanies?.[row.id];
+          return on ? on.includes(asked) : row.company_id === asked;
+        });
+        return jsonResponse({
+          data: rows,
+          page: { next_cursor: null, has_more: false },
+        });
+      }
+      if (/\/projects\/[^/]+$/.test(pathname)) {
+        const id = pathname.split("/").pop();
+        const found = (opts.projects ?? []).find((row) => row.id === id);
+        return found ? jsonResponse(found) : jsonResponse({}, 404);
+      }
+      if (/\/deals\/[^/]+$/.test(pathname)) {
+        return jsonResponse(current);
+      }
+      if (pathname.endsWith("/deals")) {
+        return jsonResponse({
+          data: opts.deals ?? [],
+          page: { next_cursor: null, has_more: false },
+        });
+      }
+      return jsonResponse({ data: [], page: { next_cursor: null } });
+    }),
+  );
+  return writes;
+}
+
+describe("the deal form's project picker", () => {
+  it("posts the picked project's id with the deal", async () => {
+    const user = userEvent.setup();
+    const writes = dealBackend({
+      projects: [
+        project({ id: "pr-1", name: "CRM rollout" }),
+        project({ id: "pr-closed", name: "Old one", phase: "closed" }),
+        project({ id: "pr-other", name: "Elsewhere", company_id: "o-2" }),
+      ],
+    });
+    render(<DealsScreen />);
+    await user.click(await screen.findByTestId("new-record"));
+    await user.type(screen.getByLabelText("Deal name *"), "Phase two");
+    await pickCompany(user, "Brandt Automotive");
+    // Only the chosen company's open projects are offered.
+    await user.click(screen.getByLabelText("Project"));
+    expect(screen.queryByRole("option", { name: /Old one/ })).toBeNull();
+    expect(screen.queryByRole("option", { name: "Elsewhere" })).toBeNull();
+    await user.click(screen.getByRole("option", { name: "CRM rollout" }));
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    await waitFor(() =>
+      expect(writes.some((write) => write.url.endsWith("/deals"))).toBe(true),
+    );
+    const posted = writes.find((write) => write.url.endsWith("/deals"));
+    expect(posted?.body).toMatchObject({
+      name: "Phase two",
+      company_id: "o-1",
+      project_id: "pr-1",
+    });
+    expect(writes.some((write) => write.url.endsWith("/projects"))).toBe(false);
+  });
+
+  it("starts a new project on the deal's company before the deal is born", async () => {
+    const user = userEvent.setup();
+    const writes = dealBackend({ projects: [] });
+    render(<DealsScreen />);
+    await user.click(await screen.findByTestId("new-record"));
+    await user.type(screen.getByLabelText("Deal name *"), "Phase two");
+    await pickCompany(user, "Brandt Automotive");
+    await pickOption(user, screen.getByLabelText("Project"), "New project…");
+    await user.type(screen.getByLabelText("Project name *"), "Born here");
+    // No key field here either: the server mints one from the name.
+    expect(screen.queryByLabelText("Key")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    await waitFor(() => expect(writes).toHaveLength(2));
+    expect(writes[0]).toMatchObject({
+      method: "POST",
+      body: {
+        name: "Born here",
+        company_id: "o-1",
+        source: "manual",
+      },
+    });
+    expect(writes[0].url.endsWith("/projects")).toBe(true);
+    expect(writes[1].url.endsWith("/deals")).toBe(true);
+    expect(writes[1].body).toMatchObject({ project_id: "pr-born" });
+  });
+
+  // An agent seat is never offered: the server refuses one as an owner.
+  it("starts the new project owned by the colleague picked as its owner", async () => {
+    const user = userEvent.setup();
+    const writes = dealBackend({
+      projects: [],
+      users: [
+        { id: "u-42", display_name: "Jane Doe", is_agent: false },
+        { id: "agent-1", display_name: "Runner Bot", is_agent: true },
+      ],
+    });
+    render(<DealsScreen />);
+    await user.click(await screen.findByTestId("new-record"));
+    await user.type(screen.getByLabelText("Deal name *"), "Phase two");
+    await pickCompany(user, "Brandt Automotive");
+    await pickOption(user, screen.getByLabelText("Project"), "New project…");
+    await user.type(screen.getByLabelText("Project name *"), "Born here");
+    await user.click(inForm().getByLabelText("Project owner"));
+    await screen.findByRole("option", { name: "Jane Doe" });
+    expect(screen.queryByRole("option", { name: "Runner Bot" })).toBeNull();
+    await user.click(screen.getByRole("option", { name: "Jane Doe" }));
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    await waitFor(() => expect(writes).toHaveLength(2));
+    expect(writes[0].body).toMatchObject({ owner_id: "u-42" });
+  });
+
+  // The case the create form could not serve at all, and the reason
+  // `optionsFor` was not enough: the newly chosen company is on the project as
+  // a PARTNER, so nothing on a project row says it belongs. Filtering a fetched
+  // page in the browser can only ever match the anchor, and the answer has to
+  // come from a re-read the form's own answers drive.
+  it("repopulates the picker from the server when the form names a different company", async () => {
+    const user = userEvent.setup();
+    dealBackend({
+      projects: [
+        project({ id: "pr-1", name: "CRM rollout" }),
+        // Anchored at a THIRD company. Nothing on this row names o-2.
+        project({
+          id: "pr-joint",
+          name: "Joint rollout",
+          company_id: "o-customer",
+        }),
+      ],
+      projectCompanies: { "pr-1": ["o-1"], "pr-joint": ["o-customer", "o-2"] },
+      companies: [
+        { id: "o-1", display_name: "Brandt Automotive" },
+        { id: "o-2", display_name: "Other GmbH" },
+      ],
+    });
+    render(<DealsScreen />);
+    await user.click(await screen.findByTestId("new-record"));
+    await pickCompany(user, "Brandt Automotive");
+    await user.click(screen.getByLabelText("Project"));
+    expect(screen.getByRole("option", { name: "CRM rollout" })).toBeTruthy();
+    expect(screen.queryByRole("option", { name: "Joint rollout" })).toBeNull();
+    await user.keyboard("{Escape}");
+
+    // The reader changes their mind mid-form. The picker used to go empty here
+    // and stay empty until the deal was saved and reopened.
+    await pickCompany(user, "Other GmbH");
+    await user.click(screen.getByLabelText("Project"));
+    await waitFor(() =>
+      expect(
+        screen.getByRole("option", { name: "Joint rollout" }),
+      ).toBeTruthy(),
+    );
+    expect(screen.queryByRole("option", { name: "CRM rollout" })).toBeNull();
+  });
+
+  it("holds the picker until a company is chosen, and drops a pick the new company does not own", async () => {
+    const user = userEvent.setup();
+    dealBackend({
+      projects: [
+        project({ id: "pr-1", name: "CRM rollout" }),
+        project({ id: "pr-other", name: "Elsewhere", company_id: "o-2" }),
+      ],
+      companies: [
+        { id: "o-1", display_name: "Brandt Automotive" },
+        { id: "o-2", display_name: "Other GmbH" },
+      ],
+    });
+    render(<DealsScreen />);
+    await user.click(await screen.findByTestId("new-record"));
+    const picker = screen.getByLabelText("Project");
+    expect(
+      picker.hasAttribute("disabled") ||
+        picker.getAttribute("aria-disabled") === "true",
+    ).toBe(true);
+
+    await pickCompany(user, "Brandt Automotive");
+    await pickOption(user, screen.getByLabelText("Project"), "CRM rollout");
+    expect(screen.getByLabelText("Project").textContent).toContain(
+      "CRM rollout",
+    );
+
+    await pickCompany(user, "Other GmbH");
+    expect(screen.getByLabelText("Project").textContent).not.toContain(
+      "CRM rollout",
+    );
+    await user.click(screen.getByLabelText("Project"));
+    expect(screen.getByRole("option", { name: "Elsewhere" })).toBeTruthy();
+    expect(screen.queryByRole("option", { name: "CRM rollout" })).toBeNull();
+  });
+});
+
+describe("the deal form's company picker", () => {
+  it("finds a company past the first page by name and posts it with the deal", async () => {
+    const user = userEvent.setup();
+    const writes = dealBackend({
+      farCompanies: [{ id: "o-77", display_name: "Wendt Logistik" }],
+    });
+    render(<DealsScreen />);
+    await user.click(await screen.findByTestId("new-record"));
+    await user.type(screen.getByLabelText("Deal name *"), "Phase two");
+    await pickCompany(user, "Wendt Logistik");
+    expect(inForm().getByText("Wendt Logistik")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    await waitFor(() =>
+      expect(writes.some((write) => write.url.endsWith("/deals"))).toBe(true),
+    );
+    const posted = writes.find((write) => write.url.endsWith("/deals"));
+    expect(posted?.body).toMatchObject({ company_id: "o-77" });
+  });
+});
+
+describe("the deal page", () => {
+  it("draws the deal's project as a chip linking to the project page", async () => {
+    dealBackend({
+      deals: [deal({ project_id: "pr-1" })],
+      projects: [project({ id: "pr-1", name: "CRM rollout" })],
+    });
+    render(<DealScreen id="d1" />);
+    const chip = await screen.findByTestId("deal-project");
+    await waitFor(() => expect(chip.textContent).toBe("CRM rollout"));
+    expect(chip.getAttribute("href")).toBe("#/projects/pr-1");
+  });
+
+  it("says a withheld project is withheld rather than drawing no chip at all", async () => {
+    // A withheld project is null with the field named in `masked_fields`, and
+    // the chip used to return nothing on a null id — so a deal whose project
+    // this reader may not see read exactly like a deal with no project. The
+    // mask says there IS one; it carries no link, because there is no id to
+    // send anybody to.
+    dealBackend({
+      deals: [deal({ project_id: null, masked_fields: ["project_id"] })],
+      projects: [project({ id: "pr-1", name: "CRM rollout" })],
+    });
+    render(<DealScreen id="d1" />);
+    await screen.findByRole("heading", { name: "Fleet retrofit" });
+    expect(await screen.findByLabelText("Masked value")).toBeTruthy();
+    expect(screen.queryByText("CRM rollout")).toBeNull();
+  });
+
+  it("offers a won deal with no project the company's one open project, and attaches it", async () => {
+    const user = userEvent.setup();
+    const writes = dealBackend({
+      deals: [deal({ status: "won", stage_id: "s3", project_id: null })],
+      projects: [project({ id: "pr-1", name: "CRM rollout", version: 3 })],
+    });
+    render(<DealScreen id="d1" />);
+    const start = await screen.findByTestId("deal-start-delivery");
+    expect(
+      screen.getByText(/Attach it to CRM rollout and move the project/),
+    ).toBeTruthy();
+    await user.click(start);
+
+    await waitFor(() => expect(writes).toHaveLength(2));
+    expect(writes[0]).toMatchObject({
+      method: "PATCH",
+      body: { project_id: "pr-1" },
+      ifMatch: "7",
+    });
+    expect(writes[0].url.endsWith("/deals/d1")).toBe(true);
+    expect(writes[1]).toMatchObject({
+      method: "POST",
+      body: { to_phase: "delivering", reason: null },
+      ifMatch: "3",
+    });
+    expect(writes[1].url.endsWith("/projects/pr-1/advance")).toBe(true);
+    await waitFor(() => expect(window.location.hash).toBe("#/projects/pr-1"));
+  });
+
+  it("makes no offer when the project is withheld or the deal is archived", async () => {
+    dealBackend({
+      deals: [
+        deal({
+          status: "won",
+          stage_id: "s3",
+          project_id: null,
+          masked_fields: ["project_id"],
+        }),
+      ],
+      projects: [project({ id: "pr-1", name: "CRM rollout" })],
+    });
+    render(<DealScreen id="d1" />);
+    await screen.findByRole("heading", { name: "Fleet retrofit" });
+    expect(screen.queryByTestId("deal-start-delivery")).toBeNull();
+    cleanup();
+
+    dealBackend({
+      deals: [
+        deal({
+          status: "won",
+          stage_id: "s3",
+          project_id: null,
+          archived_at: "2026-07-01T09:00:00Z",
+        }),
+      ],
+      projects: [project({ id: "pr-1", name: "CRM rollout" })],
+    });
+    render(<DealScreen id="d1" />);
+    await screen.findByRole("heading", { name: "Fleet retrofit" });
+    expect(screen.queryByTestId("deal-start-delivery")).toBeNull();
+  });
+
+  it("after a failed advance, re-reads both records and offers only the advance", async () => {
+    const user = userEvent.setup();
+    let advances = 0;
+    const writes = dealBackend({
+      deals: [deal({ status: "won", stage_id: "s3", project_id: null })],
+      projects: [project({ id: "pr-1", name: "CRM rollout", version: 3 })],
+      onAdvance: () => {
+        advances += 1;
+        return advances === 1
+          ? jsonResponse({ title: "version skew", code: "version_skew" }, 409)
+          : null;
+      },
+      afterPatch: (row) => ({ ...row, project_id: "pr-1", version: 8 }),
+    });
+    render(<DealScreen id="d1" />);
+    await user.click(await screen.findByTestId("deal-start-delivery"));
+    // The PATCH landed, the advance did not: the deal re-reads as attached,
+    // and the offer now says only the project is still owed.
+    expect(
+      await screen.findByText(/attached to CRM rollout, but the project/),
+    ).toBeTruthy();
+    await user.click(screen.getByTestId("deal-start-delivery"));
+    await waitFor(() => expect(advances).toBe(2));
+    // One PATCH in total: the retry never attaches a second time.
+    expect(writes.filter((write) => write.method === "PATCH")).toHaveLength(1);
+  });
+
+  it("makes no offer when the company has two open projects", async () => {
+    dealBackend({
+      deals: [deal({ status: "won", stage_id: "s3", project_id: null })],
+      projects: [
+        project({ id: "pr-1", name: "One" }),
+        project({ id: "pr-2", name: "Two" }),
+      ],
+    });
+    render(<DealScreen id="d1" />);
+    await screen.findByRole("heading", { name: "Fleet retrofit" });
+    expect(screen.queryByTestId("deal-start-delivery")).toBeNull();
+  });
+
+  // The bug Lars hit: many projects exist, and editing a deal offers only "New
+  // project…".
+  //
+  // The picker used to fetch EVERY project and filter on company_id, which
+  // names a project's CUSTOMER. A deal on a company that is on the project as a
+  // PARTNER matched nothing, so the list came back empty on an installation
+  // full of projects.
+  //
+  // BOTH forms ask the server for one company's projects now — the server
+  // matches ANY of a project's companies — and name the company they asked
+  // about, which is what stops a second filter here from undoing the answer.
+  // The create form gets there by following the answers the open form
+  // publishes (CreateAction's onValuesChange), which is the read a pure
+  // `optionsFor` cannot do.
+  it("does not re-filter a list the server already narrowed to one company", () => {
+    const partnerProject = project({
+      id: "pr-1",
+      name: "Joint rollout",
+      // The CUSTOMER is a different company: this deal's company is on the
+      // project as a partner, which company_id cannot say.
+      company_id: "o-customer",
+    });
+    const t = (key: string) => key;
+
+    const narrowed = dealProjectFields(
+      t,
+      [partnerProject],
+      undefined,
+      "o-partner",
+    );
+    const asked = narrowed.find((field) => field.key === "project_id");
+    expect(
+      asked?.optionsFor?.({ company_id: "o-partner" }).map((o) => o.label),
+    ).toContain("Joint rollout");
+
+    // A list read for NO company answers about no company. That is the state
+    // before the form has named one — not a list to filter, which is the
+    // shortcut a project row cannot support: company_id names only the
+    // CUSTOMER, so filtering on it hides every project this company is on as a
+    // partner, which is the defect above in the other direction.
+    const unread = dealProjectFields(t, [partnerProject]);
+    const client = unread.find((field) => field.key === "project_id");
+    expect(
+      client?.optionsFor?.({ company_id: "o-partner" }).map((o) => o.label),
+    ).not.toContain("Joint rollout");
+  });
+
+  it("offers nothing once the form names a company the list was not read for", () => {
+    const partnerProject = project({
+      id: "pr-1",
+      name: "Joint rollout",
+      company_id: "o-customer",
+    });
+    const t = (key: string) => key;
+    // The list was read for o-partner; the reader has since changed the form's
+    // company to o-other and the read for it is still in flight. Nothing on a
+    // project row says whether o-other is on this project, so the only honest
+    // answer for that moment is none — offering the old company's projects is
+    // what lets a save carry a pairing the server refuses
+    // (deal_project_same_company, 422).
+    const fields = dealProjectFields(
+      t,
+      [partnerProject],
+      { id: "pr-1", label: "Joint rollout" },
+      "o-partner",
+    );
+    const asked = fields.find((field) => field.key === "project_id");
+    const labels = asked
+      ?.optionsFor?.({ company_id: "o-other" })
+      .map((o) => o.label);
+    expect(labels).not.toContain("Joint rollout");
+    // The current-project fallback is withdrawn too, so `submittedValues`
+    // blanks it rather than carrying it into the new company.
+    expect(labels).toEqual(["deal.projectNew"]);
+
+    // Same list, same company it was read for: still offered.
+    const same = asked?.optionsFor?.({ company_id: "o-partner" });
+    expect(same?.map((o) => o.label)).toContain("Joint rollout");
+  });
+});

@@ -6,6 +6,7 @@ package attention
 import (
 	"context"
 	"errors"
+	"slices"
 	"strconv"
 	"testing"
 	"time"
@@ -205,14 +206,34 @@ func TestAFeedWithNoClaimReaderSendsNoCommitmentLaneAtAll(t *testing.T) {
 
 // A broken claim read is an ERROR, never a quiet lane. A feed that swallowed it
 // would draw a clear day over a read that failed.
-func TestABrokenCommitmentReadFailsTheFeedRatherThanReadingAsAClearDay(t *testing.T) {
+// A broken commitment read must not read as a clear day. It used to hold that
+// by failing the whole request, which cost a reader their day over one lane.
+// The property is the same and the lane now carries it: absent, uncounted, and
+// named as failed.
+func TestABrokenCommitmentReadIsNamedRatherThanReadingAsAClearDay(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
 		&stubCommitments{err: errors.New("the claim read fell over")}, nil, nil,
 		nil, nil, nil, nil, nil, nil, nil, nil, nil,
 		fixedClock)
-	if _, err := svc.Assemble(pageReader()); err == nil {
-		t.Fatal("a failed commitment read assembled a day, want the error surfaced")
+
+	day, err := svc.Assemble(pageReader())
+	if err != nil {
+		t.Fatalf("one broken lane cost the reader the whole day: %v", err)
+	}
+	if day.Commitments != nil {
+		t.Errorf("the failed lane carries %d items, want it absent", len(*day.Commitments))
+	}
+	if day.Counts.Commitments != nil {
+		t.Errorf("the failed lane carries a count of %d, which reads as a quiet lane", *day.Counts.Commitments)
+	}
+	if day.LanesFailed == nil || !slices.Contains(*day.LanesFailed, "commitments") {
+		t.Errorf("lanes_failed = %v, want it to name commitments", day.LanesFailed)
+	}
+	// Named as failed and not as withheld. Conflating the two reports this
+	// installation's health as this caller's access.
+	if day.LanesOmitted != nil && slices.Contains(*day.LanesOmitted, "commitments") {
+		t.Error("a broken lane is named as withheld, which tells the reader their access is the problem")
 	}
 }
 

@@ -15,6 +15,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -24,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
@@ -42,8 +44,13 @@ import (
 // log is installed for the same reason and on the same service: a bundle member
 // whose effect fails AFTER its decision committed is reported to the client by
 // outcome alone, so this is the process that has to carry the cause.
-func approvalsHandlersWithEffects(pool *pgxpool.Pool, volume approvals.VolumeReleaser, log *slog.Logger) approvals.Handlers {
-	return approvals.NewHandlers(approvalsServiceWithEffects(pool).WithVolumeReleaser(volume).WithLogger(log))
+// It also answers the lane a website lead is told through, installed here
+// alone, for rewireConfirmationLane to fill once the mail lane is wired.
+func approvalsHandlersWithEffects(
+	pool *pgxpool.Pool, volume approvals.VolumeReleaser, log *slog.Logger,
+) (approvals.Handlers, *siteLeadNoticeLane) {
+	notices := newSiteLeadNoticeLane()
+	return approvals.NewHandlers(approvalsServiceTelling(pool, notices).WithVolumeReleaser(volume).WithLogger(log)), notices
 }
 
 // approvalsServiceWithEffects is the registration list itself, split from the
@@ -51,15 +58,28 @@ func approvalsHandlersWithEffects(pool *pgxpool.Pool, volume approvals.VolumeRel
 // standing up an HTTP surface. Every kind registered here must carry a
 // decision-grant mapping (TestEveryRegisteredEffectKindHasADecisionGrantMapping).
 func approvalsServiceWithEffects(pool *pgxpool.Pool) *approvals.Service {
-	svc := approvals.NewService(InstallationDB(pool)).
+	return approvalsServiceTelling(pool, &siteLeadNoticeLane{})
+}
+
+// approvalsServiceTelling is approvalsServiceWithEffects with the lane a website
+// lead is told through. An empty lane refuses every site lead, which is right
+// for the services that only stage.
+func approvalsServiceTelling(pool *pgxpool.Pool, notices *siteLeadNoticeLane) *approvals.Service {
+	captureConfig := CaptureConfig{}
+	if loaded := config.Bound(); loaded != nil {
+		captureConfig = CaptureConfigFromDeploy(loaded, slog.Default())
+	}
+	svc := NewApprovalsService(InstallationDB(pool)).
 		WithUndoableRelease(undoableAgentRelease(activities.FilingsStayUndoable))
 	store := newCounterpartyStore(pool)
 	svc.WithEffect("coldstart", coldstartAcceptEffect(svc, store))
 	svc.WithEffect(enrichProposalKind, scrapeAcceptEffect(svc, store))
 	svc.WithEffect(deepReadProposalKind, deepReadAcceptEffect(svc, store))
-	svc.WithEffect(siteLeadProposalKind, siteLeadAcceptEffect(svc, newCaptureSink(pool, CaptureConfig{})))
-	svc.WithPrecheck(siteLeadProposalKind, siteLeadPrecheck())
-	svc.WithEffect(counterpartyProposalKind, counterpartyAcceptEffect(svc, store, newConnectorTagFiler(pool), capture.NewPendingStore(InstallationDB(pool)), newDomainTriageTrigger(pool, slog.Default())))
+	svc.WithEffect(siteLeadProposalKind,
+		siteLeadAcceptEffect(svc, newCaptureSink(pool, captureConfig), pool, notices))
+	svc.WithPrecheck(siteLeadProposalKind, siteLeadPrecheck(notices))
+	svc.WithEffect(counterpartyProposalKind, counterpartyAcceptEffect(svc, store, newConnectorTagFiler(pool), capture.NewPendingStore(InstallationDB(pool)), newDomainTriageTrigger(pool, slog.Default(), captureConfig.SkipReservedDomainProposals)))
+	svc.WithPrecheck(counterpartyProposalKind, counterpartyPrecheck(store))
 	svc.WithEffect(companyNameProposalKind, companyNameAcceptEffect(svc, store))
 	svc.WithEffect(captureCollisionKind, captureCollisionAcceptEffect(svc, store))
 	svc.WithEffect(linkedInMatchKind, linkedInMatchAcceptEffect(svc))
@@ -68,7 +88,7 @@ func approvalsServiceWithEffects(pool *pgxpool.Pool) *approvals.Service {
 	// card whose buttons only dismissed it would report a decision the record
 	// never heard.
 	svc.WithDeclinedEffect(linkedInMatchKind, linkedInMatchDeclineEffect(store))
-	svc.WithEffect(lifecycleProposalKind, lifecycleAcceptEffect(svc, store))
+	svc.WithEffect(lifecycleProposalKind, lifecycleAcceptEffect(svc, store, time.Now))
 	svc.WithEffect(vcardCreateKind, vcardCreateAcceptEffect(svc, contacts.NewStore(InstallationDB(pool))))
 	svc.WithPrecheck(vcardCreateKind, vcardCreatePrecheck())
 	// A held message is the one kind with BOTH halves registered, because its
@@ -87,9 +107,9 @@ func approvalsServiceWithEffects(pool *pgxpool.Pool) *approvals.Service {
 	svc.WithEffect(deals.CloseDateCorrectionKind, closeDateConfirmEffect(svc, deals.NewStore(InstallationDB(pool), DealsInstallation())))
 	svc.WithEffect(deals.FollowUpReconcileKind, followUpConfirmEffect(svc, activities.NewStore(InstallationDB(pool))))
 	svc.WithPrecheck(deals.FollowUpReconcileKind, followUpPrecheck())
-	svc.WithEffect(CommitmentTaskKind, commitmentTaskEffect(svc,
-		activities.NewStore(InstallationDB(pool)), contacts.NewStore(InstallationDB(pool))))
-	svc.WithPrecheck(CommitmentTaskKind, commitmentTaskPrecheck())
+	commitmentTasks := activities.NewStore(InstallationDB(pool))
+	svc.WithEffect(CommitmentTaskKind, commitmentTaskEffect(svc, commitmentTasks, contacts.NewStore(InstallationDB(pool))))
+	svc.WithPrecheck(CommitmentTaskKind, commitmentTaskPrecheck(commitmentTasks))
 	svc.WithEffect(deals.StageProgressionKind, stageProgressionEffect(svc,
 		deals.NewStore(InstallationDB(pool), DealsInstallation())))
 	svc.WithPrecheck(deals.StageProgressionKind, stageProgressionPrecheck())
@@ -110,7 +130,7 @@ func approvalsServiceWithEffects(pool *pgxpool.Pool) *approvals.Service {
 // window closes. The builder stays because the sweep needs a service and the
 // next kind that owns expiry state registers here.
 func expiringApprovalsService(pool *pgxpool.Pool) *approvals.Service {
-	return approvals.NewService(InstallationDB(pool))
+	return NewApprovalsService(InstallationDB(pool))
 }
 
 // coldstartAcceptEffect builds the approvals.ApprovedEffect compose

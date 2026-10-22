@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -41,16 +42,16 @@ import (
 // record types and hide which rule each row was judged by.
 //
 //nolint:dupl // createCompany has the same SHAPE and not the same job: a
-func (w *csvWriters) createContact(ctx context.Context, row migration.Row) (migration.EnsureResult, error) {
-	in := contactCreateFrom(textFields(row.Fields), w.provenanceOf(row.ExternalID))
+func (w *csvWriters) createContact(ctx context.Context, row migration.Row, typed map[string]any) (migration.EnsureResult, error) {
+	in := contactCreateFrom(textFields(row.Fields), typed, w.sourceSystem, w.provenanceOf(row.ExternalID))
 	if in.FullName == "" {
-		return migration.EnsureResult{Skipped: true, SkipReason: "the row carries neither a name nor an email, so it names no contact"}, nil
+		return skippedFor(contactUnnamedWhy), nil
 	}
-	err := w.land(ctx, row.ExternalID, func(tx pgx.Tx) (ids.UUID, error) {
+	err := w.land(ctx, row, func(tx pgx.Tx) (ids.UUID, error) {
 		if err := w.authors.resolve(ctx, tx, &in.Author); err != nil {
 			return ids.UUID{}, err
 		}
-		contact, err := w.contacts.CreateContactTx(ctx, tx, in)
+		contact, err := w.contacts.CreateContactTx(ctx, tx, in, w.cols.store)
 		if err != nil {
 			return ids.UUID{}, fmt.Errorf("import: creating contact %s: %w", row.ExternalID, err)
 		}
@@ -59,12 +60,52 @@ func (w *csvWriters) createContact(ctx context.Context, row migration.Row) (migr
 	if _, ok := errors.AsType[*contacts.DuplicateEmailError](err); ok {
 		// The same sentence the preview used, so an approval decided on
 		// "skipped, the address is held" is not answered by different words.
-		return migration.EnsureResult{Skipped: true, SkipReason: contactEmailClaimedReason}, nil
+		return skippedFor(contactEmailClaimedWhy), nil
 	}
 	if err != nil {
 		return migration.EnsureResult{}, err
 	}
 	return migration.EnsureResult{Created: true}, nil
+}
+
+// applyContact writes a contact's changed fields. It merges the file's address,
+// email, phone and LinkedIn handle onto what the contact holds, because the
+// store replaces each of those wholesale.
+func (w *csvWriters) applyContact(ctx context.Context, id ids.UUID, in contacts.UpdateContactInput, current []byte, source string) error {
+	in.IfVersion = w.reviewedVersion(id)
+	// Emails and phones added by an update carry the provenance the create
+	// path stamps; without it their source lands empty.
+	in.Source = source
+	merged, given, err := addressMergedOnto(current, in.Address)
+	if err != nil {
+		return err
+	}
+	if given {
+		in.Address = merged
+	}
+	mergedEmails, given, err := emailsMergedOnto(current, in.Emails)
+	if err != nil {
+		return err
+	}
+	if given {
+		in.Emails = mergedEmails
+	}
+	mergedPhones, given, err := phonesMergedOnto(current, in.Phones)
+	if err != nil {
+		return err
+	}
+	if given {
+		in.Phones = mergedPhones
+	}
+	mergedSocial, given, err := socialMergedOnto(current, in.Social)
+	if err != nil {
+		return err
+	}
+	if given {
+		in.Social = mergedSocial
+	}
+	_, err = w.contacts.UpdateContact(ctx, ids.From[ids.ContactKind](id), in)
+	return err
 }
 
 // contactEmailIsClaimed answers whether the estate already holds this row's
@@ -91,21 +132,61 @@ func (w *csvWriters) contactEmailAlreadyHeld(ctx context.Context, row migration.
 	if email == "" {
 		return false, nil
 	}
-	var claimed bool
-	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx,
-			`SELECT EXISTS (SELECT 1 FROM contact_email WHERE email = lower($1) AND archived_at IS NULL)`,
-			email).Scan(&claimed)
-	}); err != nil {
-		return false, fmt.Errorf("import: checking whether %q is already held: %w", email, err)
+	if claimed, read := w.heldEmails[email]; read {
+		return claimed, nil
 	}
-	return claimed, nil
+	held, err := w.emailsHeld(ctx, []string{email})
+	if err != nil {
+		return false, err
+	}
+	return held[email], nil
 }
 
-// contactEmailClaimedReason is what the report says for such a row. It names the
-// address the file supplied and nothing else — not the incumbent, not their
-// owner, not whether the caller could have seen them.
-const contactEmailClaimedReason = "this email address is already held in the CRM, so the row cannot create a second contact under it"
+// emailsHeld answers which of these addresses a live contact holds, in one
+// query. Postgres lowers each address, as the store's own key does.
+func (w *csvWriters) emailsHeld(ctx context.Context, emails []string) (map[string]bool, error) {
+	held := make(map[string]bool, len(emails))
+	for _, email := range emails {
+		held[email] = false
+	}
+	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `
+			SELECT given FROM unnest($1::text[]) AS given
+			 WHERE EXISTS (SELECT 1 FROM contact_email WHERE email = lower(given) AND archived_at IS NULL)`, emails)
+		if err != nil {
+			return err
+		}
+		claimed, err := pgx.CollectRows(rows, pgx.RowTo[string])
+		for _, email := range claimed {
+			held[email] = true
+		}
+		return err
+	}); err != nil {
+		return nil, fmt.Errorf("import: checking whether %d addresses are already held: %w", len(emails), err)
+	}
+	return held, nil
+}
+
+// readPageEmails answers, in one query, which addresses of a dry run's page a
+// live contact holds. Nothing writes during a dry run, so the answer holds
+// for every row of the page.
+func (w *csvWriters) readPageEmails(ctx context.Context, rows []migration.Row) error {
+	if w.object != migration.ObjectContact {
+		return nil
+	}
+	var emails []string
+	for _, row := range rows {
+		if email := strings.TrimSpace(textFields(row.Fields)[fieldEmail]); email != "" {
+			emails = append(emails, email)
+		}
+	}
+	held, err := w.emailsHeld(ctx, emails)
+	if err != nil {
+		return err
+	}
+	w.heldEmails = held
+	return nil
+}
 
 // contactCollides answers whether this row names someone the caller can already
 // see, running the same ladder the create path runs.
@@ -132,7 +213,7 @@ func (w *csvWriters) contactCollides(ctx context.Context, row migration.Row) (bo
 		// the contacts store (captureensurer.go). Going through the reader rather
 		// than exporting a store accessor keeps every exported store method
 		// RBAC-gated: this list is workspace configuration, not anyone's record.
-		consumerMail, err := capture.MatcherTx(ctx, tx)
+		consumerMail, err := w.consumerMailList(ctx, tx)
 		if err != nil {
 			return err
 		}
@@ -159,4 +240,17 @@ func (w *csvWriters) contactCollides(ctx context.Context, row migration.Row) (bo
 		return false, fmt.Errorf("import: checking %q against the contacts already held: %w", named, err)
 	}
 	return visible, nil
+}
+
+// consumerMailList is the workspace's consumer-mail list, read on first use and
+// kept for the run.
+func (w *csvWriters) consumerMailList(ctx context.Context, tx pgx.Tx) (*freemail.Matcher, error) {
+	if w.consumerMail == nil {
+		matcher, err := capture.MatcherTx(ctx, tx)
+		if err != nil {
+			return nil, err
+		}
+		w.consumerMail = matcher
+	}
+	return w.consumerMail, nil
 }

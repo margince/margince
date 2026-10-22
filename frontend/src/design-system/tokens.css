@@ -77,7 +77,7 @@
    *
    * It is a token rather than a rule in the shell's sheet because TWO surfaces
    * stand on it: the app shell, and the buyer's Deal Room, which is a page of
-   * its own outside the shell (screens/buyerroom.css). Spelled twice, the two
+   * its own outside the shell (features/deals/buyerroom.css). Spelled twice, the two
    * would drift, and the one a client sees is the one nobody is looking at. */
   --groundLit:
     radial-gradient(900px 620px at 0 0, var(--glowA), transparent 70%) no-repeat,
@@ -426,11 +426,10 @@
      so the number belongs to the house rather than to whichever rule reaches
      for it first. Left to each caller it drifted — a head carrying a description stood
      taller than a head carrying a button, and two screens re-spaced the band
-     themselves — so the same card was a different object on two pages. Fixed
-     rather than a floor: what does not fit on one band is not header content
-     and goes in the body. One value at every viewport, the touch arm below
-     included, because the band holds no target of its own — the controls inside
-     it take the pointer rungs. */
+     themselves — so the same card was a different object on two pages. A floor:
+     a head that does not fit on one line wraps rather than cut its title. One
+     value at every viewport, the touch arm below included, because the band
+     holds no target of its own — the controls inside it take the pointer rungs. */
   --panel-head-h: 56px;
 
   /* A MENU'S FLOOR AND CEILING, and they are tokens because one option list is
@@ -457,11 +456,11 @@
   /* THE SETTINGS MEASURE. A settings page is a column of decisions read top to
      bottom, and the row language puts the naming on the left and the answer on
      the right — at the page's own --pageColumn that pair is separated by half a
-     wide screen of nothing. 720 keeps a label and its answer in one glance and
-     holds a description to a readable line.
+     wide screen of nothing. 1024 keeps a label and its answer in one sweep of
+     the eye and still leaves a settings table room for its columns.
 
      A token rather than a number in one sheet, because TWO sheets read it: the
-     stack takes it as its width (screens/settings.css) and the shell takes it
+     stack takes it as its width (features/settings/settings.css) and the shell takes it
      as the width of the page's NAME above that stack (app/shell.css). A name
      that began anywhere but where its page begins is the page disagreeing with
      itself, and two spellings of one measure is how that happens.
@@ -469,7 +468,7 @@
      Here rather than beside --pageColumn on `.app`, because the stack is also
      drawn outside the shell — a settings card's own story renders one — and a
      measure that resolved to nothing there would silently uncap it. */
-  --settingsColumn: 720px;
+  --settingsColumn: 1024px;
 
   /* THE OVERLAY MEASURES, one per `Modal` intent (modal.tsx). A box is its
      measure or the glass less its gutter, whichever is narrower. */
@@ -477,6 +476,9 @@
   --dialogFormWidth: 600px;
   --drawerWidth: 560px;
   --drawerReadingWidth: 880px;
+  /* A drawer grown to the window stops here: past it a row is a line too long
+     to read across. */
+  --drawerWindowWidth: 1440px;
   --dialogFullWidth: 1240px;
 
   /* Vertical-rhythm scale — the 4/8/12/16/24 rungs the screens were already
@@ -548,7 +550,9 @@
 
   /* Type. Every size, leading and paragraph spacing below is rem, on the
      browser's own 1rem = 16px, so a reader who enlarges that moves the whole
-     document rather than the parts that were typed in px. `--fontBody` and
+     document rather than the parts that were typed in px. The display sizes
+     are the one exception: a clamp() between two rem values, with a line
+     height that has no unit. `--fontBody` and
      `--paragraphSpacing` are the pair app.css declares on `body`; every other
      level is chosen by the context it is used in. */
 
@@ -616,6 +620,23 @@
   /* Sparingly: fine print, over Body S. */
   --fontHeadingXXSmall:
     var(--fontWeightBold) 0.75rem / 1rem var(--fontFamilyHeading);
+
+  /* Display sizes, for the morning greeting alone: they scale with the window
+     because the greeting is the one line a reader sees whole on arrival. */
+  /* The full-window greeting. */
+  --fontDisplayXLarge:
+    var(--fontWeightBold) clamp(3.25rem, 8vw, 7rem) / 1 var(--fontFamilyHeading);
+  /* The greeting at the head of the page. */
+  --fontDisplayLarge:
+    var(--fontWeightBold) clamp(2.75rem, 5.4vw, 4.25rem) / 1.05
+    var(--fontFamilyHeading);
+  /* A figure under the full-window greeting. */
+  --fontDisplayMedium:
+    var(--fontWeightBold) clamp(2.125rem, 4vw, 3.25rem) / 1.05
+    var(--fontFamilyHeading);
+  /* The one sentence a page opens on. The line is tall enough for a record
+     chip to sit in it without pushing the next line down. */
+  --fontLead: var(--fontWeightRegular) 1.3125rem / 2.5rem var(--fontFamilyBody);
 
   /* Material overlays, NOT part of the §2 Ledger-Green canon and deliberately
    * not pinned by tokens.test.ts's canonical map: a highlight and a scrim are
@@ -883,7 +904,7 @@
  * The same dark palette, for a document whose host stated NOTHING.
  *
  * The attribute arm above is the whole answer only where something stamps the
- * attribute. The SPA does (app/theme.ts resolves the theme before React
+ * attribute. The SPA does (lib/theme.ts resolves the theme before React
  * mounts, precisely so no surface renders un-themed), but the SPA is not the
  * only document that reads these tokens: an MCP App view is drawn inside a
  * third-party host whose theme statement is OPTIONAL (SEP-1865), and an

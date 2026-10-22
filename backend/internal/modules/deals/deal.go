@@ -23,9 +23,12 @@ import (
 // closed_at/lost_reason/FX invariants. Creating straight onto a terminal
 // stage would put an string(DealOpen) deal on a won column — silent forecast
 // corruption, no CHECK trips.
-func ensureOpenBirthStage(ctx context.Context, tx pgx.Tx, stageID ids.StageID, pipelineID ids.PipelineID) error {
+func ensureOpenBirthStage(ctx context.Context, tx pgx.Tx, stageID ids.StageID, pipelineID ids.PipelineID, fromRequest bool) error {
 	stage, err := resolveLiveStage(ctx, tx, stageID, pipelineID, "stage_id")
 	if err != nil {
+		if fromRequest {
+			err = auth.NameMissingReference("stage_id", err)
+		}
 		return err
 	}
 	if StageSemantic(stage.semantic).Terminal() {
@@ -48,6 +51,7 @@ func recordDealUpdate(ctx context.Context, tx pgx.Tx, id ids.DealID, current crm
 	ownerChanged := in.OwnerID != nil && (current.OwnerId == nil || ids.UUID(*current.OwnerId) != in.OwnerID.UUID)
 	if ownerChanged {
 		payload := crmcontracts.PublicEventDealOwnerChanged{ToOwnerId: openapi_types.UUID(in.OwnerID.UUID)}
+		payload.Imported, payload.ImportRunId = storekit.ImportMark(ctx)
 		if current.OwnerId != nil {
 			payload.FromOwnerId = current.OwnerId
 		}
@@ -63,7 +67,9 @@ func recordDealUpdate(ctx context.Context, tx pgx.Tx, id ids.DealID, current crm
 		rest[field] = v
 	}
 	if len(rest) > 0 {
-		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventDealUpdated{ChangedFields: rest}); err != nil {
+		updated := crmcontracts.PublicEventDealUpdated{ChangedFields: rest}
+		updated.Imported, updated.ImportRunId = storekit.ImportMark(ctx)
+		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, updated); err != nil {
 			return fmt.Errorf("emit deal.updated: %w", err)
 		}
 	}
@@ -235,7 +241,7 @@ func applyPartnerAttributionPatch(ctx context.Context, tx pgx.Tx,
 		p.Set("partner_attribution", current.PartnerAttribution, *in.PartnerAttribution)
 		return nil
 	}
-	if err := auth.EnsureLinkTarget(ctx, tx, "company", in.PartnerCompanyID.UUID); err != nil {
+	if err := auth.EnsureReferenceTarget(ctx, tx, "partner_company_id", "company", in.PartnerCompanyID.UUID); err != nil {
 		return err
 	}
 	// Visible is not enough: it must actually BE a partner, or the deal reads
@@ -312,6 +318,11 @@ func (s *Store) applyMoneyInvariants(ctx context.Context, tx pgx.Tx,
 	if err := moneyPairError(resultingAmount, resultingArr, resultingCurrency); err != nil {
 		return err
 	}
+	if _, amountSet := after[amountField]; amountSet {
+		if err := amountSetError(resultingAmount); err != nil {
+			return err
+		}
+	}
 
 	// Keyed on what the PATCH carries for the MONEY, not on what the request
 	// supplied and not on the forecast fields at large: a request that re-sent
@@ -344,9 +355,8 @@ func (s *Store) applyMoneyInvariants(ctx context.Context, tx pgx.Tx,
 	}
 	if string(current.Status) != string(DealOpen) && resultingAmount != nil && (amountMoved || currencyMoved) {
 		// deal_closed_at guarantees ClosedAt on a non-open row.
-		rateBefore, rateDateBefore := frozenBefore(current)
 		if err := s.freezeBaseRate(ctx, tx, p, current.Id, string(*resultingCurrency),
-			*resultingAmount, *current.ClosedAt, rateBefore, rateDateBefore); err != nil {
+			*resultingAmount, *current.ClosedAt); err != nil {
 			return fmt.Errorf("re-freeze fx for closed deal: %w", err)
 		}
 	}
@@ -366,11 +376,36 @@ func (s *Store) rejectPastCloseDate(ctx context.Context, tx pgx.Tx, expectedClos
 	if err != nil {
 		return err
 	}
-	y, m, d := expectedClose.Date()
-	if time.Date(y, m, d, 0, 0, 0, 0, time.UTC).Before(today) {
+	if CloseDateIsPast(*expectedClose, today) {
 		return &PastCloseDateError{}
 	}
 	return nil
+}
+
+// CloseDateIsPast reports whether the day a close date names is before today,
+// UTC midnight as installationToday answers it. An import checks its rows with it.
+func CloseDateIsPast(closeDate, today time.Time) bool {
+	y, m, d := closeDate.Date()
+	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC).Before(today)
+}
+
+// CloseDateIsFuture reports whether the day a close date names is after today,
+// as CloseDateIsPast reads the day. A deal cannot have closed on a day that has
+// not come.
+func CloseDateIsFuture(closeDate, today time.Time) bool {
+	y, m, d := closeDate.Date()
+	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC).After(today)
+}
+
+// InstallationToday is today in the installation's reporting zone, the day a
+// close date is held against.
+func (s *Store) InstallationToday(ctx context.Context) (time.Time, error) {
+	var today time.Time
+	err := s.Tx(ctx, func(tx pgx.Tx) (err error) {
+		today, err = s.installationToday(ctx, tx)
+		return err
+	})
+	return today, err
 }
 
 // installationToday reads "today" as the installation's reporting zone sees it

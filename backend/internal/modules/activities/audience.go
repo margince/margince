@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // AudienceMember names one user or team admitted to a `selected` audience.
@@ -156,7 +157,10 @@ func (s *Store) SetAudience(ctx context.Context, id ids.ActivityID, in SetAudien
 		out, err = readActivity(ctx, tx, id, storekit.LiveOnly)
 		return err
 	})
-	return out, err
+	if err != nil {
+		return out, err
+	}
+	return out, s.attachCustomValues(ctx, &out)
 }
 
 // readAudienceImage renders one side of the audience audit diff: the column on
@@ -255,19 +259,16 @@ func ensureVersion(ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVersion 
 // team of this workspace: the table carries no FK for its polymorphic subject,
 // so the check is here, and a guessed id answers like a malformed one.
 //
-// LIVE is both halves. Deactivating an account sets `status` and leaves
-// `archived_at` NULL, so the archived-only test admitted a colleague who has
-// left — this comment said "live" while the query asked something weaker, and
-// an audience is a list of contacts expected to read the thing. Spelled out
-// because a module never imports a sibling (ADR-0054 §3); identity owns
-// app_user and TestOnlyOneSpellingOfALiveMember holds the two together.
+// Live means both halves. Deactivating an account sets `status` and leaves
+// `archived_at` NULL, so an archived-only test admits a colleague who has left.
+// An audience is a list of readers expected to read the thing.
 func ensureAudienceSubjectsExist(ctx context.Context, tx pgx.Tx, members []AudienceMember) error {
 	for _, m := range members {
 		var exists bool
 		var q string
 		if m.SubjectType == "user" {
 			q = `SELECT EXISTS (SELECT 1 FROM app_user
-			                 WHERE id = $1 AND status = 'active' AND archived_at IS NULL)`
+			                 WHERE id = $1 AND ` + workforce.LiveMemberSQL("") + `)`
 		} else {
 			q = `SELECT EXISTS (SELECT 1 FROM team WHERE id = $1)`
 		}
@@ -325,10 +326,21 @@ func (s *Store) GetActivityContent(ctx context.Context, id ids.ActivityID, archi
 	}
 	var out crmcontracts.Activity
 	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
-		out, err = readActivityContent(ctx, tx, id, archived)
+		out, err = ReadActivityContentTx(ctx, tx, id, archived)
 		return err
 	})
-	return out, err
+	if err != nil {
+		return out, err
+	}
+	return out, s.attachCustomValues(ctx, &out)
+}
+
+// ReadActivityContentTx keeps evidence reads inside the decision's transaction.
+func ReadActivityContentTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived storekit.ArchivedFilter) (crmcontracts.Activity, error) {
+	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+		return crmcontracts.Activity{}, err
+	}
+	return readActivityContent(ctx, tx, id, archived)
 }
 
 // InvalidAudienceError is a malformed audience write: an unknown audience, a

@@ -448,6 +448,21 @@ func (*fakeRuntime) SyncNow(_ context.Context, job extension.JobName) error {
 	return nil
 }
 
+// openchannel declares no OAuth app, so the core refuses every provider it names.
+func (*fakeRuntime) OAuthAccessToken(context.Context, extension.OAuthProvider) (string, error) {
+	return "", extension.ErrNoSuchOAuthApp
+}
+
+func (*fakeRuntime) OAuthDisconnect(context.Context, extension.OAuthProvider) error {
+	return extension.ErrNoSuchOAuthApp
+}
+
+// This unit makes no system read. A handler that starts making one fails here
+// on a nil port, never against an answer nothing scripted.
+func (*fakeRuntime) Deals() extension.Deals         { return nil }
+func (*fakeRuntime) Authority() extension.Authority { return nil }
+func (*fakeRuntime) Directory() extension.Directory { return nil }
+
 // declaredJob is the job named in api/jobs.yaml, spelled here so the fake
 // refuses exactly what the core refuses.
 const declaredJob = extension.JobName("poll_inbox")

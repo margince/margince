@@ -62,6 +62,12 @@ func TestThePrivacyNoticeAsksForNoSubscription(t *testing.T) {
 	// sees.
 	body := strings.ReplaceAll(
 		sent.Rendered.Subject+"\n"+sent.Rendered.Body, linkPlaceholder, "")
+	// A statement that no action is required must not look like a request to act.
+	const noReply = "No reply or confirmation is required."
+	if !strings.Contains(body, noReply) {
+		t.Fatal("the notice does not explain that no reply is required")
+	}
+	body = strings.ReplaceAll(body, noReply, "")
 	for _, asking := range []string{
 		"whether you want", "want to hear from us", "subscribe", "confirm",
 	} {
@@ -209,6 +215,26 @@ func TestTheNoticePageShowsTheSourceAndTheRightsAndNoFile(t *testing.T) {
 	// The purposes this installation publishes, which the fixture seeds two of.
 	if len(info.Purposes) == 0 {
 		t.Error("the notice names no purposes: what the data is used for is the disclosure")
+	}
+	assertPurposeKeysMatchTheirLabels(t, e, info)
+}
+
+// assertPurposeKeysMatchTheirLabels holds each key at its label's index, which
+// is what a page reads to name a seeded purpose in its reader's language.
+func assertPurposeKeysMatchTheirLabels(t *testing.T, e *channelConsentEnv, info PrivacyInformation) {
+	t.Helper()
+	if len(info.PurposeKeys) != len(info.Purposes) {
+		t.Fatalf("the notice carries %d purpose keys for %d purposes", len(info.PurposeKeys), len(info.Purposes))
+	}
+	for i, key := range info.PurposeKeys {
+		var label string
+		if err := e.owner.QueryRow(context.Background(),
+			`SELECT label FROM consent_purpose WHERE key = $1`, key).Scan(&label); err != nil {
+			t.Fatalf("reading the purpose %q: %v", key, err)
+		}
+		if label != info.Purposes[i] {
+			t.Errorf("purpose key %q sits beside the label %q, want its own label %q", key, info.Purposes[i], label)
+		}
 	}
 }
 

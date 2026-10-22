@@ -91,7 +91,7 @@ func verifyMeetingPrivacy(t *testing.T, anonymize bool) {
 	}
 	if anonymize {
 		service := NewRetentionServiceFor(e.DB(), nil, slog.Default()).WithPayloadVault(controllerPayloads{v: vault})
-		if _, err := service.AnonymiseContacts(ctx, []ids.UUID{contact}, privacy.PurgeOwnerRule); err != nil {
+		if _, err := service.AnonymiseContacts(ctx, []ids.UUID{contact}, privacy.PurgeOwnerRule, anonymiseAsChosen); err != nil {
 			t.Fatal(err)
 		}
 	} else {

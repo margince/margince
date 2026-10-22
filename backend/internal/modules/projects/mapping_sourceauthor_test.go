@@ -33,7 +33,7 @@ func TestTheProjectDoorsAdmitAnAuthorOnlyFromTheImporter(t *testing.T) {
 	}
 	legacy := "legacy_crm"
 	for door, err := range map[string]error{
-		"client door":           errOf(projectCreateInput(body(&legacy))),
+		"client door":           errOf(ProjectCreationInput(body(&legacy))),
 		"importer from nowhere": errOf(projectCreateInputFromImporter(body(nil))),
 	} {
 		if _, ok := errors.AsType[*provenance.AuthorError](err); !ok {

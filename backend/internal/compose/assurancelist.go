@@ -29,7 +29,9 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/assurance"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -39,6 +41,42 @@ import (
 // full list in Go means the rows crossed a boundary they should not have, and
 // the count of what was dropped is itself a statement about how much there is.
 func AssuranceExceptions(ctx context.Context, tx pgx.Tx) ([]assurance.Exception, error) {
+	return assuranceExceptionsOwnedBy(ctx, tx, nil, nil, 0)
+}
+
+// AssuranceExceptionsIn reads them for one population, narrowed by the same
+// rule the forecast and the reports measure that population by. A population
+// the caller may not measure is refused there.
+func AssuranceExceptionsIn(
+	ctx context.Context, tx pgx.Tx, population assurance.Population,
+) ([]assurance.Exception, error) {
+	if population.Kind == "" {
+		if population.ID != nil {
+			return nil, fmt.Errorf("scope_id names a team or owner and needs scope_kind: %w", apperrors.ErrInvalidArgument)
+		}
+		return AssuranceExceptions(ctx, tx)
+	}
+	requested := RequestedScope{Kind: population.Kind, ID: population.ID}
+	return assuranceExceptionsOwnedBy(ctx, tx, nil, &requested, 0)
+}
+
+// TeamAssuranceExceptions reads the open findings on deals the members own
+// now. Ownership is the deal's live owner, never the finding's own owner_id,
+// which is set when the finding is first raised and not kept in step.
+func TeamAssuranceExceptions(
+	ctx context.Context, tx pgx.Tx, members []ids.UUID, limit int,
+) ([]assurance.Exception, error) {
+	if len(members) == 0 {
+		return nil, nil
+	}
+	return assuranceExceptionsOwnedBy(ctx, tx, members, nil, limit)
+}
+
+// assuranceDealExceptionsOwnedBy is both deal readers' body. Nil owners reads every
+// finding the caller may see; a zero limit reads them all.
+func assuranceDealExceptionsOwnedBy(
+	ctx context.Context, tx pgx.Tx, owners []ids.UUID, requested *RequestedScope, limit int,
+) ([]assurance.Exception, error) {
 	// Both halves, and the object half first. Every finding here is ABOUT a
 	// deal and carries its name, so the row scope below answers which deals
 	// and never whether this caller may read deals at all — under row_scope=all
@@ -62,26 +100,48 @@ func AssuranceExceptions(ctx context.Context, tx pgx.Tx) ([]assurance.Exception,
 	if scopeClause == "" {
 		scopeClause = sqlUnnarrowed
 	}
+	if owners != nil {
+		scopeClause = fmt.Sprintf("(%s) AND d.owner_id = ANY($%d)", scopeClause, arg(owners))
+	}
+	if requested != nil {
+		_, population, err := AnalyticsPopulationClause(ctx, tx, *requested, "d", arg, unownedIsPartOfDefault)
+		if err != nil {
+			return nil, err
+		}
+		if population != "" {
+			scopeClause = "(" + scopeClause + ") AND " + population
+		}
+	}
+	// The finding's amount is the deal figure this statement selects and ranks
+	// by, so its mask is rendered here, beside the statement.
+	affected, err := auth.MaskedExpressionSQL(ctx, tableDeal, "amount_minor", "d", rawFindingMoney.affected, arg)
+	if err != nil {
+		return nil, err
+	}
+	money, err := maskedFindingMoney(ctx, affected, arg)
+	if err != nil {
+		return nil, err
+	}
+	bound := ""
+	if limit > 0 {
+		bound = fmt.Sprintf(" LIMIT $%d", arg(limit))
+	}
 
 	// An INNER join to deal, so a finding whose subject is not a deal — or is a
 	// deal that has since been archived away — does not arrive without a
 	// visibility decision having been made about it. A LEFT join would let
 	// exactly the rows nobody can gate through.
 	sql := fmt.Sprintf(`
-		SELECT `+exceptionColumns+`, d.name
+		SELECT %s, d.name, d.owner_id
 		FROM assurance_exception e
 		JOIN deal d ON d.id = e.subject_id
+		%s
 		WHERE e.status = 'open'
 		  AND e.subject_kind = 'deal'
 		  AND d.archived_at IS NULL
 		  AND %s
-		ORDER BY
-		  -- Material first: the manager reading this before a call has minutes,
-		  -- and a high-severity finding on a large deal is what those minutes
-		  -- are for.
-		  CASE e.severity WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END,
-		  e.affected_minor DESC NULLS LAST,
-		  e.last_seen_at DESC`, scopeClause)
+		ORDER BY `+findingRank+`, e.id`+bound,
+		exceptionSelect(money), findingPricedJoin(money.affected), scopeClause)
 
 	rows, err := tx.Query(ctx, sql, args...)
 	if err != nil {
@@ -92,27 +152,70 @@ func AssuranceExceptions(ctx context.Context, tx pgx.Tx) ([]assurance.Exception,
 	return pgx.CollectRows(rows, scanLabelledException)
 }
 
-// exceptionColumns is the select list every read of a finding shares, aliased
-// `e`. Two readers exist — this one and bundleableFindings, which asks a
-// different question of the same rows — and the column ORDER is what scanException
-// below binds to positionally, so the two have to move together or the scan
-// silently reads a currency into a status.
-const exceptionColumns = `e.id, e.type, e.subject_kind, e.subject_id, e.severity,
-	       e.affected_minor, e.currency, e.owner_id, e.status,
-	       e.claim, e.observed, e.first_seen_at, e.last_seen_at`
-
-// scanLabelledException reads one row of exceptionColumns plus the subject's
-// own name, which only this reader selects.
-//
-// The name is appended rather than added to exceptionColumns because that list
-// is shared with bundleableFindings and bound POSITIONALLY: a column inserted
-// there would be read into a neighbouring field by the other scanner, silently.
-func scanLabelledException(row pgx.CollectableRow) (assurance.Exception, error) {
-	out, err := scanExceptionInto(row, true)
-	return out, err
+// findingPricedJoin renames a finding's amount, rendered as affected, to the
+// columns the deal conversion reads, as alias `fa`. Every statement that orders
+// by findingRank joins it, so a masked amount ranks as the null its reader sees.
+func findingPricedJoin(affected string) string {
+	return `CROSS JOIN LATERAL (SELECT ` + affected + ` AS amount_minor, e.currency,
+	                           NULL::bigint AS amount_minor_base) fa`
 }
 
-// scanException reads one row of exceptionColumns.
+// findingRank puts material findings first: high severity, then the larger
+// amount in the base currency at today's rate. Amounts in different currencies
+// compare as money, and one with no rate sorts after every priced one.
+var findingRank = `CASE e.severity WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END,
+	` + deals.BaseValueSQL("CURRENT_DATE", installationBaseCurrencySQL, "fa") + ` DESC NULLS LAST,
+	e.last_seen_at DESC`
+
+// findingMoney is how a statement renders the three columns of a finding that
+// carry the deal's money: affected_minor, and the claim and observed slots.
+type findingMoney struct{ affected, claim, observed string }
+
+// rawFindingMoney is the bare columns, for the system-principal bundler.
+var rawFindingMoney = findingMoney{affected: "e.affected_minor", claim: "e.claim", observed: "e.observed"}
+
+// maskedFindingMoney renders those columns under the caller's mask on
+// deal.amount_minor, over the deal joined as `d`. affected is affected_minor
+// already rendered so, since it is the deal's amount or its gap to an offer or
+// contract on every type. The slots carry money only on
+// assurance.DealAmountTypes, so the dates and categories the other types quote
+// stay readable.
+func maskedFindingMoney(ctx context.Context, affected string, arg func(any) int) (findingMoney, error) {
+	if affected == rawFindingMoney.affected {
+		return rawFindingMoney, nil
+	}
+	moneyTypes := arg(assurance.DealAmountTypes())
+	slots := []string{rawFindingMoney.claim, rawFindingMoney.observed}
+	for i, column := range slots {
+		masked, err := auth.MaskedExpressionSQL(ctx, tableDeal, "amount_minor", "d", column, arg)
+		if err != nil {
+			return findingMoney{}, err
+		}
+		slots[i] = fmt.Sprintf("CASE WHEN e.type = ANY($%d) THEN %s ELSE %s END", moneyTypes, masked, column)
+	}
+	return findingMoney{affected: affected, claim: slots[0], observed: slots[1]}, nil
+}
+
+// exceptionSelect is the select list every read of a finding shares, aliased
+// `e`. scanException binds its column order positionally, so every reader moves
+// with it, or the scan reads a currency into a status.
+func exceptionSelect(money findingMoney) string {
+	return `e.id, e.type, e.subject_kind, e.subject_id, e.severity,
+	       ` + money.affected + `, e.currency, e.owner_id, e.status,
+	       ` + money.claim + `, ` + money.observed + `, e.first_seen_at, e.last_seen_at`
+}
+
+// scanLabelledException reads one row of exceptionSelect plus the subject's
+// name and live owner, which only this reader selects.
+//
+// The two are appended rather than added to exceptionSelect. That list is
+// shared with bundleableFindings and bound POSITIONALLY. A column inserted there
+// would be read into a neighbouring field by the other scanner, silently.
+func scanLabelledException(row pgx.CollectableRow) (assurance.Exception, error) {
+	return scanExceptionInto(row, true)
+}
+
+// scanException reads one row of exceptionSelect.
 //
 // The nullable columns are read through pointers and folded in afterwards
 // because assurance.Exception carries a plain string for the currency: SQL NULL
@@ -135,8 +238,9 @@ func scanExceptionInto(row pgx.CollectableRow, labelled bool) (assurance.Excepti
 		&out.AffectedMinor, &currency, &owner, &out.Status,
 		&out.Claim, &out.Observed, &firstSeen, &lastSeen,
 	}
+	var dealOwner *ids.UUID
 	if labelled {
-		targets = append(targets, &out.SubjectLabel)
+		targets = append(targets, &out.SubjectLabel, &dealOwner)
 	}
 	err := row.Scan(targets...)
 	out.ID = id
@@ -147,5 +251,8 @@ func scanExceptionInto(row pgx.CollectableRow, labelled bool) (assurance.Excepti
 		out.Currency = *currency
 	}
 	out.OwnerID = owner
+	if labelled {
+		out.OwnerID = dealOwner
+	}
 	return out, err
 }

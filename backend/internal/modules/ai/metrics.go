@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/margince/margince/backend/internal/platform/httpserver"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // callMetrics is the in-process AI counter set exposed on /metrics. Counters
@@ -169,11 +170,7 @@ func modelLabel(servedModel string) string {
 // name a contact recognises, while a truncated series label that did not say so
 // would read as a model that does not exist.
 func boundedSeriesLabel(value string) string {
-	runes := []rune(value)
-	if len(runes) <= maxLabelLen {
-		return value
-	}
-	return string(runes[:maxLabelLen]) + "..."
+	return textcut.RunesMarked(value, maxLabelLen, "...")
 }
 
 // clampToTotal holds one itemized count inside the total it is part of, and at

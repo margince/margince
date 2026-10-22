@@ -5,7 +5,8 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
-import { ProblemError } from "../screens/common";
+import { en } from "../i18n/en";
+import { ProblemError } from "../lib/problem";
 import { InlineText } from "./inlinetext";
 
 const meta: Meta = {
@@ -72,7 +73,7 @@ export const RefusedSave: Story = {
       canEdit
       onSave={async () => {
         throw new ProblemError({
-          code: "version_conflict",
+          code: "version_skew",
           detail: "Somebody else changed this record.",
         });
       }}
@@ -84,9 +85,7 @@ export const RefusedSave: Story = {
     const field = await canvas.findByRole("textbox");
     await userEvent.type(field, "s{Enter}");
     const refusal = await canvas.findByRole("alert");
-    await expect(refusal).toHaveTextContent(
-      "Somebody else changed this record.",
-    );
+    await expect(refusal).toHaveTextContent(en["common.versionSkew"]);
     await expect(refusal).toHaveClass("field-error");
   },
 };

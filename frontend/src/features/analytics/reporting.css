@@ -1,0 +1,179 @@
+.reporting-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: var(--gapCards);
+  /* Two charts sharing a row stand as tall as the taller one, so the row ends
+     on one line instead of a ragged edge. */
+  align-items: stretch;
+}
+/* A panel stretched to its row's height hands the extra room to the chart, so
+   the "view as table" fold sits on the panel's floor in both halves of a row.
+   Whatever stands right above the fold keeps the interval the fold's own top
+   margin used to give it. */
+.reporting-panel {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.reporting-panel > .panel-body,
+.reporting-panel > .panel-body > .report-chart {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.reporting-panel .report-chart-data {
+  margin-top: auto;
+}
+.reporting-panel :has(+ .report-chart-data) {
+  margin-bottom: var(--space-5);
+}
+.reporting-headline {
+  font: var(--fontHeadingLarge);
+  margin-bottom: var(--space-4);
+}
+.reporting-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gapActions);
+  align-items: end;
+  margin-bottom: var(--space-5);
+}
+.reporting-toolbar > * {
+  min-width: 8rem;
+}
+/* A toolbar whose verbs the reader may not use renders nothing, and its margin
+   would still open a gap in the page. */
+.reporting-toolbar:empty {
+  display: none;
+}
+.reporting-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: var(--space-5);
+  margin-bottom: var(--space-5);
+}
+/* The author's line breaks are kept; a long purpose wraps at reading width. */
+.reporting-description {
+  margin: var(--space-2) 0 0;
+  max-width: 70ch;
+  white-space: pre-line;
+}
+.reporting-header-actions {
+  display: flex;
+  gap: var(--gapActions);
+  flex-wrap: wrap;
+}
+.reporting-dialog {
+  display: grid;
+  gap: var(--space-5);
+  padding: var(--padPanel);
+}
+/* A section's heading sits over its own grid; sections stack with the gap the
+   cards use between them. */
+.reporting-section {
+  display: grid;
+  gap: var(--space-3);
+}
+.reporting-section + .reporting-section {
+  margin-top: var(--gapCards);
+}
+/* Edit report's layout editor: a section is a bordered group, and each card
+   is one row whose controls wrap under its name on a narrow dialog. */
+.reporting-layout-section {
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  padding: var(--space-3);
+}
+.reporting-layout-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.reporting-layout-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gapActions);
+}
+.reporting-layout-name {
+  flex: 1 1 12rem;
+}
+.reporting-panel-wide {
+  grid-column: 1 / -1;
+}
+@media (max-width: 900px) {
+  .reporting-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 520px) {
+  .reporting-header {
+    flex-direction: column;
+  }
+  .reporting-toolbar > * {
+    flex: 1;
+  }
+}
+
+.reporting-archive-banner {
+  padding: var(--space-4);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  background: var(--bgChip);
+  color: var(--textPrimary);
+}
+.reporting-block-choice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.reporting-block-order {
+  display: flex;
+  gap: var(--gapActions);
+}
+.reporting-comparison-values {
+  display: grid;
+  gap: var(--gapActions);
+}
+
+.reporting-context {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+.reporting-dialog fieldset {
+  display: grid;
+  gap: var(--space-3);
+}
+.reporting-period-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+/* The share verbs head the charts they share, on the trailing edge where the
+   page's other verbs sit; the stack around them spaces the row. */
+.reporting-share-bar {
+  justify-content: flex-end;
+  margin-bottom: 0;
+}
+
+/* Inside the filter card the card brings the air; the toolbar's own margin
+   would open a second gap under the dials. */
+.filter-bar .reporting-toolbar {
+  margin: 0;
+}
+
+.reporting-results {
+  display: grid;
+  gap: var(--gapCards);
+}
+
+.reporting-written {
+  max-inline-size: 72ch;
+  margin-block: 0 var(--space-3);
+}

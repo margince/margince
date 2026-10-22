@@ -48,8 +48,21 @@ func (*RetentionService) erasePayload(ctx context.Context, tx pgx.Tx, id ids.UUI
 // Only erase is registered. Archiving an original would mean keeping it under
 // another name, which is what the activity's own archive action already does to
 // the record it belongs to.
-func (*RetentionService) eraseRawCapture(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
-	_, err := tx.Exec(ctx, `DELETE FROM raw_capture WHERE id = $1`, id)
+//
+// It asks the floor in force again first, as activity erase does. Selection
+// ran in another transaction, and a jurisdiction change since may shield the
+// message this is the original of.
+func (s *RetentionService) eraseRawCapture(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+	floor, err := ResolveFloorPolicy(ctx, tx, s.eraser.country)
+	if err != nil {
+		return err
+	}
+	floorCurrent, floorCarried := floor.sqlArgs()
+	tag, err := tx.Exec(ctx, `DELETE FROM raw_capture r WHERE r.id = $1 AND `+rawCaptureUnshielded(2, 3),
+		id, floorCurrent, floorCarried)
+	if err == nil && tag.RowsAffected() == 0 {
+		return errKeptByFloor
+	}
 	return err
 }
 

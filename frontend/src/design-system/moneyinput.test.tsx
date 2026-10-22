@@ -8,9 +8,9 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MoneyInput } from "./moneyinput";
 
-// MoneyInput wraps the existing TextInput (atoms.tsx) to display/edit MAJOR
-// units while emitting the MINOR units the API stores, at the scale the
-// CURRENCY carries — format/minorunits, not a hard-coded hundred.
+// MoneyInput wraps the existing TextInput (field.tsx). It shows and edits
+// major units, and emits the minor units the API stores. The scale is the one
+// the currency carries (format/minorunits), not a hard-coded hundred.
 //
 // The displayed text is the component's OWN state, resynced from the
 // external valueMinor only when it changes for a reason other than this

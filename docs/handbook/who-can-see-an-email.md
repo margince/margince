@@ -113,19 +113,20 @@ The reason itself is hidden with the text, because a reason like "held because
 it is about a colleague" says what the message is about.
 
 ### How do I change who can read mail from my mailbox?
-To change who can read mail captured from your mailbox in Margince, open **Settings → Connections** and change **Mail visibility** under that mailbox.
+To change who can read mail captured from your mailbox in Margince, open **Settings → Connections**, open the mailbox, and change **Mail visibility**.
 1. Open the account menu, choose **Settings**, then **Connections**.
-2. Under the mailbox, set **Mail visibility** to **Held until classified**, **Always held** or **Shared with the team**.
-3. When you narrow it, the **Apply to captured mail?** dialog offers **Also narrow captured mail**.
-4. Confirm with **Change mail visibility**.
+2. Press the arrow at the end of the mailbox's row.
+3. Set **Mail visibility** to **Held until classified**, **Always held** or **Shared with the team**.
+4. When you narrow it, the **Apply to captured mail?** dialog offers **Also narrow captured mail**.
+5. Confirm with **Change mail visibility**.
 
 **Shared with the team** is refused until an administrator allows it for the company.
 Also called: mailbox privacy, mail posture, share my inbox.
 
 ## The three postures a mailbox can ask for
 
-You set the mailbox posture at **Settings → Connections**, under each mailbox,
-as **Mail visibility**.
+You set the mailbox posture at **Settings → Connections**, in each mailbox's
+settings, as **Mail visibility**.
 
 **Held until classified** is the default for every new mailbox. A message stays
 with whoever was on it until a model finds the thread to be plain business.
@@ -145,9 +146,9 @@ offers to narrow what is already captured. It never opens up captured mail; to
 open older mail, share its threads one by one.
 
 ### How do I turn email sharing off for the whole company?
-To turn email sharing off for everyone in Margince, an administrator opens **Settings → Capture rules**. In the **Email sharing** card, they switch off **Share captured mail with the team**.
+To turn email sharing off for everyone in Margince, an administrator opens **Settings → Capture rules**. In the **Mail sharing and sync** card, they switch off **Share captured mail with the team**.
 1. Open **Settings**, then **Capture rules**.
-2. In **Email sharing**, switch **Share captured mail with the team** off and save.
+2. In **Mail sharing and sync**, switch **Share captured mail with the team** off and save.
 
 From then on, only those on each message can see new mail. The card warns: "With email sharing off, the CRM is hard to use".
 The same card holds **Allow mailboxes to share on arrival**, which lets mailboxes pick **Shared with the team**.
@@ -155,7 +156,7 @@ Only an administrator or an Ops user can change this.
 
 ## The company-wide floor
 
-**Settings → Capture rules → Email sharing** decides whether captured mail is
+**Settings → Capture rules → Mail sharing and sync** decides whether captured mail is
 shared with colleagues at all. It is on by default.
 
 When it is off, every message captured from then on is held to those on it,
@@ -243,7 +244,7 @@ never shows mail from another seat's own mailbox.
 | What you want | Where |
 |---|---|
 | This mailbox's posture | Settings → Connections → Mail visibility |
-| The company-wide floor | Settings → Capture rules → Email sharing |
+| The company-wide floor | Settings → Capture rules → Mail sharing and sync |
 | Hold mail with one contact or company | Private correspondence, on the contact's or company's page |
 | Share one thread | The message itself, or Settings → Connections → Held threads |
 | One logged message's audience | Change visibility, on its row |

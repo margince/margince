@@ -18,8 +18,8 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -51,9 +51,10 @@ func (h Handlers) ListNoticeCases(w http.ResponseWriter, r *http.Request, params
 		writeConsentErr(w, r, err)
 		return
 	}
+	names := h.noticeContactNames(r.Context(), cases...)
 	data := make([]crmcontracts.NoticeCase, 0, len(cases))
 	for _, c := range cases {
-		data = append(data, wireNoticeCase(c))
+		data = append(data, wireNoticeCase(c, names))
 	}
 	info := crmcontracts.PageInfo{HasMore: page.HasMore}
 	if page.NextCursor != "" {
@@ -73,7 +74,7 @@ func (h Handlers) AssignNoticeCase(w http.ResponseWriter, r *http.Request, id cr
 		writeConsentErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, wireNoticeCase(updated))
+	h.writeNoticeCase(w, r, updated)
 }
 
 // ExcuseNoticeCase ends a disclosure duty on a stated ground, or records that
@@ -103,20 +104,27 @@ func (h Handlers) ExcuseNoticeCase(w http.ResponseWriter, r *http.Request, id cr
 		writeConsentErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, wireNoticeCase(updated))
+	h.writeNoticeCase(w, r, updated)
+}
+
+// writeNoticeCase answers one case, named under the same rule as the queue.
+func (h Handlers) writeNoticeCase(w http.ResponseWriter, r *http.Request, c NoticeCase) {
+	httperr.WriteJSON(w, http.StatusOK, wireNoticeCase(c, h.noticeContactNames(r.Context(), c)))
 }
 
 // wireNoticeCase is the one place a case crosses into the contract shape, so a
 // column added to the row cannot reach two readers in two different spellings.
-func wireNoticeCase(c NoticeCase) crmcontracts.NoticeCase {
+func wireNoticeCase(c NoticeCase, names map[ids.UUID]string) crmcontracts.NoticeCase {
 	out := crmcontracts.NoticeCase{
-		Id:        openapi_types.UUID(c.ID),
-		ContactId: openapi_types.UUID(c.ContactID.UUID),
-		Rule:      crmcontracts.NoticeCaseRule(c.Rule),
-		DueAt:     c.DueAt,
-		State:     crmcontracts.NoticeCaseState(c.State),
-		Attempts:  c.Attempts,
-		CreatedAt: c.CreatedAt,
+		Id:          openapi_types.UUID(c.ID),
+		ContactId:   openapi_types.UUID(c.ContactID.UUID),
+		ContactName: labelOf(names, c.ContactID.UUID),
+		Acquisition: c.Acquisition.Wire(),
+		Rule:        crmcontracts.NoticeCaseRule(c.Rule),
+		DueAt:       c.DueAt,
+		State:       crmcontracts.NoticeCaseState(c.State),
+		Attempts:    c.Attempts,
+		CreatedAt:   c.CreatedAt,
 
 		AssignedAt:     c.AssignedAt,
 		ResolutionNote: c.ResolutionNote,
@@ -147,7 +155,7 @@ func (h Handlers) GetNoticeCase(w http.ResponseWriter, r *http.Request, id crmco
 		writeConsentErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, wireNoticeCase(found))
+	h.writeNoticeCase(w, r, found)
 }
 
 // GetControllerParticulars answers what this installation says about itself.
@@ -160,12 +168,14 @@ func (h Handlers) GetControllerParticulars(w http.ResponseWriter, r *http.Reques
 	// entry's own read verb. The ungated read exists for the send path
 	// composing a message; a screen asks the object, so somebody with no
 	// settings grant at all is refused the form.
-	current, err := settings.Get(r.Context(), h.settings, ControllerIdentity)
+	current, err := config.StoredVal(r.Context(), h.settings, ControllerIdentity)
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, wireParticulars(current))
+	out := wireParticulars(current)
+	out.Locks = h.settingLocks(ControllerIdentity)
+	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
 // SetControllerParticulars records who this installation is.
@@ -190,25 +200,27 @@ func (h Handlers) SetControllerParticulars(w http.ResponseWriter, r *http.Reques
 	// without read would otherwise change what every outgoing message says
 	// about this company and then receive a 403 for the same request, with the
 	// mutation already committed and nothing telling them so.
-	if _, err := settings.Get(r.Context(), h.settings, ControllerIdentity); err != nil {
+	if _, err := config.StoredVal(r.Context(), h.settings, ControllerIdentity); err != nil {
 		writeConsentErr(w, r, err)
 		return
 	}
 	// The settings store owns the table and applies the entry's own validator,
 	// so the bounds live with the definition rather than being re-checked here.
-	if err := settings.Set(r.Context(), h.settings, ControllerIdentity, in); err != nil {
+	if err := config.Save(r.Context(), h.settings, ControllerIdentity, in); err != nil {
 		writeConsentErr(w, r, err)
 		return
 	}
 	// Answering the STORED value rather than the submitted one: a form that
 	// posts and then shows its own input would hide any normalisation, and a
 	// reader would believe something is saved that is not.
-	saved, err := settings.Get(r.Context(), h.settings, ControllerIdentity)
+	saved, err := config.StoredVal(r.Context(), h.settings, ControllerIdentity)
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, wireParticulars(saved))
+	out := wireParticulars(saved)
+	out.Locks = h.settingLocks(ControllerIdentity)
+	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
 // valueOr reads an optional wire string. An ABSENT field and an empty one are
@@ -236,4 +248,18 @@ func wireParticulars(p ControllerParticulars) crmcontracts.ControllerParticulars
 		ObjectionRoute:    &p.ObjectionRoute,
 		AdvertiserContact: &p.AdvertiserContact,
 	}
+}
+
+// WithLocks binds what reports the settings a boot source sets.
+func (h Handlers) WithLocks(locks func(surface []config.Any) *[]crmcontracts.SettingLock) Handlers {
+	h.locks = locks
+	return h
+}
+
+// settingLocks are the locks among surface, the settings one response carries.
+func (h Handlers) settingLocks(surface ...config.Any) *[]crmcontracts.SettingLock {
+	if h.locks == nil {
+		return nil
+	}
+	return h.locks(surface)
 }

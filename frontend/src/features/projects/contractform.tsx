@@ -1,0 +1,415 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useId, useState } from "react";
+import type { components } from "../../api/schema";
+import { CustomFieldControls } from "../../components/customfieldcontrols";
+import { useObjectCustomFields } from "../../components/customfields.form";
+import { Button, Modal } from "../../design-system/atoms";
+import {
+  DrawerBody,
+  DrawerFoot,
+  DrawerHead,
+} from "../../design-system/drawerbands";
+import { ErrorLine } from "../../design-system/errorline";
+import { Heading } from "../../design-system/heading";
+import { useT } from "../../i18n";
+import { uploadAttachment } from "../../lib/attachmentupload";
+// The installation read every form shares: one query, one key, so the currency
+// this form writes is the same fact the settings screen shows.
+import { useInstallationSettings } from "../../lib/uploadlimit";
+import { useSeededCustomFields } from "./contractcustomseed";
+import { SignedFileField } from "./contractform.signedfile";
+import { contractTermsBody } from "./contracttermsbody";
+import { ContractTermsFields } from "./contracttermsfields";
+import { createContract, patchContract } from "./contractwrites";
+
+// Recording an agreement.
+//
+// THE SIGNED DATE IS NEVER PREFILLED. A deal's close timestamp records when
+// somebody moved a stage, which is not evidence that anything was signed, and a
+// date the form supplied would be indistinguishable from one a human asserted
+// the moment it was saved. The field starts empty and says why.
+//
+// The status is absent from this form on purpose: an agreement is born a draft
+// and leaves that state through its own transition, so a correction to a term
+// can never silently activate a contract.
+
+export { SignedFileField } from "./contractform.signedfile";
+
+type Contract = components["schemas"]["Contract"];
+
+export type ValueBasis = NonNullable<
+  components["schemas"]["CreateContractRequest"]["value_basis"]
+>;
+
+// The draft the form edits. Money travels as a pair, so the amount and its
+// currency live together — and that currency is only ever one the record or the
+// installation stated, never a default this file picked on their behalf.
+//
+// Exported: RenewContractRequest's terms are the same shape minus
+// company_id, so contractlifecycle.tsx's renewal form reuses this type,
+// contractTermsBody and ContractTermsFields rather than a second copy of each.
+export type ContractDraft = {
+  title: string;
+  contractNumber: string;
+  valueMinor: number;
+  // The recurring half of what the agreement is worth, annual, in the same
+  // currency as valueMinor. Zero means "not priced recurring", which is what
+  // the paired money columns hold as NULL.
+  arrMinor: number;
+  currency: string;
+  valueBasis: ValueBasis;
+  startsOn: string;
+  endsOn: string;
+  renewalOn: string;
+  noticePeriodDays: string;
+  paymentTermDays: string;
+  signedOn: string;
+  // The workspace's own fields on this agreement, keyed by cf_ column, holding
+  // what the CONTROLS hold: a currency field's major units, a boolean's
+  // "true". The stored shape is derived at the write, the way every other
+  // custom-field surface does it — seeding raw minor units here and writing
+  // them back out multiplied them by the currency's scale a second time.
+  customValues: Record<string, string>;
+};
+
+const EMPTY_DRAFT: ContractDraft = {
+  title: "",
+  contractNumber: "",
+  valueMinor: 0,
+  arrMinor: 0,
+  // No currency of its own. There is no currency control on this form, so
+  // whatever stands here is written to the record unseen — and a literal would
+  // label every installation's agreements in one country's money. The unit
+  // comes from the installation itself, resolved at the moment of the save.
+  currency: "",
+  valueBasis: "total",
+  startsOn: "",
+  endsOn: "",
+  renewalOn: "",
+  noticePeriodDays: "",
+  paymentTermDays: "",
+  signedOn: "",
+  customValues: {},
+};
+
+export function ContractForm({
+  companyId,
+  contract,
+  open,
+  onClose,
+}: Readonly<{
+  companyId: string;
+  contract?: Contract;
+  open: boolean;
+  onClose: () => void;
+}>) {
+  const t = useT();
+  const titleId = useId();
+  const formId = useId();
+  const queryClient = useQueryClient();
+  const [draft, setDraft] = useState<ContractDraft>(draftOf(contract));
+  const [file, setFile] = useState<File | undefined>();
+  // The installation's own declared currency — the only one this form can
+  // supply, since it offers the reader no currency control. Undefined while the
+  // read is in flight and if it never answers, and undefined stays undefined:
+  // guessing a unit is the failure this whole pairing exists to prevent.
+  const baseCurrency = useInstallationSettings().data?.base_currency;
+  const cf = useObjectCustomFields("contract", contract ? "record" : "create");
+  // What the custom fields held when this form opened, raw. The patch is a
+  // DIFF against it rather than a snapshot of the whole slice: no cf_ column
+  // is clearable, so sending every untouched empty field would be sending a
+  // clear the server refuses.
+  // The RAW stored slice the form opened on, not the converted strings the
+  // controls hold. customFieldsToPatch puts the baseline through
+  // customFieldFormValue itself, so handing it an already-converted value
+  // converts a currency twice: a stored 10000 became "100", was re-converted
+  // to "1", and a genuine edit to 1 then compared EQUAL and vanished.
+  const [openedCustom, setOpenedCustom] = useState<Record<string, unknown>>({});
+
+  // The scale the amount field reads and writes in. A recorded agreement keeps
+  // its OWN currency (draftOf preserves it); a new one takes the installation's
+  // declared code once that read lands. The empty-string fallback is not a
+  // guessed currency — it reaches only minorUnitDigits, whose unusable-code
+  // answer is ISO's own default of two, which is what this field assumed
+  // unconditionally before.
+  const contractCurrency = draft.currency || baseCurrency || "";
+
+  // Re-seed when the modal opens on a DIFFERENT agreement. Without this the
+  // form keeps the previous row's values, and a reader correcting the second
+  // contract they clicked would be editing the first one's numbers.
+  //
+  // Keyed on the ID, never the CONTRACT OBJECT: react-query hands back a new
+  // object on every refetch of the same row even when nothing changed, and a
+  // background refetch while this form is open — another tab editing the same
+  // agreement, a window-focus refetch — would otherwise re-seed mid-edit and
+  // discard whatever the reader had already typed.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: contract.id decides whether to reseed; the object itself would reseed on every refetch of the same row, discarding an in-progress edit.
+  useEffect(() => {
+    if (open) {
+      setDraft(draftOf(contract));
+      setOpenedCustom({});
+      setFile(undefined);
+    }
+  }, [open, contract?.id]);
+
+  // The custom half, seeded SEPARATELY from the terms above: the catalog is a
+  // second read, and what a reader has already typed has to survive its arrival.
+  useSeededCustomFields({
+    open,
+    recordId: contract?.id ?? null,
+    stored: cf.recordSlice(contract ?? {}),
+    formFields: cf.formFields,
+    catalogKey: cf.fields.map((field) => field.column_name).join(","),
+    values: draft.customValues,
+    replace: (values, baseline) => {
+      setOpenedCustom(baseline);
+      setDraft((current) => ({ ...current, customValues: values }));
+    },
+    add: (values, baseline) => {
+      setOpenedCustom((current) => ({ ...current, ...baseline }));
+      setDraft((current) => ({
+        ...current,
+        customValues: { ...current.customValues, ...values },
+      }));
+    },
+  });
+
+  // The draft is a VARIABLE, never a closure over render state: a click that
+  // lands before React re-arms the mutation's options would otherwise submit
+  // the previous render's form — choices nobody made.
+  const save = useMutation({
+    mutationFn: async (submitted: { draft: ContractDraft; file?: File }) => {
+      const id = contract
+        ? await patchContract(
+            contract,
+            submitted.draft,
+            cf.toPatch(submitted.draft.customValues, openedCustom),
+          )
+        : await createContract(
+            companyId,
+            submitted.draft,
+            cf.toBody(submitted.draft.customValues),
+          );
+      if (submitted.file) {
+        // A SECOND request, which can fail on its own. The agreement is saved
+        // by then, so a failure here says the FILE did not attach rather than
+        // implying the whole thing was lost.
+        //
+        // Filed against the COMPANY with the agreement named as an extra part,
+        // so the signed paper also appears in the account's own library rather
+        // than only under the contract.
+        await uploadAttachment(
+          { entityType: "company", entityId: companyId },
+          submitted.file,
+          { contract_id: id },
+        );
+      }
+      return id;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["companyContracts", companyId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["company360", companyId] });
+      // The project 360 draws this agreement too, and would keep serving the
+      // pre-save row from cache.
+      if (contract?.project_id) {
+        queryClient.invalidateQueries({
+          queryKey: ["project", contract.project_id],
+        });
+      }
+      queryClient.invalidateQueries({
+        queryKey: ["companyDocuments", companyId],
+      });
+      // The paper list this form and the contract row both read; without it
+      // an upload lands on the server and neither surface shows it.
+      queryClient.invalidateQueries({ queryKey: ["contractPaper", companyId] });
+      onClose();
+    },
+  });
+
+  const invalid = draftProblem(draft);
+
+  return (
+    <Modal open={open} onClose={onClose} labelledBy={titleId} intent="drawer">
+      <DrawerHead>
+        <Heading size="large" id={titleId}>
+          {t(contract ? "contracts.form.editTitle" : "contracts.form.title")}
+        </Heading>
+      </DrawerHead>
+      <DrawerBody>
+        {/* Not native validation: a browser's step rule refuses amounts that
+            draftProblem and the server accept. */}
+        <form
+          id={formId}
+          className="form-stack"
+          noValidate
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (invalid === null) {
+              save.mutate({ draft: pricedIn(draft, baseCurrency), file });
+            }
+          }}
+        >
+          <ContractTermsFields
+            draft={draft}
+            setDraft={setDraft}
+            currency={contractCurrency}
+          />
+          <CustomFieldControls
+            fields={cf.formFields}
+            values={draft.customValues}
+            onChange={(customValues) => setDraft({ ...draft, customValues })}
+          />
+          <SignedFileField
+            companyId={companyId}
+            contractID={contract?.id}
+            file={file}
+            onPick={setFile}
+          />
+          <ErrorLine error={save.error} />
+        </form>
+      </DrawerBody>
+      <DrawerFoot className="actions">
+        <Button onClick={onClose}>{t("create.cancel")}</Button>
+        {/* A reason in a paragraph above the button reaches no screen reader. */}
+        <Button
+          type="submit"
+          form={formId}
+          variant="primary"
+          reason={invalid ? t(invalid) : undefined}
+          pending={save.isPending}
+        >
+          {t(contract ? "contracts.form.saveEdit" : "contracts.form.save")}
+        </Button>
+      </DrawerFoot>
+    </Modal>
+  );
+}
+
+// draftOf reads an existing agreement back into the form's shape, so correcting
+// one starts from what is recorded rather than from a blank the reader has to
+// retype — and might get wrong a second time.
+
+function draftOf(contract: Contract | undefined): ContractDraft {
+  if (!contract) {
+    return EMPTY_DRAFT;
+  }
+  return {
+    title: contract.title,
+    contractNumber: contract.contract_number ?? "",
+    valueMinor: contract.value_minor ?? 0,
+    arrMinor: contract.arr_minor ?? 0,
+    // A recorded agreement keeps its OWN currency. The two money columns are
+    // paired by the database, so an agreement carrying none carries no amount
+    // either: it is being priced here for the first time, exactly like a new
+    // one, and takes the installation's unit at the save.
+    currency: contract.currency ?? "",
+    valueBasis: contract.value_basis as ValueBasis,
+    startsOn: contract.starts_on ?? "",
+    endsOn: contract.ends_on ?? "",
+    renewalOn: contract.renewal_on ?? "",
+    noticePeriodDays:
+      contract.notice_period_days == null
+        ? ""
+        : String(contract.notice_period_days),
+    paymentTermDays:
+      contract.payment_term_days == null
+        ? ""
+        : String(contract.payment_term_days),
+    signedOn: contract.signed_on ?? "",
+    // The catalog is not readable from a module function, so the stored
+    // custom values are seeded by the form itself once the schema lands.
+    // Empty here rather than absent: the member is required, and a draft that
+    // omitted it would be a draft the form could not construct.
+    customValues: {},
+  };
+}
+
+/**
+ * The draft as it will be SAVED: an amount the reader typed, in the currency the
+ * agreement already records, or else the installation's own.
+ *
+ * Resolved at the save rather than seeded into the draft because the modal opens
+ * the instant a reader clicks a row, which can be before the installation read
+ * has answered — a draft seeded with the blank would keep the blank after the
+ * answer arrived, and re-seeding on arrival would throw away what the reader had
+ * typed by then.
+ *
+ * With no answer at all the currency stays blank, and `contractBody` sends the
+ * half-pair the form actually holds. That is the one honest option left: the
+ * server refuses it where the reader can see the refusal, whereas dropping the
+ * amount would report a saved agreement whose value quietly went nowhere.
+ */
+export function pricedIn(
+  draft: ContractDraft,
+  baseCurrency: string | undefined,
+): ContractDraft {
+  if (draft.currency !== "") {
+    return draft;
+  }
+  return { ...draft, currency: baseCurrency ?? "" };
+}
+
+// What the form refuses before the server has to.
+//
+// These mirror the database's own constraints rather than adding rules of their
+// own: the server is still the authority, and a form that refused MORE than the
+// server would make a legal agreement unrecordable.
+export function draftProblem(
+  draft: ContractDraft,
+): "contracts.form.errNoName" | "contracts.form.errTermOrder" | null {
+  if (draft.title.trim() === "") {
+    return "contracts.form.errNoName";
+  }
+  if (
+    draft.startsOn !== "" &&
+    draft.endsOn !== "" &&
+    draft.endsOn < draft.startsOn
+  ) {
+    return "contracts.form.errTermOrder";
+  }
+  return null;
+}
+
+// The wire body, with every empty field left OUT rather than sent as an empty
+// string. An omitted date is "not recorded"; an empty string is a value the
+// server would have to reject, and the difference is what keeps a half-filled
+// form from reading as a half-known agreement.
+// The seven fields a create and a renewal share, with the same
+// omit-rather-than-send-empty rule both need: an omitted date is "not
+// recorded"; an empty string is a value the server would have to reject, and
+// the difference is what keeps a half-filled form from reading as a
+// half-known agreement. Money is a PAIR: an amount with no currency cannot be
+// converted, and the record's own CHECK refuses half of one, so the amount
+// travels with the currency the form HOLDS — never one it made up, and never
+// without the amount the reader typed.
+export type ContractTermsFragment = Pick<
+  components["schemas"]["CreateContractRequest"],
+  | "contract_number"
+  | "value_minor"
+  | "arr_minor"
+  | "currency"
+  | "starts_on"
+  | "ends_on"
+  | "renewal_on"
+  | "notice_period_days"
+  | "payment_term_days"
+  | "signed_on"
+>;
+
+export function contractBody(
+  companyId: string,
+  draft: ContractDraft,
+): components["schemas"]["CreateContractRequest"] {
+  return {
+    company_id: companyId,
+    title: draft.title.trim(),
+    value_basis: draft.valueBasis,
+    // Stated rather than defaulted: whether an agreement renews itself is a
+    // fact about the paper, and a field the form quietly omitted would be a
+    // guess the record could not distinguish from an answer.
+    auto_renew: false,
+    ...contractTermsBody(draft),
+  };
+}

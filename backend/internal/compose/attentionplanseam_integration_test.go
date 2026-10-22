@@ -112,7 +112,7 @@ func TestPlanAgendaUsesTheInstallationCalendarAcrossDST(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	zone := "America/New_York"
-	if _, err := identity.NewInstallationSettings(e.DB(), NewSettingsStore(e.Pool)).UpdateInstallation(ctx, identity.InstallationPatch{Timezone: &zone}); err != nil {
+	if _, err := identity.NewInstallationSettings(e.DB(), NewSettingsStore(e.Pool), StoredConfig(e.Pool)).UpdateInstallation(ctx, identity.InstallationPatch{Timezone: &zone}); err != nil {
 		t.Fatal(err)
 	}
 	store := weeklyPlanStore(e.Pool)

@@ -26,22 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/webhooks"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
-
-// webhookSweepCtx is the scope the retry workspace worker binds before it calls
-// the engine: the tenant, and nothing else. The sweep resolves no principal of
-// its own and writes no audited row — a suite that bound more would be
-// exercising a pass production never runs.
-//
-// It does re-check each delivery's visibility before re-sending, from the
-// subscription owner recorded on the row rather than from anything in this
-// context (webhookrevisibility_integration_test.go). That is why binding only
-// the tenant is still enough.
-func webhookSweepCtx(ws ids.UUID) context.Context {
-	return principal.WithWorkspaceID(context.Background(), ws)
-}
 
 // failDueScans makes reading a webhook_delivery row raise, so the sweep's due
 // SCAN fails. There must therefore be a delivery the scan would return: the
@@ -143,7 +128,7 @@ func TestWebhookRetryReportsASweepWhoseDueScanFailed(t *testing.T) {
 	// sweep at this clock reading, so the "not re-attempted" assertion below
 	// says the fault held rather than that there was nothing to attempt.
 	now = now.Add(64 * time.Second) // beyond the largest backoff gap
-	if err := deliverer.SweepOnce(webhookSweepCtx(we.wsID)); err != nil {
+	if err := deliverer.SweepOnce(context.Background()); err != nil {
 		t.Fatalf("the sweep before any fault was injected: %v", err)
 	}
 	if got := rcv.count.Load(); got != 2 {
@@ -153,7 +138,7 @@ func TestWebhookRetryReportsASweepWhoseDueScanFailed(t *testing.T) {
 	failDueScans(t, owner)
 	now = now.Add(64 * time.Second)
 
-	err := deliverer.SweepOnce(webhookSweepCtx(we.wsID))
+	err := deliverer.SweepOnce(context.Background())
 	if got := rcv.count.Load(); got != 2 {
 		t.Fatalf("the fault injection did not hold: the parked delivery was re-attempted %d more times, so the due scan never failed", got-2)
 	}

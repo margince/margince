@@ -4,11 +4,11 @@
 // Who was on an exchange, named.
 //
 // Its own module because two surfaces answer the same question and neither
-// owns it: the thread across the top of a record (screens/record360/spine.tsx)
-// and every row of its chronology (activitytimeline.tsx). Spelled twice, one
-// copy would come to name three contacts where the other named two, and a reader
-// comparing the thread with the list underneath it would have to decide which
-// of the two was lying.
+// owns it. One is the thread across the top of a record
+// (features/records/record360/spine.exchanges.tsx). The other is every row of its
+// chronology (activitytimeline.tsx). Spelled twice, one copy would come to
+// name three contacts where the other named two. A reader comparing the thread
+// with the list underneath it would have to decide which of the two was lying.
 //
 // An activity carries ids, not names — resolving them is the CALLER's job,
 // because the names live in the sections around the row and this module holds

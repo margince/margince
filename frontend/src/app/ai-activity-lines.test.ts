@@ -1,10 +1,11 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { de } from "../i18n/de";
 import { en } from "../i18n/en";
 import { vi } from "../i18n/vi";
+import { screenFiles } from "../testing/screenfiles";
 import { NAMED, SAID, WROTE } from "./agentrail-copy";
 import { ACTIVITY_LINE, NAMED_LINE } from "./ai-activity-lines";
 import {
@@ -465,7 +466,7 @@ describe("the email mutation keys stay split", () => {
   });
 
   it.each(sites)("keeps drafts off the send key in %s", (file) => {
-    const src = readFileSync(join(screensDir(), file), "utf8");
+    const src = readFileSync(join(srcDir(), file), "utf8");
     // At most one of each per screen: the draft is the AI call the rail
     // narrates, the send is the write the ticker narrates, and a screen that
     // spelled either twice would narrate one action under two vocabularies.
@@ -474,16 +475,15 @@ describe("the email mutation keys stay split", () => {
   });
 });
 
-function screensDir(): string {
-  return join(dirname(fileURLToPath(import.meta.url)), "..", "screens");
+function srcDir(): string {
+  return join(dirname(fileURLToPath(import.meta.url)), "..");
 }
 
-/** Every screen that spells an email mutation key, in a stable order. */
+/** Every screen file that spells an email mutation key, in a stable order. */
 function mailMutationSites(): string[] {
-  return readdirSync(screensDir())
-    .filter((file) => file.endsWith(".tsx") && !file.includes(".test."))
+  return screenFiles()
     .filter((file) => {
-      const src = readFileSync(join(screensDir(), file), "utf8");
+      const src = readFileSync(join(srcDir(), file), "utf8");
       return src.includes('["email-draft",') || src.includes('["email",');
     })
     .sort();

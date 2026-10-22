@@ -3,8 +3,11 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { expect, within } from "storybook/test";
+import { formatInterval } from "../format/interval";
 import { Card } from "./atoms";
-import { NumberSetting } from "./numbersetting";
+import { Callout } from "./callout";
+import { NumberSetting, NumberSettingRow } from "./numbersetting";
 import { SettingList, SettingRow } from "./settingrow";
 
 const meta: Meta<typeof NumberSetting> = {
@@ -49,6 +52,7 @@ function Limits() {
               min={30}
               max={600}
               refusal="Enter a whole number of seconds from 30 to 600."
+              reading={(typed) => formatInterval(typed, "en")}
               onCommit={setSeconds}
             />
           )}
@@ -59,3 +63,72 @@ function Limits() {
 }
 
 export const Default: Story = { render: () => <Limits /> };
+
+/** A reader who may not change the number reads why under the box. */
+export const NotYours: Story = {
+  render: () => (
+    <Card title="Website reads">
+      <SettingList>
+        <SettingRow
+          label="Pages per read"
+          description="Most pages one read fetches, 1 to 200."
+          control={(control) => (
+            <NumberSetting
+              control={control}
+              value={60}
+              min={1}
+              max={200}
+              refusal="Enter a whole number of pages from 1 to 200."
+              reason="Only an administrator or operations user can change this."
+              onCommit={() => {}}
+            />
+          )}
+        />
+      </SettingList>
+    </Card>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      canvas.getByRole("textbox", { name: "Pages per read" }),
+    ).toBeDisabled();
+    await expect(
+      canvas.getByText(/Only an administrator or operations user/),
+    ).toBeVisible();
+  },
+};
+
+export const NamesCallerElement: Story = {
+  render: () => (
+    <Card title="Website reads">
+      <SettingList>
+        <NumberSettingRow
+          label="Pages per read"
+          description="Most pages one read fetches, 1 to 200."
+          value={60}
+          min={1}
+          max={200}
+          refusal="Enter a whole number of pages from 1 to 200."
+          describedBy="pages-refused"
+          onCommit={() => {}}
+        />
+      </SettingList>
+      <Callout
+        id="pages-refused"
+        kind="outcome"
+        tone="danger"
+        title="Couldn't save the setting"
+      >
+        You don't have permission to do that.
+      </Callout>
+    </Card>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      await canvas.findByRole("textbox", { name: "Pages per read" }),
+    ).toHaveAccessibleDescription(
+      expect.stringMatching(/^Most pages one read fetches.*Couldn't save/),
+    );
+  },
+};

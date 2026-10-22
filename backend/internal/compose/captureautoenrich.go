@@ -54,11 +54,12 @@ func (CaptureAutoEnrichSweepArgs) FleetWide() {}
 
 // captureAutoEnrichSweepWorker runs one sweep pass across every workspace.
 type captureAutoEnrichSweepWorker struct {
-	pool       *pgxpool.Pool
-	contacts   *contacts.Store
-	settings   *capture.SettingsStore
-	autoEnrich *capture.AutoEnrichStore
-	log        *slog.Logger
+	skipReservedDomains bool
+	pool                *pgxpool.Pool
+	contacts            *contacts.Store
+	settings            *capture.SettingsStore
+	autoEnrich          *capture.AutoEnrichStore
+	log                 *slog.Logger
 }
 
 // newCaptureAutoEnrichSweepWorker builds the sweep worker over the pool.
@@ -66,7 +67,7 @@ func newCaptureAutoEnrichSweepWorker(pool *pgxpool.Pool, log *slog.Logger) *capt
 	return &captureAutoEnrichSweepWorker{
 		pool:       pool,
 		contacts:   contacts.NewStore(InstallationDB(pool)),
-		settings:   capture.NewSettings(NewSettingsStore(pool)),
+		settings:   capture.NewSettings(NewSettingsStore(pool), StoredConfig(pool)),
 		autoEnrich: capture.NewAutoEnrichStore(InstallationDB(pool)),
 		log:        log,
 	}

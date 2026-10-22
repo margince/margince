@@ -183,7 +183,7 @@ func (s *Service) rotateRefreshTokenTx(
 	if err != nil {
 		return IssuedPassport{}, "", false, err
 	}
-	issued, refresh, err = spendAndReissue(writeCtx, tx, locked, scopes)
+	issued, refresh, err = s.spendAndReissue(writeCtx, tx, locked, scopes)
 	return issued, refresh, false, err
 }
 
@@ -315,6 +315,9 @@ func narrowedScopes(requested, granted []string) ([]string, error) {
 		if !slices.Contains(granted, sc) {
 			return nil, errRefreshScope
 		}
+		if slices.Contains(narrowed, sc) {
+			continue
+		}
 		narrowed = append(narrowed, sc)
 	}
 	if len(narrowed) == 0 {
@@ -330,7 +333,7 @@ func narrowedScopes(requested, granted []string) ([]string, error) {
 // connector holding two live passports, or a successor whose predecessor is
 // still spendable. The fresh passport lives as long as the installation's
 // access-token setting says now, not as long as the one it replaces did.
-func spendAndReissue(ctx context.Context, tx pgx.Tx, l lockedGrant, scopes []string) (IssuedPassport, string, error) {
+func (s *Service) spendAndReissue(ctx context.Context, tx pgx.Tx, l lockedGrant, scopes []string) (IssuedPassport, string, error) {
 	// Conditional UPDATE with the row count asserted: belt-and-braces BEHIND
 	// the lock, not instead of it — the same shape consumeAuthCode uses to
 	// keep a single-use credential single-use.
@@ -376,7 +379,7 @@ func spendAndReissue(ctx context.Context, tx pgx.Tx, l lockedGrant, scopes []str
 		return IssuedPassport{}, "", err
 	}
 	label := oauthPassportLabel(l.clientID)
-	ttl, err := oauthAccessTokenTTL(ctx, tx)
+	ttl, err := s.oauthAccessTokenTTL(ctx, tx)
 	if err != nil {
 		return IssuedPassport{}, "", err
 	}

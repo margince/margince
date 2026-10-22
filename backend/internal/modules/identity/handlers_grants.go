@@ -4,7 +4,6 @@
 package identity
 
 import (
-	"errors"
 	"net/http"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -62,24 +61,20 @@ func (h Handlers) CreateRecordGrant(w http.ResponseWriter, r *http.Request, _ cr
 		ExpiresAt:   req.ExpiresAt,
 	})
 	if err != nil {
-		writeGrantErr(w, r, err)
+		httperr.Write(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusCreated, wireGrant(grant))
 }
 
 func (h Handlers) RevokeRecordGrant(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.RevokeRecordGrantParams) {
-	if err := h.svc.RevokeRecordGrant(r.Context(), ids.UUID(id)); err != nil {
-		writeGrantErr(w, r, err)
+	ifVersion, ok := httperr.IfMatchVersion(w, r)
+	if !ok {
+		return
+	}
+	if err := h.svc.RevokeRecordGrant(r.Context(), ids.UUID(id), ifVersion); err != nil {
+		httperr.Write(w, r, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
-}
-
-func writeGrantErr(w http.ResponseWriter, r *http.Request, err error) {
-	if invalid, ok := errors.AsType[*InvalidScopeError](err); ok {
-		httperr.Write(w, r, httperr.Validation("record_type", "invalid", invalid.Error()))
-		return
-	}
-	httperr.Write(w, r, err)
 }

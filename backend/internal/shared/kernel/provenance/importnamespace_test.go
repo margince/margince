@@ -219,3 +219,26 @@ func TestRefuseWireAdmittingOpensThePrefixOnlyForTheImporter(t *testing.T) {
 		t.Errorf("a forged source through the importer door = %v, want it refused on source", err)
 	}
 }
+
+func TestImportedFromNamesTheSourceAnImportWasRunFor(t *testing.T) {
+	str := func(s string) *string { return &s }
+	cases := []struct {
+		name string
+		in   *string
+		want *string
+	}{
+		{"no source system", nil, nil},
+		{"an ordinary connector", str("email"), nil},
+		{"a named CSV run", str("mirror:csv:bundle"), str("bundle")},
+		{"an unnamed CSV run", str("mirror:csv"), str("")},
+		{"another importing connector", str("mirror:hubspot"), str("hubspot")},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := provenance.ImportedFrom(tc.in)
+			if (got == nil) != (tc.want == nil) || (got != nil && *got != *tc.want) {
+				t.Fatalf("ImportedFrom(%v) = %v, want %v", tc.in, got, tc.want)
+			}
+		})
+	}
+}

@@ -31,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // maxMailErrorRunes bounds the stored cause, matching the column's CHECK.
@@ -58,9 +59,19 @@ type MailAttempt struct {
 // The row scope and the claim are ONE statement. A brief is strictly personal,
 // so the user predicate is what stops a run id alone from burning somebody
 // else's attempt.
-func (e *BriefEngine) ClaimMailAttempt(
-	ctx context.Context, runID ids.UUID, now time.Time,
-) (MailAttempt, bool, error) {
+func (e *BriefEngine) ClaimMailAttempt(ctx context.Context, runID ids.UUID, now time.Time) (MailAttempt, bool, error) {
+	var attempt MailAttempt
+	var claimed bool
+	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		var err error
+		attempt, claimed, err = e.ClaimMailAttemptTx(ctx, tx, runID, now)
+		return err
+	})
+	return attempt, claimed, err
+}
+
+// ClaimMailAttemptTx lets a combined edition claim its existing rows atomically.
+func (e *BriefEngine) ClaimMailAttemptTx(ctx context.Context, tx pgx.Tx, runID ids.UUID, now time.Time) (MailAttempt, bool, error) {
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return MailAttempt{}, false, err
 	}
@@ -68,9 +79,10 @@ func (e *BriefEngine) ClaimMailAttempt(
 	if err != nil {
 		return MailAttempt{}, false, err
 	}
+
 	var attempt MailAttempt
 	var claimed bool
-	err = database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	claim := func() error {
 		row := tx.QueryRow(ctx, `
 			UPDATE brief_run
 			   SET mail_attempted_at = $3
@@ -115,8 +127,8 @@ func (e *BriefEngine) ClaimMailAttempt(
 		}
 		claimed = true
 		return nil
-	})
-	if err != nil {
+	}
+	if err := claim(); err != nil {
 		return MailAttempt{}, false, err
 	}
 	return attempt, claimed, nil
@@ -135,9 +147,7 @@ func (e *BriefEngine) MailFailed(ctx context.Context, runID ids.UUID, cause stri
 	if err != nil {
 		return err
 	}
-	if n := len([]rune(cause)); n > maxMailErrorRunes {
-		cause = string([]rune(cause)[:maxMailErrorRunes])
-	}
+	cause = textcut.Runes(cause, maxMailErrorRunes)
 	return database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx, `
 			UPDATE brief_run SET mail_error = $3

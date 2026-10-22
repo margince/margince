@@ -6,9 +6,9 @@ package attention
 // What a waiting row offers a reader who is not going to answer it now.
 //
 // The rule these hold is one sentence: do not offer an action the record cannot
-// perform. A message can reach this queue without a thread — a first contact
-// from an address nobody has written to, or a provider that hands over no chain
-// to root on — and two of the three dispositions are keyed on the thread.
+// perform. A message can reach this queue without a thread. A first contact
+// from a new address has none, and neither does a message from a provider that
+// hands over no chain. Two of the four dispositions are keyed on the thread.
 //
 // Both failures were silent in their own way. `not_sales` answered a validation
 // error after the reader had pressed it; a reply-snooze stored fine and then
@@ -40,7 +40,14 @@ func waitingWithThread(threaded bool) WaitingCustomer {
 // the queue offered something else.
 func offeredOn(t *testing.T, waiting WaitingCustomer) []crmcontracts.WorklistItemDispositions {
 	t.Helper()
-	rows := renderInOrder([]ranked{classifyWaiting(waiting, rankInstant)}, ids.Nil)
+	return offeredTo(t, waiting, ids.Nil)
+}
+
+// offeredTo is offeredOn for a named reader, which decides whether the row is
+// their own.
+func offeredTo(t *testing.T, waiting WaitingCustomer, reader ids.UUID) []crmcontracts.WorklistItemDispositions {
+	t.Helper()
+	rows := renderInOrder([]ranked{classifyWaiting(waiting, rankInstant)}, reader)
 	if len(rows) != 1 {
 		t.Fatalf("rendered %d rows from one wait", len(rows))
 	}
@@ -50,14 +57,46 @@ func offeredOn(t *testing.T, waiting WaitingCustomer) []crmcontracts.WorklistIte
 	return *rows[0].Dispositions
 }
 
-func TestAThreadedWaitOffersAllThreeJudgements(t *testing.T) {
+func TestAThreadedWaitOffersAllFourJudgements(t *testing.T) {
 	got := offeredOn(t, waitingWithThread(true))
 
-	for _, want := range []string{disposeSnooze, disposeNotMine, disposeNotSales} {
+	for _, want := range []string{disposeHandled, disposeSnooze, disposeNotMine, disposeNotSales} {
 		if !offers(got, want) {
-			t.Errorf("a threaded wait does not offer %q, and every one of the three is a case where "+
+			t.Errorf("a threaded wait does not offer %q, and every one of the four is a case where "+
 				"replying is not the answer", want)
 		}
+	}
+	if string(got[0]) != disposeHandled {
+		t.Errorf("the judgements open with %q; Done leads, as it does on a task row", got[0])
+	}
+}
+
+// Not mine says somebody else must still see the message. On the reader's own
+// row there is nobody else, so pressing it would take the message off every
+// list that names an owner.
+func TestNotMineIsOfferedOnlyOnARowSomebodyElseOwns(t *testing.T) {
+	owner := ids.MustParse("01a05500-0000-7000-8000-0000000000e1")
+	colleague := ids.MustParse("01a05500-0000-7000-8000-0000000000e2")
+	waiting := waitingWithThread(true)
+	waiting.OwnerID = owner
+
+	if offers(offeredTo(t, waiting, owner), disposeNotMine) {
+		t.Error("the owner is offered not_mine on their own row")
+	}
+	if !offers(offeredTo(t, waiting, colleague), disposeNotMine) {
+		t.Error("a colleague reading the owner's row is not offered not_mine")
+	}
+	// A row whose owner the lane could not read names nobody, so the reader
+	// may still say it is not theirs.
+	if !offers(offeredTo(t, waitingWithThread(true), owner), disposeNotMine) {
+		t.Error("a row with no owner withholds not_mine")
+	}
+	// Done stays on the owner's own row, so a threadless one is not left with
+	// nothing to press.
+	threadless := waitingWithThread(false)
+	threadless.OwnerID = owner
+	if got := offeredTo(t, threadless, owner); !offers(got, disposeHandled) {
+		t.Errorf("the owner's threadless row offers %v and no Done", got)
 	}
 }
 
@@ -73,10 +112,10 @@ func TestAThreadlessWaitOffersOnlyWhatItCanPerform(t *testing.T) {
 		t.Error("a threadless wait offers snooze, and the reply wake matches thread_key by equality — " +
 			"a NULL satisfies none, so the row is hidden permanently even when the customer writes back")
 	}
-	// Something, rather than nothing: not_mine is per-reader and keyed on the
-	// activity, so whoever is looking at the row can still set it aside.
-	if !offers(got, disposeNotMine) {
-		t.Error("a threadless wait offers nothing at all, leaving a reader with a row they cannot put down")
+	// Something, rather than nothing. handled and not_mine are per-reader and
+	// keyed on the activity, so the reader can still set the row aside.
+	if !offers(got, disposeHandled) || !offers(got, disposeNotMine) {
+		t.Error("a threadless wait loses a per-reader judgement it can perform")
 	}
 }
 

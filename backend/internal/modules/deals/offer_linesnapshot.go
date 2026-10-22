@@ -15,11 +15,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // zeroPct is the stored default for a percentage nobody supplied, at the
@@ -77,9 +79,9 @@ func resolveProductSnapshot(ctx context.Context, tx pgx.Tx, productID *ids.Produ
 // normalizeLineDefaults resolves unit/discount/tax to their stored defaults
 // when neither the caller nor the product snapshot supplied a value.
 func normalizeLineDefaults(unit, discountPct, taxRate *string) (unitVal, discount, tax string) {
-	unitVal = "unit"
-	if unit != nil && *unit != "" {
-		unitVal = *unit
+	unitVal = defaultUnit
+	if unit != nil && values.HasVisibleText(*unit) {
+		unitVal = canonicalUnit(strings.TrimSpace(*unit))
 	}
 	discount = zeroPct
 	if discountPct != nil {
@@ -90,4 +92,46 @@ func normalizeLineDefaults(unit, discountPct, taxRate *string) (unitVal, discoun
 		tax = *taxRate
 	}
 	return unitVal, discount, tax
+}
+
+func resolveOfferLine(ctx context.Context, tx pgx.Tx, offerCurrency string, in OfferLineInputRow) (resolvedOfferLine, error) {
+	defaults, err := resolveProductSnapshot(ctx, tx, in.ProductID, offerCurrency, lineSnapshotDefaults{
+		Description: in.Description, Unit: in.Unit, Price: in.UnitPriceMinor, TaxRate: in.TaxRate,
+		BillingModel: in.BillingModel, IntervalMonths: in.BillingIntervalMonths,
+	})
+	if err != nil {
+		return resolvedOfferLine{}, err
+	}
+	if defaults.Description == nil || !values.HasVisibleText(*defaults.Description) {
+		return resolvedOfferLine{}, &RequiredFieldError{Field: descriptionColumn}
+	}
+	if defaults.Price == nil {
+		return resolvedOfferLine{}, &RequiredFieldError{Field: "unit_price_minor"}
+	}
+	if err := checkLinePosition(in.Position); err != nil {
+		return resolvedOfferLine{}, err
+	}
+	unitVal, discount, tax := normalizeLineDefaults(defaults.Unit, in.DiscountPct, defaults.TaxRate)
+	line := OfferLineInput{Quantity: in.Quantity, UnitPriceMinor: *defaults.Price, DiscountPct: discount, TaxRate: tax}
+	// Validate the figures before the row lands: a number out of range or a
+	// malformed decimal answers 422 naming it here, not a CHECK 500 later.
+	if err := checkLineFigures(line); err != nil {
+		return resolvedOfferLine{}, err
+	}
+	if _, err := LineTotals(line); err != nil {
+		return resolvedOfferLine{}, err
+	}
+	// The classification is settled here, before the row lands, so a
+	// half-stated one earns a field to fix rather than oli_billing_shape.
+	if err := validBillingShape(defaults.BillingModel, defaults.IntervalMonths); err != nil {
+		return resolvedOfferLine{}, err
+	}
+	if err := validIntervalCount(defaults.BillingModel, in.IntervalCount); err != nil {
+		return resolvedOfferLine{}, err
+	}
+	return resolvedOfferLine{
+		Description: *defaults.Description, Unit: unitVal, Price: *defaults.Price, Discount: discount, Tax: tax,
+		BillingModel: defaults.BillingModel, IntervalMonths: defaults.IntervalMonths,
+		IntervalCount: in.IntervalCount,
+	}, nil
 }

@@ -31,9 +31,12 @@ import (
 // the package is a data handover, not an API shape.
 type SARPackage struct {
 	ReportingContributions []map[string]any `json:"reporting_contributions"`
-	Subject                map[string]any   `json:"subject"`
-	Emails                 []map[string]any `json:"emails"`
-	Phones                 []map[string]any `json:"phones"`
+	// ReportingQuestionAnswers are the kept question answer rows a record
+	// about the subject was counted in.
+	ReportingQuestionAnswers []map[string]any `json:"reporting_question_answers"`
+	Subject                  map[string]any   `json:"subject"`
+	Emails                   []map[string]any `json:"emails"`
+	Phones                   []map[string]any `json:"phones"`
 	// The messaging-channel accounts bound to the subject: which provider
 	// identity writes as them, the handle it carries, whether they have blocked
 	// this installation's bot, and whether the binding is still live.
@@ -139,7 +142,13 @@ type SARPackage struct {
 	// is entitled to know what we decided their message meant, and here that
 	// decision can be an outstanding obligation TO them, which is a thing held
 	// about somebody that they would have no other way to discover.
-	RequestSettlements []map[string]any `json:"request_settlements"`
+	RequestSettlements   []map[string]any `json:"request_settlements"`
+	CommitmentAdmissions []map[string]any `json:"commitment_admissions"`
+	// StageEvidence is what a model or a record concluded about a deal from the
+	// subject's messages. It carries the quoted words, whether they agreed or
+	// proposed, and how sure the writer was. Owed on ReplyJudgements' ground, because it
+	// is a conclusion drawn from what they wrote.
+	StageEvidence []map[string]any `json:"stage_evidence"`
 	// Handoffs is each time this contact was passed from one seat to another as a
 	// prospect, what was decided, and why. Art. 15 owes it twice over: the note
 	// is what one colleague wrote ABOUT them, and the decision is one colleagues
@@ -250,7 +259,11 @@ func AssembleSAR(ctx context.Context, db *database.DB, contactID ids.ContactID) 
 		if err != nil {
 			return err
 		}
-		sections := sarSections(&pkg, contactID, emails, leads, identities)
+		authored, err := subjectAuthoredMessages(ctx, tx, contactID, emails, identities)
+		if err != nil {
+			return err
+		}
+		sections := sarSections(&pkg, contactID, emails, leads, identities, authored)
 
 		subject, err := rowMaps(ctx, tx, `
 			SELECT p.id, p.full_name, p.first_name, p.last_name, p.title,
@@ -279,6 +292,9 @@ func AssembleSAR(ctx context.Context, db *database.DB, contactID ids.ContactID) 
 				return err
 			}
 			*section.dest = rows
+		}
+		if err := appendActivityCustomValues(ctx, tx, pkg.Activities); err != nil {
+			return err
 		}
 
 		_, err = storekit.Audit(ctx, tx, "export", "contact", contactID.UUID, nil, map[string]any{
@@ -462,9 +478,10 @@ func subjectIdentities(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) 
 	return out, rows.Err()
 }
 
-// subjectStrings runs a one-column text query into a slice.
-func subjectStrings(ctx context.Context, tx pgx.Tx, query string, contactID ids.ContactID) ([]string, error) {
-	rows, err := tx.Query(ctx, query, contactID.UUID)
+// subjectStrings runs a one-column text query into a slice. The contact is $1,
+// and any further arguments follow it.
+func subjectStrings(ctx context.Context, tx pgx.Tx, query string, contactID ids.ContactID, more ...any) ([]string, error) {
+	rows, err := tx.Query(ctx, query, append([]any{contactID.UUID}, more...)...)
 	if err != nil {
 		return nil, err
 	}

@@ -25,9 +25,11 @@ Getting around Margince, and where to read about it:
 Settings in Margince, by page:
 - Where are the settings, and what settings pages are there? → [Settings](settings.md)
 - Which settings page do I need for something? → [Settings](settings.md)
+- Where does the value of a setting come from, and how do I change one that is locked? → [Configuration](configuration.md)
 - How do I change my password, display name, language or theme? → [Your own settings](your-own-settings.md)
 - How do I add an email signature or set up my writing voice? → [Your own settings](your-own-settings.md)
 - How do I connect my mailbox or calendar? → [Connecting your mailbox and calendar](connecting-mail-and-calendars.md)
+- How do I post to a chat channel when a deal is won? → [Sending events to other tools](sending-events-to-other-tools.md)
 - How do I book a meeting with a contact, move or cancel it, or fix an invitation that needs attention? → [Meetings and booking](meetings-and-booking.md)
 - My mailbox stopped syncing, or emails stopped coming in: what do I do? → [Connecting your mailbox and calendar](connecting-mail-and-calendars.md)
 - How do I invite a colleague or change a role? → [Seats, roles and who can see what](seats-roles-and-access.md)
@@ -44,6 +46,7 @@ Records, deals and mail in Margince, by page:
 - How do I make a Live List or a Shortlist, share it, or see who joined and left? → [Lists, filters and views](lists-filters-and-views.md)
 - How do I move a deal, or close it won or lost? → [The pipeline](the-pipeline.md)
 - How do I create and send an offer (a quote)? → [Offers and the rate card](offers-and-products.md)
+- How do I ask legal to review a deal, or make a stage wait for legal? → [Legal review](legal-review.md)
 - How do I set up a partner, or credit and pay a partner's commission? → [Partners and commission](partners.md)
 - What is on a project page, and how do I start delivery? → [Leads, deals and projects](leads-deals-and-projects.md)
 - How do I send or schedule an email? → [Writing and sending mail](sending-mail.md)
@@ -52,7 +55,8 @@ Records, deals and mail in Margince, by page:
 - How do I see my weekly review or plan my week? → [Your week](your-week.md)
 - How do I attach or upload a file to a contact, company or deal? → [Documents and files](documents-and-files.md)
 - How do I import, export, archive or delete? → [What is kept, what is destroyed](retention-exports-and-deletion.md)
-- What does the import preview show, and how do I correct companies with a spreadsheet? → [Settings](settings.md)
+- What does the import preview show, and how do I correct companies with a spreadsheet? → [Importing data](importing-data.md)
+- What happens if I import the same file again? → [Importing data](importing-data.md)
 
 ## The pages
 
@@ -134,6 +138,9 @@ Records, deals and mail in Margince, by page:
 - [Deal Rooms](deal-rooms.md): the page for one deal that the buyer sees. What
   a room holds, the five states, and why Close is not a freeze. Personal
   one-time links, what a buyer never sees, and what an agent may not touch.
+- [Legal review](legal-review.md): asking legal to read a deal, what the summary
+  holds, the two answers and asking again. A stage that waits for legal's
+  approval, who answers, and how to switch it off.
 - [Documents and files](documents-and-files.md): documents on a company,
   contact or deal, and files a deal picks up from its email. Having a file read
   for deal fields, and document sets you can ask questions of. Every size limit,
@@ -159,9 +166,13 @@ Records, deals and mail in Margince, by page:
   name, language and theme. Your email signature, the hours others can book,
   and your writing voice. Your agent passports and your mailbox connections.
   What the last 24 hours of your mail turned into.
+- [Configuration](configuration.md): the read-only list of every setting, its
+  value and where the value comes from, and how to change a locked one.
 - [Settings](settings.md): how to open Settings, every settings page and which
-  one you need. Whose state each changes, and which permission opens it. The
-  import preview, running a file again, and correcting companies by their ID.
+  one you need. Whose state each changes, and which permission opens it.
+- [Importing data](importing-data.md): what a CSV or a ZIP can bring in, the
+  template, and the steps. The test run, the problems that skip a row, deals,
+  and importing the same file again. Undo and the limits.
 
 ## How this handbook is written
 

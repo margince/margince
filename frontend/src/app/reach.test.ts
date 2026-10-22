@@ -12,8 +12,8 @@ import {
   parseSource,
   resolveRelative,
 } from "../../scripts/lib/source-tree";
+import { SCREENS, type Screen } from "../lib/router";
 import { NAV } from "./nav";
-import { SCREENS, type Screen } from "./router";
 
 // A capability nobody can navigate to is, from a user's seat, indistinguishable
 // from one that was never built.
@@ -38,7 +38,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const srcRoot = resolve(here, "..");
 const frontendRoot = resolve(srcRoot, "..");
 const extensionsDir = resolve(frontendRoot, "..", "extensions");
-const routerModule = join(here, "router.tsx");
+const routerModule = join(here, "..", "lib", "router.tsx");
 const thisGate = fileURLToPath(import.meta.url);
 
 /**
@@ -313,15 +313,14 @@ function doorsIn(
  * refuses a ceiling it cannot statically fold, correctly, since one no reader
  * can evaluate is one no reader can audit.
  *
- * 40ms a file is an order of magnitude over the local measurement, matching the
- * allowance the plural gate arrived at empirically on the same corpus with the
- * same parser. 1400 files is that gate's budgeted corpus too, chosen against
- * this tree's merge rate; the corpus is asserted in the body rather than read
- * into the constant, so outgrowing it fails by name and count instead of
- * returning as an opaque timeout.
+ * 40ms a file is an order of magnitude over the local measurement. The plural
+ * gate measured the same allowance on the same corpus with the same parser.
+ * The body asserts the corpus size, so outgrowing it fails by name and count
+ * instead of as an opaque timeout.
  */
 const PARSE_BUDGET_PER_FILE_MS = 40;
-const BUDGETED_CORPUS_FILES = 1_500;
+// Headroom for the file-length splits, which turn one long module into several.
+const BUDGETED_CORPUS_FILES = 2_500;
 const SCAN_TIMEOUT_MS = BUDGETED_CORPUS_FILES * PARSE_BUDGET_PER_FILE_MS;
 
 describe("every screen has a door", () => {

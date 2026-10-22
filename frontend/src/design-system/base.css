@@ -23,6 +23,11 @@
   color-scheme: dark;
 }
 
+/* Not the default limit: it leaves a one-letter tail ("Prognosekategori-e"). */
+:root {
+  hyphenate-limit-chars: 7 3 3;
+}
+
 /* Text for assistive technology only: in the accessibility tree, off the
    screen. Clipped to 1px rather than `display: none` or `visibility: hidden` —
    both of those remove it from the tree as well, which is the opposite of what
@@ -67,8 +72,8 @@
   padding: 0 var(--controlPaddingX);
   min-block-size: var(--controlHeight);
   /* The one resting layer, so a verb has a top side. Every variant carries a
-     fill — the ghost's is the pane — except `link`, which is text and takes it
-     straight back off below. */
+     fill — the ghost's is the pane — except `link`, which is text, and `bare`;
+     both take it straight back off below. */
   box-shadow: var(--shadow-rest);
   /* Named properties, not `all`. `transition: <time>` alone is the shorthand
      for `transition-property: all`, which put min-block-size, padding, width
@@ -227,25 +232,19 @@
 .btn-ghost:hover {
   background: var(--bgHover);
 }
-/* A button that TOGGLES has to show which way it is set. `aria-pressed` is the
-   fact — it is already on every toggle in the tree — but nothing drew it, so a
-   selected relationship-graph node announced itself as pressed and looked
-   exactly like its unpressed neighbours, on a panel whose whole point is that
-   selecting a node drives the detail below it. The accent pairing is the one
-   the list surface already uses for a pressed chip (`.lt-chip.active`), so a
-   set toggle reads the same wherever it is drawn.
+/* A button that TOGGLES has to show which way it is set, from `aria-pressed`:
+   a selected relationship-graph node drives the detail below it, and has to
+   look unlike its neighbours. The pair is the pressed filter pill's
+   (filterpills.css), because a set toggle says where the reader is; in the
+   accent it read as the page's one action.
 
    Scoped to the ghost variant: primary and danger carry a fill already, and a
    pressed state has to differ from the resting one rather than replace a
    stronger signal with a weaker. */
 .btn-ghost[aria-pressed="true"] {
-  border-color: var(--accentMed);
-  background: var(--accentLight);
-  color: var(--accentText);
-}
-.btn-ghost[aria-pressed="true"]:hover {
-  background: var(--accentMed);
-  color: var(--accentText);
+  border-color: var(--borderStrong);
+  background: var(--bgChip);
+  color: var(--textPrimary);
 }
 /* federated: the door into another company's sign-in.
  *
@@ -345,7 +344,8 @@
  * specificity and this rule is the later one, so it wins by default.
  */
 .btn:active:not(:disabled, [aria-disabled="true"]),
-.iconbtn:active:not(:disabled, [aria-disabled="true"]) {
+.iconbtn:active:not(:disabled, [aria-disabled="true"]),
+.btn.btn-bare:active:not(:disabled, [aria-disabled="true"]) {
   transform: translateY(1px);
   transition-duration: var(--dur-tap);
 }
@@ -358,7 +358,8 @@
 .btn:active:not(:disabled, [aria-disabled="true"]) {
   box-shadow: none;
 }
-.iconbtn:active:not(:disabled, [aria-disabled="true"]) {
+.iconbtn:active:not(:disabled, [aria-disabled="true"]),
+.btn.btn-bare:active:not(:disabled, [aria-disabled="true"]) {
   background: var(--bgInset);
 }
 
@@ -513,8 +514,10 @@ a:not([class]):focus-visible {
    the verb a row offers where a full button would be louder than the row it
    sits in. It lived only as one panel's own rule in the shell's sheet, so the
    four call sites outside that panel rendered a preflight-reset native button:
-   no padding, no hover, no focus ring, and no hit target at all. */
-.iconbtn {
+   no padding, no hover, no focus ring, and no hit target at all.
+   `Button variant="bare"` wears these rules too, so the two cannot drift. */
+.iconbtn,
+.btn.btn-bare {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -524,6 +527,7 @@ a:not([class]):focus-visible {
   border: 0;
   border-radius: var(--r-sm);
   background: transparent;
+  box-shadow: none;
   cursor: pointer;
   transition:
     background-color var(--dur-state) var(--ease-out),
@@ -533,20 +537,24 @@ a:not([class]):focus-visible {
     filter var(--dur-state) var(--ease-out),
     transform var(--dur-move) var(--ease-spring);
 }
-.iconbtn svg {
+.iconbtn svg,
+.btn.btn-bare svg {
   inline-size: var(--controlIcon);
   block-size: var(--controlIcon);
   flex: none;
 }
-.iconbtn:hover {
+.iconbtn:hover,
+.btn.btn-bare:hover {
   background: var(--bgHover);
   color: var(--textPrimary);
 }
-.iconbtn:focus-visible {
+.iconbtn:focus-visible,
+.btn.btn-bare:focus-visible {
   outline: var(--focus-ring);
   outline-offset: 2px;
 }
-.iconbtn:disabled {
+.iconbtn:disabled,
+.btn.btn-bare:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -668,7 +676,8 @@ kbd {
  */
 @media (prefers-reduced-motion: reduce) {
   .btn:active:not(:disabled, [aria-disabled="true"]),
-  .iconbtn:active:not(:disabled, [aria-disabled="true"]) {
+  .iconbtn:active:not(:disabled, [aria-disabled="true"]),
+  .btn.btn-bare:active:not(:disabled, [aria-disabled="true"]) {
     transform: none;
     filter: brightness(0.96);
   }

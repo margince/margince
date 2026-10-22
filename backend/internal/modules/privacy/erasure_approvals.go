@@ -113,6 +113,9 @@ const (
 	// telling its reader otherwise misdescribes the decision to the contact
 	// reviewing it.
 	ReleasedSourceWithdrawal = "withdrawn: the record it was read from was erased by a controller's decision"
+	// NoiseSourceWithdrawal names one withdrawn because the message it quotes
+	// was judged noise, stayed hidden past its undo window, and was destroyed.
+	NoiseSourceWithdrawal = "withdrawn: the message it was read from was judged noise and erased"
 )
 
 // addressPatterns turns the subject's addresses into regexes that match each
@@ -181,6 +184,10 @@ func redactStagedApprovals(ctx context.Context, tx pgx.Tx, subject ids.ContactID
 	leadIDs := leads
 	if leadIDs == nil {
 		leadIDs = []ids.UUID{}
+	}
+
+	if err := eraseApprovalNoticesMatching(ctx, tx, subjectWithdrawal, causeContactErasure, subjectApprovalMatch, subject.UUID, leadIDs, addresses); err != nil {
+		return err
 	}
 
 	// Pending first, and separately from the decided rows: only these carry a
@@ -346,13 +353,16 @@ var evidenceCitesSubjectActivity = `
 // rather than off a reason string. Until then the erasure's ordering carries
 // it: this runs AFTER redactStagedApprovals, so a proposal that answers to both
 // is withdrawn there, with its run ended, before this statement sees it.
-func redactApprovalsCitingActivities(ctx context.Context, tx pgx.Tx, activities []ids.UUID, reason string) error {
+func redactApprovalsCitingActivities(ctx context.Context, tx pgx.Tx, activities []ids.UUID, reason, cause string) error {
 	if len(activities) == 0 {
 		return nil
 	}
 	cited := make([]string, 0, len(activities))
 	for _, activity := range activities {
 		cited = append(cited, activity.String())
+	}
+	if err := eraseApprovalNoticesMatching(ctx, tx, reason, cause, evidenceCitesActivity, cited); err != nil {
+		return err
 	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE approval

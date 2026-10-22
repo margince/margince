@@ -138,7 +138,7 @@ func TestTheProvenanceNoteIsKeyedOnWhatIsRendered(t *testing.T) {
 		t.Fatal("a catalog naming pipeline_id carries no note about where one comes from, so a " +
 			"correct refusal dead-ends")
 	}
-	if !strings.Contains(withPipeline.Notes[0], "list_pipelines") {
+	if !strings.Contains(withPipeline.Notes[0], pipelinesSource) {
 		t.Errorf("the note does not name the tool that yields the id: %s", withPipeline.Notes[0])
 	}
 	// The note is keyed on ALL THREE vocabularies, so each is exercised ALONE: a
@@ -246,7 +246,7 @@ func TestTheCatalogueEntryDoesNotOrderARead(t *testing.T) {
 	if entry.RequiredScope != principal.ScopeRead {
 		t.Errorf("RequiredScope = %v, want read — the same grant run_report spends", entry.RequiredScope)
 	}
-	if !strings.Contains(entry.Description, "run_report") {
+	if !strings.Contains(entry.Description, "read_reports with kind=run") {
 		t.Error("the description does not name the tool that consumes it, so a caller learns " +
 			"the vocabulary without learning what to do with it")
 	}

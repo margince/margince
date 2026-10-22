@@ -9,6 +9,7 @@ package compose
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"time"
 
@@ -76,6 +77,7 @@ func (n attentionNoticeCases) OpenDueSoonest(ctx context.Context, limit int, sco
 		out = append(out, attention.NoticeCase{
 			ID: duty.ID, Rule: string(duty.Rule), OwnerID: duty.OwnerID,
 			ContactID: duty.ContactID.UUID, DueAt: duty.DueAt, OpenedAt: duty.OpenedAt,
+			Acquisition: duty.Acquisition.Wire(),
 		})
 	}
 	return out, nil
@@ -105,7 +107,9 @@ func (c attentionCaptureHealth) CaptureConcerns(ctx context.Context) ([]attentio
 			Kind:         concern.Kind,
 			Provider:     concern.Provider,
 			AccountLabel: concern.AccountLabel,
+			Calendar:     slices.Contains(calendarProviders, concern.Provider),
 			FailingSince: concern.FailingSince,
+			LastSyncedAt: concern.LastSyncedAt,
 		})
 	}
 	return out, nil
@@ -218,7 +222,7 @@ type attentionNotices struct {
 }
 
 func (a attentionNotices) Unread(ctx context.Context, limit int) ([]attention.UnreadNotice, error) {
-	unread, err := a.store.UnreadFor(ctx, limit)
+	unread, err := a.store.UnreadWorkFor(ctx, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -252,6 +256,7 @@ func (a attentionNotices) Unread(ctx context.Context, limit int) ([]attention.Un
 			}
 		}
 		out = append(out, attention.UnreadNotice{
+			ApprovalID: notice.ApprovalID,
 			ID:         notice.ID,
 			Origin:     notice.Origin,
 			Kind:       notice.Kind,

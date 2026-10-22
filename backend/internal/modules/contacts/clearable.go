@@ -46,14 +46,15 @@ func clearableCompanyColumns(current crmcontracts.Company) map[string]storekit.C
 
 // clearableLeadColumns names the wire fields a lead restore may set to NULL,
 // with literal column names. `status` and the score pair are absent on purpose:
-// a lead's status is a lifecycle position rather than a value, and the score
-// override is sticky by design (clearing its reason resumes recompute, which is
-// a decision rather than a field edit).
+// a lead's status is a lifecycle position rather than a value. A null on score
+// or its reason ends the override and restores the machine score. So
+// buildLeadPatch hands it to applyScoreOverride instead of writing NULL here.
 //
 //nolint:goconst // wire field names against column names, each its own vocabulary — see clearableContactColumns
 func clearableLeadColumns(current crmcontracts.Lead) map[string]storekit.Clearable {
 	return map[string]storekit.Clearable{
 		"email":                 {Column: "email", Current: current.Email},
+		"phone":                 {Column: leadPhoneColumn, Current: current.Phone},
 		"title":                 {Column: "title", Current: current.Title},
 		"company_name":          {Column: leadCompanyColumn, Current: current.CompanyName},
 		"candidate_company_key": {Column: "candidate_company_key", Current: current.CandidateCompanyKey},

@@ -620,16 +620,14 @@ func TestThePreviewAgreesWithTheSendItPreviews(t *testing.T) {
 func TestThePreviewRefusesARecordTheCallerCannotRead(t *testing.T) {
 	c := setupConsent(t)
 
-	var problem struct {
-		Code string `json:"code"`
-	}
+	var problem problemBody
 	status := c.Call(t, "POST", "/v1/emails:preview", AnyMap{
 		"to":    []string{"subject@consent.test"},
 		"links": []AnyMap{{"entity_type": "deal", "entity_id": "00000000-0000-4000-8000-000000000001"}},
 	}, nil, &problem)
-	if status != http.StatusNotFound {
-		t.Errorf("preview naming an unreadable deal → %d %q, want 404 — a record the caller cannot open must answer with the row-scope verdict, not with somebody's consent state",
-			status, problem.Code)
+	if status != http.StatusUnprocessableEntity || !namesFieldWithCode(problem, "links", "reference_not_found") {
+		t.Errorf("preview naming an unreadable deal → %d %+v, want 422 reference_not_found on links — a record the caller cannot open must answer with the row-scope verdict, not with somebody's consent state",
+			status, problem.Details.Errors)
 	}
 }
 

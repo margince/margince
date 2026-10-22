@@ -13,6 +13,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/mailer"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -105,8 +106,8 @@ func (h Handlers) InviteUser(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, teamMembershipRefusal(unknownRoleRefusal(companyNotDescribedRefusal(err))))
 		return
 	}
-	h.sendInvite(r, email.String(), rawToken)
-	h.writeUserByID(w, r, userID, http.StatusCreated)
+	h.sendInvite(r, email.String(), rawToken, actor)
+	h.writeUserByID(w, r, actor, userID, http.StatusCreated)
 }
 
 // ChangeUserRole (PATCH /users/{id}/role).
@@ -129,7 +130,7 @@ func (h Handlers) ChangeUserRole(w http.ResponseWriter, r *http.Request, id crmc
 		httperr.Write(w, r, unknownRoleRefusal(err))
 		return
 	}
-	h.writeUserByID(w, r, ids.UserID{UUID: ids.UUID(id)}, http.StatusOK)
+	h.writeUserByID(w, r, actor, ids.UserID{UUID: ids.UUID(id)}, http.StatusOK)
 }
 
 // DeactivateUser (POST /users/{id}/deactivate).
@@ -156,7 +157,7 @@ func (h Handlers) DeactivateUser(w http.ResponseWriter, r *http.Request, id crmc
 				"would leave nobody able to manage users — give another user the admin role first"))
 		return
 	}
-	h.writeUserByID(w, r, ids.UserID{UUID: ids.UUID(id)}, http.StatusOK)
+	h.writeUserByID(w, r, actor, ids.UserID{UUID: ids.UUID(id)}, http.StatusOK)
 }
 
 // ReactivateUser (POST /users/{id}/reactivate).
@@ -176,7 +177,7 @@ func (h Handlers) ReactivateUser(w http.ResponseWriter, r *http.Request, id crmc
 				"whatever caused the suspension resolved instead")))
 		return
 	}
-	h.writeUserByID(w, r, ids.UserID{UUID: ids.UUID(id)}, http.StatusOK)
+	h.writeUserByID(w, r, actor, ids.UserID{UUID: ids.UUID(id)}, http.StatusOK)
 }
 
 // IssueUserPasswordLink (POST /users/{id}/password-link): mint a single-use
@@ -358,8 +359,8 @@ func (h Handlers) actor(w http.ResponseWriter, r *http.Request) (Identity, bool)
 // its role keys: an admin write answers the same shape the admin roster does,
 // and a member row that dropped them here would mean the field's presence
 // tracked the endpoint rather than the caller.
-func (h Handlers) writeUserByID(w http.ResponseWriter, r *http.Request, userID ids.UserID, status int) {
-	row, err := h.svc.GetUser(r.Context(), userID)
+func (h Handlers) writeUserByID(w http.ResponseWriter, r *http.Request, actor Identity, userID ids.UserID, status int) {
+	row, err := h.svc.GetUser(r.Context(), actor, userID)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -370,16 +371,14 @@ func (h Handlers) writeUserByID(w http.ResponseWriter, r *http.Request, userID i
 // sendInvite mails the single-use set-password link when a mailer is wired.
 // Delivery is best-effort — the member and token already committed, so a mail
 // failure is an operator incident (logged), never a failed invite.
-func (h Handlers) sendInvite(r *http.Request, email, rawToken string) {
+func (h Handlers) sendInvite(r *http.Request, email, rawToken string, inviter Identity) {
 	if !h.canSendPasswordLink() || rawToken == "" {
 		return
 	}
 	link := passwordLink(h.passwordLinkBaseURL, rawToken)
-	words := h.mailCopy(r.Context())
-	body := words.InviteIntro + "\n\n" +
-		words.InviteAction + "\n\n  " + link + "\n\n" +
-		words.InviteIgnore
-	if err := h.resetMailer.Send(r.Context(), email, words.InviteSubject, body); err != nil {
+	words := h.mailCopy(r.Context(), email)
+	body := words.AccountMessage(true, inviter.DisplayName, inviter.WorkspaceName, link)
+	if err := mailer.SendProduct(r.Context(), h.resetMailer, email, words.InviteSubject, body); err != nil {
 		slog.Error("invite email failed", "err", err)
 	}
 }
@@ -439,5 +438,5 @@ func (h Handlers) CreateFormerMember(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, unknownRoleRefusal(companyNotDescribedRefusal(err)))
 		return
 	}
-	h.writeUserByID(w, r, userID, http.StatusCreated)
+	h.writeUserByID(w, r, actor, userID, http.StatusCreated)
 }

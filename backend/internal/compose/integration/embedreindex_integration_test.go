@@ -79,16 +79,22 @@ type embedReindexProblem struct {
 // distinct identities, the raw material the identity-drift scenarios need.
 func embedReindexRouter(t *testing.T, modelName string) *ai.Router {
 	t.Helper()
+	modelPath, err := compose.NewLocalModelPath(boundEmbedRouting(modelName), ai.WithoutResultCache())
+	if err != nil {
+		t.Fatalf("NewLocalModelPath: %v", err)
+	}
+	return modelPath.Router()
+}
+
+// boundEmbedRouting is the --ai-fake routing with modelName bound on the embed
+// lane.
+func boundEmbedRouting(modelName string) ai.RoutingConfig {
 	cfg := ai.FakeRoutingConfig()
 	cfg.Embeddings = ai.EmbeddingsConfig{
 		Provider: ai.ProviderFake, Model: modelName,
 		Dimensions: fakeEmbedDims,
 	}
-	modelPath, err := compose.NewLocalModelPath(cfg, ai.WithoutResultCache())
-	if err != nil {
-		t.Fatalf("NewLocalModelPath: %v", err)
-	}
-	return modelPath.Router()
+	return cfg
 }
 
 // setupEmbedReindex boots the HTTP harness with the embed-reindex ops
@@ -100,27 +106,7 @@ func embedReindexRouter(t *testing.T, modelName string) *ai.Router {
 // leaves the bootstrap admin's session in the client jar.
 func setupEmbedReindex(t *testing.T, router *ai.Router) *apptest.AppEnv {
 	t.Helper()
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if appDSN == "" {
-		t.Fatal("MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
-	ctx := context.Background()
-
-	// A separate pool from the pointed-at-the-same-DSN pool that
-	// apptest.SetupAppWithOptions opens below — jobs.NewInserter just needs
-	// SOME pool reaching the same Postgres, not the exact same *pgxpool.Pool
-	// object (mirrors SchemaPool(t)'s own separate-connection precedent).
-	wirePool, err := testdb.OwnPool(ctx, appDSN)
-	if err != nil {
-		t.Fatalf("opening the insert-only wiring pool: %v", err)
-	}
-	t.Cleanup(wirePool.Close)
-	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
-	inserter, err := jobs.NewInserter(wirePool, quiet)
-	if err != nil {
-		t.Fatalf("jobs.NewInserter: %v", err)
-	}
-
+	inserter := insertOnlyRunner(t)
 	e := apptest.SetupAppWithOptions(t, compose.WithEmbedReindex(router, inserter))
 	// The confirm handler enqueues into river_job on ITS OWN transaction
 	// (search.Store.ClaimAndEnqueueReembedding), so the schema must exist
@@ -131,10 +117,33 @@ func setupEmbedReindex(t *testing.T, router *ai.Router) *apptest.AppEnv {
 	apptest.BootstrapWorkspaceSession(t, e, "Embed Reindex E2E", "embed-reindex@fable.test", "Admin")
 
 	identity, _ := router.EmbedIdentity()
-	if err := search.NewStore(e.DB()).SeedBinding(ctx, identity); err != nil {
+	if err := search.NewStore(e.DB()).SeedBinding(context.Background(), identity); err != nil {
 		t.Fatalf("SeedBinding: %v", err)
 	}
 	return e
+}
+
+// insertOnlyRunner is the api role's River client: it enqueues and works
+// nothing, on a pool of its own reaching the same Postgres.
+func insertOnlyRunner(t *testing.T) *jobs.Runner {
+	t.Helper()
+	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
+	if appDSN == "" {
+		t.Fatal("MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
+	}
+	// Not the pool apptest.SetupAppWithOptions opens: jobs.NewInserter needs only
+	// some pool reaching the same Postgres.
+	wirePool, err := testdb.OwnPool(context.Background(), appDSN)
+	if err != nil {
+		t.Fatalf("opening the insert-only wiring pool: %v", err)
+	}
+	t.Cleanup(wirePool.Close)
+	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
+	inserter, err := jobs.NewInserter(wirePool, quiet)
+	if err != nil {
+		t.Fatalf("jobs.NewInserter: %v", err)
+	}
+	return inserter
 }
 
 // seedStaleEmbeddingRow plants one contact carrying an embedding row under

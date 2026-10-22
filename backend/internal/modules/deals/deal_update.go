@@ -60,9 +60,8 @@ type UpdateDealInput struct {
 	ForecastCategory  *string
 	WaitUntil         *time.Time
 	IfVersion         *int64
-	// CustomFields carries the request body's extra top-level keys
-	// (additionalProperties); only active cf_* catalog columns land,
-	// drop-on-mismatch (storekit customcolumns).
+	// CustomFields carries the request body's cf_* keys. A key no active catalog
+	// column takes is refused (storekit.CheckCustomValues).
 	CustomFields map[string]any
 }
 
@@ -134,8 +133,17 @@ func (s *Store) updateDealInTx(ctx context.Context, tx pgx.Tx,
 	if err != nil {
 		return crmcontracts.Deal{}, err
 	}
-	storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties)
+	// A stale version answers 409 before a refused custom field answers 422.
+	if err := storekit.EnsureIfMatch(ctx, tx, dealTable, id.UUID, in.IfVersion); err != nil {
+		return crmcontracts.Deal{}, err
+	}
+	if err := storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties); err != nil {
+		return crmcontracts.Deal{}, err
+	}
 	if p.Empty() {
+		if err := storekit.EnsureIfMatch(ctx, tx, dealTable, id.UUID, in.IfVersion); err != nil {
+			return crmcontracts.Deal{}, err
+		}
 		// Nothing changed, but the echo is still a read: `current` came from
 		// the unmasked readDeal above, which the before-image needs and the
 		// caller must not have.

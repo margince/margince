@@ -3,38 +3,23 @@
 
 package consent
 
-// Asking somebody else to decide a refused send.
+// What is left of asking somebody else to decide a refused send.
 //
-// A rep presses send, the engine refuses, and a review records what was refused
-// and for whom. Directing that message out anyway takes an authority most seats
-// do not hold — so the rep's own next move is usually not "override it", it is
-// "ask someone who can".
-//
-// This is that ask. It puts the review in front of a decision-maker as an
-// approval card, and the card's effect is the directed send itself: whoever
-// approves it is the human whose name goes on the instruction.
-//
-// THE ROUTE IS NOT THE DECISION. Asking costs nothing and grants nothing — a
-// rep who cannot direct a send still cannot, and the card they raised is
-// answered by somebody who can or by nobody at all. What routing does is make
-// the question findable, which is the whole difference between a refusal a rep
-// can act on and one they can only read.
-//
-// WHY THE SEAM. Approvals is a sibling module, so consent may not reach into
-// it: the router is declared here and compose binds it (ADR-0054). What crosses
-// is one call — put this review in front of a decider — and what comes back is
-// the card's id.
+// A rep no longer hands a refusal to a colleague. A rep overrules a machine
+// refusal with a reason of their own (POST /contacts/{id}/consent/allow), and an
+// admin may direct a send from the review. The router below only closes cards
+// raised before that change: withdrawing one, or handing its review back when it
+// is declined or runs out.
 
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -48,15 +33,13 @@ import (
 // for one question.
 const FieldReviewID = "review_id"
 
-// ReviewRouter stages one review as a decision somebody else can take.
+// ReviewRouter closes a card an earlier version raised for a review.
 //
 // It runs on the CALLER'S transaction, so the review moving to awaiting and the
 // card appearing are one fact. A card with no review behind it is work nobody
 // can complete; a review claiming to be routed with no card is a rep waiting
 // for an answer that was never asked for.
 type ReviewRouter interface {
-	RouteForDecisionTx(ctx context.Context, tx pgx.Tx, in ReviewRouteRequest) (ids.UUID, error)
-
 	// WithdrawCardTx retracts a card whose question has been answered another
 	// way.
 	//
@@ -71,109 +54,25 @@ type ReviewRouter interface {
 	WithdrawCardTx(ctx context.Context, tx pgx.Tx, approvalID ids.UUID, reason string) error
 }
 
-// ReviewRouteRequest is what a decider needs to see before they answer.
-type ReviewRouteRequest struct {
-	ReviewID ids.UUID
-	// IntentID names the held message. The card's effect resumes it, and a
-	// route with nothing to resume is a decision about a message that no longer
-	// exists.
-	IntentID ids.UUID
-	// ReasonCode is the strongest reason across the recipients, so a queue can
-	// show what this is about without opening the snapshot.
-	ReasonCode string
-	// Recipients is how many contacts the refusal names, which is the other half
-	// of what makes a card readable at a glance. The addresses themselves stay
-	// on the review.
-	Recipients int
-	// Note is what the colleague asking wants the decider to know. Optional: a
-	// refusal is often self-explanatory.
-	Note string
-}
-
 // WithReviewRouter wires the approvals-side seam. Compose binds it.
 func (s *Store) WithReviewRouter(router ReviewRouter) *Store {
 	s.reviewRouter = router
 	return s
 }
 
-// RequestDecision puts a refused send in front of somebody who may direct it.
-//
-// GATED ON READING THE REVIEW, not on directing a send. That is the point: the
-// caller is asking precisely because they cannot direct it themselves. What
-// they must be is the colleague whose send was refused — a seat that could route
-// anybody's review would be raising cards about other colleagues' correspondence.
-func (s *Store) RequestDecision(ctx context.Context, reviewID ids.UUID, note string) (ids.UUID, error) {
+// RequestDecision refuses: asking a colleague to decide a refused send is not
+// offered any more. The refusal names the moves that are.
+func (s *Store) RequestDecision(ctx context.Context) error {
 	if err := auth.RequireHuman(ctx); err != nil {
-		return ids.UUID{}, err
+		return err
 	}
-	if s.reviewRouter == nil {
-		// A composition with no approvals engine wired cannot route, and
-		// saying so is better than staging nothing and reporting success.
-		return ids.UUID{}, errors.New(
-			"consent: this installation has no approvals surface to route a decision to")
-	}
-	// BOUNDED WHERE IT IS WRITTEN, not only at the door.
-	//
-	// The note becomes the instruction's explanation when somebody approves,
-	// and that column refuses more than maxExplanationRunes. A longer note
-	// would stage a card that cannot be approved: the decider presses approve,
-	// the redemption commits, and the send fails on a length nobody can see
-	// from the queue.
-	//
-	// Refused here rather than truncated. What the record says the approver
-	// acted on has to be what they read, and silently shortening it would put
-	// half a sentence on an override.
-	if len([]rune(note)) > maxExplanationRunes {
-		return ids.UUID{}, &ReviewNotRoutableError{
-			Why: fmt.Sprintf("a note is at most %d characters; this one would not fit the record "+
-				"the approver's decision is written into", maxExplanationRunes),
-		}
-	}
-	// THE INITIATOR'S OWN READ, which is what binds this to their message. It
-	// answers not-found for somebody else's review, so a caller cannot route a
-	// refusal they were never shown.
-	review, err := s.ReviewForInitiator(ctx, reviewID)
-	if err != nil {
-		return ids.UUID{}, err
-	}
-	if review.IntentID.IsZero() {
-		return ids.UUID{}, &ReviewNotRoutableError{
-			Why: "this review holds no message to send, so there is nothing for a decision to act on",
-		}
-	}
-	// ALREADY ROUTED IS NOT AN ERROR, it is the answer.
-	//
-	// A rep who presses the button again — or whose first request timed out on
-	// the wire — is asking the same question, and the honest reply is the card
-	// already carrying it. Refusing would tell them their ask failed when it
-	// did not, and leave them with no way to find the card they raised.
-	if review.State == ReviewAwaitingDecision {
-		return routedCardFor(ctx, s.db, reviewID)
-	}
-	if review.State != ReviewNeedsContext && review.State != ReviewNeedsRepair {
-		// Resolved, superseded or cancelled. There is nothing left to decide,
-		// and putting it in front of somebody would ask them about a closed
-		// matter.
-		return ids.UUID{}, &ReviewNotRoutableError{
-			Why: "this review is no longer waiting for a decision",
-		}
-	}
-	var approvalID ids.UUID
-	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		approvalID, err = s.reviewRouter.RouteForDecisionTx(ctx, tx, ReviewRouteRequest{
-			ReviewID:   reviewID,
-			IntentID:   review.IntentID,
-			ReasonCode: review.ReasonCode,
-			Recipients: len(review.Refusals),
-			Note:       note,
-		})
-		if err != nil {
-			return err
-		}
-		return markReviewAwaitingTx(ctx, tx, reviewID, approvalID, review.State)
-	})
-	return approvalID, err
+	return &ReviewNotRoutableError{Why: askingRetired}
 }
+
+// askingRetired is what a caller of the retired ask is told instead.
+const askingRetired = "asking a colleague to decide a refused send is no longer offered; " +
+	"overrule the refusal with your reason (POST /contacts/{id}/consent/allow), " +
+	"or ask an admin to send it from the review"
 
 // ReviewNotRoutableError refuses a route that would put an unanswerable
 // question in front of somebody.
@@ -187,65 +86,6 @@ func (e *ReviewNotRoutableError) Error() string { return e.Why }
 // alone, and names the review because that is what the caller would look at.
 func (e *ReviewNotRoutableError) FieldFault() (field, code, message string) {
 	return FieldReviewID, "review_not_routable", e.Why
-}
-
-// markReviewAwaitingTx records that this review is now somebody else's to
-// answer.
-//
-// The state is what stops a second route and what a surface reads to say
-// "waiting for a decision" rather than "needs context" — the rep has done what
-// they can, and the queue should say so.
-func markReviewAwaitingTx(ctx context.Context, tx pgx.Tx, reviewID, approvalID ids.UUID, from string) error {
-	tag, err := tx.Exec(ctx, `
-		UPDATE communication_review
-		   SET state = 'awaiting_decision', approval_id = $2
-		 WHERE id = $1 AND resolved_at IS NULL
-		   AND state IN ('needs_context', 'needs_repair')`, reviewID, approvalID)
-	if err != nil {
-		return fmt.Errorf("consent: recording that this review is waiting for a decision: %w", err)
-	}
-	if tag.RowsAffected() != 1 {
-		// Something moved the review between the read above and here. Refusing
-		// is the safe direction: a card staged against a review that has since
-		// been answered is work nobody should be shown.
-		return &ReviewNotRoutableError{
-			Why: "this review changed while it was being routed; open it again to see where it stands",
-		}
-	}
-	// Audited with both images: the review moves from work the rep holds to
-	// work somebody else does, and the state afterwards cannot say what it
-	// moved from.
-	_, err = storekit.Audit(ctx, tx, "update", "communication_review", reviewID,
-		// The state it ACTUALLY moved from. Writing needs_context unconditionally
-		// would record a needs_repair review as having been something it was
-		// not, and the before-image is the half of the audit that says what
-		// changed.
-		map[string]any{fieldStatus: from},
-		map[string]any{fieldStatus: ReviewAwaitingDecision, "approval_id": approvalID})
-	return err
-}
-
-// routedCardFor answers the card a review was already handed to.
-//
-// A review reading awaiting_decision names one, which the row's own shape CHECK
-// requires — so an empty answer here is a row that should not exist, and saying
-// so beats returning a zero id that reads as success.
-func routedCardFor(ctx context.Context, db *database.DB, reviewID ids.UUID) (ids.UUID, error) {
-	var approvalID ids.UUID
-	err := db.Tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, `
-			SELECT coalesce(approval_id, '00000000-0000-0000-0000-000000000000'::uuid)
-			  FROM communication_review WHERE id = $1`, reviewID).Scan(&approvalID)
-	})
-	if err != nil {
-		return ids.UUID{}, fmt.Errorf("consent: reading the card this review was handed to: %w", err)
-	}
-	if approvalID.IsZero() {
-		return ids.UUID{}, &ReviewNotRoutableError{
-			Why: "this review says it is waiting for a decision and names no card to carry it",
-		}
-	}
-	return approvalID, nil
 }
 
 // ReturnToAskerTx puts a routed review back in front of the colleague who raised
@@ -299,40 +139,72 @@ func ReturnToAskerTx(ctx context.Context, tx pgx.Tx, reviewID ids.UUID, why stri
 // BOUNDED, because a queue read has to answer in time whatever the backlog is.
 // A list at its limit is a list with more behind it, and the caller is told so
 // by the count rather than by discovering it.
-func (s *Store) AwaitingDecision(ctx context.Context, limit int) ([]Review, int, error) {
+func (s *Store) AwaitingDecision(ctx context.Context, limit int, cursor string) ([]Review, int, string, error) {
 	// A HUMAN, not merely a principal auth.RequireHuman admits. That check
 	// refuses buyers and agents and lets CONNECTORS through, and a connector
 	// runs with the granting human's own grants — so it would hold whatever
 	// this queue is gated on and could read the installation's refused
 	// correspondence wholesale. This list is a colleague's work queue.
 	if err := requireAHumanAtTheKeyboard(ctx); err != nil {
-		return nil, 0, err
+		return nil, 0, "", err
 	}
 	// READ rather than create, for ReviewForReader's reason: seeing the queue
 	// and overriding the engine are different authorities, and an installation
 	// can grant the first without the second.
 	if err := auth.Require(ctx, entityCommunicationException, principal.ActionRead); err != nil {
-		return nil, 0, err
+		return nil, 0, "", err
 	}
 	if limit <= 0 || limit > maxAwaitingDecision {
 		limit = maxAwaitingDecision
 	}
+	// The position to resume from, zero when the caller sent none.
+	//
+	// An undecodable token is the caller's to fix, so it is refused rather than
+	// read as the start of the queue. Serving page one again is how a client
+	// loops on a token it keeps re-sending.
+	after := storekit.Cursor{}
+	if cursor != "" {
+		decoded, err := storekit.DecodeCursor(cursor)
+		if err != nil {
+			return nil, 0, "", err
+		}
+		after = decoded
+	}
 	var out []Review
 	var total int
+	var lastOpened time.Time
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// Count and page share a statement snapshot, even when another colleague
 		// routes or resolves a review while this request is reading.
+		// The count is taken over the whole queue, and the page cut from it in
+		// the outer query. Both in one statement.
+		//
+		// A window count after the keyset filter counts the remainder, so
+		// `total` would fall as a caller paged. A documented number would then
+		// mean something else on page two.
+		//
+		// id breaks the tie opened_at leaves. Two reviews opened in the same
+		// microsecond are otherwise ordered by nothing, and a keyset over an
+		// unstable order repeats one row and skips another.
 		rows, err := tx.Query(ctx, `
-			SELECT id, state, kind,
-			       coalesce(delivery_intent_id, '00000000-0000-0000-0000-000000000000'::uuid),
-			       refusals, reason_code,
-			       coalesce(initiated_by, '00000000-0000-0000-0000-000000000000'::uuid),
-			       coalesce(approval_id, '00000000-0000-0000-0000-000000000000'::uuid),
-			       count(*) OVER ()
-			  FROM communication_review
-			 WHERE state = 'awaiting_decision' AND resolved_at IS NULL
-			 ORDER BY opened_at
-			 LIMIT $1`, limit)
+			SELECT q.id, q.state, q.kind, q.delivery_intent_id, q.refusals, q.reason_code,
+			       q.initiated_by, q.approval_id, q.opened_at, q.total
+			  FROM (
+			       SELECT id, state, kind,
+			              coalesce(delivery_intent_id, '00000000-0000-0000-0000-000000000000'::uuid)
+			                AS delivery_intent_id,
+			              refusals, reason_code,
+			              coalesce(initiated_by, '00000000-0000-0000-0000-000000000000'::uuid)
+			                AS initiated_by,
+			              coalesce(approval_id, '00000000-0000-0000-0000-000000000000'::uuid)
+			                AS approval_id,
+			              opened_at, count(*) OVER () AS total
+			         FROM communication_review
+			        WHERE state = 'awaiting_decision' AND resolved_at IS NULL
+			       ) q
+			 WHERE $2::timestamptz IS NULL OR (q.opened_at, q.id) > ($2, $3)
+			 ORDER BY q.opened_at, q.id
+			 LIMIT $1`, limit, nullableTime(after.CreatedAt), after.ID)
 		if err != nil {
 			return fmt.Errorf("consent: reading the refused sends waiting for a decision: %w", err)
 		}
@@ -341,7 +213,7 @@ func (s *Store) AwaitingDecision(ctx context.Context, limit int) ([]Review, int,
 			var r Review
 			var payload []byte
 			if err := rows.Scan(&r.ID, &r.State, &r.Kind, &r.IntentID, &payload,
-				&r.ReasonCode, &r.InitiatedBy, &r.ApprovalID, &total); err != nil {
+				&r.ReasonCode, &r.InitiatedBy, &r.ApprovalID, &lastOpened, &total); err != nil {
 				return fmt.Errorf("consent: reading a waiting review: %w", err)
 			}
 			if err := json.Unmarshal(payload, &r.Refusals); err != nil {
@@ -351,7 +223,28 @@ func (s *Store) AwaitingDecision(ctx context.Context, limit int) ([]Review, int,
 		}
 		return rows.Err()
 	})
-	return out, total, err
+	if err != nil {
+		return nil, 0, "", err
+	}
+	// A token only where a page was filled. A short page is the end of the
+	// queue, and a cursor there offers a page that is never answered.
+	if len(out) < limit {
+		return out, total, "", nil
+	}
+	next, err := storekit.EncodeCursor(lastOpened, out[len(out)-1].ID)
+	if err != nil {
+		return nil, 0, "", err
+	}
+	return out, total, next, nil
+}
+
+// nullableTime hands Postgres NULL for the zero instant, which is how the
+// keyset predicate above reads "no cursor" without a second statement.
+func nullableTime(at time.Time) *time.Time {
+	if at.IsZero() {
+		return nil
+	}
+	return &at
 }
 
 // maxAwaitingDecision bounds one page of the queue. Oldest first, so a backlog

@@ -1,0 +1,98 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+  StoryProviders,
+} from "../../testing/story-utils";
+import { AutonomySettingsCard } from "./autonomy-settings";
+
+// What a rep has let answer itself. There is no permission story here: the card
+// reads and writes the reader's own rows, so no seat can be shown the switches
+// refused — which is why the fixtures below vary the RECORD instead.
+
+type Row = {
+  kind: string;
+  mode: "manual" | "auto";
+  approved_clean: number;
+  approved_edited: number;
+  rejected: number;
+};
+
+function row(
+  kind: string,
+  mode: "manual" | "auto",
+  [approved_clean, approved_edited, rejected]: [number, number, number],
+): Row {
+  return { kind, mode, approved_clean, approved_edited, rejected };
+}
+
+function story(data: Row[]) {
+  return () => {
+    installFetchStub({
+      "GET /me": meRoute({}),
+      "GET /autonomy": () => jsonResponse({ data }),
+    });
+    return (
+      <StoryProviders>
+        <AutonomySettingsCard />
+      </StoryProviders>
+    );
+  };
+}
+
+const meta: Meta<typeof AutonomySettingsCard> = {
+  title: "Settings/You/AI access/What answers itself",
+  component: AutonomySettingsCard,
+};
+export default meta;
+type Story = StoryObj<typeof AutonomySettingsCard>;
+
+// First visit: all three defaults are on, before any review history exists.
+export const NothingDecidedYet: Story = {
+  render: story([
+    row("close_date_correction", "auto", [0, 0, 0]),
+    row("lifecycle_change", "auto", [0, 0, 0]),
+    row("company_name_promotion", "auto", [0, 0, 0]),
+  ]),
+};
+
+// Stored choices survive alongside kinds that still use the default.
+export const SavedOffWithDefaults: Story = {
+  render: story([
+    row("close_date_correction", "auto", [0, 0, 0]),
+    row("lifecycle_change", "auto", [0, 0, 0]),
+    row("company_name_promotion", "manual", [1, 0, 0]),
+  ]),
+};
+
+// The case the feature exists for: a rep who has approved fourteen close dates
+// unchanged, and the record saying so under the switch they are about to move.
+export const EarnedOnOne: Story = {
+  render: story([
+    row("close_date_correction", "auto", [14, 1, 0]),
+    row("lifecycle_change", "manual", [2, 3, 4]),
+    row("company_name_promotion", "manual", [6, 0, 1]),
+  ]),
+};
+
+export const AKindTheCopyDoesNotKnow: Story = {
+  render: story([
+    row("close_date_correction", "auto", [14, 1, 0]),
+    row("project_attribution", "auto", [0, 0, 0]),
+  ]),
+};
+
+// Every row on, in dark. The switch's on-state is the card's only colour, so
+// three of them together is where a wrong track token would show.
+export const AllOnDark: Story = {
+  globals: { theme: "dark" },
+  render: story([
+    row("close_date_correction", "auto", [14, 1, 0]),
+    row("lifecycle_change", "auto", [9, 0, 0]),
+    row("company_name_promotion", "auto", [21, 2, 1]),
+  ]),
+};

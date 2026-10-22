@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // Query is one question.
@@ -289,6 +290,9 @@ func validateAliases(q Query) error {
 // measureAlias is what a measure's column will be called — the same answer
 // measureName gives in the compiler, asked here so the check judges the name
 // that actually ships.
+// Column is the answer column a measure is served under.
+func (m Measure) Column() string { return measureAlias(m) }
+
 func measureAlias(m Measure) string {
 	if m.As != "" {
 		return m.As
@@ -310,7 +314,7 @@ func validateFilters(entity Entity, filters []Filter) error {
 		}
 		field, ok := entity.Lookup(f.Field)
 		if !ok {
-			return unknownField(entity, f.Field, KindDimension)
+			return unknownFilterField(entity, f.Field)
 		}
 		if valuelessOps[f.Op] != (f.Value == nil) {
 			return &RefusalError{
@@ -333,6 +337,11 @@ func validateFilters(entity Entity, filters []Filter) error {
 				Suggest: valueAdvice(field.Shape),
 			}
 		}
+		if !valuelessOps[f.Op] {
+			if err := field.Domain.Admits(f.Field, f.Value); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
@@ -351,11 +360,52 @@ func valueShape(op FilterOp) string {
 // somebody a column exists, which is the disclosure the grant was for. What
 // they get instead is the list of what they CAN name, which is both more
 // useful and says nothing about the rest.
+// unknownFilterField answers a filter naming nothing, and lists the whole
+// vocabulary rather than one kind of it. Suggesting the dimensions alone sent
+// a caller looking for a narrowing the entity does offer, under a name the
+// list did not carry.
+func unknownFilterField(entity Entity, name string) error {
+	if isCustomFieldName(name) {
+		return customFieldNotInReports(entity, name)
+	}
+	return &RefusalError{
+		Kind:    RefusalUnsupported,
+		Message: fmt.Sprintf("no field named %s on %s", httperr.QuoteCaller(name), entity.Name),
+		Suggest: fmt.Sprintf("filter on one of: %s", strings.Join(entity.FilterableNames(), ", ")),
+	}
+}
+
 func unknownField(entity Entity, name string, kind FieldKind) error {
+	if isCustomFieldName(name) {
+		return customFieldNotInReports(entity, name)
+	}
 	return &RefusalError{
 		Kind:    RefusalUnsupported,
 		Message: fmt.Sprintf("no field named %s on %s", httperr.QuoteCaller(name), entity.Name),
 		Suggest: fmt.Sprintf("available: %s", strings.Join(entity.FieldNames(kind), ", ")),
+	}
+}
+
+// CompanyCustomFieldPrefix starts the name of a company's custom field on a
+// deal population, so it cannot collide with a deal field of the same column.
+const CompanyCustomFieldPrefix = "company_" + datasource.CustomFieldPrefix
+
+// isCustomFieldName says whether a name is spelled as a deal's or a company's
+// custom field, which is what earns the refusal below.
+func isCustomFieldName(name string) bool {
+	return strings.HasPrefix(name, datasource.CustomFieldPrefix) || strings.HasPrefix(name, CompanyCustomFieldPrefix)
+}
+
+// customFieldNotInReports refuses a custom field the vocabulary does not
+// carry: a misspelled name, or one an admin took out of reports or retired.
+// The refusal names both repairs. Every cf_ name gets it, so it
+// confirms no field exists.
+func customFieldNotInReports(entity Entity, name string) error {
+	return &RefusalError{
+		Kind:    RefusalUnsupported,
+		Message: fmt.Sprintf("the custom field %s is not in reports on %s", httperr.QuoteCaller(name), entity.Name),
+		Suggest: "check the field's name. If it is right, an admin may have turned the field off " +
+			"under Settings, Fields, In reports, or retired it. Ask without it, or ask an admin to turn it on again",
 	}
 }
 

@@ -35,7 +35,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 )
 
-const frontendAudienceReasons = "../frontend/src/screens/audiencemembers.tsx"
+const frontendAudienceReasons = "../frontend/src/features/lists/audiencemembers.tsx"
 
 // tsReasonEntry reads one `token: "catalog.key"` pair out of the map, in either
 // spelling an object literal admits.

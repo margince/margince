@@ -22,10 +22,10 @@ import "./toast.css";
  * The transient confirmation — "that worked" — and the one place it is spelled.
  *
  * It was a HOOK before this, so every screen minted its own state and rendered
- * its own region, and all three things that go wrong when a global surface is
- * held locally went wrong. `screens/commissiondecide.tsx` called the hook and
- * rendered no region, so every approve/pay/void confirmation was written into a
- * `useState` nobody read. `screens/deals.tsx` had to carry a comment explaining
+ * its own region. All three things that go wrong when a global surface is held
+ * locally went wrong. `features/projects/commissiondecide.tsx` called the
+ * hook and rendered no region. So every approve/pay/void confirmation was
+ * written into a `useState` nobody read. `features/deals/deals.tsx` had to carry a comment explaining
  * that the instance belongs to the CALLER, because a hook minting its own shows
  * its messages to nobody. And the region being a SIBLING of the page's cards
  * forced two layout rules to be written around a fixed box that takes no space
@@ -100,9 +100,8 @@ type ToastMessage = Readonly<{
 
 export type ToastOptions = Readonly<{
   /**
-   * Keep it until something dismisses it. Worth asking for only where the
-   * message is a REFUSAL: a reader who has been told a write did not land
-   * should not have that sentence taken away from them seconds later.
+   * Keep it until something dismisses it. With `tone: "danger"` and no action
+   * it is a REFUSAL, which holds the region until the reader puts it down.
    */
   sticky?: boolean;
   /**
@@ -140,21 +139,18 @@ const ToastQueueContext = createContext<readonly ToastMessage[]>([]);
  * the shell mounts — has no region listening, and the reasoning
  * `app/attention.tsx` gives applies unchanged: publishing into nothing is right
  * there. What made the old design unsafe was that PRODUCTION could be in that
- * state too. It cannot now — `design-system/conformance.test.ts` holds the
+ * state too. It cannot now: `design-system/conformance.behaviour.test.ts` holds the
  * provider and the region to one file each, the way `UnsavedGuard` is held to
  * `App.tsx`.
  */
 const NO_REGION: Toast = { show: () => 0, dismiss: () => {} };
 
 /**
- * The queue, and the one rule that shapes it.
- *
- * A confirmation carrying a verb is not interchangeable with one that only
- * reports: an undo is the reader's only route back from something they may not
- * have meant. So while a message with an action is on screen, anything else
- * arriving QUEUES BEHIND IT. The one exception is a newer undo, which takes the
- * older undo's place: a reader pressing Done on three tasks wants the latest
- * Undo, not three identical toasts to close. Otherwise the newest message wins.
+ * A verb or a refusal (`danger` and sticky) on screen holds the region. An
+ * undo is the only way back, and a refusal says a write failed. Anything
+ * arriving queues behind it, but a refusal goes ahead of all except waiting
+ * refusals. A newer undo replaces the older one wherever it waits. Otherwise
+ * the newest message wins.
  */
 export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [queue, setQueue] = useState<readonly ToastMessage[]>([]);
@@ -198,15 +194,26 @@ function enqueue(
   arriving: ToastMessage,
 ): readonly ToastMessage[] {
   const isUndo = (message: ToastMessage) => message.action?.kind === "undo";
+  const isRefusal = (message: ToastMessage) =>
+    message.tone === "danger" && message.sticky && message.action === null;
   const replacing = { ...arriving, replacedShown: waiting.length > 0 };
   if (isUndo(arriving) && waiting.some(isUndo)) {
     return waiting.map((message, at) =>
       isUndo(message) ? (at === 0 ? replacing : arriving) : message,
     );
   }
-  const shown = waiting[0];
-  if (shown === undefined || shown.action === null) {
-    return [replacing, ...waiting.slice(1)];
+  const [shown, ...behind] = waiting;
+  if (shown === undefined || (shown.action === null && !isRefusal(shown))) {
+    return [replacing, ...behind];
+  }
+  const from = waiting.findIndex((message) => !isRefusal(message));
+  if (isRefusal(arriving) && from !== -1) {
+    // Displaced messages come back after the refusal, and take no focus then.
+    const back = waiting
+      .slice(from)
+      .map((message) => ({ ...message, replacedShown: false }));
+    const placed = from === 0 ? replacing : arriving;
+    return [...waiting.slice(0, from), placed, ...back];
   }
   return [...waiting, arriving];
 }
@@ -397,15 +404,8 @@ export function ToastRegion() {
     setFocusInside(region.contains(document.activeElement));
   }, [shownId, replacedShown, region]);
 
-  // Escape belongs to the REGION, and it is attached to the node rather than
-  // written as a JSX handler on a static element.
-  //
-  // It was on the two buttons, which was wrong for a reason a caller found
-  // before a reader did: the MESSAGE can carry focusable content of its own —
-  // the lead-qualified confirmation puts a link to the new contact in its body
-  // — and a reader who tabbed to that link was inside a toast whose documented
-  // way out did nothing. What "focus is inside it" means is the region, so the
-  // region is what listens.
+  // Escape belongs to the REGION, not its buttons. The message body can carry a
+  // link, and a reader focused there needs the same way out.
   useEffect(() => {
     if (region === null) {
       return;
@@ -429,9 +429,7 @@ export function ToastRegion() {
     }
     const life = shown.action === null ? TOAST_MS : ACTION_TOAST_MS;
     const timer = setTimeout(() => dismiss(shown.id), life);
-    // The cleanup one of the three hand-copied toasts was missing. A timer
-    // belongs to the tree that started it: left running, it fires a state update
-    // into a component that is no longer mounted.
+    // Left running, it would fire a state update into an unmounted tree.
     return () => clearTimeout(timer);
     // `shown` identity changes per message, which is what re-arms the deadline —
     // so a second confirmation gets its own full life rather than inheriting

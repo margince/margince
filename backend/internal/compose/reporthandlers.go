@@ -43,16 +43,19 @@ func (h reportHandlers) RunReport(w http.ResponseWriter, r *http.Request, report
 	rows := make([]map[string]any, len(outcome.Rows))
 	copy(rows, outcome.Rows)
 	for _, row := range rows {
-		// The handle carries the instant this answer converted at, so opening it
-		// tomorrow still reconciles to the figure printed today.
+		// The handle carries the instant this answer converted at and the
+		// currency it converted to. Opening it tomorrow then reconciles to the
+		// figure printed today, even where the base has changed since.
 		row[reservedDerivationColumn] = scopedDerivationURL(
-			outcome.Report, outcome.Filters, outcome.GroupBy, outcome.Aggregates, row, outcome.GeneratedAt, outcome.Scope,
+			outcome.Report, outcome.Filters, outcome.GroupBy, outcome.Aggregates, row,
+			outcome.GeneratedAt, outcome.BaseCurrency, outcome.Scope,
 		)
 	}
-	// The whole-result handle pins the same instant its rows do: it explains the
+	// The whole-result handle pins the same frame its rows do: it explains the
 	// same answer, over every row rather than one group's.
 	resultURL := scopedDerivationURL(
-		outcome.Report, outcome.Filters, outcome.GroupBy, outcome.Aggregates, nil, outcome.GeneratedAt, outcome.Scope,
+		outcome.Report, outcome.Filters, outcome.GroupBy, outcome.Aggregates, nil,
+		outcome.GeneratedAt, outcome.BaseCurrency, outcome.Scope,
 	)
 	// The groups that matched, not the page: a full page is the top of a longer
 	// answer and says so, the way the drill-through beside it already does.

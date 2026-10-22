@@ -18,39 +18,14 @@ package weekly
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-)
-
-// The rules that pick a rep's one coaching focus, in the order they are tried.
-//
-// Ordered by what a lead should raise FIRST, not by severity in the abstract: a
-// rep who asked for help has already said what they need, and walking past that
-// to raise a metric is the fastest way to teach them not to ask.
-const (
-	// They asked. Nothing outranks a request already made.
-	FocusHelpRequested = "help_requested"
-	// A customer waited past the response target, even if answered later.
-	FocusLeadsBreached = "leads_breached"
-	// They planned a week and did not keep it.
-	FocusCommitmentsMissed = "commitments_missed"
-	// Meetings have no explicit follow-up recorded.
-	FocusMeetingsWithoutNextStep = "meetings_without_next_step"
-	// Nothing to fix, and something to copy. Without this a healthy rep
-	// produces no row at all, and a page promising one focus per rep would
-	// quietly shorten to the troubled ones — which reads as a team where only
-	// those contacts exist.
-	FocusStrongWeek  = "strong_week"
-	FocusDealsAtRisk = "deals_at_risk"
-	// Nothing to fix and nothing that stood out. Said plainly rather than
-	// dressed as either a problem or a triumph.
-	FocusQuietWeek = "quiet_week"
 )
 
 // TeamMember is one seat the snapshot should cover, as the caller knows it.
@@ -80,6 +55,39 @@ type TeamReview struct {
 	// team that landed on nothing, so a reader says "no forecast" rather than
 	// drawing zeros.
 	Outlook []Outlook
+
+	// Members are the week's live members, measured or not. Empty on a
+	// snapshot frozen before the roster was kept.
+	Members []FrozenMember
+	Quality TeamQuality
+	// Coverage is the month's and the quarter's, empty where no forecast was
+	// composed or the team's book was refused.
+	Coverage []Coverage
+	// Summary is the paragraph at the top of the review, composed from the
+	// figures above by fixed rules. Empty on an older snapshot.
+	Summary string
+	// Language keeps permission-filtered summaries in the frozen record language.
+	Language string
+
+	// Attention is computed when the review is read, never frozen: what needs
+	// the manager now, over the frozen roster.
+	Attention TeamAttentionItems
+}
+
+// FrozenMember is one seat on the team that week, as it was named then.
+type FrozenMember struct {
+	UserID      ids.UUID
+	DisplayName string
+	// Measured says the member's own week was read into the counts.
+	Measured bool
+}
+
+// TeamQuality is how well the team kept the CRM over the week. Each figure is
+// nil on a snapshot frozen before it was measured.
+type TeamQuality struct {
+	ProposalsAccepted   *int
+	ProposalsRejected   *int
+	AutoChangeReversals *int
 }
 
 // TeamCounts are the team's totals over its member weeks.
@@ -101,8 +109,7 @@ type TeamCounts struct {
 	CommitmentsKept       int
 }
 
-// TeamRep is one member's week as their lead reads it, with the one thing to
-// raise.
+// TeamRep is one member's week as their lead reads it, with what to raise.
 type TeamRep struct {
 	UserID          ids.UUID
 	DisplayName     string
@@ -112,8 +119,11 @@ type TeamRep struct {
 	CommitmentsDue  int
 	CommitmentsKept int
 	HelpRequested   int
-	FocusKind       string
-	FocusLabel      string
+	// FocusKind and FocusLabel are always Patterns[0].
+	FocusKind  string
+	FocusLabel string
+	Patterns   []Pattern
+	Funnel     []FunnelDeviation
 }
 
 // AssembleTeamFor writes the team's snapshot for the week that closed, or
@@ -148,13 +158,13 @@ func (e *Engine) AssembleTeamFor(
 		if measured {
 			return nil
 		}
-		plans, err := gatherTeamWeek(ctx, tx, &review, members)
-		if err != nil {
+		review.Language = string(teamCopyFor(string(identity.BaseLanguageForRecord(ctx, tx))).Lang())
+		// Every figure is in memory before the parent row is written. The
+		// summary is built from all of them and travels in that one INSERT.
+		if err := e.measureTeamWeek(ctx, tx, &review, members, now); err != nil {
 			return err
 		}
-		if err := e.measureTeamNumeric(ctx, tx, &review, members, plans, now); err != nil {
-			return err
-		}
+		review.Summary = summarise(review)
 		id, wrote, err := insertTeamReview(ctx, tx, review)
 		if err != nil {
 			return err
@@ -165,57 +175,7 @@ func (e *Engine) AssembleTeamFor(
 			return nil
 		}
 		review.ID = id
-		if err := insertTeamReps(ctx, tx, id, review.Reps); err != nil {
-			return err
-		}
-		// Where the team's week was landing, frozen in the same transaction as
-		// the counts. Split across two, a snapshot could exist with no outlook
-		// and no way to tell that from an installation that forecasts nothing.
-		//
-		// Only on the branch that WROTE the snapshot: the loser of the insert
-		// race returned above, and freezing an outlook onto somebody else's row
-		// would give it two.
-		if e.forecast == nil {
-			// No forecast composed. The team's week stands without one.
-			return nil
-		}
-		start, end, err := localWeekWindow(ctx, tx, week)
-		if err != nil {
-			return err
-		}
-		// A REFUSED LANDING COSTS THE LANDING, NOT THE WEEK.
-		//
-		// forecasting's scope authority refuses ScopeTeam to a caller who is
-		// not in the team, and that refusal arrives here — inside the
-		// transaction that has already written the snapshot, its reps and their
-		// focus lines. Letting it escape rolls all of that back, so a lead
-		// whose row scope is narrower than the team they are snapshotting loses
-		// the whole retrospective rather than just its outlook.
-		//
-		// Held by: TestARefusedTeamOutlookStillLeavesTheWeekWritten
-		// (backend/internal/compose/integration/teamoutlook_integration_test.go)
-		//
-		// Only a REFUSAL is absorbed. A broken query or a dead connection is
-		// not a statement about this caller's reach and still fails the week,
-		// because a snapshot silently missing its landing for a reason nobody
-		// recorded is worse than one that did not get written.
-		outlooks, _, _, err := e.forecast.CloseTeamWeek(ctx, tx, teamID, start, end)
-		switch {
-		case errors.Is(err, apperrors.ErrNotFound),
-			errors.Is(err, apperrors.ErrPermissionDenied):
-			return nil
-		case err != nil:
-			return err
-		}
-		for _, outlook := range outlooks {
-			if err := insertOutlookInto(ctx, tx, teamOutlook, id, outlook); err != nil {
-				return err
-			}
-		}
-		// Carried on the returned value as well as written, so the caller that
-		// just assembled a week reads the same thing a later reader will.
-		review.Outlook = outlooks
-		return nil
+		return insertTeamChildren(ctx, tx, review)
 	})
 	if err != nil {
 		return TeamReview{}, false, err
@@ -227,11 +187,66 @@ func (e *Engine) AssembleTeamFor(
 	return review, true, nil
 }
 
+// measureTeamWeek computes everything the snapshot freezes.
+func (e *Engine) measureTeamWeek(
+	ctx context.Context, tx pgx.Tx, review *TeamReview, members []TeamMember, now time.Time,
+) error {
+	plans, err := gatherTeamWeek(ctx, tx, review, members)
+	if err != nil {
+		return err
+	}
+	if err := e.measureTeamNumeric(ctx, tx, review, members, plans, now); err != nil {
+		return err
+	}
+	start, end, err := localWeekWindow(ctx, tx, review.LocalWeekStart)
+	if err != nil {
+		return err
+	}
+	reversals, err := countAutoChangeReversals(ctx, tx, review.Members, start, end)
+	if err != nil {
+		return err
+	}
+	review.Quality.AutoChangeReversals = &reversals
+	if err := measureTeamFunnel(ctx, tx, review, end); err != nil {
+		return err
+	}
+	return e.closeTeamForecast(ctx, tx, review, start, end)
+}
+
+// closeTeamForecast freezes where the team's week was landing and whether its
+// pipeline covered the month and the quarter.
+//
+// A refused landing costs the landing, not the week. Forecasting refuses
+// ScopeTeam to a caller outside the team; letting that escape rolls back the
+// whole retrospective. Only a refusal is absorbed: a broken query still fails.
+//
+// Held by: TestARefusedTeamOutlookStillLeavesTheWeekWritten
+// (backend/internal/compose/integration/teamoutlook_integration_test.go)
+func (e *Engine) closeTeamForecast(
+	ctx context.Context, tx pgx.Tx, review *TeamReview, start, end time.Time,
+) error {
+	if e.forecast == nil {
+		return nil
+	}
+	closed, err := e.forecast.CloseTeamWeek(ctx, tx, review.TeamID, start, end)
+	switch {
+	case errors.Is(err, apperrors.ErrNotFound),
+		errors.Is(err, apperrors.ErrPermissionDenied):
+		return nil
+	case err != nil:
+		return err
+	}
+	review.Outlook = closed.Outlooks
+	review.Coverage = closed.Coverage
+	return nil
+}
+
 // gatherTeamWeek reads each member's frozen week and totals them.
 //
-// A member with NO review for the week is counted as unread rather than as a
-// zero row: a rep who was on leave and one whose measurement failed look
-// identical as zeros, and only one of those is a fact about their week.
+// A member with no review for the week is counted as unread rather than as a
+// zero row. A rep on leave and one whose measurement failed look identical as
+// zeros, and only one is a fact about their week. They still join the roster,
+// marked unmeasured.
 func gatherTeamWeek(
 	ctx context.Context, tx pgx.Tx, review *TeamReview, members []TeamMember,
 ) (memberPlans, error) {
@@ -241,20 +256,27 @@ func gatherTeamWeek(
 	// worse than an absent one.
 	money := Money{Known: true}
 	var plans memberPlans
+	var accepted, rejected int
 	for _, member := range members {
 		frozen, err := memberWeek(ctx, tx, member.UserID, review.LocalWeekStart)
 		if errors.Is(err, apperrors.ErrNotFound) {
 			review.RepsUnread++
 			money.Known = false
+			review.Members = append(review.Members, FrozenMember{UserID: member.UserID, DisplayName: member.DisplayName})
 			continue
 		}
 		if err != nil {
 			return memberPlans{}, err
 		}
+		review.Members = append(review.Members, FrozenMember{
+			UserID: member.UserID, DisplayName: member.DisplayName, Measured: true,
+		})
 		counts, memberMoney := frozen.counts, frozen.money
 		plans.add(frozen.plans)
 		review.Counts.RepsCounted++
 		addTeamCounts(&review.Counts, counts)
+		accepted += counts.ProposalsAccepted
+		rejected += counts.ProposalsRejected
 		if !memberMoney.Known || (money.Currency != "" && money.Currency != memberMoney.Currency) {
 			money.Known = false
 		} else if money.Known {
@@ -263,12 +285,13 @@ func gatherTeamWeek(
 			money.WonMinor += memberMoney.WonMinor
 			money.LostMinor += memberMoney.LostMinor
 		}
-		recovery, err := memberDealRecovery(ctx, tx, member.UserID, review.LocalWeekStart)
+		deals, err := memberDealBlock(ctx, tx, member.UserID, review.LocalWeekStart)
 		if err != nil {
 			return memberPlans{}, err
 		}
-		review.Reps = append(review.Reps, repFrom(member, counts, frozen.help, recovery))
+		review.Reps = append(review.Reps, teamCopyFor(review.Language).repFrom(member, counts, frozen.help, deals))
 	}
+	review.Quality.ProposalsAccepted, review.Quality.ProposalsRejected = &accepted, &rejected
 	if money.Known && money.Currency != "" {
 		review.Money = money
 	}
@@ -289,57 +312,16 @@ func addTeamCounts(team *TeamCounts, member Counts) {
 	team.CommitmentsKept += member.CommitmentsKept
 }
 
-// repFrom builds one member's row, focus and all.
-func repFrom(member TeamMember, counts Counts, help int, recovery string) TeamRep {
-	kind, label := focusFor(counts, help, recovery)
+// repFrom builds one member's row, patterns and all.
+func (said teamCopy) repFrom(member TeamMember, counts Counts, help int, deals *DealBlock) TeamRep {
+	patterns := said.patternsFor(counts, help, deals)
 	return TeamRep{
 		UserID: member.UserID, DisplayName: member.DisplayName,
 		DealsWon: counts.DealsWon, LeadsBreached: counts.LeadsBreached,
 		MeetingsHeld:   counts.MeetingsHeld,
 		CommitmentsDue: counts.CommitmentsDue, CommitmentsKept: counts.CommitmentsKept,
 		HelpRequested: help,
-		FocusKind:     kind, FocusLabel: label,
+		FocusKind:     patterns[0].Kind, FocusLabel: patterns[0].Label,
+		Patterns: patterns,
 	}
-}
-
-// focusFor picks the ONE thing a lead should raise with this rep.
-//
-// One per rep, always — including the rep whose week went well, whose focus is
-// what the team should copy. A page promising one focus per rep and delivering
-// rows only for the troubled ones reads as a team where only those contacts
-// exist, which is both untrue and demoralising to be listed in.
-//
-// The label is composed here rather than by a model: it states a stored figure
-// and nothing else, so it cannot say something the snapshot does not hold.
-func focusFor(counts Counts, help int, recovery string) (kind, label string) {
-	switch {
-	case help > 0:
-		return FocusHelpRequested, fmt.Sprintf("Asked for help on %s", plural(help, "commitment"))
-	case counts.LeadsBreached > 0:
-		return FocusLeadsBreached, fmt.Sprintf("%s went past the response target",
-			plural(counts.LeadsBreached, "lead"))
-	case counts.CommitmentsDue > counts.CommitmentsKept:
-		return FocusCommitmentsMissed, fmt.Sprintf("Kept %d of %d commitments",
-			counts.CommitmentsKept, counts.CommitmentsDue)
-	case recovery != "":
-		return FocusDealsAtRisk, recovery
-	case counts.DealsWon > 0:
-		return FocusStrongWeek, fmt.Sprintf("Won %s — worth asking how",
-			plural(counts.DealsWon, "deal"))
-	case counts.CommitmentsDue > 0 && counts.CommitmentsDue == counts.CommitmentsKept:
-		return FocusStrongWeek, fmt.Sprintf("Kept every commitment (%d)", counts.CommitmentsDue)
-	case counts.MeetingsHeld > counts.MeetingsWithNextStep:
-		return FocusMeetingsWithoutNextStep, fmt.Sprintf("%s have no linked follow-up recorded",
-			plural(counts.MeetingsHeld-counts.MeetingsWithNextStep, "meeting"))
-	default:
-		return FocusQuietWeek, "No priority indicated by the recorded metrics"
-	}
-}
-
-// plural renders a count with its noun, so a label reads as a sentence.
-func plural(n int, noun string) string {
-	if n == 1 {
-		return "1 " + noun
-	}
-	return fmt.Sprintf("%d %ss", n, noun)
 }

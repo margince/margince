@@ -20,7 +20,9 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/idlebase"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -55,10 +57,11 @@ type SlippingDeal struct {
 	ExpectedCloseDate *time.Time
 }
 
-// SlippingLister serves the row-scoped candidate set (formulas §8:
-// stalled deals plus overdue close dates); compose implements it over
-// the deals module's list path so RBAC and row scope apply unchanged.
-type SlippingLister func(ctx context.Context) ([]SlippingDeal, error)
+// SlippingLister serves the row-scoped candidate set: open deals idle longer
+// than quietDays, plus open deals past their expected close date. Compose
+// implements it over the deals module's list path so RBAC and row scope apply
+// unchanged.
+type SlippingLister func(ctx context.Context, quietDays int) ([]SlippingDeal, error)
 
 // FollowUpDrafter drafts one follow-up for a slipping deal and persists
 // it as a draft activity on the deal's timeline — a proposal, never a
@@ -80,21 +83,29 @@ type FollowUpDrafter func(ctx context.Context, deal SlippingDeal) (draftActivity
 
 // RegisterSlippingTools wires the pipeline-risk intents. No lister, no
 // tools — a surface that cannot ground does not pretend to; the drafting
-// tool additionally needs somewhere for its drafts to land.
-func RegisterSlippingTools(r *Registry, list SlippingLister, draft FollowUpDrafter) {
+// tool additionally needs somewhere for its drafts to land. stalledDays is
+// the deals module's stalled threshold, the window both tools ask at unless
+// a caller names another.
+func RegisterSlippingTools(r *Registry, list SlippingLister, draft FollowUpDrafter, stalledDays int) {
 	if list == nil {
 		return
 	}
-	r.Register(whatsSlippingThisWeek{list: list})
+	r.Register(whatsSlippingThisWeek{list: list, stalledDays: stalledDays, language: r.BaseLanguage()})
 	if draft != nil {
-		r.Register(draftFollowUpsFor{list: list, draft: draft})
+		r.Register(draftFollowUpsFor{list: list, draft: draft, stalledDays: stalledDays, language: r.BaseLanguage()})
 	}
 }
 
 // --- whats_slipping_this_week (🟢 read) ---
 
+// maxQuietDays bounds the idle window a caller may ask for: a deal quiet
+// for more than a year is no longer slipping, it has gone.
+const maxQuietDays = 365
+
 type whatsSlippingThisWeek struct {
-	list SlippingLister
+	list        SlippingLister
+	stalledDays int
+	language    baselanguage.Resolver
 }
 
 func (t whatsSlippingThisWeek) Spec() mcp.ToolSpec {
@@ -103,26 +114,35 @@ func (t whatsSlippingThisWeek) Spec() mcp.ToolSpec {
 		Description:   whatsSlippingCopy.render(),
 		Instead:       whatsSlippingCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "listDeals",
-		InputSchema: schema(`{"type":"object","properties":{
+		Unlisted:  true,
+		OpenAPIOp: "listSlippingDeals",
+		InputSchema: schema(fmt.Sprintf(`{"type":"object","properties":{
+			"quiet_days":{"type":"integer","minimum":1,"maximum":%d,"default":%d,"description":"Days without recorded activity after which a deal counts as gone quiet; omit it for the product-wide stalled threshold"},
 			"limit":{"type":"integer","minimum":1,"maximum":50,"description":"Cap the ranked set; omit for the full evidenced set"}},
-			"additionalProperties":false}`),
+			"additionalProperties":false}`, maxQuietDays, t.stalledDays)),
 		OutputSchema: schemaFor[WhatsSlippingResult](),
 	}
 }
 
 func (t whatsSlippingThisWeek) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
 	var args struct {
-		Limit int `json:"limit"`
+		QuietDays int `json:"quiet_days"`
+		Limit     int `json:"limit"`
 	}
 	if err := decodeArgs(in, &args); err != nil {
 		return nil, err
 	}
-	candidates, err := t.list(ctx)
+	// Zero is "not supplied": the registry holds a supplied value to the
+	// schema's minimum of 1 before the handler runs.
+	quietDays := args.QuietDays
+	if quietDays == 0 {
+		quietDays = t.stalledDays
+	}
+	candidates, err := t.list(ctx, quietDays)
 	if err != nil {
 		return nil, err
 	}
-	ranked := rankSlipping(candidates)
+	ranked := rankSlipping(langcopy.For(string(t.language.Resolve(ctx))), candidates)
 	if args.Limit > 0 && len(ranked) > args.Limit {
 		ranked = ranked[:args.Limit]
 	}
@@ -149,8 +169,10 @@ func (t whatsSlippingThisWeek) Handle(ctx context.Context, in json.RawMessage) (
 const maxFollowUpDrafts = 25
 
 type draftFollowUpsFor struct {
-	list  SlippingLister
-	draft FollowUpDrafter
+	list        SlippingLister
+	draft       FollowUpDrafter
+	stalledDays int
+	language    baselanguage.Resolver
 }
 
 func (t draftFollowUpsFor) Spec() mcp.ToolSpec {
@@ -158,8 +180,8 @@ func (t draftFollowUpsFor) Spec() mcp.ToolSpec {
 		Name: "draft_follow_ups_for", Title: "Draft follow-ups", Version: toolVersionV1,
 		Description:   draftFollowUpsForCopy.render(),
 		Instead:       draftFollowUpsForCopy.Instead,
-		RequiredScope: principal.ScopeDraft, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "listDeals + draftEmail + logActivity",
+		RequiredScope: principal.ScopeDraft, Tier: mcp.TierAutoExecute, Unlisted: true,
+		OpenAPIOp: "draftDealFollowUps",
 		InputSchema: schema(`{"type":"object","required":["segment"],"properties":{
 			"segment":{"type":"string","enum":["slipping"],"description":"The deal set to draft follow-ups for; drafts land on each deal's timeline and are NEVER sent"},
 			"limit":{"type":"integer","minimum":1,"maximum":25,"description":"How many of the top-ranked deals to draft for; omit it for 25, the server-side ceiling on records one call may write"}},
@@ -188,13 +210,13 @@ func (t draftFollowUpsFor) Handle(ctx context.Context, in json.RawMessage) (json
 			Guidance: fmt.Sprintf("omit it, or ask for 1..%d", maxFollowUpDrafts),
 		}
 	}
-	candidates, err := t.list(ctx)
+	candidates, err := t.list(ctx, t.stalledDays)
 	if err != nil {
 		return nil, err
 	}
 	// Draft only over the evidenced set: a deal that would not appear in
 	// whats_slipping_this_week gets no follow-up either.
-	ranked := rankSlipping(candidates)
+	ranked := rankSlipping(langcopy.For(string(t.language.Resolve(ctx))), candidates)
 	if ceiling := followUpCap(args.Limit); len(ranked) > ceiling {
 		ranked = ranked[:ceiling]
 	}
@@ -251,7 +273,7 @@ func (it slippingItem) wire(rank int) SlippingDealItem {
 // (last_activity_at, else created_at), an overdue claim on the close
 // date; a candidate whose flags survive neither is dropped. Order: idle
 // longest first, then amount descending, then id — stable and clock-free.
-func rankSlipping(candidates []SlippingDeal) []slippingItem {
+func rankSlipping(said langcopy.Spoken, candidates []SlippingDeal) []slippingItem {
 	items := make([]slippingItem, 0, len(candidates))
 	for _, d := range candidates {
 		it := slippingItem{deal: d, idleSince: idleSince(d)}
@@ -262,13 +284,13 @@ func rankSlipping(candidates []SlippingDeal) []slippingItem {
 			}
 			it.evidence = append(it.evidence, SlippingEvidence{
 				Source:  source,
-				Snippet: "no recorded activity since " + it.idleSince.UTC().Format("2006-01-02"),
+				Snippet: fmt.Sprintf(said.Say(slippingWords.Idle), it.idleSince.UTC().Format("2006-01-02")),
 			})
 		}
 		if d.CloseOverdue && d.ExpectedCloseDate != nil {
 			it.evidence = append(it.evidence, SlippingEvidence{
 				Source:  "deal.expected_close_date",
-				Snippet: "expected close " + d.ExpectedCloseDate.UTC().Format("2006-01-02") + " is past due",
+				Snippet: fmt.Sprintf(said.Say(slippingWords.Overdue), d.ExpectedCloseDate.UTC().Format("2006-01-02")),
 			})
 		}
 		// The one claim grounded in an ABSENCE, so the source names the read
@@ -279,7 +301,7 @@ func rankSlipping(candidates []SlippingDeal) []slippingItem {
 		if d.NoOpenNextStep {
 			it.evidence = append(it.evidence, SlippingEvidence{
 				Source:  "activity.task",
-				Snippet: "no open next step on this deal",
+				Snippet: said.Say(slippingWords.NoNextStep),
 			})
 		}
 		if len(it.evidence) == 0 {

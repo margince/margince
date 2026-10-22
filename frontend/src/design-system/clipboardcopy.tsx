@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactElement, useRef, useState } from "react";
+import { type ReactElement, type Ref, useRef, useState } from "react";
 import { useT } from "../i18n";
 import { Callout } from "./callout";
 
@@ -51,6 +51,8 @@ export function useClipboardCopy(
 }> {
   const t = useT();
   const [written, setWritten] = useState<string | null>(null);
+  // Kept while the reader edits the text, since the remedy is to copy it by
+  // hand; the next attempt takes it away.
   const [failed, setFailed] = useState(false);
   // Which attempt the reader is waiting on. Two presses are two independent
   // writes that can settle in either order, and an older one landing last would
@@ -65,6 +67,7 @@ export function useClipboardCopy(
     // `.writeText(…).catch(…)` never reaches its handler. An email-less
     // installation served over plain http is that deployment, not an edge case.
     const mine = ++attempt.current;
+    setFailed(false);
     const writer = navigator.clipboard;
     if (!writer) {
       // Dropping the claim as the rejection branch does: a control that had
@@ -78,7 +81,6 @@ export function useClipboardCopy(
       () => {
         if (mine !== attempt.current) return;
         setWritten(text);
-        setFailed(false);
         onCopied?.();
       },
       () => {
@@ -114,10 +116,17 @@ export function CopyableText({
   text,
   label,
   testId,
-}: Readonly<{ text: string; label: string; testId?: string }>) {
+  ref,
+}: Readonly<{
+  text: string;
+  label: string;
+  testId?: string;
+  ref?: Ref<HTMLDivElement>;
+}>) {
   return (
     // biome-ignore lint/a11y/useSemanticElements: a textarea does not grow to its text, and the value must show whole at any width
     <div
+      ref={ref}
       className="code-block"
       role="textbox"
       aria-readonly="true"

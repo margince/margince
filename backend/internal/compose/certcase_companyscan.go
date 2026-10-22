@@ -181,7 +181,7 @@ func (c *companyScanCase) Run(ctx context.Context, completer aitasks.Completer) 
 // that raised nothing is an abstention, which is a right answer for an
 // account that needs nobody.
 func (c *companyScanCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
-	kept, refused, err := companyscan.ParseFindings(trace.Output, c.companyID, c.in)
+	kept, refused, err := companyscan.ParseFindings(trace.Output, c.companyID, c.in, "en")
 	if err != nil {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: err.Error()}
 	}

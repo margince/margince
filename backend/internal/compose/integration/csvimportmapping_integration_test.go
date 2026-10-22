@@ -37,10 +37,10 @@ func TestCSVImportRefusesAMappingNamingAColumnTheFileLacks(t *testing.T) {
 	var refusal struct {
 		Detail string `json:"detail"`
 	}
-	status := e.Call(t, http.MethodPost, "/v1/imports", AnyMap{
+	status := testCall(t, e, "/v1/imports", AnyMap{
 		"connector": "csv", "object": "company", "source_ref": profile.SourceRef,
 		"mapping": map[string]string{"Company": "display_name", "Firma": "legal_name"},
-	}, nil, &refusal)
+	}, &refusal)
 	if status != http.StatusUnprocessableEntity {
 		t.Fatalf("a mapping naming a column the file lacks → %d, want 422", status)
 	}

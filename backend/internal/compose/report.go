@@ -169,6 +169,15 @@ type reportSpec struct {
 	dimensions   map[string]string
 	measures     map[string]string
 	filters      map[string]string
+	// rowKeys are the dimensions that each name one row. A listing report
+	// groups by them to list its records. A typed question that does so asks
+	// for groups of one, which the floor withholds every time. A filter on
+	// one leaves a population of one. The typed vocabulary omits them.
+	rowKeys []string
+	// rowMoments are the dimensions that differ for every row but order the
+	// rows: a timestamp. No group of one can answer, but a range over them
+	// can. The typed vocabulary offers them to narrow by, never to group by.
+	rowMoments []string
 	// nativeMeasures are the measures denominated in the ROW's own currency
 	// rather than in one the whole answer shares. Summing one across a grouping
 	// that does not split by currency adds euros to dollars and returns a plain
@@ -197,6 +206,10 @@ type reportSpec struct {
 	// silently included those deals under a null key would still disclose that
 	// somebody's partner brought them.
 	referenceScopes map[string]string
+	// customFields are the reportable custom fields this spec was extended
+	// with in one installation, keyed by their SQL expression. Empty on every
+	// prebuilt entry; analyticsCatalog fills it per request.
+	customFields map[string]customDimension
 	// thresholds are the filters that compare the row against a NUMBER the
 	// caller sends rather than a column it must equal (reportthreshold.go).
 	// Each has a default, so the report answers with no plan at all, and the

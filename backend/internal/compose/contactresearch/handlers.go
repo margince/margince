@@ -41,6 +41,13 @@ func (h Handlers) SaveContactResearch(w http.ResponseWriter, r *http.Request, id
 	if !httperr.Decode(w, r, &body) {
 		return
 	}
+	// The schema requires `claims`; an absent or null one is a dropped field,
+	// not a decision to save nothing, which is the empty list.
+	if body.Claims == nil {
+		httperr.Write(w, r, httperr.Validation("claims", "required",
+			"claims is required; send an empty list to save nothing"))
+		return
+	}
 	saved, err := h.svc.Save(r.Context(), ids.From[ids.ContactKind](ids.UUID(id)), body)
 	if err != nil {
 		httperr.Write(w, r, err)

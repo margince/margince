@@ -16,12 +16,16 @@ import {
   Wrench,
 } from "lucide-react";
 import { type ReactNode, useRef, useState } from "react";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { Card } from "../design-system/atoms";
+import { PageHeadAction } from "../components/pageheadaction";
+import { Button, Card } from "../design-system/atoms";
+import { SETTINGS_PAGES } from "../features/settings/settingscatalog";
+import { SettingsSearchBox } from "../features/settings/settingssearchbox";
+import type { Locale } from "../i18n";
 import { en } from "../i18n/en";
-import { SETTINGS_PAGES } from "../screens/settingscatalog";
-import { SettingsSearchBox } from "../screens/settingssearchbox";
+import type { Route } from "../lib/router";
+import type { GrantSpec } from "../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
@@ -29,18 +33,17 @@ import {
   type RouteMap,
   StoryProviders,
   WithInstallationBrand,
-} from "../screens/story-utils";
-import type { GrantSpec } from "./mefixture";
+} from "../testing/story-utils";
 import type { NavSection } from "./nav";
 import { CommandPalette, useBuiltinCommands } from "./palette";
-import type { Route } from "./router";
-import { PageTitle, Shell, WorkspaceRail } from "./shell";
+import { PageTitle, Shell } from "./shell";
+import { WorkspaceRail } from "./shellrail";
 import { TopBar } from "./topbar";
 // The settings stack's own sheet. A screen sheet loads with its screen, and the
 // settings frame below stands the stack under the shell WITHOUT that screen —
 // so without this the frame would draw an uncapped column and quietly
 // misrepresent the one thing it exists to show.
-import "../screens/settings.css";
+import "../features/settings/settings.css";
 
 // fullscreen: the shell sizes itself to the viewport, so Storybook's default
 // canvas padding would clip the sidebar foot and misrepresent the layout — and
@@ -250,6 +253,40 @@ export const SettingsHeadOnItsColumn: Story = {
   },
 };
 
+// A one-list settings page puts its create verb beside the page's name. The
+// head keeps the name 16rem wide; below that the verb wraps under it.
+function SettingsHeadWithVerb() {
+  stubSession({ user_admin: ["read", "create"] });
+  return (
+    <StoryProviders>
+      <SeedInstallation>
+        <ShellExample at="#/settings/members">
+          <PageHeadAction>
+            <Button>{en["users.inviteOpen"]}</Button>
+          </PageHeadAction>
+          <div className="wrap">
+            <div className="settings-stack">
+              <Card as="div">Content</Card>
+            </div>
+          </div>
+        </ShellExample>
+      </SeedInstallation>
+    </StoryProviders>
+  );
+}
+
+export const SettingsHeadWithAction: Story = {
+  name: "a settings entry — the page's verb in the head",
+  render: () => <SettingsHeadWithVerb />,
+};
+
+export const SettingsHeadWithActionPhone: Story = {
+  name: "a settings entry — the page's verb under the head on a phone",
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => <SettingsHeadWithVerb />,
+};
+
 /** A company's wide logo owns the expanded head, with Margince credited on the
  * line beneath it. This is deliberately not an Avatar story: squeezing this
  * asset into the navigation rows' square is the failure this state catches. */
@@ -417,10 +454,10 @@ function stubEntitlement(entitlement: LicenseEntitlement) {
  * The rail's foot under both panel states side by side.
  *
  * A licence is stubbed because the shell's providers want one, not because the
- * foot reports it — it has not since the posture moved to its own banner. Two
- * further frames stubbed an over-cap licence and a seat without `license:read`
- * and photographed this same picture, which is what retired them; what each of
- * them knew is now said where the behaviour is, in app/license-posture.ts.
+ * foot reports it; the posture has its own banner. A frame with an over-cap
+ * licence or a seat without `license:read` draws this same picture, so none
+ * exists. What each would show is said where the behaviour is, in
+ * lib/license-posture.ts.
  *
  * `.rail.collapsed` sets `overflow: visible` so its tooltips can escape the 56px
  * box, so the collapsed panel neither scrolls nor clips: in a window shorter
@@ -471,7 +508,7 @@ const SETTINGS_SECTION: NavSection = {
   lead: <SettingsSearchBox pages={SETTINGS_PAGES} />,
   groups: [
     // The group that carries the level's NAME, and the Overview row with it.
-    // Production builds this from the catalog (screens/settingsnav.tsx); here it
+    // Production builds this from the catalog (features/settings/settingsnav.tsx). Here it
     // is spelled out, because a level with no first heading would be a picture
     // of an unnamed panel.
     {
@@ -576,10 +613,13 @@ function LevelExample({
   );
 }
 
-function LevelStory({ children }: Readonly<{ children: ReactNode }>) {
+function LevelStory({
+  children,
+  locale,
+}: Readonly<{ children: ReactNode; locale?: Locale }>) {
   stubSession();
   return (
-    <StoryProviders>
+    <StoryProviders locale={locale}>
       <SeedInstallation>{children}</SeedInstallation>
     </StoryProviders>
   );
@@ -597,6 +637,36 @@ export const SectionLevel: Story = {
       <LevelExample initiallyCollapsed={false} />
     </LevelStory>
   ),
+};
+
+// German: the privacy entry is wider than the rail, so its row wraps and grows
+// while the rows around it keep their height.
+export const SectionLevelGerman: Story = {
+  name: "second level — a German entry that wraps",
+  render: () => (
+    <LevelStory locale="de">
+      <LevelExample initiallyCollapsed={false} tab="account" />
+    </LevelStory>
+  ),
+  play: async ({ canvasElement }) => {
+    await waitFor(() => {
+      const rows = [
+        ...canvasElement.querySelectorAll<HTMLElement>(".rail .navitem"),
+      ];
+      const long = rows.find((row) =>
+        row.textContent?.includes("Datenschutz und Aufbewahrung"),
+      );
+      const short = rows.find((row) =>
+        row.textContent?.includes("Nutzerkonto"),
+      );
+      const label = long?.querySelector(".navlabel");
+      if (!long || !short || !(label instanceof HTMLElement)) {
+        throw new Error("the settings level has no privacy or account row");
+      }
+      expect(label.scrollWidth).toBeLessThanOrEqual(label.clientWidth);
+      expect(long.offsetHeight).toBeGreaterThan(short.offsetHeight);
+    });
+  },
 };
 
 // The same level at 56px: icons, the collapsed rail's tooltip on hover or
@@ -686,6 +756,40 @@ export const SectionPhone: Story = {
       <PhoneSectionExample />
     </LevelStory>
   ),
+};
+
+/** The same head in German: the badge moves under the switcher, the name wraps
+ *  with the chevron on its first line, and the trail above shows only the page. */
+export const SectionPhoneGerman: Story = {
+  name: "a section — the head's switcher, a German name that wraps",
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => (
+    <LevelStory locale="de">
+      <PhoneSectionExample />
+    </LevelStory>
+  ),
+  play: async ({ canvasElement }) => {
+    await waitFor(() => {
+      const name = canvasElement.querySelector(".pageswitch > span");
+      const chevron = canvasElement.querySelector(".pageswitch svg");
+      if (!(name instanceof HTMLElement) || !(chevron instanceof SVGElement)) {
+        throw new Error("the head has no page switch");
+      }
+      expect(name.textContent).toBe("Datenschutz und Aufbewahrung");
+      expect(name.scrollWidth).toBeLessThanOrEqual(name.clientWidth);
+      const firstLine = parseFloat(getComputedStyle(name).lineHeight);
+      const glyph = chevron.getBoundingClientRect();
+      expect(glyph.top + glyph.height / 2).toBeCloseTo(
+        name.getBoundingClientRect().top + firstLine / 2,
+        0,
+      );
+      const stops = [...canvasElement.querySelectorAll(".topbar .crumbs li")];
+      expect(
+        stops.filter((stop) => getComputedStyle(stop).display !== "none"),
+      ).toHaveLength(1);
+    });
+  },
 };
 
 export const SectionSwitcherOpen: Story = {

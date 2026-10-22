@@ -50,12 +50,20 @@ type SendOrigin struct {
 	//
 	// Ignored on an account origin, which names its whole set in links.
 	also []ActivityLinkInput
+
+	// reply records that the caller NAMED an anchor, which the anchor's value
+	// cannot say on its own.
+	//
+	// The all-zero id is a named anchor that does not exist. Read off the value,
+	// it looked like no anchor at all, so the send answered a composition defect
+	// where every other unknown id answers 404.
+	reply bool
 }
 
 // FromActivity is the reply origin: the anchor is read, its threading chain
 // is continued, and the new activity inherits its record links.
 func FromActivity(anchor ids.ActivityID) SendOrigin {
-	return SendOrigin{anchor: anchor}
+	return SendOrigin{anchor: anchor, reply: true}
 }
 
 // AlsoFiledUnder adds records to a reply beyond the ones its anchor carries.
@@ -78,7 +86,7 @@ func FromAccount(links []ActivityLinkInput) SendOrigin {
 }
 
 // isReply reports whether this origin continues an existing conversation.
-func (o SendOrigin) isReply() bool { return o.anchor.UUID != ids.UUID{} }
+func (o SendOrigin) isReply() bool { return o.reply }
 
 // NoSendOriginError refuses a send whose origin was never named. It is a
 // composition defect on any first-party transport — both handlers construct
@@ -90,18 +98,9 @@ func (e *NoSendOriginError) Error() string {
 	return "send has no origin: name the activity it replies to, or the records it starts from"
 }
 
-// resolve reads whatever the origin needs BEFORE the guard sequence runs, so
-// a record the caller cannot see answers with the row-scope verdict and
-// nothing else.
-//
-// BOTH origins probe here, and the account one has to. Deferring its links to
-// the insert would let a caller name a company they cannot see and still reach
-// the consent gate, which answers about the RECIPIENTS — so the refusal they
-// got back would disclose whether strangers had consented, and it would be a
-// 409 where the row-scope answer is 404. The probe at insert stays: it runs
-// inside the staging transaction and still catches a target archived between
-// the two reads.
-func (o SendOrigin) resolve(ctx context.Context, s *Store) ([]ActivityLinkInput, error) {
+// Resolve checks origin visibility before consent can disclose recipient information.
+// The writer rechecks links in its transaction to catch intervening archival.
+func (o SendOrigin) Resolve(ctx context.Context, s *Store) ([]ActivityLinkInput, error) {
 	if !o.isReply() {
 		if len(o.links) == 0 {
 			return nil, &NoSendOriginError{}
@@ -217,7 +216,7 @@ func (s *Store) probeLinkTargets(ctx context.Context, links []ActivityLinkInput)
 			// is staged, asked here so the refusal arrives before the work
 			// rather than after it — two doors onto one act must not disagree.
 			if err := auth.EnsureAttachTarget(ctx, tx, link.EntityType, link.EntityID); err != nil {
-				return err
+				return linkRefusal(true, err)
 			}
 		}
 		return nil

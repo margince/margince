@@ -1,0 +1,16 @@
+/* The add-on group closes the deal column. A rule and quieter ink set its label
+   apart from core's own cards, so a reader sees where the product ends. */
+.ext-panels {
+  border-top: 1px solid var(--borderSubtle);
+  padding-top: var(--space-3);
+}
+.ext-panels-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--textSecondary);
+}
+.ext-panels-label svg {
+  width: 1em;
+  height: 1em;
+}

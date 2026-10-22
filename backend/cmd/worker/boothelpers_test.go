@@ -38,7 +38,7 @@ func TestConfiguringTheWorkerFailsBeforeAnythingIsOpened(t *testing.T) {
 		name, wantIn string
 		args         []string
 	}{
-		{"a missing dsn", "dsn", []string{}},
+		{"a missing dsn", "MARGINCE_DSN", []string{}},
 		{"a drain window that would make the stop hard", "job-drain-window", []string{"--dsn", "postgres://localhost/x", "--job-drain-window=0"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

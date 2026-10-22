@@ -26,8 +26,10 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -99,13 +101,11 @@ func (w leadSLAEscalation) Apply(ctx context.Context, ev workflow.Event, eff wor
 	if err := json.Unmarshal(ev.Payload, &payload); err != nil {
 		return workflow.RunResult{}, fmt.Errorf("decode lead.sla_breached: %w", err)
 	}
-	subject := "SLA breach — first response overdue"
 	sourceSystem := leadSLATaskSource
 	sourceID := ev.Entity.ID.String() + ":" + payload.Deadline.UTC().Format(time.RFC3339)
 	due := w.now().UTC()
 	in := activities.LogActivityInput{
 		Kind:         activityKindTask,
-		Subject:      &subject,
 		OccurredAt:   &due,
 		DueAt:        &due,
 		SourceSystem: &sourceSystem,
@@ -139,6 +139,12 @@ func (w leadSLAEscalation) Apply(ctx context.Context, ev workflow.Event, eff wor
 	// commit failing belongs to neither leg, and would otherwise reach the run
 	// ledger saying nothing about which automation produced it.
 	if err := w.db.Tx(ctx, func(tx pgx.Tx) error {
+		// The notice and the task are stored, so they speak the
+		// installation's language rather than the language of whoever's
+		// breach tripped the rule.
+		words := mailcopy.For(string(identity.BaseLanguageForRecord(ctx, tx)))
+		subject := words.NoticeSLASubject
+		in.Subject = &subject
 		if _, _, err := w.activities.LogActivityTx(ctx, tx, in); err != nil {
 			return fmt.Errorf("logging the task: %w", err)
 		}
@@ -151,7 +157,7 @@ func (w leadSLAEscalation) Apply(ctx context.Context, ev workflow.Event, eff wor
 			Recipient: *in.AssigneeID,
 			Kind:      noticeKindLeadSLA,
 			Subject:   subject,
-			Body:      "A lead's first response is overdue; its escalation task is on your list.",
+			Body:      words.NoticeSLABody,
 			DedupeKey: leadSLATaskSource + ":" + sourceID,
 		}); err != nil {
 			return fmt.Errorf(noticeLegWrap+": %w", err)

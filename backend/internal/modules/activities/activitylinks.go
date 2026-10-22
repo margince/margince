@@ -101,7 +101,7 @@ func (e *TooManyLinksError) FieldFault() (field, code, message string) {
 // (capture/sinkproject.go: "a principal that may create captured mail but not
 // change it attributes nothing"). Two doors onto one act must not disagree
 // about who may perform it; before this the create door was the cheaper way in.
-func insertActivityLinks(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, kind string, links []ActivityLinkInput) error {
+func insertActivityLinks(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, kind string, links []ActivityLinkInput, fromRequest bool) error {
 	if len(links) > maxActivityLinks {
 		return &TooManyLinksError{Count: len(links)}
 	}
@@ -135,34 +135,15 @@ func insertActivityLinks(ctx context.Context, tx pgx.Tx, activityID ids.Activity
 			continue
 		}
 		seen[link] = struct{}{}
+		if err := mayAttach(ctx, tx, link); err != nil {
+			return linkRefusal(fromRequest, err)
+		}
 		column := linkColumn(link.EntityType)
-		if column == "" {
-			return &InvalidLinkTypeError{EntityType: link.EntityType}
-		}
-		// The project grant is checked BEFORE the insert it gates, not after.
-		// A refusal returned later is undone only because every caller runs
-		// this inside a transaction it aborts — correct today, and the wrong
-		// thing to hang an authorization check on. The sibling writer asks
-		// first (capture/sinkproject.go), and two doors onto one act must not
-		// disagree about WHEN they ask either.
-		if link.EntityType == linkEntityProject {
-			if err := refuseAnUnattendedFiling(ctx); err != nil {
-				return err
-			}
-			if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
-				return err
-			}
-		}
-		// ATTACH: the named record gains an activity that every reader of it
-		// will see, so a share marked read-only does not confer this.
-		if err := auth.EnsureAttachTarget(ctx, tx, link.EntityType, link.EntityID); err != nil {
-			return err
-		}
 		// AFTER the target probe, not before it. A caller naming a company they
 		// cannot see must get the answer their row scope gives — the same
 		// not-found every other unreachable target gets — rather than a
 		// modelling refusal that tells them the id was real enough to judge.
-		if err := refuseACompanyMeeting(kind, link); err != nil {
+		if err := CheckActivityLinkKind(kind, link); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx,
@@ -177,6 +158,52 @@ func insertActivityLinks(ctx context.Context, tx pgx.Tx, activityID ids.Activity
 		}
 	}
 	return nil
+}
+
+// mayAttach asks everything the caller must be allowed before one link is
+// inserted. It runs ahead of the insert it gates, so no refusal depends on the
+// caller aborting its transaction.
+func mayAttach(ctx context.Context, tx pgx.Tx, link ActivityLinkInput) error {
+	if linkColumn(link.EntityType) == "" {
+		return &InvalidLinkTypeError{EntityType: link.EntityType}
+	}
+	if link.EntityType == linkEntityProject {
+		if err := refuseAnUnattendedFiling(ctx); err != nil {
+			return err
+		}
+		if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
+			return err
+		}
+	}
+	// ATTACH: the named record gains an activity that every reader of it
+	// will see, so a share marked read-only does not confer this.
+	return auth.EnsureAttachTarget(ctx, tx, link.EntityType, link.EntityID)
+}
+
+// linkRefusal names the body field when the caller typed the links. Links a
+// system derived (a stored proposal, an anchor's own) keep the bare
+// not-found, because the caller never sent that field.
+func linkRefusal(fromRequest bool, err error) error {
+	if fromRequest {
+		return auth.NameMissingReference("links", err)
+	}
+	return err
+}
+
+// ProbeLinkWrites asks every question a write's link inserts will ask of the
+// caller. Asked ahead, a refusal arrives before work that cannot be undone.
+func (s *Store) ProbeLinkWrites(ctx context.Context, links []ActivityLinkInput) error {
+	if len(links) > maxActivityLinks {
+		return &TooManyLinksError{Count: len(links)}
+	}
+	return s.tx(ctx, func(tx pgx.Tx) error {
+		for _, link := range links {
+			if err := mayAttach(ctx, tx, link); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 // lastActivityTargets groups the links by the record types a last-activity
@@ -199,7 +226,7 @@ func lastActivityTargets(links []ActivityLinkInput) storekit.LastActivityTargets
 	return targets
 }
 
-// refuseACompanyMeeting answers the company link on a meeting or a call the way
+// CheckActivityLinkKind answers the company link on a meeting or a call the way
 // a caller can act on.
 //
 // The estate refuses it either way — a trigger, because activity_link is
@@ -215,7 +242,7 @@ func lastActivityTargets(links []ActivityLinkInput) storekit.LastActivityTargets
 // hand, and a read of `activity` here would be a reader of the restricted table
 // that excludes no held row. The relink path takes the trigger's answer
 // instead — it holds no kind and would need that read to name one.
-func refuseACompanyMeeting(kind string, link ActivityLinkInput) error {
+func CheckActivityLinkKind(kind string, link ActivityLinkInput) error {
 	if !personalActivityKinds[kind] || link.EntityType != linkEntityCompany {
 		return nil
 	}

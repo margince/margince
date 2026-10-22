@@ -685,9 +685,68 @@ scope_probe() {
 }
 scope_probe
 
+echo "dev.sh: a process that dies during boot is reported at once, with its reason"
+
+lift log_as
+lift wait_ready
+lift fail_exited_during_boot
+boot_dir="$(mktemp -d)"
+log="$boot_dir/dev.log" log_colour=0 label="dev 'probe'" slug=probe
+: >"$log"
+# Port 1 on loopback has no listener, so readiness can only end through the
+# process check or the timeout; 60s is far past what the early exit needs.
+refusal='level=ERROR msg="config: MARGINCE_PUBLIC_BASE_URL (.env.local): want an origin"'
+boot_report="$(
+    printf 'echo "level=INFO msg=starting"\necho %q >&2\nexit 3\n' "$refusal" >"$boot_dir/api"
+    bash "$boot_dir/api" > >(log_as api) 2>&1 &
+    status=0
+    wait_ready "http://127.0.0.1:1/readyz" 60 "$!" || status=$?
+    echo "wait_ready=$status"
+    fail_exited_during_boot api "$!" "nothing is serving the app" 2>&1
+)" || true
+check yes "$(grep -qx 'wait_ready=2' <<<"$boot_report" && echo yes || echo no)" \
+      "the readiness wait stops as soon as the api has exited, rather than at its timeout"
+check yes "$(grep -qF 'api exited during boot (status 3)' <<<"$boot_report" && echo yes || echo no)" \
+      "the failure names the role and its exit status"
+check yes "$(grep -qF "$refusal" <<<"$boot_report" && echo yes || echo no)" \
+      "and prints the api's own last line, which carries the boot error"
+check yes "$(grep -qF "$log" <<<"$boot_report" && echo yes || echo no)" \
+      "and still names the log"
+
+# Off this script's stdout, so a pipe reading the gate never waits on it.
+sleep 60 >/dev/null 2>&1 &
+slow_pid=$!
+remember "$slow_pid"
+status=0
+wait_ready "http://127.0.0.1:1/readyz" 1 "$slow_pid" || status=$?
+check 1 "$status" "a process still alive but not ready keeps the timeout answer"
+kill "$slow_pid" 2>/dev/null || true
+wait "$slow_pid" 2>/dev/null || true
+
+# A server that is not the launched process answers 2xx on the probed address,
+# as an old stack still holding the port would, while the launch has died.
+port="$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])')"
+python3 -m http.server "$port" --bind 127.0.0.1 --directory "$boot_dir" >/dev/null 2>&1 &
+stale_server=$!
+remember "$stale_server"
+for _ in $(seq 1 50); do
+    curl -s -o /dev/null "http://127.0.0.1:${port}/" && break
+    sleep 0.1
+done
+bash -c 'exit 0' &
+dead_pid=$!
+wait "$dead_pid" 2>/dev/null || true
+status=0
+wait_ready "http://127.0.0.1:${port}/" 5 "$dead_pid" || status=$?
+check 2 "$status" "a launch that died is reported as exited even when another server answers its port"
+kill "$stale_server" 2>/dev/null || true
+wait "$stale_server" 2>/dev/null || true
+rm -rf "$boot_dir"
+
 if [[ "$failures" -gt 0 ]]; then
     printf 'FAIL: %d check(s)\n' "$failures" >&2
     exit 1
 fi
 printf '==> dev cleanup: a failed boot takes its api, its vite and its worker with it\n'
 printf '==> dev restart: a second run takes the first one down and says so\n'
+printf '==> dev boot: a process that dies during boot is reported at once, with its own last lines\n'

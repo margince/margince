@@ -146,6 +146,8 @@ func (s *Server) wireContact360(pool *pgxpool.Pool) {
 	// brief's: WithContactDraft binds the api role's, and without it the endpoint
 	// answers from its deterministic floor rather than 501-ing.
 	s.firstDrafts.contact = contactdraft.NewService(s.contact360Svc, nil).
+		WithCoRecipients(s.contactsStore).
+		WithAboutActivities(activities.NewStore(InstallationDB(pool))).
 		WithEmailSummaries(emailRows(pool)).
 		WithEnvelope(draftEnvelope(pool, s.log))
 	s.contactDraftHandlers = contactdraft.NewHandlers(s.firstDrafts.contact)
@@ -169,7 +171,7 @@ func (s *Server) wireProject360(pool *pgxpool.Pool) {
 		s.contactsStore,
 		contracts.NewStore(InstallationDB(pool), ContractFreezeRate(pool), ContractTimezone()).
 			WithFieldCatalog(customfields.NewService(pool, nil)),
-		activities.NewStore(InstallationDB(pool)),
+		activities.NewStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil)),
 		time.Now,
 	)
 	s.project360Handlers = project360.NewHandlers(svc)

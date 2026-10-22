@@ -23,6 +23,7 @@ package gates
 import (
 	"go/ast"
 	"go/parser"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -84,7 +85,7 @@ var selectsValues = regexp.MustCompile(
 // silently covered every reader added to that file afterwards, and the gate
 // that exists to find unoverlaid readers could not see them.
 var profileFieldValueReaders = gatekit.Waive(map[string]string{
-	"internal/modules/contacts/mergerelink.go:relinkContactReferences":                     "the merge copies each surviving evidence row from the merged-away contact to the survivor, value and provenance together, and deletes the source rows. It serves nobody: the values move between two records and are read back through contact360 afterwards like any other, verdict and all. Overlaying here would write the OVERLAID value into the survivor's row and destroy the distinction between what the machine asserted and what a human decided about it — the copy must be faithful precisely because the ledger is consulted later. The cost is that a verdict keyed to the merged-away contact's id does not follow its value across, which is a gap in the merge rather than in this reader",
+	"internal/modules/contacts/mergerelink.go:relinkContactReferences":                     "the merge copies each surviving evidence row from the merged-away contact to the survivor, value and provenance together, and deletes the source rows. It serves nobody: the values move between two records and are read back through contact360 afterwards like any other, verdict and all. Overlaying here would write the OVERLAID value into the survivor's row and destroy the distinction between what the machine asserted and what a human decided about it — the copy must be faithful precisely because the ledger is consulted later. The separate moveKindIDOwned path carries the verdict ledger with target-wins collision handling; this raw copy must not apply the ledger before that collision is resolved",
 	"internal/modules/contacts/profilefieldrestore.go:readUndo":                            "the restore serves the value to NOBODY: it reads the row under FOR UPDATE to decide whether the undo may proceed — is the value still the one that was written, and is there a superseded value to put back — and the only thing it returns to a caller is 204. Overlaying a verdict here would make that test WRONG rather than safer: the overlaid value is what a human said, the stored value is what the record carries, and the CAS has to compare against what the record carries or it would refuse an undo of a value a human corrected in the ledger without touching. The reader who then re-reads the field goes through readProfileFields and sees the overlay as always. The cost is that this file must be re-examined if it ever grows a read that reaches a reader",
 	"internal/modules/contacts/contactprofilefieldwrite.go:writeContactProfileField":       "the writer serves the value to NOBODY: when a phone number replaces the older number of its country, the statement deletes the older number's row and carries its stored value, author and date into the new row's undo buffer, row to row, inside one INSERT. Overlaying a verdict would write what a human SAID into superseded_value, and the undo would then put back a value the record never carried. The reader who re-reads the field goes through readProfileFields and sees the overlay as always. The cost is that this file must be re-examined if it ever grows a read that reaches a reader",
 	"internal/modules/contacts/fillretraction.go:fillStands":                               "the undo of a machine fill serves the value to NOBODY: it reads the rows one pass wrote to decide whether they still stand — present, uncorrected, and still what the title column and the phone list carry — and answers only undoable or refused. The ledger IS consulted, in the same statement: a field carrying a live `corrected` verdict reads as changed since, so the undo refuses rather than clearing what a human ruled on. Overlaying the verdict instead would compare what a human SAID against what the record carries, which is the comparison readUndo explains is wrong. The cost is that this file must be re-examined if it ever grows a read that reaches a reader",
@@ -92,24 +93,6 @@ var profileFieldValueReaders = gatekit.Waive(map[string]string{
 	"internal/modules/contacts/signatureretraction.go:RetractMisattributedSignatureFields": "the sweep serves the value to NOBODY: it reads f.value to compare against the contact COLUMN, which is the compare-and-swap that decides whether the column may be restored. Overlaying a verdict would make that test WRONG rather than safer, for the reason RestoreProfileField gives above — the overlaid value is what a human SAID and the column is what the record carries, so a match between them would read as 'this pass wrote the column' in exactly the case where a human has since typed something else, and their answer would be overwritten. The ledger IS consulted, on the other side of the same statement: a field carrying a live `corrected` verdict is excluded from the sweep entirely. The cost is that this file must be re-examined if it ever grows a read that reaches a reader",
 	"internal/modules/privacy/sarsections.go:sarProvenanceSections":                        "the Article 15 export owes the subject what this installation HOLDS, and it holds two facts: the value the machine asserted and the verdict the human recorded against it. It exports the stored columns here and ai_feedback as its own section beside them, so the subject sees both. Overlaying the verdict instead would hand them one merged value and conceal that an override exists — the opposite of what an export is for. It also cannot share contact360's reader: privacy is a module and may not import compose (ADR-0054 §3). The cost is that the two statements must be corrected together when the column set changes, which is why they name each other at both sites",
 })
-
-var profileFieldReaderScope = gatekit.Scope{
-	Roots:   []string{"internal"},
-	Subject: readsProfileFieldValues,
-	Exempt:  gatekit.Waive(map[string]string{}),
-}
-
-func readsProfileFieldValues(path string, file *ast.File) bool {
-	if !gatekit.FileReadsTable(path, file, profileFieldRead) {
-		return false
-	}
-	for _, read := range gatekit.TableReads(file, profileFieldRead) {
-		if selectsValues.MatchString(read.SQL) {
-			return true
-		}
-	}
-	return false
-}
 
 // The overlay itself, matched in the FUNCTION that does the reading — not
 // file-wide, which is how the sibling activity census matches and is wrong
@@ -139,6 +122,7 @@ var verdictOverlayMarkers = []string{"applyFieldVerdicts", "VerdictsForTx", "Ver
 // gatekit:fixture each reader's ruling seam, "<file>:<declaration>", parsed and
 // checked rather than trusted
 var ruledAtASeam = map[string]string{
+	"internal/modules/contacts/mergeprofilepreview.go:readMergeProfileValues":     "internal/compose/profileverdicts/merge.go:MergeReader",
 	"internal/modules/contacts/companynamepromotion.go:loadSignatureCompanyNames": "internal/compose/companynamepromotion.go:rule",
 }
 
@@ -176,13 +160,13 @@ func rulingSeams(t *testing.T) map[string]bool {
 
 // unoverlaidValueReaders names each declaration in the file that serves values
 // from the table and consults no verdict of its own.
-func unoverlaidValueReaders(file *ast.File) []string {
+func unoverlaidValueReaders(file *ast.File, constants map[string]string) []string {
 	var offenders []string
 	for _, decl := range file.Decls {
-		reads := gatekit.DeclReads(decl, profileFieldRead)
+		reads := gatekit.SQLStatementsWithConstants(decl, constants)
 		serves := false
 		for _, read := range reads {
-			if selectsValues.MatchString(read.SQL) {
+			if profileFieldRead.MatchString(read) && selectsValues.MatchString(read) {
 				serves = true
 			}
 		}
@@ -213,12 +197,36 @@ func TestEveryReaderServingProfileFieldValuesConsultsTheVerdictLedger(t *testing
 			}
 		}
 	}()
+	constants := map[string]map[string]string{}
+	profileFieldReaderScope := gatekit.Scope{
+		Roots:  []string{"internal"},
+		Exempt: gatekit.Waive(map[string]string{}),
+		Subject: func(path string, file *ast.File) bool {
+			if ast.IsGenerated(file) {
+				return false
+			}
+			dir := filepath.Dir(path)
+			if constants[dir] == nil {
+				constants[dir] = gatekit.PackageStringConstants(t, dir)
+			}
+			for _, sql := range gatekit.SQLStatementsWithConstants(file, constants[dir]) {
+				if profileFieldRead.MatchString(sql) && selectsValues.MatchString(sql) {
+					return true
+				}
+			}
+			return false
+		},
+	}
 	files := profileFieldReaderScope.Files(t)
 	if len(files) == 0 {
 		t.Fatal("no reader of contact_profile_field found — the matcher has stopped seeing this tree's SQL, and a gate that judges nothing reads exactly like a clean one")
 	}
 	for _, src := range files {
-		for _, offender := range unoverlaidValueReaders(src.File) {
+		dir := filepath.Dir(src.Path)
+		if constants[dir] == nil {
+			constants[dir] = gatekit.PackageStringConstants(t, dir)
+		}
+		for _, offender := range unoverlaidValueReaders(src.File, constants[dir]) {
 			// Asked about the READER, not the file it sits in. Keyed by file,
 			// the guard skipped the loop below entirely, so a value reader
 			// added to a waived file afterwards was never looked at — the
@@ -262,6 +270,10 @@ func TestTheProfileFieldCensusSeesWhatItClaimsTo(t *testing.T) {
 		source string
 		want   []string
 	}{
+		"shared projection from another source file": {
+			source: `func read() string { return "SELECT id, " + columns + " FROM contact_profile_field" }`,
+			want:   []string{"read"},
+		},
 		"a value column first in the projection": {
 			source: `func read() string { return "SELECT value, field FROM contact_profile_field" }`,
 			want:   []string{"read"},
@@ -311,7 +323,7 @@ func applyFieldVerdicts() {}`,
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			got := unoverlaidValueReaders(parseProbe(t, tc.source))
+			got := unoverlaidValueReaders(parseProbe(t, tc.source), map[string]string{"columns": "value, source_ref"})
 			if len(got) != len(tc.want) {
 				t.Fatalf("offenders = %v, want %v", got, tc.want)
 			}
@@ -339,7 +351,7 @@ func applyFieldVerdicts() {}`,
 	for _, column := range expectedValueColumns {
 		t.Run("serving "+column+" is a serve", func(t *testing.T) {
 			source := `func read() string { return "SELECT ` + column + ` FROM contact_profile_field" }`
-			if got := unoverlaidValueReaders(parseProbe(t, source)); len(got) != 1 {
+			if got := unoverlaidValueReaders(parseProbe(t, source), nil); len(got) != 1 {
 				t.Errorf("a read of %s was not seen as serving a value: offenders = %v", column, got)
 			}
 		})

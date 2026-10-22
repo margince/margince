@@ -31,6 +31,8 @@
  * than each row picking its own. */
 .settingrow {
   display: flex;
+  /* Only as a row: a wrapping column stretches every item to the widest one. */
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-4);
   padding: var(--space-3) 0;
@@ -41,19 +43,19 @@
  * beside it, so nothing is gained by squeezing it into the right column. */
 .settingrow-stack {
   flex-direction: column;
+  flex-wrap: nowrap;
   align-items: stretch;
   gap: var(--space-3);
 }
 
-/* The naming half. `min-width: 0` so a long description wraps instead of
- * pushing the control off the right edge — a flex item's default
- * `min-width: auto` is the reason a description ever did that. */
+/* Takes what the control leaves, down to a field's floor; below that the control
+ * wraps under it, so a long answer never squeezes the naming to a word per line. */
 .settingrow-naming {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  min-width: 0;
-  flex: 1 1 auto;
+  min-width: min(12rem, 100%);
+  flex: 1 1 0;
 }
 
 /* The description under the label. Not `.t-caption`'s bottom margin: this
@@ -69,16 +71,18 @@
   overflow-wrap: anywhere;
 }
 
-/* The control half, held to the right. `flex: 0 0 auto` rather than a width:
+/* The control half, held to the right. Content-wide rather than a width:
  * a switch is switch-wide and a button is as wide as its label, and a fixed
  * column would make the two disagree about where the row's right edge is —
- * the edge is the CARD's, which both of them reach on their own. */
+ * the edge is the CARD's, which both of them reach on their own. It shrinks
+ * only on a line of its own, where it is wider than the row. */
 .settingrow-control {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: var(--space-3);
-  flex: 0 0 auto;
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 /* A stacked row's control fills the row instead of hugging the right edge — and
@@ -188,8 +192,8 @@
   overflow-wrap: anywhere;
   /* A measure, for the same reason the field below has one: a value that is a
    * SENTENCE rather than a token — what a company sells, who it sells to —
-   * otherwise takes the row's whole width, and since the control column does
-   * not shrink it squeezes the naming beside it down to one word per line.
+   * otherwise takes the row's whole width and pushes the control under the
+   * naming on a screen where the two would fit side by side.
    * Every short answer this row was built for (an address, a currency, a
    * timezone) sits far inside the ceiling and is unaffected. */
   max-width: 22rem;
@@ -239,12 +243,75 @@
   margin-top: var(--space-2);
 }
 
+/* bleed: a list standing straight in a Panel spans the pane, and each row keeps
+ * the pane's padding inside it so its text lines up with a PanelBody's. */
+.panel > .settinglist-bleed > :not(.empty, .callout) {
+  padding-inline: var(--padPanel);
+}
+.panel > .settinglist-bleed > :is(.empty, .callout) {
+  margin-inline: var(--padPanel);
+}
+/* A list opened from a bleeding disclosure bleeds too. Its hairlines then run
+ * as wide as the outer list's, and its text keeps the same x. */
+.panel
+  > :is(.settinglist-bleed, .panel-body)
+  > .disclosure
+  > .disclosure-body
+  > .settinglist,
+.panel
+  > :is(.settinglist-bleed, .panel-body)
+  > .disclosure-wrap
+  > .disclosure
+  > .disclosure-body
+  > .settinglist {
+  margin-inline: calc(-1 * var(--padPanel));
+}
+.panel
+  > :is(.settinglist-bleed, .panel-body)
+  > .disclosure
+  > .disclosure-body
+  > .settinglist
+  > :not(.empty, .callout),
+.panel
+  > :is(.settinglist-bleed, .panel-body)
+  > .disclosure-wrap
+  > .disclosure
+  > .disclosure-body
+  > .settinglist
+  > :not(.empty, .callout) {
+  padding-inline: var(--padPanel);
+}
+.panel
+  > :is(.settinglist-bleed, .panel-body)
+  > .disclosure
+  > .disclosure-body
+  > .settinglist
+  > :is(.empty, .callout),
+.panel
+  > :is(.settinglist-bleed, .panel-body)
+  > .disclosure-wrap
+  > .disclosure
+  > .disclosure-body
+  > .settinglist
+  > :is(.empty, .callout) {
+  margin-inline: var(--padPanel);
+}
+
+/* bleed="records": one row per thing, so a row takes a table row's hover. */
+.panel > .settinglist-records > .settingrow {
+  transition: background-color var(--dur-state) var(--ease-out);
+}
+.panel > .settinglist-records > .settingrow:hover {
+  background: var(--bgHover);
+}
+
 /* Narrow viewport: the two columns become one. A right-aligned control in a
  * 320px column leaves the label with three words per line, so the row gives up
  * the alignment before it gives up the reading. */
 @media (max-width: 640px) {
   .settingrow {
     flex-direction: column;
+    flex-wrap: nowrap;
     align-items: stretch;
   }
 
@@ -270,5 +337,14 @@
     min-width: 0;
     max-width: none;
     width: 100%;
+  }
+
+  /* A bare switch stays on its name's line, as a phone's own settings put it;
+   * one with a refusal or a hint under it needs the width and stacks. */
+  .settingrow:not(.settingrow-stack):has(
+    > .settingrow-control > .switchrow:only-child
+  ):not(:has(.switchreason, .switchhint)) {
+    flex-direction: row;
+    align-items: flex-start;
   }
 }

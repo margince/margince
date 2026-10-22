@@ -75,6 +75,7 @@ func advanceDealInput(req crmcontracts.AdvanceDealRequest, ifVersion *int64) (Ad
 		return AdvanceDealInput{}, err
 	}
 	in := AdvanceDealInput{
+		ReferencesFromRequest:    true,
 		ToStageID:                pathID[ids.StageKind](req.ToStageId),
 		LostReason:               req.LostReason,
 		IfVersion:                ifVersion,
@@ -106,13 +107,13 @@ func stageCreateInput(req crmcontracts.CreateStageRequest) (CreateStageInput, er
 	return in, nil
 }
 
-func dealCreateInput(req crmcontracts.CreateDealRequest) (CreateDealInput, error) {
+// DealCreationInput shares request admission between HTTP creation and approval review.
+func DealCreationInput(req crmcontracts.CreateDealRequest) (CreateDealInput, error) {
 	return dealCreateInputAdmitting(req, false)
 }
 
-// dealCreateInputFromImporter is dealCreateInput for a declared importer
-// (auth.DeclaredImporter, asked by the handler): it may stamp the mirror:
-// namespace. provider.go keeps the closed door.
+// Only declared human importers may stamp reserved source namespaces.
+// The provider uses the ordinary mapper even when acting for an importer.
 func dealCreateInputFromImporter(req crmcontracts.CreateDealRequest) (CreateDealInput, error) {
 	return dealCreateInputAdmitting(req, true)
 }
@@ -152,20 +153,21 @@ func dealCreateInputAdmitting(req crmcontracts.CreateDealRequest, importer bool)
 		return CreateDealInput{}, err
 	}
 	in := CreateDealInput{
-		Name:             req.Name,
-		AmountMinor:      req.AmountMinor,
-		ExpectedArrMinor: req.ExpectedArrMinor,
-		Currency:         req.Currency,
-		PipelineID:       pathID[ids.PipelineKind](req.PipelineId),
-		StageID:          pathID[ids.StageKind](req.StageId),
-		Source:           req.Source,
-		SourceSystem:     req.SourceSystem,
-		Author:           author,
-		CompanyID:        idArg[ids.CompanyKind](req.CompanyId),
-		PartnerCompanyID: idArg[ids.CompanyKind](req.PartnerCompanyId),
-		ProjectID:        idArg[ids.ProjectKind](req.ProjectId),
-		OwnerID:          idArg[ids.UserKind](req.OwnerId),
-		CustomFields:     req.AdditionalProperties,
+		ReferencesFromRequest: true,
+		Name:                  req.Name,
+		AmountMinor:           req.AmountMinor,
+		ExpectedArrMinor:      req.ExpectedArrMinor,
+		Currency:              req.Currency,
+		PipelineID:            pathID[ids.PipelineKind](req.PipelineId),
+		StageID:               pathID[ids.StageKind](req.StageId),
+		Source:                req.Source,
+		SourceSystem:          req.SourceSystem,
+		Author:                author,
+		CompanyID:             idArg[ids.CompanyKind](req.CompanyId),
+		PartnerCompanyID:      idArg[ids.CompanyKind](req.PartnerCompanyId),
+		ProjectID:             idArg[ids.ProjectKind](req.ProjectId),
+		OwnerID:               idArg[ids.UserKind](req.OwnerId),
+		CustomFields:          req.AdditionalProperties,
 	}
 	if req.PartnerAttribution != nil {
 		attribution := string(*req.PartnerAttribution)

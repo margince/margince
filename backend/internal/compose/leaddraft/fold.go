@@ -17,6 +17,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // FromLead folds the lead and its correspondence into the draft's input.
@@ -46,6 +47,7 @@ func recipientOf(lead crmcontracts.Lead, activities []crmcontracts.Activity) con
 	first, last := splitName(full)
 	out := contactdraft.RecipientIn{
 		ID:        lead.Id.String(),
+		Kind:      datasource.EntityLead,
 		Name:      full,
 		FirstName: first,
 		LastName:  last,

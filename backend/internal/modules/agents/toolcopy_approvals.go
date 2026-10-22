@@ -21,8 +21,9 @@ var listApprovalsCopy = toolCopy{
 		"unsent is not one that needs writing again.",
 	Limits: "It lists what the colleague you act for could decide themselves; anything else is absent " +
 		"rather than refused. A proposal past its expiry reads as expired and can no longer be " +
-		"answered. Each item carries its one-line summary, not the change itself.",
-	Instead: "read_approval opens one and shows what it holds; decide_approval answers it.",
+		"answered. Personal mutes hide eligible pending rows, so a bundle may be partial. " +
+		"Use include_muted for a complete authorized bundle review. Each item carries its one-line summary, not the change itself.",
+	Instead: "read_approval opens one and shows what it holds; decide_approvals answers it.",
 	Retain:  "Keep the staged_action_id you mean to act on, the bundle_id when one act staged several, and next_cursor.",
 }
 
@@ -32,7 +33,7 @@ var readApprovalCopy = toolCopy{
 		"the evidence it was formed on — enough to answer it without opening the app.",
 	Limits: "Reading performs nothing. An id the colleague you act for could not decide answers as not " +
 		"found, exactly as an id naming nothing does.",
-	Instead: "list_approvals yields the id; decide_approval answers it.",
+	Instead: "list_approvals yields the id; decide_approvals answers it.",
 	Retain:  "Keep the staged_action_id, and the bundle_id if the item names one.",
 }
 
@@ -59,7 +60,26 @@ var decideBundleCopy = toolCopy{
 		"that proposed six corrections is six proposals under one bundle_id.",
 	Limits: "Each member is answered on its own terms and reported on its own; one already decided, " +
 		"or lapsed, is left as it is. Members the colleague could not decide alone are not decided " +
-		"here, and a bundle holding none of theirs reads as not found.",
+		"here, and a bundle holding none of theirs reads as not found. Review with include_muted " +
+		"before deciding a bundle: personal mutes do not narrow this explicit decision.",
 	Instead: "decide_approval answers a single item; list_approvals is where a bundle_id comes from.",
 	Retain:  "Each member carries its own outcome — decided here, already decided, or expired.",
+}
+
+var decideApprovalsCopy = toolCopy{
+	Purpose: "Answer staged actions for the colleague asking you: approve, which lets the change " +
+		"happen, or reject, which discards it. Name staged_action_id for one action, or bundle_id " +
+		"for every still-waiting proposal one act staged together.",
+	Limits: "The verdict is theirs — take an explicit approve or reject rather than deciding what " +
+		"they would have wanted. Approving is what makes the change real, including sending a " +
+		"message that was only drafted; a rejection cannot be taken back. You may approve your own " +
+		"proposal only when it is a change that would have gone straight through but for a human's " +
+		"earlier edit — no deal close, no relink, no tag merge, no schema change, no send; the rest " +
+		"is theirs to release in the CRM. An item already answered, or lapsed, is reported as such " +
+		"and nothing is written; each bundle member is answered and reported on its own, and a " +
+		"bundle holding none of theirs reads as not found.",
+	Instead: "read_approval when they have not seen what it holds; list_approvals is where both " +
+		"ids come from.",
+	Retain: "If the proposal is your OWN refused call, approving does not perform it — re-issue that " +
+		"same call with approval_id set.",
 }

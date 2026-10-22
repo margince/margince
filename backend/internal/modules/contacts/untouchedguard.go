@@ -39,6 +39,19 @@ type writeOptions struct {
 	// caller has one: ColleagueWorkedOnSince orders by it as well as by time.
 	untouchedAfter ids.UUID
 	atVersion      *int64
+	// keepWhileReferenced refuses an archive of a company a live deal or a
+	// live contact's employment still names.
+	keepWhileReferenced bool
+	// releaseSourceKey clears a retired lead's (source_system, source_id) so
+	// the key can be claimed again.
+	releaseSourceKey bool
+}
+
+// ReleasingSourceKey makes a lead's retirement free its source key.
+// The unique index on that key covers retired rows. Without this, a retired
+// lead replays when the same file is imported again.
+func ReleasingSourceKey() WriteOption {
+	return func(o *writeOptions) { o.releaseSourceKey = true }
 }
 
 // NotTouchedByHumanSince refuses the write when a HUMAN has acted on the record
@@ -69,6 +82,13 @@ func OnlyAtVersion(v *int64) WriteOption {
 	return func(o *writeOptions) { o.atVersion = v }
 }
 
+// KeepWhileReferenced refuses a company's archive while a live deal names it
+// as its company or its partner, or a live contact is employed by it. Without
+// it the archive would leave those records pointing at an archived company.
+func KeepWhileReferenced() WriteOption {
+	return func(o *writeOptions) { o.keepWhileReferenced = true }
+}
+
 func collectWriteOptions(opts []WriteOption) writeOptions {
 	var out writeOptions
 	for _, apply := range opts {
@@ -92,16 +112,18 @@ func refuseIfVersionMoved(entity string, current *int64, o writeOptions) error {
 	// than passing. The alternative reads as "checked" and is not: an unversioned
 	// read would wave through exactly the write the pin was attached to stop.
 	if current == nil {
-		return fmt.Errorf(
-			"the %s carries no version to compare against the %d this write was authorised at: %w",
-			entity, *o.atVersion, apperrors.ErrVersionSkew)
+		return &apperrors.VersionSkewError{Message: fmt.Sprintf(
+			"This %s has no version, so a change conditioned on version %d cannot be made to it. "+
+				"Nothing was changed. Make the change without a version condition.",
+			entity, *o.atVersion)}
 	}
 	if *current == *o.atVersion {
 		return nil
 	}
-	return fmt.Errorf(
-		"the %s is at version %d, not the version %d this write was authorised against: %w",
-		entity, *current, *o.atVersion, apperrors.ErrVersionSkew)
+	return &apperrors.VersionSkewError{Message: fmt.Sprintf(
+		"This %s is at version %d, not version %d, so nothing was changed. "+
+			"Read it again, then make the change again if it still applies.",
+		entity, *current, *o.atVersion)}
 }
 
 // HumanTouchedError refuses a write whose caller asked for it only while the
@@ -116,6 +138,10 @@ func (e *HumanTouchedError) Error() string {
 	return fmt.Sprintf("a contact has changed this %s since it was imported, so it was left alone", e.EntityType)
 }
 
+// Is makes the refusal a conflict for errors.Is, so an undo records the row as
+// one it left alone instead of stopping.
+func (e *HumanTouchedError) Is(target error) bool { return target == apperrors.ErrConflict }
+
 // refuseIfHumanTouched enforces the precondition inside the caller's own
 // transaction, which is the whole point: the archive that follows takes the
 // row's lock, so a human write either lands entirely before this read or
@@ -126,14 +152,9 @@ func refuseIfHumanTouched(
 	if opts.untouchedSince == nil {
 		return nil
 	}
-	var touched bool
-	if err := tx.QueryRow(ctx, `
-		SELECT EXISTS (
-			SELECT 1 FROM audit_log
-			 WHERE entity_type = $1 AND entity_id = $2
-			   AND actor_type = 'human' AND occurred_at > $3)`,
-		entityType, id, *opts.untouchedSince).Scan(&touched); err != nil {
-		return fmt.Errorf("checking whether a contact has changed this %s: %w", entityType, err)
+	touched, err := storekit.HumanActedSince(ctx, tx, entityType, id, *opts.untouchedSince)
+	if err != nil {
+		return err
 	}
 	if touched {
 		return &HumanTouchedError{EntityType: entityType, EntityID: id}

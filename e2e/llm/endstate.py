@@ -10,15 +10,31 @@ one record field per entry, in the flat form parse_scenario reads:
       - company "Emsland Ventilbau GmbH" lifecycle=prospect
       - company "Aachener Metallwerke GmbH" document=<sha256> *.md
       - company "Aachener Metallwerke GmbH" documents=1
+      - activity "Signing" on project "Rollout" document_contract=<sha256> Service contract
 
 The record is found by its type and its WHOLE display name, then read back with
 read_record; the field's value, rendered the way must_call_with renders an
-argument, must equal what follows the `=`. Two names are not fields: `document`
-holds when exactly one file on the record's Documents tab carries that checksum
-under a name the glob matches, and `documents` when the tab holds exactly that
-many files. Both are read with list_documents, so they see the tab a human sees. It runs after the run and before the
-lane restores the snapshot, through the lane's own passport. It is a reader
-with fixed calls, never a model.
+argument, must equal what follows the `=`. An activity has no list of its own,
+so it is named by its whole subject ON a project, and found on that project's
+timeline. Three names are not fields: `document` holds when exactly one file on
+the record's Documents tab carries that checksum under a name the glob matches,
+`documents` when the tab holds exactly that many files, and `document_contract`
+when the one file with that checksum is filed against the project's contract of
+that whole title. All three are read with list_documents, so they see the tab a
+human sees. Four more are not stored fields either:
+
+    - company "Weserblick Logistik GmbH" records=0      how many records carry the name
+    - company "Taunus Gerätebau GmbH" owner=Sofia Meier  the owner's name, not their id
+    - deal "Rheinufer Netzmodernisierung" stage=Negotiation   the stage's name
+    - company "Dom Digital GmbH" tagged=K5 Conference 2026    or untagged=, by read_tags
+    - tag "Strategic Account" records=3   contacts, companies, deals and leads carrying it
+
+It runs after the run and before the lane restores the snapshot, through the
+lane's own passport, and only through tools the server LISTS: a router is called
+with its view, never by the hidden name it routes to, or the read would be
+logged as hidden-tool traffic. It is a reader with fixed calls, never a model.
+An import the run committed is still writing when the run ends, so the reader
+first waits, bounded, for every run the transcript committed to stop running.
 
     endstate.py --scenario S --transcript T --mcp-url URL --token-env NAME
 
@@ -35,6 +51,7 @@ import json
 import os
 import re
 import sys
+import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -45,24 +62,70 @@ import transcript  # noqa: E402
 HARNESS = 3
 FAILED = 4
 
-Expectation = collections.namedtuple("Expectation", "record_type name field value")
+Expectation = collections.namedtuple(
+    "Expectation", "record_type name field value parent_type parent_name", defaults=(None, None)
+)
 
-_ENTRY = re.compile(r'^([a-z_]+) "([^"]+)" ([A-Za-z_][A-Za-z0-9_]*)=(.+)$')
+_ENTRY = re.compile(r'^([a-z_]+) "([^"]+)" (?:on ([a-z_]+) "([^"]+)" )?([A-Za-z_][A-Za-z0-9_]*)=(.+)$')
 
 # The field each type is NAMED by, which is what an entry quotes. Only the types
 # a scenario asks about today; a new one is a line here and a name it can be
 # found by.
-_NAME_FIELD = {"company": "display_name"}
+_NAME_FIELD = {"company": "display_name", "project": "name", "deal": "name",
+               "contact": "full_name", "lead": "full_name"}
+
+# The types found ON a parent rather than by a list of their own, and the
+# parent's type: list_records has no activity, and read_project's overview carries the
+# project's timeline whole.
+_FOUND_ON = {"activity": "project"}
 
 # Not record fields: what list_documents answers about the record's files.
 _DOCUMENT = "document"
 _DOCUMENT_COUNT = "documents"
+_DOCUMENT_CONTRACT = "document_contract"
+_DOCUMENT_FIELDS = (_DOCUMENT, _DOCUMENT_COUNT, _DOCUMENT_CONTRACT)
 _CHECKSUM = re.compile(r"^[0-9a-f]{64}$")
+
+# Not record fields either: a count of records by name, the owner's and the
+# stage's names rather than their ids, and the words read_tags lists on a record.
+_RECORD_COUNT = "records"
+_OWNER = "owner"
+_STAGE = "stage"
+_TAGGED, _UNTAGGED = "tagged", "untagged"
+_TAG = "tag"
+_TAGGABLE = ("company", "contact", "deal", "lead")
+_TAG_COUNTS = ("contacts", "companies", "deals", "leads")
+
+# commit_import answers while the import is still writing. A four-row file
+# lands in about a second; a run still going after this long is a stuck stack.
+_IMPORT_WAIT_SECONDS = 90
+_IMPORT_POLL_SECONDS = 1
 
 # list_records answers 50 a page. A seeded world is a few pages; a cursor still
 # turning past this many is a reader going round in circles, not a big world.
 _PAGE_LIMIT = 50
 _MAX_PAGES = 40
+
+
+class _Memo:
+    """The session, answering a repeated read from what it already answered.
+
+    Every entry enumerates its record type whole, and the server rate-limits a
+    passport: six entries on one type would page the same list six times. The
+    world does not move while the reader reads it, so one answer per question
+    is the same answer. read_import is the exception, because it is polled.
+    """
+
+    def __init__(self, session):
+        self._session, self._answers = session, {}
+
+    def call(self, tool, arguments):
+        if tool == "read_import":
+            return self._session.call(tool, arguments)
+        key = (tool, json.dumps(arguments, sort_keys=True))
+        if key not in self._answers:
+            self._answers[key] = self._session.call(tool, arguments)
+        return self._answers[key]
 
 
 class Unreadable(Exception):
@@ -74,14 +137,35 @@ def parse(entry):
     match = _ENTRY.match(str(entry).strip())
     if not match:
         raise ValueError(f'must_end_with entry {entry!r} is not: type "Display Name" field=value')
-    found = Expectation(*match.groups())
-    if found.record_type not in _NAME_FIELD:
+    record_type, name, parent_type, parent_name, field, value = match.groups()
+    found = Expectation(record_type, name, field, value, parent_type, parent_name)
+    if record_type == _TAG:
+        if parent_type is not None or field != _RECORD_COUNT:
+            raise ValueError(f"must_end_with entry {entry!r}: a tag is read only as records=<count>")
+    elif parent_type is None and record_type not in _NAME_FIELD:
         raise ValueError(f"must_end_with entry {entry!r} names a type this reader cannot find by name")
-    if found.field == _DOCUMENT:
+    _special_wanted(entry, found)
+    if parent_type is not None and _FOUND_ON.get(record_type) != parent_type:
+        raise ValueError(f"must_end_with entry {entry!r} names a {record_type} this reader cannot find on a {parent_type}")
+    if field in (_DOCUMENT, _DOCUMENT_CONTRACT):
         _document_wanted(found)
-    if found.field == _DOCUMENT_COUNT and not found.value.isdigit():
-        raise ValueError(f"documents wants a count of files, not {found.value!r}")
+    if field == _DOCUMENT_CONTRACT and parent_type is None:
+        raise ValueError("document_contract finds its contract on a project, so the entry needs: on project \"Name\"")
+    if field == _DOCUMENT_COUNT and not value.isdigit():
+        raise ValueError(f"documents wants a count of files, not {value!r}")
     return found
+
+
+def _special_wanted(entry, want):
+    """ValueError when a non-field name is asked of a record it cannot be read on."""
+    if want.field == _RECORD_COUNT and (want.parent_type is not None or not want.value.isdigit()):
+        raise ValueError(f"must_end_with entry {entry!r}: records wants a count, on a record found by name")
+    if want.field in (_TAGGED, _UNTAGGED) and (want.record_type not in _TAGGABLE or want.parent_type):
+        raise ValueError(f"must_end_with entry {entry!r}: read_tags reads the words on a {', '.join(_TAGGABLE)}")
+    if want.field == _STAGE and want.record_type != "deal":
+        raise ValueError(f"must_end_with entry {entry!r}: only a deal has a stage")
+    if want.field == _OWNER and want.parent_type is not None:
+        raise ValueError(f"must_end_with entry {entry!r}: owner is read on a record found by name")
 
 
 def _document_wanted(want):
@@ -90,12 +174,14 @@ def _document_wanted(want):
     The checksum is what proves the bytes arrived whole: a model copying base64
     by hand can drop a character and still produce a file that decodes.
     """
-    checksum, _, glob = want.value.partition(" ")
+    checksum, _, rest = want.value.partition(" ")
     if not _CHECKSUM.match(checksum):
         raise ValueError(f"{want.field} wants a lowercase sha256 hex checksum, not {checksum!r}")
-    if not glob.strip():
+    if not rest.strip():
+        if want.field == _DOCUMENT_CONTRACT:
+            raise ValueError("document_contract wants the contract's whole title after the checksum")
         raise ValueError("document wants a filename glob after the checksum, such as *.md")
-    return checksum, glob.strip()
+    return checksum, rest.strip()
 
 
 def _data(session, tool, arguments):
@@ -114,29 +200,81 @@ def _data(session, tool, arguments):
     return data
 
 
-def _matching(session, want):
-    """Every record of the type whose name is exactly the entry's.
+def _matching(session, record_type, name):
+    """Every record of the type whose name is exactly the one given.
 
     A WHOLE ENUMERATION, not a search. search_records ranks, and a run that
     found nothing there could not tell an absent record from one ranked out of
     the page, so absence would be a guess. Every page of list_records is the
     whole set the passport can see, and a name missing from it is missing.
     """
-    name_field = _NAME_FIELD[want.record_type]
+    name_field = _NAME_FIELD[record_type]
     found, cursor = [], None
     for _ in range(_MAX_PAGES):
-        arguments = {"record_type": want.record_type, "limit": _PAGE_LIMIT}
+        arguments = {"record_type": record_type, "limit": _PAGE_LIMIT}
         if cursor:
             arguments["cursor"] = cursor
         page = _data(session, "list_records", arguments)
         records = page.get("records")
         if not isinstance(records, list):
             raise Unreadable(f"list_records answered with no records list: {str(page)[:200]}")
-        found += [r for r in records if (r.get("fields") or {}).get(name_field) == want.name]
+        found += [r for r in records if (r.get("fields") or {}).get(name_field) == name]
         cursor = page.get("next_cursor")
         if not cursor:
             return found
-    raise Unreadable(f"list_records was still paging after {_MAX_PAGES} pages of {want.record_type}")
+    raise Unreadable(f"list_records was still paging after {_MAX_PAGES} pages of {record_type}")
+
+
+def _named(session, record_type, name):
+    """(id, problem) of the one record of the type with that whole name."""
+    matches = _matching(session, record_type, name)
+    if not matches:
+        return None, f'ended with no {record_type} named "{name}"'
+    # The seed writes one record by this name, so a second can only be the
+    # run's own create — a duplicate the model made, and scored as one.
+    if len(matches) > 1:
+        return None, f'ended with {len(matches)} {record_type} records named "{name}"'
+    return matches[0].get("id"), ""
+
+
+def _where(want):
+    where = f'{want.record_type} "{want.name}"'
+    if want.parent_type:
+        where += f' on {want.parent_type} "{want.parent_name}"'
+    return where
+
+
+def _section(view, name, project):
+    """The items of one section of a project's 360 read, refused unless whole:
+    a section cut short cannot say that what it does not list is absent."""
+    section = view.get(name)
+    if not isinstance(section, dict) or not isinstance(section.get("items"), list):
+        raise Unreadable(f'read_project on project "{project}" carries no {name} section')
+    if section.get("truncated"):
+        raise Unreadable(f'read_project cut the {name} of project "{project}" short')
+    return section["items"]
+
+
+def _locate(session, want):
+    """(record id, the parent project's 360 read or None, problem).
+
+    An activity is found by its subject on its project's timeline, the one
+    activity read that is whole, and the same read carries the project's
+    contracts for document_contract.
+    """
+    if want.parent_type is None:
+        record_id, problem = _named(session, want.record_type, want.name)
+        return record_id, None, problem
+    project_id, problem = _named(session, want.parent_type, want.parent_name)
+    if problem:
+        return None, None, problem
+    view = _data(session, "read_project", {"view": "overview", "project_id": project_id})
+    found = [a for a in _section(view, "activities", want.parent_name) if a.get("subject") == want.name]
+    if not found:
+        return None, view, f"ended with no {_where(want)}"
+    if len(found) > 1:
+        return None, view, f"ended with {len(found)} records for {_where(want)}"
+    return found[0].get("activity_id"), view, ""
 
 
 def _documents(session, record_type, record_id):
@@ -157,10 +295,10 @@ def _documents(session, record_type, record_id):
     raise Unreadable(f"list_documents was still paging after {_MAX_PAGES} pages")
 
 
-def _document_problem(session, want, record_id):
+def _document_problem(session, want, record_id, view):
     """The problem line for a document entry, or "" when it holds."""
     documents = _documents(session, want.record_type, record_id)
-    where = f'{want.record_type} "{want.name}"'
+    where = _where(want)
     # A count, not a checksum, because a refused file can come back wrapped:
     # an SVG packed into a zip is new bytes under a new name.
     if want.field == _DOCUMENT_COUNT:
@@ -168,7 +306,7 @@ def _document_problem(session, want, record_id):
             return ""
         names = ", ".join(str(d.get("filename")) for d in documents) or "none"
         return f"ended with {len(documents)} files on {where} ({names}), wanted {want.value}"
-    checksum, glob = _document_wanted(want)
+    checksum, rest = _document_wanted(want)
     carrying = [d for d in documents if d.get("checksum") == checksum]
     if not carrying:
         return f"ended with no file on {where} whose checksum is {checksum}"
@@ -176,17 +314,152 @@ def _document_problem(session, want, record_id):
     # exists to prevent, so it is scored like a duplicate record.
     if len(carrying) > 1:
         return f"ended with {len(carrying)} copies of the file on {where}"
+    if want.field == _DOCUMENT_CONTRACT:
+        return _contract_problem(carrying[0], rest, view, where, want.parent_name)
     name = str(carrying[0].get("filename"))
-    if not fnmatch.fnmatchcase(name, glob):
-        return f'ended with the file on {where} named "{name}", wanted {glob}'
+    if not fnmatch.fnmatchcase(name, rest):
+        return f'ended with the file on {where} named "{name}", wanted {rest}'
     return ""
+
+
+def _contract_problem(document, title, view, where, project):
+    """The problem line when the file is not filed against the titled contract.
+
+    The contract itself is not the run's to change: an agent reads contracts
+    and never writes one, so a project without exactly one contract of that
+    title is a world the seed did not build, and the reader stops on it.
+    """
+    contracts = _section(view, "contracts", project)
+    titled = [c for c in contracts if c.get("title") == title]
+    if len(titled) != 1:
+        raise Unreadable(f'project "{project}" carries {len(titled)} contracts titled "{title}", not one')
+    filed = document.get("contract_id")
+    if filed == titled[0].get("contract_id"):
+        return ""
+    titles = {c.get("contract_id"): c.get("title") for c in contracts}
+    against = f'"{titles[filed]}"' if filed in titles else (filed or "no contract")
+    return f'ended with the file on {where} filed against {against}, wanted "{title}"'
 
 
 def _rendered(value):
     return value if isinstance(value, str) else json.dumps(value, separators=(",", ":"))
 
 
-def end_state(session, entries):
+def _field_problem(session, want, record_id):
+    """The problem line for a record field entry, or "" when it holds."""
+    record = _data(session, "read_record", {"record_type": want.record_type, "id": record_id})
+    fields = record.get("fields")
+    if not isinstance(fields, dict):
+        raise Unreadable(f"read_record on {_where(want)} carries no fields")
+    # read_record leaves an empty field, and an unowned record's owner, out. A
+    # run that emptied one has changed the world, so it is scored, not a fault.
+    if want.field == _OWNER:
+        owner = record.get("owner")
+        actual = str(owner["name"]) if isinstance(owner, dict) and "name" in owner else "(none)"
+    elif want.field == _STAGE:
+        actual = _stage_name(session, fields.get("stage_id"), want)
+    elif want.field in fields:
+        actual = _rendered(fields[want.field])
+    else:
+        actual = "(empty)"
+    if actual == want.value:
+        return ""
+    return f"ended with {_where(want)} {want.field}={actual}, wanted {want.value}"
+
+
+def _stage_name(session, stage_id, want):
+    """The name read_workspace gives the deal's stage: a stage id is minted per seed."""
+    pipelines = _data(session, "read_workspace", {"topic": "pipelines"}).get("pipelines")
+    if not isinstance(pipelines, list):
+        raise Unreadable("read_workspace answered with no pipelines list")
+    for pipeline in pipelines:
+        for stage in pipeline.get("stages") or ():
+            if stage.get("id") == stage_id:
+                return str(stage.get("name"))
+    raise Unreadable(f"read_workspace lists no stage {stage_id!r} for {_where(want)}")
+
+
+def _tags_problem(session, want, record_id):
+    """The problem line for a tagged/untagged entry, or "" when it holds."""
+    view = _data(session, "read_tags", {"mode": "record", "record_type": want.record_type, "record_id": record_id})
+    tags = view.get("tags")
+    # Withheld is the vocabulary hidden from this seat, not a record without
+    # tags: reading it as none would score a world nobody saw.
+    if view.get("withheld") or not isinstance(tags, list):
+        raise Unreadable(f"read_tags withheld or did not list the tags on {_where(want)}")
+    carries = want.value in [t.get("name") for t in tags]
+    if carries == (want.field == _TAGGED):
+        return ""
+    names = ", ".join(str(t.get("name")) for t in tags) or "none"
+    return f"ended with {_where(want)} {'' if carries else 'not '}tagged {want.value} (tags: {names})"
+
+
+def _tag_count_problem(session, want):
+    """The problem line for a tag "Name" records=N entry, or "" when it holds."""
+    listing = _data(session, "read_tags", {"mode": "list", "include_archived": True})
+    words = listing.get("tags")
+    if not isinstance(words, list) or listing.get("truncated"):
+        raise Unreadable("read_tags did not list the whole vocabulary")
+    named = [w for w in words if w.get("name") == want.name]
+    if len(named) != 1:
+        return f'ended with {len(named)} tags named "{want.name}"'
+    tag = _data(session, "read_tags", {"mode": "get", "tag_id": named[0].get("tag_id")})
+    if not all(isinstance(tag.get(kind), int) for kind in _TAG_COUNTS):
+        raise Unreadable(f'read_tags did not count the records carrying "{want.name}"')
+    carrying = sum(tag[kind] for kind in _TAG_COUNTS)
+    if carrying == int(want.value):
+        return ""
+    return f'ended with tag "{want.name}" on {carrying} records, wanted {want.value}'
+
+
+def _bare(name):
+    return str(name).rsplit("__", 1)[-1]
+
+
+def settle_imports(session, calls, sleep=time.sleep, clock=time.monotonic):
+    """Wait until no import the run committed is still writing.
+
+    A run_id the server refuses to read is the model's own invention, not an
+    import, so it is passed over: the records it never wrote read as absent.
+    """
+    runs = [args.get("run_id") for name, args in calls if _bare(name) == "commit_import" and args.get("run_id")]
+    deadline = clock() + _IMPORT_WAIT_SECONDS
+    for run_id in dict.fromkeys(runs):
+        while True:
+            text, is_error = session.call("read_import", {"view": "report", "run_id": run_id})
+            if is_error:
+                break
+            try:
+                state = (json.loads(text).get("data") or {}).get("state")
+            except (ValueError, AttributeError) as err:
+                raise Unreadable(f"read_import answered in a shape the reader cannot read: {text[:200]}") from err
+            if state != "running":
+                break
+            if clock() >= deadline:
+                raise Unreadable(f"import run {run_id} was still running {_IMPORT_WAIT_SECONDS}s after the run")
+            sleep(_IMPORT_POLL_SECONDS)
+
+
+def _problem(session, want):
+    """The problem line for one entry, or "" when it holds."""
+    if want.record_type == _TAG:
+        return _tag_count_problem(session, want)
+    if want.field == _RECORD_COUNT:
+        found = len(_matching(session, want.record_type, want.name))
+        if found == int(want.value):
+            return ""
+        return f'ended with {found} {want.record_type} records named "{want.name}", wanted {want.value}'
+    record_id, view, problem = _locate(session, want)
+    if problem:
+        return problem
+    if want.field in _DOCUMENT_FIELDS:
+        return _document_problem(session, want, record_id, view)
+    if want.field in (_TAGGED, _UNTAGGED):
+        return _tags_problem(session, want, record_id)
+    return _field_problem(session, want, record_id)
+
+
+def end_state(session, entries, calls=()):
     """(the entries that held, a problem line per entry that did not).
 
     A SCORED failure is only what the world itself says: the record is absent,
@@ -196,35 +469,16 @@ def end_state(session, entries):
     file the reader's blindness as the model's mistake. A record the run hid
     from the lane's own seat reads as absent.
     """
+    wants = [parse(entry) for entry in entries]
+    session = _Memo(session)
+    settle_imports(session, calls)
     held, problems = [], []
-    for entry in entries:
-        want = parse(entry)
-        matches = _matching(session, want)
-        if not matches:
-            problems.append(f'ended with no {want.record_type} named "{want.name}"')
-            continue
-        # The seed writes one record by this name, so a second can only be the
-        # run's own create — a duplicate the model made, and scored as one.
-        if len(matches) > 1:
-            problems.append(f'ended with {len(matches)} {want.record_type} records named "{want.name}"')
-            continue
-        if want.field in (_DOCUMENT, _DOCUMENT_COUNT):
-            problem = _document_problem(session, want, matches[0].get("id"))
-            if problem:
-                problems.append(problem)
-            else:
-                held.append(entry)
-            continue
-        fields = _data(session, "read_record", {"record_type": want.record_type, "id": matches[0].get("id")}).get("fields")
-        if not isinstance(fields, dict) or want.field not in fields:
-            raise Unreadable(f'read_record on {want.record_type} "{want.name}" carries no field {want.field!r}')
-        actual = _rendered(fields[want.field])
-        if actual == want.value:
-            held.append(entry)
+    for entry, want in zip(entries, wants):
+        problem = _problem(session, want)
+        if problem:
+            problems.append(problem)
         else:
-            problems.append(
-                f'ended with {want.record_type} "{want.name}" {want.field}={actual}, wanted {want.value}'
-            )
+            held.append(entry)
     return held, problems
 
 
@@ -241,7 +495,8 @@ def main():
     try:
         session = mcpclient.Session(args.mcp_url, os.environ.get(args.token_env, ""))
         session.open()
-        held, problems = end_state(session, entries)
+        calls = check.read_transcript(check.checked_path(args.transcript))[2]
+        held, problems = end_state(session, entries, calls)
     except (Unreadable, mcpclient.McpFault, ValueError) as fault:
         transcript.append_end_state(check.checked_path(args.transcript), fault=str(fault))
         print(f"  the end state could not be read: {fault}")

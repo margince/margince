@@ -61,10 +61,6 @@ func focusEligible(row ranked, asOf time.Time) bool {
 	case sourceMeeting:
 		return row.item.Kind != nil && *row.item.Kind == meetingKindUnprepared &&
 			!row.deadlineAt.IsZero() && row.deadlineAt.Sub(asOf) <= 24*time.Hour
-	case "brief_item":
-		if row.item.Kind != nil && *row.item.Kind == "moved" {
-			return false
-		}
 	}
 	return semanticLevelOf(row) < levelRoutine
 }

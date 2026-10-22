@@ -188,6 +188,14 @@ func TestBuildExtractionAcceptPatchRefusesMalformedCoercions(t *testing.T) {
 		}, acceptPatchFixture())
 		requireAcceptRefusal(t, err, "field_keys[0]", "invalid_integer")
 	})
+	t.Run("expected_close_date in year zero is refused", func(t *testing.T) {
+		edits := map[string]any{"expected_close_date": "0000-01-01"}
+		_, _, err := buildExtractionAcceptPatch(crmcontracts.AcceptExtractionRequest{
+			FieldKeys: []string{"expected_close_date"},
+			Edits:     &edits,
+		}, acceptPatchFixture())
+		requireAcceptRefusal(t, err, "field_keys[0]", "invalid_date")
+	})
 	t.Run("expected_close_date must be a calendar date", func(t *testing.T) {
 		edits := map[string]any{"expected_close_date": "end of Q3"}
 		_, _, err := buildExtractionAcceptPatch(crmcontracts.AcceptExtractionRequest{

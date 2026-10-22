@@ -27,6 +27,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
@@ -63,11 +64,15 @@ func proposeOnMetCriteria(t *testing.T, e *Env) (ids.DealID, bool) {
 
 	// Through the REAL writer. A hand-inserted row would test a shape the
 	// product never writes.
+	contractID := seedContract(t, e, contracts.CreateContractInput{
+		CompanyID: companyIDOf(e.SeedCompany(t, "Progression company", nil)),
+		Title:     "Signed agreement", ValueBasis: contracts.BasisTotal, Source: "manual",
+	})
 	written, err := e.Deals.RecordDeterministicEvidence(admin, deals.DeterministicClaim{
 		DealID:     deal,
 		Kind:       deals.CriterionDocumentSigned,
 		SourceType: "contract",
-		SourceID:   ids.NewV7(),
+		SourceID:   contractID.UUID,
 		AuthorSide: deals.AuthorBuyer,
 		ObservedAt: stageProgressionClock.Add(-time.Hour),
 	})
@@ -333,7 +338,12 @@ func TestTheCardCitesSomethingAReviewerCanOpen(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("configuring the criterion: %v", err)
 	}
-	contractID := ids.NewV7()
+	// A contract that exists: a citation of a deleted source is left off the
+	// card, so a made-up id would leave nothing to read.
+	contractID := ids.UUID(seedContract(t, e, contracts.CreateContractInput{
+		CompanyID: companyIDOf(e.SeedCompany(t, "Citation Co", nil)),
+		Title:     "The signed agreement", ValueBasis: contracts.BasisTotal, Source: "manual",
+	}).UUID)
 	if _, err := e.Deals.RecordDeterministicEvidence(admin, deals.DeterministicClaim{
 		DealID: deal, Kind: deals.CriterionDocumentSigned, SourceType: "contract",
 		SourceID: contractID, AuthorSide: deals.AuthorBuyer,
@@ -366,6 +376,7 @@ func TestTheCardCitesSomethingAReviewerCanOpen(t *testing.T) {
 		t.Fatalf("the card cites %s, want the contract %s the claim was read from — "+
 			"an evidence-row id under this type resolves to nothing", source, contractID)
 	}
+	assertProgressionContractPreview(t, e, deal, contractID)
 }
 
 // A superseded card does not sit on the ledger forever.

@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { StoryProviders } from "../screens/story-utils";
+import { StoryProviders } from "../testing/story-utils";
 import { ConnectivityNotice } from "./connectivitybanner";
 
 // The notice, not the connected banner: a story cannot take the browser offline,

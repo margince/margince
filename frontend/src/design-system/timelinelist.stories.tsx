@@ -5,16 +5,14 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
 import { viewerZone } from "../format/timezone";
 import { LocaleProvider, useLocale, useT } from "../i18n";
-import { StoryProviders } from "../screens/story-utils";
-import { groupChronology } from "../screens/timelinegroups";
+import { StoryProviders } from "../testing/story-utils";
 import { activityTimeline } from "./activitytimeline";
 import { Avatar, Card } from "./atoms";
-import {
-  GroupedTimelineList,
-  type TimelineEntry,
-  TimelineList,
-} from "./composed";
 import type { RecordContact } from "./participants";
+import { GroupedTimelineList, TimelineList } from "./timeline";
+import type { TimelineEntry } from "./timelineentry";
+import { groupChronology } from "./timelinegroups";
+import { ThreadRow } from "./timelinethread";
 
 const meta: Meta<typeof TimelineList> = {
   title: "Components/Text and data display/Timeline list",
@@ -325,4 +323,61 @@ export const NoteThatReadsLikeASignOff: Story = {
       ]}
     />
   ),
+};
+
+export const CommitmentsToReview: Story = {
+  render: () => (
+    <ul className="timeline">
+      <ThreadRow
+        zone={viewerZone()}
+        group={{
+          id: "review-thread",
+          kind: "thread",
+          partial: false,
+          entries: [
+            entry("review-reply", "2026-08-14T15:20:00Z", {
+              direction: "inbound",
+              body: "Thanks, I look forward to the pricing.",
+            }),
+            entry("review-promise", "2026-08-13T10:00:00Z", {
+              direction: "outbound",
+              body: "I will send the pricing by Friday.",
+              commitmentReviewCount: 1,
+            }),
+            entry("private-promise", "2026-08-12T10:00:00Z", {
+              withheld: true,
+              commitmentReviewCount: 99,
+            }),
+          ],
+        }}
+      />
+    </ul>
+  ),
+};
+
+export const CommitmentsToReviewDark: Story = {
+  ...CommitmentsToReview,
+  globals: { theme: "dark" },
+};
+
+export const TaskStates: Story = {
+  args: {
+    zone: ZONE,
+    entries: [
+      entry("task-open", "2026-08-14T09:00:00Z", {
+        kind: "task",
+        title: "Send the revised quote",
+        isDone: false,
+      }),
+      entry("task-done", "2026-08-13T09:00:00Z", {
+        kind: "task",
+        title: "Confirm the meeting",
+        isDone: true,
+      }),
+    ],
+  },
+};
+export const TaskStatesDark: Story = {
+  ...TaskStates,
+  globals: { theme: "dark" },
 };

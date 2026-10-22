@@ -67,12 +67,14 @@ func TestOnlyAHumanKeepsARequestPastTheHorizon(t *testing.T) {
 		t.Fatal("a request nobody holds is still daily work 200 days later")
 	}
 	request := LogActivityInput{Kind: "task", Source: "manual", RequestActivityID: &id}
-	if _, _, err := storeKnowing(e).LogActivity(e.asSeat(e.rep), request); err != nil {
+	held, _, err := storeKnowing(e).LogActivity(e.asSeat(e.rep), request)
+	if err != nil {
 		t.Fatalf("taking the request: %v", err)
 	}
-	if !e.waitingAt(colleague, t, pastTheHorizon)[id] {
-		t.Fatal("a request a human took aged out of the queue")
+	if e.waitingAt(colleague, t, pastTheHorizon)[id] {
+		t.Fatal("a human-held request reappeared as a colleague's wait")
 	}
+	assertCurrentHeldRequest(t, e, ids.UUID(held.Id))
 }
 
 // Mail on an open deal ages out too: the deal's own risk lane speaks for a
@@ -126,13 +128,13 @@ func TestAnAgedSystemReminderRetiresAndAWorkedOneStays(t *testing.T) {
 	if _, archived := reminderOf(worked); archived {
 		t.Fatal("a reminder a human worked was retired by age")
 	}
-	// The read side of the same rule: the request behind a worked reminder is
-	// still work for a colleague, and the untouched one is not.
+	// Human-held work stays on its task, without duplicating the source for colleagues.
 	colleague := e.asSeat(e.other)
 	still := e.waitingAt(colleague, t, pastTheHorizon)
-	if !still[worked] {
-		t.Error("the request whose reminder a human worked left the queue")
+	if still[worked] {
+		t.Error("a human-held reminder also appeared as a colleague's wait")
 	}
+	assertCurrentHeldRequest(t, e, workedReminder)
 	if still[untouched] {
 		t.Error("the request whose reminder nobody touched is still in the queue")
 	}
@@ -144,4 +146,20 @@ func TestAnAgedSystemReminderRetiresAndAWorkedOneStays(t *testing.T) {
 	if done {
 		t.Fatal("an aged reminder was completed, which would settle a request nobody answered")
 	}
+}
+
+func assertCurrentHeldRequest(t *testing.T, e *loadEnv, task ids.UUID) {
+	t.Helper()
+	rows, _, err := storeKnowing(e).ListActivities(e.asSeat(e.rep), ListActivitiesInput{
+		Kind: new("task"), AssigneeID: new(ids.From[ids.UserKind](e.rep)), TaskAsOf: &pastTheHorizon,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, row := range rows {
+		if ids.UUID(row.Id) == task && row.AssigneeId != nil && ids.UUID(*row.AssigneeId) == e.rep {
+			return
+		}
+	}
+	t.Fatal("human-held task disappeared from its assignee's current tasks")
 }

@@ -13,16 +13,17 @@
 #
 # THE MOVE IS STAGED, AND THE PROMPT GIVES THE SIGN-OFF. A filing on a company is
 # undoable — relinking moves it back — so the credential that staged it may release
-# it on its own attended call: decide_approval to approve, then relink_activities
+# it on its own attended call: decide_approvals to approve, then relink_activities
 # again carrying approval_id, which is the call that moves the mails. An assistant
 # that stages and hands the approval back has refused authority it was given.
 #
-# decide_approval_bundle HAS NO CASE, and this is its written ruling. A bundle_id
+# DECIDING A BUNDLE HAS NO CASE, and this is its written ruling. A bundle_id
 # is minted only by two producers — a website read and a reading of a meeting
 # transcript — and both are model-backed and started by a human session, so the
 # lane could seed one only by spending a model call inside its own setup, and the
-# seed would have to add pending approvals that case 1 and case 8 count. The tool
-# stays untried by this lane until a bundle can be made without a model.
+# seed would have to add pending approvals that case 1 and case 8 count.
+# decide_approvals with a bundle_id stays untried by this lane until a bundle can
+# be made without a model.
 name: case48_that_whole_thread_is_filed_wrong
 criteria: [1, 2]
 
@@ -40,9 +41,8 @@ prompt: |
 
 must_call:
   - relink_activities
-  - decide_approval
+  - decide_approvals
 may_call:
-  - relink_thread
   - search_context
   - search_records
   - read_record
@@ -61,7 +61,7 @@ may_call:
 must_call_with:
   - relink_activities.entity_type=company
   - relink_activities.replace_existing_of_type=true
-  - decide_approval.decision=approve
+  - decide_approvals.decision=approve
   - relink_activities.approval_id=*
 
 must_mention:

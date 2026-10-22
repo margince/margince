@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -57,15 +58,17 @@ type registryFeatures struct {
 	lists       bool
 	firstDrafts *firstMessageEngines
 	served      *Server
+	// reclaim deletes a retired offer rendering where no Server holds the store.
+	reclaim deals.RetiredRendering
 }
 
-func registryWithDraftBrain(pool *pgxpool.Pool, brain completer, send SendPath) *agents.Registry {
+func registryWithDraftBrain(pool *pgxpool.Pool, brain completer, send SendPath, features registryFeatures) *agents.Registry {
 	db := InstallationDB(pool)
 	brief := meetingBriefReader(newMeetingBriefService(db))
 	if brain == nil {
-		return registryWithGate(db, auth.NewGate(identity.NewService(pool)), nil, send, companyEnricher{}, nil, nil, nil, brief, slog.Default(), registryFeatures{})
+		return registryWithGate(db, auth.NewGate(identity.NewService(pool)), nil, send, companyEnricher{}, nil, nil, nil, brief, slog.Default(), features)
 	}
-	return registryWithGate(db, auth.NewGate(identity.NewService(pool)), newReplyDrafter(pool, brain, nil), send, companyEnricher{}, nil, nil, nil, brief, slog.Default(), registryFeatures{})
+	return registryWithGate(db, auth.NewGate(identity.NewService(pool)), newReplyDrafter(pool, brain, nil), send, companyEnricher{}, nil, nil, nil, brief, slog.Default(), features)
 }
 
 // registryWithGate composes the tool surface. The volume budget charger arrives as
@@ -84,6 +87,7 @@ func registryWithDraftBrain(pool *pgxpool.Pool, brain completer, send SendPath) 
 // serving a lexically-ranked page under a semantic label.
 func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.EmailDrafter, send SendPath, enricher agents.CompanyEnricher, embedder search.Embedder, transcriptOnLanding activities.TranscriptReadEnqueue, imports agents.Imports, meetingBrief agents.MeetingBriefReader, log *slog.Logger, features registryFeatures, opts ...agents.RegistryOption) *agents.Registry {
 	pool, provider := db.Pool(), providerWithTranscripts(db, transcriptOnLanding)
+	provider = withServerSeams(provider, pool, features)
 	// Every mutating tool shares retry claims and replay authorization on every host role.
 	opts = append(opts, withContractTierFloor(),
 		agents.WithIdempotency(toolIdempotency(pool)), agents.WithReplayReader(provider),
@@ -95,6 +99,8 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterCoreTools(registry, provider, provider, provider, fieldOwnership{pool: pool}, newConsumerMailSeam(db),
 		openDuplicatesFor(pool), tagOfferSeam(db))
 	agents.RegisterListTool(registry, provider, provider)
+	agents.RegisterRecordPartsTool(registry, recordParts{offers: provider, RecordParts: contacts.NewRecordParts(db)})
+	agents.RegisterReadViewTool(registry, readViews(agentPolicies), readViewThrough(viewDoorOf(features.served)))
 	relinker, disqualifier, demoter, advancer := lifecycleSeams(pool)
 	agents.RegisterLifecycleTools(registry, provider, relinker, disqualifier, demoter, advancer)
 	agents.RegisterBulkTool(registry, bulkChangeSeam{engine: newBulkEngine(db, gate).withListsIf(features.lists)})
@@ -112,7 +118,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	// The UI and tools share calculation engines and current-reader disclosure rules.
 	agents.RegisterAnalyticsQueryTool(registry,
 		analyticsQueryToolRunner(InstallationDB(pool)))
-	agents.RegisterAnalyticsVocabularyTool(registry, analyticsVocabularyReader{})
+	agents.RegisterAnalyticsVocabularyTool(registry, analyticsVocabularyReader{db: db})
 	agents.RegisterRecordFieldsTool(registry, agents.RecordFieldsResource{})
 	agents.RegisterReportBlocksTool(registry,
 		agents.NewReportBlocksResource(reportBlockGrammar()))
@@ -128,9 +134,12 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterBriefTool(registry, briefReader(pool))
 	agents.RegisterAnnotateBriefTool(registry, briefAnnotator(pool))
 	searchRetriever, retriever := registryRetrievers(pool, embedder)
-	agents.RegisterIntentTools(registry, retriever, meetingBrief, provider)
+	// One engine ranks search_records and resolves an intent tool's record_name.
+	recordSearch := recordSearchSeam(pool)
+	agents.RegisterIntentTools(registry, retriever, meetingBrief, recordSearch)
 	agents.RegisterChannelProviderTools(registry, channelProviderDirectory{})
 	agents.RegisterContextSearchTool(registry, provider, retriever)
+	agents.RegisterRecordSearchTool(registry, provider, recordSearch)
 	agents.RegisterReportEvidenceTool(registry, provider, reportEvidenceSeam{
 		db: InstallationDB(pool), floor: analyticsquery.DefaultFloor,
 		ranker: searchRetriever, classifier: searchRetriever,
@@ -143,7 +152,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterListTools(registry, newListSeam(pool, features.lists))
 	agents.RegisterImportTools(registry, importsOr(imports, db))
 	agents.RegisterDocumentTools(registry, documentSeam{srv: features.served, db: db})
-	agents.RegisterSlippingTools(registry, slippingLister(pool), followUpDrafter(provider))
+	agents.RegisterSlippingTools(registry, slippingLister(pool), followUpDrafter(provider), deals.StalledThresholdDays)
 	agents.RegisterCommitmentTool(registry, commitmentLister(pool))
 	agents.RegisterHandoffTool(registry, handoffReader(pool))
 	agents.RegisterProject360Tool(registry, project360Reader(pool))
@@ -154,6 +163,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	comms.firstDrafts = features.firstDrafts
 	agents.RegisterCommsTools(registry, comms, provider)
 	agents.RegisterMeetingInvitationTool(registry, newCommsAdapter(pool, drafter, send), provider)
+	agents.RegisterRouters(registry)
 	registerComposedTools(registry)
 	return registry
 }

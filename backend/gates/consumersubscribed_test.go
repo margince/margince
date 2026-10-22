@@ -27,6 +27,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 func TestEveryEventConsumerIsSubscribed(t *testing.T) {
@@ -63,7 +65,7 @@ func TestEveryEventConsumerIsSubscribed(t *testing.T) {
 // files are excluded for the same reason: neither subscribes anything.
 func subscribedConsumers(t *testing.T) map[string]bool {
 	t.Helper()
-	dir := filepath.Join(moduleRoot(t), "cmd", "worker")
+	dir := filepath.Join(gatekit.ModuleRoot(t), "cmd", "worker")
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("reading cmd/worker: %v", err)
@@ -128,7 +130,7 @@ func calledFunctions(body *ast.BlockStmt) []string {
 // HandleEvent method.
 func composeEventConsumers(t *testing.T) []string {
 	t.Helper()
-	dir := filepath.Join(moduleRoot(t), "internal", "compose")
+	dir := filepath.Join(gatekit.ModuleRoot(t), "internal", "compose")
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("reading internal/compose: %v", err)

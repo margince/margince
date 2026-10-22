@@ -11,6 +11,11 @@ The owed verdict (`asks_us` or `informs_us`) decides what the sender asks for. T
 still needs action, even when its label is `meeting`. When a `noise` label disagrees, a confirmed
 request stays open for review and is not handed to anyone on its own.
 
+A reply to a calendar invite, such as a contact saying no to a meeting, is owed nothing on its own. It
+is owed only when the owed verdict says `asks_us` or someone took it on. Capture reads this from the
+method the mail's calendar part names (`REPLY`, `COUNTER` or `DECLINECOUNTER`). The owed verdict
+still reads every such mail, because a sender can put that method on any mail.
+
 The activities module owns the request state. Its shared checks serve the email brief, the waiting
 queue and the queue of mail still to classify. They also serve the reminders it files on its own, and
 the deal's read of its own requests. That last read runs apart from the newest history, so a request can
@@ -21,11 +26,16 @@ A later email proves a reply was sent; it does not prove the request was handled
 itself settles nothing. `"Thanks, I will check"` is a reply and closes nothing. So short notes back,
 replies about something else and newer inbound messages all leave a confirmed request standing.
 
-A reply does start a model reading of the thread. Once the workspace has written back, the settle pass
-hands the conversation to a model. It sends the request and everything after it, each message marked as
-from them or from us. It asks what our own reply did: `settled`, `still_owed`, or `unsure` below the
-confidence floor. A request nobody has answered is never judged. With no model set up for the task, a
-request stays owed until someone completes its reminder.
+A reply starts a model reading of the thread. Later inbound mail from the same sender can also start that reading.
+Capture must hold proof from the receiving server that the sender passed its checks.
+For Gmail, that proof is a `DMARC` pass for the domain of the sender from `mx.google.com`.
+Other transports and older rows without proof cannot end a request through inbound mail alone. Capture still works without this proof.
+
+The settle pass asks whether the evidence completes the exact request: `settled`, `still_owed`, or
+`unsure` below the confidence floor. A signature notice must name the requested document; matching
+subjects alone prove nothing. The model receives the request and eligible later evidence, marked as
+from them or from us. With no eligible evidence or no model, the request stays owed until someone
+completes its reminder.
 
 A `settled` verdict completes the reminder linked to the evidence, through the ordinary activity writer.
 So it carries the audit row and the event that a human who completes it by hand would carry. `still_owed` may
@@ -38,7 +48,7 @@ asked and would not commit. That leaves the request owed and stops the pass from
 conversation again until someone writes on it again.
 
 Any user who completes the reminder linked to the evidence settles its source request. Marking a conversation as not sales removes it from request review. When a reader chooses
-snooze or `not_mine`, that changes their own queue, not what is owed for every user.
+snooze, `not_mine` or `handled`, that changes their own queue, not what is owed for every user.
 
 ## Whether a reply is still owed
 
@@ -49,7 +59,9 @@ reply.
 
 A message that is not a request is answered by any of:
 
-- our reply on the same thread;
+- our reply on the same thread, sent to the sender. Their address, or a live address of their
+  contact, must be the recipient or on a To/Cc row. Our mail to somebody else on the thread does not
+  answer them, and neither does a Bcc copy. A chat message has no address, so any reply of ours in that chat counts;
 - our mail to the sender with the same subject, once reply tags (`Re:`, `AW:`, `Antw:`) are removed.
   The sender is their address or any live address of their contact. That address must be named as the
   recipient of the outbound mail or on a To/Cc row. A Bcc copy does not count, and a mail sent on
@@ -77,7 +89,7 @@ verdict never takes out a request a human accepted. Mail from an obvious machine
 as a confirmed request.
 
 The waiting lane is the owed set, made smaller by queue rules. The rules are the horizon, the sales
-link, mail from colleagues' own company, and the snooze and `not_mine` choices of that reader. Each of
+link, mail from colleagues' own company, and the snooze, `not_mine` and `handled` choices of that reader. Each of
 those has its own number in `/worklist/hidden` too. So when a badge says a reply is owed and a lane does
 not show the row, there is always a counted reason.
 

@@ -1,16 +1,14 @@
 import { Check } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useT } from "../i18n";
-import { problemMessageOf } from "../screens/common";
+import { isImeCommit } from "../lib/imecommit";
+import { problemMessageOf } from "../lib/problem";
 import { Button, SearchField } from "./atoms";
 import { ErrorLine } from "./errorline";
 
-// The shared debounced search→candidate-list→pick pattern: this used to live
-// duplicated, near-identically, inline in MergeAction (screens/merge.tsx) and
-// AddRelationshipAction (screens/relationships.tsx) — both wire a search
-// transport, debounce 250ms, render candidates as pickable buttons, and
-// surface a search failure inline rather than throwing it. Neither of those
-// two has been migrated onto this extraction yet.
+// The shared debounced search→candidate-list→pick pattern. MergeAction
+// (components/merge.tsx) draws it; AddRelationshipAction (features/records/relationships.tsx)
+// still holds its own copy.
 //
 // It is now PUBLISHED to the extension tier (surface/design-system.ts), which
 // makes this comment something third parties read. Two things it does not do,
@@ -21,7 +19,13 @@ import { ErrorLine } from "./errorline";
 
 const SEARCH_DEBOUNCE_MS = 250;
 
-export type RecordPickerCandidate = { id: string; name: string };
+// `detail` is the line under the name that tells two look-alike names apart
+// (a contact's company and address, a company's domain).
+export type RecordPickerCandidate = {
+  id: string;
+  name: string;
+  detail?: string;
+};
 
 // Named once: by `label` standing alone, or by the `<label for>` a `Field`
 // points at `id`. Not both: an aria-label overrides the visible label it repeats.
@@ -153,11 +157,11 @@ export function RecordPicker({
         onChange={(event) => setTerm(event.target.value)}
         // Inside a form, Enter here would submit the record picked BEFORE this
         // search; a pick is a click on a candidate, never this keystroke. An
-        // IME's Enter commits its candidate, and Safari reports it as 229.
+        // IME's Enter commits its candidate.
         onKeyDown={(event) => {
-          const composing =
-            event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229;
-          if (event.key === "Enter" && !composing) event.preventDefault();
+          if (event.key === "Enter" && !isImeCommit(event)) {
+            event.preventDefault();
+          }
         }}
       />
       {searchFailure !== null && (
@@ -169,7 +173,14 @@ export function RecordPicker({
       {selected && (
         <p className="recordpicker-selected" aria-live="polite">
           <Check className="recordpicker-selected-check" aria-hidden />
-          {selected.name}
+          <span className="recordpicker-selected-text">
+            <span>{selected.name}</span>
+            {selected.detail && (
+              <span className="t-caption recordpicker-option-detail">
+                {selected.detail}
+              </span>
+            )}
+          </span>
         </p>
       )}
       {answered && candidates.length === 0 && (
@@ -191,7 +202,12 @@ export function RecordPicker({
                   setTerm("");
                 }}
               >
-                {candidate.name}
+                <span>{candidate.name}</span>
+                {candidate.detail && (
+                  <span className="t-caption recordpicker-option-detail">
+                    {candidate.detail}
+                  </span>
+                )}
               </Button>
             </li>
           ))}

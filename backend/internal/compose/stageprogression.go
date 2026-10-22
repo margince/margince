@@ -120,7 +120,7 @@ func (p *StageProgressionProposer) Propose(ctx context.Context, dealID ids.DealI
 		// measured rates that would turn it on are their own package, and a
 		// proposer that guessed at them would auto-apply on an installation
 		// that had measured nothing. Everything reaches a human until then.
-		facts, err := deals.ReadStageProgressionFacts(
+		facts, err := p.deals.ReadStageProgressionFacts(
 			actorCtx, tx, dealID, deals.AutopilotFacts{}, p.now())
 		if err != nil {
 			return err
@@ -195,6 +195,8 @@ func (p *StageProgressionProposer) stageCard(
 		DiffHash:       diffHash,
 		TargetType:     approvalTargetDeal,
 		TargetID:       facts.DealID.UUID,
+		CoTargetType:   dealTargetStage,
+		CoTargetID:     facts.ToStageID.UUID,
 		// No TargetVersion: staging takes the pin ITSELF, in this same
 		// transaction (approvals/stagingpins.go), and never from what a caller
 		// supplied. The deal is a versioned target, so the card is pinned to
@@ -209,6 +211,9 @@ func (p *StageProgressionProposer) stageCard(
 		Identity:    identity,
 		Evidence:    progressionEvidence(facts),
 	})
+	if errors.Is(err, approvals.ErrNoDecider) {
+		return nil
+	}
 	if err != nil {
 		return err
 	}
@@ -228,12 +233,14 @@ func progressionChange(facts deals.StageProgressionFacts, lang textlang.Lang) de
 	criteria := make([]deals.ProposedCriterion, 0, len(facts.Criteria))
 	for _, c := range facts.Criteria {
 		criteria = append(criteria, deals.ProposedCriterion{
-			CriterionID: c.CriterionID,
-			Key:         c.Key,
-			Label:       c.Label,
-			Required:    c.Required,
-			Met:         c.Met,
-			EvidenceIDs: c.EvidenceIDs,
+			Version:        c.Version,
+			CriterionID:    c.CriterionID,
+			Key:            c.Key,
+			Label:          c.Label,
+			Required:       c.Required,
+			Met:            c.Met,
+			EvidenceIDs:    c.EvidenceIDs,
+			CitedSourceIDs: citedSourceIDs(c),
 		})
 	}
 	change := deals.StageProgressionChange{
@@ -279,7 +286,7 @@ func progressionEvidence(facts deals.StageProgressionFacts) []approvals.Evidence
 			continue
 		}
 		for _, src := range c.Sources {
-			if !approvals.EvidenceSourceTypeKnown(src.SourceType) {
+			if !citable(src) {
 				continue
 			}
 			// The criterion's label stands in for a claim recorded with no
@@ -294,6 +301,24 @@ func progressionEvidence(facts deals.StageProgressionFacts) []approvals.Evidence
 				SourceType: src.SourceType,
 				SourceID:   src.SourceID,
 			})
+		}
+	}
+	return out
+}
+
+// citable answers whether the card may cite a source. One the reader cannot
+// open is left off: the claim still counts, but a dead pointer reads as
+// corroboration.
+func citable(src deals.EvidenceSource) bool {
+	return !src.Missing && approvals.EvidenceSourceTypeKnown(src.SourceType)
+}
+
+// citedSourceIDs are the sources progressionEvidence cites for one criterion.
+func citedSourceIDs(c deals.ProgressionCriterion) []ids.UUID {
+	var out []ids.UUID
+	for _, src := range c.Sources {
+		if c.Met && citable(src) {
+			out = append(out, src.SourceID)
 		}
 	}
 	return out
@@ -428,6 +453,9 @@ func stageProgressionEffect(svc *approvals.Service, store *deals.Store) approval
 				// authority, and re-asking the autopilot's thresholds would
 				// let a suspended rule block a move somebody explicitly made.
 				if err := refuseAStaleAutomaticMove(ctx, tx, change); err != nil {
+					return err
+				}
+				if err := store.ValidateProgressionCriteriaTx(ctx, tx, change); err != nil {
 					return err
 				}
 				_, err := store.AdvanceDealTx(ctx, tx, change.DealID, deals.AdvanceDealInput{

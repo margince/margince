@@ -28,6 +28,10 @@ const entityLead = "lead"
 // leadEmailColumn is the lead's exact-key address column.
 const leadEmailColumn = "email"
 
+// leadPhoneColumn names the lead's own number column, for the audit image and
+// the writers that set it.
+const leadPhoneColumn = "phone"
+
 // identityTouched answers whether a patch changed any of the named columns.
 func identityTouched(p *storekit.Patch, columns ...string) bool {
 	after := p.After()
@@ -141,5 +145,9 @@ func leadConfidence(name, company, domain string, row leadCandidateRow) float64 
 	case domain != "" && normalizeDomain(row.domain) == domain:
 		employer = 0.8
 	}
-	return dedupeNameWeight*nameSimilarity(name, deref(row.fullName)) + dedupeCompanyDomainWeight*employer
+	other := deref(row.fullName)
+	if !namesCorroborate(name, other) {
+		employer = 0
+	}
+	return dedupeNameWeight*nameSimilarity(name, other) + dedupeCompanyDomainWeight*employer
 }

@@ -31,15 +31,17 @@ type CreateCompanyInput struct {
 	ParentCompanyID *ids.CompanyID
 	Address         *crmcontracts.Address
 	Domains         []CompanyDomainInput
-	Source          string
+	// LinkedInURL is the company's LinkedIn page; stored in its canonical
+	// spelling, and unique among live companies.
+	LinkedInURL *string
+	Source      string
 	// SourceSystem names the system an import took this company from; nil
 	// for one created here, which is what makes it unattributable.
 	SourceSystem *string
 	// Author is who wrote it in the system it came from; zero when unknown.
 	Author storekit.SourceAuthorInput
-	// CustomFields carries the request body's extra top-level keys
-	// (additionalProperties); only active cf_* catalog columns land,
-	// drop-on-mismatch (customfields.go).
+	// CustomFields carries the request body's cf_* keys. A key no active catalog
+	// column takes is refused (storekit.CheckCustomValues).
 	CustomFields map[string]any
 	// CreateCompany writes one company and answers with the record as it now
 	// reads, so a caller never has to guess what the store derived.
@@ -51,7 +53,7 @@ func (s *Store) CreateCompany(ctx context.Context, in CreateCompanyInput) (crmco
 	if err := auth.Require(ctx, "company", principal.ActionCreate); err != nil {
 		return crmcontracts.Company{}, err
 	}
-	by, err := s.readyCompanyCreate(ctx, in)
+	by, err := s.readyCompanyCreate(ctx, &in)
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
@@ -79,21 +81,20 @@ func (s *Store) CreateCompany(ctx context.Context, in CreateCompanyInput) (crmco
 // transaction — one whose own write must land with this company or not at
 // all. Same gates in the same order; only the transaction is borrowed.
 //
-// Custom fields are refused rather than dropped: the catalog they are matched
-// against is read in a transaction of its own, which is exactly the second
-// connection this seam exists to avoid taking.
-func (s *Store) CreateCompanyTx(ctx context.Context, tx pgx.Tx, in CreateCompanyInput) (crmcontracts.Company, error) {
+// Custom fields ride on the columns the caller read before it opened the
+// transaction (ActiveCreateColumns); with none, they are refused, never dropped.
+func (s *Store) CreateCompanyTx(ctx context.Context, tx pgx.Tx, in CreateCompanyInput, cols CustomColumns) (crmcontracts.Company, error) {
 	if err := auth.Require(ctx, "company", principal.ActionCreate); err != nil {
 		return crmcontracts.Company{}, err
 	}
-	if err := refuseCustomFields(in.CustomFields); err != nil {
+	if err := refuseUncataloguedCustomFields(in.CustomFields, cols); err != nil {
 		return crmcontracts.Company{}, err
 	}
-	by, err := s.readyCompanyCreate(ctx, in)
+	by, err := s.readyCompanyCreate(ctx, &in)
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
-	out, err := createCompanyInTx(ctx, tx, in, by, nil)
+	out, err := createCompanyInTx(ctx, tx, in, by, cols.cols)
 	if err != nil {
 		return out, err
 	}
@@ -122,13 +123,25 @@ func (s *Store) geocodeANewCompany(ctx context.Context, tx pgx.Tx,
 	return nil
 }
 
-// readyCompanyCreate runs what a create settles BEFORE any transaction
-// opens — the domain parse, the size-band vocabulary and the captured-by
-// resolution — and answers the attribution the write shape stamps. Both entry
-// points call it, so neither can drift from the other's validation.
-func (s *Store) readyCompanyCreate(ctx context.Context, in CreateCompanyInput) (string, error) {
+// readyCompanyCreate runs what a create settles before any transaction opens:
+// the domain and LinkedIn parses, the size-band vocabulary and the captured-by
+// resolution. It answers the attribution the write shape stamps.
+// Both entry points call it, so neither can drift from the other's validation.
+func (s *Store) readyCompanyCreate(ctx context.Context, in *CreateCompanyInput) (string, error) {
 	if err := parseCompanyDomains(in.Domains); err != nil {
 		return "", err
+	}
+	address, err := checkedAddress(in.Address)
+	if err != nil {
+		return "", err
+	}
+	in.Address = address
+	if in.LinkedInURL != nil {
+		normalized, err := NormalizeCompanyLinkedInURL(*in.LinkedInURL)
+		if err != nil {
+			return "", err
+		}
+		in.LinkedInURL = &normalized
 	}
 	// Both write paths, not just the patch: a vocabulary checked on update and
 	// not on create is a value the database refuses at birth and the transport
@@ -152,25 +165,10 @@ func createCompanyInTx(ctx context.Context, tx pgx.Tx, in CreateCompanyInput, by
 	}
 	in.OwnerID = owner
 
-	if err := ensureCompanyDomainsUnclaimed(ctx, tx, in.Domains); err != nil {
-		return crmcontracts.Company{}, err
-	}
-
-	match, err := manualDedupeCompany(ctx, tx, in)
+	match, err := admitAndDedupeCompanyCreate(ctx, tx, in)
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
-
-	// Naming a parent is a read of the parent: the child discloses the
-	// hierarchy edge, so the target must be visible under the caller's
-	// row scope, not merely same-workspace (H1 — an FK argument to a
-	// row-scoped record is a read of that record).
-	if in.ParentCompanyID != nil {
-		if err := auth.EnsureLinkTarget(ctx, tx, "company", in.ParentCompanyID.UUID); err != nil {
-			return crmcontracts.Company{}, err
-		}
-	}
-
 	id, err := createCompany(ctx, tx, match, CompanySpec{
 		DisplayName:     in.DisplayName,
 		LegalName:       in.LegalName,
@@ -181,6 +179,7 @@ func createCompanyInTx(ctx context.Context, tx pgx.Tx, in CreateCompanyInput, by
 		ParentCompanyID: in.ParentCompanyID,
 		Address:         in.Address,
 		Domains:         in.Domains,
+		LinkedInURL:     in.LinkedInURL,
 		Source:          in.Source,
 		SourceSystem:    in.SourceSystem,
 		Author:          in.Author,
@@ -218,4 +217,26 @@ func createCompanyInTx(ctx context.Context, tx pgx.Tx, in CreateCompanyInput, by
 		return crmcontracts.Company{}, fmt.Errorf("read created company: %w", err)
 	}
 	return out, nil
+}
+
+func admitAndDedupeCompanyCreate(ctx context.Context, tx pgx.Tx, in CreateCompanyInput) (CompanyMatch, error) {
+	if err := ensureCompanyLinkedInUnclaimed(ctx, tx, in.LinkedInURL); err != nil {
+		return CompanyMatch{}, err
+	}
+	if err := ensureCompanyDomainsUnclaimed(ctx, tx, in.Domains); err != nil {
+		return CompanyMatch{}, err
+	}
+
+	match, err := manualDedupeCompany(ctx, tx, in)
+	if err != nil {
+		return CompanyMatch{}, err
+	}
+
+	if in.ParentCompanyID != nil {
+		if err := auth.EnsureReferenceTarget(ctx, tx, "parent_company_id", "company", in.ParentCompanyID.UUID); err != nil {
+			return CompanyMatch{}, err
+		}
+	}
+
+	return match, nil
 }

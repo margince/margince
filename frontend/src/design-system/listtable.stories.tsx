@@ -1,9 +1,16 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type ReactNode, useState } from "react";
-import { userEvent, within } from "storybook/test";
-import { formatMoney, formatNumber, ordinalNumber } from "../format/format";
+import { expect, userEvent, within } from "storybook/test";
+import {
+  formatDateAbbrev,
+  formatMoney,
+  formatNumber,
+  ordinalNumber,
+} from "../format/format";
+import { viewerZone } from "../format/timezone";
 import { useLocale } from "../i18n";
-import { Badge, Button } from "./atoms";
+import { Badge, Button, OverflowMenu } from "./atoms";
+import { Avatar } from "./avatar";
 import type { ListChip } from "./listsurface";
 import { CellStrip, type ListColumn, ListTable } from "./listtable";
 import { SelectionBar } from "./selectionbar";
@@ -31,6 +38,7 @@ type Company = {
   owner: string;
   region: string;
   valueMinor: number;
+  createdAt: string;
 };
 
 const INDUSTRIES = ["Manufacturing", "Logistics", "Healthcare", "SaaS"];
@@ -45,6 +53,7 @@ function companies(count: number): Company[] {
     owner: index % 2 === 0 ? "Lars" : "Mia",
     region: REGIONS[index % REGIONS.length] ?? "DACH",
     valueMinor: (index + 1) * 12_500,
+    createdAt: new Date(Date.UTC(2026, 0, 1 + index * 9)).toISOString(),
   }));
 }
 
@@ -60,7 +69,19 @@ const columns = [
   },
   { key: "industry", header: "Industry", cell: (row: Company) => row.industry },
   { key: "size", header: "Size", cell: (row: Company) => row.size },
-  { key: "owner", header: "Owner", cell: (row: Company) => row.owner },
+  {
+    key: "owner",
+    header: "Owner",
+    // A colleague's face before their name, and a colleague column's width: no
+    // wider than a name needs, however wide the page.
+    holds: "colleague" as const,
+    cell: (row: Company) => (
+      <span className="avatar-row">
+        <Avatar identity={row.owner} name={row.owner} />
+        <span>{row.owner}</span>
+      </span>
+    ),
+  },
   { key: "region", header: "Region", cell: (row: Company) => row.region },
   {
     key: "value",
@@ -71,6 +92,12 @@ const columns = [
     // reference copy of the surface, so a hand-rolled currency string here is
     // the version somebody else copies.
     cell: (row: Company) => formatMoney(row.valueMinor, "EUR", "en"),
+  },
+  {
+    key: "created",
+    header: "Created",
+    holds: "date" as const,
+    cell: (row: Company) => formatDateAbbrev(row.createdAt, "en", viewerZone()),
   },
 ];
 
@@ -101,16 +128,20 @@ const chips: readonly ListChip[] = [
 function Surface({
   rows,
   columns: shownColumns = columns,
+  noAction = false,
   ...rest
 }: Readonly<{
   rows: Company[];
   /** The page's own name, for the story where the surface IS the page. */
   title?: string;
-  /** Defaults to the six this file reads as the reference set. */
+  /** Defaults to the seven this file reads as the reference set. */
   columns?: ListColumn<Company>[];
   pending?: boolean;
   problem?: ReactNode;
   hasMore?: boolean;
+  hideShortChrome?: boolean;
+  /** Leaves the header verb out, for the stories of a list inside a settings card. */
+  noAction?: boolean;
   caption?: string;
   note?: string;
   /** The caller's sentence under the empty line, for the story that shows it. */
@@ -144,7 +175,7 @@ function Surface({
       columns={shownColumns}
       rowKey={(row) => row.id}
       unit="companies"
-      action={<Button>New company</Button>}
+      action={noAction ? undefined : <Button>New company</Button>}
       search={{ value: search, onChange: setSearch }}
       sort={{ value: sort, onChange: setSort }}
       chips={chips}
@@ -514,4 +545,161 @@ export const CellStrips: Story = {
       />
     </div>
   ),
+};
+
+// A list that fits the smallest page size has no pages to walk. Nothing narrows
+// it, so it has nothing to search either: no count, no dials, no pager.
+export const ShortListWithoutChrome: Story = {
+  render: () => <Surface rows={companies(12)} hideShortChrome noAction />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("button", { name: "Sort by Company" });
+    await expect(
+      canvas.queryByRole("combobox", { name: "Rows per page" }),
+    ).toBeNull();
+    await expect(canvas.queryByRole("searchbox")).toBeNull();
+    await expect(canvas.queryByText(/sorted by/)).toBeNull();
+  },
+};
+
+// The header verb outlives the count it stood beside.
+export const ShortListKeepsVerb: Story = {
+  render: () => <Surface rows={companies(3)} hideShortChrome />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("button", { name: "Sort by Company" });
+    // Under the narrow width the verbs fold into one menu.
+    const more = canvas.queryByRole("button", { name: "More actions" });
+    if (more) await userEvent.click(more);
+    await expect(
+      await within(canvasElement.ownerDocument.body).findByRole("button", {
+        name: "New company",
+      }),
+    ).toBeVisible();
+    await expect(canvas.queryByText(/sorted by/)).toBeNull();
+  },
+};
+
+// No rows reads as one line, not as a table of headings over nothing. The
+// archived switch stays, since archived rows may be all the list holds.
+export const ShortListEmpty: Story = {
+  render: () => <Surface rows={[]} hideShortChrome noAction />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByText("No companies yet.")).toBeVisible();
+    await expect(canvas.queryByRole("columnheader")).toBeNull();
+    await expect(
+      canvas.getByRole("checkbox", { name: "Show archived" }),
+    ).toBeVisible();
+    await expect(canvas.queryByRole("searchbox")).toBeNull();
+  },
+};
+
+export const ShortListEmptyOnPhone: Story = {
+  ...ShortListEmpty,
+  parameters: { layout: "fullscreen" },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
+// Past the smallest page size the pager and the dials stay. A larger size may
+// fit every row, and the reader can still take that size back.
+export const LongerListKeepsPager: Story = {
+  render: () => <Surface rows={companies(40)} hideShortChrome />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("navigation", { name: "Pages" });
+    await expect(
+      canvas.getByRole("combobox", { name: "Rows per page" }),
+    ).toBeVisible();
+    await expect(canvas.getByRole("searchbox")).toBeVisible();
+  },
+};
+
+const menuColumns: ListColumn<Company>[] = [
+  ...columns.slice(0, 3),
+  {
+    key: "menu",
+    header: "Actions",
+    verbs: "menu",
+    cell: (row: Company) => (
+      <OverflowMenu label={`Actions for ${row.name}`}>
+        <Button>Edit</Button>
+        <Button variant="danger">Archive</Button>
+      </OverflowMenu>
+    ),
+  },
+];
+
+async function openRowMenu({ canvasElement }: { canvasElement: HTMLElement }) {
+  const canvas = within(canvasElement);
+  await userEvent.click(
+    await canvas.findByRole("button", { name: "Actions for Company 01" }),
+  );
+  await within(document.body).findByRole("button", { name: "Edit" });
+}
+
+// Several verbs per row fold into one trailing menu. Its heading is read and
+// never drawn, so forced colours show nothing over the column either.
+export const RowMenu: Story = {
+  render: () => <Surface rows={companies(4)} columns={menuColumns} />,
+  play: openRowMenu,
+};
+
+// On a phone each row is a card, and the menu keeps its corner of it.
+export const RowMenuOnPhone: Story = {
+  render: () => <Surface rows={companies(4)} columns={menuColumns} />,
+  play: openRowMenu,
+  parameters: { layout: "fullscreen" },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
+const longHeaderColumns: ListColumn<Company>[] = [
+  ...columns.slice(0, 4),
+  {
+    key: "region",
+    header: "Relationship to the account",
+    cell: (row: Company) => row.region,
+  },
+  {
+    key: "value",
+    header: "Open deals this quarter",
+    numeric: true,
+    sort: "amount_minor",
+    cell: (row: Company) => formatNumber(row.valueMinor / 12_500, "en"),
+  },
+  {
+    key: "renewal",
+    header: "Vertragsverlängerungskündigungsfrist",
+    cell: (row: Company) => row.size,
+  },
+];
+
+// A header longer than its column wraps, and the column keeps its width.
+// Once the column is sorted, its arrow stays clear of the resize grip.
+export const LongHeadersWrap: Story = {
+  render: () => (
+    <div style={{ maxWidth: "62rem" }}>
+      <Surface rows={companies(4)} columns={longHeaderColumns} />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", {
+        name: "Sort by Open deals this quarter",
+      }),
+    );
+    for (const header of canvasElement.querySelectorAll("thead th")) {
+      await expect(header.scrollWidth).toBeLessThanOrEqual(header.clientWidth);
+    }
+    const arrow = canvasElement.querySelector(".lt-sort.on .lt-arrow");
+    const grip = arrow?.closest("th")?.querySelector(".lt-grip");
+    if (!arrow || !grip)
+      throw new Error("the sorted header drew no arrow or grip");
+    await expect(arrow.getBoundingClientRect().right).toBeLessThanOrEqual(
+      grip.getBoundingClientRect().left,
+    );
+  },
 };

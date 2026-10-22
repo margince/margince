@@ -142,7 +142,7 @@ func TestTheCatalogNamesEveryCategoryItPricesWith(t *testing.T) {
 }
 
 // namedWith is what a buy button reads off one catalog entry — the same set
-// frontend/src/screens/contactprovider.tsx builds from the wire.
+// frontend/src/features/contacts/contactprovider.buy.tsx builds from the wire.
 func namedWith(entry CategoryCost) []string {
 	out := []string{entry.Category}
 	if entry.Requires != "" {
@@ -200,10 +200,10 @@ func TestEveryRegisteredAdapterPricesWhatItDeclares(t *testing.T) {
 }
 
 // A category the provider only issues alongside another must be priced with
-// it. The buy button asks for both (boughtWith, frontend/src/screens/
-// contactprovider.tsx) and quotes ONE figure — this entry's — so an entry
-// carrying only its own price would name a number smaller than the press
-// spends.
+// it. The buy button asks for both (boughtWith, frontend/src/features/
+// contacts/contactprovider.buy.tsx) and quotes one figure: this entry's.
+// An entry carrying only its own price would name a number smaller than the
+// press spends.
 //
 // Derived from the descriptor's own RequiresAnswerTo rather than naming a
 // category: the defect is a property of the pairing rule, so an adapter that

@@ -42,9 +42,13 @@ const ExtractedByDeterministic = "deterministic"
 // approval is retired — public-events.yaml marks it historical and nothing
 // emits it. A source type no writer can produce is a vocabulary entry that
 // only ever misleads a reader about what the ledger can hold.
+//
+// SourceLegalReview is written by the legal review decision alone, inside its
+// own transaction; validEvidence keeps it off every other writer.
 const (
-	SourceActivity = "activity"
-	SourceContract = "contract"
+	SourceActivity    = "activity"
+	SourceContract    = "contract"
+	SourceLegalReview = "legal_review"
 )
 
 // The commitment vocabulary, mirroring deal_stage_evidence.commitment.
@@ -116,11 +120,14 @@ func (s *Store) RecordStageEvidence(
 		if err := refuseUnsettleableCriterion(ctx, tx, in); err != nil {
 			return err
 		}
+		if err := withholdQuotationOfGoneText(ctx, tx, &in); err != nil {
+			return err
+		}
 		id, written, err := insertEvidence(ctx, tx, in)
 		if err != nil {
 			return err
 		}
-		if out, err = readEvidence(ctx, tx, id); err != nil {
+		if out, err = s.readEvidence(ctx, tx, id); err != nil {
 			return err
 		}
 		if !written {
@@ -160,7 +167,7 @@ func (s *Store) RefuteStageEvidence(
 		if err != nil {
 			return err
 		}
-		before, err := readEvidence(ctx, tx, id)
+		before, err := s.readEvidence(ctx, tx, id)
 		if err != nil {
 			return err
 		}
@@ -184,7 +191,7 @@ func (s *Store) RefuteStageEvidence(
 		if err != nil {
 			return fmt.Errorf("audit stage evidence refutation: %w", err)
 		}
-		if out, err = readEvidence(ctx, tx, id); err != nil {
+		if out, err = s.readEvidence(ctx, tx, id); err != nil {
 			return err
 		}
 		return emitEvidenceChanged(ctx, tx, auditID, dealID)
@@ -217,10 +224,38 @@ func (s *Store) ListStageEvidence(
 			return err
 		}
 		var err error
-		out, err = readDealEvidence(ctx, tx, dealID)
+		out, err = s.readDealEvidence(ctx, tx, dealID)
 		return err
 	})
 	return out, err
+}
+
+// withholdQuotationOfGoneText drops the snippet when the activity it quotes no
+// longer has readable text: erased, emptied by retention, or restricted.
+//
+// A model reading runs outside any transaction, so an erasure can commit while
+// the call is out. Every engine that empties an activity takes this lock.
+// An erasure that came first has already emptied the body this reads. One
+// that comes second waits, then clears the snippet this wrote. The claim
+// itself still lands.
+func withholdQuotationOfGoneText(ctx context.Context, tx pgx.Tx, in *EvidenceInput) error {
+	if in.SourceType != SourceActivity || in.Snippet == nil {
+		return nil
+	}
+	if err := storekit.LockTranscriptBody(ctx, tx, []ids.UUID{in.SourceID}); err != nil {
+		return err
+	}
+	var readable bool
+	err := tx.QueryRow(ctx, `
+		SELECT body IS NOT NULL AND restricted_at IS NULL FROM activity WHERE id = $1`,
+		in.SourceID).Scan(&readable)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return fmt.Errorf("reading whether the quoted activity still has its text: %w", err)
+	}
+	if !readable {
+		in.Snippet = nil
+	}
+	return nil
 }
 
 // insertEvidence writes the row, answering whether THIS call wrote it.

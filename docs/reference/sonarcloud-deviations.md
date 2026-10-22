@@ -43,7 +43,7 @@ caller that drops the closure still has no stop, and the tests catch that.
 
 ## The accessibility rules, on a table and two menus that are already correct
 
-14 findings in `frontend/src/design-system/`, `frontend/src/app/account.tsx`
+14 findings in `frontend/src/design-system/`, `frontend/src/app/accounttheme.tsx`
 and `frontend/src/app/agentrail.tsx`: `typescript:S6825`, `S6843`, `S6845`, `S6848`
 and `S6852`. They stay open together because they are one error made five
 ways. Each rule states a default that the code leaves for a reason WCAG itself
@@ -59,7 +59,7 @@ not extra. On a screen up to `720px` across, `listtable.css` sets `display: bloc
 removes the ARIA roles a table has by default. The roles written out keep a
 phone list a table for a screen reader.
 
-The CSS says so where it does it, and `listtable.test.tsx` reads the rows and
+The CSS says so where it does it, and `listtable.surface.test.tsx` reads the rows and
 cells back by role. Removing the roles
 would break the phone table; the tests would stay green only if the roles were
 removed from them too.
@@ -75,7 +75,7 @@ extra column. So the shape of the table stays the same with it hidden.
 does not allow `tabIndex` on an element a user does not act on. WCAG 2.1.1 requires
 that a keyboard can work an area that scrolls, and the axe check
 `scrollable-region-focusable` fails one that a keyboard cannot reach. That is
-why `composed.tsx` and `trust.tsx` put the tab stop on the element that scrolls
+why `pipelineboard.tsx` and `trust.tsx` put the tab stop on the element that scrolls
 itself. In `decisiondeck.tsx` the stop is the only way the keyboard reaches the
 four verdicts on the `←` and `→` keys. Removing any of the three turns a lint finding
 into a real accessibility error, which the axe pass in the `uat` lane would catch.
@@ -107,7 +107,7 @@ only for `contains(document.activeElement)`, and the menu moves focus to a row
 when it opens. A `tabIndex` on the container would add a second tab stop in
 front of the item that already has one. Or it would be a value nothing uses.
 
-## `typescript:S8786`: `stripEveryKeyTag` in `frontend/src/screens/projectrecord.ts`
+## `typescript:S8786`: `stripEveryKeyTag` in `frontend/src/features/projects/projectrecord.ts`
 
 **What the rule wants.** The rule says ` ?\[[^\]]*\] ?` can take time that
 grows much faster than the input. It does: a subject of 20 000 `[` with no

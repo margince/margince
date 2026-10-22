@@ -15,6 +15,7 @@ package activities
 
 import (
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -46,8 +47,8 @@ func TestTheSetAsideRuleNamesTheRowItHeldBack(t *testing.T) {
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
 		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.rep)
-	shown := e.seedWait(t, "Still waiting", "contact_id", contact)
-	aside := e.seedWait(t, "Set aside", "contact_id", contact)
+	shown := e.seedPersonalWait(t, "Still waiting", contact)
+	aside := e.seedPersonalWait(t, "Set aside", contact)
 	e.exec(t, `INSERT INTO activity_reader_state (activity_id, reader_id, state, set_by)
 		VALUES ($1, $2, 'not_mine', 'system')`, aside, e.rep)
 
@@ -71,8 +72,8 @@ func TestTheNotSalesRuleNamesTheRowItHeldBack(t *testing.T) {
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
 		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.rep)
-	shown := e.seedWait(t, "Still waiting", "contact_id", contact)
-	judged := e.seedWait(t, "Newsletter", "contact_id", contact)
+	shown := e.seedPersonalWait(t, "Still waiting", contact)
+	judged := e.seedPersonalWait(t, "Newsletter", contact)
 	// Keyed on the THREAD, the way SetThreadNotSales writes it — an activity id
 	// here would be judged by a rule that reads thread_key and match nothing.
 	e.exec(t, `INSERT INTO activity_sales_state (thread_key, kind, channel_provider, set_by)
@@ -97,7 +98,7 @@ func TestARowHeldBackByOneRuleIsNotListedUnderAnother(t *testing.T) {
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
 		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.rep)
-	aside := e.seedWait(t, "Set aside only", "contact_id", contact)
+	aside := e.seedPersonalWait(t, "Set aside only", contact)
 	e.exec(t, `INSERT INTO activity_reader_state (activity_id, reader_id, state, set_by)
 		VALUES ($1, $2, 'not_mine', 'system')`, aside, e.rep)
 
@@ -115,7 +116,7 @@ func TestARuleHidingNothingListsNothingOfThisTestsOwn(t *testing.T) {
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
 		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.rep)
-	shown := e.seedWait(t, "Nothing hides this", "contact_id", contact)
+	shown := e.seedPersonalWait(t, "Nothing hides this", contact)
 
 	for _, rule := range []HiddenRule{
 		HiddenRuleSetAside, HiddenRuleNotSales, HiddenRulePastHorizon,
@@ -137,5 +138,23 @@ func TestAnUnknownRuleIsRefusedRatherThanAnsweredEmpty(t *testing.T) {
 
 	if !errors.Is(err, ErrUnknownHiddenRule) {
 		t.Fatalf("err = %v, want ErrUnknownHiddenRule", err)
+	}
+	// And it names the field, so the transport answers 422 rather than a
+	// server fault. The route's handler claimed the generated router had
+	// already refused an unknown word; it had not, so this refusal was what
+	// the caller saw, as `500 internal`.
+	unknown, ok := errors.AsType[*UnknownHiddenRuleError](err)
+	if !ok {
+		t.Fatalf("err = %v, want UnknownHiddenRuleError so the refusal carries a field", err)
+	}
+	field, code, message := unknown.FieldFault()
+	if field != "rule" {
+		t.Errorf("field = %q, want rule", field)
+	}
+	if code != "invalid_enum" {
+		t.Errorf("code = %q, want invalid_enum", code)
+	}
+	if !strings.Contains(message, "no_such_rule") {
+		t.Errorf("message = %q, want the rejected word in it", message)
 	}
 }

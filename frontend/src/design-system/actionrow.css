@@ -38,7 +38,7 @@
    This and the `Children.toArray` gate in actionrow.tsx are two halves of one
    rule and neither covers the other. The gate sees a child that is ABSENT —
    `{canDiscard && <Button/>}` — and drops the group before it is drawn, which
-   is the common case. It cannot see what a child RENDERS: `<DispositionVerbs/>`
+   is the common case. It cannot see what a child RENDERS: `<DoneVerb/>`
    is one element that counts, and returns null on a row the server offers no
    judgements for. `:empty` is the only one of the two asked AFTER the render.
 
