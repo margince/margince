@@ -97,18 +97,17 @@ func TestTheWinEvidenceReadAgreesWithTheAdvanceAtEveryStepOfAnAgreement(t *testi
 	}
 }
 
-func TestTheWinEvidenceReadRefusesADealTheCallerCannotSee(t *testing.T) {
+func TestTheWinEvidenceReadFollowsTheDealReadsReach(t *testing.T) {
 	e := Setup(t)
 	deal, _, _, _ := dealWithSignedDraft(t, e)
 	dealID := ids.From[ids.DealKind](deal)
 
-	// Another team's rep holds the deal grant but not this row.
-	theirs := e.As(e.Rep3, []ids.UUID{e.Team2}, RepPerms)
-	if _, err := e.Deals.DealWinEvidence(theirs, dealID); !errors.Is(err, apperrors.ErrNotFound) {
-		t.Errorf("another team's deal: err = %v, want not found", err)
-	}
-	if _, err := e.Deals.DealWinEvidence(e.As(e.Rep2, []ids.UUID{e.Team1}, RepPerms), dealID); err != nil {
-		t.Errorf("a teammate's read of the same deal: %v, want an answer", err)
+	// A deal is readable by every seat holding the grant, so another team's rep
+	// is answered as the deal read itself would be.
+	for _, rep := range []struct{ who, team ids.UUID }{{e.Rep2, e.Team1}, {e.Rep3, e.Team2}} {
+		if _, err := e.Deals.DealWinEvidence(e.As(rep.who, []ids.UUID{rep.team}, RepPerms), dealID); err != nil {
+			t.Errorf("a rep holding the deal grant: %v, want an answer", err)
+		}
 	}
 
 	// A member with no deal grant is refused before any row is looked at.
