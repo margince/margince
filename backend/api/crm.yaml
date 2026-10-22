@@ -7054,8 +7054,8 @@ paths:
     get:
       tags: [Deals]
       operationId: getDealWinEvidence
-      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
-      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
       summary: Whether the deal has the signed agreement a win rests on.
       description: |
         The question `POST /deals/{id}/advance` asks before it lets a deal land on a won

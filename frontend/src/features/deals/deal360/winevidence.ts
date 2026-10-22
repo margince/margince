@@ -40,20 +40,21 @@ type AskedAdvance = Readonly<{
  * opened on.
  *
  * `needed` means ask how the win happened: the read found no signed contract,
- * or the server refused this deal's win for naming none. `checking` holds
- * Confirm while the read is out. `stillBare` asks again at the press, because
- * the server takes a stated reason without looking for paper.
+ * or the server refused this deal's win. `checking` holds Confirm while the
+ * read is out, except during the press. The press asks again through
+ * `stillBare`, because the server takes a stated reason without looking.
  */
 export function useWinQuestion(
   pending: AskedAdvance | null,
   refusedDealId: string | null,
+  submitting: boolean,
 ) {
   const asked = pending?.toStage.semantic === "won";
   const evidence = useDealWinEvidence(pending?.dealId ?? null, asked);
   const refused = pending !== null && refusedDealId === pending.dealId;
   return {
     needed: asked && (evidence.data?.has_signed_contract === false || refused),
-    checking: asked && evidence.isFetching,
+    checking: asked && evidence.isFetching && !submitting,
     stillBare: async (dealId: string) =>
       refusedDealId === dealId ||
       (await evidence.refetch()).data?.has_signed_contract !== true,

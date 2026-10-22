@@ -100157,8 +100157,6 @@ func (siw *ServerInterfaceWrapper) GetDealWinEvidence(w http.ResponseWriter, r *
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	r = r.WithContext(ctx)
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

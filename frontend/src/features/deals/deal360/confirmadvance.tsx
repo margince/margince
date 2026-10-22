@@ -141,13 +141,9 @@ export function ConfirmAdvanceModal({
   };
 
   const needsLostReason = shown?.toStage.semantic === "lost";
-  // A win with no signed contract is asked about before Confirm, so nobody is
-  // refused for an answer they were never asked for. A win with a contract
-  // stays one click, because a question every rep must answer gets the same
-  // lie from every rep.
-  // The server asks again when the win lands, so its refusal for this deal
-  // also shows the question.
-  const winQuestion = useWinQuestion(pending, refusedDealId);
+  // Only a win with no signed contract is asked how it happened. A question
+  // every rep must answer gets the same lie from every rep.
+  const winQuestion = useWinQuestion(pending, refusedDealId, submitting);
   const needsWonReason = winQuestion.needed;
   const detailMissing =
     wonReason === WON_REASON_NEEDING_DETAIL && !saysSomething(wonDetail);

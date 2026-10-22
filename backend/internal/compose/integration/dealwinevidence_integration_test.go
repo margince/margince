@@ -9,8 +9,8 @@ package integration
 //
 // The two cannot disagree. What the read calls unsigned, the advance refuses,
 // and what it calls signed, the advance lets through. The agreement comes from
-// the real contract writer. Its status and its file's parent are set directly,
-// as seedDocument does, because the subject is the read.
+// the real contract writer and its status from the real transition. The file's
+// parent is set directly, as seedDocument does, because the subject is the read.
 
 import (
 	"errors"
@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // dealWithSignedDraft seeds a deal with an agreement that carries a signing
@@ -76,17 +77,20 @@ func TestTheWinEvidenceReadAgreesWithTheAdvanceAtEveryStepOfAnAgreement(t *testi
 		t.Fatal("a draft agreement counted as the evidence of a win")
 	}
 
-	e.WsExec(t, `UPDATE contract SET status = 'active' WHERE id = $1`, contract)
+	if _, err := e.Contracts.ChangeStatus(e.Admin(), ids.From[ids.ContractKind](contract), contracts.StatusActive, nil); err != nil {
+		t.Fatalf("activating the agreement: %v", err)
+	}
 	if !signed() {
 		t.Fatal("an active agreement with a signing date and a current file did not count")
 	}
 
-	// Archive leaves the file in place; the read must look past it.
+	// Archive leaves the file in place; both must look past it.
 	e.WsExec(t, `UPDATE attachment SET archived_at = now() WHERE id = $1`, file)
 	if signed() || !refused() {
 		t.Fatal("an archived file still counted as the evidence of a win")
 	}
 
+	// With the file back, the advance lands, which ends the sequence.
 	e.WsExec(t, `UPDATE attachment SET archived_at = NULL WHERE id = $1`, file)
 	if !signed() || refused() {
 		t.Fatal("restoring the file did not bring the evidence back for both")
@@ -96,10 +100,28 @@ func TestTheWinEvidenceReadAgreesWithTheAdvanceAtEveryStepOfAnAgreement(t *testi
 func TestTheWinEvidenceReadRefusesADealTheCallerCannotSee(t *testing.T) {
 	e := Setup(t)
 	deal, _, _, _ := dealWithSignedDraft(t, e)
-	e.WsExec(t, `UPDATE deal SET archived_at = now() WHERE id = $1`, deal)
+	dealID := ids.From[ids.DealKind](deal)
 
-	_, err := e.Deals.DealWinEvidence(e.Admin(), ids.From[ids.DealKind](deal))
-	if !errors.Is(err, apperrors.ErrNotFound) {
-		t.Fatalf("an archived deal's win evidence: err = %v, want not found", err)
+	// Another team's rep holds the deal grant but not this row.
+	theirs := e.As(e.Rep3, []ids.UUID{e.Team2}, RepPerms)
+	if _, err := e.Deals.DealWinEvidence(theirs, dealID); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("another team's deal: err = %v, want not found", err)
+	}
+	if _, err := e.Deals.DealWinEvidence(e.As(e.Rep2, []ids.UUID{e.Team1}, RepPerms), dealID); err != nil {
+		t.Errorf("a teammate's read of the same deal: %v, want an answer", err)
+	}
+
+	// A member with no deal grant is refused before any row is looked at.
+	noGrant := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
+		Objects:  map[string]principal.ObjectGrant{"activity": {Read: true}},
+		RowScope: principal.RowScopeAll,
+	})
+	if _, err := e.Deals.DealWinEvidence(noGrant, dealID); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a member without deal read: err = %v, want permission denied", err)
+	}
+
+	e.WsExec(t, `UPDATE deal SET archived_at = now() WHERE id = $1`, deal)
+	if _, err := e.Deals.DealWinEvidence(e.Admin(), dealID); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("an archived deal: err = %v, want not found", err)
 	}
 }

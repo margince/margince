@@ -260,6 +260,9 @@ func hasSignedContract(ctx context.Context, tx pgx.Tx, dealID ids.DealID) (bool,
 //
 // Not a gate. The advance asks again under a lock when it runs, so an agreement
 // archived after this answered still ends in a refusal.
+//
+// Deal read is enough. The answer is one yes or no and names no contract, and a
+// deal writer learns the same from the advance's refusal.
 func (s *Store) DealWinEvidence(ctx context.Context, dealID ids.DealID) (bool, error) {
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return false, err
