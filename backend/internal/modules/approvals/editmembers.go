@@ -45,15 +45,8 @@ func assertEditableMembers(kind string, original, edited json.RawMessage) error 
 	for _, member := range allowed {
 		free[member] = true
 	}
-	members := map[string]struct{}{}
-	for member := range before {
-		members[member] = struct{}{}
-	}
-	for member := range after {
-		members[member] = struct{}{}
-	}
 	var fixed []string
-	for member := range members {
+	for member := range memberUnion(before, after) {
 		was, had := before[member]
 		now, has := after[member]
 		if free[member] && had && has {
@@ -76,6 +69,17 @@ func assertEditableMembers(kind string, original, edited json.RawMessage) error 
 	sort.Strings(fixed)
 	return &InvalidEditError{Cause: fmt.Errorf("a %s edit may change only %s; %s must stay as staged",
 		kind, strings.Join(allowed, " and "), strings.Join(fixed, ", "))}
+}
+
+func memberUnion(before, after map[string]json.RawMessage) map[string]struct{} {
+	members := make(map[string]struct{}, len(before)+len(after))
+	for member := range before {
+		members[member] = struct{}{}
+	}
+	for member := range after {
+		members[member] = struct{}{}
+	}
+	return members
 }
 
 func isJSONBool(raw json.RawMessage) bool {
