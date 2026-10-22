@@ -35231,7 +35231,7 @@ components:
         review:
           type: object
           properties:
-            dedupe_open: { type: integer, description: 'Open DH-DDL-1 candidate pairs.' }
+            dedupe_open: { type: integer, description: 'Every open duplicate candidate pair the reader can see, not only the pairs filed overnight.' }
             approvals_pending: { type: integer, description: 'Pending 🟡 items (enrich, quarantine, merge).' }
             classify:
               type: object

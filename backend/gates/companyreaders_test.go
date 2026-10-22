@@ -97,6 +97,7 @@ var predicateCompanyReads = gatekit.Waive(map[string]string{
 // (platform/auth/rbac.go), so the gate would admit them anyway and the entry
 // records why asking was never the point.
 var lifecycleCompanyReads = gatekit.Waive(map[string]string{
+	"internal/modules/contacts/deduperecheck.go:companyPairStillFiled":          "the nightly duplicate re-check reads both companies' names of an open pair, under the system principal behind auth.RequireSystem, to re-score it. Its only effect is whether the pair stays on the review queue; no company column reaches any caller",
 	"internal/modules/privacy/reportingquestions.go:heldQuestionSource":         "Retention lifecycle checks legal holds on every record behind a kept question answer before selecting an edition for expiry; it returns edition ids to the audited eraser, not source records to a reader.",
 	"internal/modules/privacy/reportingretention.go:reportingRetentionSelector": "Retention lifecycle checks legal holds across all linked subjects before selecting an edition for expiry; it returns edition ids to the audited eraser, not source records to a reader.",
 	// Deal Scout: its system-principal evidence read and the suggestion writer's own conditions.

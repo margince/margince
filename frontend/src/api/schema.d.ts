@@ -24376,7 +24376,7 @@ export interface components {
                 companies_created?: number;
             };
             review: {
-                /** @description Open DH-DDL-1 candidate pairs. */
+                /** @description Every open duplicate candidate pair the reader can see, not only the pairs filed overnight. */
                 dedupe_open?: number;
                 /** @description Pending 🟡 items (enrich, quarantine, merge). */
                 approvals_pending?: number;

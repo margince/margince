@@ -42,6 +42,7 @@ const JOB_KIND_NAME: Readonly<Record<string, MessageKey>> = {
   data_task_reconcile: "jobs.kind.data_task_reconcile",
   deal_scout: "jobs.kind.deal_scout",
   document_extract: "jobs.kind.document_extract",
+  dedupe_recheck: "jobs.kind.dedupe_recheck",
   embed_drift_sweep: "jobs.kind.embed_drift_sweep",
   embed_reindex: "jobs.kind.embed_reindex",
   employment_import_sweep: "jobs.kind.employment_import_sweep",

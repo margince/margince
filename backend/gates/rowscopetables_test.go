@@ -545,5 +545,9 @@ const (
 	// 125-127: activities.PassedActivitiesTx reads the contact, deal and company
 	// an activity whose time has come is filed under. System-only, and the ids
 	// go straight into the clock refold; nothing returns one to a reader.
-	modulesTierUnscopedCeiling = 127
+	// 128-131: contacts' nightly duplicate re-check (deduperecheck.go) reads the
+	// two ends of every open pair, and a contact's current employer, under the
+	// system principal. It walks the whole queue by design, and the ids decide
+	// only whether a pair stays open; none leaves the server.
+	modulesTierUnscopedCeiling = 131
 )

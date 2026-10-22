@@ -43381,7 +43381,7 @@ type MorningDigest struct {
 			Noise       *int `json:"noise,omitempty"`
 		} `json:"classify,omitempty"`
 
-		// DedupeOpen Open DH-DDL-1 candidate pairs.
+		// DedupeOpen Every open duplicate candidate pair the reader can see, not only the pairs filed overnight.
 		DedupeOpen *int `json:"dedupe_open,omitempty"`
 	} `json:"review"`
 }
