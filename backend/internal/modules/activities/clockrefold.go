@@ -4,7 +4,7 @@
 package activities
 
 // Which activities' time has come since the clock refold last ran. The
-// last-activity clocks count only what has happened, and no row changes when a
+// last-activity clocks count only what has happened. No row changes when a
 // booked meeting's start passes, so the refold job asks this module which
 // records those activities are filed under.
 
@@ -51,7 +51,7 @@ type PassedActivities struct {
 
 // ClockRefoldStartTx answers the stored mark and the instant this run reads up
 // to. The instant is the database's, because the clock functions read now().
-// It never passes the start of a transaction still open: that writer's
+// It never passes the start of a transaction still open. That writer's
 // trigger left out what was ahead of its now(), and its rows are not visible
 // yet. With no mark stored, the run starts when clockRefoldMigration ran.
 func ClockRefoldStartTx(ctx context.Context, tx pgx.Tx) (ClockRefoldMark, time.Time, error) {

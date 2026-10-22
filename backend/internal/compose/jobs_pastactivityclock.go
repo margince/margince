@@ -103,10 +103,9 @@ func RefoldPastActivityClocks(ctx context.Context, db *database.DB) (int, error)
 	}
 }
 
-// refoldClocksTx moves every clock a write filed under targets would move. The
-// whole set is locked once, in the order every last-activity writer shares,
-// before the first clock moves, so two batches that reach one record queue
-// rather than deadlock.
+// refoldClocksTx moves every clock a write filed under targets would move. It
+// locks the whole set once, in the order every last-activity writer shares.
+// So two batches that reach one record queue rather than deadlock.
 func refoldClocksTx(ctx context.Context, tx pgx.Tx, targets storekit.LastActivityTargets) error {
 	if err := storekit.LockLastActivityTargets(ctx, tx, targets); err != nil {
 		return err

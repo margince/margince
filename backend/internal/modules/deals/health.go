@@ -189,9 +189,9 @@ func healthFromInputs(in dealHealthInputs, now time.Time) DealHealth {
 	}
 }
 
-// recencyScore is the §10.5 recency band over the past clock: an
-// absolute-duration day count on UTC instants (like IsStalled), never a
-// calendar-day count. A booked meeting ahead counts as today's contact.
+// recencyScore bands the past clock: an absolute-duration day count on UTC
+// instants (like IsStalled), never a calendar-day count. A booked meeting
+// ahead counts as today's contact.
 func recencyScore(lastActivityAt *time.Time, meetingAhead bool, now time.Time) float64 {
 	if meetingAhead {
 		return 1.0

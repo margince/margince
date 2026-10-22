@@ -6,6 +6,7 @@ package activities
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -312,7 +313,10 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 	if err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
-	occurredAt := occurredAtOf(in)
+	occurredAt, err := occurredAtOf(ctx, tx, in)
+	if err != nil {
+		return crmcontracts.Activity{}, false, err
+	}
 	assignee, err := checkedTaskAssignee(ctx, tx, in)
 	if err != nil {
 		return crmcontracts.Activity{}, false, err
@@ -390,11 +394,18 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 	return out, true, nil
 }
 
-func occurredAtOf(in LogActivityInput) time.Time {
+// occurredAtOf defaults an undated activity to the transaction's now(). The
+// last-activity clock counts only occurred_at <= now(), so a Go clock read after
+// the transaction began would date the row ahead of the trigger that folds it.
+func occurredAtOf(ctx context.Context, tx pgx.Tx, in LogActivityInput) (time.Time, error) {
 	if in.OccurredAt != nil {
-		return in.OccurredAt.UTC()
+		return in.OccurredAt.UTC(), nil
 	}
-	return time.Now().UTC()
+	var now time.Time
+	if err := tx.QueryRow(ctx, `SELECT now()`).Scan(&now); err != nil {
+		return time.Time{}, fmt.Errorf("activities: reading the transaction time: %w", err)
+	}
+	return now.UTC(), nil
 }
 
 // writeActivitySatellites writes the rows that ride with a new activity and

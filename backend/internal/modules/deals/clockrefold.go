@@ -14,8 +14,8 @@ import (
 )
 
 // RefoldClocksTx moves the last-activity clock of each deal named, outside any
-// write to it: when an activity's time comes, or where an older rule stored a
-// future clock. The caller has taken storekit.LockLastActivityTargets.
+// write to it. It runs when an activity's time comes, or where an older rule
+// stored a future clock. The caller holds storekit.LockLastActivityTargets.
 func RefoldClocksTx(ctx context.Context, tx pgx.Tx, dealIDs []ids.UUID) error {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return err

@@ -59,9 +59,9 @@ func leadNextTaskDueSQL(work string) string {
 	   ORDER BY a.due_at NULLS LAST, a.created_at, a.id LIMIT 1)`
 }
 
-// leadLastActivitySQL is the last-touch clock, excluding system remediation,
-// called-off meetings and what has not happened yet, for the same reason
-// last_activity_of_contact does: none of it is the lead engaging.
+// leadLastActivitySQL is the last-touch clock. Like last_activity_of_contact, it
+// leaves out system remediation, called-off meetings and what has not happened
+// yet: none of it is the lead engaging.
 //
 // The row that PRINTS it and the expression that ORDERS BY it read this, so a
 // reader sees the instant the list was arranged by rather than a second reading

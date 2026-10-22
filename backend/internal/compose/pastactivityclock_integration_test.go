@@ -6,10 +6,10 @@
 package compose
 
 // last_activity_at counts only what has happened. A booked meeting ahead does
-// not move the deal, contact or company clock until its start passes, and then
-// the past_activity_clock_refold worker moves it, however long it was down.
-// Activities land through LogActivity; time passes on a pool whose now() is
-// shifted, so the clock functions and the refold window see the same instant.
+// not move the deal, contact or company clock until its start passes. Then the
+// past_activity_clock_refold worker moves it, however long it was down.
+// Activities land through LogActivity. Time passes on a pool whose now() is
+// shifted, so the clock functions and the refold window see one instant.
 
 import (
 	"context"
@@ -192,8 +192,8 @@ func TestASecondRefoldWritesNothing(t *testing.T) {
 	for table, id := range map[string]ids.UUID{"contact": f.contact, "company": f.company, "deal": f.deal} {
 		before[table] = readClockRow(t, f.e, table, id)
 	}
-	// The mark stays where the first run put it, so this run reads the meeting
-	// again: a second pass over the same records must rewrite none of them.
+	// The mark goes back a day, so this run reads the meeting again. A second
+	// pass over the same records must rewrite none of them.
 	f.e.WsExec(t, `UPDATE activity_clock_refold_mark SET passed_up_to = now() - interval '1 day'`)
 	runRefold(t, later)
 	for table, id := range map[string]ids.UUID{"contact": f.contact, "company": f.company, "deal": f.deal} {

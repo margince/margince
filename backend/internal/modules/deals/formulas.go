@@ -3,12 +3,11 @@
 
 package deals
 
-// The stalled-deal rule (formulas-and-rules §8): a deterministic,
-// fixed-clock-stable boolean over last_activity_at with the "customer
-// asked us to wait" and "a meeting is booked ahead" suppressions. Two spellings exist by necessity —
-// the Go predicate stamps the wire flag, the SQL clause filters lists
-// server-side — and TestDealsByStageStalledFilterAgreesWithIsStalled
-// (compose package, integration lane) keeps them from drifting.
+// The stalled-deal rule: a deterministic boolean over last_activity_at, stable
+// under a fixed clock. "The customer asked us to wait" and "a meeting is booked
+// ahead" suppress it. The Go predicate stamps the wire flag and the SQL clause
+// filters lists. TestDealsByStageStalledFilterAgreesWithIsStalled (compose
+// package, integration lane) keeps the two from drifting.
 
 import (
 	"fmt"
@@ -93,10 +92,10 @@ func QuietSQL(alias string, days int) string {
 }
 
 // MeetingAheadSQL is true when the deal has a booked meeting its stored clock
-// has not reached: one still to come, or one that started before the refold
-// job moved the clock to it. It reads the clock's own filters, the audience as
-// last_activity_of_deal spells it, so a meeting only some colleagues may see
-// changes no number everyone reads.
+// has not reached. That is a meeting still to come, or one that started before
+// the refold job moved the clock to it. It reads the clock's own filters. The
+// audience is spelled as in last_activity_of_deal, so a meeting only some
+// colleagues may see changes no number everyone reads.
 func MeetingAheadSQL(alias string) string {
 	deal := "deal"
 	if alias != "" {

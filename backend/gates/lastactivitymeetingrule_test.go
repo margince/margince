@@ -5,14 +5,12 @@
 
 package gates
 
-// last_activity_at on deal, contact and company skips a called-off meeting by
-// the same rule as contact strength, and counts only what has happened, both
-// spelled once in relstrength.LastActivityCountsSQL.
+// last_activity_at on deal, contact and company skips a called-off meeting and
+// counts only what has happened. relstrength.LastActivityCountsSQL spells both.
 //
-// The column is folded by the last_activity_of_* SQL functions, which cannot
-// call Go, so their migration carries the rule's rendered text. This gate holds
-// every arm of each to it, and holds the Go reads that ask the same question
-// without the stored column to the same call.
+// The last_activity_of_* SQL functions fold the column and cannot call Go, so
+// their migration carries the rule's rendered text. This gate holds every arm
+// to it, and holds the Go reads of the same question to the same call.
 
 import (
 	"os"
