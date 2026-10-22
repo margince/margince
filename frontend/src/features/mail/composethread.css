@@ -55,6 +55,7 @@
   gap: var(--space-2);
   inline-size: min(32rem, calc(100vw - var(--space-5) * 2));
   max-inline-size: none;
+  overflow: hidden;
 }
 .compose-threadmenu > * {
   margin: 0;
@@ -84,9 +85,14 @@
   margin: 0;
   padding: 0;
   /* A record with a hundred threads scrolls here, under the search, rather
-     than growing the menu past the window. */
+     than growing the menu past the window. It is the menu's one scroller. */
+  flex: 0 1 auto;
+  min-block-size: 0;
   max-block-size: 20rem;
   overflow-y: auto;
+  /* The rows' screen-reader text is placed absolutely. Held here, it scrolls
+     with its row instead of stretching the menu below the list. */
+  position: relative;
 }
 .compose-threadmenu-more {
   align-self: flex-start;

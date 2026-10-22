@@ -473,6 +473,7 @@
 .compose-earlier .btn,
 .compose-earlier .btn:hover,
 .compose-earlier .btn[aria-pressed="true"] {
+  border-color: transparent;
   background: none;
 }
 .compose-earlier .btn:hover .compose-earlier-pill,
