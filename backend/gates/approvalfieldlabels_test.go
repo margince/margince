@@ -30,21 +30,15 @@ import (
 // comment quoting a key is not read as the key.
 var historyFieldLabel = regexp.MustCompile(`(?m)^\s*"history\.field\.([a-z0-9_]+)"\s*:\s*("(?:[^"\\\n]|\\.)*")`)
 
-var historyCatalogs = map[textlang.Lang]string{
-	textlang.English:    "../frontend/src/i18n/en.ts",
-	textlang.German:     "../frontend/src/i18n/de.ts",
-	textlang.Vietnamese: "../frontend/src/i18n/vi.ts",
+// historyCatalog is the frontend catalog a shipped language is read from.
+func historyCatalog(lang textlang.Lang) string {
+	return "../frontend/src/i18n/" + string(lang) + ".ts"
 }
 
 func TestAnApprovalNamesAFieldAsTheHistoryPanelDoes(t *testing.T) {
 	t.Parallel()
 	for _, lang := range textlang.Shipped {
-		path, ok := historyCatalogs[lang]
-		if !ok {
-			t.Errorf("%s ships with no frontend catalog this gate reads", lang)
-			continue
-		}
-		for _, drift := range fieldLabelDrift(t, lang, readSource(t, path)) {
+		for _, drift := range fieldLabelDrift(t, lang, readSource(t, historyCatalog(lang))) {
 			t.Errorf("%s: %s", lang, drift)
 		}
 	}
@@ -53,7 +47,7 @@ func TestAnApprovalNamesAFieldAsTheHistoryPanelDoes(t *testing.T) {
 // A changed frontend label, planted in the real catalog, must be seen.
 func TestTheFieldLabelGateSeesAChangedLabel(t *testing.T) {
 	t.Parallel()
-	catalog := readSource(t, historyCatalogs[textlang.English])
+	catalog := readSource(t, historyCatalog(textlang.English))
 	planted := strings.Replace(catalog, `"history.field.owner_id": "Owner"`, `"history.field.owner_id": "Account lead"`, 1)
 	if planted == catalog {
 		t.Fatal("the catalog has no owner_id label to change, so the plant proves nothing")
