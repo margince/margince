@@ -140,9 +140,6 @@ func TestEveryWorkflowJobCarriesATimeoutCeiling(t *testing.T) {
 // `install --with-deps` and `install chromium` all begin this way, and a list of
 // variants would miss the next one somebody writes — a bare `playwright install`
 // fetches every browser and would have escaped a list naming chromium.
-//
-// The package manager is named too. `dpkg --configure -a` finishes installs, so
-// an unbounded one would hang the lane the bound exists to end.
 var unpinnedInstalls = []string{"playwright install", "dpkg --configure", "apt-get install", "apt-get update", "apt install"}
 
 // elevatedPrefix is what may stand before `timeout` without un-bounding the
@@ -215,11 +212,11 @@ func TestTheBoundThatCountsDependsOnWhereTheStepRuns(t *testing.T) {
 		{"the bound is on another line", workflowStep{Run: "timeout --kill-after=30s 3m true\npnpm exec playwright install chromium"}, true, false},
 		// Same line, different command: the bound belongs to `true`.
 		{"the bound is on another command", workflowStep{Run: "timeout --kill-after=30s 1m true; pnpm exec playwright install chromium"}, true, false},
-		// An unbounded fallback after a bounded attempt.
 		// sudo and its environment may stand before the bound; they do not remove it.
 		{"sudo, bounded", workflowStep{Run: "sudo DEBIAN_FRONTEND=noninteractive timeout --kill-after=30s 2m dpkg --configure -a"}, true, true},
 		{"sudo, unbounded", workflowStep{Run: "sudo DEBIAN_FRONTEND=noninteractive dpkg --configure -a"}, true, false},
 		{"apt, unbounded", workflowStep{Run: "sudo apt-get install -y libnss3"}, true, false},
+		// An unbounded fallback after a bounded attempt.
 		{"the fallback is unbounded", workflowStep{Run: "timeout --kill-after=30s 1m pnpm exec playwright install chromium || pnpm exec playwright install chromium"}, true, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
