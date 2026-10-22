@@ -380,7 +380,7 @@ func TestTheBriefItemLaneAlsoCarriesTheConvertedExpectedRevenue(t *testing.T) {
 	day := crmcontracts.Attention{
 		AsOf: rankInstant,
 		ThisMorning: []crmcontracts.AttentionItem{
-			item("brief-yen", "brief_item", withPricedDeal(fiveMillionYen)),
+			item("brief-yen", "brief_item", withCurrentIntervention(), withPricedDeal(fiveMillionYen)),
 		},
 	}
 	fx := stubFX{base: "EUR", answers: map[CurrencyAmount]int64{fiveMillionYen: 3_000_000}}
@@ -404,7 +404,7 @@ func TestTheBriefItemLaneCountsTowardRevenueAtRisk(t *testing.T) {
 	day := crmcontracts.Attention{
 		AsOf: rankInstant,
 		ThisMorning: []crmcontracts.AttentionItem{
-			item("brief-yen", "brief_item", withPricedDeal(fiveMillionYen)),
+			item("brief-yen", "brief_item", withCurrentIntervention(), withPricedDeal(fiveMillionYen)),
 		},
 	}
 	fx := stubFX{base: "EUR", answers: map[CurrencyAmount]int64{fiveMillionYen: 3_000_000}}
@@ -431,8 +431,8 @@ func TestASharedDealCountsOnceTowardRevenueAtRiskAcrossBothLanes(t *testing.T) {
 		AtRisk: lane(item("risk-row", "deal_at_risk",
 			withPricedDeal(fiveMillionYen), withDealSubject(deal))),
 		ThisMorning: []crmcontracts.AttentionItem{
-			item("brief-row-1", "brief_item", withPricedDeal(fiveMillionYen), withDealSubject(deal)),
-			item("brief-row-2", "brief_item", withPricedDeal(fiveMillionYen), withDealSubject(deal)),
+			item("brief-row-1", "brief_item", withCurrentIntervention(), withPricedDeal(fiveMillionYen), withDealSubject(deal)),
+			item("brief-row-2", "brief_item", withCurrentIntervention(), withPricedDeal(fiveMillionYen), withDealSubject(deal)),
 		},
 	}
 	fx := stubFX{base: "EUR", answers: map[CurrencyAmount]int64{fiveMillionYen: 3_000_000}}
@@ -453,7 +453,7 @@ func TestASharedDealCountsOnceTowardRevenueAtRiskAcrossBothLanes(t *testing.T) {
 func TestAPricedBriefItemWinsTheMoneyTiebreakOverAPlainTask(t *testing.T) {
 	day := crmcontracts.Attention{
 		AsOf:        rankInstant,
-		ThisMorning: []crmcontracts.AttentionItem{item("brief", "brief_item", withPricedDeal(fiveMillionYen))},
+		ThisMorning: []crmcontracts.AttentionItem{item("brief", "brief_item", withCurrentIntervention(), withPricedDeal(fiveMillionYen))},
 		Planned:     []crmcontracts.AttentionItem{item("task", "task")},
 	}
 	fx := stubFX{base: "EUR", answers: map[CurrencyAmount]int64{fiveMillionYen: 3_000_000}}

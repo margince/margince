@@ -43,7 +43,13 @@ export const ROSTER: {
       status: "active",
       is_agent: false,
       roles: ["admin"],
-      allowed_actions: ["change_role", "issue_password_link", "deactivate"],
+      assignable: true,
+      allowed_actions: [
+        "change_role",
+        "issue_password_link",
+        "deactivate",
+        "hand_over",
+      ],
       team_ids: ["t-dach", "t-nordics"],
       last_active_at: "2026-10-08T09:00:00Z",
       created_at: "2026-01-15T10:00:00Z",
@@ -55,7 +61,8 @@ export const ROSTER: {
       status: "deactivated",
       is_agent: false,
       roles: ["read_only"],
-      allowed_actions: ["change_role", "reactivate"],
+      assignable: false,
+      allowed_actions: ["change_role", "reactivate", "hand_over"],
     },
     // An invitation nobody has redeemed: it holds a licensed seat and appears
     // in the roster, but signs in nowhere until the link is used.
@@ -66,6 +73,7 @@ export const ROSTER: {
       status: "invited",
       is_agent: false,
       roles: ["rep"],
+      assignable: false,
       allowed_actions: ["change_role", "issue_password_link", "deactivate"],
     },
     {
@@ -75,7 +83,14 @@ export const ROSTER: {
       status: "active",
       is_agent: false,
       roles: [],
-      allowed_actions: ["change_role", "issue_password_link", "deactivate"],
+      assignable: true,
+      // The one member holding a confirmed second factor.
+      allowed_actions: [
+        "change_role",
+        "issue_password_link",
+        "remove_mfa",
+        "deactivate",
+      ],
     },
     // An agent identity. Bootstrap no longer seeds one, so a fresh installation
     // shows a contacts-only roster — but the roster still LISTS such a row where
@@ -94,6 +109,17 @@ export const ROSTER: {
   ],
   page: { next_cursor: null, has_more: false },
 };
+
+// What every member owns in this fixture, and the empty count a finished
+// handover leaves.
+export const HANDOVER_OWNED = {
+  lead: 4,
+  contact: 0,
+  company: 0,
+  deal: 16,
+  project: 0,
+};
+const NOTHING_OWNED = { lead: 0, contact: 0, company: 0, deal: 0, project: 0 };
 
 export const TEAMS = [
   { id: "t-dach", name: "DACH Sales" },
@@ -243,6 +269,9 @@ export function backend(
     // invite flow opens the link dialog itself, and a generic user row handed
     // to it renders an expiry from `undefined` — an unhandled error rather
     // than a failed assertion, which fails the run without naming a test.
+    if (req.url.includes("/handover")) {
+      return jsonResponse({ moved: HANDOVER_OWNED, left: NOTHING_OWNED });
+    }
     if (req.url.includes("/password-link")) {
       return jsonResponse(
         {
@@ -275,6 +304,9 @@ function readRoute(
       field_masks: [],
       teams: [],
     });
+  }
+  if (req.url.includes("/handover") && req.method === "GET") {
+    return jsonResponse({ owned: HANDOVER_OWNED });
   }
   if (req.url.includes("/users/assignable-roles")) {
     return jsonResponse({ roles: SEEDED_ASSIGNABLE_ROLES });

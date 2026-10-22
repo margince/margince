@@ -124,6 +124,40 @@ func TestFollowUpContentTracksItsSourceAudience(t *testing.T) {
 	}
 }
 
+func TestSourceFilteredListAndCountShareTheSourceAudience(t *testing.T) {
+	e := setupSend(t)
+	ctx, store := e.as(principal.RowScopeAll), e.store(nil)
+	source := loggedNote(ctx, t, e)
+	sourceID := ids.From[ids.ActivityKind](ids.UUID(source.Id))
+	if _, _, err := store.LogActivity(ctx, LogActivityInput{Kind: "task", Subject: new("Review the plan"), Source: "manual", SourceActivityID: &sourceID.UUID}); err != nil {
+		t.Fatal(err)
+	}
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		t.Fatal("missing actor")
+	}
+	actor.UserID, actor.ID = e.other, "human:"+e.other.String()
+	colleague := principal.WithActor(ctx, actor)
+	in := ListActivitiesInput{SourceActivityID: &sourceID}
+	rows, _, err := store.ListActivities(colleague, in)
+	if err != nil || len(rows) != 1 {
+		t.Fatalf("shared source list=%d, err=%v", len(rows), err)
+	}
+	if count, err := store.CountActivities(colleague, in); err != nil || count != 1 {
+		t.Fatalf("shared source count=%d, err=%v", count, err)
+	}
+	if _, err := store.SetAudience(ctx, sourceID, SetAudienceInput{Audience: "selected", Members: []AudienceMember{{SubjectType: "user", SubjectID: e.rep}}}); err != nil {
+		t.Fatal(err)
+	}
+	_, _, listErr := store.ListActivities(colleague, in)
+	if listErr == nil {
+		t.Fatal("source-filtered list disclosed a private source")
+	}
+	if _, countErr := store.CountActivities(colleague, in); !errors.Is(countErr, listErr) {
+		t.Fatalf("private source count=%v, want list refusal %v", countErr, listErr)
+	}
+}
+
 func TestFollowUpCannotUseAnotherTaskAsItsSource(t *testing.T) {
 	e := setupSend(t)
 	ctx, store := e.as(principal.RowScopeAll), e.store(nil)

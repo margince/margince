@@ -312,9 +312,15 @@ func refuseWhileHoldingArchivedRole(ctx context.Context, tx pgx.Tx, userID ids.U
 
 // archivedRoleHolders reports which of these members hold an archived role.
 func archivedRoleHolders(ctx context.Context, tx pgx.Tx, users []ids.UUID) (map[ids.UUID]bool, error) {
-	rows, err := tx.Query(ctx,
+	return usersMatching(ctx, tx,
 		`SELECT DISTINCT ra.user_id FROM role_assignment ra JOIN role r ON r.id = ra.role_id
 		  WHERE ra.user_id = ANY($1) AND r.archived_at IS NOT NULL`, users)
+}
+
+// usersMatching reads the members of users a query selects, as a set. The
+// query takes the user ids as $1 and returns user ids.
+func usersMatching(ctx context.Context, tx pgx.Tx, query string, users []ids.UUID) (map[ids.UUID]bool, error) {
+	rows, err := tx.Query(ctx, query, users)
 	if err != nil {
 		return nil, err
 	}
@@ -350,3 +356,23 @@ func lockAuthorization(ctx context.Context, tx pgx.Tx) error {
 // object added later is inside this ceiling without anybody remembering to add
 // it — the way a hand-kept list silently stops covering the newest authority.
 var administrationObjects = policy.AdministrationObjects()
+
+// AdmitMemberHandover gates handing a member's work on, inside the handover's
+// transaction. It asks the user_admin update grant, a live member (404
+// otherwise), and the ceiling every member verb carries. The member's row stays
+// locked until that transaction ends, so a role change cannot land in between.
+// The caller comes off the principal, whose role keys and grants the ceiling reads.
+func AdmitMemberHandover(ctx context.Context, tx pgx.Tx, member ids.UserID) error {
+	if err := auth.Require(ctx, objectUserAdmin, principal.ActionUpdate); err != nil {
+		return err
+	}
+	p, ok := principal.Actor(ctx)
+	if !ok {
+		return apperrors.ErrPermissionDenied
+	}
+	target, err := lockTargetGrants(ctx, tx, member)
+	if err != nil {
+		return err
+	}
+	return callerOutranks(Identity{Roles: p.Permissions.RoleKeys, Permissions: p.Permissions}, target, reachDenial)
+}

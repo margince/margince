@@ -312,7 +312,7 @@ func referenceKeyFromItsOwner(t *testing.T, e *integration.Env, kind storedobjec
 		e.WsExec(t, `
 			INSERT INTO offer (id, deal_id, offer_number, revision, status, currency,
 				pdf_asset_ref, source, captured_by)
-			VALUES ($1, $2, 'OF-LIVE-1', 1, 'draft', 'EUR', $3, 'human', 'human:test')`,
+			VALUES ($1, $2, 'A-1', 1, 'draft', 'EUR', $3, 'human', 'human:test')`,
 			ids.NewV7(), e.SeedWonDealLinkedTo(t), key)
 	case storedobjects.KindImport:
 		e.WsExec(t, `

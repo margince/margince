@@ -21,7 +21,7 @@ func TestPendingMaintenanceHonorsExpiryAndHeldMessages(t *testing.T) {
 	e := setupStaging(t)
 	at := time.Date(2026, time.September, 15, 12, 0, 0, 0, time.UTC)
 	e.svc.now = func() time.Time { return at }
-	ordinary, err := e.svc.Stage(e.sweeping(), StageInput{
+	ordinary, err := e.svc.Stage(e.forRep(), StageInput{
 		Kind: "fx_rate_proposal", ProposedChange: []byte(`{}`), DiffHash: "rate",
 	})
 	if err != nil {

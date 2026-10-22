@@ -266,13 +266,13 @@ func recordDisposition(ctx context.Context, tx pgx.Tx, in dispositionRow) (strin
 	_, err = tx.Exec(ctx, `
 		INSERT INTO capture_pending_counterparty
 		  (email, domain, display_name, activity_id, owner_id, status,
-		   disposition_reason, next_attempt_at)
+		   disposition_reason, next_attempt_at, backfill_id)
 		VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), $4, $5, $6, NULLIF($7, ''),
-		        CASE WHEN $8::boolean THEN now() END)
+		        CASE WHEN $8::boolean THEN now() END, $9)
 		ON CONFLICT `+conflict+`
 		DO NOTHING`,
 		email, strings.ToLower(strings.TrimSpace(in.Domain)), in.DisplayName,
-		in.ActivityID, in.OwnerID, in.Status, in.Reason, due)
+		in.ActivityID, in.OwnerID, in.Status, in.Reason, due, backfillRunOf(ctx))
 	if err != nil {
 		return "", fmt.Errorf("capture: recording the counterparty disposition: %w", err)
 	}

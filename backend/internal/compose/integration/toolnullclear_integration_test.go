@@ -34,8 +34,8 @@ func TestUpdateRecordToolClearsOnANullAndRefusesWhatItCannotClear(t *testing.T) 
 	// A field the contact cannot clear is refused, never answered "updated".
 	_, err := invoke("update_record", fmt.Sprintf(
 		`{"record_type":"contact","id":%q,"fields":{"full_name":null}}`, e.contactID))
-	if err == nil || !strings.Contains(err.Error(), "full_name") {
-		t.Errorf("a null full_name → %v, want a refusal naming full_name", err)
+	if err == nil || !strings.Contains(err.Error(), "overwrite Name") {
+		t.Errorf("a null full_name → %v, want a refusal naming the Name field", err)
 	}
 
 	created, err := invoke("create_record", fmt.Sprintf(

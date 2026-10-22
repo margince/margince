@@ -302,9 +302,11 @@ export function ContactDetails({
             {/* What a provider sold that no field holds: shown as bought facts
                 beside the record, never copied into the address. */}
             <BoughtAttributes profiles={profiles} />
-            <FieldRow label={t("tags.panelTitle")} align="top">
-              <ContactTagsSection contact={contact} />
-            </FieldRow>
+            {contact.archived_at ? null : (
+              <FieldRow label={t("tags.panelTitle")} align="top">
+                <ContactTagsSection contact={contact} />
+              </FieldRow>
+            )}
             <FieldRow label={t("list.created")}>
               {formatDateAbbrev(contact.created_at, locale, zone)}
             </FieldRow>

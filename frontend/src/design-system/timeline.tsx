@@ -17,6 +17,7 @@ import {
   groupCountLabel,
   MoveFlag,
   noteClass,
+  TaskStateFlag,
   TIMELINE_ICON,
   TIMELINE_KIND_LABEL,
   type TimelineEntry,
@@ -299,6 +300,7 @@ export function TimelineRow({
             qualify it and set inline they read as the subject's first words. */}
         <span className="tl-head">
           <Eyebrow>{t(TIMELINE_KIND_LABEL[entry.kind])}</Eyebrow>
+          <TaskStateFlag entry={entry} />
           {/* What the record DID, for a row that is not an exchange: the kind
               says this is a record entry, and this says what happened to it. */}
           {entry.qualifier && <span>{entry.qualifier}</span>}

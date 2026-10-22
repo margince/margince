@@ -19,7 +19,8 @@ import (
 func (h Handlers) ListDealSuggestions(w http.ResponseWriter, r *http.Request, params crmcontracts.ListDealSuggestionsParams) {
 	in := SuggestionQuery{
 		CompanyID: optionalUUID(params.CompanyId), PipelineID: optionalUUID(params.PipelineId),
-		StageID: optionalUUID(params.StageId),
+		StageID: optionalUUID(params.StageId), OwnerID: idArg[ids.UserKind](params.OwnerId),
+		OwnerTeamID: idArg[ids.TeamKind](params.OwnerTeamId), Unassigned: params.Unassigned,
 	}
 	if params.Cursor != nil {
 		in.Cursor = *params.Cursor

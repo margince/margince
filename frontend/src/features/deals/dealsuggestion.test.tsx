@@ -472,6 +472,25 @@ describe("a suggestion on the pipeline board", () => {
     expect(within(proposal).queryByTestId("deal-suggestion")).toBeNull();
   });
 
+  it.each([
+    ["All", ""],
+    ["Mine", "#/deals?owner_id=u-me"],
+  ])(
+    "opens the suggestion's company from the card under %s",
+    async (_, hash) => {
+      window.location.hash = hash;
+      try {
+        const { column } = await columnFigures([suggestion]);
+        const name = await within(column).findByRole("link", {
+          name: "Acme GmbH: proposal sent",
+        });
+        expect(name.getAttribute("href")).toBe("#/companies/co-1");
+      } finally {
+        window.location.hash = "";
+      }
+    },
+  );
+
   it("leaves the column's count and totals as the deals alone make them", async () => {
     const withSuggestion = await columnFigures([suggestion]);
     await within(withSuggestion.column).findByTestId("deal-suggestion");
@@ -481,6 +500,31 @@ describe("a suggestion on the pipeline board", () => {
     const without = await columnFigures([]);
     expect(shown).toEqual(without.figures);
     expect(shown[0]).toContain("1");
+  });
+
+  it("asks only for the reader's suggestions under Mine", async () => {
+    window.location.hash = "#/deals?owner_id=u-me";
+    const fetched = stubBackend({ suggestions: [] });
+    vi.stubGlobal("fetch", fetched);
+    draw(<DealsScreen />);
+    const asked = () =>
+      fetched.mock.calls
+        .map(
+          (call) =>
+            new URL(
+              String(call[0] instanceof Request ? call[0].url : call[0]),
+              "http://localhost",
+            ),
+        )
+        .filter((url) => url.pathname.endsWith("/deal-suggestions"));
+    try {
+      await waitFor(() => expect(asked().length).toBeGreaterThan(0));
+      for (const url of asked()) {
+        expect(url.searchParams.get("owner_id")).toBe("u-me");
+      }
+    } finally {
+      window.location.hash = "";
+    }
   });
 });
 

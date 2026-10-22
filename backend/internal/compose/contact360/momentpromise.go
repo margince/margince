@@ -246,7 +246,7 @@ func owedPromises(page *crmcontracts.Contact360) []owedwork.Item {
 	if page.Claims != nil {
 		for _, claim := range *page.Claims {
 			if claim.Kind != crmcontracts.ConversationClaimKindCommitmentOurs ||
-				claim.Status != crmcontracts.ConversationClaimStatusOpen || claim.TaskActivityId != nil {
+				claim.Status != crmcontracts.ConversationClaimStatusOpen || claim.NeedsReview || claim.TaskActivityId != nil {
 				continue
 			}
 			items = append(items, owedwork.Item{
@@ -298,7 +298,7 @@ func (said momentCopy) overdueClaimCard(now time.Time, claim crmcontracts.Conver
 		Rule:                crmcontracts.ContactMomentRuleOverduePromise,
 		RuleVersion:         new(ruleVersion),
 		EvidenceFingerprint: fingerprintOf(evidence),
-		Headline:            fmt.Sprintf(said.Say(momentWords.YouOwe), claim.Body),
+		Headline:            fmt.Sprintf(said.Say(momentWords.TeamOwes), claim.Body),
 		WhyNow:              whyNow,
 		Confidence:          crmcontracts.ContactMomentConfidenceObservedFact,
 		Evidence:            evidence,
@@ -329,17 +329,7 @@ func claimFiledAt(claim crmcontracts.ConversationClaim) time.Time {
 	return *claim.OccurredAt
 }
 
-// openClaimCard is the card for a promise read out of a conversation whose
-// date has NOT passed, or which carries none.
-//
-// The sibling of overdueClaimCard, and it exists for the same reason
-// openPromiseFrom does: the promise is the same either way, so the two cards
-// differ only in what they say about the date. Both quote the sentence the
-// promise was made in, which is the one thing a claim has and a task does not.
-//
-// No holder marker, unlike the task card. A claim carries no assignee — it
-// records what was said, not who was given it — so it is always the
-// workspace's promise and the reader is the workspace.
+// A claim has no assignee, so its original quote describes a team promise.
 func (said momentCopy) openClaimCard(now time.Time, claim crmcontracts.ConversationClaim) crmcontracts.ContactMoment {
 	evidence := []crmcontracts.ContactMomentEvidence{{
 		Type:       crmcontracts.ContactMomentEvidenceTypeActivity,
@@ -353,7 +343,7 @@ func (said momentCopy) openClaimCard(now time.Time, claim crmcontracts.Conversat
 		Rule:                crmcontracts.ContactMomentRuleOpenPromise,
 		RuleVersion:         new(ruleVersion),
 		EvidenceFingerprint: fingerprintOf(evidence),
-		Headline:            fmt.Sprintf(said.Say(momentWords.YouOwe), claim.Body),
+		Headline:            fmt.Sprintf(said.Say(momentWords.TeamOwes), claim.Body),
 		WhyNow:              said.openClaimWhyNow(now, claim),
 		Confidence:          crmcontracts.ContactMomentConfidenceObservedFact,
 		Evidence:            evidence,

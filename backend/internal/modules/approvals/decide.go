@@ -199,6 +199,9 @@ func landEditedPayload(
 	if a.Kind == KindVolumeRelease {
 		return &InvalidEditError{Cause: errors.New("a step-up is answered yes or no, not edited")}
 	}
+	if err := assertEditableMembers(a.Kind, a.ProposedChange, edited); err != nil {
+		return err
+	}
 	return applyEditedPayload(ctx, tx, id, edited, a, auditEvidence, decidedPayload)
 }
 

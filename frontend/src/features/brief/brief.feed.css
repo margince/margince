@@ -116,12 +116,8 @@
 }
 
 .brief-triage-lead {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  /* EXPLICIT ROWS — the head, the name, the words, why first, the verbs —
-     because a row a child is placed INTO has to exist in the explicit grid.
-     An empty auto row takes no height. */
-  grid-template-rows: auto auto auto auto auto;
+  display: flex;
+  flex-direction: column;
   align-items: start;
   gap: var(--space-4);
   min-width: 0;
@@ -133,8 +129,6 @@
 /* THE HEAD: why the row is here, whose it is, where it sits and when, as one
    caption line split by dots. */
 .brief-triage-lead-head {
-  grid-column: 1;
-  grid-row: 1;
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -159,33 +153,10 @@
 .brief-triage-lead .worklist-row::before {
   content: none;
 }
-/* A waiting message is drawn by the canonical email row, so its subject and
-   its words arrive inside one element; laid open they take rows of their own.
-   Every other row's text block is one cell. */
 .brief-triage-lead .worklist-row-text {
-  grid-column: 1;
-  grid-row: 2;
-}
-.brief-triage-lead .worklist-row-text:has(.emailentry),
-.brief-triage-lead .emailentry {
-  display: contents;
-}
-.brief-triage-lead .emailentry__subject,
-.brief-triage-lead .worklist-row-title {
-  grid-column: 1;
-  grid-row: 2;
-}
-.brief-triage-lead .emailentry__preview {
-  grid-column: 1;
-  grid-row: 3;
-}
-.brief-triage-lead .brief-why {
-  grid-column: 1;
-  grid-row: 4;
+  width: 100%;
 }
 .brief-triage-lead .worklist-row-acts {
-  grid-column: 1;
-  grid-row: 5;
   justify-content: flex-start;
   padding-block-start: var(--space-2);
 }
@@ -220,6 +191,11 @@
   overflow: visible;
   white-space: normal;
 }
+/* A task's name is a button, and a button sets its label in the body face; the
+   headline is one type whichever control draws it. */
+.brief-triage-lead .worklist-row-title > .btn {
+  font: inherit;
+}
 .brief-triage-lead .emailentry {
   padding: 0;
 }
@@ -234,20 +210,6 @@
   color: var(--textSecondary);
   white-space: normal;
   text-wrap: pretty;
-}
-/* Why first, as a quiet line under the words rather than a ruled section. */
-.brief-triage-lead .brief-why {
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-.brief-triage-lead .brief-why .disclosure-summary {
-  width: fit-content;
-  color: var(--textSecondary);
-}
-.brief-triage-lead .brief-why .disclosure-label {
-  text-decoration: underline;
-  text-underline-offset: 3px;
 }
 
 /* ── The rest of the order ─────────────────────────────────────────────────── */
@@ -317,34 +279,20 @@
   white-space: nowrap;
 }
 
-/* ── Why first ────────────────────────────────────────────────────────────── */
-.brief-why-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  margin: 0;
-  padding-inline-start: var(--space-5);
-  color: var(--textSecondary);
-}
-
 @media (max-width: 720px) {
-  /* ONE COLUMN of plain flow below the fold: there the row wraps its parts in
-     the swipe surface that answers the set-asides by thumb, and a grid would
-     place that wrapper and not the parts inside it. */
   .brief-triage-lead {
     display: flex;
     flex-direction: column;
     padding: var(--space-6);
   }
-  .brief-triage-lead .worklist-row > *,
-  .brief-triage-lead .brief-why {
+  .brief-triage-lead .worklist-row > * {
     order: 1;
   }
   .brief-triage-lead .worklist-row-acts {
     order: 2;
   }
   /* ds:ignore the phone rung of the same one headline */
-  .brief-triage-lead .worklist-row-title,
+  .brief-triage-lead p.worklist-row-title,
   .brief-triage-lead .emailentry__subject {
     font: var(--fontHeadingLarge);
   }

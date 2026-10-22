@@ -29,17 +29,20 @@ import { formatDate, formatMoney } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
 import { useRecordZone } from "../lib/recordzone";
-import { useAssignableUserOptions } from "./assigneepicker";
+import { routeHash } from "../lib/router";
+import { useRecordOwnerOptions } from "./assigneepicker";
 import { DealSuggestionAnswerDialog } from "./dealsuggestion.answer";
 import {
   type AcceptDealSuggestionBody,
   type DealSuggestion,
+  type SuggestionFilter,
   useAcceptDealSuggestion,
   useDealSuggestions,
 } from "./dealsuggestions.queries";
 import { EntityRef } from "./entityref";
 import "./dealsuggestion.css";
 import { currencyOptions } from "../format/currencychoices";
+import { useLeadingCurrencies } from "../lib/leadingcurrencies";
 import { usePipelines } from "../lib/pipelines.queries";
 
 function confidenceLevel(confidence: number): ConfidenceLevel {
@@ -84,7 +87,21 @@ export function DealSuggestionCard({
           <ConfidenceMeter level={confidenceLevel(suggestion.confidence)} />
         </Row>
         <p>
-          <span className="staged-value">{suggestedName(suggestion, t)}</span>
+          {compact ? (
+            // On the board this card is the suggestion's only trace. It leads to
+            // the company it is about, as the Worklist row does.
+            <a
+              className="staged-value"
+              href={routeHash({
+                screen: "companies",
+                id: suggestion.company_id,
+              })}
+            >
+              {suggestedName(suggestion, t)}
+            </a>
+          ) : (
+            <span className="staged-value">{suggestedName(suggestion, t)}</span>
+          )}
         </p>
         {suggestion.amount_minor != null && suggestion.currency && (
           <p className="dealsuggestion-amount t-caption">
@@ -200,11 +217,15 @@ export function suggestedName(
   });
 }
 
-function draftOf(suggestion: DealSuggestion, name: string): Draft {
+function draftOf(
+  suggestion: DealSuggestion,
+  name: string,
+  defaultCurrency: string,
+): Draft {
   return {
     name,
     amountMinor: suggestion.amount_minor ?? 0,
-    currency: suggestion.currency ?? "EUR",
+    currency: suggestion.currency ?? defaultCurrency,
     stageId: suggestion.stage_id,
     ownerId: "",
     closeDate: suggestion.close_date ?? "",
@@ -254,11 +275,12 @@ export function AcceptSuggestionDialog({
   // ONE key per dialog, held across retries: a response lost after the deal
   // was opened replays that acceptance rather than being refused as a second.
   const [idempotencyKey] = useState(() => crypto.randomUUID());
+  const leading = useLeadingCurrencies();
   const [draft, setDraft] = useState(() =>
-    draftOf(suggestion, suggestedName(suggestion, t)),
+    draftOf(suggestion, suggestedName(suggestion, t), leading[0]),
   );
   const accept = useAcceptDealSuggestion();
-  const owners = useAssignableUserOptions();
+  const owners = useRecordOwnerOptions();
   const pipelines = usePipelines();
   const stages = (
     pipelines.data?.find((pipeline) => pipeline.id === suggestion.pipeline_id)
@@ -320,7 +342,7 @@ export function AcceptSuggestionDialog({
             {(control) => (
               <Select
                 {...control}
-                options={currencyOptions(draft.currency)}
+                options={currencyOptions(leading, draft.currency)}
                 value={draft.currency}
                 onChange={(currency) => set({ currency })}
               />
@@ -418,12 +440,15 @@ export function CompanySuggestions({
  * Drawn BESIDE a column's cards through its extras, never among them: the
  * column's count and totals come from its deals alone, and a suggestion is not
  * one. Nothing is read until a pipeline is chosen.
+ *
+ * The board's owner dials narrow the suggestions as they narrow its deals.
  */
 export function useSuggestionGhosts(
   pipelineId: string | undefined,
+  owner: Omit<SuggestionFilter, "company_id" | "pipeline_id">,
 ): (column: { stage: string }) => ReactNode {
   const query = useDealSuggestions(
-    { pipeline_id: pipelineId },
+    { pipeline_id: pipelineId, ...owner },
     Boolean(pipelineId),
   );
   const byStage = new Map<string, DealSuggestion[]>();

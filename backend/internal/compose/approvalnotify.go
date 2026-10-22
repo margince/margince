@@ -4,16 +4,13 @@
 package compose
 
 // The cg:approval-notify consumer: a staged proposal becomes a line in the
-// queue of every seat that could actually answer it.
+// queue of the one member it names.
 //
-// THERE IS NO APPROVER COLUMN, and there is no query that could grow one.
-// Whether a seat may decide a staged row is a per-(reader, row) predicate — the
-// grants the released effect would spend, the narrowing to the one seat some
-// kinds are staged for, and a live probe that the reader may act on the target
-// record — so the only honest fan-out is to ask that predicate once per seat.
-// approvals answers it (PendingDecidableBy); this file never re-derives it,
-// because a second reading of "who may decide" drifts from the inbox and starts
-// telling colleagues about cards their own inbox then hides.
+// Staging stores that member (approvals/decider.go). A manager or an admin may
+// still answer the card from the approvals inbox, but only the named member is
+// told. Whether that member may still decide it is approvals' predicate
+// (PendingAskedOfInTx), asked under their own authority; this file never
+// re-derives it.
 //
 // It lives here because the question crosses three modules: approvals owns the
 // predicate, identity owns the roster and each seat's authority, notices owns
@@ -22,7 +19,7 @@ package compose
 // THE ENVELOPE CAN BE STALE. Supersession and withdrawal write `expired` with
 // no event of their own, so a row that was pending when the outbox recorded
 // this envelope may have stopped being pending long before the lane reads it.
-// The re-read inside PendingDecidableBy is what keeps this from announcing a
+// The re-read inside PendingAskedOfInTx is what keeps this from announcing a
 // card nobody can answer.
 //
 // Idempotency is the notice table's own unique index on (recipient, dedupe key),
@@ -75,7 +72,7 @@ type noticeMailQueue interface {
 
 var _ noticeMailQueue = (*jobs.Runner)(nil)
 
-// ApprovalNotify announces a staged approval to the seats that could decide it.
+// ApprovalNotify announces a staged approval to the member it names.
 type ApprovalNotify struct {
 	db        *database.DB
 	approvals *approvals.Service
@@ -217,27 +214,37 @@ func (a *ApprovalNotify) announceToSeat(
 	if err != nil || !live {
 		return err
 	}
-	// CreateTx rather than Create, so the line and the message asking for it
-	// commit together: a job staged beside a notice that rolled back names a
-	// row the sender will never find, and a notice written without the job it
-	// should have staged is a decision nobody is told about by the route they
-	// chose. The seat's preference decides only the MESSAGE, in stageMail — the
-	// line itself is written whatever they chose, because their centre keeps it
-	// either way.
+	// The line and the message asking for it commit together. A job beside a
+	// rolled-back notice names a row the sender never finds. A notice without
+	// its job is a decision nobody is told about by the route they chose. The
+	// seat's preference decides only the message, in stageNoticeMail.
 	return a.db.Tx(ctx, func(tx pgx.Tx) error {
-		decidable, err := a.approvals.PendingDecidableInTx(seatCtx, tx, approvalID)
+		decidable, err := a.approvals.PendingAskedOfInTx(seatCtx, tx, approvalID)
 		if err != nil || !decidable {
 			return err
 		}
-		noticeID, err := a.notices.CreateTx(ctx, tx, approvalNoticeFor(seat, approvalID, staged))
-		if err != nil {
-			return err
-		}
-		return a.stageMail(ctx, tx, wsID, seat, noticeID)
+		line := approvalNoticeFor(seat, approvalID, staged.Summary, approvalNoticeTarget(staged))
+		return recordApprovalNotice(ctx, tx, a.notices.CreateTx, a.mail, wsID, line)
 	})
 }
 
-// stageMail asks for this notice to leave the product, when the seat asked for
+// noticeWriter records one line in the caller's transaction and returns its id.
+type noticeWriter func(ctx context.Context, tx pgx.Tx, line notices.NewNotice) (ids.UUID, error)
+
+// recordApprovalNotice writes one decider's line and, when they asked for
+// email, the message about it, in the caller's transaction. The staging
+// announcement and a deal's owner change both tell a decider this way.
+func recordApprovalNotice(
+	ctx context.Context, tx pgx.Tx, write noticeWriter, mail noticeMailQueue, wsID ids.UUID, line notices.NewNotice,
+) error {
+	noticeID, err := write(ctx, tx, line)
+	if err != nil {
+		return err
+	}
+	return stageNoticeMail(ctx, tx, mail, wsID, line.Recipient.UUID, noticeID)
+}
+
+// stageNoticeMail asks for this notice to leave the product, when the seat asked for
 // that.
 //
 // THE PREFERENCE IS READ HERE, in the transaction that writes the notice, and
@@ -255,8 +262,8 @@ func (a *ApprovalNotify) announceToSeat(
 // because the dedupe key answers the first notice's id rather than a zero one.
 // That is free: the job's claim finds the attempt spent and sends nothing. It
 // is the reason the claim exists rather than a hole in this check.
-func (a *ApprovalNotify) stageMail(
-	ctx context.Context, tx pgx.Tx, wsID, seat ids.UUID, noticeID ids.UUID,
+func stageNoticeMail(
+	ctx context.Context, tx pgx.Tx, mail noticeMailQueue, wsID, seat ids.UUID, noticeID ids.UUID,
 ) error {
 	delivery, err := notices.DeliveryFor(ctx, tx, ids.From[ids.UserKind](seat), notices.ClassApprovalPending)
 	if err != nil {
@@ -265,7 +272,7 @@ func (a *ApprovalNotify) stageMail(
 	if delivery != notices.DeliveryEmail {
 		return nil
 	}
-	return a.mail.EnqueueTx(ctx, tx, SendNotificationEmailArgs{
+	return mail.EnqueueTx(ctx, tx, SendNotificationEmailArgs{
 		Workspace: wsID, NoticeID: noticeID.String(),
 	}, notificationMailOpts())
 }
@@ -316,10 +323,8 @@ func (a *ApprovalNotify) seatContext(
 // The dedupe key names the APPROVAL, so every redelivery of this envelope — and
 // any later announcement about the same staging — collapses onto the one line
 // each seat already has.
-func approvalNoticeFor(
-	seat ids.UUID, approvalID ids.ApprovalID, staged crmcontracts.PublicEventApprovalRequested,
-) notices.NewNotice {
-	subject := staged.Summary
+func approvalNoticeFor(seat ids.UUID, approvalID ids.ApprovalID, summary string, target notices.Target) notices.NewNotice {
+	subject := summary
 	if subject == "" {
 		subject = unsummarisedProposal
 	}
@@ -328,7 +333,7 @@ func approvalNoticeFor(
 		Kind:      notices.KindApprovalPending,
 		Subject:   subject,
 		DedupeKey: approvalNoticeDedupeKey(approvalID.UUID),
-		Target:    approvalNoticeTarget(staged),
+		Target:    target,
 	}
 }
 

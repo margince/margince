@@ -50,7 +50,10 @@ These skip the row:
 - a row with no value in its `ref` column, or a `ref` that an earlier row of the same file already used;
 - an email address, domain or LinkedIn address that another live record already holds, when the row would create a second record under it;
 - a row whose record was archived since the earlier import;
+- a contact row whose email belongs to a sending system, such as `noreply@`, `notifications@` or `receipts@`;
 - a record type you may not create, or a change to a record you may not edit.
+
+A contact row with **First name** and **Last name** filled takes its full name from those two. This holds even when the file also has a **Full name** column. A contact you add or edit in Margince keeps the full name you type.
 
 These stop nothing. The row lands, and the problem is listed:
 - an owner email that no user has (**Unknown owner**): you become the owner, except for a lead, which stays unassigned;
@@ -77,7 +80,7 @@ Also called: progress bar, time left, import stuck, continue an import.
 
 A ZIP starts with the source name of your last ZIP import, or else with the ZIP's own name. One CSV starts with none. A name has at most 80 characters: letters, numbers, dots, `_` or `-`.
 
-While an import of one source name is still writing, Margince does not test another file under that name. Wait for it to finish.
+While an import of one source name is still writing, Margince does not test another file under that name. Your file waits as a draft in Recent imports. Wait for the other import to finish, then select **Continue** on the draft. A draft that nobody touches for 7 days is canceled.
 
 Also called: re-import a ZIP, upload the export again.
 

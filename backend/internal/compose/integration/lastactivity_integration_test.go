@@ -182,8 +182,11 @@ func TestLastActivity_ConcurrentWritersConvergeOnTheNewest(t *testing.T) {
 	a := OwnerConn(t)
 	b := OwnerConn(t)
 	ctx := context.Background()
-	newest := time.Date(2026, 12, 1, 12, 0, 0, 0, time.UTC)
-	older := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+	// Both instants are the database's past, because the clock counts only that.
+	var newest, older time.Time
+	if err := a.QueryRow(ctx, `SELECT now() - interval '1 day', now() - interval '300 days'`).Scan(&newest, &older); err != nil {
+		t.Fatal(err)
+	}
 
 	insert := func(tx pgx.Tx, when time.Time) error {
 		id := ids.NewV7()

@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // NewRestoreSeam assembles the reversal executor over the installation pool and
@@ -238,7 +239,7 @@ func rowIsAlreadyUndone(ctx context.Context, tx pgx.Tx, row AuditRow) (bool, err
 func valuesNoLongerWritable(ctx context.Context, tx pgx.Tx, entityType string, _ ids.UUID, patch map[string]json.RawMessage) ([]string, error) {
 	var custom []string
 	for key := range patch {
-		if len(key) > 3 && key[:3] == "cf_" {
+		if datasource.IsCustomFieldKey(key) {
 			custom = append(custom, key)
 		}
 	}

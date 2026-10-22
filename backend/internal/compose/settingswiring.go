@@ -150,9 +150,14 @@ func yamlPaths(t reflect.Type, prefix string) map[string]bool {
 }
 
 // DealsInstallation is the installation seam the deals module reads through.
-// The wiring itself lives in installseam, which the integration harness can
-// also reach; this stays as the name compose's own call sites use.
-func DealsInstallation() deals.Installation { return installseam.Deals() }
+// The wiring lives in installseam, which the integration harness can also
+// reach. The owner hand-over here also tells the new owner, which needs the
+// notifier in compose; the harness keeps installseam's hand-over without it.
+func DealsInstallation() deals.Installation {
+	inst := installseam.Deals()
+	inst.FollowOwner = followDealOwnerAndTell
+	return inst
+}
 
 // ContractTimezone is the installation timezone seam the contracts module reads
 // its calendar "today" through — the SAME setting deals resolves, so a contract

@@ -30,7 +30,7 @@ func TestTranscriptAdmissionPreservesHistoryAndFutureDeadlines(t *testing.T) {
 			if future {
 				due = "2026-11-20"
 			}
-			payload, err := json.Marshal(map[string]any{"proposals": []map[string]any{{"summary": "Send revised pricing", "owner": "Priya", "source_lines": []int{3}, "confidence": 0.9, "due_date": due, "commitment": openCommitmentMeaning(due, "Friday")}}})
+			payload, err := json.Marshal(map[string]any{"proposals": []map[string]any{{"summary": "Send revised pricing", "owner": "Priya", "promiser_ref": "seat:" + e.Rep1.String(), "source_lines": []int{3}, "confidence": 0.9, "due_date": due, "commitment": openCommitmentMeaning(due, "Friday")}}})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -71,7 +71,7 @@ func TestTranscriptAdmissionPreservesHistoryAndFutureDeadlines(t *testing.T) {
 				t.Fatalf("proposals = %d, want %d", got, want)
 			}
 			if e.taskCount(t) != 0 {
-				t.Fatal("an unnamed owner received an automatic task")
+				t.Fatal("a promise its colleague did not say aloud became an automatic task")
 			}
 		})
 	}

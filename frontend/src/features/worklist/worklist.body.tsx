@@ -195,7 +195,7 @@ export function WorklistBody({
           <WalkNotice walk={walk} onRefresh={onRefresh} />
           {/* A day cannot read as clear while something that would have filled it
           was never read. */}
-          <DayUnread day={day} loaded={queue} />
+          <DayUnread day={day} />
           <WorklistBulkBar selection={selection} />
           {queue.length === 0 ? (
             // One line, not a panel. No card is drawn to report a zero.

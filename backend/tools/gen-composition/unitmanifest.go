@@ -55,10 +55,7 @@ type unitManifest struct {
 
 	// Secrets are the secret keys the unit declares (see
 	// extension.SecretsRequest) — inert data an operator resolves, never a
-	// live capability. omitempty rather than mirroring RiskTiers' bare "[]":
-	// nothing declares Secrets yet, and every manifest already committed to
-	// the tree predates this field, so an unconditional key would rewrite
-	// every one of them for a field they do not use.
+	// live capability. omitempty, so a unit declaring none gains no key.
 	Secrets []secretsRequest `json:"secrets,omitempty"`
 
 	// Subscriptions are the events the unit listens for (see
@@ -100,6 +97,18 @@ type unitManifest struct {
 
 	// Entries are the places on core screens that offer a way into the unit.
 	Entries []declaredEntry `json:"entries,omitempty"`
+
+	// Panels are the places on core pages that draw the unit's own component.
+	Panels []declaredPanel `json:"panels,omitempty"`
+
+	// OAuthApps are the vendors whose consent flow the core runs for the unit
+	// (see extension.OAuthApp). Each names where an admin is sent, what the
+	// consent asks for, and the endpoint that receives the client secret.
+	// omitempty for the reason the fields above have it.
+	OAuthApps []declaredOAuthApp `json:"oauth_apps,omitempty"`
+
+	// SystemReads are the deals and colleagues' details the unit reads.
+	SystemReads []string `json:"system_reads,omitempty"`
 }
 
 // inboundEndpoint is one declared anonymous edge (see
@@ -382,16 +391,6 @@ func writeFileAtomic(dir, path string, content []byte) error {
 		return err
 	}
 	return os.Rename(tmpName, path)
-}
-
-// jobDeclarationsByUnit groups the composed job declarations by declaring
-// unit, so each manifest derivation sees its own and no other's.
-func jobDeclarationsByUnit(decls []extension.JobDeclaration) map[string][]extension.JobDeclaration {
-	byUnit := map[string][]extension.JobDeclaration{}
-	for _, d := range decls {
-		byUnit[string(d.Unit)] = append(byUnit[string(d.Unit)], d)
-	}
-	return byUnit
 }
 
 // verifyUnitManifests re-derives every unit's manifest and requires the

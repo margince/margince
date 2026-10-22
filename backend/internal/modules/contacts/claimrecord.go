@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -18,20 +19,24 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // A withheld promise remains history without appearing as current work.
-const currentCommitmentAdmission = `(c.corrected_at IS NOT NULL OR NOT EXISTS (SELECT 1 FROM activity_commitment_admission d
- WHERE d.source_activity_id = c.source_activity_id AND d.locator = c.evidence_fingerprint AND NOT d.current_work))`
+func currentCommitmentAdmission(asOf time.Time, arg func(any) int) string {
+	current := provenance.CurrentCommitmentClause("c.source_activity_id", "c.evidence_fingerprint", "c.due_at", asOf, arg)
+	return `(c.corrected_at IS NOT NULL OR (starts_with(c.captured_by, 'human:') AND NOT EXISTS (
+ SELECT 1 FROM audit_log imported WHERE imported.entity_type='contact' AND imported.entity_id=c.contact_id
+ AND imported.after->>'claim_id'=c.id::text AND NOT ` + storekit.AuditNotFromAnImport("imported") + `)) OR ` + current + `
+ OR EXISTS (SELECT 1 FROM activity adopted_task WHERE adopted_task.id=c.task_activity_id
+ AND adopted_task.archived_at IS NULL AND NOT adopted_task.is_done AND (` + storekit.HumanWroteActivityClause("adopted_task") + `
+ OR (adopted_task.assignee_id, adopted_task.id::text) IN (SELECT reader_id,row_id FROM ` + auth.EffectiveWorklistPinsSQL(arg) + ` pins WHERE pins.source='task'))))`
+}
 
-// ourPromiseNotYetATask is an open promise of ours that no task holds yet.
-//
-// Every reader that counts promises beside the open tasks uses it, because a
-// promise the dispatch turned into a task is that task from then on: counting
-// the claim as well would show one promise twice. Readers of one record's
-// claims keep the task-backed ones, so the quote and the task stay reachable.
-const ourPromiseNotYetATask = ourPromiseWithNoTask + ` AND c.status = 'open' AND ` + currentCommitmentAdmission
+func ourPromiseNotYetATask(asOf time.Time, arg func(any) int) string {
+	return ourPromiseWithNoTask + ` AND c.status = 'open' AND ` + currentCommitmentAdmission(asOf, arg)
+}
 
 // ourPromiseWithNoTask is ourPromiseNotYetATask whatever its status: the
 // claims a Worklist promise row names, open or settled since.

@@ -12,7 +12,12 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  messageText,
+  writeMessage,
+} from "../../design-system/richtext-testing";
 import { LocaleProvider } from "../../i18n";
+import { draftButton } from "../../testing/composedraft.testkit";
 import {
   allowedPreview,
   isPreviewDoor,
@@ -134,9 +139,7 @@ describe("drafting to a contact", () => {
       />,
     );
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
 
     expect(
       await screen.findByDisplayValue("Zwei Produkte ohne Übersetzung"),
@@ -165,13 +168,12 @@ describe("drafting to a contact", () => {
       />,
     );
 
+    draftButton();
     await userEvent.type(
       screen.getByPlaceholderText(/Purpose of the email|Purpose of the reply/),
       "kurz halten",
     );
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
     await screen.findByDisplayValue("Zwei Produkte ohne Übersetzung");
 
     const call = sent.find((c) => c.key === "POST /contacts/c-1/draft-email");
@@ -201,9 +203,7 @@ describe("drafting to a contact", () => {
       />,
     );
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
     await screen.findByDisplayValue("Zwei Produkte ohne Übersetzung");
 
     await userEvent.click(screen.getByRole("button", { name: "Shorter" }));
@@ -242,13 +242,74 @@ describe("drafting to a contact", () => {
       />,
     );
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
     await screen.findByDisplayValue("Zwei Produkte ohne Übersetzung");
 
     const first = sent.find((c) => c.key === "POST /contacts/c-1/draft-email");
     expect(first?.body).toEqual({ intent: "Follow up on our discussion" });
+  });
+
+  // A rep who wrote a body and asked for a draft wants those words improved.
+  // The model is sent them, and its answer takes their place.
+  it("revises the body the reader wrote when asked for a draft", async () => {
+    const sent = stubRoutes({
+      "POST /contacts/c-1/draft-email": () => jsonResponse(CONTACT_DRAFT),
+    });
+    render(
+      <ComposeModal
+        intent="Make this nicer"
+        entityType="contact"
+        entityId="c-1"
+        contactId="c-1"
+        recordAddress="annabelle@akeneo.example"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+    writeMessage("Body", "hi, two products missing. pls send");
+
+    await userEvent.click(draftButton());
+
+    await waitFor(() =>
+      expect(messageText("Body")).toContain("brauchen wir zwei Produkte"),
+    );
+    expect(messageText("Body")).not.toContain("pls send");
+    const ask = sent.find((c) => c.key === "POST /contacts/c-1/draft-email");
+    expect(ask?.body).toEqual({
+      intent: "Make this nicer",
+      rewrite_of: "hi, two products missing. pls send",
+    });
+  });
+
+  // The deterministic floor writes from the record and never reads the body.
+  // Its answer must not take the place of the words the rep wrote.
+  it("keeps the body the reader wrote when no model answered", async () => {
+    stubRoutes({
+      "POST /contacts/c-1/draft-email": () =>
+        jsonResponse({
+          ...CONTACT_DRAFT,
+          generated_by: "deterministic",
+          ai_generated: false,
+          ai_disclosure: null,
+        }),
+    });
+    render(
+      <ComposeModal
+        intent="Make this nicer"
+        entityType="contact"
+        entityId="c-1"
+        contactId="c-1"
+        recordAddress="annabelle@akeneo.example"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+    writeMessage("Body", "hi, two products missing. pls send");
+
+    await userEvent.click(draftButton());
+
+    await screen.findByDisplayValue("Zwei Produkte ohne Übersetzung");
+    expect(messageText("Body")).toContain("pls send");
   });
 
   it("discloses a model-written draft", async () => {
@@ -267,9 +328,7 @@ describe("drafting to a contact", () => {
       />,
     );
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
 
     expect(
       await screen.findByRole("heading", { name: "AI-assisted draft" }),
@@ -294,9 +353,7 @@ describe("drafting to a contact", () => {
       />,
     );
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
 
     await waitFor(() =>
       expect(screen.getByText(/AI drafting is unavailable/i)).toBeTruthy(),
@@ -321,9 +378,7 @@ describe("drafting to a contact", () => {
       />,
     );
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
 
     await waitFor(() =>
       expect(screen.getByText(/not available on this page/i)).toBeTruthy(),
@@ -357,9 +412,7 @@ describe("drafting to everyone a meeting was with", () => {
       />,
     );
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
     await screen.findByDisplayValue("Zwei Produkte ohne Übersetzung");
 
     const call = sent.find((c) => c.key === "POST /contacts/c-1/draft-email");

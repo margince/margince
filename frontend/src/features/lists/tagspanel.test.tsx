@@ -84,6 +84,27 @@ describe("the tags panel", () => {
     expect(await screen.findByText(en["tags.emptyTitle"])).toBeInTheDocument();
   });
 
+  // The server refuses an archived record's tag list, and "no tags" would be a
+  // false claim. The panel stays out of it.
+  it("draws nothing and asks nothing for an archived record", async () => {
+    const asked: string[] = [];
+    installFetchStub({
+      [`GET /records/company/${COMPANY}/tags`]: () => {
+        asked.push("tags");
+        return jsonResponse({ data: [KEY_ACCOUNT], withheld: false });
+      },
+    });
+    const { container } = render(
+      <StoryProviders>
+        <TagsPanel entityType="company" entityID={COMPANY} canEdit archived />
+      </StoryProviders>,
+    );
+    await act(async () => {});
+    expect(container.querySelector(".tagspanel")).toBeNull();
+    expect(screen.queryByText(en["tags.emptyTitle"])).toBeNull();
+    expect(asked).toEqual([]);
+  });
+
   it("draws the words a record carries", async () => {
     mount([KEY_ACCOUNT]);
     expect(await screen.findByText("Key Account")).toBeInTheDocument();

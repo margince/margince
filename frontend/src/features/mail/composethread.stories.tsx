@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useState } from "react";
 import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import {
@@ -12,7 +11,6 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { ComposeModal } from "./compose";
-import { ThreadPane } from "./composethread";
 
 const MESSAGES: components["schemas"]["Activity"][] = [
   "Delivery window",
@@ -45,29 +43,11 @@ const MESSAGES: components["schemas"]["Activity"][] = [
   },
 }));
 
-function Conversation() {
-  const [selected, setSelected] = useState("message-0");
-  return (
-    <StoryProviders>
-      <ThreadPane
-        messages={MESSAGES}
-        selectedId={selected}
-        onSelect={setSelected}
-        pending={false}
-        failed={false}
-        onRetry={() => {}}
-        nameOf={() => undefined}
-        named
-      />
-    </StoryProviders>
-  );
-}
 const meta: Meta = {
   title: "Patterns/Compose mail/Conversation",
   excludeStories: ["selectedReplyRoutes"],
 };
 export default meta;
-export const SelectAndPreview: StoryObj = { render: () => <Conversation /> };
 export function selectedReplyRoutes() {
   return {
     "GET /me": meRoute({}),
@@ -130,7 +110,7 @@ export const DraftedBesideThread: StoryObj = {
   play: async () => {
     const dialog = within(await screen.findByRole("dialog"));
     await userEvent.click(
-      await dialog.findByRole("button", { name: "Draft reply with AI" }),
+      await dialog.findByRole("button", { name: "Draft reply" }),
     );
     await dialog.findByText("AI-assisted draft");
     const editor = dialog.getByRole("textbox", { name: "Body" });

@@ -506,6 +506,13 @@ describe("EmailReference", () => {
   });
 });
 
+// The envelope opens from the "to …" line under the sender.
+async function openEnvelope() {
+  await userEvent.click(
+    await screen.findByRole("button", { name: /^(to |Details)/ }),
+  );
+}
+
 describe("EmailDetail", () => {
   it("asks for the message only when it is opened", async () => {
     const fetchSpy = jsonOnce(PRESENTATION);
@@ -556,10 +563,13 @@ describe("EmailDetail", () => {
       />,
     );
 
-    const when = await screen.findByText("1 Sep 09:12");
+    await openEnvelope();
     // In the envelope block, not trailing the body: the assertion is WHERE, so
     // finding the text anywhere on the page would pass over the bug.
-    expect(when.closest(".emaildetail__parties")).not.toBeNull();
+    const when = await screen.findAllByText("1 Sep 09:12");
+    expect(
+      when.some((node) => node.closest(".emaildetail__parties") !== null),
+    ).toBe(true);
   });
 
   // A party the response could not name is DROPPED, not joined in as an empty
@@ -588,7 +598,11 @@ describe("EmailDetail", () => {
     // The line is read WITHOUT its label, because the gap the bug leaves is
     // between the label and the first name — an assertion over the whole
     // element's text has the word "To" in front of the comma and never sees it.
-    const line = await screen.findByText(/andreas@buyer.test/);
+    await openEnvelope();
+    const line = (await screen.findAllByText(/andreas@buyer.test/)).find(
+      (node) => node.classList.contains("emaildetail__party"),
+    );
+    if (!line) throw new Error("no To line on the envelope");
     const label = line.querySelector(".emaildetail__partyLabel");
     const names = (line.textContent ?? "").slice(
       (label?.textContent ?? "").length,
@@ -670,6 +684,7 @@ describe("EmailDetail", () => {
     );
     // An empty list would read as "nobody was blind-copied", which is a
     // different fact from "you may not see who was".
+    await openEnvelope();
     await screen.findByText(/blind-copied and are not shown\./);
   });
 

@@ -286,3 +286,46 @@ func TestExchangeTreatsAnAbsentScopeAsGrantedAsRequested(t *testing.T) {
 		t.Errorf("granted scopes = %v, want the requested %v", grant.Scopes, baseScope)
 	}
 }
+
+// The exchange and the refresh both report the access token's lifetime. A
+// caller can then keep the token until it expires.
+func TestExchangeAndRefreshReportTheAccessTokensLifetime(t *testing.T) {
+	var form url.Values
+	srv := tokenServer(t, http.StatusOK, `{"refresh_token":"r","access_token":"a","expires_in":3600}`, &form)
+	c := New(testConfig(srv.URL, false))
+
+	grant, err := c.Exchange(context.Background(), "c", "cb")
+	if err != nil {
+		t.Fatalf("Exchange: %v", err)
+	}
+	if grant.AccessToken != "a" || grant.ExpiresIn != time.Hour {
+		t.Errorf("exchange = (%q, %v), want (a, 1h)", grant.AccessToken, grant.ExpiresIn)
+	}
+	refreshed, err := c.Refresh(context.Background(), "r", nil)
+	if err != nil {
+		t.Fatalf("Refresh: %v", err)
+	}
+	if refreshed.ExpiresIn != time.Hour {
+		t.Errorf("refresh lifetime = %v, want 1h", refreshed.ExpiresIn)
+	}
+}
+
+// A lifetime sent as a JSON string still decodes. One that is not a whole
+// number of seconds reads as unknown and does not fail the exchange.
+func TestALifetimeSentAsTextStillDecodes(t *testing.T) {
+	for body, want := range map[string]time.Duration{
+		`{"refresh_token":"r","access_token":"a","expires_in":"3600"}`: time.Hour,
+		`{"refresh_token":"r","access_token":"a"}`:                     0,
+		`{"refresh_token":"r","access_token":"a","expires_in":-5}`:     0,
+	} {
+		var form url.Values
+		srv := tokenServer(t, http.StatusOK, body, &form)
+		grant, err := New(testConfig(srv.URL, false)).Exchange(context.Background(), "c", "cb")
+		if err != nil {
+			t.Fatalf("Exchange(%s): %v", body, err)
+		}
+		if grant.ExpiresIn != want {
+			t.Errorf("Exchange(%s) lifetime = %v, want %v", body, grant.ExpiresIn, want)
+		}
+	}
+}

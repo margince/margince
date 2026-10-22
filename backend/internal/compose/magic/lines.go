@@ -49,6 +49,7 @@ func linesOf(mask imageMask, entries []entry, capped map[string]bool, limit int)
 			continue
 		}
 		if at, seen := group[key]; seen {
+			out[at].ReceiptIds = appendReceiptIdentities(out[at].ReceiptIds, line.ReceiptIds)
 			records[at][e.EntityID] = true
 			count := len(records[at])
 			out[at].Count = &count
@@ -92,6 +93,7 @@ func lineOf(mask imageMask, e entry) (crmcontracts.MagicLine, string, bool) {
 	}
 	line := crmcontracts.MagicLine{
 		Id:         openapi_types.UUID(e.ID),
+		ReceiptIds: new([]openapi_types.UUID{receiptIdentity(e)}),
 		OccurredAt: e.OccurredAt,
 		Lane:       crmcontracts.MagicLineLaneMagicLaneDone,
 		Summary:    d.summary,

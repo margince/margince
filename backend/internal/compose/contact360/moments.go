@@ -49,6 +49,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -99,23 +100,13 @@ func (s *Service) momentsSection(ctx context.Context, tx pgx.Tx, contactID ids.C
 		stored, ok := putAway[moment.ClaimKey]
 		return ok && stored == moment.EvidenceFingerprint
 	}
-	// A reader who may not read activity sees no email to cite, so their
-	// promise cards stay as they are.
-	var sent *wroteTo
-	latest, found, err := lastWroteTo(ctx, tx, contactID, now, opts)
-	if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
-		return err
-	}
-	if found {
-		sent = &latest
-	}
 	zone, err := recordZone(ctx, tx)
 	if err != nil {
 		return err
 	}
 	said := momentCopyFor(string(identity.BaseLanguageForRecord(ctx, tx)))
 	said.zone = zone
-	moment := said.deriveMomentPast(ctx, now, out, dismissed, said.proposer(ctx, out, sent, zone, dismissed))
+	moment := said.deriveMomentPast(ctx, now, out, dismissed)
 	momentaction.Withhold(ctx, string(said.Lang()), &moment)
 	out.Moment = &moment
 	return nil
@@ -183,8 +174,7 @@ func (s *Service) momentDismissals(ctx context.Context, tx pgx.Tx, contactID ids
 // inputs this build does not have, and a rule that cannot fire belongs nowhere
 // on the page.
 func (said momentCopy) deriveMoment(ctx context.Context, now time.Time, page *crmcontracts.Contact360) crmcontracts.ContactMoment {
-	return said.deriveMomentPast(ctx, now, page, func(crmcontracts.ContactMoment) bool { return false },
-		func(moment crmcontracts.ContactMoment) crmcontracts.ContactMoment { return moment })
+	return said.deriveMomentPast(ctx, now, page, func(crmcontracts.ContactMoment) bool { return false })
 }
 
 // deriveMomentPast walks the same ladder and skips the rungs whose card this
@@ -203,10 +193,8 @@ func (said momentCopy) deriveMoment(ctx context.Context, now time.Time, page *cr
 func (said momentCopy) deriveMomentPast(
 	ctx context.Context, now time.Time, page *crmcontracts.Contact360,
 	dismissed func(crmcontracts.ContactMoment) bool,
-	propose func(crmcontracts.ContactMoment) crmcontracts.ContactMoment,
 ) crmcontracts.ContactMoment {
-	for _, plain := range said.ladder() {
-		rung := proposing(plain, propose)
+	for _, rung := range said.ladder() {
 		moment, ok := rung(ctx, now, page)
 		if !ok || !dismissed(moment) {
 			if ok {
@@ -481,4 +469,12 @@ func (said momentCopy) nothingNeededMoment(_ context.Context, now time.Time, pag
 		FreshnessAt:         &now,
 		RecommendedAction:   said.logInteraction(),
 	}
+}
+
+func recordZone(ctx context.Context, tx pgx.Tx) (*time.Location, error) {
+	name, err := identity.TimezoneAppliedTx(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	return storekit.LoadZone(name)
 }

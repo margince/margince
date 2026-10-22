@@ -12,6 +12,7 @@ import type {
   Grounding,
 } from "./composedraftcall";
 import type { SavedDraftFields } from "./composesaveddraft";
+import type { EditSeed } from "./schedulededit";
 
 type DraftReason = components["schemas"]["AccountDraftReason"];
 
@@ -19,12 +20,15 @@ type DraftReason = components["schemas"]["AccountDraftReason"];
 // project a draft is written for, with what the server said it wrote from.
 function useAccountGrounding(
   contactId: string | undefined,
+  edit: EditSeed | undefined,
   onGroundingChanged: () => void,
 ) {
-  const [recipientId, setRecipientId] = useState(contactId ?? "");
-  const [dealId, setDealId] = useState("");
+  const [recipientId, setRecipientId] = useState(
+    edit?.recipientId || (contactId ?? ""),
+  );
+  const [dealId, setDealId] = useState(edit?.dealId ?? "");
   // The project scopes the draft's grounding and files the sent message.
-  const [projectId, setProjectId] = useState("");
+  const [projectId, setProjectId] = useState(edit?.projectId ?? "");
   const [reasoning, setReasoning] = useState<DraftReason[]>([]);
   // The server's scope report for the draft on screen, retired with the
   // reasons because it describes the same read.
@@ -57,7 +61,7 @@ export type FieldsSnapshot = Readonly<{
   to: string[];
   cc: string[];
   bcc: string[];
-  bccOpen: boolean;
+  copiesOpen: boolean;
   subject: string;
   body: string;
   html: string;
@@ -76,7 +80,7 @@ export function emptyFields(): FieldsSnapshot {
     to: [],
     cc: [],
     bcc: [],
-    bccOpen: false,
+    copiesOpen: false,
     subject: "",
     body: "",
     html: "",
@@ -91,27 +95,41 @@ export function emptyFields(): FieldsSnapshot {
   };
 }
 
+// Whether a seed arrives holding a copy, which opens the copy rows.
+function holdsCopies(edit: EditSeed | undefined): boolean {
+  return Boolean(edit && edit.cc.length + edit.bcc.length > 0);
+}
+
 // The message being written: its fields, the draft that filled them, and
 // the epoch that retires a draft request once the words move on.
 export function useComposeFields({
   initialMessage,
   askedIntent,
   contactId,
+  edit,
 }: Readonly<{
   initialMessage?: Readonly<{ subject: string; body: string }>;
   askedIntent?: string;
   contactId?: string;
+  /** A scheduled message being written again; read once, when the composer mounts. */
+  edit?: EditSeed;
 }>) {
-  const [to, setTo] = useState<string[]>([]);
-  const [cc, setCc] = useState<string[]>([]);
-  // A Bcc row holding a value may not be hidden, so it stays open once opened.
-  const [bcc, setBcc] = useState<string[]>([]);
-  const [bccOpen, setBccOpen] = useState(false);
-  const [subject, setSubject] = useState(initialMessage?.subject ?? "");
+  const [to, setTo] = useState<string[]>(edit?.to ?? []);
+  const [cc, setCc] = useState<string[]>(edit?.cc ?? []);
+  // Copy rows holding a value may not be hidden, so they stay open once opened.
+  const [bcc, setBcc] = useState<string[]>(edit?.bcc ?? []);
+  const [copiesOpen, setCopiesOpen] = useState(() => holdsCopies(edit));
+  const [subject, setSubject] = useState(
+    edit?.subject ?? initialMessage?.subject ?? "",
+  );
   // The plain part every gate reads, and the markup part beside it. Both
   // travel, because the wire is multipart/alternative.
-  const [body, setBody] = useState(initialMessage?.body ?? "");
-  const [html, setHtml] = useState("");
+  const [body, setBody] = useState(edit?.body ?? initialMessage?.body ?? "");
+  // A seeded message arrives as plain text, and the editor draws the markup.
+  const [html, setHtml] = useState(
+    () =>
+      edit?.html ?? (initialMessage ? paragraphsFrom(initialMessage.body) : ""),
+  );
   const [intent, setIntent] = useState(askedIntent ?? "");
   // Keyed on the caller's ask, so a second moment action replaces the reason
   // the first one seeded.
@@ -122,10 +140,12 @@ export function useComposeFields({
   }
   // What this message is, when the record does not say. Empty until the
   // reader answers, and never asked on a reply (see contextFor).
-  const [context, setContext] = useState<CommunicationContext | "">("");
+  const [context, setContext] = useState<CommunicationContext | "">(
+    edit?.context ?? "",
+  );
   // The send-later moment as datetime-local text in the rep's zone. It
   // becomes an instant at submit (see scheduleFields).
-  const [sendAt, setSendAt] = useState("");
+  const [sendAt, setSendAt] = useState(edit?.sendAt ?? "");
   const [provenance, setProvenance] = useState<DraftProvenance | null>(null);
   // The served draft the body came from, so the server can tell a sent draft
   // from a rewritten one. It may only name the text on screen.
@@ -140,7 +160,7 @@ export function useComposeFields({
   const [draftKept, setDraftKept] = useState(false);
   // A new grounding clears drafted text alone. `draftRef` and `provenance`
   // are set by the fill, so a rep's own typed message stays.
-  const account = useAccountGrounding(contactId, () => {
+  const account = useAccountGrounding(contactId, edit, () => {
     if (!provenance && !draftRef) {
       return;
     }
@@ -202,7 +222,7 @@ export function useComposeFields({
     setTo([...saved.to]);
     setCc([...saved.cc]);
     setBcc([...saved.bcc]);
-    if (saved.bcc.length > 0) setBccOpen(true);
+    if (saved.cc.length + saved.bcc.length > 0) setCopiesOpen(true);
     setSubject(saved.subject);
     setBody(saved.body);
     setHtml(saved.html);
@@ -214,7 +234,7 @@ export function useComposeFields({
     to,
     cc,
     bcc,
-    bccOpen,
+    copiesOpen,
     subject,
     body,
     html,
@@ -233,7 +253,7 @@ export function useComposeFields({
     setTo(next.to);
     setCc(next.cc);
     setBcc(next.bcc);
-    setBccOpen(next.bccOpen);
+    setCopiesOpen(next.copiesOpen);
     setSubject(next.subject);
     setBody(next.body);
     setHtml(next.html);
@@ -255,8 +275,8 @@ export function useComposeFields({
     setCc,
     bcc,
     setBcc,
-    bccOpen,
-    openBcc: () => setBccOpen(true),
+    copiesOpen,
+    openCopies: () => setCopiesOpen(true),
     subject,
     setSubject,
     body,

@@ -44,11 +44,14 @@ They must sign in again after that. Bringing them back takes a full seat again, 
 Also called: restore a user, re-enable an account.
 
 ### A colleague left: who gets their deals, and how do I reassign their records?
-When a colleague leaves and you deactivate them in Margince, they stay the owner of their deals, leads, contacts, companies and projects. Nothing gets a new owner on its own. Give the work to others before you deactivate them.
-1. List what they own: **Filters and views** → **New filter** → **Contacts** → **Add condition** → **Owner**.
-2. **Deals** and **Leads**: tick the rows and press **Assign** in the bar for many rows. See [Lists, filters and views](lists-filters-and-views.md).
-3. **Contacts** and **Companies**, one at a time: **Owner** in **Details**.
-4. **Projects**, one at a time: open the project and choose **More actions** → **Assign to a colleague**.
+When a colleague leaves and you deactivate them in Margince, they stay the owner of their deals, leads, contacts, companies and projects. Nothing gets a new owner on its own. Hand the work over in **Settings → Members**, before or after you deactivate them.
+1. Open **Settings → Members**.
+2. Open the **Actions for {name}** menu on their row and choose **Hand over work**.
+3. The box says what they still own. Pick the colleague under **Give it to** and press **Hand over**.
+
+Every lead, contact, company, deal and project you may change moves to that colleague. Their tasks, automations and Deal Rooms stay where they are. The **Deactivate {name}?** box also says what they still own and offers **Hand over work**.
+
+To give their records to several colleagues, filter a list by **Owner** instead. A colleague who left shows there as "(deactivated)". Tick the rows and press **Assign** in the bar for many rows. See [Lists, filters and views](lists-filters-and-views.md).
 Also called: offboarding, handover, a rep left, transfer a colleague's accounts.
 
 ### How do I reset someone's password?
@@ -58,6 +61,14 @@ To reset a colleague's password in Margince, open **Settings → Members**. Open
 3. Send it to them yourself. The box says: "Send this link to the member through a trusted channel. It works once and is shown only now."
 The box shows when the link ends. To change your own password, use **Settings → Account → Change password** instead.
 Also called: forgot password, password reset, locked out.
+
+### How do I let in a colleague who lost their two-step sign-in?
+To let a colleague in who lost both their phone app and their backup codes, open **Settings → Members**. Open the **Actions for {name}** menu on their row and choose **Remove two-step sign-in**.
+1. Choose **Remove two-step sign-in**.
+2. Read the box and choose **Remove two-step sign-in** again.
+
+They are signed out everywhere, and their password alone signs them in until they set up two-step sign-in again. If your installation requires it, Margince asks them to set it up again at once. The menu offers this only for a colleague who has two-step sign-in on. It never shows on your own row: you remove your own in **Settings → Account**, with a code. The audit log records who removed it.
+Also called: lost phone, lost backup codes, reset two-step sign-in, reset MFA.
 
 ### How do I create a team?
 To create a team in Margince, open **Settings → Teams** and choose **New team** at the top of the page.
@@ -290,7 +301,7 @@ To invite and remove colleagues you need the permission to manage users. Only th
 
 Inviting, deactivating and the **Members** settings list all answer to that permission. So a custom role that holds it manages colleagues without being called Admin.
 
-**Your access must cover theirs.** To act on an **Admin's** account you need the Admin role yourself. If not, deactivating or bringing them back needs their admin permissions and row scope. A set-password link, a role change or an invite needs everything the account holds or will hold, fields and teams included. Only an Admin changes their own role. A member on an archived role gets no link and cannot be brought back until an Admin gives them a live role.
+**Your access must cover theirs.** To act on an **Admin's** account you need the Admin role yourself. If not, deactivating or bringing them back needs their admin permissions and row scope. A set-password link, removing two-step sign-in, a role change or an invite needs everything the account holds or will hold, fields and teams included. Only an Admin changes their own role. A member on an archived role gets no link and cannot be brought back until an Admin gives them a live role.
 
 **Inviting.** You choose a role, and the colleague is created with no password. If your Margince sends email, they get a link. If not, the admin takes a link that works once from **Get set-password link** and gives it to them. An invite link lasts 7 days.
 

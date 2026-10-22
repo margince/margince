@@ -127,6 +127,17 @@ func (h Handlers) ListStageEvidence(w http.ResponseWriter, r *http.Request, id c
 	httperr.WriteJSON(w, http.StatusOK, map[string]any{"data": evidence, "page": crmcontracts.PageInfo{}})
 }
 
+// GetDealWinEvidence answers whether the deal has the signed agreement a win
+// rests on. A client asks it to put the question before the refusal.
+func (h Handlers) GetDealWinEvidence(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	signed, err := h.store.DealWinEvidence(r.Context(), pathID[ids.DealKind](id))
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.DealWinEvidence{HasSignedContract: signed})
+}
+
 // RevertStageProgression takes back a stage move the product made by itself.
 //
 // The approval id is the caller's only handle on which move to undo; the stage

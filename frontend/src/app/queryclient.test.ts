@@ -70,6 +70,10 @@ describe("the query retry policy", () => {
     }
   });
 
+  it("never retries a host calendar the server could not read", () => {
+    expect(retryQuery(0, problem(502, "calendar_unavailable"))).toBe(false);
+  });
+
   it("never retries a client error, however early the failure", () => {
     for (const [status, code] of [
       [400, "invalid_argument"],

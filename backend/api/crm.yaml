@@ -5283,6 +5283,20 @@ paths:
         - { name: company_id, in: query, schema: { type: string, format: uuid } }
         - { name: pipeline_id, in: query, schema: { type: string, format: uuid } }
         - { name: stage_id, in: query, schema: { type: string, format: uuid } }
+        - name: owner_id
+          in: query
+          schema: { type: string, format: uuid }
+          description: Suggestions for companies this user owns. A suggestion's owner is its company's owner.
+        - name: owner_team_id
+          in: query
+          schema: { type: string, format: uuid }
+          description: Suggestions for companies owned by any member of this team. Narrows the caller's row scope, never widens it.
+        - name: unassigned
+          in: query
+          schema: { type: boolean }
+          description: |
+            `true` returns only suggestions for companies with no owner. Mutually exclusive with
+            `owner_id` and `owner_team_id`; combining them is `422`.
         - { name: cursor, in: query, schema: { type: string }, description: Opaque keyset cursor. }
         - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200, default: 50 } }
       responses:
@@ -5451,7 +5465,7 @@ paths:
         - name: stalled
           in: query
           schema: { type: boolean }
-          description: Deterministic stalled flag (no activity past the threshold).
+          description: Deterministic stalled flag (no activity past the threshold, and no booked meeting ahead).
         - name: project_id
           in: query
           schema: { type: string, format: uuid }
@@ -7034,6 +7048,35 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /deals/{id}/win-evidence:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Deals]
+      operationId: getDealWinEvidence
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Whether the deal has the signed agreement a win rests on.
+      description: |
+        The question `POST /deals/{id}/advance` asks before it lets a deal land on a won
+        stage: does the deal carry a contract that left draft, has a signing date, and has
+        a current or final contract or legal file attached. It is the same check, run at the
+        moment of the read.
+
+        A client reads this before it asks someone to confirm a win. With
+        `has_signed_contract: false` the win needs `won_without_contract_reason`, and the
+        client can ask for it up front instead of after a refused attempt. The advance
+        still checks again when it runs, because the agreement can be archived in between.
+      responses:
+        '200':
+          description: Whether the agreement a win needs is on the deal.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealWinEvidence' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   # ------------------------- /stage-automation/report -------------------------
   /stage-automation/report:
     get:
@@ -7598,6 +7641,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
+        '502': { $ref: '#/components/responses/CalendarUnavailable' }
     delete:
       tags: [Activities]
       operationId: archiveActivity
@@ -8845,6 +8889,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/MeetingAvailability' }
+        '502': { $ref: '#/components/responses/CalendarUnavailable' }
         default:
           description: The operation could not be completed.
           content:
@@ -8866,6 +8911,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/MeetingAvailability' }
+        '502': { $ref: '#/components/responses/CalendarUnavailable' }
         default:
           description: The operation could not be completed.
           content:
@@ -8925,6 +8971,7 @@ paths:
                   id: { type: string, format: uuid }
                   url: { type: string }
                   expires_at: { type: string, format: date-time }
+        '502': { $ref: '#/components/responses/CalendarUnavailable' }
         default:
           description: The operation could not be completed.
           content:
@@ -8978,6 +9025,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/MeetingInvitation' }
+        '502': { $ref: '#/components/responses/CalendarUnavailable' }
         default:
           description: The operation could not be completed.
           content:
@@ -8999,6 +9047,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/MeetingAvailability' }
+        '502': { $ref: '#/components/responses/CalendarUnavailable' }
         default:
           description: The operation could not be completed.
           content:
@@ -9106,6 +9155,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/MeetingInvitation' }
         '422': { $ref: '#/components/responses/ValidationError' }
+        '502': { $ref: '#/components/responses/CalendarUnavailable' }
   /scheduling/invitations/{id}:
     parameters:
       - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
@@ -9213,6 +9263,7 @@ paths:
                       same field with the same values — the two surfaces do not get to disagree
                       about what an answer means.
         '422': { $ref: '#/components/responses/ValidationError' }
+        '502': { $ref: '#/components/responses/CalendarUnavailable' }
 
   /bookings:
     post:
@@ -9290,6 +9341,7 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
+        '502': { $ref: '#/components/responses/CalendarUnavailable' }
 
   # ---- Public booking (feedback/14 — B-EP09.14 book.html) ----
   # Deviation from the spec source (recorded in this batch's decision file):
@@ -9338,6 +9390,7 @@ paths:
                       does not help, since the walk starts at `from` either way. Declared because a
                       capped list read as complete is how a caller concludes there is no later opening.
         '404': { $ref: '#/components/responses/NotFound' }
+        '502': { $ref: '#/components/responses/CalendarUnavailable' }
 
   /public/booking/{host_slug}:
     parameters:
@@ -9373,7 +9426,7 @@ paths:
                   required: [name, email]
                   properties:
                     name:  { type: string }
-                    email: { type: string, format: email }
+                    email: { type: string, format: email, description: 'Refused with 422 `email_names_no_one` on `booker.email` when the local part names a sending system (noreply@ and the like).' }
                 consent: { $ref: '#/components/schemas/CaptureConsent' }
       responses:
         '201':
@@ -9408,6 +9461,7 @@ paths:
                       mail follows.
         '409': { description: 'Slot no longer available (`code: slot_taken`).', content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } } }
         '422': { $ref: '#/components/responses/ValidationError' }
+        '502': { $ref: '#/components/responses/CalendarUnavailable' }
 
 
   # ---- Deal Room buyer edge ----
@@ -14122,6 +14176,9 @@ paths:
         gets `withheld: true` and no assignments — distinguishable from a record that simply
         carries none, because "no tags" is a claim about the record and this caller cannot
         make it.
+
+        An archived record answers 404, as its lists do: it is closed to reads of what hangs off
+        it, and its tags come back when it is restored.
       responses:
         '200':
           description: The record's tags.
@@ -16502,6 +16559,88 @@ paths:
         '302': { description: 'Redirect back into the app — connection established, or the denial surfaced honestly.' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /ext-oauth/{provider}/connect:
+    parameters:
+      - $ref: '#/components/parameters/ExtOAuthProvider'
+    post:
+      tags: [Extensions]
+      operationId: connectExtOauth
+      summary: Start an admin's consent to an extension unit's OAuth app.
+      description: |
+        Answers the vendor's consent URL for an OAuth app a composed extension unit declares, with
+        a signed `state` and a CSRF cookie. The flow completes at
+        `GET /ext-oauth/{provider}/callback`, where the core exchanges the code and keeps the
+        grant for the workspace; the unit reads a live access token from it and never sees the
+        refresh token.
+
+        Admin only: gated on `integrations` create, the grant that connects any integration, and
+        on a human session. The app's client id and secret must be stored first, through
+        `PUT /installation/oauth-apps/{provider}`.
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      responses:
+        '200':
+          description: The consent URL to send the browser to.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExtOAuthConnectResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '404':
+          description: No composed extension unit declares an OAuth app for this provider.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '501':
+          description: >-
+            The app cannot run its consent flow: its client id and secret are not stored yet, or
+            this deployment composed no OAuth transport (no state key or public base URL).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '503':
+          description: >-
+            This installation has no key vault, so the app's client secret cannot be read. The
+            remedy is the operator's — the vault root key.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /ext-oauth/{provider}/callback:
+    parameters:
+      - $ref: '#/components/parameters/ExtOAuthProvider'
+    get:
+      tags: [Extensions]
+      operationId: extOauthCallback
+      summary: OAuth redirect callback — completes an admin's consent to an extension unit's app.
+      description: |
+        The redirect URI the vendor returns the admin's browser to. The signed `state` names the
+        workspace, the admin and the provider, and must match the CSRF cookie the connect set;
+        the session cookie is not sent on this cross-site redirect. On success the code is
+        exchanged, the grant is sealed for the workspace, and the unit's `OnGrant` runs with the
+        callback's other query parameters.
+
+        Always answers with a redirect to `#/ext/<unit>?oauth=<outcome>&provider=<provider>`,
+        where the outcome is one of `ok`, `denied`, `rejected`, `bad_client` or `error`. No
+        vendor error text is passed on.
+      security: []   # vendor→CRM redirect; the signed `state` and the CSRF cookie bind the flow
+      parameters:
+        - { name: code, in: query, schema: { type: string }, description: The vendor's authorization code, absent when the admin declined. }
+        - { name: state, in: query, required: true, schema: { type: string }, description: Signed binding to the workspace, the admin and the provider. }
+        - { name: error, in: query, schema: { type: string }, description: Set instead of `code` when the admin declined. }
+      responses:
+        '302': { description: 'Redirect back to the unit''s screen with the outcome.' }
+        '404':
+          description: No composed extension unit declares an OAuth app for this provider.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '501':
+          description: This deployment composed no OAuth transport.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   /connectors/{provider}/disconnect:
     parameters:
       - $ref: '#/components/parameters/CaptureProvider'
@@ -17909,6 +18048,35 @@ paths:
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+  /installation/oauth-apps:
+    get:
+      tags: [Identity]
+      operationId: listOauthApps
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      summary: Every vendor whose OAuth app this installation can hold, and whether it holds one.
+      description: |
+        The core's own vendors (`google`, `microsoft`) first, then one entry per OAuth app a
+        composed extension unit declares, ordered by provider. A unit's entry carries the unit's
+        `title` for it and the `unit` that declared it. Each entry answers exactly what
+        `GET /installation/oauth-apps/{provider}` answers for that vendor.
+
+        Gated like the single read, on `capture_settings` read. Human session only.
+      responses:
+        '200':
+          description: Every vendor this build serves, without any secret.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConnectorAppList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '503':
+          description: >-
+            This installation has no key vault, so there is no sealed secret to report. The
+            remedy is the operator's — the vault root key — not anything the caller sent.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
   /installation/oauth-apps/{provider}:
     parameters:
       - name: provider
@@ -17917,12 +18085,14 @@ paths:
         description: >-
           Which vendor's app. `google` is the Google Cloud OAuth client behind Gmail and Google
           Calendar; `microsoft` is the Entra app registration behind Outlook mail and Outlook
-          calendar. One app per vendor per installation — keying it by connector instead would let
-          one installation hold two Google projects and hand a rep whichever their first consent
-          happened to reach.
+          calendar. Any other name is the provider of an OAuth app a composed extension unit
+          declares, as `GET /installation/oauth-apps` lists them. One app per vendor per
+          installation — keying it by connector instead would let one installation hold two Google
+          projects and hand a rep whichever their first consent happened to reach.
         schema:
           type: string
-          enum: [google, microsoft]
+          pattern: '^[a-z][a-z0-9_]*$'
+          maxLength: 32
     get:
       tags: [Identity]
       operationId: getOauthApp
@@ -17954,9 +18124,9 @@ paths:
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '404':
           description: >-
-            No such vendor. This build serves `google` and `microsoft`; a name outside that set is
-            refused rather than defaulted, because guessing would store one vendor's secret under
-            another's key. A vendor this build DOES serve with no app stored is not this — it is a
+            No such vendor. This build serves `google`, `microsoft` and the OAuth apps its composed
+            extension units declare; a name outside that set is refused rather than defaulted,
+            because guessing would store one vendor's secret under another's key. A vendor this build DOES serve with no app stored is not this — it is a
             200 reporting `source: none`, or a 204 from the delete.
           content:
             application/problem+json:
@@ -18007,9 +18177,9 @@ paths:
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '404':
           description: >-
-            No such vendor. This build serves `google` and `microsoft`; a name outside that set is
-            refused rather than defaulted, because guessing would store one vendor's secret under
-            another's key. A vendor this build DOES serve with no app stored is not this — it is a
+            No such vendor. This build serves `google`, `microsoft` and the OAuth apps its composed
+            extension units declare; a name outside that set is refused rather than defaulted,
+            because guessing would store one vendor's secret under another's key. A vendor this build DOES serve with no app stored is not this — it is a
             200 reporting `source: none`, or a 204 from the delete.
           content:
             application/problem+json:
@@ -18046,9 +18216,9 @@ paths:
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '404':
           description: >-
-            No such vendor. This build serves `google` and `microsoft`; a name outside that set is
-            refused rather than defaulted, because guessing would store one vendor's secret under
-            another's key. A vendor this build DOES serve with no app stored is not this — it is a
+            No such vendor. This build serves `google`, `microsoft` and the OAuth apps its composed
+            extension units declare; a name outside that set is refused rather than defaulted,
+            because guessing would store one vendor's secret under another's key. A vendor this build DOES serve with no app stored is not this — it is a
             200 reporting `source: none`, or a 204 from the delete.
           content:
             application/problem+json:
@@ -20449,46 +20619,6 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
-  /communication-reviews:
-    get:
-      tags: [Communication]
-      operationId: listCommunicationReviews
-      security: [ { cookieAuth: [] } ]   # human session only — the rows name other contacts' addresses
-      x-agent-access: human-only
-      summary: Refused sends waiting on somebody who may decide them.
-      description: |
-        The reviewer's own queue: every refused send a rep has handed on, oldest first.
-
-        Gated on `communication_exception` at `read`, which is the verb for SEEING refusals rather
-        than acting on them: directing a send takes `create`, and an installation can grant the
-        first without the second. The rows name other contacts' recipient addresses and why each was
-        refused, so a seat without that grant is not shown them.
-
-        Installation-wide, with no team or ownership narrowing. Granting the read verb means
-        trusting that seat with every refused send in the installation.
-
-        EVERY WAITING REVIEW, not only the ones routed to the caller. Routing names no assignee: a
-        rep asks the installation rather than a colleague, and whoever holds the authority answers.
-        An assignee-scoped list would leave a card nobody could find the moment the colleague it named
-        went on leave.
-
-        Bounded, and continuable. A list at its limit has more behind it: `total` says how many are
-        waiting and `page.next_cursor` reaches the rest. A queue whose tail no caller could ask for
-        stranded the oldest reviews, which are the ones a reviewer most needs.
-      parameters:
-        - name: limit
-          in: query
-          required: false
-          schema: { type: integer, minimum: 1, maximum: 100, default: 100 }
-        - $ref: '#/components/parameters/Cursor'
-      responses:
-        '200':
-          description: What is waiting.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/CommunicationReviewList' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-
   /communication-reviews/{id}:
     parameters:
       - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
@@ -20504,14 +20634,12 @@ paths:
         each one carries.
 
         TWO DOORS OPEN THIS ROW. The initiator, because it is their message. A holder of
-        `communication_exception` at `read`, because they are the human being asked to decide it —
-        a reviewer handed a card who could not read the refusal behind it would be acknowledging a
-        warning about a message they had never seen.
+        `communication_exception` at `read`, because a seat that may direct the send must be able
+        to read the refusal it is overriding.
 
         That second door is installation-wide and worth stating plainly: granting somebody the read
         verb hands them every refused send in the installation, with the recipient addresses and the
-        reason each was refused. There is no team or ownership narrowing on it. Reading is not
-        routing — handing a review on stays the initiator's own action.
+        reason each was refused. There is no team or ownership narrowing on it.
 
         A caller holding neither door receives 404 rather than 403, because "forbidden" would
         confirm the id exists and disclose a message the caller may not see.
@@ -20524,45 +20652,6 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/CommunicationReview' }
         '404': { $ref: '#/components/responses/NotFound' }
-
-  /communication-reviews/{id}/request-decision:
-    parameters:
-      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
-    post:
-      tags: [Communication]
-      operationId: requestCommunicationDecision
-      security: [ { cookieAuth: [] } ]   # human session only — the rep's own review, and the row names other contacts' addresses
-      x-agent-access: human-only
-      summary: Ask somebody who may override the engine to decide this refused send.
-      description: |
-        A rep refused at the keyboard usually cannot direct the send themselves — that takes the
-        `communication_exception` grant, which most seats do not hold. This is how they ask somebody
-        who does: the review is staged as an approval card, and whoever approves it is the human
-        whose name goes on the instruction.
-
-        ASKING GRANTS NOTHING. The caller still cannot direct the send, and the card is answered by
-        somebody who can or by nobody at all. What routing changes is that the question becomes
-        findable instead of sitting in a review only its author reads.
-
-        SCOPED TO THE REVIEW'S OWN INITIATOR. A seat that could route anybody's review would be
-        raising cards about other colleagues' correspondence, so this answers 404 for a review that
-        belongs to somebody else — the same answer reading one does, and for the same reason.
-
-        Pressing it twice raises ONE card. The question is about one refused message however many
-        times it is asked.
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/RequestCommunicationDecisionRequest' }
-      responses:
-        '201':
-          description: The card the question was staged as.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/CommunicationDecisionRequested' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '422': { $ref: '#/components/responses/ValidationError' }
 
   /communication-reviews/{id}/context:
     parameters:
@@ -21521,6 +21610,10 @@ paths:
     get:
       tags: [Compliance]
       operationId: listConsentPurposes
+      # The one consent route that admits an agent: it names the workspace's
+      # vocabulary and holds no one's decision. Every per-contact consent route,
+      # and the write to this list, is human-only. This declaration is the only
+      # gate; the policy table, the read_view list and the tool catalog derive from it.
       x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: List the workspace's consent purposes (e.g. transactional, marketing_email, profiling).
       description: |
@@ -23052,6 +23145,62 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  /users/{id}/handover:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Identity]
+      operationId: getUserHandover
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: Count the live records a member still owns. Member administration, human-only.
+      description: |
+        How many live leads, contacts, companies, deals and projects the member owns that the
+        caller can see. Deactivating a member moves none of them, so the deactivate dialog reads
+        this to say what would be left behind. Works for any non-archived member, deactivated or
+        not, because work is best handed over before the account is closed.
+      x-agent-access: human-only
+      responses:
+        '200':
+          description: What the member still owns.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserHandover' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Identity]
+      operationId: handOverUserWork
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: Move every live record a member owns to a colleague. Member administration, human-only.
+      description: |
+        Hands each live lead, contact, company, deal and project the member owns to `to_user_id`.
+        Every record moves through its own owner-change write, so each gets the audit row and
+        event a single reassignment writes, and a deal's pending proposals follow it to the new
+        owner. A record the caller may not change stays with the member and is counted in
+        `left`; nothing else is said about it. `to_user_id` must be a seat the caller may make an
+        owner (an active human seat that can write, inside the caller's write scope), else `422`
+        with `code: owner_not_assignable` and nothing moves. Tasks, automations and deal-room
+        stewardships are not moved.
+      x-agent-access: human-only
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/HandOverUserWorkRequest' }
+      responses:
+        '200':
+          description: What moved, and what the member still owns.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserHandoverResult' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /users/{id}/sessions:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -23102,6 +23251,41 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /users/{id}/mfa:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    delete:
+      tags: [Identity]
+      operationId: removeUserMfa
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Remove a member's second factor. Admin-only, human-only.
+      description: |
+        For a member who lost both their authenticator and their recovery codes. In one
+        transaction it removes the member's confirmed factor and its recovery codes, ends every
+        session the member holds, and emits `user.mfa_removed`, which names the admin and the
+        member. The sealed secret is erased after that commit; nothing references it by then.
+        The member then signs in with their password and sets a factor up again, at once if the
+        installation requires one.
+
+        It takes the same ceiling as `issueUserPasswordLink`: a delegated admin may act only on a
+        member whose whole access they already hold, and never on a full admin (403). Your own
+        factor is refused (403): `disableMyMfa` removes it, and asks for a current code, so a
+        borrowed session cannot strip it. Idempotent: a member with no confirmed factor is a
+        no-op, and a pending enrolment is left as it is.
+      responses:
+        '204': { description: 'The member has no second factor now, or had none.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: >-
+            Refused with `code: archived_role_held`: the member holds an archived role, which
+            would hand the account its grants back the moment the role is restored. An admin
+            gives them a live role first.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
 
   /users/{id}/password-link:
     parameters:
@@ -29944,7 +30128,8 @@ paths:
       description: |
         Admin/ops-only view. Without `from`, returns the latest effective rate per
         foreign currency (to = the workspace base currency). With `from=USD`, returns
-        that pair's full effective-dated history, newest first.
+        that pair's full effective-dated history, newest first. A caller that needs
+        only the sheet's currency codes reads `GET /fx-rates/currencies`.
       parameters:
         - name: from
           in: query
@@ -30078,6 +30263,28 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /fx-rates/currencies:
+    get:
+      tags: [Rates]
+      operationId: listFxRateCurrencies
+      security: [ { cookieAuth: [] } ]   # human session only — feeds the currency pickers of the web app
+      x-agent-access: human-only
+      summary: List the base currency and the currency codes on the FX rate sheet, without their rates.
+      description: |
+        The workspace base currency, and the foreign currencies of the sheet
+        head (the same rows `GET /fx-rates` lists without `from`) as codes in
+        code order. Readable by every role that
+        may read deals, so a currency picker can offer the workspace's own
+        currencies first; the rates themselves stay on the admin/ops-only
+        `GET /fx-rates`. An empty sheet answers an empty list.
+      responses:
+        '200':
+          description: The sheet's currency codes.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FxRateCurrencyListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
   /fx-rates/propose-refresh:
     post:
       tags: [Rates]
@@ -30765,6 +30972,14 @@ components:
         One fact's identity within its company, spelled `<field>:<value_key>` (e.g.
         `named_customer:acme-inc`). A fact is multi-valued, so `field` alone does not name a row and
         `value_key` alone is only unique within a field.
+    ExtOAuthProvider:
+      name: provider
+      in: path
+      required: true
+      schema: { type: string, pattern: '^[a-z][a-z0-9_]*$', maxLength: 32 }
+      description: >-
+        The provider of an OAuth app a composed extension unit declares. Never `google` or
+        `microsoft`: the boot refuses a unit that claims a core vendor's name.
     CaptureProvider:
       name: provider
       in: path
@@ -31086,6 +31301,16 @@ components:
           examples:
             locked:
               value: { type: 'https://errors.gradion.com/setting_locked_by_boot_source', title: Conflict, status: 409, code: setting_locked_by_boot_source, detail: 'capture.auto_enrich_daily_cap is set by env MARGINCE_CAPTURE_AUTO_ENRICH_DAILY_CAP; change it there' }
+    CalendarUnavailable:
+      description: |
+        The host's selected calendar could not be read (`code: calendar_unavailable`). A read offers
+        no times and a write changes nothing, because either would rest on a partial picture of the
+        host's diary. The `detail` points the host at the calendar chosen in meeting settings; the
+        calendar and the provider's reason are in the server log only. It clears once the host
+        repairs the calendar or the provider answers again.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
     ValidationError:
       description: Request failed validation (RFC 7807 with field-level `details.errors`).
       content:
@@ -31171,6 +31396,22 @@ components:
             inferred from the first rate row, so a workspace that has entered no rates
             can still state its own base.
         data: { type: array, items: { $ref: '#/components/schemas/FxRate' } }
+    FxRateCurrencyListResponse:
+      type: object
+      required: [base_currency, data]
+      properties:
+        base_currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+          description: >-
+            The workspace's base currency, which every code in `data` converts
+            into. Served here as well as on the installation settings, so a role
+            that may read deals but not those settings still learns which
+            currency a picker leads with.
+        data:
+          type: array
+          uniqueItems: true
+          items: { type: string, pattern: '^[A-Z]{3}$' }
     SetFxRateRequest:
       type: object
       required: [from_currency, rate]
@@ -32239,9 +32480,20 @@ components:
       description: |
         The workspace-shared capture posture (ADR-0072, CAP-PARAM-7). Read by every role,
         changed only by admin/ops.
-      required: [auto_enrich, mail_sharing, shared_posture_allowed, signature_enrich, auto_enrich_daily_cap, site_read, mail_sync_interval_seconds]
+      required: [auto_enrich, mail_sharing, shared_posture_allowed, signature_enrich, auto_enrich_daily_cap, site_read, mail_sync_interval_seconds, confidentiality_pass_cap]
       properties:
         locks: { $ref: '#/components/schemas/SettingLocks' }
+        confidentiality_pass_cap:
+          type: integer
+          minimum: 1
+          maximum: 200
+          description: |
+            How many held mail threads one confidentiality pass answers, per run. A thread the
+            model fails on does not count. The threads beyond the cap wait for the next run, so
+            the cap sets how fast a backlog drains and never whether a thread is judged. Raise it
+            when `margince_capture_confidentiality_oldest_wait_seconds` stays above how often the
+            pass runs. Read at the start of every pass, so a change applies without a restart.
+            Default 40.
         auto_enrich_daily_cap:
           type: integer
           minimum: 1
@@ -32355,8 +32607,22 @@ components:
         locks: { $ref: '#/components/schemas/SettingLocks' }
         provider:
           type: string
-          enum: [google, microsoft]
-          description: Which vendor's app this describes, echoed so a cached response cannot be misread.
+          pattern: '^[a-z][a-z0-9_]*$'
+          maxLength: 32
+          description: >-
+            Which vendor's app this describes, echoed so a cached response cannot be misread.
+            `google` or `microsoft` for the core's own vendors, otherwise the provider of an
+            extension unit's OAuth app.
+        title:
+          type: string
+          description: >-
+            What Settings calls an extension unit's app, as the unit declares it. Absent for the
+            core's own vendors, whose names the client already knows.
+        unit:
+          type: string
+          description: >-
+            The extension unit that declares this app, absent for the core's own vendors. Its
+            screen is `#/ext/<unit>`, where an admin connects the app once it is stored.
         configured:
           type: boolean
           description: >-
@@ -32641,6 +32907,23 @@ components:
           type: boolean
           description: Whether this installation currently offers it on the login screen.
 
+    ConnectorAppList:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/ConnectorApp' }
+    ExtOAuthConnectResponse:
+      type: object
+      additionalProperties: false
+      required: [authorize_url]
+      properties:
+        authorize_url:
+          type: string
+          format: uri
+          description: The vendor's consent URL, carrying the signed `state`. Send the browser there.
     ConnectorAppRedirectUri:
       type: object
       additionalProperties: false
@@ -32652,11 +32935,12 @@ components:
       properties:
         purpose:
           type: string
-          enum: [sign_in, mailbox_connect, calendar_connect]
+          enum: [sign_in, mailbox_connect, calendar_connect, extension_connect]
           description: >-
             Which flow uses this URL. `sign_in` is the login callback. `mailbox_connect` and
             `calendar_connect` are the per-user mail and calendar consent callbacks, which are
-            SEPARATE connectors served on different paths. ONE app backs all three on either
+            SEPARATE connectors served on different paths. `extension_connect` is the consent
+            callback of an extension unit's OAuth app, and the only purpose such an app lists. ONE app backs all three on either
             vendor, and registering only some of them fails the others at the consent screen —
             Google says `redirect_uri_mismatch`, Microsoft says `AADSTS50011`, and neither names
             the URL that was missing.
@@ -33362,6 +33646,7 @@ components:
         site_read_max_mib: { type: integer, minimum: 1, maximum: 128, description: 'Set the size limit of one website read, in MiB.' }
         site_read_wall_seconds: { type: integer, minimum: 30, maximum: 600, description: 'Set the time limit of one website crawl, in seconds.' }
         mail_sync_interval_seconds: { type: integer, minimum: 30, maximum: 3600, description: 'Set how long a mailbox waits between syncs, in seconds.' }
+        confidentiality_pass_cap: { type: integer, minimum: 1, maximum: 200, description: 'Set how many held mail threads one confidentiality pass judges.' }
         mail_sharing: { type: boolean, description: 'Toggle the workspace mail-sharing posture; affects correspondence captured from now on — mail, and chat on a transport whose credential belongs to one member.' }
         signature_enrich: { type: boolean, description: 'Toggle the tenant-wide default for reading contact details out of captured mail — its signature and any attached vCard. A mailbox that set its own switch keeps it.' }
         shared_posture_allowed: { type: boolean, description: 'Allow a seat to put their mailbox in the `shared` posture. Off by default; see CaptureSettings.shared_posture_allowed for what turning it on asserts.' }
@@ -35949,7 +36234,7 @@ components:
 
     ImportReasonCode:
       type: string
-      enum: [activity_empty, activity_held, activity_link_ambiguous, activity_link_ambiguous_dropped, activity_type_unknown, activity_type_unnamed, activity_unlinked, amount_negative, author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_link_stakeholders, cannot_read_pipelines, cannot_read_tags, cannot_write_type, close_date_future, close_date_past, company_duplicate_found, company_duplicate_skipped, company_link_on_meeting, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_not_found, contact_not_found_dropped, contact_unnamed, currency_not_a_code, currency_unset, deal_already_closed, deal_legal_gate, deal_not_found, deal_not_found_dropped, deal_pipeline_fixed, description_too_long, direction_unknown, domain_held, duplicate_email, duration_not_valid_for_kind, duration_out_of_range, employer_column_empty, employer_column_empty_dropped, employer_not_found, employer_not_found_dropped, empty_payload, field_inactive, fx_rate_missing, id_not_a_company_id, id_not_visible, id_on_non_company, lead_not_found, lead_not_found_dropped, lead_status_not_importable, lead_status_unknown, link_ambiguous, link_ambiguous_dropped, link_contact_not_imported, link_edge_unsupported, link_malformed, link_not_attachable, link_not_found, link_not_found_dropped, link_row_not_imported, link_row_skipped, link_row_skipped_dropped, link_type_unknown, linkedin_held, lost_reason_missing, meeting_status_not_valid_for_kind, meeting_status_unknown, message_not_importable, natural_key_taken, not_a_date, not_a_domain, not_a_number, not_an_amount, not_an_email, not_yes_no, occurred_at_future, occurred_at_unnamed, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, pipeline_no_open_stage, pipeline_unknown, pipeline_unnamed, record_archived, ref_taken_by_another_company, row_key_empty, row_key_repeated, run_in_flight, size_band_invalid, stage_unknown, stage_unnamed, tag_created, tag_name_invalid, tag_new, task_not_importable, timestamp_needs_zone, too_many_links, undo_edited, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, undo_still_referenced, value_refused, value_unreadable]
+      enum: [activity_empty, activity_held, activity_link_ambiguous, activity_link_ambiguous_dropped, activity_type_unknown, activity_type_unnamed, activity_unlinked, amount_negative, author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_link_stakeholders, cannot_read_pipelines, cannot_read_tags, cannot_write_type, close_date_future, close_date_past, company_duplicate_found, company_duplicate_skipped, company_link_on_meeting, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_not_found, contact_not_found_dropped, contact_unnamed, currency_not_a_code, currency_unset, deal_already_closed, deal_legal_gate, deal_not_found, deal_not_found_dropped, deal_pipeline_fixed, description_too_long, direction_unknown, domain_held, duplicate_email, duration_not_valid_for_kind, email_names_no_contact, duration_out_of_range, employer_column_empty, employer_column_empty_dropped, employer_not_found, employer_not_found_dropped, empty_payload, field_inactive, fx_rate_missing, id_not_a_company_id, id_not_visible, id_on_non_company, lead_not_found, lead_not_found_dropped, lead_status_not_importable, lead_status_unknown, link_ambiguous, link_ambiguous_dropped, link_contact_not_imported, link_edge_unsupported, link_malformed, link_not_attachable, link_not_found, link_not_found_dropped, link_row_not_imported, link_row_skipped, link_row_skipped_dropped, link_type_unknown, linkedin_held, lost_reason_missing, meeting_status_not_valid_for_kind, meeting_status_unknown, message_not_importable, natural_key_taken, not_a_date, not_a_domain, not_a_number, not_an_amount, not_an_email, not_yes_no, occurred_at_future, occurred_at_unnamed, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, pipeline_no_open_stage, pipeline_unknown, pipeline_unnamed, record_archived, ref_taken_by_another_company, row_key_empty, row_key_repeated, run_in_flight, size_band_invalid, stage_unknown, stage_unnamed, tag_created, tag_name_invalid, tag_new, task_not_importable, timestamp_needs_zone, too_many_links, undo_edited, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, undo_still_referenced, value_refused, value_unreadable]
       description: 'Why a row was skipped or warned about, so a screen can say it in the reader''s language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.'
 
     CreateImportRunRequest:
@@ -37578,7 +37863,7 @@ components:
           format: date-time
           readOnly: true
           description: >-
-            When something last happened with this contact: the newest `occurred_at` of an activity linked to it, maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first linked activity. Sortable (DM-VOCAB-1).
+            When something last happened with this contact: the newest `occurred_at` at or before now of an activity linked to it, so a booked meeting counts once it starts, maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first linked activity. Sortable (DM-VOCAB-1).
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         archived_at: { type: [string, 'null'], format: date-time }
@@ -37587,12 +37872,15 @@ components:
       x-extension-note: |
         additionalProperties:true admits client custom fields (data-model §9 — custom fields
         are real columns added by migration, surfaced additively through this same contract).
-        Because these extra keys carry no per-key schema, writes are drop-on-mismatch: a key
-        that names no ACTIVE custom column (unknown or retired), or whose value shape does
-        not match the column's declared type, is silently excluded from the write — the
-        request still succeeds. A picklist value outside the declared options is the one
-        typed refusal (422, the column's CHECK constraint). Reads surface only ACTIVE
-        columns; a retired field's stored values are preserved but leave the payload.
+        Because these extra keys carry no per-key schema, a write admits only the standard
+        fields of its route and `cf_` keys. Anything else is a 422 `unknown_field`: a
+        misspelt or non-writable standard field, and a `cf_` key that names no ACTIVE custom
+        column (unknown or retired). A value the column cannot hold is a 422
+        `invalid_value`: a wrong shape, or a picklist or multiselect choice outside its
+        options. The refusal names every such key and nothing is written. A null for a key
+        no field names is accepted, so a form that cached a field retired since can still
+        save. Reads surface only ACTIVE columns; a retired field's stored values are
+        preserved but leave the payload.
 
     BoughtField:
       type: object
@@ -37673,7 +37961,7 @@ components:
         profile_url:
           type: [string, 'null']
           description: The public profile this was read from. Stored, never fetched.
-        email: { type: [string, 'null'], format: email }
+        email: { type: [string, 'null'], format: email, description: 'Refused with 422 `email_names_no_one` when the local part names a sending system, as ContactEmailInput.email is.' }
         phone: { type: [string, 'null'] }
       additionalProperties: false
 
@@ -37728,7 +38016,8 @@ components:
             `created` — nobody matched, so the card became a contact, their company and the edge
             between them. `updated` — an exact match, filled only where the record was empty.
             `needs_review` — a resemblance, written nowhere; open the candidate and decide.
-            `skipped` — the card states no name, so there is no contact in it.
+            `skipped` — the card states no name, carries a sending system's address, or matches a
+            contact the caller may not write; `reason` says which.
         contact_id:
           type: [string, 'null']
           format: uuid
@@ -37744,7 +38033,10 @@ components:
         so the two cannot describe an address differently.
       required: [email]
       properties:
-        email: { type: string, format: email }
+        email:
+          type: string
+          format: email
+          description: 'An address whose local part names a sending system (noreply@, notifications@, receipts@ and the like) is refused with 422 `email_names_no_one`: nobody answers there, so it names no contact.'
         email_type: { type: string, enum: [work, personal, other], default: work }
         is_primary: { type: boolean, default: false }
         position: { type: integer, default: 0 }
@@ -38067,7 +38359,7 @@ components:
           format: date-time
           readOnly: true
           description: >-
-            When something last happened with this account: the newest `occurred_at` of a workspace-audience activity linked to it, maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first such activity.
+            When something last happened with this account: the newest `occurred_at` at or before now of a workspace-audience activity linked to it, so a booked meeting counts once it starts, maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first such activity.
             Sortable (DM-VOCAB-2).
 
             A message limited to its participants does NOT move this date, even for a reader who
@@ -38081,12 +38373,15 @@ components:
       x-extension-note: |
         additionalProperties:true admits client custom fields (data-model §9 — custom fields
         are real columns added by migration, surfaced additively through this same contract).
-        Because these extra keys carry no per-key schema, writes are drop-on-mismatch: a key
-        that names no ACTIVE custom column (unknown or retired), or whose value shape does
-        not match the column's declared type, is silently excluded from the write — the
-        request still succeeds. A picklist value outside the declared options is the one
-        typed refusal (422, the column's CHECK constraint). Reads surface only ACTIVE
-        columns; a retired field's stored values are preserved but leave the payload.
+        Because these extra keys carry no per-key schema, a write admits only the standard
+        fields of its route and `cf_` keys. Anything else is a 422 `unknown_field`: a
+        misspelt or non-writable standard field, and a `cf_` key that names no ACTIVE custom
+        column (unknown or retired). A value the column cannot hold is a 422
+        `invalid_value`: a wrong shape, or a picklist or multiselect choice outside its
+        options. The refusal names every such key and nothing is written. A null for a key
+        no field names is accepted, so a form that cached a field retired since can still
+        save. Reads surface only ACTIVE columns; a retired field's stored values are
+        preserved but leave the payload.
 
     CompanyDomainInput:
       type: object
@@ -39435,7 +39730,7 @@ components:
         stage_name: { type: [string, 'null'] }
         amount: { $ref: '#/components/schemas/Money' }
         expected_close_date: { type: [string, 'null'], format: date }
-        stalled: { type: boolean, description: No linked activity inside the 60-day stall window. }
+        stalled: { type: boolean, description: 'No linked activity inside the 60-day stall window, and no booked meeting ahead.' }
         attention: { $ref: '#/components/schemas/Company360WorkAttention' }
 
     Company360ProjectPhase:
@@ -43132,6 +43427,17 @@ components:
             Whether the confirmation wrote a LinkedIn handle onto the contact. False when
             the contact already carried one (never overwritten), when the member has
             recorded no profile URL of their own, and on every rejection.
+        title_written:
+          type: boolean
+          description: |
+            Whether the confirmation put the export's position on the contact as its title.
+            Only a member who ticked "Use as title" on the match card writes it.
+        employer_written:
+          type: boolean
+          description: |
+            Whether the confirmation made the company the import placed the connection at
+            the contact's current employer. Only a member who ticked "Use as employer" on
+            the match card writes it.
 
     LinkedInReachAccount:
       type: object
@@ -43799,8 +44105,8 @@ components:
         close_date_provisional: { type: boolean, readOnly: true, description: 'True while the close date is a machine-computed replacement awaiting human confirmation; a provisional deal stays out of Commit/Best-case. Cleared when a human sets the date.' }
         wait_until: { type: [string, 'null'], format: date, description: "'Customer asked us to wait until' date; suppresses the stalled flag but not the overdue close-date flag." }
         closed_at: { type: [string, 'null'], format: date-time }
-        last_activity_at: { type: [string, 'null'], format: date-time, description: 'Drives the deterministic stalled flag. Counts workspace-audience activities only, so a deal whose only recent mail is limited to its participants reads as stalled.' }
-        stalled: { type: boolean, readOnly: true, description: Derived — no activity past the threshold (absolute duration). }
+        last_activity_at: { type: [string, 'null'], format: date-time, description: 'The newest `occurred_at` at or before now of a workspace-audience activity filed under the deal, so a booked meeting counts once it starts. Drives the deterministic stalled flag. Counts workspace-audience activities only, so a deal whose only recent mail is limited to its participants reads as stalled.' }
+        stalled: { type: boolean, readOnly: true, description: 'Derived — no activity past the threshold (absolute duration). A booked workspace-audience meeting ahead keeps the deal off stalled until it starts or is called off.' }
         last_email:
           allOf: [{ $ref: '#/components/schemas/DealLastEmail' }]
           nullable: true
@@ -43850,12 +44156,15 @@ components:
       x-extension-note: |
         additionalProperties:true admits client custom fields (data-model §9 — custom fields
         are real columns added by migration, surfaced additively through this same contract).
-        Because these extra keys carry no per-key schema, writes are drop-on-mismatch: a key
-        that names no ACTIVE custom column (unknown or retired), or whose value shape does
-        not match the column's declared type, is silently excluded from the write — the
-        request still succeeds. A picklist value outside the declared options is the one
-        typed refusal (422, the column's CHECK constraint). Reads surface only ACTIVE
-        columns; a retired field's stored values are preserved but leave the payload.
+        Because these extra keys carry no per-key schema, a write admits only the standard
+        fields of its route and `cf_` keys. Anything else is a 422 `unknown_field`: a
+        misspelt or non-writable standard field, and a `cf_` key that names no ACTIVE custom
+        column (unknown or retired). A value the column cannot hold is a 422
+        `invalid_value`: a wrong shape, or a picklist or multiselect choice outside its
+        options. The refusal names every such key and nothing is written. A null for a key
+        no field names is accepted, so a form that cached a field retired since can still
+        save. Reads surface only ACTIVE columns; a retired field's stored values are
+        preserved but leave the payload.
 
     CreateDealRequest:
       type: object
@@ -44793,6 +45102,36 @@ components:
         from_owner_id: { type: string, format: uuid }
         to_owner_id: { type: string, format: uuid, description: 'An active user of the workspace (422 otherwise).' }
 
+    HandoverCounts:
+      type: object
+      description: Live records per kind.
+      required: [lead, contact, company, deal, project]
+      properties:
+        lead: { type: integer, minimum: 0 }
+        contact: { type: integer, minimum: 0 }
+        company: { type: integer, minimum: 0 }
+        deal: { type: integer, minimum: 0 }
+        project: { type: integer, minimum: 0 }
+
+    UserHandover:
+      type: object
+      required: [owned]
+      properties:
+        owned: { $ref: '#/components/schemas/HandoverCounts' }
+
+    HandOverUserWorkRequest:
+      type: object
+      required: [to_user_id]
+      properties:
+        to_user_id: { type: string, format: uuid, description: 'The colleague who takes the work over.' }
+
+    UserHandoverResult:
+      type: object
+      required: [moved, left]
+      properties:
+        moved: { $ref: '#/components/schemas/HandoverCounts' }
+        left: { $ref: '#/components/schemas/HandoverCounts' }
+
     BulkRecordType:
       type: string
       description: |
@@ -45186,6 +45525,17 @@ components:
       properties:
         data: { type: array, items: { $ref: '#/components/schemas/StageEvidence' } }
         page: { $ref: '#/components/schemas/PageInfo' }
+
+    DealWinEvidence:
+      type: object
+      required: [has_signed_contract]
+      properties:
+        has_signed_contract:
+          type: boolean
+          description: |
+            True when the deal has a contract that left draft, with a signing date and a
+            current or final contract or legal file attached. A win on such a deal needs
+            no reason; any other win names why there is none.
 
     StageExitCriterion:
       type: object
@@ -47921,7 +48271,7 @@ components:
           x-enum-varnames: [LeadSlaStateWithinTarget, LeadSlaStateAtRisk, LeadSlaStateBreached]
           readOnly: true
           description: 'Derived from sla_deadline_at and first_response_at (formulas §18.1); null once responded or on a terminal lead. Orders the work queue above score (ADR-0119).'
-        last_activity_at: { type: [string, 'null'], format: date-time, readOnly: true, description: 'Most recent activity linked to this lead — the "last touch" a work queue row shows (ADR-0118). Derived from activity_link, not stored on the lead.' }
+        last_activity_at: { type: [string, 'null'], format: date-time, readOnly: true, description: 'Most recent activity at or before now linked to this lead — the "last touch" a work queue row shows (ADR-0118). Derived from activity_link, not stored on the lead.' }
         open_task_count: { type: [integer, 'null'], readOnly: true, description: 'Open `kind=task` activities linked to this lead; the derived next step is the earliest of them (ADR-0118).' }
         next_task_subject: { type: [string, 'null'], readOnly: true, description: 'Subject of the earliest open task linked to this lead.' }
         next_task_due_at: { type: [string, 'null'], format: date-time, readOnly: true, description: 'Due time of the earliest open task linked to this lead; undated tasks follow dated ones.' }
@@ -47975,12 +48325,15 @@ components:
       x-extension-note: |
         additionalProperties:true admits client custom fields (data-model §9 — custom fields
         are real columns added by migration, surfaced additively through this same contract).
-        Because these extra keys carry no per-key schema, writes are drop-on-mismatch: a key
-        that names no ACTIVE custom column (unknown or retired), or whose value shape does
-        not match the column's declared type, is silently excluded from the write — the
-        request still succeeds. A picklist value outside the declared options is the one
-        typed refusal (422, the column's CHECK constraint). Reads surface only ACTIVE
-        columns; a retired field's stored values are preserved but leave the payload.
+        Because these extra keys carry no per-key schema, a write admits only the standard
+        fields of its route and `cf_` keys. Anything else is a 422 `unknown_field`: a
+        misspelt or non-writable standard field, and a `cf_` key that names no ACTIVE custom
+        column (unknown or retired). A value the column cannot hold is a 422
+        `invalid_value`: a wrong shape, or a picklist or multiselect choice outside its
+        options. The refusal names every such key and nothing is written. A null for a key
+        no field names is accepted, so a form that cached a field retired since can still
+        save. Reads surface only ACTIVE columns; a retired field's stored values are
+        preserved but leave the payload.
 
     CreateLeadRequest:
       type: object
@@ -50943,6 +51296,15 @@ components:
             An invited member counts against the licensed seat count, so an invitation that
             was sent to the wrong address is released by deactivating it.
         is_agent: { type: boolean, default: false, description: First-party Agent Runner identity vs a human seat. }
+        assignable:
+          type: boolean
+          description: >
+            Whether the CALLER may make this member the owner of a record right now: the same
+            check an owner change runs (an active human seat that can write, inside the caller's
+            own write scope), so a picker built on it offers only owners the write will accept.
+            Present on `listUsers`; absent means not computed, and a client then offers the
+            member and lets the write decide. A deactivated member is listed with `false` on the
+            management view, so a list can still be filtered by the work they left behind.
         roles:
           type: array
           items: { type: string }
@@ -50967,14 +51329,15 @@ components:
           type: array
           items:
             type: string
-            enum: [change_role, issue_password_link, deactivate, reactivate]
+            enum: [change_role, issue_password_link, remove_mfa, deactivate, reactivate, hand_over]
           description: >
             The member verbs the CALLER would be admitted to on this user right now, computed by
             the same checks those endpoints run: the `user_admin` verb each takes, a seat that may
             write, the ceiling over the target (a non-admin never acts on an admin, and otherwise
             holds everything the verb reaches), the member's status and kind, the last-admin
-            guard, an archived role still held, the licensed seat ceiling on reactivation, and
-            whether this installation can build a set-password link. Present on `listUsers`'s
+            guard, an archived role still held, the licensed seat ceiling on reactivation,
+            whether this installation can build a set-password link, and whether the member has
+            a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member. Present on `listUsers`'s
             management view for a human caller only; absent means not computed, and a client
             offers nothing then. It is an offer, not a promise: every write re-checks under its
             lock, and `change_role` says a role change is possible at all — which roles, is
@@ -51337,6 +51700,22 @@ components:
             a bare posture boolean would tell every rep whether the installation
             has email configured. Clients render the action on this, so an admin
             never sees a control that can only fail (ADR-0061 Amendment 1).
+        confirm_requests_sendable:
+          type: boolean
+          description: >
+            Whether THIS CALLER may ask a contact to confirm what is held about them
+            (`requestDetailsConfirmation`, `sendPrivacyNotice`, `issueDoubleOptIn`) — true only
+            when the caller may update a contact AND the installation has the lane those
+            messages ride: an outbound relay, a link vault and a public base URL.
+
+            A caller capability rather than a deployment-posture flag, for the reason
+            `admin_password_link` states: a bare posture boolean would tell every seat whether
+            this installation has email. It folds the grant in, so it answers only the holders
+            who could act on it.
+
+            The endpoint refuses what it cannot deliver, so a client that renders the action on
+            this never offers one that would be. Each of those links is mailed and never
+            returned, which is why an unsendable one is unusable rather than merely undelivered.
         roles:
           type: array
           items: { type: string }
@@ -53303,6 +53682,18 @@ components:
             vocabulary, `panicked` when the pass panicked, or `unclassified`. Never the
             error's text, which stays in the log.
 
+    CaptureUnreadPeriod:
+      type: object
+      additionalProperties: false
+      required: [from, to]
+      description: >-
+        The span between where a held first-sync anchor pointed and where the sync had to
+        start instead. Both ends or neither: a start with no end is a period nobody can ask
+        for again.
+      properties:
+        from: { type: string, format: date-time, description: The first moment nobody read. }
+        to: { type: string, format: date-time, description: The moment reading resumed. }
+
     CaptureMailboxHealth:
       type: object
       additionalProperties: false
@@ -53323,6 +53714,16 @@ components:
         threads_awaiting_verdict:
           type: integer
           description: Threads whose confidentiality question is still open, so their messages stay held.
+        unread_period:
+          allOf: [{ $ref: '#/components/schemas/CaptureUnreadPeriod' }]
+          nullable: true
+          description: >-
+            A period no sync read, when a first sync failed for longer than the point it had
+            held. Absent when there is none, which is the ordinary case.
+
+            It is reported because the alternative is a mailbox that looks synced and is
+            missing a week. The backfill reaches this period, so the owner can ask for it
+            back, and the dates are what they point it at.
         oldest_thread_age_seconds: { type: [integer, 'null'] }
 
     CaptureClassifierHealth:
@@ -53675,7 +54076,7 @@ components:
       # `close` freezes content while access continues, and `pause`/`resume`
       # suspend reads without touching a single credential. `hold`/`release`
       # and `expire` are retention and scheduling verbs and would read as those.
-      enum: [create, update, archive, merge, promote, demote, disqualify, restore, export, erase, anonymize, assign, advance_stage, advance_phase, send_email, consent_grant, consent_withdraw, approve, reject, record_share, record_unshare, activity_relink, import, import_undo, reset_data, password_link_issued, connect, disconnect, schedule, reschedule, cancel, release, hold, expire, resolve, restrict, pin, accrue, pay, publish, pause, resume, close, invite, revoke, delete, place_legal_hold, lift_legal_hold, request_legal_review, withdraw_legal_review]
+      enum: [create, update, archive, merge, promote, demote, disqualify, restore, export, erase, anonymize, assign, advance_stage, advance_phase, send_email, consent_grant, consent_withdraw, approve, reject, record_share, record_unshare, activity_relink, import, import_undo, reset_data, password_link_issued, connect, disconnect, schedule, reschedule, cancel, release, hold, expire, resolve, restrict, pin, accrue, pay, publish, pause, resume, close, invite, revoke, delete, place_legal_hold, lift_legal_hold, request_legal_review, withdraw_legal_review, mfa_removed]
 
     AuditLogEntry:
       type: object
@@ -55886,8 +56287,11 @@ components:
         sendable:
           type: boolean
           description: |
-            Whether this installation has an outbound relay and a link origin configured. False
-            means nothing was attempted — the link exists and must be passed on by hand.
+            Whether this installation has an outbound relay and a link origin configured.
+
+            Always true on a 201: the request is refused outright without that lane, because the
+            plaintext link is mailed and never returned, so one that cannot be sent is one
+            nobody can pass on. Read `confirm_requests_sendable` on `/me` to know before asking.
 
     CompanyVatCheck:
       type: object
@@ -56241,7 +56645,7 @@ components:
           readOnly: true
           description: >-
             For a pending commitment, whether its named task assignee cannot receive the task.
-            True for invited, deactivated, archived, missing, or agent seats.
+            True for deactivated, archived, missing, or agent seats. An invited colleague can.
             Absent for an unassigned proposal.
             This is current decision context, not a change to the staged assignee.
         requested_decider_id:
@@ -56321,7 +56725,12 @@ components:
         edited_payload:
           type: object
           additionalProperties: true
-          description: Optional edits — the edited payload is re-admitted, then it executes (edit-then-send).
+          description: >-
+            Optional edits — the edited payload is re-admitted, then it executes (edit-then-send).
+            It replaces the whole staged change. A `linkedin_match` card takes only one kind of
+            edit, the two boxes a member ticks in the app: `use_as_title` and `use_as_employer`,
+            each a boolean the staged change already carries. Every other member must stay as staged.
+            An agent never sends an edited payload.
         reason:
           type: string
           description: Why, in the approver's own words. Recorded with the decision, as a rejection's reason is.
@@ -57150,14 +57559,12 @@ components:
         id: { type: string, format: uuid }
         state:
           type: string
-          enum: [needs_context, needs_repair, awaiting_decision, resolved, superseded, cancelled]
+          enum: [needs_context, needs_repair, resolved, superseded, cancelled]
           description: |
             What is NEEDED rather than who is blocked: `needs_context` is a fact about the message
             and stays true whoever is looking at it. `needs_repair` is a refusal no evidence can
             answer — an objection, a dead address — where offering a context form would invite a rep
-            to argue with a withdrawal. `awaiting_decision` is a refusal the rep has handed to
-            somebody who may override it: their work no longer, so a surface should say so rather
-            than showing them a form they have already filled in.
+            to argue with a withdrawal.
         kind: { type: string, enum: [single] }
         delivery_intent_id:
           type: [string, 'null']
@@ -57178,13 +57585,6 @@ components:
           type: array
           description: What was refused, per recipient. Empty once an erasure has cleared the subject from it.
           items: { $ref: '#/components/schemas/RefusedRecipient' }
-        approval_id:
-          type: [string, 'null']
-          format: uuid
-          description: |
-            The card a routed review was handed to, so a decider reading this can find the decision
-            they are being asked to make. Null on a review nobody has asked about, which is most of
-            them.
         warning:
           $ref: '#/components/schemas/OverrideWarning'
           description: |
@@ -57192,26 +57592,6 @@ components:
             acknowledgement will name. Served rather than composed by the client: an instruction's
             claim is that a named human read particular words, and a client free to write its own
             would have the record assert an acknowledgement of text nobody published.
-
-    CommunicationReviewList:
-      type: object
-      description: A page of refused sends waiting for a decision.
-      required: [data, page, total]
-      properties:
-        data:
-          type: array
-          items: { $ref: '#/components/schemas/CommunicationReview' }
-        page:
-          allOf:
-            - $ref: '#/components/schemas/PageInfo'
-          description: |
-            Where this page was cut. `total` beside it is the same count this object may carry, kept
-            at the top level because it shipped there: a client reading it keeps working.
-        total:
-          type: integer
-          description: |
-            How many are waiting in total. A page at its limit has more behind it, and this is how
-            the caller knows rather than by discovering it.
 
     OverrideWarning:
       type: object
@@ -57232,34 +57612,6 @@ components:
           description: |
             Shown verbatim. A surface that paraphrased it would record somebody as having read the
             server's words while showing them its own.
-
-    RequestCommunicationDecisionRequest:
-      type: object
-      description: What the colleague asking wants the decider to know.
-      properties:
-        note:
-          type: string
-          maxLength: 1000
-          description: |
-            Why this message should go, in the asker's own words. Optional — a refusal is often
-            self-explanatory — but it is what the approver reads and therefore what the record says
-            they acted on.
-
-            Bounded by what an instruction's explanation accepts, because that is where these words
-            end up. A note the record could not hold would stage a card that fails when somebody
-            approves it.
-
-    CommunicationDecisionRequested:
-      type: object
-      description: The approval card a routed refusal was staged as.
-      required: [approval_id]
-      properties:
-        approval_id:
-          type: string
-          format: uuid
-          description: |
-            The card carrying the question. A second ask about the same review answers the same id:
-            one refused message is one decision.
 
     DirectCommunicationSendRequest:
       type: object
@@ -58535,8 +58887,7 @@ components:
         default_tax_rate: { type: [number, 'null'], format: double, minimum: 0, description: Percent; defaults to 0. }
         active: { type: [boolean, 'null'], description: Defaults to true. }
         source: { type: string }
-      additionalProperties: true
-      x-extension: true
+      additionalProperties: false
 
     UpdateProductRequest:
       type: object
@@ -58552,8 +58903,7 @@ components:
         currency: { type: string, pattern: '^[A-Z]{3}$' }
         default_tax_rate: { type: number, format: double, minimum: 0 }
         active: { type: boolean }
-      additionalProperties: true
-      x-extension: true
+      additionalProperties: false
 
     # ---- Deal Room (the buyer-facing projection of a deal) ----
     DealRoomState:
@@ -59319,8 +59669,7 @@ components:
           type: [array, 'null']
           items: { $ref: '#/components/schemas/OfferLineItemInput' }
         source: { type: string }
-      additionalProperties: true
-      x-extension: true
+      additionalProperties: false
 
     UpdateOfferRequest:
       type: object
@@ -59341,8 +59690,7 @@ components:
         template_id: { type: [string, 'null'], format: uuid }
         intro_text: { type: [string, 'null'] }
         terms_text: { type: [string, 'null'] }
-      additionalProperties: true
-      x-extension: true
+      additionalProperties: false
 
     RejectOfferRequest:
       type: object
@@ -61002,6 +61350,9 @@ components:
             Withheld — named in `lanes_omitted` — for a caller with no human
             behind it. Absent — not empty — on an installation whose feed does
             not read notices.
+        at_risk_more_available:
+          type: boolean
+          description: The deal risk scan was cut before its final scope and state checks. True means the returned rows are a lower bound, even when fewer than the scan limit remain. Absent when this source could not be read.
         notices_more_available:
           type: boolean
           description: |
@@ -62133,8 +62484,9 @@ components:
         waiting:
           type: integer
           description: |
-            Customers who wrote and have had no reply, attributed by the record the thread is
-            filed under: deal, then lead, then contact, then company, first owner found.
+            Customers who wrote and have had no reply. Email counts for each directly addressed
+            seat, including their own mail aliases; copies alone leave it unassigned.
+            Other messages follow the owner of the linked record.
             The same eligibility the ranked queue applies, so the board and the day agree.
         at_risk:
           type: integer
@@ -62145,12 +62497,10 @@ components:
         promises_due:
           type: integer
           description: |
-            Commitments due by the instant the board was read, from the same extracted claims
-            the rep's own day counts — not from open tasks, which are a different question
-            wearing the same heading.
-
-            A zero here means they owe nothing, not that nobody asked: claims have a writer on
-            every installation, so this count is always read.
+            Assigned conversation commitments due by the instant the board was read.
+            Only open, current commitment tasks count, under the same admission and age
+            rules as the assignee's Worklist. Future and undated promises do not count.
+            This count is always read; zero means no visible commitments are due.
 
     WorklistBand:
       type: object
@@ -62282,9 +62632,9 @@ components:
       properties:
         kind:
           type: string
-          enum: [user, unassigned]
-          x-enum-varnames: [WorklistOwnerUser, WorklistOwnerUnassigned]
-          description: 'Whether a contact answers for this row, or nobody does yet.'
+          enum: [user, unassigned, shared]
+          x-enum-varnames: [WorklistOwnerUser, WorklistOwnerUnassigned, WorklistOwnerShared]
+          description: 'Whether one user, several direct recipients, or nobody answers for this row.'
         id:
           type: string
           format: uuid
@@ -62298,6 +62648,23 @@ components:
             rest of this response uses for a name it cannot read. A client draws the
             row without a name rather than inventing one, and never treats an absent
             label as an absent owner: `kind` is what says whether anybody answers.
+
+        users:
+          type: array
+          description: 'Direct recipients responsible together. Present only for shared ownership; names follow the caller’s roster access.'
+          items:
+            $ref: '#/components/schemas/WorklistOwnerMember'
+
+    WorklistOwnerMember:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+          format: uuid
+        label:
+          type: string
+          description: 'The user’s name when the caller may resolve it.'
 
     WorklistWalk:
       type: object
@@ -63238,6 +63605,10 @@ components:
       required: [id, occurred_at, summary, actor, lane]
       properties:
         id: { type: string, format: uuid, description: "The underlying row's id — an audit entry, an approval." }
+        receipt_ids:
+          type: array
+          items: { type: string, format: uuid }
+          description: Exact Receipt.id values represented by this done line. A grouped line includes every underlying change, so a client may omit it only when all are shown elsewhere. Absent on older responses; never infer identity from the record or time.
         occurred_at:
           type: string
           format: date-time

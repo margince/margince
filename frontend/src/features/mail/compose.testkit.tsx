@@ -124,7 +124,12 @@ export const PROVISIONAL_VOICE_PROFILE = {
 
 // Records every request so a test can assert what went to the server. The
 // request body and headers are the contract for a send or relink.
-export type Sent = { key: string; body: unknown; headers: Headers };
+export type Sent = {
+  key: string;
+  body: unknown;
+  headers: Headers;
+  query: URLSearchParams;
+};
 
 export function stubRoutes(
   overrides: Record<string, () => Response | Promise<Response>> = {},
@@ -154,7 +159,7 @@ export function stubRoutes(
       const headers = request
         ? request.headers
         : new Headers(init?.headers ?? {});
-      sent.push({ key, body, headers });
+      sent.push({ key, body, headers, query: url.searchParams });
       const override = overrides[key];
       if (override) return override();
       if (key === "GET /consent-purposes") return jsonResponse(PURPOSES);
@@ -211,4 +216,17 @@ export async function fillSendableForm() {
   await userEvent.type(screen.getByLabelText("Subject"), "Hi there");
   writeMessage("Body", "Body content");
   await pickWhy(WHY_LABEL.requestedFollowup);
+}
+
+// The threads the composer offers sit in a menu behind the bar above the
+// fields. Finds one by name, opening the menu first when it is shut.
+export async function findThreadChoice(name: string | RegExp) {
+  const shown = screen.queryByRole("button", { name });
+  if (shown) {
+    return shown;
+  }
+  await userEvent.click(
+    await screen.findByRole("button", { name: /(Continue a thread|Change)$/ }),
+  );
+  return screen.findByRole("button", { name });
 }

@@ -97,6 +97,7 @@ func wireUser(u userRow) crmcontracts.User {
 		DisplayName: u.DisplayName,
 		Status:      crmcontracts.UserStatus(u.Status),
 		IsAgent:     u.IsAgent,
+		Assignable:  u.Assignable,
 		CreatedAt:   &created,
 	}
 }

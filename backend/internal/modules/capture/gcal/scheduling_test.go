@@ -6,8 +6,10 @@ package gcal
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -57,8 +59,35 @@ func TestAvailabilityFailsClosedWhenASelectedGoogleCalendarFails(t *testing.T) {
 	defer server.Close()
 	api := &httpAPI{client: server.Client(), base: server.URL}
 	_, err := api.Busy(context.Background(), "token", "private-calendar", time.Date(2026, 10, 5, 0, 0, 0, 0, time.UTC), time.Date(2026, 10, 6, 0, 0, 0, 0, time.UTC))
-	if err == nil {
-		t.Fatal("missing selected calendar was reported as free")
+	unavailable, ok := errors.AsType[*connector.CalendarUnavailableError](err)
+	if !ok || unavailable.Calendar != "private-calendar" || unavailable.Reason != "omitted" {
+		t.Fatalf("missing selected calendar was not reported as unavailable: %v", err)
+	}
+}
+
+// Google's reason separates a deleted calendar from a revoked grant, so it must
+// reach the error. A reason that is prose must not.
+func TestAGoogleCalendarErrorCarriesItsReasonToTheError(t *testing.T) {
+	for reason, want := range map[string]string{
+		"notFound":                      "notFound",
+		"forbidden":                     "forbidden",
+		"Not a code\nlevel=ERROR forge": "",
+	} {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			answer := map[string]map[string]busyCalendar{"calendars": {"team@example.test": {Errors: []struct {
+				Reason string `json:"reason"`
+			}{{Reason: reason}}}}}
+			if err := json.NewEncoder(w).Encode(answer); err != nil {
+				t.Error(err)
+			}
+		}))
+		api := &httpAPI{client: server.Client(), base: server.URL}
+		_, err := api.Busy(context.Background(), "token", "team@example.test", time.Date(2026, 10, 5, 0, 0, 0, 0, time.UTC), time.Date(2026, 10, 6, 0, 0, 0, 0, time.UTC))
+		server.Close()
+		unavailable, ok := errors.AsType[*connector.CalendarUnavailableError](err)
+		if !ok || unavailable.Reason != want || strings.ContainsAny(err.Error(), "\n") {
+			t.Errorf("reason %q → %v, want reason %q on one line", reason, err, want)
+		}
 	}
 }
 

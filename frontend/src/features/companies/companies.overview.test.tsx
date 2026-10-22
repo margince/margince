@@ -96,7 +96,7 @@ describe("CompanyScreen — next-step suggestions", () => {
     );
     // The composer stands over the record. The details it covers are still
     // where the reader left them.
-    await screen.findByRole("button", { name: "Cancel" });
+    await screen.findByRole("button", { name: "Close" });
     expect(
       container.querySelector(".record-aside .recorddetails"),
     ).toBeTruthy();
@@ -484,12 +484,12 @@ describe("CompanyScreen — the Overview and the details beside it", () => {
     await waitFor(() => expect(details()).toBeTruthy());
 
     await userEvent.click(screen.getByRole("button", { name: "Email" }));
-    await screen.findByRole("button", { name: "Cancel" });
+    await screen.findByRole("button", { name: "Close" });
     expect(details()).toBeTruthy();
 
-    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await userEvent.click(screen.getByRole("button", { name: "Close" }));
     await waitFor(() =>
-      expect(screen.queryByRole("button", { name: "Cancel" })).toBeNull(),
+      expect(screen.queryByRole("button", { name: "Close" })).toBeNull(),
     );
     expect(details()).toBeTruthy();
   });

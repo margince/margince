@@ -943,10 +943,6 @@ func (stubs) ListOpenCommitments(w nethttp.ResponseWriter, r *nethttp.Request, p
 	httperr.NotImplemented(w, r, "ListOpenCommitments")
 }
 
-func (stubs) ListCommunicationReviews(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListCommunicationReviewsParams) {
-	httperr.NotImplemented(w, r, "ListCommunicationReviews")
-}
-
 func (stubs) GetCommunicationReview(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "GetCommunicationReview")
 }
@@ -957,10 +953,6 @@ func (stubs) RecordCommunicationContext(w nethttp.ResponseWriter, r *nethttp.Req
 
 func (stubs) DirectCommunicationSend(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "DirectCommunicationSend")
-}
-
-func (stubs) RequestCommunicationDecision(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
-	httperr.NotImplemented(w, r, "RequestCommunicationDecision")
 }
 
 func (stubs) ListCompanies(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListCompaniesParams) {
@@ -1783,6 +1775,10 @@ func (stubs) GetDealStatus(w nethttp.ResponseWriter, r *nethttp.Request, id crmc
 	httperr.NotImplemented(w, r, "GetDealStatus")
 }
 
+func (stubs) GetDealWinEvidence(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetDealWinEvidence")
+}
+
 func (stubs) ListDedupeCandidates(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListDedupeCandidatesParams) {
 	httperr.NotImplemented(w, r, "ListDedupeCandidates")
 }
@@ -1849,6 +1845,14 @@ func (stubs) CreateFilteredExport(w nethttp.ResponseWriter, r *nethttp.Request) 
 
 func (stubs) DownloadExportBundle(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "DownloadExportBundle")
+}
+
+func (stubs) ExtOauthCallback(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.ExtOAuthProvider, params crmcontracts.ExtOauthCallbackParams) {
+	httperr.NotImplemented(w, r, "ExtOauthCallback")
+}
+
+func (stubs) ConnectExtOauth(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.ExtOAuthProvider) {
+	httperr.NotImplemented(w, r, "ConnectExtOauth")
 }
 
 func (stubs) ListExtensions(w nethttp.ResponseWriter, r *nethttp.Request) {
@@ -1963,6 +1967,10 @@ func (stubs) SetFxRate(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "SetFxRate")
 }
 
+func (stubs) ListFxRateCurrencies(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListFxRateCurrencies")
+}
+
 func (stubs) ProposeFxRateRefresh(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ProposeFxRateRefresh")
 }
@@ -2057,6 +2065,10 @@ func (stubs) DownloadJurisdictionDocument(w nethttp.ResponseWriter, r *nethttp.R
 
 func (stubs) GetLicenseEntitlement(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetLicenseEntitlement")
+}
+
+func (stubs) ListOauthApps(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListOauthApps")
 }
 
 func (stubs) DeleteOauthApp(w nethttp.ResponseWriter, r *nethttp.Request, provider string) {
@@ -3305,6 +3317,18 @@ func (stubs) GetUserAccess(w nethttp.ResponseWriter, r *nethttp.Request, id crmc
 
 func (stubs) DeactivateUser(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "DeactivateUser")
+}
+
+func (stubs) GetUserHandover(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetUserHandover")
+}
+
+func (stubs) HandOverUserWork(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.HandOverUserWorkParams) {
+	httperr.NotImplemented(w, r, "HandOverUserWork")
+}
+
+func (stubs) RemoveUserMfa(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RemoveUserMfa")
 }
 
 func (stubs) IssueUserPasswordLink(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {

@@ -135,10 +135,11 @@ func readBody(w http.ResponseWriter, r *http.Request) (json.RawMessage, error) {
 //
 //craft:ignore naked-any the JSON deserialization seam: the decode target is whichever contract request struct the handler owns
 func decodeRaw(r *http.Request, raw json.RawMessage, into any, owned func(string) bool, closed bool) error {
-	// A field key that only case-folds onto a contract field (or is
-	// unknown) is refused rather than matched by encoding/json's
-	// case-insensitive fallback — the same gate the provider seam applies,
-	// so REST and MCP agree on which keys are a field patch.
+	if datasource.HasCustomFieldMap(into) {
+		return decodeCustomFieldBody(r, raw, into)
+	}
+	// A key that only case-folds onto a contract field, or is unknown, is refused
+	// rather than matched by encoding/json. The provider seam applies the same gate.
 	if kErr := datasource.RejectNonCanonicalKeys(raw, into); kErr != nil {
 		return Validation("body", "unknown_field", kErr.Error())
 	}
@@ -237,6 +238,10 @@ func PresentField(r *http.Request, name string) (value json.RawMessage, present 
 //
 //craft:ignore naked-any mirror of Decode's seam target
 func bodyDecodeRefusal(r *http.Request, raw json.RawMessage, into any, err error) error {
+	// A target's own unmarshaler may refuse a key (the lead patch does).
+	if unknown, ok := errors.AsType[*datasource.UnknownFieldError](err); ok {
+		return Validation("body", "unknown_field", unknown.Error())
+	}
 	if refusal := datasource.LocalizeFieldFault(raw, into, err, bodyProbe); refusal != nil {
 		detail, withheld := fieldShapeDetail(refusal)
 		if withheld {
@@ -299,7 +304,7 @@ func DropSuccessHeaders(header http.Header) {
 func CustomFieldFilters(r *http.Request) map[string]string {
 	var filters map[string]string
 	for key, values := range r.URL.Query() {
-		if !strings.HasPrefix(key, "cf_") || len(values) == 0 {
+		if !datasource.IsCustomFieldKey(key) || len(values) == 0 {
 			continue
 		}
 		if filters == nil {

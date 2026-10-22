@@ -27,7 +27,6 @@ const PREVIEW_EFFECT_LABELS: Record<string, MessageKey> = {
   create_activity_record: "approval.import.createActivity",
   import_close_deal: "approval.import.closeDeal",
   rearm_held_message: "approval.scheduled.rearm",
-  direct_refused_message: "approval.scheduled.direct",
   apply_company_read: "approval.read.effect",
   queue_vat_check: "approval.read.vat_check",
   merge_records_release_source: "approval.preview.mergeRecords",
@@ -276,6 +275,7 @@ const PREVIEW_CONFLICT_LABELS: Record<string, MessageKey> = {
   ...LIFECYCLE_CONFLICT_LABELS,
   sender_signature_private: "approval.preview.signaturePrivate",
   import_scope_unavailable: "approval.preview.importScopeUnavailable",
+  email_names_no_one: "approval.preview.machineAddress",
 };
 
 export function commercialPreviewDisplay(
@@ -451,4 +451,41 @@ function lifecyclePreviewFields(
       comparison: null,
     });
   return fields;
+}
+
+// stagedDealMove is a deal move's own arguments. A move staged through the REST
+// gate wraps them as {operation, path, body}; a tool call stores them bare.
+export function stagedDealMove(
+  change: Readonly<Record<string, unknown>> | null | undefined,
+): Readonly<Record<string, unknown>> {
+  if (!change) return {};
+  const body = change.body;
+  if (
+    typeof change.operation === "string" &&
+    typeof body === "object" &&
+    body !== null &&
+    !Array.isArray(body)
+  ) {
+    return body as Readonly<Record<string, unknown>>;
+  }
+  return change;
+}
+
+// dealCloseOutcome reads whether a deal move closes the deal. A preview, while
+// one exists, decides: its status change is the move's real landing. Once
+// decided there is no preview. Then a lost reason in the staged move marks a
+// loss, because an agent closing a deal as lost must give one.
+export function dealCloseOutcome(
+  preview: Preview | null | undefined,
+  change?: Readonly<Record<string, unknown>> | null,
+): "won" | "lost" | undefined {
+  if (preview) {
+    const status = preview.changes.find((entry) => entry.field === "status")
+      ?.after.text;
+    return status === "won" || status === "lost" ? status : undefined;
+  }
+  const lostReason = stagedDealMove(change).lost_reason;
+  return typeof lostReason === "string" && lostReason.trim() !== ""
+    ? "lost"
+    : undefined;
 }

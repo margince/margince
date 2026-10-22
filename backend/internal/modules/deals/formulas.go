@@ -3,18 +3,19 @@
 
 package deals
 
-// The stalled-deal rule (formulas-and-rules §8): a deterministic,
-// fixed-clock-stable boolean over last_activity_at with the "customer
-// asked us to wait" suppression. Two spellings exist by necessity —
-// the Go predicate stamps the wire flag, the SQL clause filters lists
-// server-side — and TestDealsByStageStalledFilterAgreesWithIsStalled
-// (compose package, integration lane) keeps them from drifting.
+// The stalled-deal rule: a deterministic boolean over last_activity_at, stable
+// under a fixed clock. "The customer asked us to wait" and "a meeting is booked
+// ahead" suppress it. The Go predicate stamps the wire flag and the SQL clause
+// filters lists. TestDealsByStageStalledFilterAgreesWithIsStalled (compose
+// package, integration lane) keeps the two from drifting.
 
 import (
 	"fmt"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/idlebase"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // StalledThresholdDays is the §8 tunable: open deals idle longer than
@@ -36,8 +37,10 @@ const QuietThresholdDays = 19
 // IsStalled evaluates §8.1 at one instant. Idle is an absolute-duration
 // comparison on UTC instants, never a calendar-day count — stable under
 // a fixed test clock, identical across zones.
-func IsStalled(status string, createdAt time.Time, lastActivityAt, waitUntil *time.Time, now time.Time) bool {
-	return IsQuietFor(StalledThresholdDays, status, createdAt, lastActivityAt, waitUntil, now)
+// meetingAhead is MeetingAheadSQL's answer for the deal, read in the same
+// statement as lastActivityAt.
+func IsStalled(status string, createdAt time.Time, lastActivityAt, waitUntil *time.Time, meetingAhead bool, now time.Time) bool {
+	return IsQuietFor(StalledThresholdDays, status, createdAt, lastActivityAt, waitUntil, meetingAhead, now)
 }
 
 // IsQuietFor is IsStalled with the idle window named by the caller. Every rule
@@ -47,9 +50,12 @@ func IsStalled(status string, createdAt time.Time, lastActivityAt, waitUntil *ti
 // Held by: TestIsQuietForIsTheSameRuleAtADifferentWindow
 // (backend/internal/modules/deals/formulas_test.go), which asserts the two
 // answer identically across the idle range rather than trusting the delegation.
-func IsQuietFor(days int, status string, createdAt time.Time, lastActivityAt, waitUntil *time.Time, now time.Time) bool {
+func IsQuietFor(days int, status string, createdAt time.Time, lastActivityAt, waitUntil *time.Time, meetingAhead bool, now time.Time) bool {
 	if DealStatus(status) != DealOpen {
 		return false // closed deals never stall
+	}
+	if meetingAhead {
+		return false // the next contact is already booked
 	}
 	if now.Sub(idlebase.Since(createdAt, lastActivityAt)) <= time.Duration(days)*24*time.Hour {
 		return false
@@ -80,8 +86,27 @@ func StalledSQL(alias string) string {
 func QuietSQL(alias string, days int) string {
 	return fmt.Sprintf(`(%[1]sstatus = 'open'
 		AND %[3]s < now() - interval '%[2]d days'
-		AND (%[1]swait_until IS NULL OR %[1]swait_until <= now()))`,
-		columnPrefix(alias), days, idlebase.SQL(alias))
+		AND (%[1]swait_until IS NULL OR %[1]swait_until <= now())
+		AND NOT %[4]s)`,
+		columnPrefix(alias), days, idlebase.SQL(alias), MeetingAheadSQL(alias))
+}
+
+// MeetingAheadSQL is true when the deal has a booked meeting its stored clock
+// has not reached. That is a meeting still to come, or one that started before
+// the refold job moved the clock to it. It reads the clock's own filters. The
+// audience is spelled as in last_activity_of_deal, so a meeting only some
+// colleagues may see changes no number everyone reads.
+func MeetingAheadSQL(alias string) string {
+	deal := "deal"
+	if alias != "" {
+		deal = alias
+	}
+	return `EXISTS (SELECT 1 FROM activity_link ahead_link
+		JOIN activity ahead ON ahead.id = ahead_link.activity_id
+		WHERE ahead_link.deal_id = ` + deal + `.id AND ahead.archived_at IS NULL
+		  AND ahead.kind = 'meeting' AND ` + relstrength.NotCalledOffSQL("ahead") +
+		auth.OriginIsEngagement("ahead") + ` AND ahead.audience = 'workspace'
+		  AND ahead.occurred_at > coalesce(` + deal + `.last_activity_at, '-infinity'))`
 }
 
 // PartnerSourcedSQL is the list-filter spelling of "this deal is

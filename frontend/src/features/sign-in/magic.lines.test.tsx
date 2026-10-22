@@ -8,7 +8,7 @@ import {
   formatTimeOfDay,
 } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
-import { line, receipt, renderMagic, stub } from "./magic.testkit";
+import { line, receipt, renderMagic, stub } from "../../testing/magic.testkit";
 
 afterEach(() => {
   cleanup();
@@ -119,7 +119,7 @@ describe("a receipt line is one row", () => {
     expect(row.sentence).toBe("A deal moved to its next stage");
     expect(row.subject).toBe("Fleet retrofit");
     expect(row.detail).toBe(
-      "Overnight agent The deal sits in a later stage now. This kind of change cannot be undone.",
+      "Overnight agent This kind of change cannot be undone.",
     );
     // The hour on the clock the reader is on, the full instant one hover away.
     const zone = viewerZone();

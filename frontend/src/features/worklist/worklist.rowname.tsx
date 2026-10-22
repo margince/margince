@@ -17,7 +17,12 @@ export function RowName({
 }>) {
   const t = useT();
   const name = open ? (
-    <Button variant="link" aria-haspopup="dialog" onClick={open}>
+    <Button
+      variant="link"
+      className="btn-valuelabel"
+      aria-haspopup="dialog"
+      onClick={open}
+    >
       {title}
     </Button>
   ) : href ? (

@@ -22,6 +22,7 @@ import type { MessageKey } from "../../i18n/en";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
+import { isUuid } from "../../lib/uuid";
 import { humanizeToken } from "./audit";
 
 // The Held lane reads through the retention ladder's authority. A role that may
@@ -30,11 +31,6 @@ import { humanizeToken } from "./audit";
 export type RestrictedRecord = components["schemas"]["RestrictedRecord"];
 
 export const RESTRICTED_RECORDS_KEY = ["retention", "restrictions"] as const;
-
-// A pin names its record by id, and a malformed one keeps the irreversible
-// confirm shut. Shape only: whether the record exists is the server's answer.
-const RECORD_ID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // The obligation's class is the first token of the server's reason
 // ("commercial_correspondence · §257 HGB / §147 AO"); the statute after the
@@ -94,7 +90,9 @@ function OverrideModal({
   const [reason, setReason] = useState("");
   const [typedId, setTypedId] = useState("");
   const activityId = kind === "pin" ? typedId.trim() : target?.activityId;
-  const idIsWellFormed = RECORD_ID_RE.test(typedId.trim());
+  // A malformed id keeps the irreversible confirm shut. Shape only: whether
+  // the record exists is the server's answer.
+  const idIsWellFormed = isUuid(typedId.trim());
   const idIsMalformed =
     kind === "pin" && typedId.trim() !== "" && !idIsWellFormed;
 

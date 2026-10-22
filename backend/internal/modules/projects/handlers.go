@@ -49,7 +49,7 @@ func (h Handlers) ListProjects(w http.ResponseWriter, r *http.Request, params cr
 // CreateProject opens a body of work on a company.
 func (h Handlers) CreateProject(w http.ResponseWriter, r *http.Request, _ crmcontracts.CreateProjectParams) {
 	var req crmcontracts.CreateProjectRequest
-	if !httperr.Decode(w, r, &req) {
+	if !httperr.DecodeClaiming(w, r, &req, claimCallerChosenKey) {
 		return
 	}
 	// A declared importer (a HUMAN holding import_run:create) may stamp the
@@ -92,7 +92,7 @@ func (h Handlers) UpdateProject(w http.ResponseWriter, r *http.Request, id crmco
 		return
 	}
 	var req crmcontracts.UpdateProjectRequest
-	if !httperr.Decode(w, r, &req) {
+	if !httperr.DecodeClaiming(w, r, &req, claimCallerChosenKey) {
 		return
 	}
 
@@ -292,18 +292,22 @@ func projectUpdateInput(req crmcontracts.UpdateProjectRequest, ifVersion *int64)
 	return in, nil
 }
 
-// refuseCallerChosenKey answers 422 to a body that still carries a `key`.
-//
-// The field left the contract when the server took over minting, and both
-// bodies accept additionalProperties for custom fields — so without this a
-// client that sends `{"key": "NEW"}` gets a 200 and no key change, and believes
-// it renamed the project. Being told is the only outcome that is not a lie: the
-// key is not theirs to set, and a silent drop hides that from the one caller who
-// needs to know it.
-func refuseCallerChosenKey(extra map[string]any) error {
-	if _, sent := extra[projectKeyField]; !sent {
+// claimCallerChosenKey answers 422 read_only to a `key`, in place of the
+// unknown-field refusal any other stranger to the contract gets. A client that
+// still sends it needs to hear the key is not theirs to set.
+func claimCallerChosenKey(key string) error {
+	if key != projectKeyField {
 		return nil
 	}
 	return httperr.Validation(projectKeyField, "read_only",
 		"a project's key is assigned by the server from its name and cannot be set or changed")
+}
+
+// refuseCallerChosenKey is claimCallerChosenKey for the approval preview, which
+// maps a staged body that was decoded without the claim.
+func refuseCallerChosenKey(extra map[string]any) error {
+	if _, sent := extra[projectKeyField]; !sent {
+		return nil
+	}
+	return claimCallerChosenKey(projectKeyField)
 }

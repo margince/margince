@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
+import type { Worklist } from "../src/features/worklist/worklist.queries";
 import { de } from "../src/i18n/de";
 import type { MessageKey } from "../src/i18n/en";
 import { signIn } from "./waits";
@@ -37,11 +38,19 @@ const GLANCE = '[data-testid="brief-glance"]';
  * column has content, and a box read mid-fade is not where it rests. So it
  * waits for the glance, then the work, then the entry animations.
  */
-async function openBrief(page: Page) {
+async function openBrief(page: Page): Promise<Worklist> {
+  const loaded = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname.endsWith("/worklist") &&
+      response.request().method() === "GET",
+  );
   await page.goto("/#/home", { waitUntil: "networkidle" });
   await expect(page.locator(GLANCE)).toBeVisible();
   await expect(page.locator(FOCUS)).toBeVisible();
   await settled(page);
+  const response = await loaded;
+  expect(response.ok()).toBe(true);
+  return response.json();
 }
 
 /** Open the Brief on its weekly view, settled the same way the morning is. */
@@ -53,8 +62,8 @@ async function openWeekly(page: Page) {
 }
 
 /**
- * Wait out the entry animations. The core mark's opacity loop never ends and
- * cannot move a box, so it is left out by name.
+ * Entry motion must finish before measuring boxes. Perpetual paint-only
+ * loops have no resting frame and do not change the layout.
  */
 async function settled(page: Page) {
   await page.waitForFunction(
@@ -62,13 +71,28 @@ async function settled(page: Page) {
       document
         .getAnimations()
         .filter((animation) => animation.playState === "running")
+        .filter((animation) => animation.timeline instanceof DocumentTimeline)
         .every((animation) => {
           const effect = animation.effect;
           const target =
             effect instanceof KeyframeEffect && effect.target instanceof Element
               ? `${effect.target.tagName}.${effect.target.className}`
               : "";
-          return ambient.some((mark) => target.includes(mark));
+          if (ambient.some((mark) => target.includes(mark))) return true;
+          if (
+            Number.isFinite(
+              effect?.getComputedTiming().activeDuration ?? Infinity,
+            )
+          ) {
+            return false;
+          }
+          if (
+            animation instanceof CSSAnimation &&
+            animation.animationName === "brief-ring-turn"
+          ) {
+            return true;
+          }
+          return false;
         }),
     ["core-rim", "core-glass"],
   );
@@ -147,7 +171,7 @@ test.describe("the Brief — page shape", () => {
     expect(rail.x).toBeGreaterThanOrEqual(main.x + main.width);
   });
 
-  test("orders the greeting above the date above the sentence", async ({
+  test("keeps the greeting and date above the work, with an optional factual agenda", async ({
     page,
   }) => {
     await openBrief(page);
@@ -155,21 +179,41 @@ test.describe("the Brief — page shape", () => {
 
     const heading = await topOf(page.locator("main h1"));
     const date = await topOf(page.locator(`${GLANCE} time`));
-    expect(heading).toBeLessThan(date);
-    expect(date).toBeLessThan(
-      await topOf(page.locator('[data-testid="glance-sentence"]')),
-    );
+    const work = await topOf(page.locator(FOCUS));
+    expect(heading).toBeLessThan(work);
+    expect(date).toBeLessThan(work);
+    const agenda = page.getByTestId("glance-sentence");
+    if (await agenda.count()) expect(date).toBeLessThan(await topOf(agenda));
   });
 
-  test("says the morning in one paragraph, unclipped", async ({ page }) => {
-    await openBrief(page);
+  test("summarizes only complete positive focus, in an unclipped paragraph", async ({
+    page,
+  }) => {
+    const day = await openBrief(page);
     await expectShellRendered(page);
 
-    await expect(page.locator(`${GLANCE} p.glance-sentence`)).toHaveCount(1);
-    const clipped = await page
-      .locator('[data-testid="glance-sentence"]')
-      .evaluate((el) => el.scrollHeight > el.clientHeight);
-    expect(clipped).toBe(false);
+    const complete =
+      day.focus &&
+      day.focus.total > 0 &&
+      day.focus.total <= day.focus.items.length &&
+      !day.scope_truncated &&
+      !day.readings?.more_available &&
+      !day.counts.some((count) => count.more_available) &&
+      !day.sources_unavailable.some(
+        (source) => source.contributes_rows !== false,
+      );
+    await expect(page.getByTestId("glance-sentence")).toHaveCount(
+      complete ? 1 : 0,
+    );
+    await expect(page.locator(`${GLANCE} p.glance-sentence`)).toHaveCount(
+      complete ? 1 : 0,
+    );
+    if (complete) {
+      const clipped = await page
+        .getByTestId("glance-sentence")
+        .evaluate((el) => el.scrollHeight > el.clientHeight);
+      expect(clipped).toBe(false);
+    }
   });
 
   // Five slots on every morning, a quiet one too. A slot with nothing to show

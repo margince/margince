@@ -37,13 +37,14 @@ import (
 // describing a contact who does not exist.
 func (e *CounterpartyVerdictEngine) createCounterparty(ctx context.Context, tx pgx.Tx, row capture.PendingCounterparty) (string, error) {
 	created, err := createCounterpartyRecords(ctx, tx, e.contacts, e.tagFiler, counterpartyCreation{
-		Email:       row.Email,
-		DisplayName: row.DisplayName,
-		Domain:      row.Domain,
-		OwnerID:     row.OwnerID,
-		ActivityID:  row.ActivityID,
-		Source:      verdictReason,
-		CapturedBy:  verdictActor,
+		DispositionID: row.ID,
+		Email:         row.Email,
+		DisplayName:   row.DisplayName,
+		Domain:        row.Domain,
+		OwnerID:       row.OwnerID,
+		ActivityID:    row.ActivityID,
+		Source:        verdictReason,
+		CapturedBy:    verdictActor,
 	})
 	if err != nil {
 		return "", err
@@ -71,6 +72,7 @@ func (e *CounterpartyVerdictEngine) createOwnerScopedCounterparty(
 	ctx context.Context, tx pgx.Tx, row capture.PendingCounterparty, reason contacts.NarrowingReason,
 ) (string, error) {
 	created, err := createCounterpartyRecords(ctx, tx, e.contacts, e.tagFiler, counterpartyCreation{
+		DispositionID:   row.ID,
 		Email:           row.Email,
 		DisplayName:     row.DisplayName,
 		Domain:          row.Domain,
@@ -93,11 +95,14 @@ func (e *CounterpartyVerdictEngine) createOwnerScopedCounterparty(
 
 // counterpartyCreation names one deferred sender being turned into records.
 type counterpartyCreation struct {
-	Email       string
-	DisplayName string
-	Domain      string
-	OwnerID     ids.UUID
-	ActivityID  ids.UUID
+	// DispositionID is the ledger row this answer settles. It names the
+	// backfill run, if any, whose card counts what this creates.
+	DispositionID ids.UUID
+	Email         string
+	DisplayName   string
+	Domain        string
+	OwnerID       ids.UUID
+	ActivityID    ids.UUID
 	// Source is the provenance CHANNEL — which mechanism produced these records.
 	Source string
 	// CapturedBy is the acting PRINCIPAL, in the contract's declared grammar
@@ -110,6 +115,9 @@ type counterpartyCreation struct {
 	// a record capture minted owner-scoped; a narrowing verdict sets it, so the
 	// record is made, the promotion does not happen, and the reason is kept.
 	NarrowedBecause contacts.NarrowingReason
+	// SkipLeadPromotion leaves a lead holding the address where it is, for a
+	// human accept whose decider may not promote one.
+	SkipLeadPromotion bool
 }
 
 // counterpartyCreated reports what a `real` answer produced that its caller has
@@ -138,15 +146,16 @@ func createCounterpartyRecords(ctx context.Context, tx pgx.Tx, store *contacts.S
 	filer *connectorTagFiler, in counterpartyCreation,
 ) (counterpartyCreated, error) {
 	res, err := store.EnsureCounterpartyTx(ctx, tx, contacts.EnsureCounterpartyInput{
-		Email:           in.Email,
-		DisplayName:     in.DisplayName,
-		Domain:          in.Domain,
-		OwnerID:         in.OwnerID,
-		ActivityID:      ids.From[ids.ActivityKind](in.ActivityID),
-		Source:          in.Source,
-		CapturedBy:      in.CapturedBy,
-		OwnerScoped:     in.NarrowedBecause != "",
-		NarrowedBecause: in.NarrowedBecause,
+		Email:             in.Email,
+		DisplayName:       in.DisplayName,
+		Domain:            in.Domain,
+		OwnerID:           in.OwnerID,
+		ActivityID:        ids.From[ids.ActivityKind](in.ActivityID),
+		Source:            in.Source,
+		CapturedBy:        in.CapturedBy,
+		OwnerScoped:       in.NarrowedBecause != "",
+		NarrowedBecause:   in.NarrowedBecause,
+		SkipLeadPromotion: in.SkipLeadPromotion,
 	})
 	if errors.Is(err, contacts.ErrCounterpartySuppressed) {
 		return counterpartyCreated{Suppressed: true}, nil
@@ -173,6 +182,12 @@ func createCounterpartyRecords(ctx context.Context, tx pgx.Tx, store *contacts.S
 		if err := filer.fileUnderConnectorTag(ctx, tx, in, res.ContactID); err != nil {
 			return counterpartyCreated{}, err
 		}
+	}
+	if err := capture.CreditBackfillRunTx(ctx, tx, in.DispositionID, capture.EnsureOutcome{
+		ContactCreated: res.ContactCreated, ContactID: res.ContactID.UUID,
+		CompanyQueued: res.TriagePending, QueuedDomain: res.TriageDomain,
+	}); err != nil {
+		return counterpartyCreated{}, err
 	}
 	out := counterpartyCreated{}
 	if res.TriagePending {

@@ -22,6 +22,7 @@ import {
   reservedPageTitle,
 } from "./nav";
 import { NotificationBell } from "./notificationbell";
+import { OutboxButton } from "./outboxbutton";
 import { resolveTitle, sectionHead, useRouteSubject } from "./pagemeta";
 import { paletteHotkeyCaps } from "./palette";
 import "./topbar.css";
@@ -212,6 +213,7 @@ export function TopBar({
             something waiting FOR the reader, and the chip is who the reader is.
             Reading right to left, identity is the anchor and everything that
             wants their attention stacks up before it. */}
+        <OutboxButton />
         <NotificationBell />
         <AccountMenu />
       </div>

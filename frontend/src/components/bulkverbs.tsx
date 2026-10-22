@@ -9,6 +9,7 @@ import { Select } from "../design-system/select";
 import { stable } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
+import { mayOwnRecords } from "./assigneepicker";
 import {
   BulkChangeDialog,
   type BulkChangeRequest,
@@ -105,7 +106,7 @@ export function BulkVerbs({
         onChange={setOwnerId}
         // The caveat sits last in the row (below), so the picker names it.
         aria-describedby={rosterPartial ? partialNoteId : undefined}
-        options={(roster.data ?? []).map((entry) => ({
+        options={(roster.data ?? []).filter(mayOwnRecords).map((entry) => ({
           value: entry.id,
           label: "display_name" in entry ? entry.display_name : entry.id,
         }))}

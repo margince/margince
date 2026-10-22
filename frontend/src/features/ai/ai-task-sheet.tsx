@@ -169,7 +169,13 @@ export function TaskSheet({
     save.mutate({ overrides: next, version: stored.data.version });
   };
   return (
-    <Modal open onClose={onClose} labelledBy={titleId} intent="drawer-reading">
+    <Modal
+      open
+      onClose={onClose}
+      labelledBy={titleId}
+      intent="drawer-reading"
+      unsaved={changed}
+    >
       <DrawerHead>
         <Heading size="large" id={titleId} className="t-h2 modal-title">
           {aiTaskLabel(route.task, t, route.display_name)}

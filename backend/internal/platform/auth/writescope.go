@@ -223,7 +223,26 @@ func EnsureWritableForSubjectRights(ctx context.Context, tx pgx.Tx, table string
 // is not a match they may merge into, and the conflict must still be reported
 // without disclosing the id.
 func WritableBy(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) (bool, error) {
-	err := EnsureWritable(ctx, tx, table, id)
+	return writableAnswer(EnsureWritable(ctx, tx, table, id))
+}
+
+// WritableLiveBy is WritableBy for a row that must also be live, asked with no
+// handler gate in front. So it checks the seat and the read and update verbs
+// itself. A read seat's role may hold update; only the HTTP clamp refuses it.
+func WritableLiveBy(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) (bool, error) {
+	p, err := rbacActor(ctx)
+	if err != nil {
+		return false, err
+	}
+	if !p.SeatType.CanMutate() ||
+		!p.Permissions.Allows(table, principal.ActionRead) || !p.Permissions.Allows(table, principal.ActionUpdate) {
+		return false, nil
+	}
+	return writableAnswer(EnsureWritableLive(ctx, tx, table, id))
+}
+
+// writableAnswer turns a write probe's refusal into "no", hiding which it was.
+func writableAnswer(err error) (bool, error) {
 	switch {
 	case err == nil:
 		return true, nil

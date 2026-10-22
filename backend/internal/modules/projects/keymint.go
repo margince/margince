@@ -205,6 +205,10 @@ func insertProjectRow(
 	ctx context.Context, tx pgx.Tx, id ids.ProjectID,
 	in CreateProjectInput, by string, active []fieldcatalog.Column,
 ) (string, error) {
+	// Checked once, so a refused custom field never opens a savepoint.
+	if err := storekit.CheckCustomValues(active, in.CustomFields); err != nil {
+		return "", err
+	}
 	minted := map[string]bool{}
 	var lastErr error
 	for range keyMintAttempts {
@@ -259,7 +263,10 @@ func insertOnce(
 		in.Description, in.StartedAt, in.TargetEndDate, in.Source, by,
 		in.SourceSystem,
 	})
-	cfCols, cfHolders, args := storekit.InsertFragments(active, in.CustomFields, base)
+	cfCols, cfHolders, args, cfErr := storekit.InsertFragments(active, in.CustomFields, base)
+	if cfErr != nil {
+		return false, cfErr
+	}
 	_, insertErr := sp.Exec(ctx,
 		`INSERT INTO project (id, name, key, company_id, owner_id,
 		                      description, started_at, target_end_date, source, captured_by, source_system`+authorCols+cfCols+`)

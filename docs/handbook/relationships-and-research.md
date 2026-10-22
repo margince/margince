@@ -84,9 +84,16 @@ Matching runs as soon as the upload ends.
 | Two contacts with that name at that employer | Nothing: choosing one would be a guess |
 | A name alone, with no employer that matches | Nothing |
 
-A **LinkedIn match** approval shows **Name on LinkedIn** and **Company on LinkedIn** beside the contact it may be. It waits with your other approvals; see [Approvals](approvals.md). A colleague who can already see that contact can decide it too, and the link still goes on your network.
+A **LinkedIn match** approval shows **Name on LinkedIn**, **Company on LinkedIn** and **Position on LinkedIn** beside the contact it may be. It also shows the contact's **Job title in CRM**. It waits with your other approvals; see [Approvals](approvals.md). A colleague who can already see that contact can decide it too, and the link still goes on your network.
 
 When you accept a match, the connection's own LinkedIn profile goes on the contact. A contact that already has a LinkedIn profile keeps it.
+
+The approval can also offer two boxes:
+
+- **Use as job title** puts the position on LinkedIn on the contact as their job title.
+- **Use … as employer** makes the company Margince placed the connection at the contact's current employer. It shows only when that company is already in Margince, you can see it, and your role may both add and change a relationship.
+
+A box is ticked when the contact has nothing in that field yet. When the contact has a value, the box is unticked. Tick it and the LinkedIn value replaces the old one, which stays in the record's history. If someone changes the job title or the employer while the approval waits, accepting with that box ticked is refused, so their change stays. A later import never changes the contact again.
 
 **A refusal lasts.** Once you reject a match, Margince never asks about that pair again, even after a new import.
 

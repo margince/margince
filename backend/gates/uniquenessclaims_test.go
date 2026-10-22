@@ -474,7 +474,7 @@ func TestTheRegisterHoldsNoEntryThatIsNoLongerAClaim(t *testing.T) {
 var shapeCensus = map[string]int{
 	"cannot-drift":   153,
 	"once":           158,
-	"one-of-a-kind":  147,
+	"one-of-a-kind":  146,
 	"is-every-named": 82,
 	"only-noun":      9,
 	"no-second":      10,

@@ -14,13 +14,23 @@ package datasource
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"maps"
 	"reflect"
+	"slices"
 	"strings"
 )
 
 // CustomFieldPrefix starts every key a custom-field value travels under.
 const CustomFieldPrefix = "cf_"
+
+// IsCustomFieldKey reports whether key is spelt as a custom field's: the prefix
+// and a name after it. It is the one test of "this key is not a typo of a core
+// field", for the REST decode and the tool seam alike.
+func IsCustomFieldKey(key string) bool {
+	return len(key) > len(CustomFieldPrefix) && strings.HasPrefix(key, CustomFieldPrefix)
+}
 
 // CustomFieldBody is one body split into its core half and its cf_ values.
 type CustomFieldBody struct {
@@ -28,6 +38,19 @@ type CustomFieldBody struct {
 	custom map[string]any
 	twin   reflect.Value
 	target reflect.Value
+}
+
+// HasCustomFieldMap reports whether into points at a struct with its own
+// AdditionalProperties map, the shape a body takes when it carries cf_ values.
+//
+//craft:ignore naked-any mirror of StrictDecode's seam target
+func HasCustomFieldMap(into any) bool {
+	t := reflect.TypeOf(into)
+	if t == nil || t.Kind() != reflect.Pointer || t.Elem().Kind() != reflect.Struct {
+		return false
+	}
+	_, ok := coreFields(t.Elem())
+	return ok
 }
 
 // SplitCustomFields lifts the cf_ keys out of raw, and readies a twin of into
@@ -50,7 +73,7 @@ func SplitCustomFields(raw json.RawMessage, into any) (*CustomFieldBody, error) 
 		return body, nil
 	}
 	for key, value := range keys {
-		if len(key) <= len(CustomFieldPrefix) || !strings.HasPrefix(key, CustomFieldPrefix) {
+		if !IsCustomFieldKey(key) {
 			continue
 		}
 		var decoded any
@@ -71,6 +94,32 @@ func SplitCustomFields(raw json.RawMessage, into any) (*CustomFieldBody, error) 
 		body.rest = rest
 	}
 	return body, nil
+}
+
+// ClaimKeys offers each top-level key of raw to claim, in key order, and answers
+// the first refusal. A layer that judges a key in its own words, such as a
+// smuggled money total, claims it before the strict decode names it unknown.
+func ClaimKeys(raw json.RawMessage, claim func(key string) error) error {
+	keys, isObject := topLevelKeys(raw)
+	if !isObject {
+		return nil
+	}
+	for _, key := range slices.Sorted(maps.Keys(keys)) {
+		if err := claim(key); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// RejectUnknownKeys refuses a core key the contract does not declare. It names
+// every such key and says a custom field is sent as a cf_ key.
+func (b *CustomFieldBody) RejectUnknownKeys() error {
+	err := RejectNonCanonicalKeys(b.rest, b.Target())
+	if refusal, ok := errors.AsType[*UnknownFieldError](err); ok {
+		refusal.Hint = "a custom field is sent as " + CustomFieldPrefix + "<slug>"
+	}
+	return err
 }
 
 // Rest is the body without its cf_ keys.
@@ -100,6 +149,9 @@ func StrictCustomFieldDecode(raw json.RawMessage, into any) error {
 	body, err := SplitCustomFields(raw, into)
 	if err != nil {
 		return err
+	}
+	if err := body.RejectUnknownKeys(); err != nil {
+		return &FieldDecodeError{Cause: err}
 	}
 	if err := StrictDecode(body.Rest(), body.Target()); err != nil {
 		return err

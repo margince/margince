@@ -89,6 +89,10 @@ To filter a list by tag in Margince, open **Contacts**, **Companies** or **Deals
 One tag at a time: a second tag takes the place of the first. **Any tag** takes the filter off. To see every record with a tag across all record types, open the tag's own page. Use the **Tags** panel on any record that has it.
 Also called: filter by label, show tagged records, segment by tag.
 
+### Why are some contacts tagged `machine-address`?
+Margince tags a contact `machine-address` when its email belongs to a sending system, such as `noreply@` or `receipts@`. These contacts were made before Margince refused such addresses. Filter by the tag, then keep or archive each one. Margince archives and deletes none of them itself.
+Also called: contacts made from notification mail, automatic senders.
+
 ### How do I filter by date?
 The list screens in Margince have no date filter. To put a list in date order, sort it. **Contacts**, **Companies** and **Leads** sort by **Created** and **Last activity**; **Deals** by **Expected close** and **Last signal**; **Projects** by **Last activity**.
 On **Filters and views**, there are the date choices **is after**, **is on or after**, **is before** and **is on or before**. They show only for date custom fields your company has added. Created and expected close dates are not filter fields there.

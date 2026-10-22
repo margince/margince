@@ -512,6 +512,7 @@ var argsForKind = map[string]river.JobArgs{
 	ApprovalExpiryArgs{}.Kind():          ApprovalExpiryArgs{},
 	IntroExpiryArgs{}.Kind():             IntroExpiryArgs{},
 	ApprovalAutoApplyArgs{}.Kind():       ApprovalAutoApplyArgs{},
+	PastActivityClockRefoldArgs{}.Kind(): PastActivityClockRefoldArgs{},
 	PrivacyRetentionArgs{}.Kind():        PrivacyRetentionArgs{},
 	ProviderRunSubmitArgs{}.Kind():       ProviderRunSubmitArgs{},
 	TelegramPollArgs{}.Kind():            TelegramPollArgs{},

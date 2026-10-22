@@ -51,9 +51,8 @@ type UpdateLeadInput struct {
 	OwnerID            *ids.UserID
 	ProjectID          *ids.ProjectID
 	IfVersion          *int64
-	// CustomFields carries the request body's extra top-level keys
-	// (additionalProperties); only active cf_* catalog columns land,
-	// drop-on-mismatch (customfields.go).
+	// CustomFields carries the request body's cf_* keys. A key no active catalog
+	// column takes is refused (storekit.CheckCustomValues).
 	CustomFields map[string]any
 }
 
@@ -281,7 +280,9 @@ func (s *Store) updateLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in U
 	if err := stampStatusSetBy(ctx, p, current, in); err != nil {
 		return crmcontracts.Lead{}, err
 	}
-	storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties)
+	if err := storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties); err != nil {
+		return crmcontracts.Lead{}, err
+	}
 	if p.Empty() {
 		return current, nil
 	}

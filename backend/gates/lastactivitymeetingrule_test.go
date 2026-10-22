@@ -5,13 +5,12 @@
 
 package gates
 
-// last_activity_at on deal, contact and company skips a called-off meeting by
-// the same rule as contact strength, spelled once in relstrength.
+// last_activity_at on deal, contact and company skips a called-off meeting and
+// counts only what has happened. relstrength.LastActivityCountsSQL spells both.
 //
-// The column is folded by the last_activity_of_* SQL functions, which cannot
-// call Go, so their migration carries the rule's rendered text. This gate holds
-// every arm of each to relstrength.NotCalledOffSQL, and holds the Go reads that
-// ask the same question without the stored column to the same call.
+// The last_activity_of_* SQL functions fold the column and cannot call Go, so
+// their migration carries the rule's rendered text. This gate holds every arm
+// to it, and holds the Go reads of the same question to the same call.
 
 import (
 	"os"
@@ -28,14 +27,18 @@ var meetingRuleClocks = []string{"last_activity_of_deal", "last_activity_of_cont
 // gatekit:fixture the Go reads of a record's last touch that do not read
 // last_activity_at, each with what it computes.
 var meetingRuleReaders = map[string]string{
-	"internal/modules/deals/health.go":       "deal health's recency evidence",
-	"internal/modules/contacts/lead_read.go": "a lead's last activity",
+	"internal/modules/deals/health.go":         "deal health's recency evidence",
+	"internal/modules/contacts/lead_read.go":   "a lead's last activity",
+	"internal/compose/contact360/lasttouch.go": "a contact's last inbound and outbound touch",
+	"internal/modules/deals/quietfacts.go":     "a deal's last interaction each way, cited in the close-date review",
+	"internal/modules/activities/lasttouch.go": "the last genuine engagement that holds back a no-activity reminder",
+	"internal/modules/deals/lastemail.go":      "the newest email on a deal's board card",
 }
 
 func TestNoLastActivityClockCountsACalledOffMeeting(t *testing.T) {
 	t.Parallel()
 	bodies := currentRecencyBodies(t)
-	rule := relstrength.NotCalledOffSQL("a")
+	rule := relstrength.LastActivityCountsSQL("a", "now()")
 	for _, name := range meetingRuleClocks {
 		body, ok := bodies[name]
 		if !ok {
@@ -49,9 +52,9 @@ func TestNoLastActivityClockCountsACalledOffMeeting(t *testing.T) {
 		}
 		for i, arm := range arms {
 			if !strings.Contains(arm, rule) {
-				t.Errorf("%s: activity arm %d of %d does not carry %q, so a canceled or no-show meeting "+
-					"can keep the record looking recently active. Replace the function in a new migration "+
-					"with the rule's current text in every arm.", name, i+1, len(arms), rule)
+				t.Errorf("%s: activity arm %d of %d does not carry %q, so a canceled or no-show meeting, "+
+					"or one still ahead, can keep the record looking recently active. Replace the function in a "+
+					"new migration with the rule's current text in every arm.", name, i+1, len(arms), rule)
 			}
 		}
 	}
@@ -61,9 +64,9 @@ func TestNoLastActivityClockCountsACalledOffMeeting(t *testing.T) {
 			t.Errorf("%s (%s): %v", file, what, err)
 			continue
 		}
-		if !strings.Contains(string(src), "relstrength.NotCalledOffSQL(") {
-			t.Errorf("%s no longer calls relstrength.NotCalledOffSQL, so %s can count a called-off "+
-				"meeting as a touch", file, what)
+		if !strings.Contains(string(src), "relstrength.LastActivityCountsSQL(") {
+			t.Errorf("%s no longer calls relstrength.LastActivityCountsSQL, so %s can count a called-off "+
+				"meeting, or one still ahead, as a touch", file, what)
 		}
 	}
 }

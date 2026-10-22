@@ -79,9 +79,11 @@ func approvalsServiceTelling(pool *pgxpool.Pool, notices *siteLeadNoticeLane) *a
 		siteLeadAcceptEffect(svc, newCaptureSink(pool, captureConfig), pool, notices))
 	svc.WithPrecheck(siteLeadProposalKind, siteLeadPrecheck(notices))
 	svc.WithEffect(counterpartyProposalKind, counterpartyAcceptEffect(svc, store, newConnectorTagFiler(pool), capture.NewPendingStore(InstallationDB(pool)), newDomainTriageTrigger(pool, slog.Default(), captureConfig.SkipReservedDomainProposals)))
+	svc.WithPrecheck(counterpartyProposalKind, counterpartyPrecheck(store))
 	svc.WithEffect(companyNameProposalKind, companyNameAcceptEffect(svc, store))
 	svc.WithEffect(captureCollisionKind, captureCollisionAcceptEffect(svc, store))
-	svc.WithEffect(linkedInMatchKind, linkedInMatchAcceptEffect(svc))
+	svc.WithEffect(linkedInMatchKind, linkedInMatchAcceptEffect(svc, store))
+	svc.WithPrecheck(linkedInMatchKind, linkedInMatchPrecheck(store))
 	// Both halves, like the held message above and for the same reason: the
 	// subject of this card is a row that is already sitting in a state, and a
 	// card whose buttons only dismissed it would report a decision the record

@@ -50,6 +50,31 @@ func (h Handlers) WithPasswordLinkBase(publicBaseURL string) Handlers {
 	return h
 }
 
+// WithContactMailLane records that the installation can mail a contact a
+// one-time confirmation link.
+//
+// Named apart from the consent module's own WithConfirmationLane, because
+// compose promotes both onto one Server.
+func (h Handlers) WithContactMailLane(wired bool) Handlers {
+	h.confirmLaneWired = wired
+	return h
+}
+
+// canRequestConfirmation reports whether this caller may ask a contact to
+// confirm what is held about them.
+//
+// It folds the grant in for the reason admin_password_link states: a bare
+// posture boolean would tell every seat whether this installation has email.
+//
+// The lane is read as wired, never as healthy. Whether a wired relay delivers
+// is the delivery row's answer, and the sibling below says what came of asking
+// for more.
+func (h Handlers) canRequestConfirmation(ctx context.Context, id Identity) bool {
+	return h.confirmLaneWired &&
+		auth.Require(actorCtx(ctx, id), "contact", principal.ActionUpdate) == nil &&
+		principal.SeatType(id.SeatType).CanMutate()
+}
+
 // canSendPasswordLink reports whether this installation can MAIL a
 // set-password link: it needs both the transport and a canonical base to build
 // the link on. The two arrive separately, so they can disagree — and a mailer

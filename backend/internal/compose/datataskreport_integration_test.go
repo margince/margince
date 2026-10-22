@@ -85,7 +85,7 @@ func TestOwnerCorrectionCommandsRefuseInvalidActionsAndUnreadableLedger(t *testi
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(progress) != 3 || progress[0].Version != 0 || progress[0].Estimate != nil {
+	if len(progress) != registeredDataTaskSteps(dataTaskCatalog(e.Pool, func() time.Time { return clocktest.Now(t) })) || progress[0].Version != 0 || progress[0].Estimate != nil {
 		t.Fatalf("unseeded estimate invented progress: %+v", progress)
 	}
 	hideDataTaskLedger(t)

@@ -10,6 +10,8 @@ import (
 	"context"
 	"crypto/rand"
 	"errors"
+	"os"
+	"os/exec"
 	"strings"
 	"testing"
 	"time"
@@ -23,7 +25,9 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/config/configtest"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/dbsettings"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -124,6 +128,34 @@ func TestReplayErasuresRefusesToRunWithoutTheObjectStore(t *testing.T) {
 
 	if _, err := replayErasures(t, e, "--empty-journal-ok"); !errors.Is(err, compose.ErrReplayNeedsObjectStore) {
 		t.Fatalf("err = %v, want the replay refused for want of the journal", err)
+	}
+}
+
+// workerProgramEnv marks the child process the test below starts.
+const workerProgramEnv = "MARGINCE_TEST_WORKER_PROGRAM"
+
+// The restore drill runs the command as an operator types it, through the
+// worker's whole boot. The boot registers extensions once per process, so the
+// test runs it in a child process of its own.
+func TestTheWorkerProgramRunsReplayErasures(t *testing.T) {
+	if os.Getenv(workerProgramEnv) != "" {
+		if err := run(t.Context(), []string{"replay-erasures", "--empty-journal-ok"}, os.Stdout); err != nil {
+			t.Fatalf("worker replay-erasures: %v", err)
+		}
+		return
+	}
+	// With no config named, the child's boot reads margince.yaml here.
+	if err := gatekit.DeclareInputs(os.Getenv, "margince.yaml"); err != nil {
+		t.Fatal(err)
+	}
+	integration.Setup(t)
+	configureObjectStore(t)
+	child := exec.CommandContext(t.Context(), os.Args[0], "-test.run=^TestTheWorkerProgramRunsReplayErasures$", "-test.v")
+	child.Env = append(os.Environ(), workerProgramEnv+"=1", "MARGINCE_ENV=dev",
+		dbsettings.DSN.Env()+"="+os.Getenv("MARGINCE_TEST_APP_DSN"))
+	out, err := child.CombinedOutput()
+	if err != nil || !strings.Contains(string(out), "holds no entry") {
+		t.Fatalf("worker replay-erasures: %v\n%s\nwant the empty journal named", err, out)
 	}
 }
 

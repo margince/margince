@@ -45,6 +45,7 @@ function CompanyTags({
     <TagsPanel
       entityType="company"
       entityID={companyId}
+      archived={Boolean(company.archived_at)}
       canEdit={canEdit}
       bare={bare}
     />

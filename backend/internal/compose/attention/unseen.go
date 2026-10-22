@@ -96,6 +96,9 @@ func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSou
 	// under-reading a truncation flag exists to prevent.
 	atCap(sourceMeetingOutcome, day.MeetingsUnreported, plannedCap)
 	atCap(sourceAtRisk, day.AtRisk, quietDealBound)
+	if day.AtRisk != nil && day.AtRiskMoreAvailable != nil {
+		bounded[sourceAtRisk] = bounded[sourceAtRisk] || *day.AtRiskMoreAvailable
+	}
 	atCap("relationship_decay", day.RelationshipDecay, decayBound)
 	atCap("conversation_claim", day.Commitments, doneCap)
 	// The decision lane is read deeper than the rest, because a batch row

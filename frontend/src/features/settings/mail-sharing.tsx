@@ -1,7 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useId, useState } from "react";
 import { api } from "../../api/client";
+import type { components } from "../../api/schema";
 import {
+  MAIL_REVIEW_BOUNDS,
   MAIL_SYNC_BOUNDS,
   useCaptureSettings,
   useUpdateCaptureSettings,
@@ -75,6 +77,67 @@ function CommitBand({
         </Button>
       )}
     </div>
+  );
+}
+
+/**
+ * The two numbers that pace mail: how often a mailbox is read, and how many held
+ * threads one privacy review decides. Each commits on its own, like every
+ * number row, because pacing withholds nothing from anybody.
+ */
+function PacingRows({
+  settings,
+  locked,
+  notAdmin,
+  describedBy,
+  onPatch,
+}: Readonly<{
+  settings: components["schemas"]["CaptureSettings"];
+  locked: boolean;
+  notAdmin: string | undefined;
+  describedBy: string | undefined;
+  onPatch: (
+    patch: components["schemas"]["UpdateCaptureSettingsRequest"],
+  ) => void;
+}>) {
+  const t = useT();
+  return (
+    <>
+      <NumberSettingRow
+        label={t("captureMailSync.interval.label")}
+        description={t("captureMailSync.interval.help")}
+        testId="capture-mail-sync"
+        value={settings.mail_sync_interval_seconds}
+        {...MAIL_SYNC_BOUNDS.mail_sync_interval_seconds}
+        refusal={t("captureMailSync.interval.refusal")}
+        disabled={locked}
+        reason={lockReasonOr(
+          settings.locks,
+          "capture.mail_sync_interval_seconds",
+          t,
+          notAdmin,
+        )}
+        describedBy={describedBy}
+        onCommit={(next) => onPatch({ mail_sync_interval_seconds: next })}
+      />
+      <NumberSettingRow
+        label={t("captureReview.passCap.label")}
+        description={t("captureReview.passCap.help")}
+        testId="capture-review-pass-cap"
+        value={settings.confidentiality_pass_cap}
+        {...MAIL_REVIEW_BOUNDS.confidentiality_pass_cap}
+        refusal={t("captureReview.passCap.refusal")}
+        disabled={locked}
+        reason={lockReasonOr(
+          settings.locks,
+          "capture.confidentiality_pass_cap",
+          t,
+          notAdmin,
+        )}
+        describedBy={describedBy}
+        onCommit={(next) => onPatch({ confidentiality_pass_cap: next })}
+      />
+    </>
   );
 }
 
@@ -213,26 +276,12 @@ export function MailSharingCard() {
                     />
                   )}
                 />
-                {/* Commits on its own, like every number row: pacing the
-                    mailboxes withholds nothing from anybody. */}
-                <NumberSettingRow
-                  label={t("captureMailSync.interval.label")}
-                  description={t("captureMailSync.interval.help")}
-                  testId="capture-mail-sync"
-                  value={settings.mail_sync_interval_seconds}
-                  {...MAIL_SYNC_BOUNDS.mail_sync_interval_seconds}
-                  refusal={t("captureMailSync.interval.refusal")}
-                  disabled={!canManage || sync.isPending}
-                  reason={lockReasonOr(
-                    settings.locks,
-                    "capture.mail_sync_interval_seconds",
-                    t,
-                    notAdmin,
-                  )}
+                <PacingRows
+                  settings={settings}
+                  locked={!canManage || sync.isPending}
+                  notAdmin={notAdmin}
                   describedBy={syncRefused}
-                  onCommit={(next) =>
-                    sync.mutate({ mail_sync_interval_seconds: next })
-                  }
+                  onPatch={(patch) => sync.mutate(patch)}
                 />
               </SettingList>
               {(bandShows(sharedBand) || bandShows(sharingBand)) && (

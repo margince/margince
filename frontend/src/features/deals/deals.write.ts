@@ -253,11 +253,13 @@ function withoutMasked(
 export function mapDealCreate(
   values: Record<string, unknown>,
   pipelineId: string,
+  // The first code the currency picker offered, sent when the field is empty.
+  defaultCurrency: string,
 ): CreateDealRequest {
   const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
   const amount = str(values.amount);
   const expectedArr = str(values.expected_arr);
-  const currency = str(values.currency) || "EUR";
+  const currency = str(values.currency) || defaultCurrency;
   return {
     name: str(values.name),
     pipeline_id: pipelineId,

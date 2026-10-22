@@ -17,7 +17,16 @@ import (
 // OutstandingApprovalPage keeps a cursor even when every key in a page is unreadable.
 type OutstandingApprovalPage struct {
 	ApprovalIDs []ids.ApprovalID
-	AfterID     ids.UUID
+	// Notices is each readable copy in the page and the member it went to.
+	Notices []OutstandingApprovalNotice
+	AfterID ids.UUID
+}
+
+// OutstandingApprovalNotice is one member's copy of one pending-decision notice.
+type OutstandingApprovalNotice struct {
+	ID        ids.UUID
+	Recipient ids.UUID
+	Approval  ids.ApprovalID
 }
 
 // OutstandingApprovalNotices advances over notices, including unreadable legacy keys.
@@ -30,7 +39,7 @@ func (s *Store) OutstandingApprovalNotices(ctx context.Context, tx pgx.Tx, after
 	if limit < 1 || limit > 1000 {
 		return page, apperrors.ErrInvalidArgument
 	}
-	rows, err := tx.Query(ctx, `SELECT id, COALESCE(dedupe_key, '') FROM notice
+	rows, err := tx.Query(ctx, `SELECT id, recipient_user_id, COALESCE(dedupe_key, '') FROM notice
 		WHERE kind = @approval_kind AND retracted_at IS NULL AND id > @after
 		ORDER BY id LIMIT @limit`, pgx.StrictNamedArgs{"approval_kind": KindApprovalPending, "after": after, "limit": limit})
 	if err != nil {
@@ -38,14 +47,16 @@ func (s *Store) OutstandingApprovalNotices(ctx context.Context, tx pgx.Tx, after
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var id ids.UUID
+		var id, recipient ids.UUID
 		var key string
-		if err := rows.Scan(&id, &key); err != nil {
+		if err := rows.Scan(&id, &recipient, &key); err != nil {
 			return page, err
 		}
 		page.AfterID = id
 		if approval, ok := approvalOfNoticeKey(KindApprovalPending, key); ok {
-			page.ApprovalIDs = append(page.ApprovalIDs, ids.From[ids.ApprovalKind](approval))
+			approvalID := ids.From[ids.ApprovalKind](approval)
+			page.ApprovalIDs = append(page.ApprovalIDs, approvalID)
+			page.Notices = append(page.Notices, OutstandingApprovalNotice{ID: id, Recipient: recipient, Approval: approvalID})
 		}
 	}
 	return page, rows.Err()

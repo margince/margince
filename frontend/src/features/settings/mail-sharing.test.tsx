@@ -39,6 +39,7 @@ function backendFor(
   let sharingState = mailSharing;
   let sharedState = sharedAllowed;
   let syncState = 120;
+  let passCapState = 40;
   let capturedPatch: unknown = null;
   const fetchMock = vi.fn(
     async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -56,10 +57,12 @@ function backendFor(
             mail_sharing?: boolean;
             shared_posture_allowed?: boolean;
             mail_sync_interval_seconds?: number;
+            confidentiality_pass_cap?: number;
           };
           sharingState = body.mail_sharing ?? sharingState;
           sharedState = body.shared_posture_allowed ?? sharedState;
           syncState = body.mail_sync_interval_seconds ?? syncState;
+          passCapState = body.confidentiality_pass_cap ?? passCapState;
         }
         return jsonResponse({
           auto_enrich: true,
@@ -67,6 +70,7 @@ function backendFor(
           shared_posture_allowed: sharedState,
           signature_enrich: true,
           mail_sync_interval_seconds: syncState,
+          confidentiality_pass_cap: passCapState,
         });
       }
       throw new Error(`unexpected request: ${req.method} ${req.url}`);
@@ -173,7 +177,52 @@ describe("MailSharingCard", () => {
     // Every row on the card carries the same refusal, so the count says it reached each one.
     expect(
       screen.getAllByText(/Only an administrator or operations user/),
-    ).toHaveLength(3);
+    ).toHaveLength(4);
+  });
+
+  // The cap commits on its own beside the sync interval, writes its own wire
+  // field, and refuses past its bounds in the box.
+  it.each(["0", "201"])(
+    "refuses a held-thread cap of %s without sending it",
+    async (bad) => {
+      const backend = backendFor(SETTINGS_EDITOR);
+      vi.stubGlobal("fetch", backend.fetchMock);
+      const user = userEvent.setup();
+      render(<MailSharingCard />);
+
+      const box = await screen.findByTestId<HTMLInputElement>(
+        "capture-review-pass-cap",
+      );
+      expect(box.value).toBe("40");
+      await user.clear(box);
+      await user.type(box, `${bad}{Enter}`);
+
+      expect(
+        await screen.findByText(
+          translate("en", "captureReview.passCap.refusal"),
+        ),
+      ).toBeTruthy();
+      expect(backend.getCapturedPatch()).toBeNull();
+    },
+  );
+
+  it("saves a new held-thread cap on Enter", async () => {
+    const backend = backendFor(SETTINGS_EDITOR);
+    vi.stubGlobal("fetch", backend.fetchMock);
+    const user = userEvent.setup();
+    render(<MailSharingCard />);
+
+    const box = await screen.findByTestId<HTMLInputElement>(
+      "capture-review-pass-cap",
+    );
+    await user.clear(box);
+    await user.type(box, "100{Enter}");
+
+    await waitFor(() =>
+      expect(backend.getCapturedPatch()).toEqual({
+        confidentiality_pass_cap: 100,
+      }),
+    );
   });
 
   // The sync row commits on its own: pacing the mailboxes withholds nothing,
@@ -224,6 +273,7 @@ describe("MailSharingCard", () => {
           shared_posture_allowed: false,
           signature_enrich: true,
           mail_sync_interval_seconds: 120,
+          confidentiality_pass_cap: 40,
         });
       }),
     );

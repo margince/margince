@@ -78,7 +78,7 @@ function DealAsideBody({
   const reads = {
     viewerId: useViewerId(),
     sources: useAcquisitionSources().data ?? [],
-    tags: useRecordTags("deal", deal.id).data,
+    tags: useRecordTags("deal", deal.id, !deal.archived_at).data,
   };
   const sections: DetailSection[] = [
     {

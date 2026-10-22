@@ -44,6 +44,10 @@ var mailLabelPairs = []struct {
 	field func(mailcopy.Copy) string
 }{
 	{"prefs.purpose.business_correspondence", func(c mailcopy.Copy) string { return c.BusinessPurpose }},
+	// The approval email says why the reader is asked in the card's own words.
+	{"approval.preview.requested", func(c mailcopy.Copy) string { return c.MailReasonRequested }},
+	{"approval.preview.onBehalf", func(c mailcopy.Copy) string { return c.MailReasonOnBehalf }},
+	{"approval.preview.authority", func(c mailcopy.Copy) string { return c.MailReasonAuthority }},
 	{"prefs.purpose.marketing_email", func(c mailcopy.Copy) string { return c.MarketingPurpose }},
 	{"prefs.purpose.transactional", func(c mailcopy.Copy) string { return c.TransactionalPurpose }},
 	{"brief.weekly.tasksDelivered", func(c mailcopy.Copy) string { return c.WeeklyTasksDelivered }},

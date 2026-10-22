@@ -14,6 +14,7 @@ import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { DismissClaimButton } from "../records/claimdismiss";
 import { omitted } from "./contact360";
+import { ContactClaimsReview, claimsForReview } from "./contactclaimsreview";
 import {
   commitmentRows,
   dealCard,
@@ -39,6 +40,8 @@ export function ContactCommitmentsCard({
   const rows = withheld
     ? []
     : commitmentRows(view, firstName, nowMs, t, locale);
+  const claims = withheld ? [] : (view.claims ?? []);
+  const hasReview = claimsForReview(claims).length > 0;
   return (
     <OverviewCard
       title={t("record.commitments")}
@@ -47,25 +50,33 @@ export function ContactCommitmentsCard({
       // is correct, not a gap.
       empty={withheld ? t("state.withheld") : t("contact.loops.empty")}
     >
-      {rows.length > 0 && (
-        <OverviewList>
-          {rows.map((row) => (
-            <OverviewRow
-              key={row.key}
-              // A read of the promise's done state, never a write.
-              lead={
-                <Checkbox
-                  label={<span className="sr-only">{row.title}</span>}
-                  checked={row.tick === true}
-                  disabled
+      {(rows.length > 0 || hasReview) && (
+        <>
+          {rows.length > 0 && (
+            <OverviewList>
+              {rows.map((row) => (
+                <OverviewRow
+                  key={row.key}
+                  // A read of the promise's done state, never a write.
+                  lead={
+                    <Checkbox
+                      label={<span className="sr-only">{row.title}</span>}
+                      checked={row.tick === true}
+                      disabled
+                    />
+                  }
+                  title={row.title}
+                  sub={row.sub}
+                  right={rowPill(row)}
                 />
-              }
-              title={row.title}
-              sub={row.sub}
-              right={rowPill(row)}
-            />
-          ))}
-        </OverviewList>
+              ))}
+            </OverviewList>
+          )}
+          <ContactClaimsReview
+            claims={claims}
+            dismiss={(id) => <DismissClaimButton id={id} />}
+          />
+        </>
       )}
     </OverviewCard>
   );

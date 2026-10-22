@@ -124,11 +124,6 @@ test.describe("company record — the glance's page shape", () => {
     }
   });
 
-  // Overview · History · Contacts · Deals · Tasks · Finance · Documents · Profile,
-  // plus Partner for an account with a partner programme. (companyTabsFor
-  // in companies.tsx gates it on relationship_types, not on a fixed count).
-  // The expectation follows the fixture's own data rather than assuming either
-  // shape.
   test("the tab strip offers every tab, plus partner only where the account has one", async ({
     page,
   }) => {
@@ -142,47 +137,42 @@ test.describe("company record — the glance's page shape", () => {
       return Boolean(company?.relationship_types?.includes("partner"));
     });
     await expect(
+      page
+        .locator("[data-testid='co-tabs']")
+        .getByRole("button", { name: "Finanzen", exact: true }),
+    ).toBeVisible();
+    await expect(
       page.locator("[data-testid='co-tabs'] .recordtabs-tab"),
-    ).toHaveCount(isPartnerAccount ? 8 : 7);
+    ).toHaveCount(isPartnerAccount ? 9 : 8);
   });
 
-  // The 360 is the first pane and the only one that may look like a feature
-  // (DESIGN.md §7): one pane, the account brief, the needs list and the money
-  // under it on the left, Ask on the right. What this pins is that they are
-  // PANES of the glance in that order, not a column of cards that each reads
-  // the account.
-  //
-  // Anchored on rendered TEXT rather than classes: the strings are the German
-  // chrome the suite pins via `locale: de-DE`.
-  test("the overview leads with the 360, then the needs list and the money on the left, Ask on the right", async ({
+  test("the overview stacks the account brief, needs and questions, with commercial detail on Deals", async ({
     page,
   }) => {
     await openCompany(page, POPULATED_COMPANY as string);
     const call = page.getByRole("heading", { name: "Unternehmensbericht" });
-    await expect(call).toHaveCount(1);
     const needs = page.getByRole("heading", { name: "Handlungsbedarf" });
-    await expect(needs).toHaveCount(1);
-    const money = page.getByRole("heading", { name: "Geschäftliches" });
     const ask = page.getByRole("heading", {
       name: "Fragen zu diesem Unternehmen",
     });
-    await expect(ask).toHaveCount(1);
-    // Next steps is gone from this page — its open tasks are the needs list
-    // and the Tasks tab now.
+    await expect(call).toBeVisible();
+    await expect(needs).toBeVisible();
+    await expect(ask).toBeVisible();
     await expect(
-      page.getByRole("heading", { name: "Nächste Schritte" }),
+      page.getByRole("heading", { name: "Nächste Schritte", exact: true }),
     ).toHaveCount(0);
-
-    // Order: the 360 above the needs list, the needs list above the money, and
-    // Ask beside the needs list rather than under it.
     expect(await topOf(call)).toBeLessThan(await topOf(needs));
-    expect(await topOf(needs)).toBeLessThan(await topOf(money));
-    const needsBox = await needs.boundingBox();
-    const askBox = await ask.boundingBox();
-    if (!needsBox || !askBox) {
-      throw new Error("the needs list and Ask are visible but one has no box");
-    }
-    expect(askBox.x).toBeGreaterThan(needsBox.x);
+    expect(await topOf(needs)).toBeLessThan(await topOf(ask));
+    await expect(
+      page.getByRole("heading", { name: "Geschäftliches" }),
+    ).toHaveCount(0);
+    await page
+      .locator("[data-testid='co-tabs']")
+      .getByRole("button", { name: /^Deals und Projekte/ })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: "Deals", exact: true }),
+    ).toBeVisible();
   });
 
   // The needs list asks for a move on the account, so it belongs to the tab a
@@ -261,20 +251,8 @@ test.describe("company record — the glance's page shape", () => {
   });
 });
 
-/**
- * The mockup's PROMINENCE, measured off the boxes the page lays out.
- *
- * The structural suite above passes on a page rendering at half the mockup's
- * size, because a count does not know how big anything is. These are the things
- * a reader actually sees at their drawn size: the account's logo and the
- * control that says where the account stands.
- *
- * Floors rather than exact values. A mark that lands at 120px where the mockup
- * drew 110 is right; one that lands at 44 is the list-row avatar these exist to
- * catch. Pixel equality would fail on a rounding difference and tell nobody
- * anything.
- */
-test.describe("company record — the mockup's visual weight", () => {
+// Live geometry complements the structural and record-header unit tests.
+test.describe("company record — visual weight", () => {
   test.beforeEach(async ({ page }) => {
     await signIn(page);
     await openCompany(page, POPULATED_COMPANY as string);
@@ -315,7 +293,7 @@ test.describe("company record — the mockup's visual weight", () => {
         "no [data-testid='company-lifecycle'] on the company header — the id moved, or the control did",
       );
     }
-    expect(box.height).toBeGreaterThanOrEqual(32);
+    expect(Math.round(box.height)).toBeGreaterThanOrEqual(32);
   });
 
   // Website, LinkedIn, location, industry, size: five pills under the

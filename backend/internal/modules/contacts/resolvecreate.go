@@ -154,7 +154,10 @@ func createContact(ctx context.Context, tx pgx.Tx, match ContactResolution, spec
 		spec.Source, spec.CapturedBy, spec.Visibility, spec.Quarantined, spec.ConvertedFromLeadID,
 		spec.SourceSystem, spec.Narrowing,
 	})
-	cfCols, cfHolders, args := storekit.InsertFragments(spec.Active, spec.CustomFields, base)
+	cfCols, cfHolders, args, err := storekit.InsertFragments(spec.Active, spec.CustomFields, base)
+	if err != nil {
+		return ids.ContactID{}, err
+	}
 	if _, err := tx.Exec(ctx,
 		`INSERT INTO contact (id, full_name, first_name, last_name, title, owner_id, address_line1, address_line2, address_city, address_region, address_postal_code, address_country, source, captured_by, visibility, quarantined_at, converted_from_lead_id, source_system, narrowing_reason`+authorCols+cfCols+`)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
@@ -298,7 +301,10 @@ func createCompany(ctx context.Context, tx pgx.Tx, match CompanyMatch, spec Comp
 		spec.Source, spec.CapturedBy, spec.NameSource, spec.Visibility, spec.IsAnchor,
 		spec.SourceSystem, spec.LinkedInURL,
 	})
-	cfCols, cfHolders, args := storekit.InsertFragments(spec.Active, spec.CustomFields, base)
+	cfCols, cfHolders, args, err := storekit.InsertFragments(spec.Active, spec.CustomFields, base)
+	if err != nil {
+		return ids.CompanyID{}, err
+	}
 	if _, err := tx.Exec(ctx,
 		`INSERT INTO company (id, display_name, legal_name, description, industry, size_band, owner_id, parent_company_id, address_line1, address_line2, address_city, address_region, address_postal_code, address_country, source, captured_by, name_source, visibility, is_anchor, source_system, linkedin_url`+authorCols+cfCols+`)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,

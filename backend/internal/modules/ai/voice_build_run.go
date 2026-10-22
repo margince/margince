@@ -187,17 +187,27 @@ func loadVoiceSamples(ctx context.Context, tx pgx.Tx, profileID ids.UUID) ([]Voi
 	return samples, rows.Err()
 }
 
-// SetBuildStage records forward progress; the stage is display state, so a
-// lost update is harmless and the write is deliberately minimal.
+// ErrVoiceBuildNotRunning is a stage refused because the build left
+// `running`: cancelled, archived or finished elsewhere. Its worker stops.
+var ErrVoiceBuildNotRunning = errors.New("ai: the voice build is no longer running")
+
+// SetBuildStage records forward progress. The stage is display state, but a
+// refused one means the build stopped running, which its worker must hear.
 func (s *VoiceStore) SetBuildStage(ctx context.Context, buildID ids.UUID, stage string) error {
 	if err := auth.Require(ctx, "voice_profile", principal.ActionUpdate); err != nil {
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, `
+		tag, err := tx.Exec(ctx, `
 			UPDATE voice_build SET stage = $2, version = version + 1, updated_at = $3
 			WHERE id = $1 AND status = 'running' AND archived_at IS NULL`, buildID, stage, s.now().UTC())
-		return err
+		if err != nil {
+			return err
+		}
+		if tag.RowsAffected() == 0 {
+			return ErrVoiceBuildNotRunning
+		}
+		return nil
 	})
 }
 

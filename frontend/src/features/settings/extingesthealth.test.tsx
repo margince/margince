@@ -22,6 +22,7 @@ vi.mock("@composition/extensions", () => ({
       name: "openchannel",
       title: "extOpenchannel.title",
       secretScope: "workspace",
+      panels: [],
       verbs: [],
     },
   ],

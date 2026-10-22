@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 func (s *Store) strictHours(ctx context.Context, host ids.UserID) (WorkingHours, error) {
@@ -50,14 +51,15 @@ func (s *Store) calendarBusy(ctx context.Context, host ids.UserID, p crmcontract
 		seen[calendar] = true
 		intervals, err := s.calendar.Busy(ctx, host, string(p.Provider), calendar, from.Add(-buffer), to.Add(buffer))
 		if err != nil {
-			return nil, err
+			return nil, calendarReadFailure(ctx, host, string(p.Provider), calendar, err)
 		}
 		for _, interval := range intervals {
 			if exclude != "" && calendar == p.CalendarId && interval.EventID == exclude {
 				continue
 			}
 			if !interval.End.After(interval.Start) {
-				return nil, errors.New("scheduling: invalid provider interval")
+				return nil, calendarReadFailure(ctx, host, string(p.Provider), calendar,
+					connector.NewCalendarUnavailable(calendar, "invalid_interval", errors.New("scheduling: invalid provider interval")))
 			}
 			busy = append(busy, slot{Start: interval.Start.Add(-buffer), End: interval.End.Add(buffer)})
 		}

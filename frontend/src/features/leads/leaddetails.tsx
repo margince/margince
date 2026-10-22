@@ -132,7 +132,7 @@ function useAboutRows(
   const t = useT();
   const { locale } = useLocale();
   const sources = useLeadSources();
-  const tags = useRecordTags("lead", lead.id);
+  const tags = useRecordTags("lead", lead.id, !lead.archived_at);
   const mayTag = useCanWriteRecord("lead", lead);
   const save = useFieldSave(lead);
   const canEdit = !writer.readOnly;
@@ -242,6 +242,7 @@ function useAboutRows(
           entityType="lead"
           entityID={lead.id}
           bare
+          archived={Boolean(lead.archived_at)}
           canEdit={mayTag && canEdit}
         />
       ),

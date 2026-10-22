@@ -59,7 +59,7 @@ To add a new contact in Margince, open **Contacts** in the sidebar and choose **
 2. If you like, fill **First name**, **Last name**, **Title** and **LinkedIn**.
 3. Choose **Add email** for each address and set its **Type** (Work, Personal or Other); choose **Add phone** for each number.
 4. Fill any custom fields, then choose **Create**. It stays turned off until the full name is filled.
-If the contact is already in Margince, **View existing record** opens it instead.
+If the contact is already in Margince, **View existing record** opens it instead. An email that belongs to a sending system, such as `noreply@` or `receipts@`, is refused.
 Also called: create a contact, add someone to the CRM, new customer contact.
 
 ### How do I add a contact quickly, or import contacts from vCards?
@@ -268,8 +268,8 @@ Without permission you see "You do not have permission to log activities on this
 Also called: add a note, record a call, write a comment.
 
 ### How do I add a task on a record?
-To add a task in Margince, open the contact, company, lead or deal and choose **Add task** in its header. It opens the **Log activity** form set to the Task type.
-Enter a **Subject** (required), a **Due date** and an **Assignee** (or leave it **Unassigned**), then choose **Log**. Open tasks have **Done** and **Snooze 1 day**.
+To add a task in Margince, open the contact, company, lead or deal and choose **Add task** in its header.
+Enter a **Subject** (required), a **Due date** and an **Assignee** (or **Unassigned**), then choose **Log**. History labels tasks **Open** or **Completed**; the company's **Tasks** tab lists open tasks only. Choose **Open task** for **Done** and **Snooze 1 day**.
 Also called: create a to-do, follow-up, reminder.
 
 One activity can link to many records at once, such as a contact and a deal. Everyone can see one you log with no links. A *captured* message with nothing to link to stays held, because nothing has judged who it belongs to.

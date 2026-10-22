@@ -43,7 +43,7 @@ Things for the whole company in Margince each have one settings page.
 - Create, rename, narrow or archive a role: **Roles and permissions**.
 - See how many seats are in use: **Seats and license**.
 - Change the company name, time zone, base currency, date format, time format or exchange rates: **Company profile**.
-- Set up single sign-on or the Google and Microsoft apps, or require two-step sign-in: **Sign-in and apps**.
+- Set up single sign-on, the Google and Microsoft apps or the app an extension signs in to, or require two-step sign-in: **Sign-in and apps**.
 - Mark your own email domains, or refuse a domain: **Capture rules**.
 - Set up webhooks or a provider of contact data: **Integrations**.
 
@@ -177,6 +177,8 @@ The Capture rules page in Settings (group **Data**) decides what comes into the 
 **Own email domains** are the domains that belong to this company. Mail between colleagues is not stored for anyone, including you. Take note: no mailbox offers again the mail skipped while a domain is on this list.
 
 **Enrichment.** Whether Margince fills in facts on captured companies by itself.
+
+**Mail privacy review.** A mailbox set to *Held until classified* holds its mail until Margince has judged the thread ([Who can see an email](who-can-see-an-email.md)). This setting says how many held threads one review run decides, from 1 to 200. The default is 40, and the rest wait for the next run. Raise it when new mail stays hidden from colleagues for longer than the review schedule.
 
 **Consumer mail domains.** Which domains count as private mailboxes. Mail from one of them makes the contact, but never a company. Margince comes with the list; you can add a missing domain or change a wrong entry.
 

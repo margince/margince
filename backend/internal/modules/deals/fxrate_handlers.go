@@ -60,6 +60,23 @@ func (h Handlers) ListFxRates(w http.ResponseWriter, r *http.Request, params crm
 	})
 }
 
+// ListFxRateCurrencies returns the sheet's currency codes for the currency
+// pickers. Deal-read gated in the store; it carries no rate.
+func (h Handlers) ListFxRateCurrencies(w http.ResponseWriter, r *http.Request) {
+	if err := auth.RequireHuman(r.Context()); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	base, codes, err := h.store.RateSheetCurrencies(r.Context())
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.FxRateCurrencyListResponse{
+		BaseCurrency: base, Data: codes,
+	})
+}
+
 // SetFxRate appends (or same-day corrects) one effective-dated FX rate.
 // Human-admin/ops only; append-forward. Effective date defaults to today.
 func (h Handlers) SetFxRate(w http.ResponseWriter, r *http.Request) {

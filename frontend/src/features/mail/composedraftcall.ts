@@ -62,6 +62,9 @@ export type DraftResult =
       reasoning?: DraftReason[];
       // Account path only: what the scoped read kept, when a project was chosen.
       scope?: ProjectScope;
+      // A model was sent the body on screen and answered a revision of it. The
+      // deterministic floor never reads that body, so its answer is no revision.
+      revised?: boolean;
     };
 
 // What one drafting call is asked under. A rewrite carries its instruction
@@ -91,8 +94,8 @@ export function fillFromDraft(
     // The words as the model served them. A rewrite is offered only while
     // the body still equals them, because an edited body is the rep's work.
     setServedBody: (next: string) => void;
-    // A rewrite replaces the body it was asked about. Any other draft fills
-    // an empty field and leaves the rep's words alone.
+    // A rewrite, or a draft the route wrote from the body on screen, replaces
+    // that body. Any other draft fills an empty field and leaves it alone.
     rewrite?: boolean;
     setTo: (next: string[]) => void;
     setDraftRef: (next: string | null) => void;
@@ -175,6 +178,7 @@ function draftAnswer(
   error: unknown,
   data: DraftedPayload | undefined,
   t: Translate,
+  rewriteOf = "",
 ): DraftResult {
   if (response.status === 501) {
     return { available: false as const, reason: "no_model" as const };
@@ -187,6 +191,7 @@ function draftAnswer(
     draft: data,
     reasoning: data.reasoning,
     scope: data.scope,
+    revised: rewriteOf.trim() !== "" && data.ai_generated === true,
   };
 }
 
@@ -261,7 +266,7 @@ async function draftFromContact({
       },
     },
   );
-  return draftAnswer(response, error, data, t);
+  return draftAnswer(response, error, data, t, rewriteOf);
 }
 
 // The account-started draft. It grounds itself in the record it was started
@@ -319,7 +324,7 @@ async function draftFromAccount({
       },
     },
   );
-  return draftAnswer(response, error, data, t);
+  return draftAnswer(response, error, data, t, rewriteOf);
 }
 
 // The drafting call for every origin. They answer one shape, so the fill
@@ -350,8 +355,9 @@ export function useDraftMutation({
       resetUnavailable();
       const { grounding, activityId, entityType } = ask;
       const intentOf = ask.instruction ?? ask.intent;
-      // A rewrite sends the body on screen; a first draft sends none.
-      const rewriteOf = ask.instruction ? ask.body : "";
+      // The body on screen goes with every ask, so words the rep wrote are
+      // revised rather than ignored. A blank body asks for a first draft.
+      const rewriteOf = ask.body;
       if (activityId) {
         return draftFromActivity({ activityId, intent: intentOf, t });
       }

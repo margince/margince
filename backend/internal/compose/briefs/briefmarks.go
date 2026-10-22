@@ -261,12 +261,12 @@ func lockItemForMark(ctx context.Context, tx pgx.Tx, itemID ids.UUID, item *Brie
 		return ids.UUID{}, err
 	}
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
-		SELECT bi.id, bi.deal_id, bi.rank, bi.composite, bi.feature_vector, %s, bi.state, bi.state_at, bi.snoozed_until, coalesce(bi.finding, ''),
+		SELECT bi.id, bi.deal_id, bi.rank, bi.composite, bi.feature_vector, %s, bi.state, bi.state_at, bi.snoozed_until, %s,
 		       bi.reopen_on, bi.reopen_ref, bi.returned_after_dismissal_on, %s, br.user_id
 		FROM brief_item bi
 		JOIN brief_run br ON br.id = bi.brief_run_id
 		WHERE bi.id = $%d
-		FOR UPDATE OF bi`, evidenceSQL, returnedWithSQL, itemPos), args...).Scan(&item.ID, &item.DealID, &item.Rank, &item.Composite, &featuresRaw,
+		FOR UPDATE OF bi`, evidenceSQL, servedFindingSQL(evidenceSQL), returnedWithSQL, itemPos), args...).Scan(&item.ID, &item.DealID, &item.Rank, &item.Composite, &featuresRaw,
 		&item.EvidenceIDs, &item.State, &item.StateAt, &item.SnoozedUntil, &item.Finding,
 		&wasOn, &item.ReopenRef, &dismissedOn, &returnedWith, &owner)
 	if errors.Is(err, pgx.ErrNoRows) {

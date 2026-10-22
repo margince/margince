@@ -72,6 +72,28 @@ The worker does not schedule River's nightly index rebuild, which needs the inde
 fetches slow down, rebuild the index as `margince_owner`, for example
 `REINDEX INDEX CONCURRENTLY river_job_prioritized_fetching_index`.
 
+## Get a license token
+
+Outside `dev` and `test` mode, `cmd/api` and `cmd/worker` need a license token to start, even for
+one seat. A dev stack needs none.
+
+To get a token:
+
+- For up to 3 seats for your own company, ask for a free token with the
+  [free license form](https://dist.margince.com/free-license). It lasts one year.
+- For more seats, see the prices on [margince.com](https://margince.com).
+- To host Margince for other companies, you need a hosting partner contract with Gradion.
+
+To give the token to Margince, do one of these on both `cmd/api` and `cmd/worker`:
+
+- Mount it as a secret file. In the `margince.yaml` each one reads, set `license.token` to
+  `${file:/run/secrets/margince-license}`.
+- Set `MARGINCE_LICENSE`. A container that sets it needs no `license:` block.
+
+After the first boot, the api's `/metrics`, read with the `--metrics-token` bearer credential,
+reports `margince_license_posture{state="valid"} 1`. What each posture does at boot is in
+[License](../reference/configuration.md#license).
+
 ## Set the environment
 
 The images bake in **no** instance configuration. All settings come from the runtime environment,
@@ -87,8 +109,7 @@ rollout, and to see which settings the app shows as locked, read
 [change-a-setting.md](change-a-setting.md).
 
 Do **not** set `MARGINCE_ENV=dev` in a deployed environment. It decides which license authorities are
-honoured, and whether the installation may run unlicensed at all. With no license configured,
-`cmd/api` and `cmd/worker` refuse to boot unless the environment says non-production (see
+honoured, and lets the installation run with no license (see
 [License](../reference/configuration.md#license)).
 
 ## Write the first-boot config

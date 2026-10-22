@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Panel } from "../../design-system/panel";
 import { viewerZone } from "../../format/timezone";
+import { wonProposal } from "../../testing/magic.approval.fixtures";
 import { StoryProviders } from "../../testing/story-utils";
-import { wonProposal } from "./magic.approval.fixtures";
 import { MagicLaneSection } from "./magic.lines";
 
 const meta: Meta<typeof MagicLaneSection> = {
@@ -43,6 +43,31 @@ export const Stale: Story = {
                 state: "stale",
                 reviewer_reason: "requested_decider",
                 changes: [],
+              },
+            },
+          ]}
+          since={undefined}
+          zone={viewerZone()}
+          byDay={false}
+        />
+      </Panel>
+    </StoryProviders>
+  ),
+};
+
+export const WithoutOptionalEvidence: Story = {
+  render: () => (
+    <StoryProviders>
+      <Panel>
+        <MagicLaneSection
+          lane="needs_you"
+          title="Waiting on you"
+          rows={[
+            {
+              ...wonProposal,
+              approval_preview: wonProposal.approval_preview && {
+                ...wonProposal.approval_preview,
+                evidence: [],
               },
             },
           ]}

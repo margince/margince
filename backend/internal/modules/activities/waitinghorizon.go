@@ -23,11 +23,12 @@ package activities
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 // waitingHorizonSpread is what the derivation measures: how long this
@@ -117,7 +118,7 @@ const (
 // read. The number is in days and moves slowly, so a day is below what the
 // queue can tell apart. Past it the pass has stopped running, and the compiled
 // horizon beats a measurement of an older business.
-const waitingHorizonStaleAfter = 24 * time.Hour
+const waitingHorizonStaleAfter = storekit.WaitingHorizonStaleAfter
 
 // waitingHorizonFor is the horizon the worker pass stored, or the compiled one
 // when none is stored or it is older than waitingHorizonStaleAfter. It never
@@ -130,18 +131,12 @@ func (s *Store) waitingHorizonFor(ctx context.Context, tx pgx.Tx) (int, error) {
 }
 
 func waitingHorizonAt(ctx context.Context, tx pgx.Tx, asOf time.Time) (int, error) {
+	args := []any{}
+	arg := func(v any) int { args = append(args, v); return len(args) }
 	var days int
-	var measuredAt time.Time
-	err := tx.QueryRow(ctx,
-		`SELECT horizon_days, measured_at FROM activity_waiting_horizon`).Scan(&days, &measuredAt)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return waitingHorizonDays, nil
-	}
+	err := tx.QueryRow(ctx, "SELECT "+storekit.WaitingHorizonSQL(asOf, arg), args...).Scan(&days)
 	if err != nil {
 		return 0, fmt.Errorf("activities: reading the stored waiting horizon: %w", err)
-	}
-	if asOf.Sub(measuredAt) >= waitingHorizonStaleAfter {
-		return waitingHorizonDays, nil
 	}
 	return days, nil
 }

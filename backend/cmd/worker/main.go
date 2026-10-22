@@ -62,11 +62,11 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	if handled, err := runDebugSubcommand(ctx, args, stdout); handled {
 		return err
 	}
-	if checked, err := checkWorkerConfig(args, config.Environ(), stdout); checked || err != nil {
+	if checked, err := checkWorkerConfig(workerFlags(args), config.Environ(), stdout); checked || err != nil {
 		return err
 	}
 
-	boot, err := configureWorker(args, stdout)
+	boot, err := configureWorker(workerFlags(args), stdout)
 	if err != nil {
 		return err
 	}
@@ -270,6 +270,7 @@ func configureWorker(args []string, stdout io.Writer) (workerBoot, error) {
 	if err != nil {
 		return workerBoot{}, err
 	}
+	compose.BindExtensionEgress(cfg.posture)
 	bootstrap, err := loadBootstrap(cfg)
 	if err != nil {
 		return workerBoot{}, err

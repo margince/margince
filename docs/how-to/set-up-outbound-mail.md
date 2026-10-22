@@ -58,6 +58,9 @@ email:
   the value itself. Leave it out for a relay that needs no login. The first start
   that reads it seals it into the keyvault, and later starts read it from there.
   To take the reference out after that, see [configuration.md](../reference/configuration.md).
+- `MARGINCE_SMTP_PASSWORD` is also the variable of the setting itself. Set it in the
+  environment or in the file `--env-file` names, and the `password:` line can go.
+  A `${env:NAME}` reference reads the environment only, never that file.
 - Once a password is sealed, leaving it out keeps the sealed copy in use. To stop
   using it (a new relay with no login, or a password that is no longer secret),
   write `password: ${none}`. The next start deletes the sealed copy and sends

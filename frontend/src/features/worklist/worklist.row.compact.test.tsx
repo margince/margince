@@ -49,7 +49,7 @@ function row(over: Partial<WorklistItem> = {}) {
   return <WorklistRow item={item(over)} density="compact" owner="" />;
 }
 
-/** Four reasons, so three are said and the fourth goes behind the count. */
+/** Several concrete reasons remain visible at compact density. */
 const MANY_REASONS: WorklistItem["because"] = [
   { kind: "quiet_days", value: { kind: "days", days: 21 } },
   { kind: "closing_soon" },
@@ -127,11 +127,9 @@ describe("a worklist row at list density", () => {
     // ONE element, holding the reasons AND what it costs, dot-separated. Two
     // elements is the shape this replaced: the line then clipped whichever was
     // last and the reader had no way to see what went.
-    const inline = container.querySelectorAll(".worklist-row-inline");
+    const inline = container.querySelectorAll(".worklist-row-because");
     expect(inline).toHaveLength(1);
-    expect(inline[0].textContent).not.toContain(
-      en["worklist.consequence.deal_drifts"],
-    );
+    expect(inline[0].textContent).not.toContain("If ignored");
     expect(inline[0].textContent).toContain(" · ");
   });
 
@@ -162,7 +160,12 @@ describe("a worklist row at list density", () => {
   // focus back. A press a keyboard can make and not leave is a trap.
   it("closes on Escape and hands the focus back", async () => {
     const user = userEvent.setup();
-    render(row({ because: MANY_REASONS }));
+    render(
+      row({
+        because: MANY_REASONS,
+        detail: "The buyer requested a revised schedule.",
+      }),
+    );
 
     const trigger = screen.getByRole("button", {
       name: en["brief.row.details"],
@@ -255,4 +258,56 @@ it("does not claim that unavailable recipients are an empty campaign", () => {
   expect(
     screen.queryByRole("list", { name: en["worklist.recipients.label"] }),
   ).not.toBeInTheDocument();
+});
+
+it.each(["normal", "compact", "framed"] as const)(
+  "%s shows concrete basis without sorting, consequences or a reason disclosure",
+  (shape) => {
+    const evidence = item({
+      because: [
+        { kind: "no_next_step" },
+        { kind: "no_next_step" },
+        { kind: "material" },
+        { kind: "below_material" },
+        { kind: "routine" },
+      ],
+      consequence: "deal_drifts",
+      above_next: { comparator: "level" },
+    });
+    const { container } = render(
+      shape === "compact" ? (
+        <WorklistRow item={evidence} owner="" density="compact" />
+      ) : (
+        <WorklistRow
+          item={evidence}
+          owner=""
+          position={1}
+          framed={shape === "framed"}
+        />
+      ),
+    );
+    expect(
+      screen.getAllByText(en["worklist.because.no_next_step"]),
+    ).toHaveLength(1);
+    expect(container.querySelector(".worklist-row-because")).toBeVisible();
+    expect(container.querySelector("details")).toBeNull();
+    expect(container.textContent).not.toMatch(
+      /If ignored|Ranked above|typical|routine cleanup/,
+    );
+  },
+);
+
+it("shows shared reply responsibility instead of an unassigned label", () => {
+  render(
+    row({
+      owner: {
+        kind: "shared",
+        users: [
+          { id: "alice", label: "Alice" },
+          { id: "bob", label: "Bob" },
+        ],
+      },
+    }),
+  );
+  expect(screen.getByText("Shared responsibility: Alice and Bob")).toBeTruthy();
 });

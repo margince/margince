@@ -83,7 +83,7 @@ func pristineRepairTaskSQL(alias string) string {
  SELECT 1 FROM audit_log creation WHERE creation.entity_type='activity' AND creation.entity_id=%[1]s.id
  AND creation.action='create' AND creation.actor_type IN ('system','agent')
  AND %[1]s.version=CASE WHEN creation.after->>'audience'='selected' THEN 2 ELSE 1 END)
- AND NOT %s AND NOT EXISTS (SELECT 1 FROM worklist_pin pin WHERE pin.source='task' AND pin.row_id=%[1]s.id::text))`, alias, humanWroteReminderSQL(alias))
+ AND NOT %s)`, alias, storekit.HeldTaskClause(alias))
 }
 
 // RequestReminderPastHorizonTx uses the same age boundary as routine retirement.

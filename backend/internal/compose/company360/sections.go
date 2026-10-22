@@ -23,6 +23,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -182,9 +183,13 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now 
 	if err != nil {
 		return nil, crmcontracts.PageInfo{}, nil, err
 	}
-	extra := ""
+	identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
+	if err != nil {
+		return nil, crmcontracts.PageInfo{}, nil, err
+	}
+	extra := " AND " + activities.CurrentTaskClause("a", now, identities, arg)
 	if promisesOnly {
-		extra = " AND " + activities.NotSystemMinted("a", arg)
+		extra += " AND " + activities.NotSystemMinted("a", arg)
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT a.id, coalesce(a.subject, ''), a.due_at, a.assignee_id, a.occurred_at, a.version,

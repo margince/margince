@@ -77,12 +77,12 @@ func TestRoutineWindowReusesPersonalWorkingDaysAndTimezone(t *testing.T) {
 func TestPersonalTimeCanStartBeforeTheReportingMorning(t *testing.T) {
 	relay := &countingMailer{}
 	b := setupBriefJob(t).withMailer(relay)
-	seedWorkFor(t, b.Env, b.Rep1)
 	ctx := b.As(b.Rep1, []ids.UUID{b.Team1}, integration.AdminPerms)
 	if _, err := b.worker.users.SaveMyWorkingHours(ctx, identity.WorkingHours{StartMinute: 540, EndMinute: 1020, Days: []int{1, 2, 3, 4, 5}, Timezone: "Asia/Tokyo"}); err != nil {
 		t.Fatal(err)
 	}
 	b.now = time.Date(2026, 10, 19, 0, 30, 0, 0, time.UTC)
+	seedWorkFor(t, b.Env, b.now, b.Rep1)
 	if err := b.run(t); err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +97,6 @@ func TestPersonalTimeCanStartBeforeTheReportingMorning(t *testing.T) {
 func TestPersonalWindowAcrossReportingMidnightKeepsOneAttempt(t *testing.T) {
 	relay := &countingMailer{}
 	b := setupBriefJob(t).withMailer(relay)
-	seedWorkFor(t, b.Env, b.Rep1)
 	ctx := b.As(b.Rep1, []ids.UUID{b.Team1}, integration.AdminPerms)
 	if _, err := b.worker.users.SaveMyWorkingHours(ctx, identity.WorkingHours{StartMinute: 540, EndMinute: 1020, Days: []int{1, 2, 3, 4, 5}, Timezone: "America/New_York"}); err != nil {
 		t.Fatal(err)
@@ -106,7 +105,9 @@ func TestPersonalWindowAcrossReportingMidnightKeepsOneAttempt(t *testing.T) {
 	if _, err := b.worker.users.SaveMyDelivery(ctx, identity.Delivery{RoutineTime: &hour}); err != nil {
 		t.Fatal(err)
 	}
-	for _, now := range []time.Time{time.Date(2026, 10, 19, 22, 30, 0, 0, time.UTC), time.Date(2026, 10, 20, 0, 30, 0, 0, time.UTC)} {
+	start := time.Date(2026, 10, 19, 22, 30, 0, 0, time.UTC)
+	seedWorkFor(t, b.Env, start, b.Rep1)
+	for _, now := range []time.Time{start, start.Add(2 * time.Hour)} {
 		b.now = now
 		if err := b.run(t); err != nil {
 			t.Fatal(err)
@@ -123,7 +124,7 @@ func TestCombinedWorkersClaimOneEditionAndKeepPersonalOptOut(t *testing.T) {
 	if _, err := e.worker.users.SaveMyDelivery(e.repCtx, identity.Delivery{CombineRoutine: &yes, MorningBrief: &none}); err != nil {
 		t.Fatal(err)
 	}
-	seedWorkFor(t, e.Env, e.Rep1)
+	seedWorkFor(t, e.Env, weeklyMailClock, e.Rep1)
 	reviewID := e.seedReview(t, time.Date(2026, 6, 29, 0, 0, 0, 0, time.UTC))
 	var group sync.WaitGroup
 	for range 4 {

@@ -43,7 +43,7 @@ func runtimeFor(ctx context.Context, unit, version, via string, deps extensionRu
 // call. Nothing else about the tick changes: the actor on callCtx is still the
 // one every capability and every policy sees.
 func jobRuntimeFor(ctx context.Context, unit, version, via string, deps extensionRuntimeBinding) *callRuntime {
-	return unattendedRuntimeFor(ctx, unit, version, via, deps)
+	return systemReaderFor(ctx, unit, version, via, deps)
 }
 
 // deliveryRuntimeFor mints the Runtime for one BUS DELIVERY — a subscription
@@ -56,7 +56,16 @@ func jobRuntimeFor(ctx context.Context, unit, version, via string, deps extensio
 // which auth.Require does not check at all — so the unattended flag is what
 // keeps the governed core port shut for a caller nothing else would refuse.
 func deliveryRuntimeFor(ctx context.Context, unit, version, via string, deps extensionRuntimeBinding) *callRuntime {
-	return unattendedRuntimeFor(ctx, unit, version, via, deps)
+	return systemReaderFor(ctx, unit, version, via, deps)
+}
+
+// systemReaderFor is an unattended Runtime that also answers the system reads.
+// A finance read and a channel send are unattended too, but what they return
+// reaches the administrator or rep who asked, so they answer none.
+func systemReaderFor(ctx context.Context, unit, version, via string, deps extensionRuntimeBinding) *callRuntime {
+	rt := unattendedRuntimeFor(ctx, unit, version, via, deps)
+	rt.systemReads = true
+	return rt
 }
 
 // sendRuntimeFor mints the Runtime for one outbound TRANSMISSION on a unit's

@@ -292,6 +292,9 @@ func TestAMemberOnAnArchivedRoleIsNotHandedBack(t *testing.T) {
 	if _, _, err := e.svc.IssuePasswordLink(ctx, e.admin, holder.UserID); !errors.Is(err, errArchivedRoleHeld) {
 		t.Errorf("a link for a member on an archived role: %v, want errArchivedRoleHeld", err)
 	}
+	if err := e.svc.RemoveMemberMFA(ctx, e.admin, holder.UserID); !errors.Is(err, errArchivedRoleHeld) {
+		t.Errorf("removing the factor of a member on an archived role: %v, want errArchivedRoleHeld", err)
+	}
 	if _, err := e.svc.IssuePassport(e.wsCtx(holder), holder, IssuePassportInput{Scopes: []string{"read"}}); !errors.Is(err, errArchivedRoleHeld) {
 		t.Errorf("a passport for a member on an archived role: %v, want errArchivedRoleHeld", err)
 	}

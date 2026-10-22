@@ -4,11 +4,13 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { messageText } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
+import { draftButton } from "../../testing/composedraft.testkit";
 import { ComposeModal } from "./compose";
 import {
   type Activity,
   activity202,
   fillSendableForm,
+  findThreadChoice,
   jsonResponse,
   NO_VOICE_PROFILE,
   PURPOSES,
@@ -101,9 +103,7 @@ describe("ComposeModal started from an account", () => {
       />,
     );
 
-    const drafting = screen.getByRole("button", {
-      name: /Draft (reply )?with AI/,
-    });
+    const drafting = draftButton();
     expect(drafting).toHaveProperty("disabled", true);
     expect(sent.some((r) => r.key.includes("draft-email"))).toBe(false);
     // Undraftable is not unsendable: the rep writes it themselves and sends.
@@ -194,9 +194,7 @@ describe("ComposeModal started from an account", () => {
       await screen.findByRole("combobox", { name: "Draft to" }),
       "Sarah Cole",
     );
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
     await waitFor(() =>
       expect(messageText("Body")).toBe("Hi Sarah, shall we pick this up?"),
     );
@@ -412,9 +410,11 @@ describe("ComposeModal started from an account", () => {
     replyBackend([{ entity_type: "deal", entity_id: "d-1" }], []);
     const subject = await openReply();
 
-    await screen.findByRole("button", { name: /Draft (reply )?with AI/ });
+    await draftButton();
     // A list whose only entry is None asks a question with one answer.
-    expect(screen.queryByLabelText("Project")).toBeNull();
+    expect(screen.getByLabelText("Project").hasAttribute("disabled")).toBe(
+      true,
+    );
     expect(subject().value).toBe("");
   });
 
@@ -505,13 +505,9 @@ describe("what the composer says it is answering", () => {
     // The conversations are offered, not chosen for the reader. A button that
     // says "write an email" must not anchor the message to whatever came last,
     // addressed to somebody they had not picked.
-    await userEvent.click(
-      await screen.findByRole("button", { name: /Rechnung GR-2026-0207/ }),
-    );
+    await userEvent.click(await findThreadChoice(/Rechnung GR-2026-0207/));
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
 
     // And the draft answers that message: the account-wide draft, which needs
     // a recipient named first, is not what a reader gets from a record page.
@@ -571,14 +567,10 @@ describe("what the composer says it is answering", () => {
     );
 
     // The conversation is picked, then drafted against.
-    await userEvent.click(
-      await screen.findByRole("button", { name: /Rechnung GR-2026-0207/ }),
-    );
+    await userEvent.click(await findThreadChoice(/Rechnung GR-2026-0207/));
     expect(screen.queryByText(/dietmar@valantic.test/)).toBeNull();
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
 
     // And who, in the field that will carry it. It is asked for as the chip's
     // own control, because the address also appears in the quoted head of the
@@ -628,7 +620,7 @@ describe("what the composer says it is answering", () => {
       />,
     );
 
-    await screen.findByText(/Rechnung GR-2026-0207/);
+    await findThreadChoice(/Rechnung GR-2026-0207/);
     // The record still scopes the read; a project only narrows it further.
     expect(asked.params?.get("entity_type")).toBe("company");
     expect(asked.params?.get("entity_id")).toBe("company-1");
@@ -666,12 +658,8 @@ describe("what the composer says it is answering", () => {
       />,
     );
 
-    await userEvent.click(
-      await screen.findByRole("button", { name: /Rechnung GR-2026-0207/ }),
-    );
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(await findThreadChoice(/Rechnung GR-2026-0207/));
+    await userEvent.click(draftButton());
     await waitFor(() =>
       expect(
         sent.some((s) => s.key === "POST /activities/act-latest/draft-email"),

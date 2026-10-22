@@ -79,9 +79,8 @@ type CreateContactInput struct {
 	SourceSystem *string
 	// Author is who wrote it in the system it came from; zero when unknown.
 	Author storekit.SourceAuthorInput
-	// CustomFields carries the request body's extra top-level keys
-	// (additionalProperties); only active cf_* catalog columns land,
-	// drop-on-mismatch (customfields.go).
+	// CustomFields carries the request body's cf_* keys. A key no active catalog
+	// column takes is refused (storekit.CheckCustomValues).
 	CustomFields map[string]any
 }
 
@@ -267,6 +266,11 @@ func (s *Store) GetContactTx(ctx context.Context, tx pgx.Tx, id ids.ContactID,
 // when none does — where an address seen on a message becomes a record.
 func (s *Store) EnsureContactByEmail(ctx context.Context, fullName, email, source string) (ids.UUID, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionCreate); err != nil {
+		return ids.Nil, err
+	}
+	// Before the lookup, so a machine-address contact made before the refusal
+	// existed is not handed back either.
+	if err := refuseMachineAddress(email); err != nil {
 		return ids.Nil, err
 	}
 	lookup := func() (ids.UUID, bool, error) {

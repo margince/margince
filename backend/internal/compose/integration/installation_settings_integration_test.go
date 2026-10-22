@@ -451,7 +451,7 @@ func TestBaseCurrencyFreezesOnASentOfferWithNoClosedDeal(t *testing.T) {
 	e.SeedID(t, `
 		INSERT INTO offer (id, deal_id, offer_number, currency, status,
 		                   fx_rate_to_base, fx_rate_date, source, captured_by)
-		VALUES ($1, $2, 'AN-2026-001', 'EUR', 'sent', 1.0850000000, current_date, 'seed', 'system:test')`,
+		VALUES ($1, $2, 'A-2026001', 'EUR', 'sent', 1.0850000000, current_date, 'seed', 'system:test')`,
 		deal)
 
 	// Prove the fixture is the one this test claims: no deal froze anything.
@@ -547,7 +547,7 @@ func TestTheFrozenRateCountSumsEveryKindOfRecord(t *testing.T) {
 		pipeline, stage)
 	e.SeedID(t, `
 		INSERT INTO offer (id, deal_id, offer_number, currency, status, fx_rate_to_base, fx_rate_date, source, captured_by)
-		VALUES ($1, $2, 'AN-2026-002', 'EUR', 'sent', 1.0850000000, current_date, 'seed', 'system:test')`, deal)
+		VALUES ($1, $2, 'A-2026002', 'EUR', 'sent', 1.0850000000, current_date, 'seed', 'system:test')`, deal)
 	company := e.SeedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Census GmbH', 'seed', 'system:test')`)
 	e.SeedID(t, `
 		INSERT INTO contract (id, company_id, title, value_minor, currency, status, fx_rate_to_base, fx_rate_date, source, captured_by)

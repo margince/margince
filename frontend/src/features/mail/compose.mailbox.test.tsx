@@ -11,7 +11,9 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { draftButton } from "../../testing/composedraft.testkit";
 import { ComposeModal } from "./compose";
+import { findThreadChoice } from "./compose.testkit";
 
 // Whose conversation the composer is answering.
 //
@@ -135,11 +137,7 @@ describe("whose mailbox the composer is answering from", () => {
         onClose={vi.fn()}
       />,
     );
-    await userEvent.click(
-      await screen.findByRole("button", {
-        name: /ACTION REQUIRED/,
-      }),
-    );
+    await userEvent.click(await findThreadChoice(/ACTION REQUIRED/));
   }
 
   // The positive control. Every withholding case below is only meaningful
@@ -158,7 +156,7 @@ describe("whose mailbox the composer is answering from", () => {
   // Answering your own mail is not answering somebody else's.
   it("says nothing when the reader's own mailbox took delivery", async () => {
     await openOnColleaguesThread(["u-charlotte", "u-lars"]);
-    await screen.findByRole("button", { name: /Draft (reply )?with AI/ });
+    await draftButton();
     expect(screen.queryByText(/mailbox/)).toBeNull();
   });
 
@@ -166,7 +164,7 @@ describe("whose mailbox the composer is answering from", () => {
   // anybody. An empty list is an answer, and the answer is "nobody's".
   it("says nothing when no mailbox took delivery", async () => {
     await openOnColleaguesThread([]);
-    await screen.findByRole("button", { name: /Draft (reply )?with AI/ });
+    await draftButton();
     expect(screen.queryByText(/mailbox/)).toBeNull();
   });
 
@@ -197,9 +195,7 @@ describe("whose mailbox the composer is answering from", () => {
         onClose={vi.fn()}
       />,
     );
-    await userEvent.click(
-      await screen.findByRole("button", { name: /ACTION REQUIRED/ }),
-    );
+    await userEvent.click(await findThreadChoice(/ACTION REQUIRED/));
     expect(
       await screen.findByText(/Charlotte Weber and Mara Ott/),
     ).toBeTruthy();
@@ -224,9 +220,7 @@ describe("whose mailbox the composer is answering from", () => {
         onClose={vi.fn()}
       />,
     );
-    await userEvent.click(
-      await screen.findByRole("button", { name: /ACTION REQUIRED/ }),
-    );
+    await userEvent.click(await findThreadChoice(/ACTION REQUIRED/));
     const notice = await screen.findByText(/mailbox of a colleague/);
     expect(notice).toBeTruthy();
     // Never the raw id, and never the doubled possessive a bare fragment makes.
@@ -248,10 +242,8 @@ describe("whose mailbox the composer is answering from", () => {
         onClose={vi.fn()}
       />,
     );
-    await userEvent.click(
-      await screen.findByRole("button", { name: /ACTION REQUIRED/ }),
-    );
-    await screen.findByRole("button", { name: /Draft (reply )?with AI/ });
+    await userEvent.click(await findThreadChoice(/ACTION REQUIRED/));
+    await draftButton();
     expect(screen.queryByText(/mailbox/)).toBeNull();
   });
 
@@ -337,10 +329,8 @@ describe("whose mailbox the composer is answering from", () => {
         onClose={vi.fn()}
       />,
     );
-    await userEvent.click(
-      await screen.findByRole("button", { name: /ACTION REQUIRED/ }),
-    );
-    await screen.findByRole("button", { name: /Draft (reply )?with AI/ });
+    await userEvent.click(await findThreadChoice(/ACTION REQUIRED/));
+    await draftButton();
     expect(screen.queryByText(/mailbox/)).toBeNull();
   });
 });

@@ -153,7 +153,7 @@ describe("the writing surface inside a host that hands it a height", () => {
       "utf8",
     );
     const frame =
-      css.split(".compose-fields > .richtext {")[1]?.split("}")[0] ?? "";
+      css.split(".compose-sheet > .richtext {")[1]?.split("}")[0] ?? "";
 
     expect(frame).toContain("min-block-size");
     expect(frame).not.toContain("min-block-size: 0");

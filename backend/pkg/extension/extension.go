@@ -355,6 +355,21 @@ type Extension struct {
 	// which is the state every unit was in before this field existed.
 	Inbound []InboundEndpoint
 
+	// OAuthApps are the vendors whose consent flow the core runs for this unit
+	// (see OAuthApp). The core keeps the client credentials and the tokens: a
+	// refresh needs the client secret, and only the core holds it. The unit asks
+	// for a live access token through Runtime.OAuthAccessToken.
+	//
+	// Declared here rather than in a contract fragment for Inbound's reason: the
+	// connect and callback routes are core routes, not the unit's own.
+	OAuthApps []OAuthApp
+
+	// SystemReads are the system reads the unit's jobs and subscriptions make
+	// (see systemread.go). A read not listed answers ErrUndeclaredRead. The list
+	// is published in manifest.generated.json, so an operator sees what the unit
+	// reads without opening its source.
+	SystemReads []SystemRead
+
 	// Migrations is the unit's SQL schema layer: a read-only filesystem
 	// holding the MigrationsDir directory of NNNN_name.up.sql/.down.sql
 	// pairs, which a unit supplies with `//go:embed migrations`. A unit
@@ -414,6 +429,10 @@ type Extension struct {
 	// Entries are the unit's ways into its own screen from core screens: the
 	// Log activity form and the contact, company and deal headers. See Entry.
 	Entries []Entry
+
+	// Panels are the unit's components drawn inline on core pages, such as a
+	// deal page's side column. See Panel.
+	Panels []Panel
 }
 
 // MigrationsDir is the one spelling of the subdirectory a unit's

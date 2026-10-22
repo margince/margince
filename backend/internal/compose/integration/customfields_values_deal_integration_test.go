@@ -5,11 +5,10 @@
 
 package integration
 
-// The deals-store half of the custom-field VALUES coverage (CF-T05, arc
-// 2a-ii T3): the same fieldcatalog seam wired into the deals store —
-// active cf_* columns ride create/update writes and get/list reads like
-// core fields, with the same drop-on-mismatch and workspace-isolation
-// posture the contact/company suites prove.
+// The deals-store half of the custom-field values coverage. The fieldcatalog seam
+// is wired into the deals store. Active cf_* columns ride create and update
+// writes and get and list reads like core fields. The refusal of a key or shape
+// no column holds, and the workspace isolation, match the contact and company suites.
 //
 // BOTH records this store writes are covered here, deal and project, and
 // the second one is why the pairing matters. Contact, company, lead

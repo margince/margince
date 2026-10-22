@@ -100,6 +100,7 @@ var dealFigureWithholds = map[string]func(*DealFigures){
 // DealFigures is one deal's commercial face: what it is worth, when it was
 // meant to land, and who answers for it.
 type DealFigures struct {
+	Closed               bool
 	CloseDateProvisional *bool
 	ForecastCategory     *string
 	StageID              ids.UUID
@@ -157,6 +158,7 @@ func scanFigures(rows pgx.Rows, out map[ids.UUID]DealFigures, now time.Time, loc
 		figures := DealFigures{
 			AmountMinor: amount, ExpectedCloseDate: closes, CloseDateProvisional: provisional,
 			ForecastCategory: category, StageWinProbability: winProb,
+			Closed: semantic != nil && *semantic != string(SemanticOpen),
 		}
 		// A won or lost deal's date is when it closed, so only an open one is late.
 		if closes != nil && (semantic == nil || *semantic == string(SemanticOpen)) {

@@ -59,6 +59,11 @@ export const routes: readonly MockRoute[] = [
   },
   {
     method: "GET",
+    path: "/installation/oauth-apps",
+    handle: session.oauthApps,
+  },
+  {
+    method: "GET",
     path: (path) => path.startsWith("/installation/oauth-apps/"),
     handle: session.oauthApp,
   },
@@ -222,6 +227,11 @@ export const routes: readonly MockRoute[] = [
     path: (path) =>
       path.startsWith("/deals/") && path.endsWith("/stakeholders"),
     handle: empty,
+  },
+  {
+    method: "GET",
+    path: /^\/deals\/([^/]+)\/win-evidence$/,
+    handle: records.getDealWinEvidence,
   },
   { path: (path) => path.startsWith("/deals/"), handle: records.getDeal },
   { method: "GET", path: "/magic", handle: reply(work.magicReceipt) },

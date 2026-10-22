@@ -59,8 +59,8 @@ const (
 	// close enough to be sure. The card is not written; the candidate is
 	// named so a human can open it.
 	VCardNeedsReview VCardOutcome = "needs_review"
-	// VCardSkipped means the card could not be written: it states no name, or
-	// it matches a contact this caller may not write.
+	// VCardSkipped means the card could not be written: no name, a sending
+	// system's address, or a match this caller may not write.
 	VCardSkipped VCardOutcome = "skipped"
 )
 
@@ -142,6 +142,10 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry,
 	if result.FullName == "" {
 		result.Outcome = VCardSkipped
 		result.Reason = "the card states no name"
+		return result, nil
+	}
+	if cardNamesASendingSystem(entry) {
+		result.Outcome, result.Reason = VCardSkipped, vcardMachineAddress
 		return result, nil
 	}
 

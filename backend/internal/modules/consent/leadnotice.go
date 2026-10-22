@@ -41,11 +41,17 @@ const (
 	LeadNoticeBounced = "bounced"
 )
 
-// ErrNoNoticeLane refuses a website lead while the installation cannot send
-// its own mail: the lead would be held with nobody told.
-var ErrNoNoticeLane = fmt.Errorf("%w: this installation cannot send its own mail yet, "+
-	"so a website lead cannot be told it is held; configure the relay, public URL and key vault",
+// ErrNoMailLane refuses any controller mail while the installation cannot send
+// its own. Each of these messages carries a one-time link that is mailed and
+// never returned. One that cannot be sent is one nobody can use.
+var ErrNoMailLane = fmt.Errorf("%w: this installation cannot send its own mail yet; "+
+	"configure the relay, public URL and key vault",
 	apperrors.ErrConflict)
+
+// ErrNoNoticeLane is that refusal with the lead's own consequence named: the
+// lead would be held with nobody told.
+var ErrNoNoticeLane = fmt.Errorf("%w, so a website lead cannot be told it is held",
+	ErrNoMailLane)
 
 // errNotAWebsiteLead refuses a notice to any lead but the one the accepted
 // website-lead proposal captured.

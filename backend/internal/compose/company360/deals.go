@@ -64,12 +64,12 @@ func dealsSection(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now t
 		       -- scan fails at RUNTIME on any deal that names a close date —
 		       -- and it 500s the whole company page, not just this card.
 		       to_char(d.expected_close_date, 'YYYY-MM-DD'),
-		       d.created_at, d.last_activity_at, d.wait_until
+		       d.created_at, d.last_activity_at, d.wait_until, %[4]s
 		FROM deal d
 		LEFT JOIN stage s ON s.id = d.stage_id
 		%[1]s
 		ORDER BY d.created_at DESC, d.id DESC
-		LIMIT %[2]d`, openDealsWhere(companyPos, dealScope), sectionLimit+1, amountSQL), args...)
+		LIMIT %[2]d`, openDealsWhere(companyPos, dealScope), sectionLimit+1, amountSQL, deals.MeetingAheadSQL("d")), args...)
 	if err != nil {
 		return crmcontracts.Company360Deals{}, err
 	}
@@ -83,8 +83,9 @@ func dealsSection(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now t
 		var createdAt time.Time
 		var lastActivityAt, waitUntil *time.Time
 		var closeOn *string
+		var meetingAhead bool
 		if err := row.Scan(&id, &d.Name, &status, &stageIDPtr, &d.StageName, &amountMinor, &currency,
-			&closeOn, &createdAt, &lastActivityAt, &waitUntil); err != nil {
+			&closeOn, &createdAt, &lastActivityAt, &waitUntil, &meetingAhead); err != nil {
 			return d, err
 		}
 		if closeOn != nil {
@@ -104,7 +105,7 @@ func dealsSection(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now t
 		if amountMinor != nil {
 			d.Amount = &crmcontracts.Money{AmountMinor: amountMinor, Currency: currency}
 		}
-		d.Stalled = deals.IsStalled(status, createdAt, lastActivityAt, waitUntil, now)
+		d.Stalled = deals.IsStalled(status, createdAt, lastActivityAt, waitUntil, meetingAhead, now)
 		return d, nil
 	})
 	if err != nil {

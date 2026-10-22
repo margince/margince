@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import { SearchScreen } from "./search";
@@ -370,6 +371,7 @@ export const NarrowedWithMore: Story = {
 export const ActivityPanelOpen: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": meRoute({ activity: ["read"] }),
       "GET /search": () =>
         jsonResponse({
           data: [

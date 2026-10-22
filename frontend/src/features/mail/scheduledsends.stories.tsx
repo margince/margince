@@ -35,12 +35,22 @@ type Story = StoryObj;
 // case the row has to explain rather than silently re-render.
 const readerZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
+// Moments are built from the clock the story opens on, so the timeline always
+// has a today, a tomorrow and a later day to show.
+function inDays(days: number, hour: number): string {
+  const at = new Date();
+  at.setDate(at.getDate() + days);
+  at.setHours(hour, 0, 0, 0);
+  return at.toISOString();
+}
+
 const waiting = {
   id: "019f7e65-fbf7-7114-b114-40af4af63ae8",
   status: "scheduled",
-  scheduled_at: "2026-09-01T07:00:00Z",
+  scheduled_at: inDays(1, 9),
   scheduled_tz: readerZone,
   subject: "The renewal quote",
+  body: "Hi, attached is the renewal quote we discussed on Thursday.\nBest regards",
   to: ["ceo@acme.example"],
   version: 3,
   created_at: "2026-08-20T09:00:00Z",
@@ -53,6 +63,7 @@ const held = {
   ...waiting,
   id: "019f7e65-fbf7-7114-b114-40af4af63ae9",
   status: "held",
+  scheduled_at: inDays(-1, 17),
   held_reason: "consent_withdrawn",
   subject: "The follow-up",
   to: ["ops@acme.example", "cfo@acme.example", "legal@acme.example"],
@@ -61,9 +72,17 @@ const held = {
 // Picked in another zone, which the row NAMES. A rep who scheduled 09:00 from
 // Berlin and reads from Hanoi must not be shown 14:00 with no explanation, and
 // must not be shown 09:00 with no zone either.
+const laterThisWeek = {
+  ...waiting,
+  id: "019f7e65-fbf7-7114-b114-40af4af63af1",
+  scheduled_at: inDays(4, 14),
+  subject: "The onboarding checklist",
+};
+
 const crossZone = {
   ...waiting,
   id: "019f7e65-fbf7-7114-b114-40af4af63aeb",
+  scheduled_at: inDays(1, 15),
   scheduled_tz: readerZone === "Asia/Tokyo" ? "Europe/Berlin" : "Asia/Tokyo",
   subject: "The board update",
 };
@@ -97,7 +116,7 @@ function Screen() {
 
 export const FullQueue: Story = {
   render: () => {
-    stubQueue([held, waiting, crossZone, ...settled]);
+    stubQueue([held, waiting, laterThisWeek, crossZone, ...settled]);
     return <Screen />;
   },
 };
@@ -106,14 +125,13 @@ export const FullQueue: Story = {
 // message that has gone offers neither, because the server would refuse both.
 export const OnlyWaiting: Story = {
   render: () => {
-    stubQueue([waiting, crossZone]);
+    stubQueue([waiting, laterThisWeek, crossZone]);
     return <Screen />;
   },
 };
 
-// Moving is inline and unconfirmed; the picker opens seeded from the send's own
-// moment, so a rep who opens it and saves without touching it does not move the
-// message.
+// Moving is unconfirmed. The three common moments are one press.
+// The picker below them starts at the send's own moment, so saving it untouched moves nothing.
 export const MovingAMessage: Story = {
   render: () => {
     stubQueue([waiting]);
@@ -122,7 +140,7 @@ export const MovingAMessage: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(
       await within(canvasElement).findByRole("button", {
-        name: "Reschedule",
+        name: /Reschedule: /,
       }),
     );
   },
@@ -138,7 +156,7 @@ export const WithdrawConfirm: Story = {
   },
   play: async ({ canvasElement }) => {
     await userEvent.click(
-      await within(canvasElement).findByRole("button", { name: "Withdraw" }),
+      await within(canvasElement).findByRole("button", { name: /Withdraw: / }),
     );
   },
 };
@@ -157,7 +175,7 @@ export const NothingScheduled: Story = {
 // already carries a subject, a recipient line, a moment, a badge and two verbs.
 export const FullQueueGerman: Story = {
   render: () => {
-    stubQueue([held, waiting, crossZone]);
+    stubQueue([held, waiting, laterThisWeek, crossZone]);
     return (
       <StoryProviders locale="de">
         <ScheduledSendsScreen />
@@ -166,23 +184,50 @@ export const FullQueueGerman: Story = {
   },
 };
 
+// The Today cut of the queue: what goes out before midnight, and nothing else.
+export const TodayOnly: Story = {
+  render: () => {
+    stubQueue([
+      {
+        ...waiting,
+        id: "019f7e65-fbf7-7114-b114-40af4af63af2",
+        scheduled_at: inDays(0, 23),
+      },
+      waiting,
+    ]);
+    return <Screen />;
+  },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", { name: /Today/ }),
+    );
+  },
+};
+
+const rowProps = {
+  readerZone,
+  now: new Date(),
+  timeOnly: false,
+  isNext: false,
+  movePending: false,
+  onMove: () => {},
+  onEdit: () => {},
+  onWithdraw: () => {},
+};
+
 export const ChangedContext: Story = {
   render: () => (
     <StoryProviders>
-      <SendRow
-        send={{ ...waiting, status: "held", held_reason: "followup_settled" }}
-        readerZone={readerZone}
-        movePending={false}
-        onMove={() => {}}
-        onWithdraw={() => {}}
-      />
-      <SendRow
-        send={{ ...waiting, status: "held", held_reason: "meeting_canceled" }}
-        readerZone={readerZone}
-        movePending={false}
-        onMove={() => {}}
-        onWithdraw={() => {}}
-      />
+      <ol className="scheduledsends-list">
+        <SendRow
+          {...rowProps}
+          send={{ ...waiting, status: "held", held_reason: "followup_settled" }}
+        />
+        <SendRow
+          {...rowProps}
+          send={{ ...waiting, status: "held", held_reason: "meeting_canceled" }}
+        />
+      </ol>
     </StoryProviders>
   ),
 };
@@ -190,4 +235,22 @@ export const ChangedContextPhone: Story = {
   ...ChangedContext,
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
+};
+
+/** A message the composer could write again: the row offers Edit beside Reschedule. */
+export const Editable: Story = {
+  render: () => (
+    <StoryProviders>
+      <ol className="scheduledsends-list">
+        <SendRow
+          {...rowProps}
+          send={{
+            ...waiting,
+            status: "scheduled",
+            links: [{ entity_type: "company", entity_id: "company-1" }],
+          }}
+        />
+      </ol>
+    </StoryProviders>
+  ),
 };

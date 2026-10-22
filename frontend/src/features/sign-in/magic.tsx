@@ -53,7 +53,13 @@ const NOT_SHOWN_REASON: Readonly<Record<MagicNotShown["reason"], MessageKey>> =
     out_of_scope: "magic.notShown.outOfScope",
   };
 
-export function MagicPanel() {
+export function MagicPanel({
+  visibleApprovalIds = [],
+  visibleReceiptIds = [],
+}: Readonly<{
+  visibleApprovalIds?: readonly string[];
+  visibleReceiptIds?: readonly string[];
+}> = {}) {
   const t = useT();
   const { locale } = useLocale();
   const plural = usePlural();
@@ -71,12 +77,17 @@ export function MagicPanel() {
       : "ready";
   // Lines only off a read that answered: a refresh that failed keeps the last
   // answer cached, and drawing it would offer undos under "did not load".
-  const shown = state === "ready" ? receipt : undefined;
+  const shown = distinctReceipt(
+    state === "ready" ? receipt : undefined,
+    visibleApprovalIds,
+    visibleReceiptIds,
+  );
   const drawn = LANES.filter((lane) => hasLines(shown?.[lane]));
   const done = rowsOf(shown?.done);
   const doneRecords = recordsOf(done);
   const coverageIncomplete = doneCoverageIncomplete(shown);
-  const doneFloor = sumIsFloor("done", done) || coverageIncomplete;
+  const doneFloor =
+    sumIsFloor("done", rowsOf(receipt?.done)) || coverageIncomplete;
   // "All" would claim the whole of a count that is only a floor.
   const doneFold = plural(
     doneFloor ? "magic.done.atLeast" : "magic.done.all",
@@ -212,4 +223,24 @@ function NotShown({
       ))}
     </ul>
   );
+}
+
+function distinctReceipt(
+  receipt: MagicReceipt | undefined,
+  approvalIds: readonly string[],
+  receiptIds: readonly string[],
+): MagicReceipt | undefined {
+  if (!receipt) return undefined;
+  return {
+    ...receipt,
+    needs_you: receipt.needs_you?.filter(
+      (line) => !approvalIds.includes(line.id),
+    ),
+    done: receipt.done?.filter(
+      (line) =>
+        (line.count ?? 1) > 1 ||
+        !line.receipt_ids?.length ||
+        !line.receipt_ids.every((id) => receiptIds.includes(id)),
+    ),
+  };
 }

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { EntityRef } from "../../components/entityref";
 import {
   Badge,
   Button,
@@ -12,6 +13,7 @@ import { Heading } from "../../design-system/heading";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { isEntityKind } from "../../lib/entity";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 
@@ -104,6 +106,14 @@ export function EvidenceModal({
         <EmptyState>{t("co.evidence.unavailable")}</EmptyState>
       ) : (
         <div>
+          {/* Which record the claim is about, as a way to it. A new tab keeps
+              the claim this receipt is being checked against on screen. */}
+          {isEntityKind(cited.entityType) && (
+            <p>
+              <strong>{t("co.evidence.record")}: </strong>
+              <EntityRef kind={cited.entityType} id={cited.entityId} newTab />
+            </p>
+          )}
           <p>
             {shown.label ? `${shown.label}: ` : ""}
             {shown.value}

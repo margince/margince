@@ -396,6 +396,9 @@ func (s *Store) RegenerateOffer(ctx context.Context, id ids.OfferID) (crmcontrac
 // N+1 and N+2, not collide on the unique (workspace, number, revision)
 // key.
 func nextOfferRevision(ctx context.Context, tx pgx.Tx, wsID ids.UUID, offerNumber string) (int, error) {
+	if err := requireReadCommitted(ctx, tx); err != nil {
+		return 0, err
+	}
 	if _, err := tx.Exec(ctx,
 		`SELECT pg_advisory_xact_lock(hashtextextended('offer_revision:' || $1::text || ':' || $2, 0))`,
 		wsID, offerNumber); err != nil {

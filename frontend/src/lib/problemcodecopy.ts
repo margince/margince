@@ -14,6 +14,7 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["provider_out_of_credit", "common.providerOutOfCredit"],
   ["provider_unauthorized", "common.providerUnauthorized"],
   ["provider_unavailable", "common.providerUnavailable"],
+  ["calendar_unavailable", "scheduling.calendarUnavailable"],
   ["permission_denied", "common.permissionDenied"],
   ["seat_tier_insufficient", "common.seatReadOnly"],
   // The server's skew detail is English, worded for API and agent readers.
@@ -26,5 +27,7 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["duplicate_contact_lead", "common.duplicate.contactLead"],
   ["slot_taken", "common.duplicate.slotTaken"],
   ["import_source_busy", "import.sourceBusy"],
+  // The server's detail lists the closed vocabulary by its wire spellings.
+  ["win_evidence_required", "deals.winEvidenceRequired"],
   ["run_in_flight", "import.reason.run_in_flight"],
 ]);

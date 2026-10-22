@@ -119,6 +119,7 @@ already exists:
 | `Subscriptions` | Event types the unit answers, each with the function that one delivery runs |
 | `Jobs` | Scheduled work: a job that runs on a fixed schedule and starts one worker run per tenant |
 | `Secrets` | The secret keys the unit will use, by name and scope. It is a request; it grants nothing |
+| `OAuthApps` | Vendors whose sign-in the core runs for an admin. The core keeps the tokens and gives the unit a live access token through `Runtime.OAuthAccessToken` |
 | `Migrations` | The SQL schema layer the unit owns, built into the binary instead of read from the tree |
 | `Entries` | Buttons on core screens that open the unit's screen. The unit names a slot, a label key, an icon and an RBAC object, and the core draws and places the button |
 
@@ -210,6 +211,7 @@ the harm could go before turning the unit on:
 | `channels` | `Channels` | Which providers it supplies, whose credential each one uses (`credential_model`: required, no default), and whether it supplies a **transport** (`supplies_transport`) or only captures |
 | `finance_sources` | `FinanceSources` | Which accounting systems it reads |
 | `entries` | `Entries` | Which core screens offer a way into the unit, and the object a reader needs `read` on to see it |
+| `oauth_apps` | `OAuthApps` | Which vendors an admin is sent to, the scopes asked for, and the token URL that receives the client secret |
 
 The `extension.Extension` value the unit returns, and every field the manifest derives, must be written
 out in full in the source. A field the generate step does not know fails it, with the place in the file.

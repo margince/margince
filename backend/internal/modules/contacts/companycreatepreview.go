@@ -66,7 +66,10 @@ func (s *Store) PreviewCompanyCreationForActor(ctx context.Context, in CreateCom
 			out.ReviewCompanyID = &match.CompanyID
 		}
 		in.Domains = electPrimary(in.Domains, "")
-		out.Input, out.CustomFields = in, storekit.CreateFieldValues(active, in.CustomFields)
+		out.Input = in
+		if out.CustomFields, err = storekit.CreateFieldValues(active, in.CustomFields); err != nil {
+			return err
+		}
 		out.AddressLookup = namesAPlace(in.Address)
 		out.Geocode = s.geocodeEnqueue != nil && out.AddressLookup
 		return nil

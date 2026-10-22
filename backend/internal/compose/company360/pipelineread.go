@@ -213,7 +213,7 @@ func openPipeline(
 		return pipeline{}, err
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT d.id, d.name, d.status, d.created_at, d.last_activity_at, d.wait_until,
+		SELECT d.id, d.name, d.status, d.created_at, d.last_activity_at, d.wait_until, %[4]s,
 		       (SELECT count(*) FROM deal_stage_history h
 		         WHERE h.deal_id = d.id AND h.from_stage_id IS DISTINCT FROM h.to_stage_id),
 		       %[3]s,
@@ -228,7 +228,7 @@ func openPipeline(
 		FROM deal d
 		%[1]s
 		ORDER BY %[2]s, d.id`,
-		openDealsWhere(companyPos, dealScope), idlebase.SQL("d"), amountSQL), args...)
+		openDealsWhere(companyPos, dealScope), idlebase.SQL("d"), amountSQL, deals.MeetingAheadSQL("d")), args...)
 	if err != nil {
 		return pipeline{}, fmt.Errorf("read the account's open pipeline: %w", err)
 	}
@@ -237,12 +237,13 @@ func openPipeline(
 		var status string
 		var createdAt time.Time
 		var lastActivityAt, waitUntil *time.Time
-		if err := row.Scan(&r.id, &r.name, &status, &createdAt, &lastActivityAt, &waitUntil,
+		var meetingAhead bool
+		if err := row.Scan(&r.id, &r.name, &status, &createdAt, &lastActivityAt, &waitUntil, &meetingAhead,
 			&r.stageMoves, &r.amountMinor, &r.closeOn, &r.currency); err != nil {
 			return r, err
 		}
 		r.baseCcy = baseCcy
-		r.stalled = deals.IsStalled(status, createdAt, lastActivityAt, waitUntil, now)
+		r.stalled = deals.IsStalled(status, createdAt, lastActivityAt, waitUntil, meetingAhead, now)
 		// The same base IsStalled measures from, so the fingerprint moves exactly
 		// when the stall the rep judged is replaced by a new one.
 		r.idleSince = idlebase.Since(createdAt, lastActivityAt)

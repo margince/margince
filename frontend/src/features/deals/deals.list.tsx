@@ -27,6 +27,7 @@ import {
   useDeals,
   useStageTotals,
 } from "../../lib/deals.queries";
+import { useLeadingCurrencies } from "../../lib/leadingcurrencies";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { throwProblem, unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
@@ -89,6 +90,7 @@ function DealCreateAction({
   startOpen: boolean;
 }>) {
   const t = useT();
+  const leading = useLeadingCurrencies();
   // The picker asks the server for one company's projects, so it is keyed on
   // the company the open form names. A create form has no record to take it
   // from, and only the server knows which projects a company is on. The form
@@ -119,6 +121,7 @@ function DealCreateAction({
           ...mapDealCreate(
             { ...values, project_id: projectId ?? "" },
             pipeline.id,
+            leading[0],
           ),
           ...cf.toBody(values),
         },
@@ -150,7 +153,7 @@ function DealCreateAction({
           label: "create.currency",
           type: "select",
           required: true,
-          options: currencyOptions(),
+          options: currencyOptions(leading),
         },
         {
           key: "stage_id",
@@ -354,6 +357,7 @@ export function DealsScreen({
         dealsQuery={dealsQuery}
         pipelinesQuery={pipelinesQuery}
         effectivePipeline={effectivePipeline}
+        dealFilters={dealFilters}
         loadedDeals={loadedDeals}
         stageTotalsQuery={stageTotalsQuery}
         totalsWithheld={totalsWithheld}

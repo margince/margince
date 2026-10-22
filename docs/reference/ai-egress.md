@@ -117,6 +117,7 @@ a processing record can be written from the rows marked yes.
 | the customer's own webhook endpoint | yes | whatever the subscribed event carries, which is the customer's own record data | the subscription itself; deleting it stops the delivery |
 | the identity provider's published key set | no |  | the identity provider binding |
 | the mailbox provider (IMAP) | yes | the mailbox credential and the folders it reads | the mailbox connection; removing it stops the sync |
+| the provider an installed extension unit calls | yes | whatever that unit sends its provider, which can include the deals and colleagues' details its manifest lists under system_reads | removing the unit from the installation |
 | this installation's own public address | no |  | not optional: it is how the installation learns whether it is reachable |
 
 A row here is what the installation can do. Most of these are inert until an administrator supplies a credential or turns a setting on, and

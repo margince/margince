@@ -7,6 +7,8 @@ import (
 	"context"
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // answering is the who-is-waiting seam reporting a window's figures, and
@@ -17,7 +19,7 @@ type answering struct {
 	to   *time.Time
 }
 
-func (a *answering) Unanswered(context.Context, time.Time) ([]WaitingCustomer, bool, error) {
+func (a *answering) Unanswered(context.Context, time.Time, *ids.UUID) ([]WaitingCustomer, bool, error) {
 	return nil, false, nil
 }
 

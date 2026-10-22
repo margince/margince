@@ -25,12 +25,12 @@ const worklistAgeOutDays = 30
 //
 // pinner is a SQL expression, not a value: the reader's own placeholder for the
 // day's page, the assignee column for the team board that counts their day.
-func worklistAgeOutClause(asOf time.Time, pinner string, arg func(any) int) string {
+func worklistAgeOutClause(asOf time.Time, pinner, identities string, arg func(any) int) string {
 	floor := arg(asOf.AddDate(0, 0, -worklistAgeOutDays))
-	return sprintf(`(a.kind <> 'task' OR a.due_at IS NULL OR a.due_at >= $%d
+	return storekit.CurrentTaskClause("a", asOf, identities, arg) + " AND " + sprintf(`(a.kind <> 'task' OR a.due_at IS NULL OR a.due_at >= $%d
 		OR `+humanReopenedTaskSQL("a")+`
 		OR (%s, a.id::text) IN (SELECT reader_id, row_id FROM %s wp WHERE wp.source = $%d))`,
-		floor, pinner, effectivePinsSQL(arg), arg(string(crmcontracts.WorklistItemSourceTask)))
+		floor, pinner, auth.EffectiveWorklistPinsSQL(arg), arg(string(crmcontracts.WorklistItemSourceTask)))
 }
 
 func humanReopenedTaskSQL(alias string) string {
@@ -45,9 +45,14 @@ func worklistClauses(in ListActivitiesInput, reader ids.UUID, arg func(any) int)
 	if in.WorklistAsOf == nil {
 		return nil
 	}
+	if in.OwnQueueOf != nil {
+		reader = in.OwnQueueOf.UUID
+	} else if in.AssigneeID != nil {
+		reader = in.AssigneeID.UUID
+	}
 	pinner := sprintf("$%d", arg(reader))
 	return []string{
 		auth.LiveIntakeTaskClause("a"),
-		worklistAgeOutClause(*in.WorklistAsOf, pinner, arg),
+		worklistAgeOutClause(*in.WorklistAsOf, pinner, sprintf("$%d::jsonb", arg(in.mailIdentities)), arg),
 	}
 }

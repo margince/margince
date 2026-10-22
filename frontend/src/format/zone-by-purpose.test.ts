@@ -496,6 +496,10 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Same pair, asserted: the row must state the picked zone when it differs from the reader's.",
   },
   {
+    file: "features/mail/scheduledtimeline.test.ts",
+    why: "Day boundaries are asserted on a named zone that sits ahead of UTC, so a message late in UTC is already the next day on the reader's wall clock.",
+  },
+  {
     file: "features/settings/users-admin.stories.tsx",
     why: "Installation-settings fixtures backing the users-admin story rows.",
   },

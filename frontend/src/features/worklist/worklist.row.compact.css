@@ -75,6 +75,7 @@
    press that holds the rest. */
 .worklist-row-line {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   gap: var(--space-2);
   min-width: 0;
@@ -99,12 +100,19 @@
   white-space: nowrap;
 }
 
-/* The name itself, where it is a link: the ellipsis belongs to the string and
-   not to the box around it, so it has to be on the element holding the text. */
-.worklist-row-line > .worklist-row-title > a {
+/* The name itself, link or button: the ellipsis belongs to the string and not
+   to the box around it, so it has to be on the element holding the text. */
+.worklist-row-line > .worklist-row-title > a,
+.worklist-row-line > .worklist-row-title > .btn-valuelabel {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+/* A button's label is a flex line, and an ellipsis needs a block one; the name
+   wraps at the default density, and here the line holds it to one. */
+.worklist-row-line > .worklist-row-title > .btn-valuelabel {
+  display: block;
+  white-space: nowrap;
 }
 
 /* WHEN, WHAT IT IS WORTH, WHY and WHAT IT COSTS, as one dot-separated
@@ -200,4 +208,9 @@
   .worklist-row.worklist-row-compact button.worklist-row-why {
     min-block-size: auto;
   }
+}
+
+.worklist-row-line > .worklist-row-because {
+  flex-basis: 100%;
+  order: 1;
 }

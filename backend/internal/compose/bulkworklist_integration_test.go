@@ -10,6 +10,7 @@ package compose
 // one undo that opens them all again.
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -21,6 +22,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -128,9 +130,8 @@ func TestBulkCompletingThreeTasksAndUndoingOpensAllThreeAgain(t *testing.T) {
 	}
 }
 
-// One change over a task and a promise settles each through its own writer,
-// and reports rather than overwrites the rows it cannot honestly change.
-func TestABulkCompletionSettlesAPromiseAndReportsWhatItLeftAlone(t *testing.T) {
+// A personal completion cannot settle an unassigned team claim.
+func TestABulkCompletionRefusesUnassignedClaimsAndReportsWhatItLeftAlone(t *testing.T) {
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Frau Adler", &e.Rep1)
 	task := seedWorklistTask(t, e, contact, "Send the quote")
@@ -150,19 +151,20 @@ func TestABulkCompletionSettlesAPromiseAndReportsWhatItLeftAlone(t *testing.T) {
 	engine := bulkEngineFor(e)
 
 	out, err := engine.Execute(e.Admin(), completeItems(task, promise, stale, finished))
-	if err != nil || out.Changed != 2 {
-		t.Fatalf("execute → %+v, %v; want the task and the promise done", out, err)
+	if err != nil || out.Changed != 1 {
+		t.Fatalf("execute → %+v, %v; want only the assigned task done", out, err)
 	}
 	assertReasons(t, "execute", skipReasons(out.Skipped), map[openapi_types.UUID]crmcontracts.BulkSkipReason{
+		promise.Id:  crmcontracts.BulkSkipReasonNotFound,
 		stale.Id:    crmcontracts.BulkSkipReasonChangedSincePreview,
 		finished.Id: crmcontracts.BulkSkipReasonNoChange,
 	})
-	if got := e.WsScalar(t, `SELECT status FROM conversation_claim WHERE id = $1`, promise.Id); got != "done" {
-		t.Fatalf("the promise is %s after the change, want done", got)
+	if got := e.WsScalar(t, `SELECT status FROM conversation_claim WHERE id = $1`, promise.Id); got != "open" {
+		t.Fatalf("the unassigned team claim is %s after the change, want open", got)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE batch_id = $1 AND entity_type = 'contact'`,
-		ids.UUID(out.BatchId)); n != 1 {
-		t.Errorf("%d contact audit rows carry the batch id, want the one settlement", n)
+		ids.UUID(out.BatchId)); n != 0 {
+		t.Errorf("%d contact audit rows carry the batch id, want no claim settlement", n)
 	}
 
 	if _, err := engine.Undo(e.Admin(), ids.UUID(out.BatchId), ""); err != nil {
@@ -250,7 +252,6 @@ func TestTheWorklistOffersDoneOnlyWhereTheReaderMayWrite(t *testing.T) {
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Herr Vogt", &e.Rep1)
 	task := seedWorklistTask(t, e, contact, "Call back")
-	seedWorklistPromise(t, e, contact, "Send the quote")
 	readOnly := principal.Permissions{
 		RoleKeys: integration.SchedulerPerms.RoleKeys,
 		Objects: map[string]principal.ObjectGrant{
@@ -258,7 +259,6 @@ func TestTheWorklistOffersDoneOnlyWhereTheReaderMayWrite(t *testing.T) {
 		},
 		RowScope: integration.SchedulerPerms.RowScope,
 	}
-	due := time.Now().Add(24 * time.Hour)
 	for name, tc := range map[string]struct {
 		perms    principal.Permissions
 		writable bool
@@ -271,14 +271,7 @@ func TestTheWorklistOffersDoneOnlyWhereTheReaderMayWrite(t *testing.T) {
 		if err != nil || tasks[ids.UUID(task.Id)] != tc.writable {
 			t.Errorf("%s: task writable = %v (%v), want %v", name, tasks[ids.UUID(task.Id)], err, tc.writable)
 		}
-		claims := contacts.NewStore(e.DB())
-		promises, err := claims.OpenCommitmentsDue(reader, ids.From[ids.UserKind](e.Rep1), due, 10)
-		if err == nil {
-			err = claims.MarkSettleable(reader, promises)
-		}
-		if err != nil || len(promises) != 1 || promises[0].Settleable != tc.writable {
-			t.Errorf("%s: promises %+v (%v), want one with settleable = %v", name, promises, err, tc.writable)
-		}
+
 	}
 }
 
@@ -382,7 +375,7 @@ func TestABulkCompletionLeavesRowsTheReaderMayNotChange(t *testing.T) {
 	}
 	assertReasons(t, "read-only", skipReasons(out.Skipped), map[openapi_types.UUID]crmcontracts.BulkSkipReason{
 		task.Id:    crmcontracts.BulkSkipReasonNotWritable,
-		promise.Id: crmcontracts.BulkSkipReasonNotWritable,
+		promise.Id: crmcontracts.BulkSkipReasonNotFound,
 	})
 
 	otherTeam := e.As(e.Rep3, []ids.UUID{e.Team2}, integration.SchedulerPerms)
@@ -433,9 +426,8 @@ func TestABatchNamesItsSkippedTasksOnlyWhileTheRequesterReadsThem(t *testing.T) 
 	}
 }
 
-// The Worklist target answers a task and a promise as the rows a sample shows:
-// the task by its subject, the promise by its sentence, each at its version.
-func TestTheWorklistTargetLocksATaskAndAPromiseByTheirOwnWords(t *testing.T) {
+// A preview must not offer a personal completion for an unassigned team claim.
+func TestTheWorklistTargetLocksTasksButNotUnassignedTeamClaims(t *testing.T) {
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Frau Keller", &e.Rep1)
 	task := seedWorklistTask(t, e, contact, "Send the quote")
@@ -448,6 +440,12 @@ func TestTheWorklistTargetLocksATaskAndAPromiseByTheirOwnWords(t *testing.T) {
 	}{{task, "Send the quote"}, {promise, "Confirm the delivery date"}} {
 		err := e.DB().Tx(e.Admin(), func(tx pgx.Tx) error {
 			row, err := target.lock(e.Admin(), tx, ids.UUID(want.item.Id))
+			if want.item.Id == promise.Id {
+				if !errors.Is(err, apperrors.ErrNotFound) {
+					t.Errorf("unassigned claim lock error=%v, want not found", err)
+				}
+				return nil
+			}
 			if err == nil && (row.label != want.label || row.version != want.item.Version) {
 				t.Errorf("locked %+v, want %q at version %d", row, want.label, want.item.Version)
 			}

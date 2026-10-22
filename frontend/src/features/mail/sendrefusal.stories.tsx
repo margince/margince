@@ -11,7 +11,13 @@ import type { SendReview } from "./sendreview";
 
 const review: SendReview = {
   reviewId: "01a0aaaa-bbbb-7ccc-8ddd-eeeeffff0001",
-  actions: ["request_decision"],
+  actions: ["overrule"],
+  overrulable: [
+    {
+      contactId: "01a0aaaa-bbbb-7ccc-8ddd-eeeeffff0003",
+      category: "marketing",
+    },
+  ],
 };
 
 const meta: Meta<typeof SendRefusal> = {

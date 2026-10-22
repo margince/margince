@@ -1339,7 +1339,7 @@ paths:
         - name: stalled
           in: query
           schema: {type: boolean}
-          description: Deterministic stalled flag (no activity past the threshold).
+          description: Deterministic stalled flag (no activity past the threshold, and no booked meeting ahead).
         - name: project_id
           in: query
           schema: {type: string, format: uuid}
@@ -2617,6 +2617,7 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
+        '502': {$ref: '#/components/responses/CalendarUnavailable'}
       description: |-
         Update an activity (e.g. complete a task).
 
@@ -3075,6 +3076,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/MeetingInvitation'}
         '422': {$ref: '#/components/responses/ValidationError'}
+        '502': {$ref: '#/components/responses/CalendarUnavailable'}
       description: |-
         Reserve a meeting and request a calendar-native invitation.
 
@@ -3146,6 +3148,7 @@ paths:
                     description: |-
                       What these slots were computed FROM, which decides what an empty window means.
         '422': {$ref: '#/components/responses/ValidationError'}
+        '502': {$ref: '#/components/responses/CalendarUnavailable'}
   /bookings:
     post:
       tags: [Activities, AI]
@@ -3216,6 +3219,7 @@ paths:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
         '422': {$ref: '#/components/responses/ValidationError'}
+        '502': {$ref: '#/components/responses/CalendarUnavailable'}
   /automations/catalog:
     get:
       tags: [Automations]
@@ -8131,6 +8135,16 @@ components:
           examples:
             skew:
               value: {type: 'https://errors.gradion.com/version_skew', title: Version conflict, status: 409, code: version_skew, detail: The resource changed since your last read; re-read and retry.}
+    CalendarUnavailable:
+      description: |-
+        The host's selected calendar could not be read (`code: calendar_unavailable`). A read offers
+        no times and a write changes nothing, because either would rest on a partial picture of the
+        host's diary. The `detail` points the host at the calendar chosen in meeting settings; the
+        calendar and the provider's reason are in the server log only. It clears once the host
+        repairs the calendar or the provider answers again.
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
     ValidationError:
       description: Request failed validation (RFC 7807 with field-level `details.errors`).
       content:
@@ -8643,7 +8657,7 @@ components:
       description: 'What kind of problem a report issue names, so a screen can group them. One closed list, the same one the server reports from.'
     ImportReasonCode:
       type: string
-      enum: [activity_empty, activity_held, activity_link_ambiguous, activity_link_ambiguous_dropped, activity_type_unknown, activity_type_unnamed, activity_unlinked, amount_negative, author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_link_stakeholders, cannot_read_pipelines, cannot_read_tags, cannot_write_type, close_date_future, close_date_past, company_duplicate_found, company_duplicate_skipped, company_link_on_meeting, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_not_found, contact_not_found_dropped, contact_unnamed, currency_not_a_code, currency_unset, deal_already_closed, deal_legal_gate, deal_not_found, deal_not_found_dropped, deal_pipeline_fixed, description_too_long, direction_unknown, domain_held, duplicate_email, duration_not_valid_for_kind, duration_out_of_range, employer_column_empty, employer_column_empty_dropped, employer_not_found, employer_not_found_dropped, empty_payload, field_inactive, fx_rate_missing, id_not_a_company_id, id_not_visible, id_on_non_company, lead_not_found, lead_not_found_dropped, lead_status_not_importable, lead_status_unknown, link_ambiguous, link_ambiguous_dropped, link_contact_not_imported, link_edge_unsupported, link_malformed, link_not_attachable, link_not_found, link_not_found_dropped, link_row_not_imported, link_row_skipped, link_row_skipped_dropped, link_type_unknown, linkedin_held, lost_reason_missing, meeting_status_not_valid_for_kind, meeting_status_unknown, message_not_importable, natural_key_taken, not_a_date, not_a_domain, not_a_number, not_an_amount, not_an_email, not_yes_no, occurred_at_future, occurred_at_unnamed, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, pipeline_no_open_stage, pipeline_unknown, pipeline_unnamed, record_archived, ref_taken_by_another_company, row_key_empty, row_key_repeated, run_in_flight, size_band_invalid, stage_unknown, stage_unnamed, tag_created, tag_name_invalid, tag_new, task_not_importable, timestamp_needs_zone, too_many_links, undo_edited, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, undo_still_referenced, value_refused, value_unreadable]
+      enum: [activity_empty, activity_held, activity_link_ambiguous, activity_link_ambiguous_dropped, activity_type_unknown, activity_type_unnamed, activity_unlinked, amount_negative, author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_link_stakeholders, cannot_read_pipelines, cannot_read_tags, cannot_write_type, close_date_future, close_date_past, company_duplicate_found, company_duplicate_skipped, company_link_on_meeting, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_not_found, contact_not_found_dropped, contact_unnamed, currency_not_a_code, currency_unset, deal_already_closed, deal_legal_gate, deal_not_found, deal_not_found_dropped, deal_pipeline_fixed, description_too_long, direction_unknown, domain_held, duplicate_email, duration_not_valid_for_kind, email_names_no_contact, duration_out_of_range, employer_column_empty, employer_column_empty_dropped, employer_not_found, employer_not_found_dropped, empty_payload, field_inactive, fx_rate_missing, id_not_a_company_id, id_not_visible, id_on_non_company, lead_not_found, lead_not_found_dropped, lead_status_not_importable, lead_status_unknown, link_ambiguous, link_ambiguous_dropped, link_contact_not_imported, link_edge_unsupported, link_malformed, link_not_attachable, link_not_found, link_not_found_dropped, link_row_not_imported, link_row_skipped, link_row_skipped_dropped, link_type_unknown, linkedin_held, lost_reason_missing, meeting_status_not_valid_for_kind, meeting_status_unknown, message_not_importable, natural_key_taken, not_a_date, not_a_domain, not_a_number, not_an_amount, not_an_email, not_yes_no, occurred_at_future, occurred_at_unnamed, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, pipeline_no_open_stage, pipeline_unknown, pipeline_unnamed, record_archived, ref_taken_by_another_company, row_key_empty, row_key_repeated, run_in_flight, size_band_invalid, stage_unknown, stage_unnamed, tag_created, tag_name_invalid, tag_new, task_not_importable, timestamp_needs_zone, too_many_links, undo_edited, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, undo_still_referenced, value_refused, value_unreadable]
       description: 'Why a row was skipped or warned about, so a screen can say it in the reader''s language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.'
     CreateImportRunRequest:
       type: object
@@ -9552,7 +9566,7 @@ components:
           format: date-time
           readOnly: true
           description: >-
-            When something last happened with this contact: the newest `occurred_at` of an activity linked to it, maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first linked activity. Sortable.
+            When something last happened with this contact: the newest `occurred_at` at or before now of an activity linked to it, so a booked meeting counts once it starts, maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first linked activity. Sortable.
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
         archived_at: {type: [string, 'null'], format: date-time}
@@ -9609,7 +9623,10 @@ components:
         so the two cannot describe an address differently.
       required: [email]
       properties:
-        email: {type: string, format: email}
+        email:
+          type: string
+          format: email
+          description: 'An address whose local part names a sending system (noreply@, notifications@, receipts@ and the like) is refused with 422 `email_names_no_one`: nobody answers there, so it names no contact.'
         email_type: {type: string, enum: [work, personal, other], default: work}
         is_primary: {type: boolean, default: false}
         position: {type: integer, default: 0}
@@ -9829,7 +9846,7 @@ components:
           format: date-time
           readOnly: true
           description: >-
-            When something last happened with this account: the newest `occurred_at` of a workspace-audience activity linked to it, maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first such activity. Sortable.
+            When something last happened with this account: the newest `occurred_at` at or before now of a workspace-audience activity linked to it, so a booked meeting counts once it starts, maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first such activity. Sortable.
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
         archived_at: {type: [string, 'null'], format: date-time}
@@ -10441,7 +10458,7 @@ components:
         stage_name: {type: [string, 'null']}
         amount: {$ref: '#/components/schemas/Money'}
         expected_close_date: {type: [string, 'null'], format: date}
-        stalled: {type: boolean, description: No linked activity inside the 60-day stall window.}
+        stalled: {type: boolean, description: 'No linked activity inside the 60-day stall window, and no booked meeting ahead.'}
         attention: {$ref: '#/components/schemas/Company360WorkAttention'}
     Company360ProjectPhase:
       type: string
@@ -13194,8 +13211,8 @@ components:
         close_date_provisional: {type: boolean, readOnly: true, description: 'True while the close date is a machine-computed replacement awaiting human confirmation; a provisional deal stays out of Commit/Best-case. Cleared when a human sets the date.'}
         wait_until: {type: [string, 'null'], format: date, description: "'Customer asked us to wait until' date; suppresses the stalled flag but not the overdue close-date flag."}
         closed_at: {type: [string, 'null'], format: date-time}
-        last_activity_at: {type: [string, 'null'], format: date-time, description: 'Drives the deterministic stalled flag. Counts workspace-audience activities only, so a deal whose only recent mail is limited to its participants reads as stalled.'}
-        stalled: {type: boolean, readOnly: true, description: Derived — no activity past the threshold (absolute duration).}
+        last_activity_at: {type: [string, 'null'], format: date-time, description: 'The newest `occurred_at` at or before now of a workspace-audience activity filed under the deal, so a booked meeting counts once it starts. Drives the deterministic stalled flag. Counts workspace-audience activities only, so a deal whose only recent mail is limited to its participants reads as stalled.'}
+        stalled: {type: boolean, readOnly: true, description: 'Derived — no activity past the threshold (absolute duration). A booked workspace-audience meeting ahead keeps the deal off stalled until it starts or is called off.'}
         last_email:
           allOf: [{$ref: '#/components/schemas/DealLastEmail'}]
           nullable: true
@@ -15561,7 +15578,7 @@ components:
           enum: [within_target, at_risk, breached]
           readOnly: true
           description: 'Derived from sla_deadline_at and first_response_at; null once responded or on a terminal lead. Orders the work queue above score.'
-        last_activity_at: {type: [string, 'null'], format: date-time, readOnly: true, description: 'Most recent activity linked to this lead — the "last touch" a work queue row shows.'}
+        last_activity_at: {type: [string, 'null'], format: date-time, readOnly: true, description: 'Most recent activity at or before now linked to this lead — the "last touch" a work queue row shows.'}
         open_task_count: {type: [integer, 'null'], readOnly: true, description: 'Open `kind=task` activities linked to this lead; the derived next step is the earliest of them.'}
         next_task_subject: {type: [string, 'null'], readOnly: true, description: 'Subject of the earliest open task linked to this lead.'}
         next_task_due_at: {type: [string, 'null'], format: date-time, readOnly: true, description: 'Due time of the earliest open task linked to this lead; undated tasks follow dated ones.'}
@@ -17740,6 +17757,10 @@ components:
           description: >-
             `invited` is a seat that exists and has never been entered: the member holds a licensed seat and appears in the roster, but has set no password and can sign in by no method until they redeem their invitation link. Redeeming it makes them `active`, which is the only status that may sign in.
         is_agent: {type: boolean, default: false, description: First-party Agent Runner identity vs a human seat.}
+        assignable:
+          type: boolean
+          description: >-
+            Whether the CALLER may make this member the owner of a record right now: the same check an owner change runs (an active human seat that can write, inside the caller's own write scope), so a picker built on it offers only owners the write will accept. Present on `listUsers`; absent means not computed, and a client then offers the member and lets the write decide. A deactivated member is listed with `false` on the management view, so a list can still be filtered by the work they left behind.
         roles:
           type: array
           items: {type: string}
@@ -17754,9 +17775,9 @@ components:
           type: array
           items:
             type: string
-            enum: [change_role, issue_password_link, deactivate, reactivate]
+            enum: [change_role, issue_password_link, remove_mfa, deactivate, reactivate, hand_over]
           description: >-
-            The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, and whether this installation can build a set-password link. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer.
+            The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer.
         last_active_at:
           type: [string, 'null']
           format: date-time
@@ -19110,7 +19131,7 @@ components:
           type: boolean
           readOnly: true
           description: >-
-            For a pending commitment, whether its named task assignee cannot receive the task. True for invited, deactivated, archived, missing, or agent seats. Absent for an unassigned proposal. This is current decision context, not a change to the staged assignee.
+            For a pending commitment, whether its named task assignee cannot receive the task. True for deactivated, archived, missing, or agent seats. An invited colleague can. Absent for an unassigned proposal. This is current decision context, not a change to the staged assignee.
         requested_decider_id:
           type: string
           format: uuid
@@ -19178,7 +19199,8 @@ components:
         edited_payload:
           type: object
           additionalProperties: true
-          description: Optional edits — the edited payload is re-admitted, then it executes (edit-then-send).
+          description: >-
+            Optional edits — the edited payload is re-admitted, then it executes (edit-then-send). It replaces the whole staged change. A `linkedin_match` card takes only one kind of edit, the two boxes a member ticks in the app: `use_as_title` and `use_as_employer`, each a boolean the staged change already carries. Every other member must stay as staged. An agent never sends an edited payload.
         reason:
           type: string
           description: Why, in the approver's own words. Recorded with the decision, as a rejection's reason is.
@@ -19435,7 +19457,7 @@ components:
         default_tax_rate: {type: [number, 'null'], format: double, minimum: 0, description: Percent; defaults to 0.}
         active: {type: [boolean, 'null'], description: Defaults to true.}
         source: {type: string}
-      additionalProperties: true
+      additionalProperties: false
     UpdateProductRequest:
       type: object
       description: Any subset; omit a field to leave it unchanged. A price change never re-prices existing offer lines (they hold snapshots).
@@ -19450,7 +19472,7 @@ components:
         currency: {type: string, pattern: '^[A-Z]{3}$'}
         default_tax_rate: {type: number, format: double, minimum: 0}
         active: {type: boolean}
-      additionalProperties: true
+      additionalProperties: false
     DealRoomState:
       type: string
       description: |-
@@ -19885,7 +19907,7 @@ components:
           type: [array, 'null']
           items: {$ref: '#/components/schemas/OfferLineItemInput'}
         source: {type: string}
-      additionalProperties: true
+      additionalProperties: false
     UpdateOfferRequest:
       type: object
       description: Header-field patch; allowed only while status=draft (422 offer_not_draft otherwise). Totals are derived and not settable (422).
@@ -19905,7 +19927,7 @@ components:
         template_id: {type: [string, 'null'], format: uuid}
         intro_text: {type: [string, 'null']}
         terms_text: {type: [string, 'null']}
-      additionalProperties: true
+      additionalProperties: false
     MorningBrief:
       type: object
       description: |-

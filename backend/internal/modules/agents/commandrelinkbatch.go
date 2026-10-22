@@ -128,8 +128,9 @@ type relinkActivitiesResolver struct {
 // theirs to be shown by name.
 func (r *relinkActivitiesResolver) Subject(ctx context.Context, cmd RelinkActivitiesCommand) (StageInfo, error) {
 	said := summaryIn(ctx, r.language)
-	return destinationSubject(ctx, &r.destination, cmd.EntityType, cmd.EntityID,
-		fmt.Sprintf(said.relinkActivities, len(cmd.ActivityIDs), said.noun(cmd.EntityType), cmd.EntityID))
+	return destinationSubject(ctx, &r.destination, cmd.EntityType, cmd.EntityID, func(label string) string {
+		return fmt.Sprintf(said.relinkActivities, len(cmd.ActivityIDs), said.noun(cmd.EntityType), label)
+	})
 }
 
 // Guards refuses the destination vocabulary, an empty or oversized set — the
@@ -159,8 +160,9 @@ func destinationRecord(records datasource.SystemOfRecordProvider, entityType str
 }
 
 // destinationSubject is the one spelling of a batch card's subject: the
-// destination's type and id, its version as read, and the sentence.
-func destinationSubject(ctx context.Context, destination *anchoredRecord, entityType string, entityID ids.UUID, summary string) (StageInfo, error) {
+// destination's type and id, its version as read, and the sentence. The
+// sentence names the destination by its label.
+func destinationSubject(ctx context.Context, destination *anchoredRecord, entityType string, entityID ids.UUID, summary func(label string) string) (StageInfo, error) {
 	rec, err := destination.row(ctx, entityID)
 	if err != nil {
 		return StageInfo{}, err
@@ -169,6 +171,6 @@ func destinationSubject(ctx context.Context, destination *anchoredRecord, entity
 		TargetType:    entityType,
 		TargetID:      entityID,
 		TargetVersion: &rec.Version,
-		Summary:       summary,
+		Summary:       summary(recordLabel(rec)),
 	}, nil
 }

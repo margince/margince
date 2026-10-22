@@ -72,8 +72,8 @@ export function VerdictLine({
           {t(`worklist.verdict.${verdict.standing}` as const)}
         </Badge>
       )}
-      <span>{t("worklist.verdict.believes")}</span>
-      <span className="worklist-row-verdict-line">{verdict.line}</span>
+      <span>{t("worklist.verdict.believes")}</span>{" "}
+      <span className="worklist-row-verdict-line">{verdict.line}</span>{" "}
       {asOfText(verdict, t, locale, zone)}
     </p>
   );

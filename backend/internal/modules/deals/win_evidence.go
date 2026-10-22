@@ -31,7 +31,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -185,11 +187,10 @@ func ensureDetailWithinBound(detail *string) error {
 	return nil
 }
 
-// evidenceQuery is the gate's one question, named so a test can read it
-// rather than keeping a second copy that drifts.
-const evidenceQuery = `
-		SELECT EXISTS (
-			SELECT 1
+// signedAgreementFrom is the gate's one question, named so a test can read it.
+// The advance asks it under a lock (evidenceQuery) and the client's read asks
+// it without one (readEvidenceQuery). Both embed this text.
+const signedAgreementFrom = `
 			FROM contract c
 			JOIN attachment a ON a.contract_id = c.id
 			WHERE c.deal_id = $1
@@ -198,8 +199,21 @@ const evidenceQuery = `
 			  AND c.signed_on IS NOT NULL
 			  AND a.archived_at IS NULL
 			  AND a.category IN ('contract', 'legal')
-			  AND a.doc_state IN ('current', 'final')
+			  AND a.doc_state IN ('current', 'final')`
+
+// evidenceQuery is the advance's question: it locks what it finds, because the
+// check and the write share a transaction.
+const evidenceQuery = `
+		SELECT EXISTS (
+			SELECT 1` + signedAgreementFrom + `
 			FOR SHARE OF c, a
+		)`
+
+// readEvidenceQuery is the same question for a reader that writes nothing.
+// It takes no lock, because showing a form must not hold up an archive.
+const readEvidenceQuery = `
+		SELECT EXISTS (
+			SELECT 1` + signedAgreementFrom + `
 		)`
 
 // hasSignedContract asks whether this deal has an agreement a human called
@@ -239,4 +253,29 @@ func hasSignedContract(ctx context.Context, tx pgx.Tx, dealID ids.DealID) (bool,
 		return false, fmt.Errorf("check the deal's signed agreement: %w", err)
 	}
 	return found, nil
+}
+
+// DealWinEvidence answers whether the deal has the signed agreement a win rests
+// on. A client reads it to ask how a win happened before a refusal.
+//
+// Not a gate. The advance asks again under a lock when it runs, so an agreement
+// archived after this answered still ends in a refusal.
+//
+// Deal read is enough. The answer is one yes or no and names no contract, and a
+// deal writer learns the same from the advance's refusal.
+func (s *Store) DealWinEvidence(ctx context.Context, dealID ids.DealID) (bool, error) {
+	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+		return false, err
+	}
+	var signed bool
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		if err := auth.EnsureVisibleLive(ctx, tx, dealTable, dealID.UUID); err != nil {
+			return err
+		}
+		if err := tx.QueryRow(ctx, readEvidenceQuery, dealID).Scan(&signed); err != nil {
+			return fmt.Errorf("read whether the deal has a signed agreement: %w", err)
+		}
+		return nil
+	})
+	return signed, err
 }

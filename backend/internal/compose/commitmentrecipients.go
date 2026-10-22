@@ -108,11 +108,12 @@ func (d *CommitmentDispatcher) reconcileTaskRecipients(ctx context.Context, tx p
 		return CommitmentRemembered, ids.Nil, err
 	}
 	if mutable.IsZero() {
-		proposal := CommitmentTaskProposal{SourceActivityID: c.SourceActivityID, Summary: c.Summary, Party: c.Party, Quote: c.Quote, Locator: c.Locator, SeatID: target.Assignee, ClaimIDs: claims, Body: c.Body, PrivateTo: c.PrivateTo, ExistingTaskID: &target.ID}
-		if target.Assignee != nil {
-			ctx = onBehalfOf(ctx, *target.Assignee)
+		proposal := CommitmentTaskProposal{SourceActivityID: c.SourceActivityID, Summary: c.Summary, Party: c.Party, Quote: c.Quote, Locator: c.Locator, SeatID: target.Assignee, PromiserSeatID: c.Seat, ClaimIDs: claims, Body: c.Body, PrivateTo: c.PrivateTo, ExistingTaskID: &target.ID}
+		asked, _, err := d.pendingProposalAskedOf(ctx, tx, c, &proposal)
+		if err != nil {
+			return CommitmentRemembered, ids.Nil, err
 		}
-		return d.stageCommitmentProposal(ctx, tx, c, proposal, bundleID)
+		return d.stageCommitmentProposal(ctx, tx, c, proposal, bundleID, asked, nil)
 	}
 	for _, claim := range claims {
 		if err := d.claims.SetClaimTaskTx(ctx, tx, claim, target.ID); err != nil {
@@ -148,10 +149,18 @@ func (d *CommitmentDispatcher) reconcilePendingRecipients(ctx context.Context, t
 	if !changed {
 		return CommitmentRemembered, ids.Nil, nil
 	}
-	if proposal.SeatID != nil {
-		ctx = onBehalfOf(ctx, *proposal.SeatID)
+	asked, state, err := d.pendingProposalAskedOf(ctx, tx, c, &proposal)
+	if err != nil {
+		return CommitmentRemembered, ids.Nil, err
 	}
-	return d.stageCommitmentProposal(ctx, tx, c, proposal, bundleID)
+	// Supersession matches only the new decider's rows, so a request still put
+	// to a colleague the promise no longer names is withdrawn here.
+	if held.Decider != nil && *held.Decider != asked {
+		if _, err := d.approval.WithdrawInTx(ctx, tx, held.ID, "the promise's task now belongs to another colleague"); err != nil {
+			return CommitmentRemembered, ids.Nil, err
+		}
+	}
+	return d.stageCommitmentProposal(ctx, tx, c, proposal, bundleID, asked, commitmentWindow(state))
 }
 
 func (d *CommitmentDispatcher) recipientTaskTarget(ctx context.Context, tx pgx.Tx, c Commitment) (activities.CommitmentTaskTarget, ids.UUID, error) {

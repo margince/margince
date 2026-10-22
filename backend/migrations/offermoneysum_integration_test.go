@@ -27,7 +27,7 @@ import (
 const offerRow = `
 	INSERT INTO offer (deal_id, offer_number, currency, source, captured_by,
 	                   net_minor, tax_minor, gross_minor)
-	VALUES (gen_random_uuid(), 'OF-1', 'EUR', 'manual', 'human:test', $1, $2, $3)`
+	VALUES (gen_random_uuid(), 'A-1', 'EUR', 'manual', 'human:test', $1, $2, $3)`
 
 func TestAnOfferGrossIsItsNetPlusTax(t *testing.T) {
 	ownerDSN, _ := dsns(t)

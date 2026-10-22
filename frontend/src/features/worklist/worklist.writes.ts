@@ -2,7 +2,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
-import { throwProblem, unwrap } from "../../lib/problem";
+import { refetchAfterAssignment } from "../../components/taskwritefollowup";
+import { isEntityKind } from "../../lib/entity";
+import { problemCodeOf, throwProblem, unwrap } from "../../lib/problem";
+import { invalidateRecord } from "../../lib/recordwritekeys";
 import type {
   ReopenCondition,
   TeamException,
@@ -27,7 +30,7 @@ export function useReassignTask() {
       version: number | undefined;
       assigneeId: string;
     }) => {
-      unwrap(
+      return unwrap(
         await api.PATCH("/activities/{id}", {
           params: {
             path: { id: input.activityId },
@@ -37,15 +40,12 @@ export function useReassignTask() {
         }),
       );
     },
-    onSuccess: (_data, input) => {
-      // Every scope and owner of this queue, because the task left one rep's
-      // day and arrived in another's. Refetching only the view in front of the
-      // reader would leave the receiving queue stale until something else
-      // invalidates it.
-      queryClient.invalidateQueries({ queryKey: worklistKey });
-      queryClient.invalidateQueries({
-        queryKey: ["activity", input.activityId],
-      });
+    onSuccess: (activity, input) =>
+      refetchAfterAssignment(queryClient, input.activityId, activity),
+    onError: (error, input) => {
+      if (problemCodeOf(error) === "version_skew") {
+        return refetchAfterAssignment(queryClient, input.activityId, undefined);
+      }
     },
   });
 }
@@ -108,6 +108,22 @@ export function useTakeOwnership() {
         // handover that never happened.
         throw new Error(`no owner write for subject ${input.subject.type}`);
       }
+      if (input.subject.type === "activity") {
+        const current = unwrap(
+          await api.GET("/activities/{id}", {
+            params: { path: { id: input.subject.id } },
+          }),
+        );
+        return unwrap(
+          await api.PATCH("/activities/{id}", {
+            params: {
+              path: { id: input.subject.id },
+              ...ifMatch(requireVersion(current.version)),
+            },
+            body: { assignee_id: input.userId },
+          }),
+        );
+      }
       unwrap(
         await api.PATCH(write.path as "/deals/{id}", {
           params: { path: { id: input.subject.id } },
@@ -115,13 +131,25 @@ export function useTakeOwnership() {
         }),
       );
     },
-    onSuccess: () => {
-      // worklistKey alone, which the exceptions read is keyed under
-      // ([...worklistKey, "exceptions"]). This one invalidation reaches the
-      // panel the press was made from as well as every queue. A second call
-      // naming the exceptions key would ask for the same refetch twice, and a
-      // hand-typed key is how the two drift apart.
-      queryClient.invalidateQueries({ queryKey: worklistKey });
+    onError: (error, input) => {
+      if (
+        input.subject.type === "activity" &&
+        problemCodeOf(error) === "version_skew"
+      ) {
+        return refetchAfterAssignment(queryClient, input.subject.id, undefined);
+      }
+    },
+    onSuccess: async (activity, input) => {
+      if (input.subject.type === "activity") {
+        await refetchAfterAssignment(queryClient, input.subject.id, activity);
+        return;
+      }
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: worklistKey }),
+        input.subject.type && isEntityKind(input.subject.type)
+          ? invalidateRecord(queryClient, input.subject.type, input.subject.id)
+          : Promise.resolve(),
+      ]);
     },
   });
 }

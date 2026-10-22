@@ -57,7 +57,10 @@ func (s *Store) PreviewLeadCreationForActor(ctx context.Context, in CreateLeadIn
 	if err != nil {
 		return out, err
 	}
-	custom := storekit.CreateFieldValues(active, in.CustomFields)
+	custom, err := storekit.CreateFieldValues(active, in.CustomFields)
+	if err != nil {
+		return out, err
+	}
 	err = s.txSnapshot(ctx, func(tx pgx.Tx) error {
 		existing, err := replayedLead(ctx, tx, in, active)
 		if err != nil {

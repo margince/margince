@@ -904,7 +904,7 @@ describe("installation-wide cards live off the personal pages", () => {
 
   it("puts the vendor OAuth apps on an installation page, not beside a contact's own connections", () => {
     const hosts = SETTINGS_PAGES.filter((page) =>
-      pageRenders(page.id, "OAuthAppCard"),
+      pageRenders(page.id, "OAuthAppCards"),
     );
     expect(hosts).toHaveLength(1);
     expect(hosts[0]?.scope).toBe("installation");

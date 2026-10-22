@@ -337,6 +337,7 @@ function TestRunBody({
         <ImportRefusal
           title={t("import.map.stageFailed")}
           error={wizard.test.error}
+          keepsDraft
         />
       ) : null}
     </div>

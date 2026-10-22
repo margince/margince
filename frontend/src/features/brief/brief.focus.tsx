@@ -6,9 +6,7 @@
 
 import { useRef } from "react";
 import { Button, Card } from "../../design-system/atoms";
-import { Disclosure } from "../../design-system/disclosure";
 import { Eyebrow } from "../../design-system/eyebrow";
-import { openingCase } from "../../format/collate";
 import {
   formatDayMonth,
   formatNumber,
@@ -18,11 +16,9 @@ import { viewerZone } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
-import { consequenceText } from "../worklist/worklist.connection";
 import {
   briefContextTitle,
   briefSubjectLabel,
-  comparisonText,
   dealFactsText,
   itemTitle,
   phrasedReasons,
@@ -90,23 +86,7 @@ export function Triage({
   const when = arrived
     ? `${formatDayMonth(arrived, locale, zone)}, ${formatTimeOfDay(arrived, locale, zone)}`
     : whenText(lead, t, locale, zone, recordZone, new Date());
-  const weighed = phrasedReasons(lead, when !== null).filter(
-    (reason) => reason.kind !== "pinned",
-  );
-  // The label is the first reason with a figure, else the first weighed:
-  // "Waiting 13 days" says more than "they wrote last". The rest stay on the
-  // queue's row.
-  const strongest = weighed.find((reason) => reason.value) ?? weighed[0];
-  const phrased = strongest ? reasonText(strongest, t, locale, zone) : null;
-  // The reasons are written as fragments of a line ("waiting 13 days"); as a
-  // label one opens a line, and recasing its first letter is the reader's own
-  // locale decision, spelled once in `openingCase`.
-  const label =
-    lead.source === "failed_approval"
-      ? t(eyebrowKeyFor(lead))
-      : phrased
-        ? openingCase(phrased, locale)
-        : t(eyebrowKeyFor(lead));
+  const label = t(eyebrowKeyFor(lead));
   return (
     <div className="brief-triage">
       {/* Keyed by the row, so pressing another one in the list mounts a new
@@ -118,9 +98,6 @@ export function Triage({
         key={identity(lead)}
       >
         <Card as="article" className="brief-triage-lead">
-          {/* Why it is here, whose it is, and when: the strongest reason the
-              ranking weighed, in the warning ink on a row the day put first,
-              then the contact and the moment. */}
           <p className="t-caption brief-triage-lead-head">
             <span
               className={
@@ -152,7 +129,6 @@ export function Triage({
             // where it stands in the day. Each is said once, in its own place.
             framed
           />
-          <WhyFirst item={lead} />
         </Card>
       </div>
       {rows.length > 1 && (
@@ -203,40 +179,6 @@ function QueueEntry({
       </span>
       {line && <span className="t-caption brief-focus-item-line">{line}</span>}
     </button>
-  );
-}
-
-/**
- * The whole case for the row in hand, folded. It holds every reason the
- * ranking weighed, why it beat the row under it, and what doing nothing costs.
- *
- * The same sentences the Worklist's rows print, through the same helpers, so
- * the card and the queue cannot argue one row two ways. Nothing to fold, no
- * fold.
- */
-function WhyFirst({ item }: Readonly<{ item: WorklistItem }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const zone = viewerZone();
-  const lines = [
-    ...phrasedReasons(item, false)
-      .filter((reason) => reason.kind !== "pinned")
-      .map((reason) => reasonText(reason, t, locale, zone)),
-    // A pin is the reader's own order in the queue, not the brief's reason.
-    item.above_next?.comparator === "pin"
-      ? null
-      : comparisonText(item.above_next, t, locale, zone),
-    consequenceText(item, t),
-  ].filter((line): line is string => line !== null && line !== "");
-  if (lines.length === 0) return null;
-  return (
-    <Disclosure className="brief-why" summary={t("brief.first.why")}>
-      <ul className="brief-why-list">
-        {lines.map((line) => (
-          <li key={line}>{line}</li>
-        ))}
-      </ul>
-    </Disclosure>
   );
 }
 

@@ -1291,7 +1291,6 @@ unique
 unit
 unknown
 unless
-unlicensed
 unprivileged
 unready
 unset

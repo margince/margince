@@ -46,7 +46,7 @@ func TestADecisionWaitingReachesTheReceiptThroughTheRealApprovalsEngine(t *testi
 	deal := e.SeedDeal(t, "Weber GmbH — Phase 2", pipeline, open, &e.Rep1)
 
 	queue := approvalsServiceWithEffects(e.Pool)
-	change, hash, err := diffhash.Canonical(json.RawMessage(`{"summary":"Send revised pricing"}`))
+	change, hash, err := diffhash.Canonical(json.RawMessage(`{"summary":"Send revised pricing","seat_id":"` + e.Rep1.String() + `","promiser_seat_id":"` + e.Rep1.String() + `"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -123,7 +123,7 @@ func TestPersonalDecisionScopeAgreesAcrossHomeAndWorklist(t *testing.T) {
 	actor.OnBehalfOf = e.Rep1
 	ctx = principal.WithActor(ctx, actor)
 	requested, err := queue.Stage(ctx, approvals.StageInput{
-		Kind: "commitment_task", ProposedChange: json.RawMessage(`{"summary":"Send pricing"}`),
+		Kind: "commitment_task", ProposedChange: json.RawMessage(`{"summary":"Send pricing","seat_id":"` + e.Rep1.String() + `","promiser_seat_id":"` + e.Rep1.String() + `"}`),
 		DiffHash: "personal-pricing", TargetType: "deal", TargetID: deal, Summary: "Send pricing",
 	})
 	if err != nil {
@@ -145,7 +145,7 @@ func TestPersonalDecisionScopeAgreesAcrossHomeAndWorklist(t *testing.T) {
 		t.Fatal(err)
 	}
 	private, err := queue.Stage(onBehalfOf(background, e.Rep2), approvals.StageInput{
-		Kind: "commitment_task", ProposedChange: json.RawMessage(`{"summary":"Send private pricing"}`),
+		Kind: "commitment_task", ProposedChange: json.RawMessage(`{"summary":"Send private pricing","seat_id":"` + e.Rep2.String() + `","promiser_seat_id":"` + e.Rep2.String() + `"}`),
 		DiffHash: "private-pricing", TargetType: "activity", TargetID: ids.UUID(source.Id), Summary: "Send private pricing",
 		Evidence: []approvals.Evidence{{SourceType: "activity", SourceID: ids.UUID(source.Id), Snippet: "I will send the private pricing."}},
 	})
@@ -186,8 +186,9 @@ func TestPersonalDecisionScopeAgreesAcrossHomeAndWorklist(t *testing.T) {
 			if receipt.Totals.NeedsYou != len(receipt.NeedsYou) {
 				t.Fatalf("Home count %d differs from %d readable decisions", receipt.Totals.NeedsYou, len(receipt.NeedsYou))
 			}
-			if home[shared.String()] || mine[shared.String()] {
-				t.Fatal("general decision authority became personal responsibility")
+			if home[shared.String()] != want || mine[shared.String()] != want {
+				t.Fatalf("a background review staged for the deal's owner: home=%v worklist=%v want=%v",
+					home[shared.String()], mine[shared.String()], want)
 			}
 			for _, scope := range []crmcontracts.GetWorklistParamsScope{"unassigned", "all", "team"} {
 				page := readWorklistHTTP(readCtx, t, feed, crmcontracts.GetWorklistParams{Scope: &scope})
@@ -197,7 +198,8 @@ func TestPersonalDecisionScopeAgreesAcrossHomeAndWorklist(t *testing.T) {
 						listed[row.Id] = true
 					}
 				}
-				if !listed[shared.String()] || listed[requested.String()] != (want && scope != "unassigned") || listed[private.String()] != (privateWanted && scope != "unassigned") {
+				sharedListed := scope == "all" || (scope == "team" && reader != e.AdminUser)
+				if listed[shared.String()] != sharedListed || listed[requested.String()] != (want && scope != "unassigned") || listed[private.String()] != (privateWanted && scope != "unassigned") {
 					t.Fatalf("scope %s has incorrect decision ownership or privacy: %v", scope, listed)
 				}
 				for _, count := range page.Counts {

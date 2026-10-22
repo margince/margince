@@ -68,6 +68,7 @@ vi.mock("@composition/screens", () => ({
     // descriptor lookup is the gate, and an entry here is not one.
     "crm-ghost": () => <Heading size="xlarge">Ghost</Heading>,
   },
+  extensionPanels: {},
 }));
 
 beforeEach(() => {

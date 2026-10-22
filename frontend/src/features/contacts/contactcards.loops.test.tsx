@@ -1,5 +1,7 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import {
@@ -8,6 +10,7 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { ContactClaimReadings, ContactCommitmentsCard } from "./contactcards";
+import { hasOpenCommitments } from "./contactoverview.rows";
 
 type Contact360 = components["schemas"]["Contact360"];
 type ConversationClaim = components["schemas"]["ConversationClaim"];
@@ -133,7 +136,7 @@ describe("the Commitments card's due pill", () => {
 });
 
 describe("the Commitments card's rows", () => {
-  it("prefixes our promise with You and theirs with their first name", () => {
+  it("prefixes our promise with Team and theirs with their first name", () => {
     renderCard(
       viewWith([
         claim(),
@@ -145,7 +148,7 @@ describe("the Commitments card's rows", () => {
       ]),
     );
     expect(
-      screen.getAllByText("You: Send the pilot quote").length,
+      screen.getAllByText("Team: Send the pilot quote").length,
     ).toBeGreaterThan(0);
     expect(
       screen.getAllByText("Dana: confirm the attendees").length,
@@ -266,5 +269,44 @@ describe("the claim readings on the Research tab", () => {
       </StoryProviders>,
     );
     expect(container.querySelector(".panel")).toBeNull();
+  });
+});
+
+describe("responsibility and historical conversation findings", () => {
+  it("does not assign a team claim to the reader", () => {
+    renderDue(null);
+    expect(
+      screen.getByRole("checkbox", { name: "Team: Send the pilot quote" }),
+    ).toBeVisible();
+    expect(screen.queryByText(/You: Send the pilot quote/)).toBeNull();
+  });
+
+  it("keeps an unverified old finding out of open obligations while retaining its source", async () => {
+    const user = userEvent.setup();
+    const old = claim({ due_at: "2024-07-08T09:00:00Z" });
+    old.needs_review = true;
+    old.occurred_at = "2024-07-05T09:00:00Z";
+    old.source_label = "Rollout planning";
+    const view = viewWith([old]);
+    expect(hasOpenCommitments(view)).toBe(false);
+    render(
+      <StoryProviders>
+        <ContactCommitmentsCard
+          view={view}
+          firstName="Dana"
+          onAllTasks={() => undefined}
+        />
+      </StoryProviders>,
+    );
+    expect(
+      screen.queryByRole("checkbox", { name: /Send the pilot quote/ }),
+    ).toBeNull();
+    expect(screen.queryByText(/overdue/)).toBeNull();
+    await user.click(screen.getByText("Review conversation findings"));
+    expect(screen.getByText("Send the pilot quote")).toBeVisible();
+    expect(screen.getByText(/Rollout planning/)).toBeVisible();
+    expect(screen.getByText(/I'll send the quote on Monday/)).toBeVisible();
+    expect(screen.queryByText(/You: Send the pilot quote/)).toBeNull();
+    expect(screen.queryByText(/overdue/)).toBeNull();
   });
 });

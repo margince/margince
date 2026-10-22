@@ -37,9 +37,8 @@ type UpdateProjectInput struct {
 	TargetEndDate *time.Time
 	EndedAt       *time.Time
 	IfVersion     *int64
-	// CustomFields carries the request body's extra top-level keys
-	// (additionalProperties); only active cf_* catalog columns land,
-	// drop-on-mismatch (storekit customcolumns).
+	// CustomFields carries the request body's cf_* keys. A key no active catalog
+	// column takes is refused (storekit.CheckCustomValues).
 	CustomFields map[string]any
 }
 
@@ -78,7 +77,13 @@ func (s *Store) UpdateProject(ctx context.Context, id ids.ProjectID, in UpdatePr
 		if err != nil {
 			return err
 		}
-		storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties)
+		// A stale version answers 409 before a refused custom field answers 422.
+		if err := storekit.EnsureIfMatch(ctx, tx, projectObject, id.UUID, in.IfVersion); err != nil {
+			return err
+		}
+		if err := storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties); err != nil {
+			return err
+		}
 		if p.Empty() {
 			if err := storekit.EnsureIfMatch(ctx, tx, projectObject, id.UUID, in.IfVersion); err != nil {
 				return err

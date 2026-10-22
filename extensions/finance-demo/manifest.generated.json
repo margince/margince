@@ -7,5 +7,16 @@
     {
       "provider": "offline_demo"
     }
+  ],
+  "oauth_apps": [
+    {
+      "provider": "offline_demo",
+      "title": "Demo accounting sign-in (example only, cannot connect)",
+      "auth_url": "https://auth.ledger.example/authorize",
+      "token_url": "https://auth.ledger.example/token",
+      "scopes": [
+        "ledger.read"
+      ]
+    }
   ]
 }

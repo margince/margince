@@ -169,7 +169,7 @@ func timelineNarrowings(in ListActivitiesInput, arg func(any) int) []string {
 	if in.UnhostedMeetings {
 		where = append(where, "a.kind = 'meeting' AND a.host_user_id IS NULL")
 	}
-	if clause := openTaskAssigneeClause(in.AssigneeID, arg); clause != "" {
+	if clause := openTaskAssigneeClause(in.AssigneeID, in.TaskAsOf, in.mailIdentities, arg); clause != "" {
 		where = append(where, clause)
 	}
 	return append(where, openTaskWindowClauses(in, arg)...)

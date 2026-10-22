@@ -137,7 +137,11 @@ func (s *Service) AssembleScoped(ctx context.Context, companyID ids.CompanyID, o
 		if err := opts.admit(ctx, tx, companyID, &out); err != nil {
 			return err
 		}
-		return s.sections(ctx, tx, companyID, now, opts, activityColumns, &out)
+		prepared, err := storekit.WithMailSeatIdentitySnapshot(ctx, tx)
+		if err != nil {
+			return err
+		}
+		return s.sections(prepared, tx, companyID, now, opts, activityColumns, &out)
 	})
 	if err != nil {
 		return crmcontracts.Company360{}, err

@@ -1,13 +1,24 @@
 /* The attachment shelf and the picker behind its paperclip. */
 
-/* What the message carries, under the words it is about. Drawn only when
-   there IS something — the paperclip that fills it lives in the editor's
-   footer, so the way in does not depend on this row existing. */
+/* What the message carries, as a row of file cards above the foot. Drawn
+   only when there IS something; the paperclip that fills it lives in the
+   foot, so the way in does not depend on this row existing. */
 .compose-files {
+  flex: none;
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
   flex-wrap: wrap;
+  padding: var(--space-2) var(--space-4);
+  border-top: 1px solid var(--borderSubtle);
+}
+.compose-file {
+  display: inline-flex;
+  align-items: center;
+  max-inline-size: 100%;
+}
+.compose-files-total {
+  margin-inline-start: auto;
 }
 
 /* The picker sits inside a popover, so it owns its own width: wide enough that
@@ -38,6 +49,13 @@
   inline-size: 100%;
   justify-content: space-between;
   gap: var(--space-3);
+}
+.compose-files-row[aria-pressed="true"] {
+  background: var(--bgInset);
+}
+.compose-files-row > svg {
+  flex: none;
+  color: var(--accentText);
 }
 .compose-files-name {
   overflow: hidden;

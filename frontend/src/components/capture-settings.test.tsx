@@ -37,6 +37,7 @@ const SETTINGS = {
   auto_enrich_daily_cap: 500,
   site_read: { max_pages: 60, max_mib: 32, wall_seconds: 240 },
   mail_sync_interval_seconds: 120,
+  confidentiality_pass_cap: 40,
 };
 
 // backendFor answers /me with the given grants and /capture/settings with the

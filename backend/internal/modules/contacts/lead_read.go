@@ -44,17 +44,24 @@ const leadSourceLabelSQL = `(SELECT s.label FROM lead_source s WHERE s.key = lea
 // leadNextTaskDueSQL is when the next open task a reader may open falls due —
 // the deadline the Next task column prints, taking the audience for the reason
 // the pair beside it does.
-var leadTaskWorkSQL = " AND " + auth.LiveIntakeTaskClause("a")
+func leadTaskWorkSQL(ctx context.Context, arg func(any) int) (string, error) {
+	identities, err := leadTaskIdentitiesSQL(ctx, arg)
+	if err != nil {
+		return "", err
+	}
+	return " AND " + auth.LiveIntakeTaskClause("a") + " AND " + storekit.CurrentTaskClause("a", slaNow(ctx), identities, arg), nil
+}
 
-var leadNextTaskDueSQL = `(SELECT a.due_at FROM activity_link l JOIN activity a ON a.id = l.activity_id
-	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done ` + leadTaskWorkSQL + `
+func leadNextTaskDueSQL(work string) string {
+	return `(SELECT a.due_at FROM activity_link l JOIN activity a ON a.id = l.activity_id
+	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done ` + work + `
 	     AND a.audience = 'workspace'
 	   ORDER BY a.due_at NULLS LAST, a.created_at, a.id LIMIT 1)`
+}
 
-// leadLastActivitySQL is the last-touch clock, excluding system remediation and
-// called-off meetings for the same reason last_activity_of_contact does: work
-// the product files ABOUT a lead, or a meeting that did not happen, is not the
-// lead engaging.
+// leadLastActivitySQL is the last-touch clock. Like last_activity_of_contact, it
+// leaves out system remediation, called-off meetings and what has not happened
+// yet: none of it is the lead engaging.
 //
 // The row that PRINTS it and the expression that ORDERS BY it read this, so a
 // reader sees the instant the list was arranged by rather than a second reading
@@ -62,10 +69,15 @@ var leadNextTaskDueSQL = `(SELECT a.due_at FROM activity_link l JOIN activity a 
 func leadLastActivitySQL() string {
 	return `(SELECT max(a.occurred_at) FROM activity_link l JOIN activity a ON a.id = l.activity_id
 	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL
-	     AND ` + relstrength.NotCalledOffSQL("a") + auth.OriginIsEngagement("a") + `)`
+	     AND ` + relstrength.LastActivityCountsSQL("a", "now()") + auth.OriginIsEngagement("a") + `)`
 }
 
-var leadColumns = `id, full_name, email, phone, title, company_name, candidate_company_key,
+func leadColumns(ctx context.Context, arg func(any) int) (string, error) {
+	work, err := leadTaskWorkSQL(ctx, arg)
+	if err != nil {
+		return "", err
+	}
+	return `id, full_name, email, phone, title, company_name, candidate_company_key,
 	linkedin_url, status, score, score_override_reason, score_computed, owner_id, project_id, source_system, source_id,
 	promoted_contact_id, promoted_at, merged_into_id, from_contact_id, source, captured_by,
 	source_author_id, source_author_name,
@@ -89,7 +101,7 @@ var leadColumns = `id, full_name, email, phone, title, company_name, candidate_c
 	                WHEN a.kind = 'meeting' THEN 1 ELSE 2 END, a.occurred_at DESC, a.id LIMIT 1),
 	` + leadLastActivitySQL() + `,
 	(SELECT count(*) FROM activity_link l JOIN activity a ON a.id = l.activity_id
-	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done ` + leadTaskWorkSQL + `),
+	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done ` + work + `),
 	-- The next open task, as the pair it is: its title and its deadline
 	-- describe ONE task, so they select one row. The subject is content and
 	-- the due date is a marker, but splitting them by that distinction would
@@ -102,10 +114,10 @@ var leadColumns = `id, full_name, email, phone, title, company_name, candidate_c
 	-- actually open. The count and the max beside them are aggregate markers
 	-- over all tasks and owe nothing.
 	(SELECT a.subject FROM activity_link l JOIN activity a ON a.id = l.activity_id
-	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done ` + leadTaskWorkSQL + `
+	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done ` + work + `
 	     AND a.audience = 'workspace'
 	   ORDER BY a.due_at NULLS LAST, a.created_at, a.id LIMIT 1),
-	` + leadNextTaskDueSQL + `,
+	` + leadNextTaskDueSQL(work) + `,
 	(SELECT factor.value->>'factor'
 	   FROM LATERAL (
 	     SELECT factors FROM lead_score_history
@@ -121,13 +133,25 @@ var leadColumns = `id, full_name, email, phone, title, company_name, candidate_c
 	                    THEN (factor.value->>'points')::numeric END) DESC,
 	           factor.position
 	  LIMIT 1),
-	legal_hold, ` + leadHasInboundSQL
+	legal_hold, ` + leadHasInboundSQL, nil
+}
 
 // readLead resolves one lead row; active names the custom-field columns
 // to carry alongside the core ones — nil for internal decision reads whose
 // result never reaches the wire.
 func readLead(ctx context.Context, tx pgx.Tx, id ids.LeadID, archived storekit.ArchivedFilter, active []fieldcatalog.Column) (crmcontracts.Lead, error) {
-	q := `SELECT ` + leadColumns + storekit.SelectSuffix(active) + ` FROM lead WHERE id = $1`
+	var err error
+	ctx, err = withLeadTaskIdentities(ctx, tx)
+	if err != nil {
+		return crmcontracts.Lead{}, err
+	}
+	args := []any{id}
+	arg := func(value any) int { args = append(args, value); return len(args) }
+	columns, err := leadColumns(ctx, arg)
+	if err != nil {
+		return crmcontracts.Lead{}, err
+	}
+	q := `SELECT ` + columns + storekit.SelectSuffix(active) + ` FROM lead WHERE id = $1`
 	if archived == storekit.LiveOnly {
 		q += liveOnlyClause
 	}
@@ -135,7 +159,7 @@ func readLead(ctx context.Context, tx pgx.Tx, id ids.LeadID, archived storekit.A
 	if err != nil {
 		return crmcontracts.Lead{}, err
 	}
-	l, err := scanLead(tx.QueryRow(ctx, q, id), active, policy)
+	l, err := scanLead(tx.QueryRow(ctx, q, args...), active, policy)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return crmcontracts.Lead{}, apperrors.ErrNotFound
 	}

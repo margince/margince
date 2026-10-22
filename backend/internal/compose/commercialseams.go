@@ -58,6 +58,7 @@ func commitmentLister(pool *pgxpool.Pool) agents.CommitmentLister {
 		// be told nothing was cut.
 		asked := agents.CommitmentSweepLimit(in.Limit)
 		query := activities.ListOpenTasksInput{
+			AsOf:       now,
 			AssigneeID: in.AssigneeID, Limit: asked,
 			// The bound cuts before the merge does, so the store has to keep
 			// the promise the ranking is about rather than the oldest ones.

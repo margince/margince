@@ -62,6 +62,9 @@ func (s *Service) worklistIn(
 	// Resolved BEFORE the day is read: a reader asking for a scope they do not
 	// hold gets a refusal rather than a page assembled and then narrowed, and
 	// the read they were never entitled to make is not made.
+	if !owner.IsZero() && owner == readerOf(ctx) {
+		scope = scopeMine
+	}
 	resolved, err := resolveScope(ctx, scope)
 	if err != nil {
 		return crmcontracts.Worklist{}, err
@@ -176,11 +179,11 @@ func (s *Service) worklistIn(
 	out.ScopeOptions = scopeOptions(scopeOptionsFor(ctx))
 	teamWeek := teamWeekFor(ctx)
 	out.TeamWeek = &teamWeek
-	if err := reader.nameWorklistRows(ctx, out.Queue, beside.night.findings); err != nil {
+	if err := withPins.nameWorklistRows(ctx, out.Queue, beside.night.findings); err != nil {
 		return crmcontracts.Worklist{}, err
 	}
 	if out.Focus != nil {
-		if err := reader.nameWorklistRows(ctx, out.Focus.Items, beside.night.findings); err != nil {
+		if err := withPins.nameWorklistRows(ctx, out.Focus.Items, beside.night.findings); err != nil {
 			return crmcontracts.Worklist{}, err
 		}
 	}

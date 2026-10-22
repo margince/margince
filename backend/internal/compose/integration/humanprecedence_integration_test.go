@@ -102,17 +102,12 @@ func TestEndToEnd_humanEditPrecedenceOnAgentUpdate(t *testing.T) {
 	}
 }
 
-// A differently-cased field key cannot slip a human-owned overwrite
-// through the 🟢 path. The precedence probe matches audit keys
-// case-sensitively (jsonb), so it clears `{"FULL_NAME":…}` as touching no
-// human-owned field. The store is the backstop: every record object's
-// generated request decoder matches its known fields by EXACT key, so a
-// case-variant never binds to the core column via encoding/json's
-// case-insensitive fallback — it lands in the additionalProperties
-// catch-all and is dropped as a non-catalog custom key. The write is a
-// no-op (200), and the human value is left intact. Lead is exercised here
-// because it was the last object to gain the catch-all (custom fields on
-// records); the protection is now uniform across contact/company/deal/lead.
+// A differently-cased field key cannot slip a human-owned overwrite through the
+// green path. The precedence probe matches audit keys case-sensitively, so it
+// would clear `{"FULL_NAME":…}` as touching no human-owned field. Every record
+// request decoder matches its known fields by exact key and refuses any other
+// key that is no cf_ key. The patch answers 422 and the human value stands. Lead
+// is exercised here because it was the last object to take custom fields.
 func TestEndToEnd_caseVariantKeyCannotBypassPrecedence(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
@@ -133,13 +128,16 @@ func TestEndToEnd_caseVariantKeyCannotBypassPrecedence(t *testing.T) {
 	}
 	bearer := map[string]string{"Authorization": "Bearer " + minted.Token}
 
-	// The case-variant key binds to no known field (exact-key decode) and no
-	// active custom column, so it drops to an empty patch: 200, no write.
+	// The case-variant key binds to no known field (exact-key decode) and is no
+	// cf_ key, so it is refused by name and nothing is written.
+	if status := e.Call(t, "PATCH", "/v1/leads/"+lead.ID, AnyMap{"FULL_NAME": "Otto Machine"}, bearer, nil); status != 422 {
+		t.Fatalf("case-variant patch → %d, want 422 (refused, not written)", status)
+	}
 	var patched struct {
 		FullName string `json:"full_name"`
 	}
-	if status := e.Call(t, "PATCH", "/v1/leads/"+lead.ID, AnyMap{"FULL_NAME": "Otto Machine"}, bearer, &patched); status != 200 {
-		t.Fatalf("case-variant patch → %d, want 200 (dropped, not written)", status)
+	if status := e.Call(t, "GET", "/v1/leads/"+lead.ID, nil, nil, &patched); status != 200 {
+		t.Fatalf("read the lead → %d", status)
 	}
 	if patched.FullName != "Otto Human" {
 		t.Fatalf("case-variant key must not overwrite the human value: got %q", patched.FullName)

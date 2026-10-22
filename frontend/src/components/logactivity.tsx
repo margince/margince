@@ -56,6 +56,7 @@ import {
   useReportUnattached,
 } from "./logactivityfiles";
 import { MeetingAttendeeFields } from "./meetingattendees";
+import { useUnsavedGuard } from "./unsaved";
 
 // Meetings arrive through the calendar rather than a preselected form address.
 type OpeningKind = "note" | "task" | "call";
@@ -164,6 +165,9 @@ export function LogActivityForm({
       onLogged?.();
     },
   });
+
+  // The words are the work a reader would retype; the kind and day are a pick.
+  useUnsavedGuard(draft.subject.trim() !== "" || draft.body.trim() !== "");
 
   // Enter in a field submits past the Save button, so the form is latched too.
   const singlePress = useSinglePress(log.isPending);

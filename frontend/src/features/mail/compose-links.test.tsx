@@ -12,6 +12,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { writeMessage } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
+import { draftButton } from "../../testing/composedraft.testkit";
 import {
   allowedPreview,
   isPreviewDoor,
@@ -215,11 +216,18 @@ describe("what a sent message files under", () => {
       />,
     );
 
-    await screen.findByLabelText("Project");
+    // The picker holds its place from the start; it opens once the record's
+    // projects have arrived.
+    await waitFor(() =>
+      expect(screen.getByLabelText("Project").hasAttribute("disabled")).toBe(
+        false,
+      ),
+    );
+    await screen.findByLabelText("Related to");
     await pickBy("Related to", "Acme Renewal");
     await pickBy("Project", "ERP-27 · ERP rollout");
-    // The choice is visible, and so is what it does to the draft.
-    expect(screen.getByText("Scoped to ERP-27")).toBeTruthy();
+    // The choice is visible in the head, and so is its tag in the subject.
+    expect(screen.getByLabelText("Project").textContent).toContain("ERP-27");
     await fillBody();
     await pickBy("Reason for contact", "Active deal");
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
@@ -258,9 +266,7 @@ describe("what a sent message files under", () => {
 
     await screen.findByLabelText("Project");
     await pickBy("Project", "ERP-27 · ERP rollout");
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
 
     await waitFor(() =>
       expect(
@@ -312,7 +318,9 @@ describe("what a sent message files under", () => {
       />,
     );
 
-    expect(await screen.findByText("Scoped to ERP-27")).toBeTruthy();
+    await waitFor(() =>
+      expect(screen.getByLabelText("Project").textContent).toContain("ERP-27"),
+    );
     await fillBody();
     await pickBy("Reason for contact", "Active deal");
     await userEvent.click(screen.getByRole("button", { name: "Send" }));

@@ -21,7 +21,7 @@ import { AgentUsageByUserCard } from "../automations/agentusage";
 import { AutomationsAdmin } from "../automations/automations";
 import { ExtensionAccessCard } from "../automations/extension-access";
 import { ExtensionUnitsCard } from "../automations/extension-units";
-import { OAuthAppCard } from "../automations/oauth-app";
+import { OAuthAppCards } from "../automations/oauth-app";
 import { OvernightGrantCard } from "../automations/overnight-grant";
 import { MeetingSettings } from "../booking/meeting-settings";
 import { BriefDeliveryPanel } from "../brief/briefdelivery";
@@ -157,8 +157,7 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
       return (
         <>
           <SignInMethodsCard />
-          <OAuthAppCard provider="google" />
-          <OAuthAppCard provider="microsoft" />
+          <OAuthAppCards />
         </>
       );
 

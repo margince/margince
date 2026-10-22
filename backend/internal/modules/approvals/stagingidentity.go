@@ -292,9 +292,10 @@ func (s *Service) RejectedChangesForTx(ctx context.Context, tx pgx.Tx, kind stri
 
 // Offer is one proposal of a kind against a target, as staged.
 type Offer struct {
-	ID     ids.ApprovalID
-	Status string
-	Change json.RawMessage
+	ID      ids.ApprovalID
+	Status  string
+	Change  json.RawMessage
+	Decider *ids.UUID
 }
 
 // Pending reports whether the offer still waits for a human. An offer past its
@@ -323,7 +324,7 @@ func readOffersAtTx(ctx context.Context, tx pgx.Tx, kind string, targetID ids.UU
 			return nil, err
 		}
 	}
-	query := `SELECT id, status, proposed_change, expires_at FROM approval
+	query := `SELECT id, status, proposed_change, expires_at, requested_decider_id FROM approval
  WHERE kind = @kind AND target_entity_id = @target ` + lockOrder
 	if forDecision {
 		query += " FOR UPDATE"
@@ -337,10 +338,10 @@ func readOffersAtTx(ctx context.Context, tx pgx.Tx, kind string, targetID ids.UU
 	var out []Offer
 	for rows.Next() {
 		held := row{Kind: kind}
-		if err := rows.Scan(&held.ID, &held.Status, &held.ProposedChange, &held.ExpiresAt); err != nil {
+		if err := rows.Scan(&held.ID, &held.Status, &held.ProposedChange, &held.ExpiresAt, &held.RequestedDecider); err != nil {
 			return nil, fmt.Errorf("read the offers for this proposal: %w", err)
 		}
-		out = append(out, Offer{ID: held.ID, Status: held.effectiveStatus(now), Change: held.ProposedChange})
+		out = append(out, Offer{ID: held.ID, Status: held.effectiveStatus(now), Change: held.ProposedChange, Decider: held.RequestedDecider})
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("read the offers for this proposal: %w", err)
@@ -420,7 +421,7 @@ func (s *Service) prepareUnlessDeclined(ctx context.Context, in StageInput) (Sta
 		}
 		in.Identity = canonical
 	}
-	if err := stagerIsAttributable(ctx); err != nil {
+	if err := stagerIsAttributable(ctx, in); err != nil {
 		return StageInput{}, err
 	}
 	return in, nil

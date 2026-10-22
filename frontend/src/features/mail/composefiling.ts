@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { useRoster } from "../../components/entityref";
 import {
   liveProjects,
   type PickableProject,
@@ -147,6 +148,30 @@ function useProjectFiling(input: {
   return { projectId, setProjectId: setPicked };
 }
 
+/**
+ * The contact an address belongs to, read off the two 360s the composer already
+ * holds. Addresses compare case-blind, the way a mailbox does. An address
+ * neither names is no contact the composer can record anything on.
+ */
+export function contactsByAddress(
+  contact: ReturnType<typeof useContact360>["data"],
+  company: ReturnType<typeof useCompany360>["data"],
+): (address: string) => string | undefined {
+  const owners = new Map<string, string>();
+  const own = (address: string | null | undefined, contactId: string) => {
+    const key = address?.trim().toLowerCase();
+    if (key && !owners.has(key)) owners.set(key, contactId);
+  };
+  const subject = contact?.contact;
+  for (const address of subject?.emails ?? []) {
+    if (subject) own(address.email, subject.id);
+  }
+  for (const member of company?.contacts?.data ?? []) {
+    own(member.primary_email, member.contact_id);
+  }
+  return (address) => owners.get(address.trim().toLowerCase());
+}
+
 // Which projects a message may file under, per record kind: a contact's own,
 // a project itself, and otherwise the account's.
 function reachableFrom(
@@ -200,6 +225,7 @@ export function useComposeRecords({
     recipientContact ?? "",
     open && recipientContact != null,
   );
+  const colleagues = useRoster("user", open && !isChannelReply);
   const anchorProject = useAnchorProject(entityType, entityId);
   // A project page's message is about that project, read as a record so the
   // picker names it the way the page does.
@@ -229,13 +255,24 @@ export function useComposeRecords({
     open,
   });
   return {
+    // Whose conversations the rail lists, where the page's own read says.
+    recordName:
+      entityType === "contact"
+        ? contact.data?.contact?.full_name
+        : anchorCompany.data?.company?.display_name,
+    contactOf: contactsByAddress(contact.data, anchorCompany.data),
     reachableProjects,
     projectFiling,
     // Addresses known not to arrive, warned under the fields.
     deadRecipients: deadRecipientsAmong(contact.data, [...addressed]),
-    // The contact first, then the account's roster. Both reads already run, so
-    // the offer costs no request and agrees with the page behind it.
-    recipients: recipientSuggestions(contact.data, anchorCompany.data),
+    // The contact first, then the account's roster, then the workspace's
+    // members. The reads already run (the members' cache entry is shared with
+    // the anchor lookup), so the offer costs no request of its own.
+    recipients: recipientSuggestions(
+      contact.data,
+      anchorCompany.data,
+      colleagues.data,
+    ),
   };
 }
 

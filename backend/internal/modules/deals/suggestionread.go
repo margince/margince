@@ -144,8 +144,13 @@ type SuggestionQuery struct {
 	CompanyID  *ids.UUID
 	PipelineID *ids.UUID
 	StageID    *ids.UUID
-	Cursor     string
-	Limit      int
+	// The deal list's owner dials, read against the company's owner, which is
+	// the owner a suggestion carries.
+	OwnerID     *ids.UserID
+	OwnerTeamID *ids.TeamID
+	Unassigned  *bool
+	Cursor      string
+	Limit       int
 }
 
 const (
@@ -199,6 +204,14 @@ func (s *Store) ListSuggestions(ctx context.Context, in SuggestionQuery) ([]Sugg
 		}
 	}
 	query += querySb189.String()
+	ownership, err := storekit.OwnershipClause(in.OwnerID, in.OwnerTeamID, in.Unassigned, arg)
+	if err != nil {
+		return nil, "", err
+	}
+	if ownership != "" {
+		// Unqualified, it names c.owner_id: deal_suggestion has no owner column.
+		query += " AND " + ownership
+	}
 	if in.Cursor != "" {
 		cur, err := storekit.DecodeOpaque[suggestionCursor](in.Cursor)
 		if err != nil || cur.ID.IsZero() {

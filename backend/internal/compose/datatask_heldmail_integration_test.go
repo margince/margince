@@ -179,13 +179,13 @@ func TestHeldMailTaskClosesOnlyProvenHistoryAndReplaysSafely(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		finished := len(progress) > 0
+		finished := 0
 		for _, row := range progress {
-			if !row.AwaitingReview() && row.Status != datatask.Done {
-				finished = false
+			if row.TaskID == tasks[0].ID && row.Status == datatask.Done {
+				finished++
 			}
 		}
-		if finished {
+		if finished == len(tasks[0].Steps) {
 			break
 		}
 		if batch == 99 {

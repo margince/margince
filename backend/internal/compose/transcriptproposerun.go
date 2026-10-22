@@ -261,10 +261,6 @@ func (p *TranscriptProposer) stage(
 	ctx context.Context, tx pgx.Tx, steps []proposedStep,
 	reading activities.TranscriptReading, activityID ids.ActivityID,
 ) (transcriptStaging, error) {
-	ctx, err := transcriptSeat(ctx, tx, reading.Links)
-	if err != nil {
-		return transcriptStaging{}, err
-	}
 	bundleID := ids.NewV7()
 	asOf := p.now()
 	out := transcriptStaging{withheld: make(map[CommitmentOutcome]int)}

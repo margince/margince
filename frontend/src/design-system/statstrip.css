@@ -94,12 +94,12 @@
   block-size: 100%;
 }
 
-/* A pressed slot is the card lit in the accent: its ground takes the accent
- * wash and its edge the accent, which reads as chosen beside its plain
- * neighbours without a ring drawn around the pane. */
+/* A pressed slot is the card on the inset ground with a strong edge, which
+ * reads as chosen beside its plain neighbours without a ring drawn around the
+ * pane, and without the accent that marks the page's action. */
 .stat-strip > [aria-pressed="true"] > .stat-card {
-  background: var(--accentLight);
-  border-color: var(--accentMed);
+  background: var(--bgInset);
+  border-color: var(--borderStrong);
 }
 .stat-strip > *:focus-visible {
   outline: var(--focus-ring);

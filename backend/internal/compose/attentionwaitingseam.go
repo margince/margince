@@ -90,9 +90,9 @@ func (w attentionWaiting) Hidden(
 }
 
 func (w attentionWaiting) Unanswered(
-	ctx context.Context, asOf time.Time,
+	ctx context.Context, asOf time.Time, owner *ids.UUID,
 ) ([]attention.WaitingCustomer, bool, error) {
-	kept, cut, err := w.waitingPages(ctx, asOf)
+	kept, cut, err := w.waitingPages(ctx, asOf, owner)
 	if err != nil {
 		return nil, false, err
 	}
@@ -152,6 +152,7 @@ func (w attentionWaiting) asWaitingCustomers(
 			ConfirmedRequest:  row.OwedVerdict == activities.OwedVerdictAsksUs,
 			ActionUnconfirmed: row.OwedVerdict == "",
 			NonBuyer:          row.CaptureLabel == "noise" || (!row.HasOpenDeal && supplier),
+			DirectRecipients:  row.DirectRecipients,
 			OwnerID:           row.OwnerID,
 			OwnerKnown:        row.OwnerKnown,
 			EarlierRequests:   row.EarlierRequests,
@@ -208,12 +209,18 @@ const waitingRefillRounds = 3
 // only when the LAST page was also full, so a refill that reached the end of
 // the matching rows reports a complete scan rather than inheriting the first
 // page's truncation.
-func (w attentionWaiting) waitingPages(ctx context.Context, asOf time.Time) ([]activities.WaitingReply, bool, error) {
+func (w attentionWaiting) waitingPages(ctx context.Context, asOf time.Time, owner *ids.UUID) ([]activities.WaitingReply, bool, error) {
 	var kept []activities.WaitingReply
-	var before time.Time
+	var before activities.WaitingPosition
 	cut := false
 	for range waitingRefillRounds {
-		rows, err := w.store.WaitingRepliesBefore(ctx, asOf, before)
+		var rows []activities.WaitingReply
+		var err error
+		if owner == nil {
+			rows, err = w.store.WaitingRepliesBefore(ctx, asOf, before)
+		} else {
+			rows, err = w.store.WaitingRepliesForOwnerBefore(ctx, asOf, before, *owner)
+		}
 		if err != nil {
 			return nil, false, err
 		}
@@ -231,7 +238,8 @@ func (w attentionWaiting) waitingPages(ctx context.Context, asOf time.Time) ([]a
 		}
 		// The page is ordered newest first, so the oldest row on it is where
 		// the next page starts.
-		before = rows[len(rows)-1].OccurredAt
+		last := rows[len(rows)-1]
+		before = activities.WaitingPosition{At: last.OccurredAt, ID: last.ActivityID}
 	}
 	// Folded across pages as well as within one: two mails with the same sender
 	// and subject are one conversation whichever page each arrived on, and a

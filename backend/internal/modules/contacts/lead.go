@@ -40,9 +40,8 @@ type CreateLeadInput struct {
 	Source              string
 	// Author is who wrote it in the system it came from; zero when unknown.
 	Author storekit.SourceAuthorInput
-	// CustomFields carries the request body's extra top-level keys
-	// (additionalProperties); only active cf_* catalog columns land,
-	// drop-on-mismatch (customfields.go).
+	// CustomFields carries the request body's cf_* keys. A key no active catalog
+	// column takes is refused (storekit.CheckCustomValues).
 	CustomFields map[string]any
 	// FromContactID names a contact whose identity fills the fields left
 	// out (leadfromcontact.go).
@@ -198,7 +197,10 @@ func insertLeadRow(ctx context.Context, tx pgx.Tx, in CreateLeadInput, active []
 		in.LinkedInURL, in.Status, fit.Score, in.OwnerID, in.ProjectID, in.SourceSystem, in.SourceID, in.Source, by,
 		in.FromContactID, in.Phone,
 	})
-	cfCols, cfHolders, args := storekit.InsertFragments(active, in.CustomFields, base)
+	cfCols, cfHolders, args, err := storekit.InsertFragments(active, in.CustomFields, base)
+	if err != nil {
+		return ids.LeadID{}, err
+	}
 	_, err = tx.Exec(ctx,
 		`INSERT INTO lead (id, full_name, email, title, company_name, candidate_company_key,
 		                   linkedin_url, status, score, owner_id, project_id, source_system, source_id, source, captured_by,
@@ -324,14 +326,23 @@ func (s *Store) FindLeadByLinkedInURL(ctx context.Context, rawURL string) (*crmc
 
 	var out *crmcontracts.Lead
 	err = s.tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		ctx, err = withLeadTaskIdentities(ctx, tx)
+		if err != nil {
+			return err
+		}
 		// A dedupe probe for the capture path — its result is not rendered
 		// with custom fields, so no catalog columns are carried (nil active).
 		policy, err := loadLeadSLAPolicy(ctx, tx, s.bootConfig())
 		if err != nil {
 			return err
 		}
+		columns, err := leadColumns(ctx, arg)
+		if err != nil {
+			return err
+		}
 		l, err := scanLead(tx.QueryRow(ctx,
-			`SELECT `+leadColumns+` FROM lead
+			`SELECT `+columns+` FROM lead
 			 WHERE linkedin_url = $1 AND archived_at IS NULL AND `+scope+`
 			 ORDER BY created_at ASC, id ASC LIMIT 1`, args...), nil, policy)
 		if errors.Is(err, pgx.ErrNoRows) {

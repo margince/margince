@@ -263,6 +263,7 @@ admin can also change under Settings.
 |---|---|---|---|---|---|---|
 | `capture.auto_enrich` | `MARGINCE_CAPTURE_AUTO_ENRICH` | — | `bool`, stored | `true` | api, worker | Read a new contact's company web page automatically. |
 | `capture.auto_enrich_daily_cap` | `MARGINCE_CAPTURE_AUTO_ENRICH_DAILY_CAP` | — | `int`, 1 to 20000, stored | `500` | api, worker | Automatic company web-page reads the installation may start in one UTC day. |
+| `capture.confidentiality_pass_cap` | `MARGINCE_CAPTURE_CONFIDENTIALITY_PASS_CAP` | — | `int`, 1 to 200, stored | `40` | api, worker | Held mail threads one review pass may judge; the rest wait for the next pass. |
 | `capture.freemail_extra` | `MARGINCE_CAPTURE_FREEMAIL_EXTRA` | — | `list<string>` | — | api, worker | Ignored, with a warning at boot; the consumer-mail list is edited under Settings. |
 | `capture.freemail_never` | `MARGINCE_CAPTURE_FREEMAIL_NEVER` | — | `list<string>` | — | api, worker | Ignored, with a warning at boot; the consumer-mail list is edited under Settings. |
 | `capture.mail_sharing` | `MARGINCE_CAPTURE_MAIL_SHARING` | — | `bool`, stored | `true` | api, worker | Let every colleague who can see a contact read the email captured with them; off keeps new mail to those on it. |
@@ -320,11 +321,11 @@ admin can also change under Settings.
 |---|---|---|---|---|---|---|
 | `email.enabled` | `MARGINCE_EMAIL_ENABLED` | — | `bool` | `false` | api, worker | Send the installation's own mail through the SMTP relay below; needs `--public-base-url`. |
 | `email.from_address` | `MARGINCE_EMAIL_FROM_ADDRESS` | — | `string` | — | api, worker | Sender address of the installation's own mail; required when email.enabled. |
-| `email.smtp.host` | `MARGINCE_EMAIL_SMTP_HOST` | — | `string` | — | api, worker | SMTP relay host; required when email.enabled. |
-| `email.smtp.password` | `MARGINCE_EMAIL_SMTP_PASSWORD` | — | `string`, secret | — | api, worker | SMTP relay password, sealed into the key vault at boot; `${none}` deletes the sealed copy and sends without one. |
-| `email.smtp.password_file` | `MARGINCE_EMAIL_SMTP_PASSWORD_FILE` | — | `string` | — | api, worker | Path to a file holding the SMTP relay password; a password set by reference wins over it. |
-| `email.smtp.port` | `MARGINCE_EMAIL_SMTP_PORT` | — | `int` | `0` | api, worker | SMTP relay port, 1 to 65535 when email.enabled. |
-| `email.smtp.username` | `MARGINCE_EMAIL_SMTP_USERNAME` | — | `string` | — | api, worker | SMTP relay user; unset sends without signing in. |
+| `email.smtp.host` | `MARGINCE_SMTP_HOST` | — | `string` | — | api, worker | SMTP relay host; required when email.enabled. |
+| `email.smtp.password` | `MARGINCE_SMTP_PASSWORD` | — | `string`, secret | — | api, worker | SMTP relay password, sealed into the key vault at boot; `${none}` deletes the sealed copy and sends without one. |
+| `email.smtp.password_file` | `MARGINCE_SMTP_PASSWORD_FILE` | — | `string` | — | api, worker | Path to a file holding the SMTP relay password; a password set by reference wins over it. |
+| `email.smtp.port` | `MARGINCE_SMTP_PORT` | — | `int` | `0` | api, worker | SMTP relay port, 1 to 65535 when email.enabled. |
+| `email.smtp.username` | `MARGINCE_SMTP_USERNAME` | — | `string` | — | api, worker | SMTP relay user; unset sends without signing in. |
 
 ### `identity`
 
@@ -941,6 +942,23 @@ see whether the Google download or our transaction takes most of the time of a m
 to see how many messages needed no full download after the headers read. Use
 `rate(margince_connector_requests_total{result="rate_limited"}[5m])` to see whether the provider is
 slowing the import down.
+
+### Reading the mail review backlog
+
+A mailbox in the classified posture holds every captured message until the review pass answers its
+thread. The pass answers up to `capture.confidentiality_pass_cap` threads per run, and the rest wait
+for the next run. The job gauges cannot show a pass that runs on time and still falls
+behind, so `cmd/api` serves two more gauges beside them. They are read from the thread ledger at
+scrape time, and every api replica answers the same numbers, so read them with `max`, never `sum`:
+
+| Family | Labels | Meaning |
+|---|---|---|
+| `margince_capture_confidentiality_waiting_threads` | — | held threads the pass has not answered yet and can still claim; a seat that left the classified posture is not counted |
+| `margince_capture_confidentiality_oldest_wait_seconds` | — | how long the longest-held of them has been hidden from the team, counted from the capture of the message that opened the thread; 0 when none waits |
+
+Alert when the age stays above how often the pass runs. An admin then raises the cap under
+Settings → Capture rules, or by `PATCH /v1/capture/settings`, and the next run uses it.
+
 ## cmd/worker: the background process role
 
 **Outbound mail does not leave without this process.** Every role that takes a send stages it (the
@@ -1396,7 +1414,7 @@ without a password anyway, and tries again on the next boot.
 
 `${none}` is not a password. Each secret field refuses a literal value, so it cannot be one.
 `email.smtp.password` is the only field that takes it, in `margince.yaml` or as the value of
-`MARGINCE_EMAIL_SMTP_PASSWORD`. `license.token` and `bootstrap_admin.password` refuse it at boot,
+`MARGINCE_SMTP_PASSWORD`. `license.token` and `bootstrap_admin.password` refuse it at boot,
 and so does `email.smtp.password` next to `password_file`. A `${env:…}` or `${file:…}` reference
 whose target holds the text `${none}` is refused as well. A removal is always written where the
 setting is declared.
@@ -1535,10 +1553,11 @@ the container gets. The scripts read the values below from it too, without expor
 
 | Env | Default | Used by | Meaning |
 |---|---|---|---|
-| `MARGINCE_ENV` | `production` | api (`runtimeenv.Parse`) | Read at boot. Only `dev` or `test` give a mode that is not production; unset, `production`, `staging`, or any value it does not know means production. It decides two license questions and nothing else: which issuers the installation trusts, and whether it may run with no license (a production role refuses to boot with no license). No feature that deletes data turns on it. A staging installation has real internal users, so it takes the production mode. The Makefile sets `dev`; production must not set it. |
+| `MARGINCE_ENV` | `production` | api, worker (`runtimeenv.Parse`) | Read at boot. Only `dev` or `test` give a mode that is not production; unset, `production`, `staging`, or any value it does not know means production. It decides two license questions: which issuers the installation trusts, and whether it may run with no license (a production role refuses to boot with no license). Under `dev` alone, a unit's `extension.OutboundClient` may also dial loopback (`127.0.0.0/8`, `::1`); every other non-public address stays refused. No feature that deletes data turns on it. A staging installation has real internal users, so it takes the production mode. The Makefile sets `dev`; production must not set it. |
 | `MARGINCE_TEST_DSN`, `MARGINCE_TEST_APP_DSN`, `MARGINCE_TEST_REDIS` | — | integration tests | owner DSN / app-role DSN / Redis address for the real-Postgres lane; the Makefile sets them. The lane runs on its own `_test` names (the `margince_test` DB, never the dev `margince` DB), so it can run next to `make dev`. |
 | `MARGINCE_TEST_REDIS_DB` | `15` | integration tests | Redis database number for the lane. Number 0 is kept for a running `make dev`. A good value is 1..63; the runner that runs packages side by side gives one to each package, so two packages at once never share a stream. A value out of range fails with a clear error. |
 | `MARGINCE_TEST_CLONE_DB` | — | integration tests | names the short-lived database copy this package process was handed. `scripts/test-integration-parallel.sh` and `scripts/test-integration-one.sh` set it next to the two DSNs. It lets `testdb.EnsureSchema` use again a database the lane copied from a template that already has every migration, and not apply every migration again (`~1.3 s` per package process). The value is a database name: the skip also needs it to be the same as `current_database()`. That refuses the lane that runs one package at a time (which runs on the template itself), and any suite that made its own database in the middle of a run. Unset means build again, which is slower and never wrong. |
+| `MARGINCE_TEST_WORKER_PROGRAM` | — | integration tests | set by a `cmd/worker` test on the copy of its own test binary that it starts, so that copy runs the whole boot of the worker once, in a process of its own. Never set it by hand. |
 | `MARGINCE_TEST_POOL_MAX_CONNS` | — | integration tests | limit for each pool the harness opens from the copy DSNs. `scripts/test-integration-parallel.sh` sets it to the number per pool that its connection budget was sized for. Unset (the lane for one package, a suite run by hand), the pool keeps the 16 of `database.NewPool`. It is an env setting because `pgx.ParseConfig` passes a `pool_*` key it does not know on to the server. `cmd/migrate` and every plain `pgx` connection a fixture opens use it. The server then stops with `FATAL: unrecognized configuration parameter`. A value that is not a number, or not above zero, fails with a clear error. |
 | `MARGINCE_TEST_BLOBSTORE_ENDPOINT`, `MARGINCE_TEST_BLOBSTORE_ACCESS_KEY`, `MARGINCE_TEST_BLOBSTORE_SECRET_KEY`, `MARGINCE_TEST_BLOBSTORE_BUCKET` | — | integration tests | the object store the blobstore lane runs against. The Makefile sets them to the `make db-up` MinIO, on its own `margince-test` bucket. An unset endpoint **fails** the lane, and does not skip it, because a skipped storage gate looks like a passing one. |
 | `MARGINCE_AICERT` | — | `make e2e-ai` | the switch that turns on the AI certification lane. The `e2e_llm` build tag keeps this live lane, which costs money, out of every normal lane. Once the tag is set, an empty value here **fails** and does not skip, so the lane never reports a pass for doing nothing. |
@@ -1921,6 +1940,9 @@ The api serves the file, since it holds this config, as `text/plain; charset=utf
 answers 404, the same as an installation with no file.
 
 ### License
+
+Gradion issues the license token.
+[Get a license token](../how-to/deploy-margince.md#get-a-license-token) says how to ask for one.
 
 The `license:` block points at the license token of the installation. Margince checks it
 **offline**, in the process, against the license check WebAssembly module bundled at

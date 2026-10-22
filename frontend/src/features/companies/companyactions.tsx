@@ -7,6 +7,7 @@ import { toMinorUnits } from "../../format/minorunits";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { currencyBeside } from "../../lib/dealcurrency";
+import { useLeadingCurrencies } from "../../lib/leadingcurrencies";
 import { unwrap } from "../../lib/problem";
 import { useProjectCreateForm } from "../projects/projects.create";
 
@@ -73,6 +74,7 @@ export function NewDealAction({
 }>) {
   const t = useT();
   const target = useDealTarget();
+  const leading = useLeadingCurrencies();
   const pipeline = target.data?.pipeline;
   const open = target.data?.open ?? [];
   // No pipeline, or none of its stages is open, means there is nowhere for a
@@ -96,7 +98,7 @@ export function NewDealAction({
       label: "create.currency",
       type: "select",
       required: true,
-      options: currencyOptions(),
+      options: currencyOptions(leading),
     },
     {
       key: "stage_id",
@@ -114,7 +116,7 @@ export function NewDealAction({
     idempotencyKey: string,
   ) => {
     const amount = values.amount?.trim();
-    const currency = values.currency || "EUR";
+    const currency = values.currency || leading[0];
     return unwrap(
       await api.POST("/deals", {
         params: { header: { "Idempotency-Key": idempotencyKey } },

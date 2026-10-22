@@ -255,7 +255,7 @@ it("names why the row in hand is first, whose it is, and its inbox", () => {
   );
   const head = container.querySelector(".brief-triage-lead-head");
   expect(head?.querySelector(".brief-triage-label-now")?.textContent).toBe(
-    "Waiting 13 days",
+    "Customer waiting",
   );
   expect(head?.textContent).toContain(en["visibility.team"]);
   expect(
@@ -387,19 +387,15 @@ it("names the host of a meeting in hand on Home's focus card", () => {
   expect(card?.textContent).toContain("hosted by Lena Fischer");
 });
 
-it("folds the whole case for the row in hand under Why first", async () => {
+it("shows concrete reasons without ranking or consequence narration", () => {
   stubApi({});
-  const user = userEvent.setup();
   const { container } = render(
     <BriefFeed day={readingsDay({}, [waitingEmailRow()])} state="ready" />,
   );
-  await user.click(inHand(container).getByText(en["brief.first.why"]));
-  // The reasons the ranking weighed, and what doing nothing costs, in the
-  // Worklist's own sentences.
-  expect(
-    inHand(container).getByText(en["worklist.consequence.buyer_waits"]),
-  ).toBeTruthy();
-  expect(inHand(container).getByText("waiting 13 days")).toBeTruthy();
+  const card = inHand(container);
+  expect(card.queryByText("Why first?")).toBeNull();
+  expect(card.queryByText(/If ignored/)).toBeNull();
+  expect(card.getByText(/waiting 13 days/)).toBeTruthy();
 });
 
 it.each([true, false])(
@@ -424,14 +420,11 @@ it.each([true, false])(
       </ToastProvider>,
     );
     const hero = screen.getByTestId("brief-glance");
-    expect(hero.textContent).toContain("1 item needs attention.");
     expect(hero.textContent).not.toContain("Move deal to Won");
     expect(hero.textContent).not.toContain(failed.detail);
     const card = inHand(container);
     expect(container.querySelector(".worklist-row-title")?.textContent).toBe(
-      hasTitle
-        ? "Move deal to Won · Nordwind renewal"
-        : "Approved action did not run · Nordwind renewal",
+      hasTitle ? "Move deal to Won" : "Approved action did not run",
     );
     expect(card.getAllByText(failed.detail ?? "")).toHaveLength(1);
     expect(card.getAllByText("Approved but not run").length).toBeGreaterThan(0);
@@ -457,7 +450,12 @@ it.each(["stalled", "closing_soon", "opportunity"])(
     expect(container.querySelector(".worklist-row-context")).toBeNull();
     expect(card.getAllByText("Acme Expansion")).toHaveLength(1);
     expect(container.querySelector(".worklist-row-verdict")).toBeNull();
-    expect(card.getByRole("button", { name: "Done" })).toBeTruthy();
+    expect(card.getByRole("button", { name: en["brief.act"] })).toBeTruthy();
+    expect(
+      card
+        .getByRole("link", { name: en["deal.openDeal"] })
+        .getAttribute("href"),
+    ).toBe("#/deals/deal-expansion");
   },
 );
 
@@ -495,6 +493,19 @@ it("preserves a concrete brief action supplied by the server", () => {
     inHand(container).getByText("Call the buyer about the renewal"),
   ).toBeTruthy();
   expect(inHand(container).getAllByText("Acme Expansion")).toHaveLength(1);
+});
+
+// The defect was layout, and happy-dom lays nothing out. What holds is the
+// mark: a task's name is a button, and only a button so marked may wrap.
+it("marks a long task name in hand as data, so the headline wraps", () => {
+  stubApi({});
+  const title =
+    "Call Alice back about the retrofit quote and the revised delivery window by noon";
+  const { container } = render(
+    <BriefFeed day={readingsDay({}, [taskRow("long", title)])} state="ready" />,
+  );
+  const name = inHand(container).getByRole("button", { name: title });
+  expect(name.classList).toContain("btn-valuelabel");
 });
 
 it("keeps the canonical deal title for an unframed brief row", () => {
@@ -617,4 +628,42 @@ it("prints a supplied sentence once when the title repeats the finding", () => {
   );
   expect(inHand(container).getAllByText(finding)).toHaveLength(1);
   expect(container.querySelector(".worklist-row-context")).toBeNull();
+});
+
+it("opens a long task title without repeating its linked subject", () => {
+  stubApi({});
+  const title =
+    "Call back about retrofit delivery and the revised installation schedule";
+  const row = {
+    ...taskRow("long-call", title),
+    subject: { type: "contact" as const, id: "alice", label: "Alice" },
+  };
+  const { container } = render(
+    <BriefFeed day={readingsDay({}, [row])} state="ready" />,
+  );
+  const card = inHand(container);
+  const control = card.getByRole("button", { name: title });
+  expect(control.classList.contains("btn-valuelabel")).toBe(true);
+  expect(control.getAttribute("aria-haspopup")).toBe("dialog");
+  expect(card.getAllByText("Alice")).toHaveLength(1);
+});
+
+it("keeps an unlinked subject in the framed title", () => {
+  stubApi({});
+  const row = {
+    ...taskRow("unlinked", "Review the transcript"),
+    subject: {
+      type: "activity" as const,
+      id: "recording",
+      label: "Buyer meeting",
+    },
+  };
+  const { container } = render(
+    <BriefFeed day={readingsDay({}, [row])} state="ready" />,
+  );
+  expect(
+    inHand(container).getByRole("button", {
+      name: "Review the transcript · Buyer meeting",
+    }),
+  ).toBeTruthy();
 });

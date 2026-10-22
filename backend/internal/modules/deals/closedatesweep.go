@@ -105,6 +105,7 @@ type closeDateCandidate struct {
 	createdAt      time.Time
 	lastActivityAt *time.Time
 	waitUntil      *time.Time
+	meetingAhead   bool
 	expectedClose  *time.Time
 	provisional    bool
 	forecastCat    *string
@@ -242,6 +243,7 @@ func (c *CloseDateCorrector) settleMember(
 		CreatedAt:           cand.createdAt,
 		LastActivityAt:      cand.lastActivityAt,
 		WaitUntil:           cand.waitUntil,
+		MeetingAhead:        cand.meetingAhead,
 		StageWinProbability: cand.winProbability,
 		RemainingOpenStages: cand.remainingOpen,
 		InForecastCommit:    category == forecastCommit || category == forecastBestCase,

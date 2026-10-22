@@ -52,9 +52,8 @@ type UpdateContactInput struct {
 	Phones    []ContactPhoneInput
 	IfVersion *int64
 	Source    string
-	// CustomFields carries the request body's extra top-level keys
-	// (additionalProperties); only active cf_* catalog columns land,
-	// drop-on-mismatch (customfields.go).
+	// CustomFields carries the request body's cf_* keys. A key no active catalog
+	// column takes is refused (storekit.CheckCustomValues).
 	CustomFields map[string]any
 }
 
@@ -104,10 +103,13 @@ func (s *Store) updateContactInTx(
 	if err != nil {
 		return out, err
 	}
-	storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties)
-	// The If-Match check comes first: the replace-sets write child rows before
-	// the contact row's own guarded write can refuse a stale version.
+	// The If-Match check comes first. The replace-sets write child rows before the
+	// guarded write could refuse a stale version. A stale version also answers 409
+	// before a refused custom field answers 422.
 	if err := storekit.EnsureIfMatch(ctx, tx, "contact", id.UUID, in.IfVersion); err != nil {
+		return out, err
+	}
+	if err := storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties); err != nil {
 		return out, err
 	}
 	setsChanged, err := applyContactReplaceSets(ctx, tx, id, current, in, active)

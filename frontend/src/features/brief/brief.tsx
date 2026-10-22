@@ -12,6 +12,7 @@ import { PageZones } from "../../design-system/pagezones";
 import { greetingNameOf } from "../../format/greetingname";
 import { useNow } from "../../format/now";
 import { useT } from "../../i18n";
+import { isReviewableReceipt } from "../../lib/receiptreview";
 import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import { useUrlParams } from "../../lib/urlstate";
@@ -21,7 +22,11 @@ import { MagicPanel } from "../sign-in/magic";
 import { TaskDetailModal } from "../worklist/taskdetailmodal";
 import { drawerScope } from "../worklist/worklist.address";
 import { WorklistPane } from "../worklist/worklist.pane";
-import { useWorklist, worklistKey } from "../worklist/worklist.queries";
+import {
+  useHandledForYou,
+  useWorklist,
+  worklistKey,
+} from "../worklist/worklist.queries";
 import { readerTask } from "../worklist/worklist.reader";
 import { changedSinceBrief } from "./brief.changed";
 import { BriefChanges } from "./brief.changes";
@@ -35,6 +40,7 @@ import { useMorningBrief, useWeeklyReview } from "./brief.queries";
 import { BriefQueue } from "./brief.queue";
 import { BriefReadingsStrip } from "./brief.readings";
 import { SchedulePanel } from "./brief.schedule";
+import { BriefSuggestions } from "./brief.suggestions";
 import { addressFrom, type BriefAddress, paramsFor } from "./brief.view";
 import { WeeklySection, WeekStepper } from "./brief.weekly";
 import { BriefCoverage } from "./briefcoverage";
@@ -170,6 +176,7 @@ function PersonalMorning({
 }>) {
   const t = useT();
   const brief = useMorningBrief();
+  const handled = useHandledForYou();
   const [selected, setSelected] = useState("");
   const titleId = useId();
   const update = useTaskUpdate([worklistKey]);
@@ -208,7 +215,23 @@ function PersonalMorning({
               onRetry={() => void query.refetch()}
               queueToggle={queueToggle}
             />
-            <MagicPanel />
+            <BriefSuggestions />
+            <MagicPanel
+              visibleApprovalIds={day?.focus?.items
+                .filter(
+                  (item) =>
+                    item.source === "approval" &&
+                    item.actions.includes("decide"),
+                )
+                .map((item) => item.id)}
+              visibleReceiptIds={
+                handled.isSuccess && !handled.isRefetchError
+                  ? handled.data.receipts
+                      ?.filter(isReviewableReceipt)
+                      .map((receipt) => receipt.id)
+                  : []
+              }
+            />
           </>
         }
         aside={

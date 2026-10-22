@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // Every advertised target must survive BOTH paths — the create and the patch.
@@ -133,7 +134,7 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 			fields, typed := make(map[string]string, len(targets)), map[string]any{}
 			for _, target := range targets {
 				fields[target] = "value"
-				if strings.HasPrefix(target, customFieldPrefix) {
+				if datasource.IsCustomFieldKey(target) {
 					typed[target] = "value"
 				}
 				if target == csvTargetOwner {

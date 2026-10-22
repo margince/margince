@@ -6,7 +6,6 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { useToast } from "../../design-system/toast";
-import { viewerZone } from "../../format/timezone";
 import { useT } from "../../i18n";
 import { entityTimelineKeys } from "../../lib/activitykeys";
 import {
@@ -28,7 +27,8 @@ import type { Grounding } from "./composedraftcall";
 import type { ComposeFields } from "./composefields";
 import type { RelinkKind } from "./composerelink";
 import type { useSavedDraft } from "./composesaveddraft";
-import { SCHEDULED_SCREEN } from "./scheduledsends";
+import { scheduleFields } from "./composeschedule";
+import { SCHEDULED_SCREEN } from "./scheduledqueue";
 import { sendReviewOf } from "./sendreview";
 
 type Activity = components["schemas"]["Activity"];
@@ -147,27 +147,6 @@ async function sendFrom(args: SendRequest) {
     });
   }
   return api.POST("/emails", { body: { ...args.mail, links: args.links } });
-}
-
-/**
- * The picker's wall-clock text as the wire wants it: an instant plus the IANA
- * zone it was chosen in.
- *
- * `new Date(...)` resolves the text in the rep's own zone. The zone name
- * travels rather than an offset, which would freeze one day's DST rules. Empty
- * means send now.
- */
-export function scheduleFields(local: string): {
-  scheduled_at?: string;
-  scheduled_tz?: string;
-} {
-  if (local === "") return {};
-  const at = new Date(local);
-  if (Number.isNaN(at.getTime())) return {};
-  return {
-    scheduled_at: at.toISOString(),
-    scheduled_tz: viewerZone(),
-  };
 }
 
 // What the send is waiting for, in reading order. A pressed Send names each
@@ -319,6 +298,7 @@ export function useComposeSend({
       // A scheduled send may need undoing, so the toast opens the queue. An
       // `open` verb keeps it until dismissed, door and all.
       if (result.scheduled) {
+        queryClient.invalidateQueries({ queryKey: ["scheduled-sends"] });
         toast.show(t("compose.scheduledQueued"), {
           action: {
             kind: "open",

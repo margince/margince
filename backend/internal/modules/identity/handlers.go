@@ -53,6 +53,10 @@ type Handlers struct {
 	// no mailer still needs it, and that is exactly where the admin-issued
 	// link lives. Empty means no link of either kind can be built.
 	passwordLinkBaseURL string
+	// confirmLaneWired says whether the installation can mail a contact a
+	// one-time link. A boolean rather than the lane itself, because the lane
+	// belongs to a module this one may not import.
+	confirmLaneWired bool
 	// resetSendStarted is a test seam: the async reset send signals here
 	// when it finishes, so a test can wait for the captured mail without
 	// sleeping. Nil in production.

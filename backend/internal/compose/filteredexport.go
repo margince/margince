@@ -46,6 +46,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/fieldmask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -241,6 +242,7 @@ func maskedRowSelects(ctx context.Context, tx pgx.Tx, table string, columns []st
 			conditioned[f] = true
 		}
 	}
+	withholdDerivedColumns(table, columns, alwaysMasked, conditioned)
 	// Only a conditioned mask naming a REAL column earns the writable-set
 	// bind: a stale mask row naming no column would otherwise register a
 	// parameter no CASE references, which Postgres refuses outright.
@@ -282,6 +284,26 @@ func maskedRowSelects(ctx context.Context, tx pgx.Tx, table string, columns []st
 		}
 	}
 	return selects, args, nil
+}
+
+// withholdDerivedColumns extends both mask sets to the stored columns computed
+// from a withheld field. A deal's base amount and rate print the masked money
+// and currency back out. The stricter mask on any input decides the column.
+func withholdDerivedColumns(table string, columns []string, alwaysMasked, conditioned map[string]bool) {
+	for _, col := range columns {
+		inputs, derived := fieldmask.DerivedInputs(table, col)
+		if !derived {
+			continue
+		}
+		for _, input := range inputs {
+			switch {
+			case alwaysMasked[input]:
+				alwaysMasked[col] = true
+			case conditioned[input]:
+				conditioned[col] = true
+			}
+		}
+	}
 }
 
 // renderExport renders one member as the requested open format, reusing the

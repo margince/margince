@@ -84,3 +84,21 @@ func TestAMalformedBodyIsRefusedBeforeAnythingIsWritten(t *testing.T) {
 		t.Errorf("status = %d — a body the caller got wrong is not the server failing", rec.Code)
 	}
 }
+
+// A null clears a mailbox's word and resets its signature switch. A body that
+// names neither is a mistake, refused before the registry is asked.
+func TestAConnectorSettingLeftOutOfTheBodyIsRefused(t *testing.T) {
+	h := connectorHandlers{registry: capture.NewRegistry(nil, nil, deadAuthority{}, nil)}
+	for name, set := range map[string]func(http.ResponseWriter, *http.Request){
+		"context-tag":          func(w http.ResponseWriter, r *http.Request) { h.SetConnectorContextTag(w, r, "gmail") },
+		"signature-enrichment": func(w http.ResponseWriter, r *http.Request) { h.SetConnectorSignatureEnrichment(w, r, "gmail") },
+	} {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPut, "/v1/connectors/gmail/"+name, strings.NewReader(`{}`))
+		req.Header.Set("Content-Type", "application/json")
+		set(rec, asSeat(req))
+		if rec.Code != http.StatusUnprocessableEntity {
+			t.Errorf("%s with an empty body = %d, want 422: a left-out key is not a null", name, rec.Code)
+		}
+	}
+}

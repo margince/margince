@@ -25,16 +25,20 @@ package capture
 // cannot carry those, so this row stays a settings entry and compose holds the
 // lock.
 //
-// Two providers, ONE set of mechanics. What differs between them is declared in
-// appKinds below — the storage key, the vendor's name, the shape of a client id,
-// and whether the app is pinned to a directory — so adding a third is a table
-// entry rather than a second copy of the sealing, rotation and validation.
+// The core vendors and every extension unit's app share one set of mechanics.
+// What differs is declared in appKinds and unitKind below. That is the storage
+// key, the vendor's name, the client id's shape, and whether a directory pins it.
 
 import (
+	"context"
 	"fmt"
+	"maps"
 	"regexp"
 	"slices"
 	"strings"
+	"unicode"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -131,10 +135,61 @@ type appVendor struct {
 	connectors []string
 }
 
-// appKind is one vendor together with the settings entry its app is stored in.
+// appKind is one vendor together with where its app is stored: a core vendor's
+// own settings entry, or a unit app's key in UnitAppsSetting.
 type appKind struct {
 	appVendor
 	entry *settings.Entry[ConnectorApp]
+	// unitKey is set, and entry nil, for an extension unit's app: its key in
+	// UnitAppsSetting.
+	unitKey string
+}
+
+// settingKey is the key a write to this app locks and an invalid value names.
+func (k appKind) settingKey() string {
+	if k.entry != nil {
+		return k.entry.Key()
+	}
+	return UnitAppsSetting.Key()
+}
+
+func (k appKind) read(ctx context.Context, s *settings.Store) (ConnectorApp, error) {
+	if k.entry != nil {
+		return settings.Get(ctx, s, k.entry)
+	}
+	apps, err := settings.Get(ctx, s, UnitAppsSetting)
+	return apps[k.unitKey], err
+}
+
+func (k appKind) readTx(ctx context.Context, tx pgx.Tx) (ConnectorApp, error) {
+	if k.entry != nil {
+		return settings.GetTx(ctx, tx, k.entry)
+	}
+	apps, err := settings.GetTx(ctx, tx, UnitAppsSetting)
+	return apps[k.unitKey], err
+}
+
+// writeTx stores next, or removes the app when next is empty. The caller holds
+// the settings lock on settingKey, so a unit app's read-modify-write of the
+// shared map cannot lose another unit's concurrent write.
+func (k appKind) writeTx(ctx context.Context, s *settings.Store, tx pgx.Tx, next ConnectorApp) error {
+	if k.entry != nil {
+		return settings.SetTx(ctx, s, tx, k.entry, next)
+	}
+	apps, err := settings.GetTx(ctx, tx, UnitAppsSetting)
+	if err != nil {
+		return err
+	}
+	apps = maps.Clone(apps)
+	if apps == nil {
+		apps = map[string]ConnectorApp{}
+	}
+	if next == (ConnectorApp{}) {
+		delete(apps, k.unitKey)
+	} else {
+		apps[k.unitKey] = next
+	}
+	return settings.SetTx(ctx, s, tx, UnitAppsSetting, apps)
 }
 
 var (
@@ -182,6 +237,68 @@ var (
 		microsoftVendor.validate,
 	).AsInstallationIdentity().AsSecretReference()
 )
+
+// UnitAppsKey stores every extension unit's OAuth app, keyed by
+// "<unit>/<provider>". One entry for all of them because the units are an
+// installation's choice and the settings catalog is fixed at build time. The
+// unit is in the key for a later unit that declares the same provider. That
+// unit must never receive the client secret of another unit's vendor.
+const UnitAppsKey = "capture.unit_apps"
+
+// UnitAppsSetting is the unit apps' entry, under the same object, identity and
+// redaction rules as GoogleAppSetting and for the same reasons.
+var UnitAppsSetting = settings.Define[map[string]ConnectorApp](
+	UnitAppsKey, captureSettingsObject, "update", map[string]ConnectorApp{},
+	validateUnitApps,
+).AsInstallationIdentity().AsSecretReference()
+
+// unitVendor holds the vendor rules a unit app follows. The name is the unit's
+// Title, filled in per app by unitKind.
+var unitVendor = appVendor{
+	console:          "the vendor's developer console",
+	validateClientID: appVendor.validateOpaqueClientID,
+}
+
+// UnitApp is a composed unit's declaration of one OAuth app, as the store
+// needs it.
+type UnitApp struct {
+	Unit  string
+	Title string
+}
+
+// unitKind is the appKind of one unit's app.
+func unitKind(p AppProvider, app UnitApp) appKind {
+	vendor := unitVendor
+	vendor.name = app.Title
+	return appKind{appVendor: vendor, unitKey: app.Unit + "/" + string(p)}
+}
+
+func validateUnitApps(apps map[string]ConnectorApp) error {
+	for key, app := range apps {
+		unit, provider, ok := strings.Cut(key, "/")
+		if !ok || unit == "" || provider == "" || len(key) > maxAppFieldBytes {
+			return fmt.Errorf("capture: a unit app is stored under an unusable key %q; want <unit>/<provider>", key)
+		}
+		if app == (ConnectorApp{}) {
+			return fmt.Errorf("capture: the %s unit app is stored empty; remove it instead", provider)
+		}
+		if err := unitKind(AppProvider(provider), UnitApp{Unit: unit, Title: provider}).validate(app); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// validateOpaqueClientID checks the one shape every vendor shares: a client id
+// is a single token. A value with whitespace is the app's display name or a
+// label copied beside the id.
+func (v appVendor) validateOpaqueClientID(clientID string) error {
+	if strings.ContainsFunc(clientID, func(r rune) bool { return unicode.IsSpace(r) || unicode.IsControl(r) }) {
+		return fmt.Errorf("capture: %q does not look like a client id — those are one token with no spaces; check you copied the client ID from %s and not the app's name",
+			clientID, v.console)
+	}
+	return nil
+}
 
 // appKinds is the provider table. Declared after the entries it points at, and
 // read through appKindFor so an unknown provider is refused in one place.
@@ -352,7 +469,7 @@ var guid = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-
 func appSettingKeyForConnector(name string) string {
 	for _, k := range appKinds {
 		if slices.Contains(k.connectors, name) {
-			return k.entry.Key()
+			return k.settingKey()
 		}
 	}
 	return ""

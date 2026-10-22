@@ -46,18 +46,7 @@ type TeamMember struct {
 // that is up to date.
 type OverdueLoad interface {
 	OverduePerAssignee(ctx context.Context, asOf time.Time) (map[ids.UUID]int, error)
-}
-
-// PromiseLoad counts each contact's commitments due by an instant. Read from
-// extracted claims so the board and the rep's day count the same thing: a task
-// carries a date and no provenance, and a promise is a thing somebody SAID.
-//
-// Optional, for a sharper reason than the others — an installation extracting no
-// claims binds nothing here, and a zero column would say the team promised
-// nothing when in truth nobody was listening. It takes the OWNERS to count
-// because the promise store answers one owner at a time.
-type PromiseLoad interface {
-	DuePerOwner(ctx context.Context, owners []ids.UUID, by time.Time) (map[ids.UUID]int, error)
+	CommitmentsDuePerAssignee(ctx context.Context, asOf time.Time) (map[ids.UUID]int, error)
 }
 
 // rosterRead is one roster answer: its members, and whether it stopped at its cap.

@@ -114,7 +114,20 @@ type tokenResponse struct {
 	// consent screen. Omitted by providers that granted exactly what was
 	// asked for (RFC 6749 §5.1).
 	Scope string `json:"scope"`
-	Error string `json:"error"`
+	// ExpiresIn is the access token's lifetime in seconds (RFC 6749 §5.1).
+	// A Number, because some vendors send it as a JSON string.
+	ExpiresIn json.Number `json:"expires_in"`
+	Error     string      `json:"error"`
+}
+
+// lifetime is the access token's lifetime, zero when the provider did not say
+// or said something that is not a whole number of seconds.
+func (t tokenResponse) lifetime() time.Duration {
+	seconds, err := t.ExpiresIn.Int64()
+	if err != nil || seconds < 0 {
+		return 0
+	}
+	return time.Duration(seconds) * time.Second
 }
 
 // oauthErrorCode extracts the RFC 6749 error code from a token-endpoint error
@@ -160,6 +173,10 @@ func Misconfigured(err error) bool {
 type TokenGrant struct {
 	RefreshToken string
 	Scopes       []string
+	// AccessToken and ExpiresIn are the first access token the exchange
+	// minted, for a caller that keeps it rather than refreshing at once.
+	AccessToken string
+	ExpiresIn   time.Duration
 }
 
 // Exchange redeems the authorization code for a durable refresh token.
@@ -181,7 +198,10 @@ func (c *Client) Exchange(ctx context.Context, code, redirectURI string) (TokenG
 	if tok.RefreshToken == "" {
 		return TokenGrant{}, fmt.Errorf("%s: consent returned no refresh token: %w", c.cfg.Provider, c.cfg.AuthRejected)
 	}
-	return TokenGrant{RefreshToken: tok.RefreshToken, Scopes: c.grantedScopes(tok.Scope)}, nil
+	return TokenGrant{
+		RefreshToken: tok.RefreshToken, Scopes: c.grantedScopes(tok.Scope),
+		AccessToken: tok.AccessToken, ExpiresIn: tok.lifetime(),
+	}, nil
 }
 
 // grantedScopes reads the response's granted set. An ABSENT scope means the
@@ -205,6 +225,9 @@ func (c *Client) grantedScopes(scope string) []string {
 type TokenRefresh struct {
 	AccessToken string
 	Rotated     string
+	// ExpiresIn is the access token's lifetime, zero when the provider did
+	// not say.
+	ExpiresIn time.Duration
 }
 
 // AccessToken redeems the stored refresh token for a short-lived access token,
@@ -268,7 +291,10 @@ func (c *Client) Refresh(ctx context.Context, refreshToken string, granted []str
 		// blob for no change.
 		rotated = ""
 	}
-	return TokenRefresh{AccessToken: tok.AccessToken, Rotated: rotated}, nil
+	return TokenRefresh{
+		AccessToken: tok.AccessToken, Rotated: rotated,
+		ExpiresIn: tok.lifetime(),
+	}, nil
 }
 
 func (c *Client) addScope(form url.Values) {

@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { draftButton } from "../../testing/composedraft.testkit";
 import {
   allowedPreview,
   isPreviewDoor,
@@ -116,9 +117,7 @@ describe("where a finished draft leaves the reader", () => {
     const reveal = vi.fn();
     editor.scrollIntoView = reveal;
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
     await screen.findByRole("heading", { name: "AI-assisted draft" });
 
     // The BODY is what is brought back, not the band that displaced it: the

@@ -27,6 +27,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -48,7 +49,7 @@ type figureStarts struct {
 func (said teamCopy) figureCoverageOf(
 	ctx context.Context, tx pgx.Tx, owners []ids.UUID, start, end time.Time,
 ) (*crmcontracts.WeeklyFigureCoverageSet, error) {
-	since, err := readFigureStarts(ctx, tx, owners)
+	since, err := readFigureStarts(ctx, tx, owners, end)
 	if err != nil {
 		return nil, err
 	}
@@ -179,7 +180,7 @@ func (said teamCopy) figureCoverage(since *time.Time, start, end time.Time, noun
 // import carries from the source. Imported leads start nothing: the lead count
 // excludes them, having no response stamps to judge. Without lead read the lead
 // arm is rendered FALSE, so the statement stays one and the lead table is not read.
-func readFigureStarts(ctx context.Context, tx pgx.Tx, owners []ids.UUID) (figureStarts, error) {
+func readFigureStarts(ctx context.Context, tx pgx.Tx, owners []ids.UUID, asOf time.Time) (figureStarts, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	captured := make([]string, 0, len(owners))
@@ -209,19 +210,24 @@ func readFigureStarts(ctx context.Context, tx pgx.Tx, owners []ids.UUID) (figure
 	if err != nil {
 		return figureStarts{}, err
 	}
+	identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
+	if err != nil {
+		return figureStarts{}, err
+	}
+	current := storekit.CurrentTaskClause("a", asOf, identities, arg)
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
-		SELECT
+ SELECT
 		  (SELECT min(LEAST(d.created_at, d.closed_at,
 		          (SELECT min(h.changed_at) FROM deal_stage_history h WHERE h.deal_id = d.id)))
 		     FROM deal d WHERE d.owner_id = %[1]s AND (%[2]s)),
 		  (SELECT min(a.created_at) FROM activity a
-		    WHERE a.kind = 'task' AND a.archived_at IS NULL AND a.assignee_id = %[1]s AND (%[3]s)),
+		    WHERE a.kind = 'task' AND a.archived_at IS NULL AND a.assignee_id = %[1]s AND (%[3]s) AND (a.is_done OR %[7]s)),
 		  (SELECT min(LEAST(m.created_at, m.occurred_at)) FROM activity m
 		    WHERE m.kind = 'meeting' AND m.archived_at IS NULL AND %[4]s AND (%[5]s)),
 		  (SELECT min(COALESCE(l.routed_at, l.created_at)) FROM lead l
 		    WHERE l.owner_id = %[1]s AND l.archived_at IS NULL AND `+nonImportedLeadSQL+` AND (%[6]s))`,
 		owned, orUnbounded(dealScope), taskScope, meetingIsTheirsSQL(owned, capturedBy), meetingScope,
-		leadScope), args...).
+		leadScope, current), args...).
 		Scan(&s.deals, &s.tasks, &s.meetings, &s.leads)
 	if err != nil {
 		return figureStarts{}, fmt.Errorf("weekly: reading when each figure's source began: %w", err)

@@ -396,41 +396,48 @@ func (s *Store) RestoreTag(ctx context.Context, id ids.TagID) (tagRow, error) {
 	}
 	var out tagRow
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// Lock first: two restores racing would both read an archived row and
-		// both report success, and the audit trail would show the word coming
-		// back twice.
-		if _, err := storekit.LockRow(ctx, tx, "tag", id.UUID, storekit.IncludeArchived); err != nil {
-			return err
-		}
-		// Read the archived instant: the audit row for an update has to say
-		// what the field held, and after the UPDATE it holds NULL.
-		before, err := scanTag(tx.QueryRow(ctx, "SELECT "+tagColumns+" FROM tag WHERE id = $1", id))
-		if errors.Is(err, pgx.ErrNoRows) {
-			return apperrors.ErrNotFound
-		}
-		if err != nil {
-			return err
-		}
-		row := tx.QueryRow(ctx, `
-			UPDATE tag SET archived_at = NULL
-			 WHERE id = $1 AND archived_at IS NOT NULL
-			RETURNING `+tagColumns, id)
-		if out, err = scanTag(row); errors.Is(err, pgx.ErrNoRows) {
-			// The tag exists but was never archived: there is nothing here to
-			// restore, and saying so is more useful than reporting success.
-			return apperrors.ErrNotFound
-		} else if err != nil {
-			if constraint, ok := storekit.UniqueViolation(err); ok && constraint == uqTagName {
-				return fmt.Errorf(
-					"a live tag already holds this name; rename it before restoring this one: %w",
-					apperrors.ErrConflict)
-			}
-			return err
-		}
-		_, err = storekit.Audit(ctx, tx, "update", auditentity.Tag, id.UUID,
-			map[string]any{"archived_at": before.ArchivedAt},
-			map[string]any{"archived_at": nil, nameField: out.Name})
+		var err error
+		out, err = restoreTagTx(ctx, tx, id)
 		return err
 	})
+	return out, err
+}
+
+// restoreTagTx is RestoreTag on the caller's transaction, with its audit row.
+func restoreTagTx(ctx context.Context, tx pgx.Tx, id ids.TagID) (tagRow, error) {
+	// Lock first: two racing restores would both read an archived row and
+	// both report success. The audit trail would show the word back twice.
+	if _, err := storekit.LockRow(ctx, tx, "tag", id.UUID, storekit.IncludeArchived); err != nil {
+		return tagRow{}, err
+	}
+	// Read the archived instant: the audit row for an update has to say
+	// what the field held, and after the UPDATE it holds NULL.
+	before, err := scanTag(tx.QueryRow(ctx, "SELECT "+tagColumns+" FROM tag WHERE id = $1", id))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return tagRow{}, apperrors.ErrNotFound
+	}
+	if err != nil {
+		return tagRow{}, err
+	}
+	row := tx.QueryRow(ctx, `
+		UPDATE tag SET archived_at = NULL
+		 WHERE id = $1 AND archived_at IS NOT NULL
+		RETURNING `+tagColumns, id)
+	out, err := scanTag(row)
+	if errors.Is(err, pgx.ErrNoRows) {
+		// The tag exists but was never archived: there is nothing here to
+		// restore, and saying so is more useful than reporting success.
+		return tagRow{}, apperrors.ErrNotFound
+	} else if err != nil {
+		if constraint, ok := storekit.UniqueViolation(err); ok && constraint == uqTagName {
+			return tagRow{}, fmt.Errorf(
+				"a live tag already holds this name; rename it before restoring this one: %w",
+				apperrors.ErrConflict)
+		}
+		return tagRow{}, err
+	}
+	_, err = storekit.Audit(ctx, tx, "update", auditentity.Tag, id.UUID,
+		map[string]any{"archived_at": before.ArchivedAt},
+		map[string]any{"archived_at": nil, nameField: out.Name})
 	return out, err
 }

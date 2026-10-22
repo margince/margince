@@ -127,6 +127,45 @@ describe("CompaniesScreen — what an account is to us", () => {
   });
 });
 
+// Every reader sees every company, so each row says whose it is. A reader on
+// the default view must not take a colleague's account for their own.
+describe("CompaniesScreen — whose account each row is", () => {
+  it("names the owner on each row", async () => {
+    stubFetch(async (url) =>
+      url.includes("/users")
+        ? jsonResponse({
+            data: [
+              { id: "u-9", email: "lena@x.test", display_name: "Lena F." },
+            ],
+            page: { next_cursor: null },
+          })
+        : jsonResponse({
+            data: [{ ...company, owner_id: "u-9" }],
+            page: { next_cursor: null, has_more: false },
+          }),
+    );
+    render(<CompaniesScreen />);
+    await waitFor(() =>
+      expect(screen.getByText("Brandt Automotive GmbH")).toBeTruthy(),
+    );
+    await waitFor(() => expect(screen.getByText("Lena F.")).toBeTruthy());
+  });
+
+  it("says an account is unassigned rather than leaving the owner blank", async () => {
+    stubFetch(async () =>
+      jsonResponse({
+        data: [{ ...company, owner_id: null }],
+        page: { next_cursor: null, has_more: false },
+      }),
+    );
+    render(<CompaniesScreen />);
+    await waitFor(() =>
+      expect(screen.getByText("Brandt Automotive GmbH")).toBeTruthy(),
+    );
+    expect(screen.getByText("Unassigned")).toBeTruthy();
+  });
+});
+
 describe("CompaniesScreen — how many work here, how many deals are open", () => {
   it("shows both counts, zero included", async () => {
     stubFetch(async () =>

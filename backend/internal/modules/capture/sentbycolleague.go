@@ -95,6 +95,9 @@ func colleagueTx(ctx context.Context, tx pgx.Tx, address string) (ids.UUID, erro
 func stampMessageEnds(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, seat ids.UUID, fields ActivityFields, counterparty connector.Counterparty,
 ) error {
+	if err := stampOwnMailRecipient(ctx, tx, id, fields); err != nil {
+		return err
+	}
 	if fields.SentByColleague.IsZero() {
 		return stampCaptureParticipants(ctx, tx, id, seat, fields.Kind, fields.Direction, counterparty)
 	}

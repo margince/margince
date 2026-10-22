@@ -39,15 +39,12 @@ import {
 } from "../../lib/privacy.logic";
 import { ProblemError, problemMessageOf, unwrap } from "../../lib/problem";
 import "./privacy.css";
+import { isUuid } from "../../lib/uuid";
 
 export type DataSubjectRequest = components["schemas"]["DataSubjectRequest"];
 type UpdateDataSubjectRequest =
   components["schemas"]["UpdateDataSubjectRequest"];
 type User = components["schemas"]["User"];
-
-// A record id, as opposed to an external identifier typed in by hand.
-const SUBJECT_UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // A record id that does not resolve may be hidden or erased, and the server
 // sends both the same, so the wording claims neither.
@@ -55,7 +52,7 @@ export function subjectName(dsr: DataSubjectRequest, t: Translator): string {
   if (dsr.subject_label) {
     return dsr.subject_label;
   }
-  return SUBJECT_UUID_RE.test(dsr.subject_ref)
+  return isUuid(dsr.subject_ref)
     ? t("notice.recordUnavailable")
     : dsr.subject_ref;
 }

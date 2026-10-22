@@ -83,6 +83,11 @@ type busyCalendar struct {
 }
 
 func (a *httpAPI) Busy(ctx context.Context, token, calendar string, from, to time.Time) ([]connector.CalendarInterval, error) {
+	busy, err := a.readBusy(ctx, token, calendar, from, to)
+	return busy, connector.CalendarReadFailed(calendar, err)
+}
+
+func (a *httpAPI) readBusy(ctx context.Context, token, calendar string, from, to time.Time) ([]connector.CalendarInterval, error) {
 	var result struct {
 		Calendars map[string]busyCalendar `json:"calendars"`
 	}
@@ -91,8 +96,11 @@ func (a *httpAPI) Busy(ctx context.Context, token, calendar string, from, to tim
 		return nil, err
 	}
 	found, ok := result.Calendars[calendar]
-	if !ok || len(found.Errors) != 0 {
-		return nil, errors.New("calendar: selected calendar could not be checked")
+	if !ok {
+		return nil, connector.NewCalendarUnavailable(calendar, "omitted", nil)
+	}
+	if len(found.Errors) != 0 {
+		return nil, connector.NewCalendarUnavailable(calendar, found.Errors[0].Reason, nil)
 	}
 	// Read only occupancy metadata, so rescheduling can exclude its own event.
 	return a.eventBusy(ctx, token, calendar, from, to)

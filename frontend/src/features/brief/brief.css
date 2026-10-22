@@ -172,33 +172,6 @@
   text-wrap: pretty;
 }
 
-/* The sentence's own tail control, back INSIDE the sentence. `.link-button`
-   is an inline-flex box with side padding — right for a verb standing alone in
-   a footer, wrong for a clause with a full stop after it: the padding printed
-   as a space before the stop, and the box raised the line height that the
-   sentence's two-line clamp then reserved two of. Only the BOX is refused —
-   the accent ink, the weight and the hover underline are the shared
-   affordance and stay, because this is the same kind of control it is
-   everywhere else. */
-.glance-rest {
-  display: inline;
-  padding: 0;
-  font-size: inherit;
-}
-
-/* The line a pressed chip opens under the sentence: what it was read from.
-   Neutral, because the sentence is composed here and no agent wrote it. */
-.glance-quote {
-  margin: 0;
-  padding-inline-start: var(--space-3);
-  border-inline-start: 2px solid var(--borderStrong);
-  color: var(--textSecondary);
-  max-width: 62ch;
-}
-.glance-quote-from {
-  color: var(--textPrimary);
-  font-weight: var(--fontWeightMedium);
-}
 .glance-briefed {
   margin: var(--space-1) 0 0;
 }
@@ -290,9 +263,6 @@
   margin-block-start: var(--space-3);
   -webkit-line-clamp: 4;
   line-clamp: 4;
-}
-.brief-morning .glance-quote {
-  max-width: none;
 }
 .brief-morning .brief-overview {
   margin: 0;

@@ -55,6 +55,6 @@ func (s *Store) PreviewProjectCreationForActor(ctx context.Context, in CreatePro
 		return CreateProjectInput{}, err
 	}
 	out.Key = nil
-	out.CustomFields = storekit.CreateFieldValues(active, in.CustomFields)
-	return out, nil
+	out.CustomFields, err = storekit.CreateFieldValues(active, in.CustomFields)
+	return out, err
 }

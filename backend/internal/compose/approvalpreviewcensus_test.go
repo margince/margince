@@ -53,8 +53,12 @@ func TestEveryGovernedKindHasReviewContextOrIsNotCurrentlyStageable(t *testing.T
 }
 
 func inactiveApprovalKind(kind string) bool {
-	// The first two execute without staging; the retired transcript kind remains readable in history.
-	return kind == "archive_tag" || kind == "change_record_parts" || kind == "transcript_proposal"
+	// The first two execute without staging; the two retired kinds remain readable in history.
+	switch kind {
+	case "archive_tag", "change_record_parts", "transcript_proposal", "communication_review":
+		return true
+	}
+	return false
 }
 
 func assertApprovalContextCovered(t *testing.T, reader approvalPreviewReader, kind string) {

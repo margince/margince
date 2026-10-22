@@ -12,6 +12,7 @@ import { Modal } from "../../design-system/modal";
 import { useLocale, useT } from "../../i18n";
 import { useAcquisitionSources } from "../../lib/acquisitionsources.queries";
 import { useCanWriteRecord } from "../../lib/capability";
+import { useLeadingCurrencies } from "../../lib/leadingcurrencies";
 import { RecordListsPanel } from "../records/recordlists";
 import { useOwnerPicker, useRecordOwners } from "../records/recordreferences";
 import { DealRecordRows } from "./deal360/dealheaderfacts";
@@ -28,6 +29,7 @@ import {
   usePartnerOptions,
 } from "./deals.fields";
 import { dealEditRecord, mapDealUpdate, stringValues } from "./deals.write";
+import { ExtensionPanels } from "./extensionpanels";
 
 export function DealDetails({
   deal,
@@ -42,6 +44,7 @@ export function DealDetails({
   const { locale } = useLocale();
   const partnerOptions = usePartnerOptions([]);
   const acquisitionSources = useAcquisitionSources().data;
+  const leadingCurrencies = useLeadingCurrencies();
   const masked = deal.masked_fields ?? [];
   const companyName = useEntityName("company", deal.company_id).name;
   const partnerName = useEntityName("company", deal.partner_company_id).name;
@@ -130,6 +133,7 @@ export function DealDetails({
             me: meId,
             currentOwner: deal.owner_id ?? null,
             currency: deal.currency ?? "",
+            leadingCurrencies,
             acquisitionSources,
             currentAcquisitionSource: deal.acquisition_source,
           }).map(
@@ -190,6 +194,7 @@ function DealTagsSection({ deal }: Readonly<{ deal: Deal }>) {
     <TagsPanel
       entityType="deal"
       entityID={deal.id}
+      archived={Boolean(deal.archived_at)}
       canEdit={canUpdate && !deal.archived_at}
     />
   );
@@ -233,6 +238,13 @@ export function DealDetailsDrawer({
           entityType="deal"
           entityId={deal.id}
           archived={Boolean(deal.archived_at)}
+        />
+        {/* Units' panels close the column, grouped under their own label: each
+            is an add-on's card about this deal, fenced off so its failure stays
+            there. */}
+        <ExtensionPanels
+          slot="record_panel.deal"
+          record={{ type: "deal", id: deal.id }}
         />
       </DrawerBody>
     </Modal>

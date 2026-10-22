@@ -159,7 +159,7 @@ function coerceWrite(field: CustomField, raw: string): unknown {
     case "currency": {
       // NaN is never sent: it serialises to null, and a null PATCH clears the
       // column. The control's validate refuses such a figure before it gets
-      // here; past it, the typed text goes and the store drops the key.
+      // here; past it, the typed text goes and the store refuses it by name.
       const minor = toMinorUnits(Number(value), field.currency ?? "");
       if (Number.isNaN(minor)) {
         return value;

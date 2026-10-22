@@ -360,6 +360,32 @@ func TestManualSignalReadReturnsTheStoredQualificationEvidence(t *testing.T) {
 	}
 }
 
+// A manual signal is replaced whole, so one entered again with no confidence
+// holds none, whatever the one before it said.
+func TestAManualSignalEnteredAgainWithoutAConfidenceHoldsNone(t *testing.T) {
+	ctx, store := newLeadScoreEnv(t)
+	leadID := seedScoredLead(ctx, t, store)
+	confidence := float32(0.7)
+	signal := SetLeadManualSignalInput{
+		Factor: "employees", Band: "51-200", SignalKind: "assumption",
+		Confidence: &confidence, Reason: "the careers page lists about eighty contacts",
+	}
+	if _, err := store.SetLeadManualSignal(ctx, leadID, signal); err != nil {
+		t.Fatalf("entering a manual signal: %v", err)
+	}
+	signal.Confidence = nil
+	if _, err := store.SetLeadManualSignal(ctx, leadID, signal); err != nil {
+		t.Fatalf("entering it again without a confidence: %v", err)
+	}
+	signals, err := store.ListLeadManualSignals(ctx, leadID)
+	if err != nil {
+		t.Fatalf("reading manual signals: %v", err)
+	}
+	if len(signals) != 1 || signals[0].Confidence != nil {
+		t.Fatalf("manual signals = %+v, want one with no confidence", signals)
+	}
+}
+
 // Scoring a lead is a WRITE to it. A lead is workspace-readable identity
 // (platform/auth tableclass.go), so every seat with the lead grant may READ
 // another rep's lead — but row scope and record grants still govern writes,

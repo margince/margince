@@ -501,9 +501,8 @@ func TestATaskProposalRecordsTheDealOwnerItIsFor(t *testing.T) {
 	}
 }
 
-// A deal nobody owns records nobody, and that is the honest answer rather than a
-// gap: with no seat to name, withholding it would leave a proposal nobody at all
-// could act on.
+// A deal nobody owns gets no follow-up proposal. A request always names the
+// member it is for, and an unowned deal has nobody to follow it up.
 func TestAProposalOnAnUnownedDealRecordsNobody(t *testing.T) {
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Nobody owns this", e.pipeline, e.open, nil)
@@ -520,15 +519,14 @@ func TestAProposalOnAnUnownedDealRecordsNobody(t *testing.T) {
 	if err := e.reconcile(); err != nil {
 		t.Fatal(err)
 	}
-	var onBehalfOf *ids.UUID
+	var staged int
 	if err := e.owner.QueryRow(context.Background(),
-		`SELECT on_behalf_of FROM approval
-		  WHERE kind = 'deal_follow_up' AND target_entity_id = $1 AND status = 'pending'`,
-		deal).Scan(&onBehalfOf); err != nil {
-		t.Fatalf("reading the staged proposal: %v", err)
+		`SELECT count(*) FROM approval WHERE kind = 'deal_follow_up' AND target_entity_id = $1`,
+		deal).Scan(&staged); err != nil {
+		t.Fatalf("counting staged proposals: %v", err)
 	}
-	if onBehalfOf != nil {
-		t.Errorf("an unowned deal's proposal was filed for %s", *onBehalfOf)
+	if staged != 0 {
+		t.Errorf("an unowned deal got %d follow-up proposal(s), want none", staged)
 	}
 }
 

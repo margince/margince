@@ -181,6 +181,9 @@ func parseContactContacts(emails []ContactEmailInput, phones []ContactPhoneInput
 		if err != nil {
 			return err
 		}
+		if err := refuseMachineAddress(parsed.String()); err != nil {
+			return err
+		}
 		emails[i].Email = parsed.String()
 	}
 	for i, p := range phones {
@@ -203,6 +206,11 @@ func parseContactContacts(emails []ContactEmailInput, phones []ContactPhoneInput
 //nolint:unparam // the same shape as its siblings; see replaceContactSocial.
 func insertContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, contactID ids.ContactID, source, by string, emails []ContactEmailInput) error {
 	for _, e := range emails {
+		// Capture, channel, promotion and booking reach this writer without
+		// parseContactContacts, so the refusal is asked here too.
+		if err := refuseMachineAddress(e.Email); err != nil {
+			return err
+		}
 		if _, err := tx.Exec(ctx,
 			`INSERT INTO contact_email (contact_id, email, email_type, is_primary, position, source, captured_by, from_correspondence)
 			 VALUES ($1, lower($2), $3, $4, $5, $6, $7, $8)`,

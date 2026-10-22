@@ -9,6 +9,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { UnsavedGuard } from "../../components/unsaved";
+import { en } from "../../i18n/en";
 import { ImportCard } from "./import";
 import {
   dryRun,
@@ -499,9 +500,10 @@ describe("the test run", () => {
     await renderAtTestRun(user);
     expect(
       await screen.findByText(
-        "Another import of this source name is still writing. Wait for it to finish, then test again.",
+        "Another import of this source name is still writing. Wait for it to finish, then try again.",
       ),
     ).toBeVisible();
+    expect(screen.getByText(en["import.sourceBusyDraft"])).toBeVisible();
     expect(
       screen.getByRole("link", { name: "Open that import" }),
     ).toHaveAttribute("href", expect.stringContaining("run=019ff-other"));

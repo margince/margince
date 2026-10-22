@@ -27,9 +27,8 @@ import (
 )
 
 const (
-	typedPointers    = "typed pointers: a null is read as absent, so the field cannot be cleared"
-	patchUnconfirmed = "the handler reads no explicit null and no test sends one; unconfirmed whether the store honours it"
-	putUnconfirmed   = "a replace: the store may take every column from the body; no test sends a null"
+	typedPointers = "typed pointers: a null is read as absent, so the field cannot be cleared"
+	wholeReplace  = "a whole replace: the store writes every column from the body, so a null writes NULL"
 )
 
 // nullIgnoredByHandler are the operations whose handler reads no explicit null.
@@ -44,15 +43,12 @@ var nullIgnoredByHandler = gatekit.Waive(map[string]string{
 	"SetWeeklyPlanContract": "decodes map[string]json.RawMessage and reads presence per key " +
 		"in contractField; an explicit null clears there.",
 
-	"UpdateAutomation":                patchUnconfirmed,
-	"UpdateOfferLineItem":             patchUnconfirmed,
-	"UpdateSignal":                    patchUnconfirmed,
-	"PutAnchorCompany":                putUnconfirmed,
-	"SetConnectorContextTag":          putUnconfirmed,
-	"SetConnectorSignatureEnrichment": putUnconfirmed,
-	"SetLeadManualSignal":             putUnconfirmed,
-	"SaveMailDraft":                   putUnconfirmed,
-	"PutOnboardingState":              putUnconfirmed,
+	"UpdateOfferLineItem": "reads the nulls with NullKeysOf in updateLineInput, " +
+		"which the agent tool shares; an explicit null clears there.",
+	"SetLeadManualSignal": wholeReplace,
+	"SaveMailDraft":       wholeReplace,
+	"UpdateSignal": "note is written only on the resolution a status change appends; " +
+		"there is no stored note for a null to clear.",
 })
 
 func TestEveryHandlerOfANullableBodyReadsExplicitNullsSomewhere(t *testing.T) {

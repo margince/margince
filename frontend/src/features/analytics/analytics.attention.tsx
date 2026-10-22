@@ -16,8 +16,9 @@ import { isEntityKind } from "../../lib/entity";
 import { useMemberNames } from "../../lib/membernames";
 import type { AnalyticsScope } from "./analytics.context";
 import { useDataCoverage } from "./analytics.coverage";
-import { checkLabel, useInputChecks } from "./analytics.forecast.review";
+import { useInputChecks } from "./analytics.forecast.review";
 import { useForecastReadings } from "./forecast.queries";
+import { checkLabel } from "./inputcheck.facts";
 
 type InputCheck = components["schemas"]["InputCheck"];
 

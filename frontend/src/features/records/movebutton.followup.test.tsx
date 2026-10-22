@@ -10,6 +10,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { draftButton } from "../../testing/composedraft.testkit";
 import { MoveButton } from "./movebutton";
 
 afterEach(() => {
@@ -69,9 +70,7 @@ it("drafts the follow-up to everyone the meeting was with", async () => {
   await userEvent.click(
     screen.getByRole("button", { name: /draft follow-up/i }),
   );
-  await userEvent.click(
-    await screen.findByRole("button", { name: /Draft (reply )?with AI/ }),
-  );
+  await userEvent.click(await draftButton());
   await screen.findByDisplayValue("Thanks for the review");
   expect(drafts[0]?.url).toContain(`/contacts/${FIRST}/draft-email`);
   expect(drafts[0]?.body).toMatchObject({

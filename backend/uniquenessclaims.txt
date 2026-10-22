@@ -462,7 +462,6 @@ internal/modules/privacy/retentionpolicystore.go#const fieldRetainDays
 internal/modules/privacy/retentionscope.go#func AuthorableScopes
 internal/modules/privacy/retentionscope.go#func ParseRetentionScope
 internal/modules/privacy/retentionscope_test.go#func TestAuthorableScopesIsTheSelectorTableInWireSpelling
-internal/modules/projects/handlers.go#func refuseCallerChosenKey
 internal/modules/projects/keymint.go#const projectKeyField
 internal/modules/projects/keymint.go#func mintProjectKey
 internal/modules/projects/listfilters.go#const block at const filterKey

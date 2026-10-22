@@ -10,6 +10,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { draftButton } from "../../testing/composedraft.testkit";
 import {
   allowedPreview,
   isPreviewDoor,
@@ -403,9 +404,7 @@ describe("ComposeModal recipient", () => {
     // The composer settles without inventing one. Rendering the empty string
     // as a chip would put an unsendable recipient in front of the reader.
     await waitFor(() => {
-      expect(
-        screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-      ).toBeTruthy();
+      expect(draftButton()).toBeTruthy();
     });
     expect(screen.queryByText("dietmar@buyer.test")).toBeNull();
   });

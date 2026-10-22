@@ -34,6 +34,7 @@ export const HISTORY_VERB = {
   import_undo: "history.verb.importUndo",
   reset_data: "history.verb.resetData",
   password_link_issued: "history.verb.passwordLinkIssued",
+  mfa_removed: "history.verb.mfaRemoved",
   connect: "history.verb.connect",
   disconnect: "history.verb.disconnect",
   schedule: "history.verb.schedule",

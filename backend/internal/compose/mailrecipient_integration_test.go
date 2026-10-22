@@ -328,8 +328,8 @@ func TestProductionMorningRecipientPreviews(t *testing.T) {
 				relay := &countingMailer{}
 				b := setupBriefJob(t).withMailer(relay)
 				labelRecipientTeam(t, b.Env)
-				seedWorkFor(t, b.Env, b.Rep1, b.Rep2)
 				now := reviewHour(previewWeek(t))
+				seedWorkFor(t, b.Env, now, b.Rep1, b.Rep2)
 				b.now = now
 				ctx := b.As(b.Rep1, []ids.UUID{b.Team1}, integration.AdminPerms)
 				if _, err := b.worker.users.SaveMyLocale(ctx, language); err != nil {

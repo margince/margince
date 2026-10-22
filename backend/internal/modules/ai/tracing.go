@@ -330,7 +330,7 @@ func rejectedAgainAbove(b *binding, callErr error, rest []Tier) bool {
 		return false
 	}
 	here, above := b.routeMeta[rest[0]], b.routeMeta[rest[1]]
-	return here.provider != "" && here == above
+	return sameRoute(here, above)
 }
 
 // usageOf is one served or withheld reply's spend as the meter records it.

@@ -844,3 +844,36 @@ func TestVoiceBuildOnAnUnconfiguredInstallationNamesTheSetting(t *testing.T) {
 		t.Fatalf("nothing blames the corpus for a missing setting: %s", *finished.StatusDetail)
 	}
 }
+
+// A build that stops running mid-run ends the worker at the next stage. It
+// asks the model nothing more and writes nothing over the row that stopped it.
+func TestAVoiceBuildThatStopsRunningEndsItsWorker(t *testing.T) {
+	quote := "A quote for a build that is stopped."
+	env, build := seedVoiceBuild(t, quote, 6)
+	scripted := &scriptedBuildBrain{judgeScore: 0.9, quote: quote}
+	calls, stopped := 0, false
+	worker := newVoiceBuildWorker(env.e.Pool, brainFunc(func(ctx context.Context, req model.Request) (model.Response, error) {
+		calls++
+		if !stopped {
+			stopped = true
+			env.e.WsExec(t, `UPDATE voice_build SET archived_at = now() WHERE id = $1`, build.ID)
+		}
+		return scripted.Complete(ctx, req)
+	}), slog.New(slog.DiscardHandler))
+
+	if err := worker.Work(context.Background(), voiceBuildJob(env, build)); err != nil {
+		t.Fatalf("Work on a build that stopped running: %v", err)
+	}
+	callsAtStop := calls
+	if status := env.e.WsScalar(t, `SELECT status FROM voice_build WHERE id = $1`, build.ID); status != "running" {
+		t.Errorf("the stopped build reads %q, want the row left as the stop left it", status)
+	}
+	if n := env.e.WsCount(t, `SELECT count(*) FROM voice_profile_version WHERE voice_profile_id = $1`, env.profile.ID); n != 0 {
+		t.Errorf("the stopped build activated %d version(s), want none", n)
+	}
+	if callsAtStop > 1 {
+		// The first call is the derive the stop interrupted; every later one is
+		// an evaluation nobody will record.
+		t.Errorf("the worker made %d model calls after the build stopped, want none past the first", callsAtStop-1)
+	}
+}

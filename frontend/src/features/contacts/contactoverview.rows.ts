@@ -29,7 +29,7 @@ export type OverviewRow = Readonly<{
 // the only one entirely within the reader's control. A null prefix key means
 // the contact's own name, which no catalog can carry.
 const LOOPS: ReadonlyArray<{ kind: string; prefixKey: MessageKey | null }> = [
-  { kind: "commitment_ours", prefixKey: "contact.loops.ours" },
+  { kind: "commitment_ours", prefixKey: "contact.loops.team" },
   { kind: "commitment_theirs", prefixKey: null },
   { kind: "open_question", prefixKey: "contact.loops.question" },
 ];
@@ -61,6 +61,7 @@ function openLoops(view: Contact360): readonly OpenLoop[] {
         (claim) =>
           claim.kind === loop.kind &&
           claim.status !== "dismissed" &&
+          !claim.needs_review &&
           (!claim.task_activity_id ||
             (claim.status === "done" &&
               !openTasks.has(claim.task_activity_id))),
@@ -77,6 +78,12 @@ function openLoops(view: Contact360): readonly OpenLoop[] {
         }),
       ),
   );
+}
+
+// What the band counts as still owed: a finding awaiting review is not an
+// obligation yet, and a kept promise no longer is one.
+export function hasOpenCommitments(view: Contact360): boolean {
+  return openLoops(view).some((loop) => !loop.done);
 }
 
 export function commitmentRows(
@@ -252,7 +259,10 @@ export function understandingRows(
   const claims = view.claims ?? [];
   return MATTERS.map((row) => {
     const match = claims.find(
-      (claim) => claim.kind === row.kind && claim.status !== "dismissed",
+      (claim) =>
+        claim.kind === row.kind &&
+        claim.status !== "dismissed" &&
+        !claim.needs_review,
     );
     return {
       key: row.kind,

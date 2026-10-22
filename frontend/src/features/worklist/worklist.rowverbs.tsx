@@ -14,7 +14,7 @@ import { useToast } from "../../design-system/toast";
 import { useTooltip } from "../../design-system/tooltip";
 import { useT } from "../../i18n";
 import { useFoldedViewport } from "../../lib/viewport";
-import { moveHref, moveLabel } from "./worklist.copy";
+import { moveHref, moveLabel, subjectHref } from "./worklist.copy";
 import {
   DoneVerb,
   HandBackLines,
@@ -170,6 +170,14 @@ function RowAnswer({
           {VERB_LABEL[lead.action](t)}
         </a>
       )}
+      {item.source === "brief_item" &&
+        !primary &&
+        !moveHref(item) &&
+        subjectHref(item) && (
+          <a className={NAVIGATING_VERB} href={subjectHref(item)}>
+            {t("deal.openDeal")}
+          </a>
+        )}
       {primary}
     </>
   );

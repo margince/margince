@@ -219,9 +219,7 @@ export const Drafted: Story = {
   play: async () => {
     await composerOnScreen();
     await screen.findByDisplayValue("Re: Q3 numbers");
-    await userEvent.click(
-      screen.getByRole("button", { name: "Draft reply with AI" }),
-    );
+    await userEvent.click(screen.getByRole("button", { name: "Draft reply" }));
     await screen.findByText(DRAFT.body);
   },
 };
@@ -277,7 +275,13 @@ export const ConsentBlocked: Story = {
           // point of the refusal now — was never rendered in Storybook.
           details: {
             review_id: "01a0aaaa-bbbb-7ccc-8ddd-eeeeffff0001",
-            available_actions: ["request_decision"],
+            available_actions: ["overrule"],
+            overrulable: [
+              {
+                contact_id: "01a0aaaa-bbbb-7ccc-8ddd-eeeeffff0003",
+                category: "marketing",
+              },
+            ],
           },
         },
         409,
@@ -576,14 +580,14 @@ export const RecipientOffer: Story = {
   },
 };
 
-/** Bcc, once asked for: the row opens under Cc, with what "blind" means beside
- *  the field that does it. It never closes again — a field holding a value may
- *  not be hidden. */
+/** The copies, once asked for: Cc and Bcc open under To, with what "blind"
+ *  means beside the field that does it. They never close again — a field
+ *  holding a value may not be hidden. */
 export const BlindCopy: Story = {
   render: headStory(),
   play: async () => {
     await composerOnScreen();
-    await userEvent.click(screen.getByRole("button", { name: "Bcc" }));
+    await userEvent.click(screen.getByRole("button", { name: "Cc and Bcc" }));
   },
 };
 

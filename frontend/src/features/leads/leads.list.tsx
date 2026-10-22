@@ -6,7 +6,7 @@ import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { usePageName } from "../../app/pagemeta";
-import { useAssignableUserOptions } from "../../components/assigneepicker";
+import { useRecordOwnerOptions } from "../../components/assigneepicker";
 import { CreateAction } from "../../components/create";
 import { useObjectCustomFields } from "../../components/customfields.form";
 import {
@@ -150,7 +150,7 @@ function LeadsWorkbench({
   const ownerChips = useOwnerTagChips();
   const pageName = usePageName("leads");
   const savedViews = useSavedViewTabs("leads");
-  const assignable = useAssignableUserOptions();
+  const assignable = useRecordOwnerOptions();
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();

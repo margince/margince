@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // RequiredFieldError maps to 422 on both surfaces — via FieldFault, so the
@@ -417,7 +418,7 @@ type LeadUpdateRequest struct {
 }
 
 func (r *LeadUpdateRequest) UnmarshalJSON(data []byte) error {
-	if err := json.Unmarshal(data, &r.UpdateLeadRequest); err != nil {
+	if err := datasource.StrictCustomFieldDecode(data, &r.UpdateLeadRequest); err != nil {
 		return err
 	}
 	var fields map[string]json.RawMessage

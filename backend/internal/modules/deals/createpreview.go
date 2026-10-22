@@ -80,6 +80,6 @@ func (s *Store) previewActorDealCreation(ctx context.Context, in CreateDealInput
 	if terminal != nil {
 		out.StageID = terminal.StageID
 	}
-	out.CustomFields = storekit.CreateFieldValues(active, in.CustomFields)
-	return out, nil
+	out.CustomFields, err = storekit.CreateFieldValues(active, in.CustomFields)
+	return out, err
 }
