@@ -439,6 +439,7 @@ function LinkCustomerModal({
           selected={company}
           onPick={setCompany}
           disabled={link.isPending}
+          initialTerm={customer.display_name}
         />
         <ErrorLine error={link.error} />
       </div>

@@ -180,7 +180,7 @@ func TestTheSourceCardShowsTheLiveConnectionAndWhatIsOnOffer(t *testing.T) {
 		t.Errorf("available = %+v, want every offered source with its description", state.Available)
 	}
 
-	bare := Handlers{store: NewStore(a.store.db, a.store.baseCurrency)}
+	bare := Handlers{store: NewStore(a.store.db, a.store.rates)}
 	rec = call(a.admin(), http.MethodGet, "", bare.GetFinanceSource)
 	if got := decode[crmcontracts.FinanceSourceState](t, rec); len(got.Available) != 0 || got.Available == nil {
 		t.Errorf("an unwired build offers %+v, want an empty list rather than null", got.Available)

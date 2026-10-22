@@ -3,9 +3,9 @@
 
 package finance
 
-// The mirror's own rules over a source's ledger: the hash, the credits and the
-// rate. The ledgers are built by hand, because what is tested is the mirror
-// and not any one source.
+// The mirror's own rules over a source's ledger: the hash and the credits. The
+// ledgers are built by hand, because what is tested is the mirror and not any
+// one source.
 
 import (
 	"testing"
@@ -111,51 +111,11 @@ func TestACreditNoteOwesNothing(t *testing.T) {
 	note := SourceInvoice{
 		ExternalID: "CN-1", GrossMinor: 25000, CreditsExternalID: "INV-1",
 	}
-	values := deriveValues(note, asOf, map[string]ids.UUID{}, 0, "EUR")
+	values := deriveValues(note, asOf, map[string]ids.UUID{}, 0, nil)
 	if values.openMinor != 0 {
 		t.Fatalf("the credit note owes %d, want 0", values.openMinor)
 	}
 	if values.status != statusCredited {
 		t.Fatalf("status = %q, want %q", values.status, statusCredited)
-	}
-}
-
-// The rate and the date it froze on are one fact (FIN-PARAM-7), and the schema
-// enforces it. Only the identity is knowable without a rate sheet: an invoice
-// already issued in the workspace's reporting currency is already in base.
-func TestOnlyTheIdentityRateIsKnownWithoutARateSheet(t *testing.T) {
-	issued := asOf
-	for _, tc := range []struct {
-		name     string
-		currency string
-		base     string
-		want     bool
-	}{
-		{"same currency converts at one", "EUR", "EUR", true},
-		{"case is not a different currency", "eur", "EUR", true},
-		{"a foreign currency has no knowable rate", "USD", "EUR", false},
-		{"an unknown base has no knowable rate", "EUR", "", false},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			rate, when := fxRateToBase(
-				SourceInvoice{Currency: tc.currency, IssuedOn: issued}, tc.base,
-			)
-			if tc.want {
-				if rate == nil || *rate != 1 {
-					t.Fatalf("rate = %v, want 1", rate)
-				}
-				// Both or neither: a rate without its date fails the schema's
-				// own CHECK. A test that asserted only the rate would pass while
-				// every insert aborted.
-				if when == nil || !when.Equal(issued) {
-					t.Fatalf("rate date = %v, want the issue date %v", when, issued)
-				}
-				return
-			}
-			if rate != nil || when != nil {
-				t.Fatalf("invented a rate for %q against base %q: %v @ %v",
-					tc.currency, tc.base, rate, when)
-			}
-		})
 	}
 }

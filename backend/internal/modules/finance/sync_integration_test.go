@@ -17,11 +17,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"math/big"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -137,14 +140,10 @@ func setupFinance(t *testing.T) *financeEnv {
 	// The pool outlives the test now, so a goroutine still holding a connection
 	// would go on writing into the database the NEXT test just reset.
 	testdb.AssertPoolsQuiesced(t)
-	// The mirror's base currency is a fixed input here, not a thing under
-	// test: this suite is about the sync pass — the hash discipline, the
-	// derived status, the credit-note placement. Injecting the literal keeps
-	// it that way, and keeps the suite indifferent to where the installation
-	// stores its currency.
-	e.store = NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.ws)), func(context.Context, pgx.Tx) (string, error) {
-		return "EUR", nil
-	})
+	// The currency arithmetic is a fixed input here. This suite tests the sync
+	// pass: the hash discipline, the derived status, the credit-note placement.
+	// The compose integration lane proves the wired rate sheet and conversion.
+	e.store = NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.ws)), euroOnlyRates())
 
 	opCtx := principal.WithWorkspaceID(context.Background(), e.ws)
 	opCtx = principal.WithCorrelationID(opCtx, ids.NewV7())
@@ -166,6 +165,31 @@ func setupFinance(t *testing.T) *financeEnv {
 
 func (e *financeEnv) provider() Provider { return fixtureSource{} }
 
+// euroOnlyRates is an installation based in EUR whose sheet holds no rate, so
+// only the identity converts. The fixture ledger bills in EUR alone.
+func euroOnlyRates() Rates {
+	return Rates{
+		BaseCurrency: func(context.Context, pgx.Tx) (string, error) { return "EUR", nil },
+		RateOn: func(_ context.Context, _ pgx.Tx, currency, base string, day time.Time) (Rate, bool, error) {
+			if currency != base {
+				return Rate{}, false, nil
+			}
+			return Rate{Value: pgtype.Numeric{Int: big.NewInt(1), Valid: true}, On: day}, true, nil
+		},
+		ToBase: func(amountMinor int64, rate pgtype.Numeric, from, base string) (int64, error) {
+			text, err := rate.Value()
+			if err != nil {
+				return 0, err
+			}
+			spelled, ok := text.(string)
+			if one, parsed := new(big.Rat).SetString(spelled); !ok || !parsed || one.Cmp(big.NewRat(1, 1)) != 0 {
+				return 0, fmt.Errorf("the fixture converts only at the identity, asked %s into %s at %v", from, base, text)
+			}
+			return amountMinor, nil
+		},
+	}
+}
+
 // summaryAtEpoch reads the card at a clock pinned to the ledger's own epoch.
 // Every figure folds over a window measured back from the store's clock, and
 // the fixture ledger is fixed (see ledgerEpoch). Unpinned, the figures would
@@ -177,7 +201,7 @@ func (e *financeEnv) summaryAtEpoch(
 	t *testing.T, companyID ids.CompanyID,
 ) crmcontracts.CompanyFinanceSummary {
 	t.Helper()
-	at := NewStore(e.store.db, e.store.baseCurrency).
+	at := NewStore(e.store.db, e.store.rates).
 		WithClock(func() time.Time { return ledgerEpoch })
 	out, err := at.SummaryFor(e.ctx, companyID)
 	if err != nil {
@@ -426,13 +450,13 @@ func TestCrossingADueDateDoesNotRewriteTheLedger(t *testing.T) {
 	e := setupFinance(t)
 	ctx, provider := e.ctx, e.provider()
 
-	atEpoch := NewStore(e.store.db, e.store.baseCurrency).WithClock(func() time.Time { return ledgerEpoch })
+	atEpoch := NewStore(e.store.db, e.store.rates).WithClock(func() time.Time { return ledgerEpoch })
 	if _, err := atEpoch.SyncConnection(ctx, provider); err != nil {
 		t.Fatal(err)
 	}
 	// A year later, with the SAME source. Every open invoice is now long past
 	// due, so a status-in-the-hash implementation would rewrite them all.
-	later := NewStore(e.store.db, e.store.baseCurrency).WithClock(func() time.Time { return ledgerEpoch.AddDate(1, 0, 0) })
+	later := NewStore(e.store.db, e.store.rates).WithClock(func() time.Time { return ledgerEpoch.AddDate(1, 0, 0) })
 	second, err := later.SyncConnection(ctx, provider)
 	if err != nil {
 		t.Fatal(err)

@@ -20766,9 +20766,12 @@ export interface paths {
         get: operations["listFxRates"];
         put?: never;
         /**
-         * Set an FX rate effective today or later (append-forward).
+         * Set an FX rate effective today or later, or before the earliest rate.
          * @description Admin/ops-only. Appends one effective-dated rate; the same day in the
-         *     installation's zone corrects in place, a past date is refused (422). `to`
+         *     installation's zone corrects in place. A past date is accepted only when
+         *     it is earlier than every rate stored for `from_currency`, which extends
+         *     the history back without changing any day that already had a rate;
+         *     any other past date is refused (422 `fx_rate_past`). `to`
          *     is resolved to the workspace base currency server-side; `from == base` is
          *     refused. Human session only
          *     (x-agent-access: human-only) — an agent never sets a rate directly.
@@ -21283,7 +21286,7 @@ export interface components {
             rate: string;
             /**
              * Format: date
-             * @description Defaults to today; must not be in the past (append-forward).
+             * @description Defaults to today. A past date must be earlier than every rate stored for the currency.
              */
             effective_date?: string;
         };

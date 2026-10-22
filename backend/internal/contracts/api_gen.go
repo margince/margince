@@ -48496,7 +48496,7 @@ type SetDealRoomExpiryRequest struct {
 
 // SetFxRateRequest defines model for SetFxRateRequest.
 type SetFxRateRequest struct {
-	// EffectiveDate Defaults to today; must not be in the past (append-forward).
+	// EffectiveDate Defaults to today. A past date must be earlier than every rate stored for the currency.
 	EffectiveDate *openapi_types.Date `json:"effective_date,omitempty"`
 
 	// FromCurrency 3-letter ISO; must not equal the base currency.
@@ -74231,7 +74231,7 @@ type ServerInterface interface {
 	// List current FX rates (latest per currency), or one pair's history.
 	// (GET /fx-rates)
 	ListFxRates(w http.ResponseWriter, r *http.Request, params ListFxRatesParams)
-	// Set an FX rate effective today or later (append-forward).
+	// Set an FX rate effective today or later, or before the earliest rate.
 	// (POST /fx-rates)
 	SetFxRate(w http.ResponseWriter, r *http.Request)
 	// List the base currency and the currency codes on the FX rate sheet, without their rates.
@@ -78365,7 +78365,7 @@ func (_ Unimplemented) ListFxRates(w http.ResponseWriter, r *http.Request, param
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Set an FX rate effective today or later (append-forward).
+// Set an FX rate effective today or later, or before the earliest rate.
 // (POST /fx-rates)
 func (_ Unimplemented) SetFxRate(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)

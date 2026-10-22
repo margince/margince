@@ -70,11 +70,16 @@ func TestFxRatesOverHTTP(t *testing.T) {
 		t.Fatalf("list = %+v, want one %s row", list.Data, from)
 	}
 
-	// A past effective date is a clean 422, not a 500.
+	// A past date before the earliest rate extends the history back. The same
+	// past date again is no longer before it, so it is a clean 422.
 	past := time.Now().UTC().AddDate(0, 0, -1).Format("2006-01-02")
 	if status := e.Call(t, "POST", "/v1/fx-rates",
-		map[string]any{"from_currency": from, "rate": "0.9", "effective_date": past}, nil, nil); status != http.StatusUnprocessableEntity {
-		t.Fatalf("past-date POST /fx-rates → %d, want 422", status)
+		map[string]any{"from_currency": from, "rate": "0.9", "effective_date": past}, nil, nil); status != http.StatusCreated {
+		t.Fatalf("POST /fx-rates before the earliest rate → %d, want 201", status)
+	}
+	if status := e.Call(t, "POST", "/v1/fx-rates",
+		map[string]any{"from_currency": from, "rate": "0.91", "effective_date": past}, nil, nil); status != http.StatusUnprocessableEntity {
+		t.Fatalf("past-date POST /fx-rates over a stored rate → %d, want 422", status)
 	}
 }
 

@@ -30102,7 +30102,8 @@ paths:
 
   # =========================================================================
   #   /fx-rates, /ai-model-rates   (admin/ops-only effective-dated price
-  #   sheets — strict append-forward: today-or-later. One date is never
+  #   sheets — append-forward: today-or-later; an FX rate may also extend
+  #   history before its currency's earliest rate. One date is never
   #   removed; a model's WHOLE entry can be)
   # =========================================================================
   /fx-rates:
@@ -30134,10 +30135,13 @@ paths:
     post:
       tags: [Rates]
       operationId: setFxRate
-      summary: Set an FX rate effective today or later (append-forward).
+      summary: Set an FX rate effective today or later, or before the earliest rate.
       description: |
         Admin/ops-only. Appends one effective-dated rate; the same day in the
-        installation's zone corrects in place, a past date is refused (422). `to`
+        installation's zone corrects in place. A past date is accepted only when
+        it is earlier than every rate stored for `from_currency`, which extends
+        the history back without changing any day that already had a rate;
+        any other past date is refused (422 `fx_rate_past`). `to`
         is resolved to the workspace base currency server-side; `from == base` is
         refused. Human session only
         (x-agent-access: human-only) — an agent never sets a rate directly.
@@ -31408,7 +31412,7 @@ components:
         effective_date:
           type: string
           format: date
-          description: Defaults to today; must not be in the past (append-forward).
+          description: Defaults to today. A past date must be earlier than every rate stored for the currency.
     AiModelRate:
       type: object
       description: One effective-dated model price. The four buckets are USD per 1M tokens as decimal strings (the server stores µUSD integers). Transparency-only — never gates routing.

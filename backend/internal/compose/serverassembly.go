@@ -100,7 +100,7 @@ func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 // company page's own billing section, so a second one would let the finance
 // card and the account panel disagree about who the recipient is.
 func newFinanceHandlers(pool *pgxpool.Pool) finance.Handlers {
-	return finance.NewHandlers(InstallationDB(pool), identity.BaseCurrencyOf).
+	return finance.NewHandlers(InstallationDB(pool), FinanceRates()).
 		WithBillingContacts(financeBillingContacts{contacts: contacts.NewStore(InstallationDB(pool))})
 }
 
