@@ -141,8 +141,9 @@ type RelinkActivityCommand struct {
 func NewRelinkActivityCall(records datasource.SystemOfRecordProvider, language baselanguage.Resolver, cmd RelinkActivityCommand) GovernedCall {
 	return destinationTieredCall{
 		GovernedCall: bind[RelinkActivityCommand](&relinkActivityResolver{
-			language: language,
-			activity: anchoredRecord{records: records, entityType: datasource.EntityActivity},
+			language:    language,
+			activity:    anchoredRecord{records: records, entityType: datasource.EntityActivity},
+			destination: destinationRecord(records, cmd.EntityType),
 		}, cmd),
 		entityType: cmd.EntityType,
 		pinnable:   true,
@@ -301,8 +302,9 @@ var relinkDestinationTools = map[string]bool{
 }
 
 type relinkActivityResolver struct {
-	activity anchoredRecord
-	language baselanguage.Resolver
+	activity    anchoredRecord
+	destination anchoredRecord
+	language    baselanguage.Resolver
 }
 
 // Subject names the ACTIVITY the approval binds to — the row that changes —
@@ -314,12 +316,16 @@ func (r *relinkActivityResolver) Subject(ctx context.Context, cmd RelinkActivity
 	if err != nil {
 		return StageInfo{}, err
 	}
+	destination, err := destinationLabel(ctx, &r.destination, cmd.EntityID)
+	if err != nil {
+		return StageInfo{}, err
+	}
 	said := summaryIn(ctx, r.language)
 	return StageInfo{
 		TargetType:    string(datasource.EntityActivity),
 		TargetID:      cmd.ActivityID,
 		TargetVersion: &rec.Version,
-		Summary:       fmt.Sprintf(said.relinkActivity, cmd.ActivityID, said.noun(cmd.EntityType), cmd.EntityID),
+		Summary:       fmt.Sprintf(said.relinkActivity, recordLabel(rec), said.noun(cmd.EntityType), destination),
 	}, nil
 }
 

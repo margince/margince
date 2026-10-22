@@ -336,6 +336,10 @@ func TestUpdateRecordAllHumanOwnedStagesTheWholeCall(t *testing.T) {
 	if len(approvals.staged) != 1 || approvals.staged[0].TargetVersion == nil || *approvals.staged[0].TargetVersion != 3 {
 		t.Fatalf("staged = %+v, want one approval pinned to the current version", approvals.staged)
 	}
+	if summary := approvals.staged[0].Summary; !strings.Contains(summary, "overwrite Name") ||
+		strings.Contains(summary, "full_name") {
+		t.Errorf("summary %q names the withheld field by its wire name, not its label", summary)
+	}
 
 	// The approved retry is the IDENTICAL call plus approval_id.
 	retry := fmt.Sprintf(`{"record_type":"contact","id":%q,"fields":{"full_name":"Greta Machine"},"approval_id":%q}`, target, stagedErr.ApprovalID)

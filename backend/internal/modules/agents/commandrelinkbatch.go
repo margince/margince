@@ -33,6 +33,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -128,8 +129,9 @@ type relinkActivitiesResolver struct {
 // theirs to be shown by name.
 func (r *relinkActivitiesResolver) Subject(ctx context.Context, cmd RelinkActivitiesCommand) (StageInfo, error) {
 	said := summaryIn(ctx, r.language)
-	return destinationSubject(ctx, &r.destination, cmd.EntityType, cmd.EntityID,
-		fmt.Sprintf(said.relinkActivities, len(cmd.ActivityIDs), said.noun(cmd.EntityType), cmd.EntityID))
+	return destinationSubject(ctx, &r.destination, cmd.EntityType, cmd.EntityID, func(label string) string {
+		return fmt.Sprintf(said.relinkActivities, len(cmd.ActivityIDs), said.noun(cmd.EntityType), label)
+	})
 }
 
 // Guards refuses the destination vocabulary, an empty or oversized set — the
@@ -159,8 +161,9 @@ func destinationRecord(records datasource.SystemOfRecordProvider, entityType str
 }
 
 // destinationSubject is the one spelling of a batch card's subject: the
-// destination's type and id, its version as read, and the sentence.
-func destinationSubject(ctx context.Context, destination *anchoredRecord, entityType string, entityID ids.UUID, summary string) (StageInfo, error) {
+// destination's type and id, its version as read, and the sentence, which names
+// the destination by its label.
+func destinationSubject(ctx context.Context, destination *anchoredRecord, entityType string, entityID ids.UUID, summary func(label string) string) (StageInfo, error) {
 	rec, err := destination.row(ctx, entityID)
 	if err != nil {
 		return StageInfo{}, err
@@ -169,6 +172,21 @@ func destinationSubject(ctx context.Context, destination *anchoredRecord, entity
 		TargetType:    entityType,
 		TargetID:      entityID,
 		TargetVersion: &rec.Version,
-		Summary:       summary,
+		Summary:       summary(recordLabel(rec)),
 	}, nil
+}
+
+// destinationLabel names the record a single relink files under. That relink
+// binds to the activity and never refuses on its destination (Guards says why),
+// so a destination the caller cannot see is named by its id, as the store will
+// refuse it at execution anyway. Any other failed read fails the staging.
+func destinationLabel(ctx context.Context, destination *anchoredRecord, id ids.UUID) (string, error) {
+	rec, err := destination.row(ctx, id)
+	if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
+		return id.String(), nil
+	}
+	if err != nil {
+		return "", err
+	}
+	return recordLabel(rec), nil
 }
