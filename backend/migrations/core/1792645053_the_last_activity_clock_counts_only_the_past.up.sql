@@ -14,9 +14,10 @@
 --
 -- No row changes when a meeting's start passes, so the past_activity_clock_refold
 -- job refolds the records an activity reached once its time has come. Its
--- watermark, activity_clock_refold_mark, starts empty, so the first run walks
--- every activity written before it happened once. Stored clocks the old rule
--- left in the future are moved back by the past_activity_clocks data task.
+-- watermark, activity_clock_refold_mark, starts empty, and a run with no mark
+-- starts at the moment this migration was applied: the old rule already
+-- counted every activity dated before it. Stored clocks the old rule left in
+-- the future are moved back by the past_activity_clocks data task.
 --
 -- move_last_activity now writes only a value that changed, so a refold over
 -- records it does not move rewrites nothing.

@@ -21,9 +21,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// clockRefoldSettle holds the window back from now, so a write still in flight
-// when the refold reads commits before the mark passes its activity.
+// clockRefoldSettle holds the window back from now, so a write that started
+// just before the refold reads has committed before the mark passes it.
 const clockRefoldSettle = 5 * time.Minute
+
+// clockRefoldMigration is the migration that made the clocks count only the
+// past. Every activity dated before it ran was already in the stored clocks,
+// so a run with no mark stored yet starts there.
+const clockRefoldMigration = "1792645053"
 
 // ClockRefoldMark is how far the refold has come, in (occurred_at, id) order.
 type ClockRefoldMark struct {
@@ -46,7 +51,9 @@ type PassedActivities struct {
 
 // ClockRefoldStartTx answers the stored mark and the instant this run reads up
 // to. The instant is the database's, because the clock functions read now().
-// With no mark stored yet, the run starts before every activity.
+// It never passes the start of a transaction still open: that writer's
+// trigger left out what was ahead of its now(), and its rows are not visible
+// yet. With no mark stored, the run starts when clockRefoldMigration ran.
 func ClockRefoldStartTx(ctx context.Context, tx pgx.Tx) (ClockRefoldMark, time.Time, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return ClockRefoldMark{}, time.Time{}, err
@@ -54,9 +61,15 @@ func ClockRefoldStartTx(ctx context.Context, tx pgx.Tx) (ClockRefoldMark, time.T
 	var mark ClockRefoldMark
 	var asOf time.Time
 	err := tx.QueryRow(ctx, `
-		SELECT coalesce(m.passed_up_to, '0001-01-01 00:00:00+00'), coalesce(m.passed_id, '00000000-0000-0000-0000-000000000000'),
-		       now() - make_interval(secs => $1)
-		  FROM (SELECT) one LEFT JOIN activity_clock_refold_mark m ON true`, clockRefoldSettle.Seconds()).Scan(&mark.At, &mark.ID, &asOf)
+		SELECT coalesce(m.passed_up_to,
+		                (SELECT applied_at FROM schema_migrations_core WHERE version = $2),
+		                '0001-01-01 00:00:00+00'),
+		       coalesce(m.passed_id, '00000000-0000-0000-0000-000000000000'),
+		       least(now() - make_interval(secs => $1),
+		             (SELECT min(xact_start) FROM pg_stat_activity
+		               WHERE datname = current_database() AND pid <> pg_backend_pid()))
+		  FROM (SELECT) one LEFT JOIN activity_clock_refold_mark m ON true`,
+		clockRefoldSettle.Seconds(), clockRefoldMigration).Scan(&mark.At, &mark.ID, &asOf)
 	if err != nil {
 		return ClockRefoldMark{}, time.Time{}, fmt.Errorf("activities: reading the clock refold mark: %w", err)
 	}

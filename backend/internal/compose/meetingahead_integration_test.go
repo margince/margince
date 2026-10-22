@@ -237,6 +237,21 @@ func TestTheLastTouchReadersIgnoreAFutureDatedEmail(t *testing.T) {
 		t.Errorf("the no-activity reminder does not see the deal quiet since %v: %+v", past, quiet)
 	}
 
+	for _, at := range []time.Time{past, future} {
+		subject, inbound := "Their reply", "inbound"
+		if _, _, err := f.e.Activities.LogActivity(f.e.Admin(), activities.LogActivityInput{
+			Kind: "email", Subject: &subject, Direction: &inbound, OccurredAt: &at, Source: "manual",
+			Links: []activities.ActivityLinkInput{onRecord("deal", deal)},
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, s := range subjectsFor(t, f.e) {
+		if s.DealID == deal.String() && (s.LastInboundAt == nil || !s.LastInboundAt.Equal(past)) {
+			t.Errorf("the assurance check's last inbound = %v, want the past email at %v", s.LastInboundAt, past)
+		}
+	}
+
 	contact := f.e.SeedContact(t, "Reader Contact", nil)
 	f.logOn(t, "email", onRecord("contact", contact), past)
 	f.logOn(t, "email", onRecord("contact", contact), future)

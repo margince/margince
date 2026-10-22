@@ -35,7 +35,8 @@ const assuranceSubjectsSQL = `
 		          JOIN activity_link al ON al.activity_id = a.id
 		         WHERE al.deal_id = d.id
 		           AND a.direction = 'inbound'
-		           AND a.archived_at IS NULL) AS last_inbound_at,
+		           AND a.archived_at IS NULL
+		           AND a.occurred_at <= now()) AS last_inbound_at,
 		       (SELECT o.gross_minor
 		          FROM offer o
 		         WHERE o.deal_id = d.id
