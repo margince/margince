@@ -322,7 +322,7 @@ func (s *Store) RateSheetCurrencies(ctx context.Context) (string, []string, erro
 	return base, codes, err
 }
 
-// sheetHeadTx is the one definition of the sheet head: the latest-dated row
+// sheetHeadTx reads the sheet head for both sheet reads: the latest-dated row
 // per foreign currency that converts into base, ordered by currency code.
 func sheetHeadTx(ctx context.Context, tx pgx.Tx, base string) ([]FxRateRow, error) {
 	r, err := tx.Query(ctx, `

@@ -208,9 +208,9 @@ func TestFxRateCurrenciesOverHTTP(t *testing.T) {
 	if baseCurrency(t, e) == "USD" {
 		from = "GBP"
 	}
-	today := time.Now().UTC().Format("2006-01-02")
+	// No effective date: the server dates the rate today on its own clock.
 	if status := e.Call(t, "POST", "/v1/fx-rates",
-		map[string]any{"from_currency": from, "rate": "0.92", "effective_date": today}, nil, nil); status != http.StatusCreated {
+		map[string]any{"from_currency": from, "rate": "0.92"}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("POST /fx-rates → %d, want 201", status)
 	}
 	var codes struct {
