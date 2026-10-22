@@ -92,8 +92,8 @@ var exemptFromSharedRules = gatekit.Waive(map[string]string{
 })
 
 // exemptWriterPrompts is each exempt file's assembled system turn, keyed like
-// draftingSurfaces, so the absence of the block is checked against what the
-// model is sent and a row without a prompt fails.
+// draftingSurfaces. The absence of the block is checked against what the model
+// is sent, and a row without a prompt fails.
 func exemptWriterPrompts(fence promptfence.Fence) map[string]string {
 	return map[string]string{
 		"voicebuildeval.go": voiceEvalDraftSystemFor(fence),
