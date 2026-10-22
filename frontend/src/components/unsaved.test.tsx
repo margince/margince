@@ -10,8 +10,8 @@ import {
 import userEvent from "@testing-library/user-event";
 import { type ReactNode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { LocaleProvider } from "../i18n";
 import { Modal } from "../design-system/modal";
+import { LocaleProvider } from "../i18n";
 import { navigate, useHash } from "../lib/router";
 import { UnsavedGuard, useGuardedLeave, useUnsavedGuard } from "./unsaved";
 

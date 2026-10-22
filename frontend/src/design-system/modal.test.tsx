@@ -9,6 +9,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { useEffect, useRef, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { useUnsavedGuard } from "../lib/unsavedclaims";
 import { Button, Modal } from "./atoms";
 import { Heading } from "./heading";
 import { armHoverIntent } from "./hoverintent-testing";
@@ -19,7 +20,6 @@ import {
   MODAL_INTENTS,
   type ModalIntent,
 } from "./modal";
-import { useUnsavedGuard } from "../lib/unsavedclaims";
 import { Popover } from "./popover";
 
 // A dialog covers the page. `aria-modal` says so to a screen reader and does
